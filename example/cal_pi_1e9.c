@@ -9,7 +9,7 @@ int ans = 0;
 
 void work(int id)
 {
-	const int start = (id - 1) * 1000000;
+	const int start = (id - 1) * 1000000 + 1;
 	const int end = id * 1000000;
 	int local_ans = 0;
 	

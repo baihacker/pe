@@ -1,161 +1,494 @@
+/*
+static int plist[maxp/10];  
+static int pmask[maxp+1];
+static int pcnt;
+int* phi = NULL;
+int* miu = NULL;
+const int64 pmpi[];
+
+SL int64 estimate_pmpi(int64 n)
+SL int is_prime(int64 n)
+SL void init_primes()
+SL void init_primes(int cal_phi, int cal_miu)
+
+SL vector<pair<int64, int> > factorize(int64 n)
+SL vector<int64> get_factors(const vector<pair<int64, int> >& f)
+SL vector<int64> get_factors(int64 value)
+
+SL int64 square_root(int64 n)
+SL int64 add_mod(int64 a, int64 b, int64 mod)
+SL int64 sub_mod(int64 a, int64 b, int64 mod)
+SL int64 mul_mod(int64 a, int64 b, int64 mod)
+SL int64 mul_mod_ex(int64 a, int64 b, int64 mod)
+SL int64 power_mod(int64 x, int64 n, int64 mod)
+SL int64 power_mod_ex(int64 x, int64 n, int64 mod)
+SL int64 inv_of(int64 x, int64 p)
+
+// Primitive Root
+namespace pr{
+SL bool is_pr(const vector<pair<int64, int> >& f, int64 x, int64 p)
+SL bool is_pr(int64 x, int64 p)
+SL int64 find_pr(int64 p)
+int64 ind(int64 a, int64 pr, int64 p)
+int64 ind1(int64 a, int64 pr, int64 p)
+}
+
+template<typename T>
+struct Fraction;
+*/
+
 #ifndef __PE_NT_H__
 #define __PE_NT_H__
 
-#include <pe_base>
-static int plist[maxp/3], pmask[maxp+1], phi[maxp+1], miu[maxp+1], pcnt;
+#if __cplusplus < 201103L
+#error "c++11 or above"
+#endif
+
+#ifdef DISABLE_ASSERT
+#define assert(x)
+#endif
+
+typedef long long int64;
+
+#ifndef SL
+#define SL static inline
+#endif
+
+#ifdef _M_X64
+#define HAS_INT128 1
+typedef __int128 int128;
+#else
+#define HAS_INT128 0
+#endif
+
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+#include <ctime>
+#include <cassert>
+#include <algorithm>
+#include <iostream>
+#include <utility>
+#include <map>
+#include <vector>
+
+#include <unordered_map>
+using namespace std;
+
+static_assert(maxp >= 100000, "maxp >= 100000");
+static constexpr int64 maxp2 = (int64)maxp * maxp;
+static int plist[maxp/10];
+static int pmask[maxp+1], pcnt;
+int* phi = NULL;
+int* miu = NULL;
+
+const int64 pmpi[] =
+{
+0LL,
+4LL,                // 10
+25LL,               // 100
+168LL,              // 1000
+1229LL,             // 1e4
+9592LL,             // 1e5
+78498LL,            // 1e6
+664579LL,           // 1e7
+5761455LL,          // 1e8
+50847534LL,         // 1e9
+455052512LL,        // 1e10
+4118054813LL,       // 1e11
+37607912018LL,      // 1e12
+346065536839LL,     // 1e13
+3204941750802LL,    // 1e14
+};
+
+SL int64 estimate_pmpi(int64 n)
+{
+    if (n <= 1) return 0;
+    int64 ret = 1. * n / log(1.*n);
+    return max(ret, 1LL);
+}
 
 SL int is_prime(int64 n)
 {
-	if (n <= 1) return 0;
-	if (n <= maxp) return pmask[n] == n;
-	for (int i = 0; i < pcnt; ++i)
-	{
-		const int64 p = plist[i];
-		const int64 test = p * p;
-		if (test > n) break;
-		if (n % p == 0) return 0;
-	}
-	return 1;
+    if (n <= 1) return 0;
+    if (n <= maxp) return pmask[n] == n;
+    assert(n <= maxp2);
+    for (int i = 0; i < pcnt; ++i)
+    {
+        const int64 p = plist[i];
+        const int64 test = p * p;
+        if (test > n) break;
+        if (n % p == 0) return 0;
+    }
+    return 1;
 }
 
 SL void init_primes()
 {
-	for (int i = 1; i <= maxp; ++i) pmask[i] = i;
-	phi[1] = 1; miu[1] = 1;
-	for (int i = 2; i <= maxp; ++i)
-	{
-		if (pmask[i] == i)
-		{
-			miu[i] = -1;
-			phi[i] = i - 1;
-			plist[pcnt++] = i;
-		}
-		for (int j = 0; j < pcnt; ++j)
-		{
-			const int64 t = (int64)plist[j] * i;
-			if (t > maxp) break;
-			pmask[t] = plist[j];
-			if (i % plist[j] == 0)
-			{
-				miu[t] = 0;
-				phi[t] = phi[i] * plist[j];
-				break;
-			}
-			else
-			{
-				miu[t] = -miu[i];
-				phi[t] = phi[i] * (plist[j] - 1);
-			}
-		}
-	}
+    for (int i = 1; i <= maxp; ++i) pmask[i] = i;
+    for (int i = 2; i <= maxp; ++i)
+    {
+        if (pmask[i] == i)
+        {
+            plist[pcnt++] = i;
+        }
+        for (int j = 0; j < pcnt; ++j)
+        {
+            const int64 t = (int64)plist[j] * i;
+            if (t > maxp) break;
+            pmask[t] = plist[j];
+            if (i % plist[j] == 0)
+            {
+                break;
+            }
+        }
+    }
 }
 
-static int pv[1024], pc[1024];
-static int64 factors[655360];
-static int factor_cnt;
-SL void get_factors(int limit, int64 value)
+SL void init_primes(int cal_phi, int cal_miu)
 {
-	factors[factor_cnt++] = value;
-	for (int i = 0; i < limit; ++i)
-	{
-		int64 tvalue = value;
-		const int p = pv[i];
-		for (int j = 1; j <= pc[i]; ++j)
-		{
-			tvalue *= p;
-			get_factors(i, tvalue);
-		}
-	}
+    if (cal_phi) phi = new int[maxp+1];
+    if (cal_miu) miu = new int[maxp+1];
+    
+    for (int i = 1; i <= maxp; ++i) pmask[i] = i;
+    if (phi) phi[1] = 1;
+    if (miu) miu[1] = 1;
+    
+    for (int i = 2; i <= maxp; ++i)
+    {
+        if (pmask[i] == i)
+        {
+            if (miu) miu[i] = -1;
+            if (phi) phi[i] = i - 1;
+            plist[pcnt++] = i;
+        }
+        for (int j = 0; j < pcnt; ++j)
+        {
+            const int64 t = (int64)plist[j] * i;
+            if (t > maxp) break;
+            pmask[t] = plist[j];
+            if (i % plist[j] == 0)
+            {
+                if (miu) miu[t] = 0;
+                if (phi) phi[t] = phi[i] * plist[j];
+                break;
+            }
+            else
+            {
+                if (miu) miu[t] = -miu[i];
+                if (phi) phi[t] = phi[i] * (plist[j] - 1);
+            }
+        }
+    }
 }
 
-SL int factorize(int64 n)
+SL vector<pair<int64, int> > factorize(int64 n)
 {
-	if (n <= 0)
-	{
-		return 0;
-	}
-	int top = 0;
-	if (n <= maxp)
-	{
-		while (n != 1)
-		{
-			int now = pmask[n];
-			int c = 0;
-			while (n % now == 0) n /= now, ++c;
-			if (c) pv[top] = now, pc[top++] = c;
-		}
-	}
-	else
-	{
-		for (int i = 0; i < pcnt; ++i)
-		{
-			const int64 p = plist[i];
-			const int64 test = p * p;
-			if (p > n) break;
-			int c = 0;
-			while (n % p == 0) n /= p, ++c;
-			if (c) pv[top] = p, pc[top++] = c;
-		}
-		if (n != 1) pv[top] = n, pc[top++] = 1;
-	}
-	return top;
+    vector<pair<int64, int> > ret;
+    if (n <= 1)
+    {
+        return ret;
+    }
+    int top = 0;
+    if (n <= maxp)
+    {
+        while (n != 1)
+        {
+            int now = pmask[n];
+            int c = 0;
+            while (n % now == 0) n /= now, ++c;
+            if (c) ret.push_back({(int64)now, c});
+        }
+    }
+    else
+    {
+        assert(n <= maxp2);
+        for (int i = 0; i < pcnt; ++i)
+        {
+            const int64 p = plist[i];
+            const int64 test = p * p;
+            if (p > n) break;
+            int c = 0;
+            while (n % p == 0) n /= p, ++c;
+            if (c) ret.push_back({p, c});
+        }
+        if (n != 1) ret.push_back({n, 1});
+    }
+    return ret;
 }
 
-SL int64 is_square(int64 n)
+void get_factors_impl(const int limit, const vector<pair<int64, int> >& f, int64 value, vector<int64>& result)
 {
-	for (int64 test = sqrt(n);;++test)
-	{
-		int64 t = test * test;
-		if (t == n) return test;
-		if (t > n) return 0;
-	}
-	return 0;
+    result.push_back(value);
+    for (int i = 0; i < limit; ++i)
+    {
+        int64 tvalue = value;
+        const int64 p = f[i].first;
+        const int c = f[i].second;
+        for (int j = 1; j <= c; ++j)
+        {
+            tvalue *= p;
+            get_factors_impl(i, f, tvalue, result);
+        }
+    }
 }
 
-SL int64 power_mod(int64 x, int64 n, int64 mod)
+SL vector<int64> get_factors(const vector<pair<int64, int> >& f)
 {
-	int64 ret = 1;
-	for (; n; n >>= 1)
-	{
-		if (n&1) ret = ret * x % mod;
-		x = x * x % mod;
-	}
-	return ret;
+    vector<int64> result;
+    get_factors_impl(f.size(), f, 1, result);
+    return result;
 }
 
-SL int64 mul_mod(int64 a, int64 b, int64 mod)
+SL vector<int64> get_factors(int64 value)
 {
-	return a*b%mod;
+    vector<int64> result;
+    if (value <= 1)
+    {
+        result.push_back(1);
+        return result;
+    }
+    auto f = factorize(value);
+    get_factors_impl(f.size(), f, 1, result);
+    return result;
 }
 
-SL int64 mul_mod_ex(int64 a, int64 b, int64 mod)
+SL int64 square_root(int64 n)
 {
-	int64 ret = 0;
-	int64 flag = b;
-	for (int64 d = 1; d <= a; d <<= 1)
-	{
-		if (d & a)
-		{
-			ret = (ret + flag) % mod;
-		}
-		flag = (flag << 1) % mod;
-	}
-	return ret;
+    if (n <= 0) return 0;
+    if (n == 1) return 1;
+    for (int64 test = sqrt(n);;++test)
+    {
+        int64 t = test * test;
+        if (t == n) return test;
+        if (t > n) return 0;
+    }
+    return 0;
 }
 
 SL int64 add_mod(int64 a, int64 b, int64 mod)
 {
-	a += b;
-	if (a >= mod) a -= mod;
-	return a;
+    a += b;
+    if (a >= mod) a -= mod;
+    return a;
 }
 
+SL int64 sub_mod(int64 a, int64 b, int64 mod)
+{
+    a -= b;
+    if (a < 0) a += mod;
+    return a;
+}
+
+SL int64 mul_mod(int64 a, int64 b, int64 mod)
+{
+    return a*b%mod;
+}
+
+SL int64 mul_mod_ex(int64 a, int64 b, int64 mod)
+{
+#if HAS_INT128
+    return (int128)a * b % mod;
+#else
+    int64 ret = 0;
+    int64 flag = b;
+    for (int64 d = 1; d <= a; d <<= 1)
+    {
+        if (d & a)
+        {
+            ret = (ret + flag) % mod;
+        }
+        flag = (flag << 1) % mod;
+    }
+    return ret;
+#endif
+}
+
+SL int64 power_mod(int64 x, int64 n, int64 mod)
+{
+    int64 ret = 1;
+    x %= mod;
+    for (; n; n >>= 1)
+    {
+        if (n&1) ret = ret * x % mod;
+        x = x * x % mod;
+    }
+    return ret;
+}
+
+SL int64 power_mod_ex(int64 x, int64 n, int64 mod)
+{
+#if HAS_INT128
+    int64 ret = 1;
+    x %= mod;
+    for (; n; n >>= 1)
+    {
+        if (n&1) ret = (int128)ret * x % mod;
+        x = (int128)x * x % mod;
+    }
+    return ret;
+#else
+    int64 ret = 1;
+    x %= mod;
+    for (; n; n >>= 1)
+    {
+        if (n&1) ret = mul_mod_ex(x, ret, mod);
+        x = mul_mod_ex(x, x, mod);
+    }
+    return ret;
+#endif
+}
+
+SL int64 inv_of(int64 x, int64 p)
+{
+    return power_mod(x, p-2, p);
+}
+
+// Primitive Root
+namespace pr{
+
+SL bool is_pr(const vector<pair<int64, int> >& f, int64 x, int64 p)
+{
+    const int top = f.size();
+    foreach(it, f) if (power_mod(x, (p-1)/it.first, p) == 1)
+    return 0;
+    return 1;
+}
+
+SL bool is_pr(int64 x, int64 p)
+{
+    return is_pr(factorize(p-1), x, p);
+}
+
+SL int64 find_pr(int64 p)
+{
+    if (p == 2) return 1;
+    auto f = factorize(p-1);
+    for (int64 i = 2; ; ++i)
+    if (is_pr(f, i, p)) return i;
+    return -1;
+}
+
+#if 0
+struct pr_pair
+{
+    int idx;
+    int64 value;
+    pr_pair(int64 _idx=0, int64 _value=0) : idx(_idx), value(_value){}
+    bool operator < (const pr_pair& r) const
+    {
+        return value < r.value;
+    }
+};
+
+pr_pair     l1[100005], l2[100005];
+int64 ind(int64 a, int64 pr, int64 p)
+{
+    int64 inv_pr = power_mod(pr, p-2, p);
+    int64 mx = sqrt(double(p-1)+0.5);
+    if (mx * mx != p - 1) ++mx;
+    int64 t1 = 1, t2 = a;
+    int64 temp = power_mod(pr, mx, p);
+    for (unsigned int i = 0; i <= mx - 1; ++i)
+    {
+        l1[i] = pr_pair(i, t1);
+        l2[i] = pr_pair(i, t2);
+        t2 = t2 * inv_pr % p;
+        t1 = t1 * temp % p;
+    }
+    sort(l1, l1+mx);
+    sort(l2, l2+mx);
+    int _i = -1, _j = -1;
+    for (int i = 0, j = 0;;)
+    if (l1[i].value == l2[j].value)
+    {
+        _i = l1[i].idx;
+        _j = l2[j].idx;
+        break;
+    }
+    else if (l1[i].value > l2[j].value)++j;
+    else ++i;
+    int64 ind_a = mx * _i + _j;
+    return ind_a;
+}
+#endif
+int64 ind1(int64 a, int64 pr, int64 p)
+{
+    typedef unordered_map<int64, int> map_t;
+
+    int64 inv_pr = inv_of(pr, p);
+    int64 mx = sqrt(double(p-1)+0.5);
+    if (mx * mx != p - 1) ++mx;
+    map_t mem;
+    int64 t1 = 1, t2 = a;
+    for (unsigned int i = 0; i <= mx - 1; ++i)
+    {
+        mem[t2] = i;
+        t2 = t2 * inv_pr % p;
+    }
+    int64 temp = power_mod(pr, mx, p);
+    for (unsigned int i = 0; i <= mx - 1; ++i)
+    {
+        map_t::iterator where = mem.find(t1);
+        if (where != mem.end())
+        {
+            return i * mx + where->second;
+        }
+        t1 = t1 * temp % p;
+    }
+    return -1;
+}
+}
+template<typename T>
+struct Fraction
+{
+    Fraction(T u = 0, T v = 1) : a(u), b(v)
+    {
+        T d = __gcd(abs(a), abs(b));
+        if (d > 1) a /= d, b /= d;
+        if (b < 0) b = -b, a = -a;
+    }
+    int operator < (const Fraction& o) const
+    {
+        return a * o.b < b * o.a;
+    }
+    int operator > (const Fraction& o) const
+    {
+        return a * o.b > b * o.a;
+    }
+    int operator == (const Fraction& o) const
+    {
+        return a * o.b == b * o.a;
+    }
+    Fraction operator + (const Fraction& o) const
+    {
+        return Fraction(a * o.b + o.a * b, b * o.b);
+    }
+    Fraction operator - (const Fraction& o) const
+    {
+        return Fraction(a * o.b - o.a * b, b * o.b);
+    }
+    Fraction operator * (const Fraction& o) const
+    {
+        return Fraction(a * o.a, b * o.b);
+    }
+    Fraction operator / (const Fraction& o) const
+    {
+        return Fraction(a * o.b, b * o.a);
+    }
+    double ToFloat()
+    {
+        return 1. * a / b;
+    }
+    T a, b;
+};
 struct time_usage
 {
-	~time_usage()
-	{
-		cerr << "time usage: " << clock() << "ms" << endl;
-	}
+    ~time_usage()
+    {
+        cerr << "time usage: " << clock() << "ms" << endl;
+    }
 };
 static time_usage __time_usage;
+// 65701
 #endif

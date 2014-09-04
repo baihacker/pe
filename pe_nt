@@ -1,0 +1,161 @@
+#ifndef __PE_NT_H__
+#define __PE_NT_H__
+
+#include <pe_base>
+static int plist[maxp/3], pmask[maxp+1], phi[maxp+1], miu[maxp+1], pcnt;
+
+SL int is_prime(int64 n)
+{
+	if (n <= 1) return 0;
+	if (n <= maxp) return pmask[n] == n;
+	for (int i = 0; i < pcnt; ++i)
+	{
+		const int64 p = plist[i];
+		const int64 test = p * p;
+		if (test > n) break;
+		if (n % p == 0) return 0;
+	}
+	return 1;
+}
+
+SL void init_primes()
+{
+	for (int i = 1; i <= maxp; ++i) pmask[i] = i;
+	phi[1] = 1; miu[1] = 1;
+	for (int i = 2; i <= maxp; ++i)
+	{
+		if (pmask[i] == i)
+		{
+			miu[i] = -1;
+			phi[i] = i - 1;
+			plist[pcnt++] = i;
+		}
+		for (int j = 0; j < pcnt; ++j)
+		{
+			const int64 t = (int64)plist[j] * i;
+			if (t > maxp) break;
+			pmask[t] = plist[j];
+			if (i % plist[j] == 0)
+			{
+				miu[t] = 0;
+				phi[t] = phi[i] * plist[j];
+				break;
+			}
+			else
+			{
+				miu[t] = -miu[i];
+				phi[t] = phi[i] * (plist[j] - 1);
+			}
+		}
+	}
+}
+
+static int pv[1024], pc[1024];
+static int64 factors[655360];
+static int factor_cnt;
+SL void get_factors(int limit, int64 value)
+{
+	factors[factor_cnt++] = value;
+	for (int i = 0; i < limit; ++i)
+	{
+		int64 tvalue = value;
+		const int p = pv[i];
+		for (int j = 1; j <= pc[i]; ++j)
+		{
+			tvalue *= p;
+			get_factors(i, tvalue);
+		}
+	}
+}
+
+SL int factorize(int64 n)
+{
+	if (n <= 0)
+	{
+		return 0;
+	}
+	int top = 0;
+	if (n <= maxp)
+	{
+		while (n != 1)
+		{
+			int now = pmask[n];
+			int c = 0;
+			while (n % now == 0) n /= now, ++c;
+			if (c) pv[top] = now, pc[top++] = c;
+		}
+	}
+	else
+	{
+		for (int i = 0; i < pcnt; ++i)
+		{
+			const int64 p = plist[i];
+			const int64 test = p * p;
+			if (p > n) break;
+			int c = 0;
+			while (n % p == 0) n /= p, ++c;
+			if (c) pv[top] = p, pc[top++] = c;
+		}
+		if (n != 1) pv[top] = n, pc[top++] = 1;
+	}
+	return top;
+}
+
+SL int64 is_square(int64 n)
+{
+	for (int64 test = sqrt(n);;++test)
+	{
+		int64 t = test * test;
+		if (t == n) return test;
+		if (t > n) return 0;
+	}
+	return 0;
+}
+
+SL int64 power_mod(int64 x, int64 n, int64 mod)
+{
+	int64 ret = 1;
+	for (; n; n >>= 1)
+	{
+		if (n&1) ret = ret * x % mod;
+		x = x * x % mod;
+	}
+	return ret;
+}
+
+SL int64 mul_mod(int64 a, int64 b, int64 mod)
+{
+	return a*b%mod;
+}
+
+SL int64 mul_mod_ex(int64 a, int64 b, int64 mod)
+{
+	int64 ret = 0;
+	int64 flag = b;
+	for (int64 d = 1; d <= a; d <<= 1)
+	{
+		if (d & a)
+		{
+			ret = (ret + flag) % mod;
+		}
+		flag = (flag << 1) % mod;
+	}
+	return ret;
+}
+
+SL int64 add_mod(int64 a, int64 b, int64 mod)
+{
+	a += b;
+	if (a >= mod) a -= mod;
+	return a;
+}
+
+struct time_usage
+{
+	~time_usage()
+	{
+		cerr << "time usage: " << clock() << "ms" << endl;
+	}
+};
+static time_usage __time_usage;
+#endif

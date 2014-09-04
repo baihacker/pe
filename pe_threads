@@ -1,0 +1,129 @@
+#ifndef __PE_THREADS_H__
+#define __PE_THREADS_H__
+
+#include <windows.h>
+#include <process.h>
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+
+class Threads
+{
+enum
+{
+	min_thread = 1,
+	max_thread = 64,
+	max_tasks = 2000000,
+	stop_task_id = 2000000000
+};
+typedef void (*worker_pointer)(int id);
+
+public:
+void init(worker_pointer worker, const int threads = 3, const int stack = 100*(1<<20))
+{
+	p = q = 0;
+	InitializeCriticalSection(&request_access);
+	has_request = CreateEvent(NULL, FALSE, FALSE, NULL);
+	has_result = CreateEvent(NULL, FALSE, FALSE, NULL);
+	threads_count = max(threads, (int)min_thread);
+	threads_count = min(threads_count, (int)max_thread);
+	thread_worker = worker;
+	for (int i = 0; i < threads_count; ++i)
+	{
+		threads_handle[i] = (HANDLE)_beginthreadex(NULL, max(stack, 100*(1<<20)), work_thread, (void*)this, 0, NULL);
+	}
+	start = GetTickCount();
+}
+
+void wait_for_queue(int max_request = -1)
+{
+	if (max_request == -1) max_request = threads_count;
+	for (;;)
+	{
+		if (get_request_count() < max_request) break;
+		WaitForSingleObject(has_result, 500);
+	}
+}
+
+void add_request(const int id)
+{
+	EnterCriticalSection(&request_access);
+	task_que[q++] = id;
+	LeaveCriticalSection(&request_access);
+	SetEvent(has_request);
+}
+
+void wait_for_end()
+{
+	add_request(stop_task_id);
+	WaitForMultipleObjects(threads_count, threads_handle, TRUE, INFINITE);
+	for (int i = 0; i < threads_count; ++i) CloseHandle(threads_handle[i]);
+	CloseHandle(has_result);
+	CloseHandle(has_request);
+	DeleteCriticalSection(&request_access);
+	end = GetTickCount();
+	fprintf(stderr, "time : %u\n", (unsigned)(end - start));
+}
+
+public:
+bool get_next_request(int& id, int inc)
+{
+	id = -1;
+	EnterCriticalSection(&request_access);
+	if (p < q)
+	{
+		id = task_que[p];
+		if (id != stop_task_id) p += inc;
+	}
+	LeaveCriticalSection(&request_access);
+	return id != -1;
+}
+
+int get_request_count()
+{
+	int ret = 0;
+	EnterCriticalSection(&request_access);
+	ret = q - p;
+	LeaveCriticalSection(&request_access);
+	return ret;
+}
+
+void work()
+{
+	for (;;)
+	{
+		int id = -1;
+		if (get_next_request(id, 0) == false)
+		{
+			DWORD wait_result = WaitForSingleObject(has_request, INFINITE);
+			if (wait_result != WAIT_OBJECT_0) continue;
+		}
+		if (get_next_request(id, 1) == false) continue;
+		if (id == stop_task_id) {SetEvent(has_request);break;}
+		(*thread_worker)(id);
+		SetEvent(has_result);
+	}
+}
+
+static unsigned int __stdcall work_thread(void* p)
+{
+	Threads* pThis = (Threads*)p;
+	pThis->work();
+	return 0;
+}
+
+private:
+	DWORD start, end;
+
+private:
+	int threads_count;
+	HANDLE threads_handle[max_thread];
+	HANDLE has_request;
+	HANDLE has_result;
+	CRITICAL_SECTION request_access;
+	worker_pointer thread_worker;
+
+	int task_que[max_tasks+1], p, q;
+};
+
+#endif

@@ -1,6 +1,6 @@
 pe
 ==
-It is my basic code for solve problem on project euler.
+It is my basic code for solving problem on project euler.
 The old code has been treat as release 1.0.
 The developing version is 2.0. It will be more interesting.
 

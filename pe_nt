@@ -75,6 +75,9 @@ typedef __int128 int128;
 #include <unordered_map>
 using namespace std;
 
+const int64 SOI63 = 3037000499LL;   // x * x > 2^63 - 1 (x > SOI63)
+const int64 SOI64 = 4294967295LL;   // x * x > 2^64 - 1 (x > SOI64)
+
 static_assert(maxp >= 100000, "maxp >= 100000");
 static constexpr int64 maxp2 = (int64)maxp * maxp;
 static int plist[maxp/10];
@@ -342,6 +345,78 @@ SL int64 power_mod_ex(int64 x, int64 n, int64 mod)
 SL int64 inv_of(int64 x, int64 p)
 {
     return power_mod(x, p-2, p);
+}
+
+// prime test for n <= 2^63 - 1
+// http://oeis.org/A014233
+const int64 sopp[] = 
+{
+2047LL,                         // 2
+1373653LL,                      // 3
+25326001LL,                     // 5
+3215031751LL,                   // 7
+2152302898747LL,                // 11
+3474749660383LL,                // 13
+341550071728321LL,              // 17
+341550071728321LL,              // 19
+3825123056546413051LL,          // 23
+3825123056546413051LL,          // 29
+3825123056546413051LL,          // 31
+// bigger than 2^64             // 37
+// 2^63 = 9223372036854775808   // 
+};
+const int64 sopp_size = sizeof(sopp) / sizeof(sopp[0]);
+
+int MR_test(int64 n, int x)
+{
+    if (n <= 1) return 0;
+    
+    int s = 0;
+    int64 t = n - 1;
+    while ((t&1) == 0) ++s, t >>= 1;
+    
+    if (n <= SOI63)
+    {
+        t = power_mod(x, t, n);
+        if (t == 1 || t == n - 1) return 1;
+
+        for (int i = 1; i < s; ++i)
+        {
+            t = mul_mod(t, t, n);
+            if (t == n - 1) return 1;
+        }
+    }
+    else
+    {
+        t = power_mod_ex(x, t, n);
+        if (t == 1 || t == n - 1) return 1;
+
+        for (int i = 1; i < s; ++i)
+        {
+            t = mul_mod_ex(t, t, n);
+            if (t == n - 1) return 1;
+        }
+    }
+    return 0;
+}
+
+SL int is_prime_ex(int64 n)
+{
+    if (n <= 1) return 0;
+    if ((n&1) == 0) return 0;
+    if (n <= maxp) return pmask[n] == n;
+    
+    for (int i = 1; i < 50; ++i)
+    if (n % plist[i] == 0) return 0;
+
+    for (int i = 0; i < sopp_size; ++i)
+    {
+        const int64 val = sopp[i];
+        if (n == val) return 0;
+        if (!MR_test(n, plist[i])) return 0;
+        if (n < val) break;
+    }
+    return 1;
 }
 
 // Primitive Root

@@ -18,7 +18,7 @@ void work(int id)
 	th.unlock();
 	
 	for (int i = start; i <= end; ++i)
-	if (is_prime(i)) ++local_ans;		// current is_prime is slow
+	if (is_prime_ex(i)) ++local_ans;		// current is_prime is slow
 	
 	th.lock();
 	cerr << "finish:\t" << id << endl;
@@ -30,7 +30,7 @@ void work(int id)
 int main()
 {
 	init_primes();
-	th.init(work);
+	th.init(work, 8);
 	for (int id = 1; id <= 1000; ++id)
 	{
 		th.wait_for_queue(3);

@@ -44,44 +44,72 @@ struct Fraction;
 #error "c++11 or above"
 #endif
 
-#ifdef DISABLE_ASSERT
-#define assert(x)
-#endif
-
-typedef long long int64;
-
-#ifndef SL
-#define SL static inline
-#endif
-
-#ifdef _M_X64
-#define HAS_INT128 1
-typedef __int128 int128;
-#else
-#define HAS_INT128 0
-#endif
+#include <cstdint>
 
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
 #include <ctime>
 #include <cassert>
+
+#include <random>
 #include <algorithm>
-#include <iostream>
 #include <utility>
 #include <map>
 #include <vector>
-
 #include <unordered_map>
+
+#include <iostream>
+
 using namespace std;
 
-const int64 SOI63 = 3037000499LL;   // x * x > 2^63 - 1 (x > SOI63)
-const int64 SOI64 = 4294967295LL;   // x * x > 2^64 - 1 (x > SOI64)
+// compiler
+#if defined(__gnuc__)
+#define CMPILER_GNU
+#elif defined(__MSVC_VER__)
+#define COMPILER_MSVC
+#endif
 
+// function specifier
+#ifndef SL
+#define SL static inline
+#endif
+
+// PE_ASSERT
+#ifdef DISABLE_ASSERT
+    #define PE_ASSERT(x)
+#else
+    #define PE_ASSERT(x) assert((x))
+#endif
+
+// About numbers
+
+// Integer limits check
+static_assert(INT_MAX == LONG_MAX, "INT_MAX == LONG_MAX");
+
+// int64 and int128
+typedef std::int64_t int64;
+#ifdef COMPILER_GNU
+    #ifdef _M_X64
+        #define HAS_INT128 1
+        typedef __int128 int128;
+    #else
+        #define HAS_INT128 0
+    #endif
+#endif
+
+// square overflow integers
+static constexpr int64 PE_SOI63 = 3037000499LL;   // x * x > 2^63 - 1 for x > PE_SOI63
+static constexpr int64 PE_SOI64 = 4294967295LL;   // x * x > 2^64 - 1 for x > PE_SOI64
+
+// About primes
 static_assert(maxp >= 100000, "maxp >= 100000");
+static_assert(maxp <= INT_MAX, "maxp <= INT_MAX");
 static constexpr int64 maxp2 = (int64)maxp * maxp;
+
+static int pcnt;
 static int plist[maxp/10];
-static int pmask[maxp+1], pcnt;
+static int pmask[maxp+1];
 int* phi = NULL;
 int* miu = NULL;
 
@@ -115,7 +143,7 @@ SL int is_prime(int64 n)
 {
     if (n <= 1) return 0;
     if (n <= maxp) return pmask[n] == n;
-    assert(n <= maxp2);
+    PE_ASSERT(n <= maxp2);
     for (int i = 0; i < pcnt; ++i)
     {
         const int64 p = plist[i];
@@ -205,7 +233,7 @@ SL vector<pair<int64, int> > factorize(int64 n)
     }
     else
     {
-        assert(n <= maxp2);
+        PE_ASSERT(n <= maxp2);
         for (int i = 0; i < pcnt; ++i)
         {
             const int64 p = plist[i];
@@ -269,6 +297,7 @@ SL int64 square_root(int64 n)
     return 0;
 }
 
+// Modular arithmetic
 SL int64 add_mod(int64 a, int64 b, int64 mod)
 {
     a += b;
@@ -311,6 +340,7 @@ SL int64 power_mod(int64 x, int64 n, int64 mod)
 {
     int64 ret = 1;
     x %= mod;
+    if (x < 0) x += mod;
     for (; n; n >>= 1)
     {
         if (n&1) ret = ret * x % mod;
@@ -324,6 +354,7 @@ SL int64 power_mod_ex(int64 x, int64 n, int64 mod)
 #if HAS_INT128
     int64 ret = 1;
     x %= mod;
+    if (x < 0) x += mod;
     for (; n; n >>= 1)
     {
         if (n&1) ret = (int128)ret * x % mod;
@@ -333,6 +364,7 @@ SL int64 power_mod_ex(int64 x, int64 n, int64 mod)
 #else
     int64 ret = 1;
     x %= mod;
+    if (x < 0) x += mod;
     for (; n; n >>= 1)
     {
         if (n&1) ret = mul_mod_ex(x, ret, mod);
@@ -342,6 +374,7 @@ SL int64 power_mod_ex(int64 x, int64 n, int64 mod)
 #endif
 }
 
+// p is prime
 SL int64 inv_of(int64 x, int64 p)
 {
     return power_mod(x, p-2, p);
@@ -349,7 +382,7 @@ SL int64 inv_of(int64 x, int64 p)
 
 // prime test for n <= 2^63 - 1
 // http://oeis.org/A014233
-const int64 sopp[] = 
+const int64 sopp[] =
 {
 2047LL,                         // 2
 1373653LL,                      // 3
@@ -369,9 +402,9 @@ const int64 sopp_size = sizeof(sopp) / sizeof(sopp[0]);
 
 SL int MR_test_impl(int s, int64 t, int64 n, int x)
 {
-	// assert((n&1) == 0)
-	
-    if (n <= SOI63)
+    // PE_ASSERT((n&1) == 0)
+    
+    if (n <= PE_SOI63)
     {
         t = power_mod(x, t, n);
         if (t == 1 || t == n - 1) return 1;
@@ -432,13 +465,73 @@ SL int is_prime_ex(int64 n)
     return 1;
 }
 
+// C-style random number generator
+// ANSI_ISO_9899-1999: The value of the RAND_MAX macro shall be at least 32767.
+// We assume RAND_MAX is either 32767 or 2147483647
+#if RAND_MAX == 32767
+
+SL int  crand15() {return rand();}
+SL int  crand30() {return crand15() << 15 | crand15();}
+SL int64 crand45(){return (int64)crand15() << 30 | crand30();}
+SL int64 crand60(){return (int64)crand30() << 30 | crand30();}
+
+SL int crandi() {return crand30();}
+SL double crandd() {static constexpr double coe = 1. / (RAND_MAX + 1); return coe * rand();}
+
+#elif RAND_MAX == 2147483647
+
+SL int crand15() {return rand() & 32767;}
+SL int crand30() {return rand();}
+SL int64 crand45(){return (int64)crand15() << 30 | crand30();}
+SL int64 crand50(){return (int64)crand30() << 30 | crand30();}
+
+SL int crandi() {return crand30();}
+SL double crandd() {static constexpr double coe = 1. / ((int64)RAND_MAX + 1LL); return coe * rand();}
+
+#else
+
+#error "RAND_MAX should be either 32767 or 2147483647"
+
+#endif
+
+// C++ style random generator
+template<typename RE, typename DS>
+class RandomGenerator
+{
+public:
+    RandomGenerator(const RE& engine, const DS& distribution) : 
+        random_engine_(engine), distribution_(distribution){}
+    int operator ()()
+    {
+        return distribution_(random_engine_);
+    }
+private:
+    RE random_engine_;
+    DS distribution_;
+};
+
+RandomGenerator<std::mt19937, uniform_int_distribution<int> >
+make_uniform_generator(int seed, int min, int max)
+{
+    return RandomGenerator<std::mt19937, uniform_int_distribution<int> >
+        (std::mt19937(seed), std::uniform_int_distribution<int>(min, max));
+}
+
+RandomGenerator<std::mt19937, uniform_int_distribution<int> >
+make_uniform_generator(int min, int max)
+{
+    std::random_device rd;
+    return RandomGenerator<std::mt19937, uniform_int_distribution<int> >
+        (std::mt19937(rd()), std::uniform_int_distribution<int>(min, max));
+}
+
 // Primitive Root
 namespace pr{
 
 SL bool is_pr(const vector<pair<int64, int> >& f, int64 x, int64 p)
 {
     const int top = f.size();
-    foreach(it, f) if (power_mod(x, (p-1)/it.first, p) == 1)
+    for(auto& it: f) if (power_mod(x, (p-1)/it.first, p) == 1)
     return 0;
     return 1;
 }

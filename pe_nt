@@ -438,10 +438,10 @@ SL tuple<int64, int64, int64> exgcd(int64 a, int64 b)
 // solve equation a x = b (mod m)
 // return 0 and set u = -1 and v = 0 if failed
 // return 1, x = v (mod u)
-SL int solve_linear_equation(int64 a, int64 b, int64 m, int64& u, int64& v)
+SL int solve_linear_equation(int64 a, int64 b, int64 m, int64& v, int64& u)
 {
-    u = 0;
     v = 0;
+    u = 0;
     
     PE_ASSERT(m);
     
@@ -462,19 +462,18 @@ SL int solve_linear_equation(int64 a, int64 b, int64 m, int64& u, int64& v)
     xx = (xx % m + m) % m;
     xx = xx * (b / d) % m;
     
-    u = m / d;
     v = xx;
-
+    u = m / d;
     return 1;
 }
 
 // solve equation x = a (mod m1) x = b (mod m2)
 // return 0 and set u = 0 and t = 0 if failed
 // return 1, x = v (mod u)
-SL int crt2(int64 a, int64 m1, int64 b, int64 m2, int64& u, int64& v)
+SL int crt2(int64 a, int64 m1, int64 b, int64 m2, int64& v, int64& u)
 {
-    u = 0;
     v = 0;
+    u = 0;
     
     PE_ASSERT(m1 != 0 && m2 != 0);
     if (m1 < 0) m1 = -m1;
@@ -490,7 +489,7 @@ SL int crt2(int64 a, int64 m1, int64 b, int64 m2, int64& u, int64& v)
     if (b < 0) b = -b;
     
     int64 s = 0, t = 0;
-    if (!solve_linear_equation(m1, b-a, m2, s, t)) return 0;
+    if (!solve_linear_equation(m1, b-a, m2, t, s)) return 0;
     // k0 = k1 * s + t
     // x = (k1 * s + t) * m1 + a
     // x = k1 * s * m1 + (a + t * m1)
@@ -502,25 +501,25 @@ SL int crt2(int64 a, int64 m1, int64 b, int64 m2, int64& u, int64& v)
 
 SL tuple<int, int64, int64> crt2(int64 a, int64 m1, int64 b, int64 m2)
 {
-    int64 u = 0, v = 0;
-    int r = crt2(a, m1, b, m2, u, v);
-    return tuple<int, int64, int64>{r, u, v};
+    int64 v = 0, u = 0;
+    int r = crt2(a, m1, b, m2, v, u);
+    return tuple<int, int64, int64>{r, v, u};
 }
 
 SL tuple<int, int64, int64> crtn(int64* val, int64* mod, int n)
 {
     PE_ASSERT(val != NULL && mod != NULL);
-    int64 u = 1, v = 0;
+    int64 v = 0, u = 1;
     int have = 1;
     for (int i = 0; i < n; ++i)
     {
-        tie(have, u, v) = crt2(v, u, val[i], mod[i]);
+        tie(have, v, u) = crt2(v, u, val[i], mod[i]);
         if (!have)
         {
             return tuple<int, int64, int64>{0, 0, 0};
         }
     }
-    return tuple<int, int64, int64>{have, u, v};
+    return tuple<int, int64, int64>{have, v, u};
 }
 
 // prime test for n <= 2^63 - 1

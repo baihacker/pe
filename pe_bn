@@ -207,6 +207,7 @@ typedef DataBlock<int32_t>  BigNumberData;
 
 const int32_t   BIG_NUMBER_BASE =   10000;
 const int32_t   DIG_COUNT       =   4;
+const int32_t 	ALLOC_SIZE	=	16;
 
 class   BigNumber
     :   protected   BigNumberData
@@ -443,6 +444,22 @@ protected:
         }
     }
 
+	void ToString(char* buffer, int size)
+	{	
+		Int32 curr = GetLength() - 1;
+		if (GetSign() < 0)
+		{
+			*buffer++='-';
+		}
+		int cnt = sprintf(buffer, "%d", this->operator[](curr--));
+		buffer+=cnt;
+		
+		for (; curr >= 0; )
+		{
+			cnt = printf("%0*d", DIG_COUNT, this->operator[](curr--));
+			buffer += cnt;
+		}
+	}
 private:
 
     int32_t CalStoreLength(int32_t length_)
@@ -457,10 +474,10 @@ private:
 
     void    ZeroInit()
     {
-        BigNumberData temp_data(8);
+        BigNumberData temp_data(ALLOC_SIZE);
         BigNumberData::Swap(temp_data);
 
-        memset(this->Buffer(), 0, sizeof(int32_t) * 8);
+        memset(this->Buffer(), 0, sizeof(int32_t) * ALLOC_SIZE);
         length_ = 1;
         sign_ = 0;
     }

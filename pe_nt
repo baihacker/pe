@@ -380,6 +380,149 @@ SL int64 inv_of(int64 x, int64 p)
     return power_mod(x, p-2, p);
 }
 
+// greatest common divisor and extend greatest common divisor
+#ifndef GNU_COMPILER
+template<typename _EuclideanRingElement>
+_EuclideanRingElement
+__gcd(_EuclideanRingElement __m, _EuclideanRingElement __n)
+{
+    while (__n != 0)
+    {
+        _EuclideanRingElement __t = __m % __n;
+        __m = __n;
+        __n = __t;
+    }
+    return __m;
+}
+#endif
+
+#define gcd __gcd
+
+int64 exgcd_impl(int64 a, int64 b, int64& x, int64& y)
+{
+    if (b == 0)
+    {
+        x = 1;
+        y = 0;
+        return a;
+    }
+    
+    int64 x1 = 0, y1 = 0;
+    const int64 ret = exgcd_impl(b, a%b, x1, y1);
+    // b * x1 + (a%b) * y1 = ret
+    // b * x1 + (a - a / b * b) * y1 = ret
+    // b * x1 + a * y1 - a / b * b * y1 = ret
+    // y1 * a + (x1 - a / b * y1) b = ret
+    x = y1;
+    y = x1 - a / b * y1;
+    return ret;
+}
+
+SL int64 exgcd(int64 a, int64 b, int64& x, int64& y)
+{
+    PE_ASSERT(a != 0 || b != 0);
+    const int64 r = exgcd_impl(a, b, x, y);
+    PE_ASSERT(a*x+b*y==r);
+    return r;
+}
+
+SL tuple<int64, int64, int64> exgcd(int64 a, int64 b)
+{
+    PE_ASSERT(a != 0 || b != 0);
+    int64 x = 0, y = 0;
+    const int64 r = exgcd_impl(a, b, x, y);
+    PE_ASSERT(a*x+b*y==r);
+    return tuple<int64, int64, int64>{r, x, y};
+}
+
+// solve equation a x = b (mod m)
+// return 0 and set u = -1 and v = 0 if failed
+// return 1, x = v (mod u)
+SL int solve_linear_equation(int64 a, int64 b, int64 m, int64& u, int64& v)
+{
+    u = 0;
+    v = 0;
+    
+    PE_ASSERT(m);
+    
+    if (m < 0) m = -m;
+    
+    PE_ASSERT(m <= PE_SOI63);
+    
+    a %= m;
+    b %= m;
+    
+    if (a < 0) a += m;
+    if (b < 0) b += m;
+    
+    int64 xx = 0, yy = 0, d = exgcd(a, m, xx, yy);
+    
+    if (b % d) return 0;
+    
+    xx = (xx % m + m) % m;
+    xx = xx * (b / d) % m;
+    
+    u = m / d;
+    v = xx;
+
+    return 1;
+}
+
+// solve equation x = a (mod m1) x = b (mod m2)
+// return 0 and set u = 0 and t = 0 if failed
+// return 1, x = v (mod u)
+SL int crt2(int64 a, int64 m1, int64 b, int64 m2, int64& u, int64& v)
+{
+    u = 0;
+    v = 0;
+    
+    PE_ASSERT(m1 != 0 && m2 != 0);
+    if (m1 < 0) m1 = -m1;
+    if (m2 < 0) m2 = -m2;
+    // x = a (mod m1)
+    // x = b (mod m2)
+    // x = k0 m1 + a
+    // k0 m1 + a = b (mod m2)
+    // k0 m1 = b - a (mod m2)
+    a %= m1;
+    b %= m2;
+    if (a < 0) a = -a;
+    if (b < 0) b = -b;
+    
+    int64 s = 0, t = 0;
+    if (!solve_linear_equation(m1, b-a, m2, s, t)) return 0;
+    // k0 = k1 * s + t
+    // x = (k1 * s + t) * m1 + a
+    // x = k1 * s * m1 + (a + t * m1)
+    
+    u = s * m1;
+    v = ((a + t * m1) % u + u) % u;
+    return 1;
+}
+
+SL tuple<int, int64, int64> crt2(int64 a, int64 m1, int64 b, int64 m2)
+{
+    int64 u = 0, v = 0;
+    int r = crt2(a, m1, b, m2, u, v);
+    return tuple<int, int64, int64>{r, u, v};
+}
+
+SL tuple<int, int64, int64> crtn(int64* val, int64* mod, int n)
+{
+    PE_ASSERT(val != NULL && mod != NULL);
+    int64 u = 1, v = 0;
+    int have = 1;
+    for (int i = 0; i < n; ++i)
+    {
+        tie(have, u, v) = crt2(v, u, val[i], mod[i]);
+        if (!have)
+        {
+            return tuple<int, int64, int64>{0, 0, 0};
+        }
+    }
+    return tuple<int, int64, int64>{have, u, v};
+}
+
 // prime test for n <= 2^63 - 1
 // http://oeis.org/A014233
 const int64 sopp[] =

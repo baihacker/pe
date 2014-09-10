@@ -1,5 +1,5 @@
 /*
-static int plist[maxp/10];  
+static int plist[maxp/10];
 static int pmask[maxp+1];
 static int pcnt;
 int* phi = NULL;
@@ -36,12 +36,26 @@ int64 ind1(int64 a, int64 pr, int64 p)
 template<typename T>
 struct Fraction;
 */
-
 #ifndef __PE_NT_H__
 #define __PE_NT_H__
 
-#if __cplusplus < 201103L
-#error "c++11 or above"
+// compiler checking
+#if defined(__gnuc__)
+#define CMPILER_GNU
+#elif defined(_MSC_VER)
+#define COMPILER_MSVC
+#endif
+
+#ifdef CMPILER_GNU
+	#if __cplusplus < 201103L
+		#error "c++11 or above"
+	#endif
+#endif
+
+#ifdef COMPILER_MSVC
+	#if _MSC_VER < 1800
+		#error "VS2013 or above"
+	#endif
 #endif
 
 #include <cstdint>
@@ -63,13 +77,6 @@ struct Fraction;
 #include <iostream>
 
 using namespace std;
-
-// compiler
-#if defined(__gnuc__)
-    #define CMPILER_GNU
-#elif defined(__MSVC_VER__)
-    #define COMPILER_MSVC
-#endif
 
 // function specifier
 #ifndef SL
@@ -136,7 +143,7 @@ const int64 pmpi[] =
 SL int64 estimate_pmpi(int64 n)
 {
     if (n <= 1) return 0;
-    int64 ret = 1. * n / log(1.*n);
+    int64 ret = static_cast<int64>(1. * n / log(1.*n));
     return max(ret, 1LL);
 }
 
@@ -183,11 +190,11 @@ SL void init_primes(int cal_phi, int cal_miu)
     pcnt = 0;
     if (cal_phi) phi = new int[maxp+1];
     if (cal_miu) miu = new int[maxp+1];
-    
+
     for (int i = 1; i <= maxp; ++i) pmask[i] = i;
     if (phi) phi[1] = 1;
     if (miu) miu[1] = 1;
-    
+
     for (int i = 2; i <= maxp; ++i)
     {
         if (pmask[i] == i)
@@ -223,7 +230,7 @@ SL vector<pair<int64, int> > factorize(int64 n)
     {
         return ret;
     }
-    int top = 0;
+
     if (n <= maxp)
     {
         while (n != 1)
@@ -241,7 +248,7 @@ SL vector<pair<int64, int> > factorize(int64 n)
         {
             const int64 p = plist[i];
             const int64 test = p * p;
-            if (p > n) break;
+            if (test > n) break;
             int c = 0;
             while (n % p == 0) n /= p, ++c;
             if (c) ret.push_back({p, c});
@@ -270,7 +277,7 @@ void get_factors_impl(const int limit, const vector<pair<int64, int> >& f, int64
 SL vector<int64> get_factors(const vector<pair<int64, int> >& f)
 {
     vector<int64> result;
-    get_factors_impl(f.size(), f, 1, result);
+    get_factors_impl(static_cast<int>(f.size()), f, 1, result);
     return result;
 }
 
@@ -283,7 +290,7 @@ SL vector<int64> get_factors(int64 value)
         return result;
     }
     auto f = factorize(value);
-    get_factors_impl(f.size(), f, 1, result);
+    get_factors_impl(static_cast<int>(f.size()), f, 1, result);
     return result;
 }
 
@@ -291,7 +298,7 @@ SL int64 square_root(int64 n)
 {
     if (n <= 0) return 0;
     if (n == 1) return 1;
-    for (int64 test = sqrt(n);;++test)
+    for (int64 test = static_cast<int64>(sqrt(n));;++test)
     {
         int64 t = test * test;
         if (t == n) return test;
@@ -420,12 +427,12 @@ struct comb_moder
     static int64 comb(int64 m, int64 n)
     {
         PE_ASSERT(fac);
-        
+
         if (m < 0 || n > m) return 0;
-        
+
         int64 pp = 0;
         int64 dist = m - n;
-        
+
         // todo: overflow x *= P;
         for (int64 x = P; x <= m; x *= P) pp += m / x - n / x - dist / x;
         if (pp) return 0;
@@ -468,7 +475,7 @@ int64 exgcd_impl(int64 a, int64 b, int64& x, int64& y)
         y = 0;
         return a;
     }
-    
+
     int64 x1 = 0, y1 = 0;
     const int64 ret = exgcd_impl(b, a%b, x1, y1);
     // b * x1 + (a%b) * y1 = ret
@@ -504,26 +511,26 @@ SL int solve_linear_equation(int64 a, int64 b, int64 m, int64& v, int64& u)
 {
     v = 0;
     u = 0;
-    
+
     PE_ASSERT(m);
-    
+
     if (m < 0) m = -m;
-    
+
     PE_ASSERT(m <= PE_SOI63);
-    
+
     a %= m;
     b %= m;
-    
+
     if (a < 0) a += m;
     if (b < 0) b += m;
-    
+
     int64 xx = 0, yy = 0, d = exgcd(a, m, xx, yy);
-    
+
     if (b % d) return 0;
-    
+
     xx = (xx % m + m) % m;
     xx = xx * (b / d) % m;
-    
+
     v = xx;
     u = m / d;
     return 1;
@@ -536,7 +543,7 @@ SL int crt2(int64 a, int64 m1, int64 b, int64 m2, int64& v, int64& u)
 {
     v = 0;
     u = 0;
-    
+
     PE_ASSERT(m1 != 0 && m2 != 0);
     if (m1 < 0) m1 = -m1;
     if (m2 < 0) m2 = -m2;
@@ -549,13 +556,13 @@ SL int crt2(int64 a, int64 m1, int64 b, int64 m2, int64& v, int64& u)
     b %= m2;
     if (a < 0) a = -a;
     if (b < 0) b = -b;
-    
+
     int64 s = 0, t = 0;
     if (!solve_linear_equation(m1, b-a, m2, t, s)) return 0;
     // k0 = k1 * s + t
     // x = (k1 * s + t) * m1 + a
     // x = k1 * s * m1 + (a + t * m1)
-    
+
     u = s * m1;
     v = ((a + t * m1) % u + u) % u;
     return 1;
@@ -600,14 +607,14 @@ const int64 sopp[] =
 3825123056546413051LL,          // 29
 3825123056546413051LL,          // 31
 // bigger than 2^64             // 37
-// 2^63 = 9223372036854775808   // 
+// 2^63 = 9223372036854775808   //
 };
 const int64 sopp_size = sizeof(sopp) / sizeof(sopp[0]);
 
 SL int MR_test_impl(int s, int64 t, int64 n, int x)
 {
     // PE_ASSERT((n&1) == 0)
-    
+
     if (n <= PE_SOI63)
     {
         t = power_mod(x, t, n);
@@ -651,7 +658,7 @@ SL int is_prime_ex(int64 n)
     if (n == 2) return 1;
     if ((n&1) == 0) return 0;
     if (n <= maxp) return pmask[n] == n;
-    
+
     for (int i = 1; i < 20; ++i)
     if (n % plist[i] == 0) return 0;
 
@@ -703,7 +710,7 @@ template<typename RE, typename DS>
 class RandomGenerator
 {
 public:
-    RandomGenerator(const RE& engine, const DS& distribution) : 
+    RandomGenerator(const RE& engine, const DS& distribution) :
         random_engine_(engine), distribution_(distribution){}
     int operator ()()
     {
@@ -736,7 +743,6 @@ namespace pr{
 
 SL bool is_pr(const vector<pair<int64, int> >& f, int64 x, int64 p)
 {
-    const int top = f.size();
     for(auto& it: f) if (power_mod(x, (p-1)/it.first, p) == 1)
     return 0;
     return 1;
@@ -804,7 +810,7 @@ int64 ind1(int64 a, int64 pr, int64 p)
     typedef unordered_map<int64, int> map_t;
 
     int64 inv_pr = inv_of(pr, p);
-    int64 mx = sqrt(double(p-1)+0.5);
+    int64 mx = static_cast<int64>(sqrt(double(p-1)+0.5));
     if (mx * mx != p - 1) ++mx;
     map_t mem;
     int64 t1 = 1, t2 = a;

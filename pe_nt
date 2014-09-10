@@ -58,6 +58,7 @@ struct Fraction;
 #include <map>
 #include <vector>
 #include <unordered_map>
+#include <tuple>
 
 #include <iostream>
 
@@ -99,13 +100,13 @@ typedef std::int64_t int64;
 #endif
 
 // square overflow integers
-static constexpr int64 PE_SOI63 = 3037000499LL;   // x * x > 2^63 - 1 for x > PE_SOI63
-static constexpr int64 PE_SOI64 = 4294967295LL;   // x * x > 2^64 - 1 for x > PE_SOI64
+static const int64 PE_SOI63 = 3037000499LL;   // x * x > 2^63 - 1 for x > PE_SOI63
+static const int64 PE_SOI64 = 4294967295LL;   // x * x > 2^64 - 1 for x > PE_SOI64
 
 // About primes
 static_assert(maxp >= 100000, "maxp >= 100000");
 static_assert(maxp <= INT_MAX, "maxp <= INT_MAX");
-static constexpr int64 maxp2 = (int64)maxp * maxp;
+static const int64 maxp2 = (int64)maxp * maxp;
 
 static int pcnt;
 static int plist[maxp/10];
@@ -156,6 +157,7 @@ SL int is_prime(int64 n)
 
 SL void init_primes()
 {
+    pcnt = 0;
     for (int i = 1; i <= maxp; ++i) pmask[i] = i;
     for (int i = 2; i <= maxp; ++i)
     {
@@ -178,6 +180,7 @@ SL void init_primes()
 
 SL void init_primes(int cal_phi, int cal_miu)
 {
+    pcnt = 0;
     if (cal_phi) phi = new int[maxp+1];
     if (cal_miu) miu = new int[maxp+1];
     
@@ -379,6 +382,65 @@ SL int64 inv_of(int64 x, int64 p)
 {
     return power_mod(x, p-2, p);
 }
+
+// calculate C(n, m) % P where P is prime
+template<int64 P, int64 F = P>
+struct comb_moder
+{
+    static_assert(P <= PE_SOI63, "P <= PE_SOI63");
+    static_assert(F > 0, "F > 0");
+    comb_moder()
+    {
+        init();
+    }
+    static int64 inv(int64 x)
+    {
+        int64 result = 1;
+        int n = P - 2;
+        x %= P;
+        for (; n; n >>= 1, x = x * x % P) if (n&1) result = result * x % P;
+        return result;
+    }
+    static int64* fac;
+    static void init()
+    {
+        if (fac == NULL)
+        {
+            fac = new int64[F];
+            fac[0] = 1;
+            for (int i = 1; i < F; ++i) fac[i] = fac[i-1] * i % P;
+        }
+    }
+    static void destroy_fac()
+    {
+        delete[] fac;
+        fac = NULL;
+    }
+    static int64 s(int x) {return x & 1 ? -1 : 1;}
+    static int64 comb(int64 m, int64 n)
+    {
+        PE_ASSERT(fac);
+        
+        if (m < 0 || n > m) return 0;
+        
+        int64 pp = 0;
+        int64 dist = m - n;
+        
+        // todo: overflow x *= P;
+        for (int64 x = P; x <= m; x *= P) pp += m / x - n / x - dist / x;
+        if (pp) return 0;
+        int64 l = 1, r = 1;
+        for (int64 x = m; x; x /= P) {PE_ASSERT(x%P<F); l = l * s(x/P) * fac[x%P] % P;}
+        for (int64 x = n; x; x /= P) {PE_ASSERT(x%P<F); r = r * s(x/P) * fac[x%P] % P;}
+        for (int64 x = dist; x; x /= P) {PE_ASSERT(x%P<F); r = r * s(x/P) * fac[x%P] % P;}
+        l = (l + P) % P;
+        r = (r + P) % P;
+        int64 t  = (inv(r) * l % P + P) % P;
+        return t;
+    }
+};
+template<int64 P, int64 F>
+int64 * comb_moder<P, F>:: fac;
 
 // greatest common divisor and extend greatest common divisor
 #ifndef GNU_COMPILER
@@ -618,7 +680,7 @@ SL int64 crand45(){return (int64)crand15() << 30 | crand30();}
 SL int64 crand60(){return (int64)crand30() << 30 | crand30();}
 
 SL int crandi() {return crand30();}
-SL double crandd() {static constexpr double coe = 1. / (RAND_MAX + 1); return coe * rand();}
+SL double crandd() {static const double coe = 1. / (RAND_MAX + 1); return coe * rand();}
 
 #elif RAND_MAX == 2147483647
 
@@ -628,7 +690,7 @@ SL int64 crand45(){return (int64)crand15() << 30 | crand30();}
 SL int64 crand50(){return (int64)crand30() << 30 | crand30();}
 
 SL int crandi() {return crand30();}
-SL double crandd() {static constexpr double coe = 1. / ((int64)RAND_MAX + 1LL); return coe * rand();}
+SL double crandd() {static const double coe = 1. / ((int64)RAND_MAX + 1LL); return coe * rand();}
 
 #else
 
@@ -636,7 +698,7 @@ SL double crandd() {static constexpr double coe = 1. / ((int64)RAND_MAX + 1LL); 
 
 #endif
 
-// C++ style random generator
+// C++ style random number generator
 template<typename RE, typename DS>
 class RandomGenerator
 {

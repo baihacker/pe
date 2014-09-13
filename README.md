@@ -9,11 +9,10 @@ The developing version is 2.0. It will be more interesting.
 file list:
 -----------
 
-pe_base: some pre-including headers. some macros and typedef.
-
-pe_nt: basic code of number theory.
-
-pe_threads: a simple framework to solve problem with multi-threads.
+* pe_base: some pre-including headers. some macros and typedef.
+* pe_nt: basic code of number theory.
+* pe_threads: a simple framework to solve problem with multi-threads.
+* pe_bn: big number.
 
 
 design desitination:

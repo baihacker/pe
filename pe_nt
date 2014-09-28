@@ -67,13 +67,13 @@ struct Fraction;
 #define __PE_NT_H__
 
 // compiler checking
-#if defined(__gnuc__)
-#define CMPILER_GNU
+#if defined(__GNUC__)
+#define COMPILER_GNU
 #elif defined(_MSC_VER)
 #define COMPILER_MSVC
 #endif
 
-#ifdef CMPILER_GNU
+#ifdef COMPILER_GNU
 	#if __cplusplus < 201103L
 		#error "c++11 or above"
 	#endif
@@ -460,8 +460,10 @@ struct comb_moder
         int64 pp = 0;
         int64 dist = m - n;
 
-        // todo: overflow x *= P;
-        for (int64 x = P; x <= m; x *= P) pp += m / x - n / x - dist / x;
+        for (int64 mm = m/P, nn = n/P, dd = dist/P; mm; mm /= P, nn /= P, dd /= P)
+        {
+          pp += mm - nn - dd;
+        }
         if (pp) return 0;
         int64 l = 1, r = 1;
         for (int64 x = m; x; x /= P) {PE_ASSERT(x%P<F); l = l * s(x/P) * fac[x%P] % P;}
@@ -477,7 +479,7 @@ template<int64 P, int64 F>
 int64 * comb_moder<P, F>:: fac;
 
 // greatest common divisor and extend greatest common divisor
-#ifndef GNU_COMPILER
+#ifndef COMPILER_GNU
 template<typename _EuclideanRingElement>
 _EuclideanRingElement
 __gcd(_EuclideanRingElement __m, _EuclideanRingElement __n)

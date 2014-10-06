@@ -126,10 +126,10 @@ static_assert(sizeof(int) >= 4, "sizeof(int) >= 4");
 typedef std::int64_t int64;
 #ifdef COMPILER_GNU
     #ifdef _M_X64
-        #define HAS_INT128 1
+        #define PE_HAS_INT128 1
         typedef __int128 int128;
     #else
-        #define HAS_INT128 0
+        #define PE_HAS_INT128 0
     #endif
 #endif
 
@@ -356,7 +356,7 @@ SL int64 mul_mod(int64 a, int64 b, int64 mod)
 
 SL int64 mul_mod_ex(int64 a, int64 b, int64 mod)
 {
-#if HAS_INT128
+#if PE_HAS_INT128
     return (int128)a * b % mod;
 #else
     int64 ret = 0;
@@ -388,7 +388,7 @@ SL int64 power_mod(int64 x, int64 n, int64 mod)
 
 SL int64 power_mod_ex(int64 x, int64 n, int64 mod)
 {
-#if HAS_INT128
+#if PE_HAS_INT128
     int64 ret = 1;
     x %= mod;
     if (x < 0) x += mod;
@@ -904,6 +904,16 @@ struct Fraction
     }
     T a, b;
 };
+#if PE_HAS_INT128
+void print_int128(int128 x)
+{
+  int dig[64];
+  int top = 0;
+  if (x < 0) putchar('-'), x = -x;
+  while (x) dig[top++] = x % 10, x /= 10;
+  while (top > 0) printf("%d", dig[top--]);
+}
+#endif
 struct time_usage
 {
     ~time_usage()

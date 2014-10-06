@@ -1,5 +1,5 @@
-#ifndef __PE_NT_H__
-#define __PE_NT_H__
+#ifndef __PE_BN_H__
+#define __PE_BN_H__
 
 #include <cstdint>
 #include <cstring>
@@ -12,6 +12,13 @@
 using namespace std;
 
 #define     BN_ASSERT(x) (void)assert((x))
+
+#if defined(__GNUC__) && defined(_M_X64)
+  #define BN_HAS_INT128 1
+  typedef __int128 int128;
+#else
+  #define BN_HAS_INT128 0
+#endif
 
 template<typename _DataType>
 class   DataBlock
@@ -238,6 +245,28 @@ public:
 
     typedef BigNumber   SelfType;
 
+#if BN_HAS_INT128
+    BigNumber(int128 value = 0)
+    {
+        ZeroInit();
+
+        if (value != 0)
+        {
+            sign_ = value > 0 ? 1 : -1;
+            if (value < 0)
+            {
+                value = - value;
+            }
+
+            int32_t curr = 0;
+            for (;value; value /= BIG_NUMBER_BASE, ++curr)
+            {
+                BigNumberData::data_[curr] = value % BIG_NUMBER_BASE;
+            }
+            length_ = curr;
+        }
+    }
+#else
     BigNumber(int64_t value = 0)
     {
         ZeroInit();
@@ -258,7 +287,7 @@ public:
             length_ = curr;
         }
     }
-
+#endif
     struct StringNumberTag{};
     explicit BigNumber(const char* pCharNumber, StringNumberTag)
     {
@@ -305,7 +334,10 @@ public:
     {
         if (this != &other)
         {
+            length_ = other.length_;
+            sign_ = other.sign_;
             this->BigNumberData::operator =(std::move(other));
+            
         }
         return *this;
     }
@@ -394,15 +426,15 @@ protected:
             ;
         --j;
 
-        int32_t length_ = j - i + 1;
+        int32_t length = j - i + 1;
 
-        if (length_ == 0)
+        if (length == 0)
         {
             ZeroInit();
             return;
         }
 
-        int32_t size = CalStoreLength(length_);
+        int32_t size = CalStoreLength(length);
 
         BigNumberData temp_data(size);
         BigNumberData::Swap(temp_data);
@@ -446,7 +478,7 @@ protected:
 
 	void ToString(char* buffer, int size)
 	{	
-		Int32 curr = GetLength() - 1;
+		int32_t curr = GetLength() - 1;
 		if (GetSign() < 0)
 		{
 			*buffer++='-';
@@ -460,12 +492,31 @@ protected:
 			buffer += cnt;
 		}
 	}
+#if BN_HAS_INT128
+  int128 ToInt() const
+  {
+    int128 ret = 0;
+    for (int i = GetLength() - 1; i >= 0; --i)
+    ret = ret * BIG_NUMBER_BASE + this->operator [](i);
+    if (GetSign() < 0) ret = -ret;
+    return ret;
+  }
+#else
+  int64_t ToInt() const
+  {
+    int64_t ret = 0;
+    for (int i = GetLength() - 1; i >= 0; --i)
+    ret = ret * BIG_NUMBER_BASE + this->operator [](i);
+    if (GetSign() < 0) ret = -ret;
+    return ret;
+  }
+#endif
 private:
 
-    int32_t CalStoreLength(int32_t length_)
+    int32_t CalStoreLength(int32_t length)
     {
-        int32_t ret = length_ / DIG_COUNT;
-        if (length_ % DIG_COUNT)
+        int32_t ret = length / DIG_COUNT;
+        if (length % DIG_COUNT)
         {
             ++ret;
         }
@@ -730,7 +781,7 @@ public:
 
         int32_t curr = ret_length - 1;
         int32_t hi_l = l_length - 1, lo_l = curr;
-        int32_t hi_r = r_length - 1, lo_r = 0;
+        const int32_t hi_r = r_length - 1, lo_r = 0;
 
         for (; curr >= 0; --curr, --lo_l)
         {
@@ -740,6 +791,10 @@ public:
                 if (hi_l-lo_l>hi_r-lo_r)
                 {
                     test = (l_buffer[hi_l]*BIG_NUMBER_BASE + l_buffer[hi_l-1]) / r_buffer[hi_r];
+                }
+                else if (hi_l == lo_l)
+                {
+                    test = 0;
                 }
                 else
                 {
@@ -756,11 +811,12 @@ public:
                 {
                     test = l_buffer[hi_l]/r_buffer[hi_r];
                 }
+                
             }
 
             for( ; test > 0; --test)
             {
-                if (BigNumber::DoSub(l_buffer, hi_l, lo_l, r_buffer,  hi_r, lo_r, test, buffer_data.Buffer()))
+                if (BigNumber::DoSub(l_buffer, hi_l, lo_l, r_buffer, hi_r, lo_r, test, buffer_data.Buffer()))
                 {
                     break;
                 }
@@ -768,7 +824,6 @@ public:
             
             for (;l_buffer[hi_l] == 0 && hi_l >= lo_l; --hi_l)
                 ;
-
             ret_buffer[curr] = test;
         }
 

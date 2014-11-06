@@ -57,7 +57,7 @@ make_uniform_generator(int min, int max)
 
 // Primitive Root
 namespace pr{
-SL bool is_pr(const vector<pair<int64, int> >& f, int64 x, int64 p)
+SL bool is_pr(int64 x, int64 p, const vector<pair<int64, int> >& f)
 SL bool is_pr(int64 x, int64 p)
 SL int64 find_pr(int64 p)
 int64 ind(int64 a, int64 pr, int64 p)
@@ -270,7 +270,7 @@ SL vector<pair<int64, int> > factorize(int64 n)
       int now = pmask[n];
       int c = 0;
       while (n % now == 0) n /= now, ++c;
-      if (c) ret.push_back({(int64)now, c});
+      if (c) ret.emplace_back((int64)now, c);
     }
   }
   else
@@ -283,9 +283,9 @@ SL vector<pair<int64, int> > factorize(int64 n)
       if (test > n) break;
       int c = 0;
       while (n % p == 0) n /= p, ++c;
-      if (c) ret.push_back({p, c});
+      if (c) ret.emplace_back(p, c);
     }
-    if (n != 1) ret.push_back({n, 1});
+    if (n != 1) ret.emplace_back(n, 1);
   }
   return ret;
 }
@@ -856,7 +856,7 @@ namespace pr{
 /*
   test, find the primitive of a prime
 */
-SL bool is_pr(const vector<pair<int64, int> >& f, int64 x, int64 p)
+SL bool is_pr(int64 x, int64 p, const vector<pair<int64, int> >& f)
 {
   return std::none_of(std::begin(f), std::end(f),
     [=](const pair<int64, int>& it)
@@ -868,7 +868,7 @@ SL bool is_pr(const vector<pair<int64, int> >& f, int64 x, int64 p)
 
 SL bool is_pr(int64 x, int64 p)
 {
-  return is_pr(factorize(p-1), x, p);
+  return is_pr(x, p, factorize(p-1));
 }
 
 SL int64 find_pr(int64 p)
@@ -877,7 +877,7 @@ SL int64 find_pr(int64 p)
   if (p == 2) return 1;
   auto f = factorize(p-1);
   for (int64 i = 2; ; ++i)
-  if (is_pr(f, i, p)) return i;
+  if (is_pr(i, p, f)) return i;
   return -1;
 }
 
@@ -1003,6 +1003,7 @@ private:
   map_t mem_;
 };
 }
+
 template<typename T>
 struct Fraction
 {

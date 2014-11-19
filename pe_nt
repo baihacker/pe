@@ -343,9 +343,9 @@ SL int64 square_root(int64 n)
 {
   if (n <= 0) return 0;
   if (n == 1) return 1;
-  for (int64 test = static_cast<int64>(sqrt(n));;++test)
+  for (int64 test = static_cast<int64>(sqrt(n));; ++test)
   {
-    int64 t = test * test;
+    const int64 t = test * test;
     if (t == n) return test;
     if (t > n) return 0;
   }
@@ -539,7 +539,7 @@ public:
     int64 l = 1, r = 1;
     for (int64 x = m; x; x /= P_)
     {
-      PE_ASSERT(x%P_<F_); 
+      PE_ASSERT(x%P_<F_);
       l = l * s(x/P_) * fac_[x%P_] % P_;
     }
     for (int64 x = n; x; x /= P_)
@@ -646,7 +646,7 @@ SL int solve_linear_equation(int64 a, int64 b, int64 m, int64& v, int64& u)
 
   u = m / d;
   v = xx % u;
-  
+
   return 1;
 }
 
@@ -935,6 +935,7 @@ int64 ind(int64 a, int64 pr, int64 p)
   return ind_a;
 }
 #endif
+
 int64 ind(int64 a, int64 pr, int64 p)
 {
   typedef unordered_map<int64, int> map_t;
@@ -967,11 +968,12 @@ class ind_solver
   typedef unordered_map<int64, int> map_t;
   static int64 square_root_for_ind(int64 x)
   {
-    int64 ret = static_cast<int64>(sqrt(double(x)+0.5));
-    if (ret * ret != x) ++ret;
+    int64 ret = static_cast<int64>(sqrt(double(x)));
+    if (ret * ret < x) ++ret;
+    PE_ASSERT(ret * ret >= x);
     return ret;
   }
-  
+
 public:
   ind_solver(const int64 p, int64 pr = -1) :
     p_(p),
@@ -986,15 +988,16 @@ public:
       t = t * inv_pr % p_;
     }
   }
+
   int64 operator () (int64 a) const
   {
     PE_ASSERT(a > 0);
     a %= p_;
-    
+
     const int64 temp = power_mod(pr_, mx_, p_);
     const int64 inv_a = inv_of(a, p_);
     int64 t = 1;
-    
+
     for (int i = 0; i <= mx_ - 1; ++i)
     {
       auto where = mem_.find(mul_mod(t, inv_a, p_));
@@ -1004,9 +1007,15 @@ public:
       }
       t = t * temp % p_;
     }
-    
+
     return -1;
   }
+
+  int64 pr() const
+  {
+    return pr_;
+  }
+
 private:
   const int64 p_;
   const int64 pr_;
@@ -1058,6 +1067,7 @@ struct Fraction
   }
   T a, b;
 };
+
 #if PE_HAS_INT128
 void print_int128(int128 x)
 {
@@ -1068,6 +1078,7 @@ void print_int128(int128 x)
   while (top > 0) printf("%d", dig[--top]);
 }
 #endif
+
 struct time_usage
 {
   ~time_usage()
@@ -1075,6 +1086,7 @@ struct time_usage
       cerr << "time usage: " << clock() << "ms" << endl;
   }
 };
+
 static time_usage __time_usage;
 // 65701
 #endif

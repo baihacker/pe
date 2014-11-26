@@ -1,0 +1,219 @@
+#ifndef __PE_UTIL_H__
+#define __PE_UTIL_H__
+
+#if __cplusplus < 201103L
+#error "c++11 or above"
+#endif
+
+#include <cstdint>
+
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+#include <cstdlib>
+#include <cctype>
+#include <cstddef>
+#include <complex>
+#include <ctime>
+#include <climits>
+
+#include <algorithm>
+#include <iostream>
+#include <iomanip>
+#include <sstream>
+#include <iomanip>
+#include <vector>
+#include <deque>
+#include <list>
+#include <set>
+#include <map>
+#include <stack>
+#include <queue>
+#include <bitset>
+#include <string>
+#include <numeric>
+#include <functional>
+#include <iterator>
+#include <typeinfo>
+#include <utility>
+#include <memory>
+#include <cassert>
+
+#include <tuple>
+#include <ratio>
+#include <array>
+#include <forward_list>
+#include <unordered_map>
+#include <unordered_set>
+
+using namespace std;
+
+typedef std::int64_t int64;
+static const int64 CPS          = CLOCKS_PER_SEC;
+static const int64 SEC_CLOCKS   = CPS;
+static const int64 MIN_CLOCKS   = SEC_CLOCKS * 60;
+static const int64 HOUR_CLOCKS  = MIN_CLOCKS * 60;
+static const int64 DAY_CLOCKS   = HOUR_CLOCKS * 24;
+
+class TimeDelta
+{
+public:
+TimeDelta(int64 time = 0) : time_(time)
+{
+}
+
+int64 NativeTime() const {return time_;}
+double to_seconds() const {return 1. * time_ / SEC_CLOCKS;}
+double to_minutes() const {return 1. * time_ / MIN_CLOCKS;}
+double to_hours() const {return 1. * time_ / HOUR_CLOCKS;}
+double to_days() const {return 1. * time_ / DAY_CLOCKS;}
+string format() const
+{
+  char temp[128];
+  int64 day = time_ / DAY_CLOCKS ;
+  int hour = time_ % DAY_CLOCKS / HOUR_CLOCKS;
+  int min = time_ % HOUR_CLOCKS / MIN_CLOCKS;
+  int sec = time_ % MIN_CLOCKS / SEC_CLOCKS;
+  int msec = time_ % SEC_CLOCKS;
+  sprintf(temp, "%I64d:%02d:%02d:%02d.%03d", day, hour, min, sec, msec);
+  return temp;
+}
+
+private:
+int64 time_;
+};
+
+class TimeRecorder
+{
+
+TimeRecorder() : last_time_(clock())
+{
+}
+
+int64 RecordNow() {last_time_ = clock();}
+TimeDelta ElapsedTime() {return clock() - last_time_;}
+
+private:
+int64 last_time_;
+};
+
+class KVPersistance
+{
+public:
+KVPersistance(const string& path, bool auto_save = true, bool check = false) :
+  path_(path),
+  auto_save_(auto_save),
+  check_(check),
+  dirty_(0),
+  auto_save_limit_(10)
+{
+  load();
+}
+
+~KVPersistance()
+{
+  save_if_dirty();
+}
+
+void set_auto_save_limit(int n)
+{
+  if (n < 0) n = 1;
+  auto_save_limit_ = n;
+  if (dirty_ >= auto_save_limit_)
+  {
+    save();
+  }
+}
+
+void load(bool check = false)
+{
+  FILE* fp = fopen(path_.c_str(), "r");
+  if (!fp) return;
+  vector<pair<int64, int64> > vec;
+  
+  int64 k, v;
+  while (fscanf(fp, "%I64d %I64d", &k, &v) == 2)
+    vec.emplace_back(k, v);
+  fclose(fp);
+  
+  if (check || check_)
+  {
+    stable_sort(vec.begin(), vec.end());
+    const int n = vec.size();
+    for (int i = 1; i < n; ++i)
+    if (vec[i-1].first == vec[i].first)
+    {
+      if (vec[i-1].second != vec[i].second)
+      {
+        fprintf(stderr, "key = %I64d, value = %I64d, %I64d\n", vec[i].first, vec[i-1].second, vec[i].second);
+        assert(0);
+      }
+    }
+  }
+  kv_ = std::move(map<int64, int64>(vec.begin(), vec.end()));
+}
+
+void save()
+{
+  FILE* fp = fopen(path_.c_str(), "w");
+  if (!fp) return;
+  for (auto& iter: kv_)
+  {
+    fprintf(fp, "%I64d %I64d\n", iter.first, iter.second);
+  }
+  fclose(fp);
+  dirty_ = 0;
+}
+
+void save_if_dirty()
+{
+  if (dirty_ > 0)
+  {
+    save();
+  }
+}
+
+void set(int64 key, int64 v)
+{
+  bool skip = false;
+  if (check_)
+  {
+    auto where = kv_.find(key);
+    if (where != kv_.end())
+    {
+      if (where->second != v)
+      {
+        fprintf(stderr, "invalid set: key = %I64d, value = %I64d, %I64d\n", key, where->second, v);
+        assert(0);
+      }
+      else
+      {
+        skip = true;
+      }
+    }
+  }
+  if (skip) return;
+  
+  kv_[key] = v;
+  ++dirty_;
+  if (auto_save_ && dirty_ >= auto_save_limit_)
+  {
+    save();
+  }
+}
+
+map<int64, int64>& storage() { return kv_;}
+
+int64 size() const {return kv_.size();}
+
+private:
+
+string path_;
+bool  auto_save_;
+bool  check_;
+int   dirty_;
+int   auto_save_limit_;
+map<int64, int64> kv_;
+};
+
+#endif

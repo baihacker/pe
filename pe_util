@@ -8,44 +8,12 @@
 #include <cstdint>
 
 #include <cstdio>
-#include <cstring>
-#include <cmath>
-#include <cstdlib>
-#include <cctype>
-#include <cstddef>
-#include <complex>
 #include <ctime>
-#include <climits>
-
-#include <algorithm>
-#include <iostream>
-#include <iomanip>
-#include <sstream>
-#include <iomanip>
-#include <vector>
-#include <deque>
-#include <list>
-#include <set>
-#include <map>
-#include <stack>
-#include <queue>
-#include <bitset>
-#include <string>
-#include <numeric>
-#include <functional>
-#include <iterator>
-#include <typeinfo>
-#include <utility>
-#include <memory>
 #include <cassert>
 
-#include <tuple>
-#include <ratio>
-#include <array>
-#include <forward_list>
-#include <unordered_map>
-#include <unordered_set>
-
+#include <map>
+#include <vector>
+#include <algorithm>
 using namespace std;
 
 typedef std::int64_t int64;
@@ -62,7 +30,7 @@ TimeDelta(int64 time = 0) : time_(time)
 {
 }
 
-int64 NativeTime() const {return time_;}
+int64 native_time() const {return time_;}
 double to_seconds() const {return 1. * time_ / SEC_CLOCKS;}
 double to_minutes() const {return 1. * time_ / MIN_CLOCKS;}
 double to_hours() const {return 1. * time_ / HOUR_CLOCKS;}
@@ -85,13 +53,13 @@ int64 time_;
 
 class TimeRecorder
 {
-
+public:
 TimeRecorder() : last_time_(clock())
 {
 }
 
-int64 RecordNow() {last_time_ = clock();}
-TimeDelta ElapsedTime() {return clock() - last_time_;}
+int64 record() {return last_time_ = clock();}
+TimeDelta elapsed() const {return clock() - last_time_;}
 
 private:
 int64 last_time_;
@@ -129,8 +97,8 @@ void load(bool check = false)
 {
   FILE* fp = fopen(path_.c_str(), "r");
   if (!fp) return;
-  vector<pair<int64, int64> > vec;
   
+  vector<pair<int64, int64> > vec;
   int64 k, v;
   while (fscanf(fp, "%I64d %I64d", &k, &v) == 2)
     vec.emplace_back(k, v);
@@ -215,5 +183,18 @@ int   dirty_;
 int   auto_save_limit_;
 map<int64, int64> kv_;
 };
+
+class time_usage
+{
+public:
+  ~time_usage()
+  {
+    fprintf(stderr, "time usage: %s\n", tr_.elapsed().format().c_str());
+  }
+private:
+TimeRecorder tr_;
+};
+
+static time_usage __time_usage;
 
 #endif

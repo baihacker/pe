@@ -47,6 +47,18 @@ string format() const
   return temp;
 }
 
+static TimeDelta from_millisecond(int64 t) { return t;}
+static TimeDelta from_second(int64 t) { return t * SEC_CLOCKS;}
+static TimeDelta from_minute(int64 t) { return t * MIN_CLOCKS;}
+static TimeDelta from_hour(int64 t) { return t * HOUR_CLOCKS;}
+static TimeDelta from_day(int64 t) { return t * DAY_CLOCKS;}
+
+bool operator > (const TimeDelta& o) const {return time_ > o.time_;}
+bool operator >= (const TimeDelta& o) const {return time_ >= o.time_;}
+bool operator == (const TimeDelta& o) const {return time_ == o.time_;}
+bool operator < (const TimeDelta& o) const {return time_ < o.time_;}
+bool operator <= (const TimeDelta& o) const {return time_ <= o.time_;}
+
 private:
 int64 time_;
 };
@@ -65,36 +77,99 @@ private:
 int64 last_time_;
 };
 
-class KVPersistance
+template<typename T>
+class SavePolicy
 {
 public:
-KVPersistance(const string& path, bool auto_save = true, bool check = false) :
+  SavePolicy() :
+    auto_save_(true),
+    dirty_(0),
+    dirty_limit_(10),
+    time_limit_(TimeDelta::from_second(10))
+  {
+    on_saved();
+  }
+
+  ~SavePolicy()
+  {
+    
+  }
+
+  void enable_auto_save(bool enable = true)
+  {
+    auto_save_ = enable;
+  }
+  
+  void set_dirty_limit(int d)
+  {
+    dirty_limit_ = d;
+  }
+  
+  void disable_dirty_limit(int d)
+  {
+    dirty_limit_ = 2000000000;
+  }
+  
+  void set_time_limit(TimeDelta t)
+  {
+    time_limit_ = t;
+  }
+  
+  void disable_time_limit()
+  {
+    time_limit_ = TimeDelta::from_day(10);
+  }
+  
+  void on_closing()
+  {
+    if (dirty_ > 0)
+    {
+      static_cast<T&>(*this).save();
+    }
+  }
+
+  void on_updated()
+  {
+    ++dirty_;
+    if (auto_save_ && (tr_.elapsed() >= time_limit_ || dirty_ >= dirty_limit_))
+    {
+      static_cast<T&>(*this).save();
+    }
+  }
+
+  void on_saved()
+  {
+    tr_.record();
+    dirty_ = 0;
+  }
+
+private:
+bool          auto_save_;
+int           dirty_;
+int           dirty_limit_;
+TimeDelta     time_limit_;
+TimeRecorder  tr_;
+};
+
+class KVPersistance : public SavePolicy<KVPersistance>
+{
+public:
+KVPersistance(const string& path, bool check = false) :
   path_(path),
-  auto_save_(auto_save),
-  check_(check),
-  dirty_(0),
-  auto_save_limit_(10)
+  check_(check)
 {
   load();
 }
 
 ~KVPersistance()
 {
-  save_if_dirty();
-}
-
-void set_auto_save_limit(int n)
-{
-  if (n < 0) n = 1;
-  auto_save_limit_ = n;
-  if (dirty_ >= auto_save_limit_)
-  {
-    save();
-  }
+  on_closing();
 }
 
 void load(bool check = false)
 {
+  on_saved();
+
   FILE* fp = fopen(path_.c_str(), "r");
   if (!fp) return;
   
@@ -130,15 +205,8 @@ void save()
     fprintf(fp, "%I64d %I64d\n", iter.first, iter.second);
   }
   fclose(fp);
-  dirty_ = 0;
-}
-
-void save_if_dirty()
-{
-  if (dirty_ > 0)
-  {
-    save();
-  }
+  
+  on_saved();
 }
 
 void set(int64 key, int64 v)
@@ -163,11 +231,8 @@ void set(int64 key, int64 v)
   if (skip) return;
   
   kv_[key] = v;
-  ++dirty_;
-  if (auto_save_ && dirty_ >= auto_save_limit_)
-  {
-    save();
-  }
+  
+  on_updated();
 }
 
 map<int64, int64>& storage() { return kv_;}
@@ -177,10 +242,7 @@ int64 size() const {return kv_.size();}
 private:
 
 string path_;
-bool  auto_save_;
 bool  check_;
-int   dirty_;
-int   auto_save_limit_;
 map<int64, int64> kv_;
 };
 

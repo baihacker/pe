@@ -4,6 +4,7 @@
 #include <windows.h>
 #include <process.h>
 #include <cstdio>
+#include <string>
 #include <cassert>
 #include <algorithm>
 using namespace std;
@@ -199,18 +200,40 @@ private:
 
 enum
 {
-PRIORITY_REALTIME=REALTIME_PRIORITY_CLASS,
-PRIORITY_HIGH=HIGH_PRIORITY_CLASS,
-PRIORITY_ABOVE_NORMAL=ABOVE_NORMAL_PRIORITY_CLASS,
-PRIORITY_NORMAL=NORMAL_PRIORITY_CLASS,
-PRIORITY_BELOW_NORMAL=BELOW_NORMAL_PRIORITY_CLASS,
-PRIORITY_BACKGROUND=PROCESS_MODE_BACKGROUND_BEGIN,
-PRIORITY_IDLE=IDLE_PRIORITY_CLASS,
+PRIORITY_REALTIME     = REALTIME_PRIORITY_CLASS,
+PRIORITY_HIGH         = HIGH_PRIORITY_CLASS,
+PRIORITY_ABOVE_NORMAL = ABOVE_NORMAL_PRIORITY_CLASS,
+PRIORITY_NORMAL       = NORMAL_PRIORITY_CLASS,
+PRIORITY_BELOW_NORMAL = BELOW_NORMAL_PRIORITY_CLASS,
+PRIORITY_BACKGROUND   = PROCESS_MODE_BACKGROUND_BEGIN,
+PRIORITY_IDLE         = IDLE_PRIORITY_CLASS,
 };
 
 static inline void set_process_priority(int priority)
 {
   ::SetPriorityClass(::GetCurrentProcess(), priority);
+}
+
+static inline void make_sure_process_singleton(const char* id)
+{
+  string mutex_name = "pe_mutex_prefix_";
+  mutex_name += id;
+  HANDLE hMutex = ::OpenMutex(MUTEX_ALL_ACCESS, FALSE, mutex_name.c_str());
+  if (hMutex)
+  {
+    fprintf(stderr, "another process is running\n");
+    ::CloseHandle(hMutex);
+    exit(-1);
+    return;
+  }
+  hMutex = ::CreateMutex(NULL, TRUE, mutex_name.c_str());
+  if (::GetLastError() == ERROR_ALREADY_EXISTS)
+  {
+    fprintf(stderr, "another process is running\n");
+    ::CloseHandle(hMutex);
+    exit(-1);
+    return;
+  }
 }
 
 #endif

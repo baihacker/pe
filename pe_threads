@@ -21,8 +21,8 @@ enum
 {
   min_thread = 1,
   max_thread = 64,
-  max_tasks = 2000000,
-  stop_task_id = 2000000000
+  max_pending_tasks = 1024,//1<<20,  // the actual maximum pending task is max_pending_tasks - 1
+  stop_task_id = 2000000000,
 };
 
 typedef void (*worker_pointer)(int task_id);
@@ -44,7 +44,7 @@ Threads() : threads_count(0), thread_worker(NULL), thread_worker_ext(NULL), p(0)
 void init(worker_pointer worker, const int threads = 3, const int stack = 100*(1<<20))
 {
   assert(thread_worker == NULL && thread_worker_ext == NULL);
-  
+
   p = q = 0;
   InitializeCriticalSection(&request_access);
   has_request = CreateEvent(NULL, FALSE, FALSE, NULL);
@@ -66,7 +66,7 @@ void init(worker_pointer worker, const int threads = 3, const int stack = 100*(1
 void init(worker_pointer_ext worker_ext, const int threads = 3, const int stack = 100*(1<<20))
 {
   assert(thread_worker == NULL && thread_worker_ext == NULL);
-  
+
   p = q = 0;
   InitializeCriticalSection(&request_access);
   has_request = CreateEvent(NULL, FALSE, FALSE, NULL);
@@ -88,6 +88,7 @@ void init(worker_pointer_ext worker_ext, const int threads = 3, const int stack 
 void wait_for_queue(int max_request = -1)
 {
   if (max_request == -1) max_request = threads_count;
+  if (max_request > max_pending_tasks - 1) max_request = max_pending_tasks - 1;
   for (;;)
   {
     if (get_request_count() < max_request) break;
@@ -98,13 +99,19 @@ void wait_for_queue(int max_request = -1)
 void add_request(const int id)
 {
   EnterCriticalSection(&request_access);
+  assert(q + 1 != p);
   task_que[q++] = id;
+  if (q >= max_pending_tasks)
+  {
+    q -= max_pending_tasks;
+  }
   LeaveCriticalSection(&request_access);
   SetEvent(has_request);
 }
 
 void wait_for_end()
 {
+  wait_for_queue();
   add_request(stop_task_id);
   WaitForMultipleObjects(threads_count, threads_handle, TRUE, INFINITE);
   for (int i = 0; i < threads_count; ++i) CloseHandle(threads_handle[i]);
@@ -127,14 +134,22 @@ void unlock()
   LeaveCriticalSection(&request_access);
 }
 
+// inc = 0 or 1
 bool get_next_request(int& id, int inc)
 {
   id = -1;
   EnterCriticalSection(&request_access);
-  if (p < q)
+  if (p != q)
   {
     id = task_que[p];
-    if (id != stop_task_id) p += inc;
+    if (inc > 0 && id != stop_task_id)
+    {
+      p += inc;
+      if (p >= max_pending_tasks)
+      {
+        p -= max_pending_tasks;
+      }
+    }
   }
   LeaveCriticalSection(&request_access);
   return id != -1;
@@ -145,6 +160,10 @@ int get_request_count()
   int ret = 0;
   EnterCriticalSection(&request_access);
   ret = q - p;
+  if (ret < 0)
+  {
+    ret += max_pending_tasks;
+  }
   LeaveCriticalSection(&request_access);
   return ret;
 }
@@ -185,17 +204,17 @@ private:
 
 private:
   int threads_count;
-  
+
   HANDLE threads_handle[max_thread];
   ThreadContext threads_context[max_thread];
-  
+
   HANDLE has_request;
   HANDLE has_result;
   CRITICAL_SECTION request_access;
   worker_pointer thread_worker;
   worker_pointer_ext thread_worker_ext;
 
-  int task_que[max_tasks+1], p, q;
+  int task_que[max_pending_tasks+1], p, q;
 };
 
 enum

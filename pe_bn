@@ -20,12 +20,11 @@ using namespace std;
   #define BN_HAS_INT128 0
 #endif
 
-template<typename _DataType>
+template<typename ET>
 class   DataBlock
 {
-
-    typedef _DataType       DataType;
-
+public:
+    typedef ET       ElementType;
 public:
 
     enum    {NOT_COPY_DATA = false, COPY_DATA = true, COPY_ALL = -1};
@@ -41,14 +40,14 @@ public:
     {
         BN_ASSERT(size > 0);
 
-        data_       =   new DataType[size];
-        ref_count_   =   new int32_t(0);
+        data_         =   new ElementType[size];
+        ref_count_    =   new int32_t(0);
         data_size_    =   size;
 
         IncReference();
     }
 
-    DataBlock(DataType * data, int32_t size, int CanCopy = NOT_COPY_DATA, int32_t RequiredSize = COPY_ALL)
+    DataBlock(ElementType * data, int32_t size, int CanCopy = NOT_COPY_DATA, int32_t RequiredSize = COPY_ALL)
     {
         DoBindData(data, size, CanCopy, RequiredSize);
 
@@ -57,8 +56,8 @@ public:
 
     DataBlock(const DataBlock& other)
     {
-        data_       =   other.data_;
-        ref_count_   =   other.ref_count_;
+        data_         =   other.data_;
+        ref_count_    =   other.ref_count_;
         data_size_    =   other.data_size_;
 
         IncReference();
@@ -113,7 +112,7 @@ public:
         }
     }
 
-    void    BindData(DataType * data, int32_t size, int CanCopy = NOT_COPY_DATA, int32_t RequiredSize = COPY_ALL)
+    void    BindData(ElementType * data, int32_t size, int CanCopy = NOT_COPY_DATA, int32_t RequiredSize = COPY_ALL)
     {
         DecReference();
 
@@ -122,17 +121,17 @@ public:
         IncReference();
     }
 
-    DataType*   Buffer() const
+    ElementType*   Buffer() const
     {
         return data_;
     }
 
-    DataType    operator [] (int32_t pos) const
+    ElementType    operator [] (int32_t pos) const
     {
         return data_[pos];
     }
 
-    DataType&   operator[] (int32_t pos)
+    ElementType&   operator[] (int32_t pos)
     {
         return data_[pos];
     }
@@ -159,7 +158,7 @@ protected:
 
 private:
 
-    void    DoBindData(DataType * data, int32_t size, int CanCopy, int32_t RequiredSize)
+    void    DoBindData(ElementType * data, int32_t size, int CanCopy, int32_t RequiredSize)
     {
         if (CanCopy == COPY_DATA || data == NULL)
         {
@@ -174,8 +173,8 @@ private:
                 data_size_    =   RequiredSize;
             }
 
-            data_       =   new DataType[data_size_]; 
-            ref_count_   =   new int32_t(0);
+            data_         =   new ElementType[data_size_]; 
+            ref_count_    =   new int32_t(0);
 
             if (data)
             {
@@ -195,7 +194,7 @@ private:
 
     void    DoRelease()
     {
-        delete data_;
+        delete[] data_;
         data_ = 0;
 
         delete ref_count_;
@@ -204,22 +203,50 @@ private:
 
 protected:
 
-    DataType*       data_;
+    ElementType*    data_;
     int32_t*        ref_count_;
     int32_t         data_size_;
 
 };
 
-typedef DataBlock<int32_t>  BigNumberData;
+// very slow in general scene (under testing)
+#if 0
+typedef DataBlock<int64_t>  BigNumberData;
+const int64_t   BIG_NUMBER_BASE =   1000000000000000000LL;
+const int32_t   DIG_COUNT       =   18;
+const int32_t   ALLOC_SIZE      =   16;
+typedef int128 MUL_TYPE;
+#define PRT_FORMAT_STRING_PREFIX  "%I64d"
+#define PRT_FORMAT_STRING         "%018I64d"
+#endif
 
+// fast in general scene (under testing)
+#if 0
+typedef DataBlock<int32_t>  BigNumberData;
+const int32_t   BIG_NUMBER_BASE =   1000000000;
+const int32_t   DIG_COUNT       =   9;
+const int32_t   ALLOC_SIZE      =   16;
+typedef int64_t MUL_TYPE;
+#define PRT_FORMAT_STRING_PREFIX  "%d"
+#define PRT_FORMAT_STRING         "%09d"
+#endif
+
+// tested
+#if 1
+typedef DataBlock<int32_t>  BigNumberData;
 const int32_t   BIG_NUMBER_BASE =   10000;
 const int32_t   DIG_COUNT       =   4;
-const int32_t 	ALLOC_SIZE	=	16;
+const int32_t   ALLOC_SIZE      =   16;
+typedef int32_t MUL_TYPE;
+#define PRT_FORMAT_STRING_PREFIX  "%d"
+#define PRT_FORMAT_STRING         "%04d"
+#endif
+
+
 
 class   BigNumber
     :   protected   BigNumberData
 {
-
     friend  inline  BigNumber   operator + (const BigNumber& l, const BigNumber& r);
     friend  inline  BigNumber   operator - (const BigNumber& l, const BigNumber& r);
     friend  inline  BigNumber   operator * (const BigNumber& l, const BigNumber& r);
@@ -244,6 +271,7 @@ class   BigNumber
 public:
 
     typedef BigNumber   SelfType;
+    typedef BigNumberData::ElementType ElementType;
 
 #if BN_HAS_INT128
     BigNumber(int128 value = 0)
@@ -308,14 +336,14 @@ public:
         sign_        = other.sign_;
     }
 
-    BigNumber(int32_t* _pBuff, int32_t size, int32_t copy = BigNumberData::NOT_COPY_DATA, int32_t copy_size = BigNumberData::COPY_ALL)
+    BigNumber(ElementType* _pBuff, int32_t size, int32_t copy = BigNumberData::NOT_COPY_DATA, int32_t copy_size = BigNumberData::COPY_ALL)
         :   BigNumberData(_pBuff, size, copy, copy_size),
             length_(size),
             sign_(1)
     {
         if (_pBuff == 0)
         {
-            memset(data_, 0, sizeof(int32_t) * size);
+            memset(data_, 0, sizeof(ElementType) * size);
         }
         ZeroAdjust();
     }
@@ -349,22 +377,22 @@ public:
         std::swap(sign_, other.sign_);
     }
 
-    int32_t*    Buffer() const
+    ElementType*    Buffer() const
     {
         return BigNumberData::Buffer();
     }
 
-    int32_t GetLength() const
+    int32_t   GetLength() const
     {
         return length_;
     }
 
-    int32_t GetSign() const
+    int32_t   GetSign() const
     {
         return sign_;
     }
 
-    void    Neg()
+    void      Neg()
     {
         sign_ = -sign_;
     }
@@ -374,12 +402,12 @@ public:
         return !GetSign();
     }
 
-    int32_t operator [] (int32_t pos) const
+    ElementType operator [] (int32_t pos) const
     {
         return BigNumberData::data_[pos];
     }
 
-    int32_t&    operator [] (int32_t pos)
+    ElementType& operator [] (int32_t pos)
     {
         //Dangerous, if data_ is shared by another bignumber
         return BigNumberData::data_[pos];
@@ -395,7 +423,7 @@ public:
         if (Capacity() < size)
         {
             BigNumberData   temp(size);
-            int32_t *   buff = temp.Buffer();
+            ElementType *   buff = temp.Buffer();
             for (int32_t i = 0; i < Capacity(); ++i)
             {
                 buff[i] = BigNumberData::data_[i];
@@ -434,19 +462,19 @@ protected:
             return;
         }
 
-        int32_t size = CalStoreLength(length);
+        int32_t size = (length + DIG_COUNT - 1) / DIG_COUNT;
 
         BigNumberData temp_data(size);
         BigNumberData::Swap(temp_data);
 
-        int32_t * temp = BigNumberData::Buffer();
+        ElementType* temp = BigNumberData::Buffer();
         int32_t curr = 0;
 
         while (j >= i)
         {
-            int32_t value = 0;
-            int32_t count = 0;
-            int32_t base = 1;
+            ElementType value = 0;
+            ElementType base = 1;
+            int32_t     count = 0;
             while (j >= i && count++ < DIG_COUNT)
             {
                 value += base * (_pCharNumber[j--] - '0');
@@ -476,22 +504,22 @@ protected:
         }
     }
 
-	void ToString(char* buffer, int size)
-	{	
-		int32_t curr = GetLength() - 1;
-		if (GetSign() < 0)
-		{
-			*buffer++='-';
-		}
-		int cnt = sprintf(buffer, "%d", this->operator[](curr--));
-		buffer+=cnt;
-		
-		for (; curr >= 0; )
-		{
-			cnt = printf("%0*d", DIG_COUNT, this->operator[](curr--));
-			buffer += cnt;
-		}
-	}
+  void ToString(char* buffer, int size)
+  { 
+    int32_t curr = GetLength() - 1;
+    if (GetSign() < 0)
+    {
+      *buffer++='-';
+    }
+    int cnt = sprintf(buffer, PRT_FORMAT_STRING_PREFIX, this->operator[](curr--));
+    buffer+=cnt;
+    
+    for (; curr >= 0; )
+    {
+      cnt = sprintf(buffer, PRT_FORMAT_STRING_PREFIX, this->operator[](curr--));
+      buffer += cnt;
+    }
+  }
 public:
 #if BN_HAS_INT128
   int128 ToInt() const
@@ -514,16 +542,6 @@ public:
 #endif
 private:
 
-    int32_t CalStoreLength(int32_t length)
-    {
-        int32_t ret = length / DIG_COUNT;
-        if (length % DIG_COUNT)
-        {
-            ++ret;
-        }
-        return ret;
-    }
-
     void    ZeroInit()
     {
         BigNumberData temp_data(ALLOC_SIZE);
@@ -536,7 +554,7 @@ private:
 
 public:
 
-    static  int AbsCompare(const BigNumber& l, const BigNumber& r)
+    static  ElementType AbsCompare(const BigNumber& l, const BigNumber& r)
     {
         l.ZeroAdjust();
         r.ZeroAdjust();
@@ -560,15 +578,15 @@ public:
         l.ZeroAdjust();
         r.ZeroAdjust();
 
-        int32_t longer          = l.GetLength();
-        int32_t shorter         = r.GetLength();
-        int32_t*    longer_buffer   = l.Buffer();
-        int32_t*    shorter_buffer  = r.Buffer();
+        int32_t         longer          = l.GetLength();
+        int32_t         shorter         = r.GetLength();
+        ElementType*    longer_buffer   = l.Buffer();
+        ElementType*    shorter_buffer  = r.Buffer();
 
         BN_ASSERT(longer >= shorter);
 
-        int32_t     inc = 0;
-        int32_t     curr = 0;
+        ElementType     inc = 0;
+        ElementType     curr = 0;
 
         for (; curr < shorter; ++curr)
         {
@@ -579,7 +597,7 @@ public:
 
         for (; curr < longer; ++curr)
         {
-            int32_t value = longer_buffer[curr] + inc;
+            ElementType value = longer_buffer[curr] + inc;
             longer_buffer[curr] = value % BIG_NUMBER_BASE;
             inc = value / BIG_NUMBER_BASE;
         }
@@ -612,10 +630,10 @@ public:
 
     static  BigNumber   AbsSubImpl(BigNumber& l, const BigNumber& r)
     {
-        int32_t longer          = l.GetLength();
-        int32_t shorter         = r.GetLength();
-        int32_t*    shorter_buffer  = r.Buffer();
-        int32_t*    longer_buffer   = l.Buffer();
+        int32_t         longer          = l.GetLength();
+        int32_t         shorter         = r.GetLength();
+        ElementType*    shorter_buffer  = r.Buffer();
+        ElementType*    longer_buffer   = l.Buffer();
 
         (void)longer;
 
@@ -623,7 +641,7 @@ public:
 
         for (int32_t curr = 0; curr < shorter; ++curr)
         {
-            int32_t value = longer_buffer[curr] - shorter_buffer[curr];
+            ElementType value = longer_buffer[curr] - shorter_buffer[curr];
             while (value < 0)
             {
                 --longer_buffer[curr+1];
@@ -668,9 +686,9 @@ public:
 
         BigNumber   ret(NULL, ret_length);
 
-        int32_t*    ret_buffer  = ret.Buffer();
-        int32_t*    l_buffer    = l.Buffer();
-        int32_t*    r_buffer    = r.Buffer();
+        ElementType*    ret_buffer  = ret.Buffer();
+        ElementType*    l_buffer    = l.Buffer();
+        ElementType*    r_buffer    = r.Buffer();
 
         for (int32_t i = 0; i < ret_length; ++i)
         {
@@ -679,12 +697,13 @@ public:
 
         for (int32_t i = 0; i < r_length; ++i)
         {
-            int32_t t = r_buffer[i];
-            int32_t inc = 0;
+            MUL_TYPE inc = 0;
+            ElementType t = r_buffer[i];
+            
             int32_t j = 0;
             for (; j < l_length; ++j)
             {
-                inc += t * l_buffer[j] + ret_buffer[i+j];
+                inc += (MUL_TYPE)t * l_buffer[j] + ret_buffer[i+j];
                 ret_buffer[i+j] = inc % BIG_NUMBER_BASE;
                 inc /= BIG_NUMBER_BASE;
             }
@@ -703,13 +722,13 @@ public:
         return AbsMulImpl(l, r);
     }
 
-    static  int32_t     DoMemMul(int32_t* ResultBuff, int32_t* LeftBuff, int32_t LeftLength, int32_t RightValue)
+    static  int32_t     DoMemMul(ElementType* ResultBuff, ElementType* LeftBuff, int32_t LeftLength, int32_t RightValue)
     {
+        MUL_TYPE inc = 0;
         int32_t curr = 0;
-        int32_t inc = 0;
         for (; curr < LeftLength; ++curr)
         {
-            int32_t value = RightValue * LeftBuff[curr] + inc;
+            MUL_TYPE value = (MUL_TYPE)RightValue * LeftBuff[curr] + inc;
             ResultBuff[curr] = value % BIG_NUMBER_BASE;
             inc = value / BIG_NUMBER_BASE;
         }
@@ -720,9 +739,9 @@ public:
         return curr;
     }
 
-    static  int32_t     DoSub(int32_t* LeftBuff, int32_t hi_l, int32_t lo_l,
-                              int32_t* RightBuff, int32_t hi_r, int32_t lo_r,
-                              int32_t test, int32_t* temp)
+    static  int32_t     DoSub(ElementType* LeftBuff, int32_t hi_l, int32_t lo_l,
+                              ElementType* RightBuff, int32_t hi_r, int32_t lo_r,
+                              int32_t test, ElementType* temp)
     {
             int hi2 = DoMemMul(temp+lo_r, RightBuff, hi_r-lo_r+1, test) - 1;
 
@@ -734,16 +753,16 @@ public:
             if (hi_l - lo_l == hi2 - lo_r)
             {
                 for (int32_t i = hi_l, j = hi2; i >= lo_l; --i, --j)
+                {
+                    if(LeftBuff[i] < temp[j])
                     {
-                        if(LeftBuff[i] < temp[j])
-                        {
-                            return 0;
-                        }
-                        if (LeftBuff[i] > temp[j])
-                        {
-                            break;
-                        }
+                        return 0;
                     }
+                    if (LeftBuff[i] > temp[j])
+                    {
+                        break;
+                    }
+                }
             }
 
             for (int32_t i = lo_r, j = lo_l; i <= hi2; ++i, ++j)
@@ -765,7 +784,7 @@ public:
             return 0;
         }
 
-        DataBlock<int>  buffer_data(remain.length_ + 5);
+        DataBlock<ElementType>  buffer_data(remain.length_ + 5);
 
         remain.ZeroAdjust();
         r.ZeroAdjust();
@@ -776,9 +795,9 @@ public:
 
         BigNumber   ret(NULL, ret_length);
 
-        int32_t*    ret_buffer  = ret.Buffer();
-        int32_t*    l_buffer    = remain.Buffer();
-        int32_t*    r_buffer    = r.Buffer();
+        ElementType*    ret_buffer  = ret.Buffer();
+        ElementType*    l_buffer    = remain.Buffer();
+        ElementType*    r_buffer    = r.Buffer();
 
         int32_t curr = ret_length - 1;
         int32_t hi_l = l_length - 1, lo_l = curr;
@@ -786,12 +805,12 @@ public:
 
         for (; curr >= 0; --curr, --lo_l)
         {
-            int32_t test;
+            MUL_TYPE test;
             if (r_length > 1)
             {
                 if (hi_l-lo_l>hi_r-lo_r)
                 {
-                    test = (l_buffer[hi_l]*BIG_NUMBER_BASE + l_buffer[hi_l-1]) / r_buffer[hi_r];
+                    test = ((MUL_TYPE)l_buffer[hi_l]*BIG_NUMBER_BASE + l_buffer[hi_l-1]) / r_buffer[hi_r];
                 }
                 else if (hi_l == lo_l)
                 {
@@ -799,14 +818,14 @@ public:
                 }
                 else
                 {
-                    test = (l_buffer[hi_l]*BIG_NUMBER_BASE + l_buffer[hi_l-1]) / (r_buffer[hi_r]*BIG_NUMBER_BASE + r_buffer[hi_r-1]);
+                    test = ((MUL_TYPE)l_buffer[hi_l]*BIG_NUMBER_BASE + l_buffer[hi_l-1]) / ((MUL_TYPE)r_buffer[hi_r]*BIG_NUMBER_BASE + r_buffer[hi_r-1]);
                 }
             }
             else
             {
                 if (hi_l-lo_l+1>1)
                 {
-                    test = (l_buffer[hi_l]*BIG_NUMBER_BASE + l_buffer[hi_l-1]) / r_buffer[hi_r];
+                    test = ((MUL_TYPE)l_buffer[hi_l]*BIG_NUMBER_BASE + l_buffer[hi_l-1]) / r_buffer[hi_r];
                 }
                 else
                 {
@@ -1261,7 +1280,7 @@ inline
 void print_bn(const BigNumber& n)
 {
     int32_t curr = n.GetLength() - 1;
-    const int32_t* data = n.Buffer();
+    const BigNumber::ElementType* data = n.Buffer();
     
     while (curr >= 0 && data[curr] == 0) --curr;
     if (curr < 0)
@@ -1275,8 +1294,8 @@ void print_bn(const BigNumber& n)
         putchar('-');
     }
     
-    printf("%d", data[curr--]);
-    while (curr >= 0) printf("%04d", data[curr--]);
+    printf(PRT_FORMAT_STRING_PREFIX, data[curr--]);
+    while (curr >= 0) printf(PRT_FORMAT_STRING, data[curr--]);
 }
 
 inline

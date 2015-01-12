@@ -10,22 +10,24 @@ void basic()
   cerr << orz << endl;
   cerr << 12312321%10005 << endl;
 }
-mint3264<1000000007> u[1000000+5];
-mintd3264 v[1000000+5];
+
+const int N = 10000000;
+mint3264<1000000007> u[N+5];
+mintd3264 v[N+5];
 void perf()
 {
   TimeRecorder tr;
   u[0] = 1;
-  for (int i = 1; i <= 1000000; ++i)
+  for (int i = 1; i <= N; ++i)
   u[i] = u[i-1] * i;
   cerr << tr.elapsed().format() << endl;
   tr.record();
   v[0].MOD = 1000000007;
   v[0] = 1;
-  for (int i = 1; i <= 1000000; ++i)
+  for (int i = 1; i <= N; ++i)
   v[i] = v[i-1] * i;
   cerr << tr.elapsed().format() << endl;
-  for (int i = 0; i <= 1000000; ++i)
+  for (int i = 0; i <= N; ++i)
   assert(u[i].value() == v[i].value());
 }
 int main()

@@ -469,6 +469,7 @@ SL int64 power_mod_ex(int64 x, int64 n, int64 mod)
 
 struct init_direct_t{};
 static const init_direct_t __init_direct;
+struct fake_int128{};
 
 template<typename S, typename B>
 struct mtype_policy
@@ -515,6 +516,29 @@ struct mtype_policy<S, S>
   {
     a = a * b % mod;
     return a;
+  }
+};
+
+template<typename S>
+struct mtype_policy<S, fake_int128>
+{
+  typedef S   ints;
+  typedef fake_int128   intb;
+  static ints add(ints a, ints b, ints mod)
+  {
+    a += b;
+    if (a >= mod) a -= mod;
+    return a;
+  }
+  static ints sub(ints a, ints b, ints mod)
+  {
+    a -= b;
+    if (a < 0) a += mod;
+    return b;
+  }
+  static ints mul(ints a, ints b, ints mod)
+  {
+    return mul_mod_ex(a, b, mod);
   }
 };
 

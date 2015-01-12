@@ -10,8 +10,8 @@ void basic()
   cerr << orz << endl;
   cerr << 12312321%10005 << endl;
 }
-mint3232<1000000007> u[1000000+5];
-mintd3232 v[1000000+5];
+mint3264<1000000007> u[1000000+5];
+mintd3264 v[1000000+5];
 void perf()
 {
   TimeRecorder tr;

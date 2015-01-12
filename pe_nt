@@ -379,9 +379,15 @@ SL int64 square_root(int64 n)
 SL int64 regulate_mod(int64 a, int64 mod)
 {
   PE_ASSERT(mod >= 1);
-  if (a >= 0) if (a >= mod) a %= mod;
-  if (a < 0) if (-a >= mod) a %= mod;
-  if (a < 0) a += mod;
+  if (a >= 0)
+  {
+    if (a >= mod) a %= mod;
+  }
+  else
+  {
+    if (-a >= mod) a = a % mod + mod;
+    else a += mod;
+  }
   return a;
 }
 
@@ -460,7 +466,7 @@ SL int64 power_mod_ex(int64 x, int64 n, int64 mod)
   return ret;
 #endif
 }
-// Modular arithmetic
+
 struct init_direct_t{};
 static const init_direct_t __init_direct;
 
@@ -512,25 +518,6 @@ struct mtype_policy<S, S>
   }
 };
 
-template<>
-struct mtype_policy<int64, int64>
-{
-  typedef int64   ints;
-  typedef int64   intb;
-  static ints add(ints a, ints b, ints mod)
-  {
-    return add_mod(a, b, mod);
-  }
-  static ints sub(ints a, ints b, ints mod)
-  {
-    return sub_mod(a, b, mod);
-  }
-  static ints mul(ints a, ints b, ints mod)
-  {
-    return mul_mod(a, b, mod);
-  }
-};
-
 template<typename S, typename B, S MOD>
 struct mint;
 
@@ -554,7 +541,7 @@ static_assert(MOD > 0, "MOD > 0");
 
 mint(ints val = 0)
 {
-  if (val > 0)
+  if (val >= 0)
   {
     value_ = val >= MOD ? val % MOD : val;
   }
@@ -636,9 +623,9 @@ typedef mtype_policy<S, B> MTI;
 typedef typename MTI::ints ints;
 typedef typename MTI::intb intb;
 
-mintd(ints mod = 0, ints val = 0) : MOD(mod)
+explicit mintd(ints val = 0, ints mod = 0) : MOD(mod)
 {
-  if (val > 0)
+  if (val >= 0)
   {
     value_ = val >= MOD ? val % MOD : val;
   }
@@ -648,64 +635,99 @@ mintd(ints mod = 0, ints val = 0) : MOD(mod)
   }
 }
 
-mintd(ints mod, ints val, init_direct_t) : MOD(mod), value_(val)
+mintd(ints val, ints mod, init_direct_t) : value_(val), MOD(mod)
 {
 }
 
 mintd& operator = (ints v)
 {
-  mintd temp(MOD, v);
+  mintd temp(v, MOD);
   value_ = temp.value_;
   return *this;
 }
 
 mintd& operator = (const mintd& other)
 {
-  MOD = other.MOD;
   value_ = other.value_;
+  MOD = other.MOD;
   return *this;
 }
 
 mintd operator + (const mintd& y) const
 {
-  return mintd(MOD, MTI::add(value_, y.value, MOD), __init_direct);
+  PE_ASSERT(y.MOD == MOD);
+  return mintd(MTI::add(value_, y.value, MOD), MOD, __init_direct);
+}
+
+mintd operator + (const ints y) const
+{
+  return *this + mintd(y, MOD);
 }
 
 mintd& operator += (const mintd& y)
 {
+  PE_ASSERT(y.MOD == MOD);
   value_ = MTI::add(value_, y.value_, MOD);
   return *this;
 }
 
+mintd& operator += (const ints y)
+{
+  return *this += mintd(y, MOD);
+}
+
 mintd operator - (const mintd& y) const
 {
-  return mintd(MOD, MTI::sub(value_, y.value, MOD), __init_direct);
+  PE_ASSERT(y.MOD == MOD);
+  return mintd(MTI::sub(value_, y.value, MOD), MOD, __init_direct);
+}
+
+mintd operator - (const ints y) const
+{
+  return *this - mintd(y, MOD);
 }
 
 mintd& operator -= (const mintd& y)
 {
+  PE_ASSERT(y.MOD == MOD);
   value_ = MTI::sub(value_, y.value_, MOD);
   return *this;
 }
 
+mintd& operator -= (const ints y)
+{
+  return *this -= mintd(y, MOD);
+}
+
 mintd operator * (const mintd& y) const
 {
-  return mintd(MOD, MTI::mul(value_, y.value_, MOD), __init_direct);
+  PE_ASSERT(y.MOD == MOD);
+  return mintd(MTI::mul(value_, y.value_, MOD), MOD, __init_direct);
+}
+
+mintd operator * (const ints y) const
+{
+  return *this * mintd(y, MOD);
 }
 
 mintd& operator *= (const mintd& y)
 {
+  PE_ASSERT(y.MOD == MOD);
   value_ = MTI::mul(value_, y.value_, MOD);
   return *this;
+}
+
+mintd& operator *= (const ints y)
+{
+  return *this *= mintd(y, MOD);
 }
 
 //operator ints () const {return value_;}
 ints value() const {return value_;}
 friend ostream& operator << <S,B>(ostream& o, const mintd& m);
 
-ints MOD;
 ints value_;
-
+ints MOD;
 };
 
 template<typename S, typename B>

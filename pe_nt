@@ -137,7 +137,7 @@ typedef std::int64_t int64;
 #ifdef COMPILER_GNU
   #ifdef _M_X64
     #define PE_HAS_INT128 1
-      typedef __int128 int128;
+    typedef __int128 int128;
   #else
     #define PE_HAS_INT128 0
   #endif
@@ -148,15 +148,20 @@ static const int64 PE_SOI63 = 3037000499LL;   // x * x > 2^63 - 1 for x > PE_SOI
 static const int64 PE_SOI64 = 4294967295LL;   // x * x > 2^64 - 1 for x > PE_SOI64
 
 // About primes
-static_assert(maxp >= 100000, "maxp >= 100000");
-static_assert(maxp <= INT_MAX, "maxp <= INT_MAX");
-static const int64 maxp2 = (int64)maxp * maxp;
-
 static int pcnt;
-static int plist[maxp/10];
-static int pmask[maxp+1];
+#ifdef PLIST_ARRAY
+  static int pmask[maxp+1];
+  static int plist[maxp/10];
+  static_assert(maxp >= 100000, "maxp >= 100000");
+#else
+  int* pmask = NULL;
+  int* plist = NULL;
+#endif
 int* phi = NULL;
 int* miu = NULL;
+
+static_assert(maxp <= INT_MAX, "maxp <= INT_MAX");
+static const int64 maxp2 = (int64)maxp * maxp;
 
 // http://oeis.org/A006880
 const int64 pmpi[] =
@@ -191,6 +196,20 @@ SL int64 estimate_pmpi(int64 n)
   return max(ret, 1LL);
 }
 
+template<int d1, int d2>
+SL void init_pmask_plist(int (&pmask)[d1], int (&plist)[d2])
+{
+  (void)pmask;
+  (void)plist;
+}
+
+SL void init_pmask_plist(int*& pmask, int*& plist)
+{
+  pmask = new int[maxp+1];
+  int64 size = max(static_cast<int64>((estimate_pmpi(maxp+1) + 1) * 1.1), 100000LL);
+  plist = new int[size];
+}
+
 SL int is_prime(int64 n)
 {
   if (n <= 1) return 0;
@@ -208,6 +227,8 @@ SL int is_prime(int64 n)
 
 SL void init_primes()
 {
+  init_pmask_plist(pmask, plist);
+
   pcnt = 0;
   for (int i = 1; i <= maxp; ++i) pmask[i] = i;
   for (int i = 2; i <= maxp; ++i)
@@ -231,6 +252,8 @@ SL void init_primes()
 
 SL void init_primes(int cal_phi, int cal_miu)
 {
+  init_pmask_plist(pmask, plist);
+
   pcnt = 0;
   if (cal_phi) phi = new int[maxp+1];
   if (cal_miu) miu = new int[maxp+1];
@@ -472,6 +495,87 @@ SL int64 power_mod_ex(int64 x, int64 n, int64 mod)
   }
   return ret;
 #endif
+}
+
+template<typename T, int D>
+SL void mat_mul(T (*a)[D], T (*b)[D], T (*c)[D])
+{
+  for (int i = 0; i < D; ++i) for (int j = 0; j < D; ++j)
+  {
+    T s = 0;
+    for (int k = 0; k < D; ++k)
+    s += a[i][k] * b[k][j];
+    c[i][j] = s;
+  }
+}
+
+template<typename T, int D>
+SL void mat_mul_vec(T (*a)[D], T (*b)[D], T (*c)[D])
+{
+  for (int i = 0; i < D; ++i)
+  {
+    T s = 0;
+    for (int k = 0; k < D; ++k)
+    s += a[i][k] * b[k][0];
+    c[i][0] = s;
+  }
+}
+
+template<typename T, int D>
+SL void mat_mul_vec(T (*a)[D], T *b, T *c)
+{
+  for (int i = 0; i < D; ++i)
+  {
+    T s = 0;
+    for (int k = 0; k < D; ++k)
+    s += a[i][k] * b[k];
+    c[i] = s;
+  }
+}
+
+template<typename T, int D>
+SL void mat_mul_mod(T (*a)[D], T (*b)[D], T (*c)[D], int64 mod)
+{
+  for (int i = 0; i < D; ++i) for (int j = 0; j < D; ++j)
+  {
+    int64 s = 0;
+    for (int k = 0; k < D; ++k)
+    {
+      s += mul_mod(a[i][k], b[k][j], mod);
+      if (s >= mod) s -= mod;
+    }
+    c[i][j] = s % mod;
+  }
+}
+
+template<typename T, int D>
+SL void mat_mul_vec_mod(T (*a)[D], T (*b)[D], T (*c)[D], int64 mod)
+{
+  for (int i = 0; i < D; ++i)
+  {
+    int64 s = 0;
+    for (int k = 0; k < D; ++k)
+    {
+      s += mul_mod(a[i][k], b[k][0], mod);
+      if (s >= mod) s -= mod;
+    }
+    c[i][0] = s;
+  }
+}
+
+template<typename T, int D>
+SL void mat_mul_vec_mod(T (*a)[D], T *b, T *c, int64 mod)
+{
+  for (int i = 0; i < D; ++i)
+  {
+    int64 s = 0;
+    for (int k = 0; k < D; ++k)
+    {
+      s += mul_mod(a[i][k], b[k], mod);
+      if (s >= mod) s -= mod;
+    }
+    c[i] = s;
+  }
 }
 
 struct init_direct_t{};

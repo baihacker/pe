@@ -1,0 +1,61 @@
+#ifndef __PE_MEMORY_H__
+#define __PE_MEMORY_H__
+
+#include <cassert>
+#include <map>
+#include <vector>
+#include <windows.h>
+
+using namespace std;
+
+struct LargeMemory
+{
+public:
+LargeMemory()
+{
+}
+
+~LargeMemory()
+{
+  vector<void*> vec;
+  for (map<void*, HANDLE>::iterator iter = allocated_.begin();
+        iter != allocated_.end(); ++iter)
+    vec.push_back(iter->first);
+  
+  const int size = vec.size();
+  for (int i = 0; i < size; ++i)
+    deallocate(vec[i]);
+}
+
+void* allocate(int64 size)
+{
+  HANDLE hMapFile = ::CreateFileMapping(
+         INVALID_HANDLE_VALUE,
+         NULL,
+         PAGE_READWRITE | SEC_COMMIT,
+         size>>32,
+         size%(1LL<<32),
+         NULL);
+  assert(GetLastError() == 0);
+  
+  void* ptr = ::MapViewOfFile(hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+  assert(GetLastError() == 0);
+  allocated_.insert(make_pair(ptr, hMapFile));
+  
+  return ptr;
+}
+
+void deallocate(void* ptr)
+{
+  map<void*, HANDLE>::iterator where = allocated_.find(ptr);
+  if (where == allocated_.end()) return;
+  
+  ::UnmapViewOfFile(ptr);
+  ::CloseHandle(where->second);
+  allocated_.erase(where);
+}
+private:
+map<void*, HANDLE> allocated_;
+};
+
+#endif

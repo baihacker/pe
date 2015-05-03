@@ -1,13 +1,20 @@
 #ifndef __PE_THREADS_H__
 #define __PE_THREADS_H__
 
+#include <cstdint>
+#include <cstdio>
+#include <cassert>
+
+#include <string>
+#include <algorithm>
+#include <functional>
+
 #include <windows.h>
 #include <process.h>
-#include <cstdio>
-#include <string>
-#include <cassert>
-#include <algorithm>
+
 using namespace std;
+
+typedef std::int64_t int64;
 
 struct TaskContext
 {
@@ -32,18 +39,19 @@ struct ThreadContext
   int idx;
   worker_pointer worker;
   worker_pointer_ext worker_ext;
+  std::function<void (TaskContext)>* worker_function;
   Threads* host;
 };
 
 public:
-Threads() : threads_count(0), thread_worker(NULL), thread_worker_ext(NULL), p(0), q(0)
+Threads() : threads_count(0), thread_worker(NULL), thread_worker_ext(NULL), thread_worker_function(NULL), p(0), q(0)
 {
   memset(threads_context, 0, sizeof threads_context);
 }
 
 void init(worker_pointer worker, const int threads = 3, const int stack = 100*(1<<20))
 {
-  assert(thread_worker == NULL && thread_worker_ext == NULL);
+  assert(thread_worker == NULL && thread_worker_ext == NULL && thread_worker_function == NULL);
 
   p = q = 0;
   InitializeCriticalSection(&request_access);
@@ -57,6 +65,7 @@ void init(worker_pointer worker, const int threads = 3, const int stack = 100*(1
     threads_context[i].idx = i;
     threads_context[i].worker = thread_worker;
     threads_context[i].worker_ext = thread_worker_ext;
+    threads_context[i].worker_function = thread_worker_function;
     threads_context[i].host = this;
     threads_handle[i] = (HANDLE)_beginthreadex(NULL, max(stack, 100*(1<<20)), work_thread, (void*)&threads_context[i], 0, NULL);
   }
@@ -65,7 +74,7 @@ void init(worker_pointer worker, const int threads = 3, const int stack = 100*(1
 
 void init(worker_pointer_ext worker_ext, const int threads = 3, const int stack = 100*(1<<20))
 {
-  assert(thread_worker == NULL && thread_worker_ext == NULL);
+  assert(thread_worker == NULL && thread_worker_ext == NULL && thread_worker_function == NULL);
 
   p = q = 0;
   InitializeCriticalSection(&request_access);
@@ -79,6 +88,30 @@ void init(worker_pointer_ext worker_ext, const int threads = 3, const int stack 
     threads_context[i].idx = i;
     threads_context[i].worker = thread_worker;
     threads_context[i].worker_ext = thread_worker_ext;
+    threads_context[i].worker_function = thread_worker_function;
+    threads_context[i].host = this;
+    threads_handle[i] = (HANDLE)_beginthreadex(NULL, max(stack, 100*(1<<20)), work_thread, (void*)&threads_context[i], 0, NULL);
+  }
+  start = GetTickCount();
+}
+
+void init(std::function<void (TaskContext)>* worker_function, const int threads = 3, const int stack = 100*(1<<20))
+{
+  assert(thread_worker == NULL && thread_worker_ext == NULL && thread_worker_function == NULL);
+
+  p = q = 0;
+  InitializeCriticalSection(&request_access);
+  has_request = CreateEvent(NULL, FALSE, FALSE, NULL);
+  has_result = CreateEvent(NULL, FALSE, FALSE, NULL);
+  threads_count = max(threads, (int)min_thread);
+  threads_count = min(threads_count, (int)max_thread);
+  thread_worker_function = worker_function;
+  for (int i = 0; i < threads_count; ++i)
+  {
+    threads_context[i].idx = i;
+    threads_context[i].worker = thread_worker;
+    threads_context[i].worker_ext = thread_worker_ext;
+    threads_context[i].worker_function = thread_worker_function;
     threads_context[i].host = this;
     threads_handle[i] = (HANDLE)_beginthreadex(NULL, max(stack, 100*(1<<20)), work_thread, (void*)&threads_context[i], 0, NULL);
   }
@@ -188,6 +221,13 @@ void work(ThreadContext thread_context)
       ctx.worker_idx = thread_context.idx;
       (*thread_context.worker_ext)(ctx);
     }
+    if (thread_context.worker_function)
+    {
+      TaskContext ctx;
+      ctx.task_id = id;
+      ctx.worker_idx = thread_context.idx;
+      (*thread_context.worker_function)(ctx);
+    }
     SetEvent(has_result);
   }
 }
@@ -213,8 +253,41 @@ private:
   CRITICAL_SECTION request_access;
   worker_pointer thread_worker;
   worker_pointer_ext thread_worker_ext;
+  std::function<void (TaskContext)>* thread_worker_function;
 
   int task_que[max_pending_tasks+1], p, q;
+};
+
+struct TaskDivision
+{
+TaskDivision(int64 first = 0, int64 last = 0, int64 block_size = 1) : 
+  first_(first), last_(last), block_size_(block_size)
+  {
+    assert(block_size_ >= 1);
+    const int64 cnt = last_ - first_ + 1;
+    first_task_ = 1;
+    last_task_ = (cnt + block_size - 1) / block_size;
+  }
+
+~TaskDivision()
+{
+}
+
+pair<int64, int64> TaskID2Range(int64 id)
+{
+  assert(id >= first_task_ && id <= last_task_);
+  
+  int64 u = (id - 1) * block_size_ + first_;
+  int64 v = u + block_size_ - 1;
+  if (v > last_) v = last_;
+  
+  return {u, v};
+}
+int64 block_size_;
+int64 first_;
+int64 last_;
+int64 first_task_;
+int64 last_task_;
 };
 
 enum
@@ -254,5 +327,78 @@ static inline void make_sure_process_singleton(const char* id)
     return;
   }
 }
+/*
 
+int64 g_result;
+
+void ThreadsWorker(TaskContext tc, TaskDivision td, Threads& locker, KVPersistance* kv)
+{
+  int64 id = tc.task_id;
+  auto range = td.TaskID2Range(id);
+  int64 local_result = -1;
+  
+  locker.lock();
+    cerr << id << " begins" << endl;
+    if (kv && kv->storage().count(id)) local_result = kv->storage()[id];
+  locker.unlock();
+  
+  if (local_result != -1)
+  {
+    locker.lock();
+      g_result += local_result;
+    locker.unlock();
+    return;
+  }
+  
+  TimeRecorder tr;
+  local_result = 0;
+  for (int64 i = range.first; i <= range.second; ++i)
+  {
+    local_result += i;
+  }
+  auto usage = tr.elapsed();
+  
+  locker.lock();
+    cerr << id << " finishes. (" << usage.format() << ")" << endl;
+    cerr << "local_result = " << local_result << endl;
+    cerr << "g_result = " << g_result << endl;
+    if (kv) kv->set(id, local_result);
+    g_result += local_result;
+  locker.unlock();
+}
+
+void ThreadsRun(int64 first, int64 last, int64 block_size, int thread_count_, const char* filename = NULL)
+{
+  TaskDivision td(first, last, block_size);
+
+  KVPersistance* kv = NULL;
+  if (filename)
+  {
+    kv = new KVPersistance(filename);
+    make_sure_process_singleton(filename);
+  }
+  
+  Threads oml;
+  
+  std::function<void (TaskContext)> worker([=,&oml](TaskContext tc)
+    {
+      ::ThreadsWorker(tc, td, oml, kv);
+    }
+  );
+  
+  set_process_priority(PRIORITY_IDLE);
+  
+  oml.init(&worker, thread_count_);
+  for (int64 i = td.first_task_; i <= td.last_task_; ++i)
+  {
+    oml.wait_for_queue();
+    oml.add_request((int32_t)i);
+  }
+  oml.wait_for_end();
+  
+  if (kv) delete kv;
+  
+  cerr << g_result << endl;
+}
+*/
 #endif

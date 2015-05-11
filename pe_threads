@@ -361,6 +361,9 @@ template<typename IMPL>
 class MultiThreadsTask
 {
 public:
+  MultiThreadsTask(int64 first = 0, int64 last = 0, int64 block_size = 1, const char* file_name = NULL)
+    : MultiThreadsTask(TaskDivision(first, last, block_size), file_name){}
+
   MultiThreadsTask(TaskDivision td, const char* file_name = NULL) :
     td_(td), kv_(NULL), result_(0)
     {
@@ -445,6 +448,7 @@ public:
     if (kv_) kv_->set(id, local_result);
     static_cast<IMPL&>(*this).update_result(local_result);
     cerr << "result = " << result_ << endl;
+    return true;
   }
 
   void lock(){oml_.lock();}
@@ -452,6 +456,8 @@ public:
   void unlock(){oml_.unlock();}
   
   int64 value() const {return result_;}
+  
+  int64 operator () (int thread_count) {return run(thread_count);}
   
   int64 run(int thread_count)
   {
@@ -490,7 +496,18 @@ int64           result_;
 // example of MultiThreadsTask
 struct ComputeSum : public MultiThreadsTask<ComputeSum>
 {
-using MultiThreadsTask<ComputeSum>::MultiThreadsTask;
+typedef MultiThreadsTask<ComputeSum> base;
+using base::MultiThreadsTask;
+
+bool on_start(int64 id, bool has_value, int64 old_value)
+{
+  return base::on_start(id, has_value, old_value);
+}
+
+bool on_stop(int64 id, int64 local_result, TimeDelta usage)
+{
+  return base::on_stop(id, local_result, usage);
+}
 
 void update_result(int64 local_result)
 {

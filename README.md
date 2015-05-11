@@ -5,6 +5,11 @@ It is my basic code for solving problem on project euler.
 The old code has been treated as release 1.0.
 The developing version is 2.0. It will be more interesting.
 
+Installation:
+-------------
+Put all the files in a folder (directory).
+For example, we put them in the directory D:\usr\include.
+Make sure CPLUS_INCLUDE_PATH contain D:\usr\include.
 
 File list:
 -----------

@@ -63,6 +63,16 @@ Threads() : threads_count(0), thread_worker(NULL), thread_worker_ext(NULL), thre
   memset(threads_context, 0, sizeof threads_context);
 }
 
+void reset()
+{
+  threads_count = 0;
+  thread_worker = NULL;
+  thread_worker_ext = NULL;
+  thread_worker_function = NULL;
+  p = q = 0;
+  memset(threads_context, 0, sizeof threads_context);
+}
+
 void init(worker_pointer worker, const int threads = 3, const int stack = 100*(1<<20))
 {
   assert(thread_worker == NULL && thread_worker_ext == NULL && thread_worker_function == NULL);
@@ -351,8 +361,8 @@ template<typename IMPL>
 class MultiThreadsTask
 {
 public:
-  MultiThreadsTask(TaskDivision td, Threads& locker, const char* file_name = NULL) :
-    td_(td), locker_(locker), kv_(NULL)
+  MultiThreadsTask(TaskDivision td, const char* file_name = NULL) :
+    td_(td), kv_(NULL), result_(0)
     {
       if (file_name)
       {
@@ -437,36 +447,37 @@ public:
     cerr << "result = " << result_ << endl;
   }
 
-  void lock(){locker_.lock();}
+  void lock(){oml_.lock();}
 
-  void unlock(){locker_.unlock();}
+  void unlock(){oml_.unlock();}
   
-  static void ThreadsRun(int64 first, int64 last, int64 block_size, int thread_count_, const char* filename = NULL)
+  int64 value() const {return result_;}
+  
+  int64 run(int thread_count)
   {
-    TaskDivision td(first, last, block_size);
-    Threads oml;
-    IMPL mtt(td, oml, filename);
-
-    std::function<void (TaskContext)> worker([=,&mtt](TaskContext tc)
+    std::function<void (TaskContext)> worker([=](TaskContext tc)
       {
-        mtt.work_on_thread(tc);
+        this->work_on_thread(tc);
       }
     );
-
+    
     set_process_priority(PRIORITY_IDLE);
-
-    oml.init(&worker, thread_count_);
-    for (int64 i = td.first_task_; i <= td.last_task_; ++i)
+    
+    oml_.init(&worker, thread_count);
+    for (int64 i = td_.first_task_; i <= td_.last_task_; ++i)
     {
-      oml.wait_for_queue();
-      oml.add_request((int32_t)i);
+      oml_.wait_for_queue();
+      oml_.add_request((int32_t)i);
     }
-    oml.wait_for_end();
+    oml_.wait_for_end();
+    oml_.reset();
+    
+    return value();
   }
 private:
 
 TaskDivision    td_;
-Threads&        locker_;
+Threads         oml_;
 KVPersistance*  kv_;
 
 protected:

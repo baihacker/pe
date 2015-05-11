@@ -407,12 +407,17 @@ public:
     unlock();
   }
 
+  void update_result(int64 local_result)
+  {
+    result_ += local_result;
+  }
+  
   bool on_start(int64 id, bool has_value, int64 old_value)
   {
     cerr << id << " begins" << endl;
     if (has_value)
     {
-      result_ += old_value;
+      static_cast<IMPL&>(*this).update_result(old_value);
       return true;
     }
     return false;
@@ -428,7 +433,7 @@ public:
     cerr << id << " finishes. (" << usage.format() << ")" << endl;
     cerr << "local_result = " << local_result << endl;
     if (kv_) kv_->set(id, local_result);
-    result_ += local_result;
+    static_cast<IMPL&>(*this).update_result(local_result);
     cerr << "result = " << result_ << endl;
   }
 
@@ -464,6 +469,8 @@ TaskDivision    td_;
 Threads&        locker_;
 KVPersistance*  kv_;
 
+protected:
+
 int64           result_;
 };
 #endif
@@ -473,6 +480,11 @@ int64           result_;
 struct ComputeSum : public MultiThreadsTask<ComputeSum>
 {
 using MultiThreadsTask<ComputeSum>::MultiThreadsTask;
+
+void update_result(int64 local_result)
+{
+  result_ += local_result;
+}
 
 void work(int64 input, int64& local_result, int worker_idx)
 {

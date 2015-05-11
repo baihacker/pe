@@ -1,6 +1,20 @@
 #ifndef __PE_THREADS_H__
 #define __PE_THREADS_H__
 
+#if defined(__GNUC__)
+  #if __cplusplus < 201103L
+    #define PE_THREAD_HAS_CPP11 0
+  #else
+    #define PE_THREAD_HAS_CPP11 1
+  #endif
+#elif defined(_MSC_VER)
+  #if _MSC_VER < 1800
+    #define PE_THREAD_HAS_CPP11 0
+  #else
+    #define PE_THREAD_HAS_CPP11 1
+  #endif
+#endif
+
 #include <cstdint>
 #include <cstdio>
 #include <cassert>
@@ -328,7 +342,146 @@ static inline void make_sure_process_singleton(const char* id)
   }
 }
 
-/*
+#if PE_THREAD_HAS_CPP11
+
+#include <iostream>
+#include "pe_util"
+
+template<typename IMPL>
+class MultiThreadsTask
+{
+public:
+  MultiThreadsTask(TaskDivision td, Threads& locker, const char* file_name = NULL) :
+    td_(td), locker_(locker), kv_(NULL)
+    {
+      if (file_name)
+      {
+        kv_ = new KVPersistance(file_name);
+      }
+    }
+
+  ~MultiThreadsTask()
+  {
+    if (kv_)
+    {
+      delete kv_;
+    }
+    cerr << "result = " << result_ << endl;
+  }
+
+  void work_on_thread(TaskContext tc)
+  {
+    const int64 id = tc.task_id;
+    
+    // step 1: check cache
+    bool can_skip = false;
+    lock();
+    {
+      int64 old_value = -1;
+      bool handled = false;
+      bool has_value = false;
+      if (kv_ && kv_->storage().count(id))
+      {
+        old_value = kv_->storage()[id];
+        has_value = true;
+      }
+      handled = static_cast<IMPL&>(*this).on_start(id, has_value, old_value);
+      can_skip = has_value && handled;
+    }
+    unlock();
+    if (can_skip) return;
+    
+    // step 2: run
+    int64 local_result = 0;
+    auto range = td_.TaskID2Range(id);
+    TimeRecorder tr;
+    for (int64 i = range.first; i <= range.second; ++i)
+    {
+      static_cast<IMPL&>(*this).work(i, local_result, tc.worker_idx);
+    }
+    auto usage = tr.elapsed();
+    
+    // step 3: finish
+    lock();
+      static_cast<IMPL&>(*this).on_stop(id, local_result, usage);
+    unlock();
+  }
+
+  bool on_start(int64 id, bool has_value, int64 old_value)
+  {
+    cerr << id << " begins" << endl;
+    if (has_value)
+    {
+      result_ += old_value;
+      return true;
+    }
+    return false;
+  }
+
+  void work(int64 input, int64& local_result, int worker_idx)
+  {
+    // default implementation: do nothing
+  }
+
+  bool on_stop(int64 id, int64 local_result, TimeDelta usage)
+  {
+    cerr << id << " finishes. (" << usage.format() << ")" << endl;
+    cerr << "local_result = " << local_result << endl;
+    if (kv_) kv_->set(id, local_result);
+    result_ += local_result;
+    cerr << "result = " << result_ << endl;
+  }
+
+  void lock(){locker_.lock();}
+
+  void unlock(){locker_.unlock();}
+  
+  static void ThreadsRun(int64 first, int64 last, int64 block_size, int thread_count_, const char* filename = NULL)
+  {
+    TaskDivision td(first, last, block_size);
+    Threads oml;
+    IMPL mtt(td, oml, filename);
+
+    std::function<void (TaskContext)> worker([=,&mtt](TaskContext tc)
+      {
+        mtt.work_on_thread(tc);
+      }
+    );
+
+    set_process_priority(PRIORITY_IDLE);
+
+    oml.init(&worker, thread_count_);
+    for (int64 i = td.first_task_; i <= td.last_task_; ++i)
+    {
+      oml.wait_for_queue();
+      oml.add_request((int32_t)i);
+    }
+    oml.wait_for_end();
+  }
+private:
+
+TaskDivision    td_;
+Threads&        locker_;
+KVPersistance*  kv_;
+
+int64           result_;
+};
+#endif
+
+#if 0
+// example of MultiThreadsTask
+struct ComputeSum : public MultiThreadsTask<ComputeSum>
+{
+using MultiThreadsTask<ComputeSum>::MultiThreadsTask;
+
+void work(int64 input, int64& local_result, int worker_idx)
+{
+  local_result += input;
+}
+};
+#endif
+
+#if 0
 
 int64 g_result;
 
@@ -400,5 +553,6 @@ void ThreadsRun(int64 first, int64 last, int64 block_size, int thread_count_, co
   
   cerr << g_result << endl;
 }
-*/
+#endif
+
 #endif

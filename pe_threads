@@ -282,47 +282,15 @@ private:
   int task_que[max_pending_tasks+1], p, q;
 };
 
-struct TaskDivision
-{
-TaskDivision(int64 first = 0, int64 last = 0, int64 block_size = 1) : 
-  first_(first), last_(last), block_size_(block_size)
-  {
-    assert(block_size_ >= 1);
-    const int64 cnt = last_ - first_ + 1;
-    first_task_ = 1;
-    last_task_ = (cnt + block_size - 1) / block_size;
-  }
-
-~TaskDivision()
-{
-}
-
-pair<int64, int64> TaskID2Range(int64 id)
-{
-  assert(id >= first_task_ && id <= last_task_);
-  
-  int64 u = (id - 1) * block_size_ + first_;
-  int64 v = u + block_size_ - 1;
-  if (v > last_) v = last_;
-  
-  return {u, v};
-}
-int64 block_size_;
-int64 first_;
-int64 last_;
-int64 first_task_;
-int64 last_task_;
-};
-
 enum
 {
-PRIORITY_REALTIME     = REALTIME_PRIORITY_CLASS,
-PRIORITY_HIGH         = HIGH_PRIORITY_CLASS,
-PRIORITY_ABOVE_NORMAL = ABOVE_NORMAL_PRIORITY_CLASS,
-PRIORITY_NORMAL       = NORMAL_PRIORITY_CLASS,
-PRIORITY_BELOW_NORMAL = BELOW_NORMAL_PRIORITY_CLASS,
-PRIORITY_BACKGROUND   = PROCESS_MODE_BACKGROUND_BEGIN,
-PRIORITY_IDLE         = IDLE_PRIORITY_CLASS,
+  PRIORITY_REALTIME     = REALTIME_PRIORITY_CLASS,
+  PRIORITY_HIGH         = HIGH_PRIORITY_CLASS,
+  PRIORITY_ABOVE_NORMAL = ABOVE_NORMAL_PRIORITY_CLASS,
+  PRIORITY_NORMAL       = NORMAL_PRIORITY_CLASS,
+  PRIORITY_BELOW_NORMAL = BELOW_NORMAL_PRIORITY_CLASS,
+  PRIORITY_BACKGROUND   = PROCESS_MODE_BACKGROUND_BEGIN,
+  PRIORITY_IDLE         = IDLE_PRIORITY_CLASS,
 };
 
 static inline void set_process_priority(int priority)
@@ -357,6 +325,202 @@ static inline void make_sure_process_singleton(const char* id)
 #include <iostream>
 #include "pe_util"
 
+struct TaskDivision
+{
+  TaskDivision(int64 first = 0, int64 last = 0, int64 block_size = 1) :
+    first_(first), last_(last), block_size_(block_size)
+    {
+      assert(block_size_ >= 1);
+      const int64 cnt = last_ - first_ + 1;
+      first_task_ = 1;
+      last_task_ = (cnt + block_size - 1) / block_size;
+    }
+
+  ~TaskDivision()
+  {
+  }
+
+  pair<int64, int64> TaskID2Range(int64 id)
+  {
+    assert(id >= first_task_ && id <= last_task_);
+
+    int64 u = (id - 1) * block_size_ + first_;
+    int64 v = u + block_size_ - 1;
+    if (v > last_) v = last_;
+
+    return {u, v};
+  }
+  int64 block_size_;
+  int64 first_;
+  int64 last_;
+  int64 first_task_;
+  int64 last_task_;
+};
+
+template<typename CONTEXT>
+class MultiThreadsTask
+{
+public:
+  MultiThreadsTask(int64 first = 0, int64 last = 0, int64 block_size = 1, const char* file_name = NULL)
+    : MultiThreadsTask(TaskDivision(first, last, block_size), file_name){}
+
+  MultiThreadsTask(TaskDivision td, const char* file_name = NULL) :
+    td_(td), kv_(NULL)
+    {
+      if (file_name)
+      {
+        kv_ = new KVPersistance(file_name);
+      }
+    }
+
+  ~MultiThreadsTask()
+  {
+    if (kv_)
+    {
+      delete kv_;
+    }
+    cerr << "result = " << result() << endl;
+    context_.on_finished();
+  }
+
+  void work_on_thread(TaskContext tc)
+  {
+    const int64 id = tc.task_id;
+
+    // step 1: check cache
+    lock();
+      bool can_skip = on_start(id);
+    unlock();
+    if (can_skip) return;
+
+    // step 2: run
+    auto range = td_.TaskID2Range(id);
+    TimeRecorder tr;
+    const int64 local_result =
+      context_.work_on_range(range.first, range.second, id, tc.worker_idx);
+    auto usage = tr.elapsed();
+
+    // step 3: finish
+    lock();
+      on_stop(id, local_result, usage);
+    unlock();
+  }
+
+  bool on_start(int64 id)
+  {
+    cerr << id << " begins" << endl;
+    if (kv_)
+    {
+      auto iter = kv_->storage().find(id);
+      if (iter != kv_->storage().end())
+      {
+        const int64 old_value = iter->second;
+        return context_.handle_cached_result(id, old_value);
+      }
+    }
+    return false;
+  }
+
+  bool on_stop(int64 id, int64 local_result, TimeDelta usage)
+  {
+    cerr << id << " finishes. (" << usage.format() << ")" << endl;
+    cerr << "local_result = " << local_result << endl;
+    if (kv_) kv_->set(id, local_result);
+    context_.handle_result(id, local_result);
+    cerr << "result = " << result() << endl;
+    return true;
+  }
+
+  void lock(){oml_.lock();}
+
+  void unlock(){oml_.unlock();}
+
+  int64 result() const {return context_.result();}
+
+  int64 operator () (int thread_count) {return run(thread_count);}
+
+  int64 run(int thread_count)
+  {
+    std::function<void (TaskContext)> worker([=](TaskContext tc)
+      {
+        work_on_thread(tc);
+      }
+    );
+
+    set_process_priority(PRIORITY_IDLE);
+
+    oml_.init(&worker, thread_count);
+    for (int64 i = td_.first_task_; i <= td_.last_task_; ++i)
+    {
+      oml_.wait_for_queue();
+      oml_.add_request((int32_t)i);
+    }
+    oml_.wait_for_end();
+    oml_.reset();
+
+    return result();
+  }
+ 
+private:
+TaskDivision    td_;
+Threads         oml_;
+KVPersistance*  kv_;
+
+protected:
+CONTEXT           context_;
+};
+
+#endif
+
+#if 0
+// example of MultiThreadsTask
+class ComputeSumContext
+{
+public:
+  ComputeSumContext() : result_(0){}
+
+  void on_finished()
+  {
+    cerr << "result = " << result_ << endl;
+  }
+
+  void handle_result(int64 id, int64 result)
+  {
+    result_ += result;
+  }
+
+  bool handle_cached_result(int64 id, int64 result)
+  {
+    handle_result(id, result);
+    return true;
+  }
+
+  int64 result() const
+  {
+    return result_;
+  }
+
+  int64 work_on_range(int64 first, int64 last, int64 id, int64 worker_idx)
+  {
+    int64 t = 0;
+    for (int64 i = first; i <= last; ++i)
+    {
+      t += i;
+    }
+    return t;
+  }
+protected:
+  int64 result_;
+};
+
+MultiThreadsTask<ComputeSumContext> orz(1, 1000000, 100000);
+orz(8);
+
+#endif
+
+#if 0
+
+/* deprecated v0
 template<typename IMPL>
 class MultiThreadsTask
 {
@@ -490,9 +654,6 @@ protected:
 
 int64           result_;
 };
-#endif
-
-#if 0
 // example of MultiThreadsTask
 struct ComputeSum : public MultiThreadsTask<ComputeSum>
 {
@@ -519,9 +680,7 @@ void work(int64 input, int64& local_result, int worker_idx)
   local_result += input;
 }
 };
-#endif
-
-#if 0
+*/
 
 int64 g_result;
 
@@ -530,12 +689,12 @@ void ThreadsWorker(TaskContext tc, TaskDivision td, Threads& locker, KVPersistan
   int64 id = tc.task_id;
   auto range = td.TaskID2Range(id);
   int64 local_result = -1;
-  
+
   locker.lock();
     cerr << id << " begins" << endl;
     if (kv && kv->storage().count(id)) local_result = kv->storage()[id];
   locker.unlock();
-  
+
   if (local_result != -1)
   {
     locker.lock();
@@ -543,7 +702,7 @@ void ThreadsWorker(TaskContext tc, TaskDivision td, Threads& locker, KVPersistan
     locker.unlock();
     return;
   }
-  
+
   TimeRecorder tr;
   local_result = 0;
   for (int64 i = range.first; i <= range.second; ++i)
@@ -551,7 +710,7 @@ void ThreadsWorker(TaskContext tc, TaskDivision td, Threads& locker, KVPersistan
     local_result += i;
   }
   auto usage = tr.elapsed();
-  
+
   locker.lock();
     cerr << id << " finishes. (" << usage.format() << ")" << endl;
     cerr << "local_result = " << local_result << endl;
@@ -570,17 +729,17 @@ void ThreadsRun(int64 first, int64 last, int64 block_size, int thread_count_, co
   {
     kv = new KVPersistance(filename);
   }
-  
+
   Threads oml;
-  
+
   std::function<void (TaskContext)> worker([=,&oml](TaskContext tc)
     {
       ::ThreadsWorker(tc, td, oml, kv);
     }
   );
-  
+
   set_process_priority(PRIORITY_IDLE);
-  
+
   oml.init(&worker, thread_count_);
   for (int64 i = td.first_task_; i <= td.last_task_; ++i)
   {
@@ -588,9 +747,9 @@ void ThreadsRun(int64 first, int64 last, int64 block_size, int thread_count_, co
     oml.add_request((int32_t)i);
   }
   oml.wait_for_end();
-  
+
   if (kv) delete kv;
-  
+
   cerr << g_result << endl;
 }
 #endif

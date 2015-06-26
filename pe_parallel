@@ -1,0 +1,545 @@
+#ifndef __PE_THREADS_H__
+#define __PE_THREADS_H__
+
+#if defined(__GNUC__)
+  #if __cplusplus < 201103L
+    #define PE_THREAD_HAS_CPP11 0
+  #else
+    #define PE_THREAD_HAS_CPP11 1
+  #endif
+#elif defined(_MSC_VER)
+  #if _MSC_VER < 1800
+    #define PE_THREAD_HAS_CPP11 0
+  #else
+    #define PE_THREAD_HAS_CPP11 1
+  #endif
+#endif
+
+#include <cstdint>
+#include <cstdio>
+#include <cassert>
+
+#include <string>
+#include <algorithm>
+#include <functional>
+
+#include <windows.h>
+#include <process.h>
+
+using namespace std;
+
+typedef std::int64_t int64;
+
+template<typename Task>
+class MultiThreadsTaskRunner
+{
+public:
+struct TaskItem
+{
+  int64 task_item_id;
+  int worker_idx;
+  int is_stop_task;
+  Task task;
+};
+
+private:
+enum
+{
+  min_thread = 1,
+  max_thread = 64,
+  max_pending_tasks = 1024,//1<<20,  // the actual maximum pending task is max_pending_tasks - 1
+};
+
+#if PE_THREAD_HAS_CPP11
+  typedef std::function<void (TaskItem)>* worker_ptr_t;
+#else
+  typedef void (*worker_ptr_t)(TaskItem task_item);
+#endif
+
+struct ThreadContext
+{
+  int idx;
+  worker_ptr_t worker_ptr;
+  MultiThreadsTaskRunner* host;
+};
+
+public:
+MultiThreadsTaskRunner() : threads_count(0), worker_ptr(NULL), next_task_item_id(0), p(0), q(0)
+{
+  memset(threads_context, 0, sizeof threads_context);
+}
+
+void reset()
+{
+  threads_count = 0;
+  worker_ptr = NULL;
+  p = q = 0;
+  memset(threads_context, 0, sizeof threads_context);
+}
+
+void init(worker_ptr_t worker_ptr, const int threads = 3, const int stack = 100*(1<<20))
+{
+  assert(this->worker_ptr == NULL);
+
+  p = q = 0;
+  InitializeCriticalSection(&request_access);
+  has_request = CreateEvent(NULL, FALSE, FALSE, NULL);
+  has_result = CreateEvent(NULL, FALSE, FALSE, NULL);
+  threads_count = max(threads, (int)min_thread);
+  threads_count = min(threads_count, (int)max_thread);
+  this->worker_ptr = worker_ptr;
+  for (int i = 0; i < threads_count; ++i)
+  {
+    threads_context[i].idx = i;
+    threads_context[i].worker_ptr = worker_ptr;
+    threads_context[i].host = this;
+    threads_handle[i] = (HANDLE)_beginthreadex(NULL, max(stack, 100*(1<<20)), work_thread, (void*)&threads_context[i], 0, NULL);
+  }
+  start = GetTickCount();
+}
+
+void wait_for_queue(int max_request = -1)
+{
+  if (max_request == -1) max_request = threads_count;
+  if (max_request > max_pending_tasks - 1) max_request = max_pending_tasks - 1;
+  for (;;)
+  {
+    if (get_request_count() < max_request) break;
+    WaitForSingleObject(has_result, 500);
+  }
+}
+
+void add_request(const Task& task, int is_stop_task = 0)
+{
+  EnterCriticalSection(&request_access);
+  assert(q + 1 != p);
+  TaskItem item = {next_task_item_id++, -1, is_stop_task, task};
+  task_que[q++] = item;
+  if (q >= max_pending_tasks)
+  {
+    q -= max_pending_tasks;
+  }
+  LeaveCriticalSection(&request_access);
+  SetEvent(has_request);
+}
+
+void wait_for_end()
+{
+  wait_for_queue();
+  add_request(Task(), 1);
+  WaitForMultipleObjects(threads_count, threads_handle, TRUE, INFINITE);
+  for (int i = 0; i < threads_count; ++i) CloseHandle(threads_handle[i]);
+  CloseHandle(has_result);
+  CloseHandle(has_request);
+  DeleteCriticalSection(&request_access);
+  end = GetTickCount();
+  fprintf(stderr, "time : %u\n", (unsigned)(end - start));
+}
+
+public:
+
+void lock()
+{
+  EnterCriticalSection(&request_access);
+}
+
+void unlock()
+{
+  LeaveCriticalSection(&request_access);
+}
+
+// inc = 0 or 1
+bool get_next_request(TaskItem& item, int inc)
+{
+  item.task_item_id = -1;
+  EnterCriticalSection(&request_access);
+  if (p != q)
+  {
+    item = task_que[p];
+    if (inc > 0 && !item.is_stop_task)
+    {
+      p += inc;
+      if (p >= max_pending_tasks)
+      {
+        p -= max_pending_tasks;
+      }
+    }
+  }
+  LeaveCriticalSection(&request_access);
+  return item.task_item_id != -1;
+}
+
+int get_request_count()
+{
+  int ret = 0;
+  EnterCriticalSection(&request_access);
+  ret = q - p;
+  if (ret < 0)
+  {
+    ret += max_pending_tasks;
+  }
+  LeaveCriticalSection(&request_access);
+  return ret;
+}
+
+void work(ThreadContext thread_context)
+{
+  for (;;)
+  {
+    TaskItem item;
+    if (get_next_request(item, 0) == false)
+    {
+      DWORD wait_result = WaitForSingleObject(has_request, INFINITE);
+      if (wait_result != WAIT_OBJECT_0) continue;
+    }
+    if (get_next_request(item, 1) == false) continue;
+    if (item.is_stop_task) {SetEvent(has_request);break;}
+    if (thread_context.worker_ptr)
+    {
+      item.worker_idx = thread_context.idx;
+      (*thread_context.worker_ptr)(item);
+    }
+    SetEvent(has_result);
+  }
+}
+
+static unsigned int __stdcall work_thread(void* p)
+{
+  ThreadContext context_copy = *(ThreadContext*)p;
+  context_copy.host->work(context_copy);
+  return 0;
+}
+
+private:
+  DWORD start, end;
+
+private:
+  int threads_count;
+
+  HANDLE threads_handle[max_thread];
+  ThreadContext threads_context[max_thread];
+
+  HANDLE has_request;
+  HANDLE has_result;
+  CRITICAL_SECTION request_access;
+  worker_ptr_t worker_ptr;
+
+  TaskItem task_que[max_pending_tasks+1];
+  int64 next_task_item_id;
+  int p, q;
+};
+
+enum
+{
+  PRIORITY_REALTIME     = REALTIME_PRIORITY_CLASS,
+  PRIORITY_HIGH         = HIGH_PRIORITY_CLASS,
+  PRIORITY_ABOVE_NORMAL = ABOVE_NORMAL_PRIORITY_CLASS,
+  PRIORITY_NORMAL       = NORMAL_PRIORITY_CLASS,
+  PRIORITY_BELOW_NORMAL = BELOW_NORMAL_PRIORITY_CLASS,
+  PRIORITY_BACKGROUND   = PROCESS_MODE_BACKGROUND_BEGIN,
+  PRIORITY_IDLE         = IDLE_PRIORITY_CLASS,
+};
+
+static inline void set_process_priority(int priority)
+{
+  ::SetPriorityClass(::GetCurrentProcess(), priority);
+}
+
+static inline void make_sure_process_singleton(const char* id)
+{
+  string mutex_name = "pe_mutex_prefix_";
+  mutex_name += id;
+  HANDLE hMutex = ::OpenMutex(MUTEX_ALL_ACCESS, FALSE, mutex_name.c_str());
+  if (hMutex)
+  {
+    fprintf(stderr, "another process is running\n");
+    ::CloseHandle(hMutex);
+    exit(-1);
+    return;
+  }
+  hMutex = ::CreateMutex(NULL, TRUE, mutex_name.c_str());
+  if (::GetLastError() == ERROR_ALREADY_EXISTS)
+  {
+    fprintf(stderr, "another process is running\n");
+    ::CloseHandle(hMutex);
+    exit(-1);
+    return;
+  }
+}
+
+#if PE_THREAD_HAS_CPP11
+
+#include <iostream>
+#include "pe_util"
+
+template<typename Derived>
+struct RangeBasedTaskGenerator
+{
+  struct Task
+  {
+    int64 id;
+    int operator == (const Task& other) const
+    {
+      return id == other.id;
+    }
+  };
+
+  RangeBasedTaskGenerator(int64 first = 0, int64 last = 0, int64 block_size = 1) :
+    first_(first), last_(last), block_size_(block_size)
+    {
+      assert(block_size_ >= 1);
+      const int64 cnt = last_ - first_ + 1;
+      first_task_ = 1;
+      last_task_ = (cnt + block_size - 1) / block_size;
+    }
+
+  ~RangeBasedTaskGenerator()
+  {
+  }
+  
+  Derived& set_range(int64 first = 0, int64 last = 0, int64 block_size = 1)
+  {
+    first_ = first;
+    last_ = last;
+    block_size_ = block_size;
+    assert(block_size_ >= 1);
+    const int64 cnt = last_ - first_ + 1;
+    first_task_ = 1;
+    last_task_ = (cnt + block_size - 1) / block_size;
+    return static_cast<Derived&>(*this);
+  }
+
+  Task first_task()
+  {
+    Task first = {first_task_};
+    return first;
+  }
+  
+  Task next_task(Task curr)
+  {
+    curr.id++;
+    return curr;
+  }
+  
+  Task last_task()
+  {
+    Task last = {last_task_};
+    return last;
+  }
+
+  pair<int64, int64> task_id_to_range(int64 id) const
+  {
+    assert(id >= first_task_ && id <= last_task_);
+
+    int64 u = (id - 1) * block_size_ + first_;
+    int64 v = u + block_size_ - 1;
+    if (v > last_) v = last_;
+
+    return {u, v};
+  }
+  int64 block_size_;
+  int64 first_;
+  int64 last_;
+  int64 first_task_;
+  int64 last_task_;
+};
+
+template<typename Derived>
+struct SupportCacheFileName
+{
+  SupportCacheFileName(const char* file_name = NULL) : file_name_(NULL){}
+
+  const char* cache_file_name() const
+  {
+    return file_name_;
+  }
+
+  Derived& set_cache_file_name(const char* file_name)
+  {
+    file_name_ = file_name;
+    return static_cast<Derived&>(*this);
+  }
+
+  const char* file_name_;
+};
+
+template<typename CONTEXT, bool has_file_name>
+struct GetCacheFileNameHelper
+{
+  const char* get(CONTEXT& context){return context.cache_file_name();}
+};
+
+template<typename CONTEXT>
+struct GetCacheFileNameHelper<CONTEXT, false>
+{
+  const char* get(CONTEXT& context){return NULL;}
+};
+
+template<typename CONTEXT>
+class ParallelRunner
+{
+  typedef MultiThreadsTaskRunner<typename CONTEXT::Task> runner_t;
+  typedef typename runner_t::TaskItem TaskItem;
+public:
+  ParallelRunner() : kv_(NULL)
+  {
+  }
+
+  ~ParallelRunner()
+  {
+  }
+
+  void work_on_thread(TaskItem ti)
+  {
+    // step 1: check cache
+    lock();
+      bool can_skip = on_start(ti);
+    unlock();
+    if (can_skip) return;
+
+    // step 2: run
+    TimeRecorder tr;
+    const int64 local_result = context_ptr_->work(ti.task, ti.worker_idx);
+    auto usage = tr.elapsed();
+
+    // step 3: finish
+    lock();
+      on_stop(ti, local_result, usage);
+    unlock();
+  }
+
+  bool on_start(const TaskItem& task_item)
+  {
+    cerr << task_item.task.id << " begins" << endl;
+    if (kv_)
+    {
+      auto iter = kv_->storage().find(task_item.task.id);
+      if (iter != kv_->storage().end())
+      {
+        const int64 old_value = iter->second;
+        return context_ptr_->handle_cached_result(task_item.task, old_value);
+      }
+    }
+    return false;
+  }
+
+  bool on_stop(const TaskItem& task_item, int64 local_result, TimeDelta usage)
+  {
+    cerr << task_item.task.id << " finishes. (" << usage.format() << ")" << endl;
+    cerr << "local_result = " << local_result << endl;
+    if (kv_) kv_->set(task_item.task.id, local_result);
+    context_ptr_->handle_result(task_item.task, local_result);
+    cerr << "result = " << context_ptr_->result() << endl;
+    return true;
+  }
+
+  void lock(){oml_.lock();}
+
+  void unlock(){oml_.unlock();}
+
+  int64 run(CONTEXT&& context, int thread_count) {return run(context, thread_count);}
+  int64 run(CONTEXT& context, int thread_count)
+  {
+    const char* file_name = GetCacheFileNameHelper<
+        CONTEXT, is_base_of<SupportCacheFileName<CONTEXT>, CONTEXT>::value
+            >().get(context);
+    if (file_name && file_name[0]) kv_ = new KVPersistance(file_name);
+    context_ptr_ = &context;
+
+    std::function<void (TaskItem)> worker([=](TaskItem ti)
+      {
+        work_on_thread(ti);
+      }
+    );
+
+    set_process_priority(PRIORITY_IDLE);
+
+    oml_.init(&worker, thread_count);
+    auto curr = context.first_task();
+    auto last = context.last_task();
+    for (;;)
+    {
+      oml_.wait_for_queue();
+      oml_.add_request(curr);
+      if (curr == last) break;
+      curr = context.next_task(curr);
+    }
+    oml_.wait_for_end();
+    oml_.reset();
+    context.on_finished();
+    
+    if (kv_) {delete kv_; kv_ = NULL;}
+    context_ptr_ = NULL;
+    
+    return context.result();
+  }
+
+private:
+runner_t oml_;
+KVPersistance* kv_;
+CONTEXT* context_ptr_;
+};
+
+#endif
+
+#if 0
+// example of MultiThreadsTask
+class ComputeSumContext :
+  public RangeBasedTaskGenerator<ComputeSumContext>,
+  public SupportCacheFileName<ComputeSumContext>
+{
+public:
+  ComputeSumContext(int64 first = 0, int64 last = 0, int64 block_size = 1, const char* file_name = NULL) :
+  RangeBasedTaskGenerator(first, last, block_size), result_(0), SupportCacheFileName(file_name){}
+
+  int64 result() const
+  {
+    return result_;
+  }
+
+  void on_finished()
+  {
+    cerr << "result = " << result_ << endl;
+  }
+
+  void handle_result(const Task& task, int64 result)
+  {
+    result_ += result;
+  }
+
+  bool handle_cached_result(const Task& task, int64 result)
+  {
+    handle_result(task, result);
+    return true;
+  }
+
+  int64 work(const Task& task, int64 worker_idx)
+  {
+    int64 t = 0;
+    auto range = task_id_to_range(task.id);
+    for (int64 i = range.first; i <= range.second; ++i)
+    {
+      t += i;
+    }
+    return t;
+  }
+  
+  void run(int thread_count){runner.run(*this, thread_count);}
+
+protected:
+  ParallelRunner<ComputeSumContext> runner;
+  int64 result_;
+};
+
+int main()
+{
+  init_primes();
+  ComputeSumContext()
+    .set_range(1, 100000000, 10000000)
+    .run(8);
+  return 0;
+}
+
+#endif
+
+#endif

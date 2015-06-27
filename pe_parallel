@@ -3,19 +3,25 @@
 
 #if defined(__GNUC__)
   #if __cplusplus < 201103L
-    #define PE_THREAD_HAS_CPP11 0
+    #define PE_PARALLEL_HAS_CPP11 0
   #else
-    #define PE_THREAD_HAS_CPP11 1
+    #define PE_PARALLEL_HAS_CPP11 1
   #endif
 #elif defined(_MSC_VER)
   #if _MSC_VER < 1800
-    #define PE_THREAD_HAS_CPP11 0
+    #define PE_PARALLEL_HAS_CPP11 0
   #else
-    #define PE_THREAD_HAS_CPP11 1
+    #define PE_PARALLEL_HAS_CPP11 1
   #endif
 #endif
 
+#if PE_PARALLEL_HAS_CPP11
 #include <cstdint>
+typedef std::int64_t int64;
+#else
+typedef long long int64;
+#endif
+
 #include <cstdio>
 #include <cassert>
 
@@ -28,18 +34,16 @@
 
 using namespace std;
 
-typedef std::int64_t int64;
-
 template<typename Task>
 class MultiThreadsTaskRunner
 {
 public:
 struct TaskItem
 {
+  Task task;
   int64 task_item_id;
   int worker_idx;
   int is_stop_task;
-  Task task;
 };
 
 private:
@@ -50,7 +54,7 @@ enum
   max_pending_tasks = 1024,//1<<20,  // the actual maximum pending task is max_pending_tasks - 1
 };
 
-#if PE_THREAD_HAS_CPP11
+#if PE_PARALLEL_HAS_CPP11
   typedef std::function<void (TaskItem)>* worker_ptr_t;
 #else
   typedef void (*worker_ptr_t)(TaskItem task_item);
@@ -77,9 +81,9 @@ void reset()
   memset(threads_context, 0, sizeof threads_context);
 }
 
-void init(worker_ptr_t worker_ptr, const int threads = 3, const int stack = 100*(1<<20))
+void init(worker_ptr_t worker, const int threads = 3, const int stack = 100*(1<<20))
 {
-  assert(this->worker_ptr == NULL);
+  assert(worker_ptr == NULL);
 
   p = q = 0;
   InitializeCriticalSection(&request_access);
@@ -87,7 +91,7 @@ void init(worker_ptr_t worker_ptr, const int threads = 3, const int stack = 100*
   has_result = CreateEvent(NULL, FALSE, FALSE, NULL);
   threads_count = max(threads, (int)min_thread);
   threads_count = min(threads_count, (int)max_thread);
-  this->worker_ptr = worker_ptr;
+  worker_ptr = worker;
   for (int i = 0; i < threads_count; ++i)
   {
     threads_context[i].idx = i;
@@ -113,7 +117,7 @@ void add_request(const Task& task, int is_stop_task = 0)
 {
   EnterCriticalSection(&request_access);
   assert((q + 1) % max_pending_tasks != p);
-  TaskItem item = {next_task_item_id++, -1, is_stop_task, task};
+  TaskItem item = {task, next_task_item_id++, -1, is_stop_task};
   task_que[q++] = item;
   if (q >= max_pending_tasks)
   {
@@ -267,7 +271,7 @@ static inline void make_sure_process_singleton(const char* id)
   }
 }
 
-#if PE_THREAD_HAS_CPP11
+#if PE_PARALLEL_HAS_CPP11
 
 #include <iostream>
 #include "pe_util"
@@ -480,6 +484,106 @@ KVPersistance* kv_;
 CONTEXT* context_ptr_;
 };
 
+class ParallelRange :
+  public RangeBasedTaskGenerator<ParallelRange>,
+  public SupportCacheFileName<ParallelRange>
+{
+public:
+  ParallelRange(int64 first = 0, int64 last = 0, int64 block_size = 1, const char* file_name = NULL) :
+    RangeBasedTaskGenerator(first, last, block_size),
+    SupportCacheFileName(file_name),
+    result_(0),
+    has_woi_(false),
+    has_wob_(false)
+    {}
+
+  int64 result() const
+  {
+    return result_;
+  }
+
+  void on_finished()
+  {
+    cerr << "result = " << result_ << endl;
+  }
+
+  void handle_result(const Task& task, int64 result)
+  {
+    result_ = update_result_(result_, result);
+  }
+
+  bool handle_cached_result(const Task& task, int64 result)
+  {
+    handle_result(task, result);
+    return true;
+  }
+
+  int64 work(const Task& task, int64 worker_idx)
+  {
+    auto range = task_id_to_range(task.id);
+    if (has_wob_)
+    {
+      return work_on_block_(range.first, range.second, worker_idx);
+    }
+    assert(has_woi_);
+    int64 t = 0;
+    for (int64 i = range.first; i <= range.second; ++i)
+    {
+      t = update_result_(t, work_on_item_(i, worker_idx));
+    }
+    return t;
+  }
+  
+  ParallelRange& from(int64 first) {first_ = first; return *this;}
+  ParallelRange& to(int64 last) {last_ = last; return *this;}
+  ParallelRange& divide_by(int64 block_size) {block_size_ = block_size; return *this;}
+  ParallelRange& map(std::function<int64 (int64, int64)> woi){work_on_item_ = woi; has_woi_ = true; return *this;}
+  ParallelRange& block_map(std::function<int64 (int64, int64, int64)> wor){work_on_block_ = wor; has_wob_ = true; return *this;}
+  ParallelRange& reduce(std::function<int64 (int64, int64)> ur){update_result_ = ur; return *this;}
+  ParallelRange& cache(const char* file_name){set_cache_file_name(file_name); return *this;}
+  ParallelRange& go(int thread_count)
+  {
+    set_range(first_, last_, block_size_);
+    runner_.run(*this, thread_count);
+    return *this;
+  }
+  
+  void run(int thread_count){runner_.run(*this, thread_count);}
+
+protected:
+  ParallelRunner<ParallelRange> runner_;
+  int64 result_;
+  bool has_woi_;
+  bool has_wob_;
+  std::function<int64 (int64, int64)> update_result_;
+  std::function<int64 (int64, int64)> work_on_item_;
+  std::function<int64 (int64, int64, int64)> work_on_block_;
+};
+
+#if 1
+
+#define BEGIN_PARALLEL    ParallelRange()
+#define FROM              .from((
+#define TO                )).to((
+#define EACH_BLOCK_IS     )).divide_by((
+#define MAP               )).map((        [=] (int64 key, int64 worker)
+#define BLOCK_MAP         )).block_map((  [=] (int64 first, int64 last, int64 worker)
+#define REDUCE            )).reduce((     [=] (int64 result, int64 value)
+#define CACHE             )).cache((
+#define GO                )).go((
+#define END_PARALLEL      ));
+
+#else
+
+#define FROM(x)           ParallelRange().from((x)
+#define TO(x)             ).to((x)
+#define MAP(x)            ).map((x)
+#define EACH_BLOCK_IS(x)  ).divide_by((x)
+#define BLOCK_MAP(x)      ).block_map((x)
+#define REDUCE(x)         ).reduce((x)
+#define CACHE(x)          ).cache((x)
+#define GO(x)             ).go((x))
+
 #endif
 
 #if 0
@@ -524,10 +628,10 @@ public:
     return t;
   }
   
-  void run(int thread_count){runner.run(*this, thread_count);}
+  void run(int thread_count){runner_.run(*this, thread_count);}
 
 protected:
-  ParallelRunner<ComputeSumContext> runner;
+  ParallelRunner<ComputeSumContext> runner_;
   int64 result_;
 };
 
@@ -541,5 +645,7 @@ int main()
 }
 
 #endif
+
+#endif // end PE_PARALLEL_HAS_CPP11
 
 #endif

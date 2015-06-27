@@ -441,8 +441,8 @@ public:
 
   void unlock(){oml_.unlock();}
 
-  int64 run(CONTEXT&& context, int thread_count) {return run(context, thread_count);}
-  int64 run(CONTEXT& context, int thread_count)
+  int64 run(CONTEXT&& context, int threads_count) {return run(context, threads_count);}
+  int64 run(CONTEXT& context, int threads_count)
   {
     const char* file_name = GetCacheFileNameHelper<
         CONTEXT, is_base_of<SupportCacheFileName<CONTEXT>, CONTEXT>::value
@@ -458,7 +458,14 @@ public:
 
     set_process_priority(PRIORITY_IDLE);
 
-    oml_.init(&worker, thread_count);
+    if (threads_count > 0)
+    {
+      oml_.init(&worker, threads_count);
+    }
+    else
+    {
+      oml_.init(&worker);
+    }
     auto curr = context.first_task();
     auto last = context.last_task();
     for (;;)
@@ -493,6 +500,7 @@ public:
     RangeBasedTaskGenerator(first, last, block_size),
     SupportCacheFileName(file_name),
     result_(0),
+    threads_count_(-1),
     has_woi_(false),
     has_wob_(false)
     {}
@@ -537,22 +545,23 @@ public:
   ParallelRange& from(int64 first) {first_ = first; return *this;}
   ParallelRange& to(int64 last) {last_ = last; return *this;}
   ParallelRange& divide_by(int64 block_size) {block_size_ = block_size; return *this;}
+  ParallelRange& cache(const char* file_name){set_cache_file_name(file_name); return *this;}
+  ParallelRange& threads(int threads_count){threads_count_ = threads_count; return *this;}
   ParallelRange& map(std::function<int64 (int64, int64)> woi){work_on_item_ = woi; has_woi_ = true; return *this;}
   ParallelRange& block_map(std::function<int64 (int64, int64, int64)> wor){work_on_block_ = wor; has_wob_ = true; return *this;}
   ParallelRange& reduce(std::function<int64 (int64, int64)> ur){update_result_ = ur; return *this;}
-  ParallelRange& cache(const char* file_name){set_cache_file_name(file_name); return *this;}
-  ParallelRange& go(int thread_count)
+  ParallelRange& start()
   {
     set_range(first_, last_, block_size_);
-    runner_.run(*this, thread_count);
+    runner_.run(*this, threads_count_);
     return *this;
   }
-  
-  void run(int thread_count){runner_.run(*this, thread_count);}
+  void run(int threads_count){runner_.run(*this, threads_count);}
 
 protected:
   ParallelRunner<ParallelRange> runner_;
   int64 result_;
+  int   threads_count_;
   bool has_woi_;
   bool has_wob_;
   std::function<int64 (int64, int64)> update_result_;
@@ -560,31 +569,17 @@ protected:
   std::function<int64 (int64, int64, int64)> work_on_block_;
 };
 
-#if 1
-
 #define BEGIN_PARALLEL    ParallelRange()
 #define FROM              .from((
 #define TO                )).to((
 #define EACH_BLOCK_IS     )).divide_by((
+#define CACHE             )).cache((
+
+#define THREADS           )).threads((
 #define MAP               )).map((        [=] (int64 key, int64 worker)
 #define BLOCK_MAP         )).block_map((  [=] (int64 first, int64 last, int64 worker)
 #define REDUCE            )).reduce((     [=] (int64 result, int64 value)
-#define CACHE             )).cache((
-#define GO                )).go((
-#define END_PARALLEL      ));
-
-#else
-
-#define FROM(x)           ParallelRange().from((x)
-#define TO(x)             ).to((x)
-#define MAP(x)            ).map((x)
-#define EACH_BLOCK_IS(x)  ).divide_by((x)
-#define BLOCK_MAP(x)      ).block_map((x)
-#define REDUCE(x)         ).reduce((x)
-#define CACHE(x)          ).cache((x)
-#define GO(x)             ).go((x))
-
-#endif
+#define END_PARALLEL      )).start();
 
 #if 0
 // example of MultiThreadsTask
@@ -628,7 +623,7 @@ public:
     return t;
   }
   
-  void run(int thread_count){runner_.run(*this, thread_count);}
+  void run(int threads_count){runner_.run(*this, threads_count);}
 
 protected:
   ParallelRunner<ComputeSumContext> runner_;

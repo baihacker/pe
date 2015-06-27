@@ -87,8 +87,8 @@ void init(worker_ptr_t worker, const int threads = 3, const int stack = 100*(1<<
 
   p = q = 0;
   InitializeCriticalSection(&request_access);
-  has_request = CreateEvent(NULL, FALSE, FALSE, NULL);
-  has_result = CreateEvent(NULL, FALSE, FALSE, NULL);
+  has_new_request = CreateEvent(NULL, FALSE, FALSE, NULL);
+  request_removed = CreateEvent(NULL, FALSE, FALSE, NULL);
   threads_count = max(threads, (int)min_thread);
   threads_count = min(threads_count, (int)max_thread);
   worker_ptr = worker;
@@ -97,7 +97,8 @@ void init(worker_ptr_t worker, const int threads = 3, const int stack = 100*(1<<
     threads_context[i].idx = i;
     threads_context[i].worker_ptr = worker_ptr;
     threads_context[i].host = this;
-    threads_handle[i] = (HANDLE)_beginthreadex(NULL, max(stack, 100*(1<<20)), work_thread, (void*)&threads_context[i], 0, NULL);
+    threads_handle[i] = (HANDLE)_beginthreadex(
+        NULL, max(stack, 100*(1<<20)), work_thread, (void*)&threads_context[i], 0, NULL);
   }
   start = GetTickCount();
 }
@@ -109,7 +110,7 @@ void wait_for_queue(int max_request = -1)
   for (;;)
   {
     if (get_request_count() < max_request) break;
-    WaitForSingleObject(has_result, 500);
+    WaitForSingleObject(request_removed, INFINITY);
   }
 }
 
@@ -124,7 +125,7 @@ void add_request(const Task& task, int is_stop_task = 0)
     q -= max_pending_tasks;
   }
   LeaveCriticalSection(&request_access);
-  SetEvent(has_request);
+  SetEvent(has_new_request);
 }
 
 void wait_for_end()
@@ -133,14 +134,12 @@ void wait_for_end()
   add_request(Task(), 1);
   WaitForMultipleObjects(threads_count, threads_handle, TRUE, INFINITE);
   for (int i = 0; i < threads_count; ++i) CloseHandle(threads_handle[i]);
-  CloseHandle(has_result);
-  CloseHandle(has_request);
+  CloseHandle(request_removed);
+  CloseHandle(has_new_request);
   DeleteCriticalSection(&request_access);
   end = GetTickCount();
   fprintf(stderr, "time : %u\n", (unsigned)(end - start));
 }
-
-public:
 
 void lock()
 {
@@ -152,10 +151,12 @@ void unlock()
   LeaveCriticalSection(&request_access);
 }
 
+private:
 // inc = 0 or 1
 bool get_next_request(TaskItem& item, int inc)
 {
   item.task_item_id = -1;
+  int oldp = p;
   EnterCriticalSection(&request_access);
   if (p != q)
   {
@@ -170,6 +171,10 @@ bool get_next_request(TaskItem& item, int inc)
     }
   }
   LeaveCriticalSection(&request_access);
+  if (oldp != p)
+  {
+    SetEvent(request_removed);
+  }
   return item.task_item_id != -1;
 }
 
@@ -193,17 +198,20 @@ void work(ThreadContext thread_context)
     TaskItem item;
     if (get_next_request(item, 0) == false)
     {
-      DWORD wait_result = WaitForSingleObject(has_request, INFINITE);
+      DWORD wait_result = WaitForSingleObject(has_new_request, INFINITE);
       if (wait_result != WAIT_OBJECT_0) continue;
     }
     if (get_next_request(item, 1) == false) continue;
-    if (item.is_stop_task) {SetEvent(has_request);break;}
+    if (item.is_stop_task)
+    {
+      SetEvent(has_new_request);
+      break;
+    }
     if (thread_context.worker_ptr)
     {
       item.worker_idx = thread_context.idx;
       (*thread_context.worker_ptr)(item);
     }
-    SetEvent(has_result);
   }
 }
 
@@ -223,8 +231,8 @@ private:
   HANDLE threads_handle[max_thread];
   ThreadContext threads_context[max_thread];
 
-  HANDLE has_request;
-  HANDLE has_result;
+  HANDLE has_new_request;
+  HANDLE request_removed;
   CRITICAL_SECTION request_access;
   worker_ptr_t worker_ptr;
 
@@ -300,7 +308,7 @@ struct RangeBasedTaskGenerator
   ~RangeBasedTaskGenerator()
   {
   }
-  
+
   Derived& set_range(int64 first = 0, int64 last = 0, int64 block_size = 1)
   {
     first_ = first;
@@ -318,13 +326,13 @@ struct RangeBasedTaskGenerator
     Task first = {first_task_};
     return first;
   }
-  
+
   Task next_task(Task curr)
   {
     curr.id++;
     return curr;
   }
-  
+
   Task last_task()
   {
     Task last = {last_task_};
@@ -478,10 +486,10 @@ public:
     oml_.wait_for_end();
     oml_.reset();
     context.on_finished();
-    
+
     if (kv_) {delete kv_; kv_ = NULL;}
     context_ptr_ = NULL;
-    
+
     return context.result();
   }
 
@@ -541,7 +549,7 @@ public:
     }
     return t;
   }
-  
+
   ParallelRange& from(int64 first) {first_ = first; return *this;}
   ParallelRange& to(int64 last) {last_ = last; return *this;}
   ParallelRange& divide_by(int64 block_size) {block_size_ = block_size; return *this;}
@@ -582,7 +590,7 @@ protected:
 #define END_PARALLEL      )).start();
 
 #if 0
-// example of MultiThreadsTask
+// example of ParallelRunner
 class ComputeSumContext :
   public RangeBasedTaskGenerator<ComputeSumContext>,
   public SupportCacheFileName<ComputeSumContext>
@@ -622,7 +630,7 @@ public:
     }
     return t;
   }
-  
+
   void run(int threads_count){runner_.run(*this, threads_count);}
 
 protected:

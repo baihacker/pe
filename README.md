@@ -32,3 +32,31 @@ eg:
 The factorizing interface is c++ style. It will be a little slower but it's easy to use.
 
 [Use global variable plist (array of integers), pcnt to store the prime list and prime count, because they are frequently used. phi and miu are a c-style pointers, because they are not frequently used while vector<int> is a little heavier.] But now, the type of plist can be both array of integers and c-stype pointer, because the performance is nearly the same and sometimes we need dynamic allocation to obtain much more primes where a static allocation will make the binary not work.
+
+Example:
+--------
+```cpp
+const int maxp = 100000;
+#include <pe>
+
+int main()
+{
+  init_primes();
+  
+  BEGIN_PARALLEL
+    FROM 1 TO 100000000 EACH_BLOCK_IS 10000000 CACHE ""
+    MAP
+      {
+        return is_prime_ex(key);
+      }
+    REDUCE
+      {
+        result += value;
+        return result;
+      }
+    GO 10
+  END_PARALLEL
+  
+  return 0;
+}
+```

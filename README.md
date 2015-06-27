@@ -18,7 +18,8 @@ File list:
 * pe_base: Some pre-including headers. Some macros and typedef. (c++11 or above).
 * pe_util: Utilities such as TimeDelta, KVPersistance. (c++11 or above, it may support linux but we need change the generated cmdline and check the other codes)
 * pe_nt: Basic code of number theory. (c++11 or above)
-* pe_threads: A simple framework to solve problem with multi-threads. (c++11 or above for class MultiThreadsTask, windows only)
+* pe_parallel: A simple framework to solve problem with multi-threads. (c++11 or above for class ParallelRunner and ParallelRange)
+* pe_threads: Deprecated. A simple framework to solve problem with multi-threads. (c++11 or above for class MultiThreadsTask, windows only)
 * pe_bn: Big integer.
 * pe_memory: Memory manipulation such as allocating large memory. (windows only)
 

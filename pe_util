@@ -22,67 +22,82 @@
 #include <algorithm>
 #include <functional>
 
+#include <chrono>
+#include <ratio>
+
 using namespace std;
 
 typedef std::int64_t int64;
-static const int64 CPS          = CLOCKS_PER_SEC;
-static const int64 SEC_CLOCKS   = CPS;
-static const int64 MIN_CLOCKS   = SEC_CLOCKS * 60;
-static const int64 HOUR_CLOCKS  = MIN_CLOCKS * 60;
-static const int64 DAY_CLOCKS   = HOUR_CLOCKS * 24;
+
+typedef chrono::high_resolution_clock pe_clock_t;
+typedef typename pe_clock_t::time_point time_point_t;
+typedef pe_clock_t::duration duration_t;
+typedef pe_clock_t::period period_t;
+
+static const int64 MILLI_SEC_CLOCKS = period_t::den / milli::den;
+static const int64 SEC_CLOCKS = period_t::den;
+static const int64 MIN_CLOCKS = SEC_CLOCKS * 60;
+static const int64 HOUR_CLOCKS = MIN_CLOCKS * 60;
+static const int64 DAY_CLOCKS = HOUR_CLOCKS * 24;
 
 class TimeDelta
 {
 public:
-TimeDelta(int64 time = 0) : time_(time)
+TimeDelta(duration_t duration = duration_t::zero()) : duration_(duration)
 {
 }
 
-int64 native_time() const {return time_;}
-double to_seconds() const {return 1. * time_ / SEC_CLOCKS;}
-double to_minutes() const {return 1. * time_ / MIN_CLOCKS;}
-double to_hours() const {return 1. * time_ / HOUR_CLOCKS;}
-double to_days() const {return 1. * time_ / DAY_CLOCKS;}
+int64 native_time() const {return duration_.count();}
+double to_seconds() const {return 1. * duration_.count() / SEC_CLOCKS;}
+double to_minutes() const {return 1. * duration_.count() / MIN_CLOCKS;}
+double to_hours() const {return 1. * duration_.count() / HOUR_CLOCKS;}
+double to_days() const {return 1. * duration_.count() / DAY_CLOCKS;}
 string format() const
 {
   char temp[128];
-  int64 day = time_ / DAY_CLOCKS ;
-  int hour = time_ % DAY_CLOCKS / HOUR_CLOCKS;
-  int min = time_ % HOUR_CLOCKS / MIN_CLOCKS;
-  int sec = time_ % MIN_CLOCKS / SEC_CLOCKS;
-  int msec = time_ % SEC_CLOCKS;
+  const int64 nano_seconds = duration_.count();
+  const int64 day = nano_seconds / DAY_CLOCKS ;
+  const int hour = nano_seconds % DAY_CLOCKS / HOUR_CLOCKS;
+  const int min = nano_seconds % HOUR_CLOCKS / MIN_CLOCKS;
+  const int sec = nano_seconds % MIN_CLOCKS / SEC_CLOCKS;
+  const int msec = nano_seconds % SEC_CLOCKS / MILLI_SEC_CLOCKS;
   sprintf(temp, "%I64d:%02d:%02d:%02d.%03d", day, hour, min, sec, msec);
   return temp;
 }
 
-static TimeDelta from_millisecond(int64 t) { return t;}
-static TimeDelta from_second(int64 t) { return t * SEC_CLOCKS;}
-static TimeDelta from_minute(int64 t) { return t * MIN_CLOCKS;}
-static TimeDelta from_hour(int64 t) { return t * HOUR_CLOCKS;}
-static TimeDelta from_day(int64 t) { return t * DAY_CLOCKS;}
+static TimeDelta from_millisecond(int64 t) { return duration_t(t*MILLI_SEC_CLOCKS);}
+static TimeDelta from_second(int64 t) { return duration_t(t * SEC_CLOCKS);}
+static TimeDelta from_minute(int64 t) { return duration_t(t * MIN_CLOCKS);}
+static TimeDelta from_hour(int64 t) { return duration_t(t * HOUR_CLOCKS);}
+static TimeDelta from_day(int64 t) { return duration_t(t * DAY_CLOCKS);}
 
-bool operator > (const TimeDelta& o) const {return time_ > o.time_;}
-bool operator >= (const TimeDelta& o) const {return time_ >= o.time_;}
-bool operator == (const TimeDelta& o) const {return time_ == o.time_;}
-bool operator < (const TimeDelta& o) const {return time_ < o.time_;}
-bool operator <= (const TimeDelta& o) const {return time_ <= o.time_;}
+bool operator > (const TimeDelta& o) const {return duration_ > o.duration_;}
+bool operator >= (const TimeDelta& o) const {return duration_ >= o.duration_;}
+bool operator == (const TimeDelta& o) const {return duration_ == o.duration_;}
+bool operator < (const TimeDelta& o) const {return duration_ < o.duration_;}
+bool operator <= (const TimeDelta& o) const {return duration_ <= o.duration_;}
 
 private:
-int64 time_;
+duration_t duration_;
 };
 
 class TimeRecorder
 {
 public:
-TimeRecorder() : last_time_(clock())
+TimeRecorder() : last_time_(pe_clock_t::now())
 {
 }
 
-int64 record() {return last_time_ = clock();}
-TimeDelta elapsed() const {return clock() - last_time_;}
+int64 record()
+{
+  last_time_ = pe_clock_t::now();
+  return last_time_.time_since_epoch().count();
+}
+
+TimeDelta elapsed() const {return pe_clock_t::now() - last_time_;}
 
 private:
-int64 last_time_;
+time_point_t last_time_;
 };
 
 template<typename T>

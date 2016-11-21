@@ -552,7 +552,7 @@ public:
 
   ParallelRange& from(int64 first) {first_ = first; return *this;}
   ParallelRange& to(int64 last) {last_ = last; return *this;}
-  ParallelRange& divide_by(int64 block_size) {block_size_ = block_size; return *this;}
+  ParallelRange& divided_by(int64 block_size) {block_size_ = block_size; return *this;}
   ParallelRange& cache(const char* file_name){set_cache_file_name(file_name); return *this;}
   ParallelRange& set_result(int64 result) {result_ = result; return *this;}
   ParallelRange& threads(int threads_count){threads_count_ = threads_count; return *this;}
@@ -581,7 +581,7 @@ protected:
 #define BEGIN_PARALLEL    ParallelRange()
 #define FROM              .from((
 #define TO                )).to((
-#define EACH_BLOCK_IS     )).divide_by((
+#define EACH_BLOCK_IS     )).divided_by((
 #define CACHE             )).cache((
 #define INIT_RESULT       )).set_result((
 
@@ -590,6 +590,73 @@ protected:
 #define BLOCK_MAP         )).block_map((  [=] (int64 first, int64 last, int64 worker)-> int64
 #define REDUCE            )).reduce((     [=] (int64 result, int64 value)-> int64
 #define END_PARALLEL      )).start();
+
+template<typename Derived>
+class ParallelRangeT :
+  public RangeBasedTaskGenerator<ParallelRangeT<Derived>>,
+  public SupportCacheFileName<ParallelRangeT<Derived>>
+{
+public:
+  typedef ParallelRangeT<Derived> Self;
+  typedef typename RangeBasedTaskGenerator<Self>::Task Task;
+  int64 result() const
+  {
+    return result_;
+  }
+
+  void on_finished()
+  {
+    cerr << "result = " << result_ << endl;
+  }
+
+  void handle_result(const Task& task, int64 result)
+  {
+    Derived& obj = static_cast<Derived&>(*this);
+    result_ = obj.update_result(result_, result);
+  }
+
+  bool handle_cached_result(const Task& task, int64 result)
+  {
+    handle_result(task, result);
+    return true;
+  }
+
+  int64 update_result(int64 result, int64 value)
+  {
+    return result;
+  }
+
+  int64 work_on_block(int64 first, int64 last, int64 worker)
+  {
+    return 0;
+  }
+
+  int64 work(const Task& task, int64 worker_idx)
+  {
+    Derived& obj = static_cast<Derived&>(*this);
+    auto range = obj.task_id_to_range(task.id);
+    return obj.work_on_block(range.first, range.second, worker_idx);
+  }
+
+  Self& from(int64 first) {this->first_ = first; return *this;}
+  Self& to(int64 last) {this->last_ = last; return *this;}
+  Self& divided_by(int64 block_size) {this->block_size_ = block_size; return *this;}
+  Self& cache(const char* file_name){this->set_cache_file_name(file_name); return *this;}
+  Self& set_result(int64 result) {result_ = result; return *this;}
+  Self& threads(int threads_count){threads_count_ = threads_count; return *this;}
+  Self& start()
+  {
+    this->set_range(this->first_, this->last_, this->block_size_);
+    runner_.run(*this, threads_count_);
+    return *this;
+  }
+  void run(int threads_count){runner_.run(*this, threads_count);}
+
+protected:
+  ParallelRunner<ParallelRangeT<Derived>> runner_;
+  int64 result_;
+  int   threads_count_;
+};
 
 #if 0
 // example of ParallelRunner

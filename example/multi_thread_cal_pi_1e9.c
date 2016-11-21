@@ -1,31 +1,26 @@
 const int maxp = 10000000;
-#include <pe_base>
-#include <pe_nt>
-#include <pe_threads>
-#include <pe_util>
+#include <pe>
 
 // example of MultiThreadsTask
-struct CalPI : public MultiThreadsTask<CalPI>
+struct CalPI : public ParallelRangeT<CalPI>
 {
-using MultiThreadsTask<CalPI>::MultiThreadsTask;
-
-void update_result(int64 local_result)
-{
-  result_ += local_result;
-}
-
-void work(int64 input, int64& local_result, int worker_idx)
-{
-  local_result += is_prime_ex(input);
-}
+  int64 update_result(int64 result, int64 value)
+  {
+    return result + value;
+  }
+  int64 work_on_block(int64 first, int64 last, int64 worker)
+  {
+    int64 t = 0;
+    for (int64 i = first; i <= last; ++i) t += is_prime_ex(i);
+    return t;
+  }
 };
 
 int main()
 {
   init_primes();
-  auto runner = CalPI(TaskDivision(1, 100000000, 1000000));
-  int64 result = runner.run(4);
+  int64 result = CalPI().from(1).to(100000000).divided_by(10000000).threads(4).start().result();
   cerr << "expected : " << pmpi[8] << endl;
-  cerr << "received : " << runner.value() << endl;
+  cerr << "received : " << result << endl;
   return 0;
 }

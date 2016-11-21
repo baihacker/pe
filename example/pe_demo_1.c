@@ -1,6 +1,6 @@
 const int maxp = 100000;
-#include <pe_base>
-#include <pe_nt>
+#include <pe>
+
 int main()
 {
   init_primes(true, true);

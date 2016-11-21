@@ -1,10 +1,6 @@
-#include <pe_base>
 const int maxp = 100000;
-#include <pe_nt>
-#include <pe_threads>
-#include <cmath>
-#include <iostream>
-using namespace std;
+#include <pe>
+
 int main()
 {
   int orz = 1;

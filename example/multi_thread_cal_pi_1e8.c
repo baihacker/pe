@@ -1,7 +1,6 @@
 const int maxp = 10000000;
 #include <pe>
 
-// example of MultiThreadsTask
 struct CalPI : public ParallelRangeT<CalPI>
 {
   int64 update_result(int64 result, int64 value)

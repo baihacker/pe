@@ -33,11 +33,11 @@ void small_test()
   for (int i = 1; i <= 100000; ++i)
   {
     const int n = i;
-    auto c = prime_phi(i);
+    auto c = prime_pi(i);
     verify_cnt(n, get<0>(c), get<1>(c));
     auto s = prime_sum(i);
     verify_sum(n, get<0>(s), get<1>(s));
-    auto cs = prime_phi_sum(i);
+    auto cs = prime_pi_sum(i);
     verify_cnt(n, get<0>(cs), get<1>(cs));
     verify_sum(n, get<2>(cs), get<3>(cs));
   }
@@ -54,12 +54,12 @@ int main()
 
   small_test();
 
-  assert(get<1>(prime_phi(10000000))[1] == pmpi[7]);
-  assert(get<1>(prime_phi(100000000))[1] == pmpi[8]);
-  assert(get<1>(prime_phi(1000000000))[1] == pmpi[9]);
-  assert(get<1>(prime_phi(10000000000))[1] == pmpi[10]);
-  assert(get<1>(prime_phi(100000000000))[1] == pmpi[11]);
-  assert(get<1>(prime_phi(1000000000000))[1] == pmpi[12]);
+  assert(get<1>(prime_pi(10000000))[1] == pmpi[7]);
+  assert(get<1>(prime_pi(100000000))[1] == pmpi[8]);
+  assert(get<1>(prime_pi(1000000000))[1] == pmpi[9]);
+  assert(get<1>(prime_pi(10000000000))[1] == pmpi[10]);
+  assert(get<1>(prime_pi(100000000000))[1] == pmpi[11]);
+  assert(get<1>(prime_pi(1000000000000))[1] == pmpi[12]);
 
   return 0;
 }

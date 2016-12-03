@@ -1,5 +1,5 @@
-#ifndef __PE_THREADS_H__
-#define __PE_THREADS_H__
+#ifndef __PE_PARALLEL_H__
+#define __PE_PARALLEL_H__
 
 #if defined(__GNUC__)
   #if __cplusplus < 201103L
@@ -657,66 +657,6 @@ protected:
   int64 result_;
   int   threads_count_;
 };
-
-#if 0
-// example of ParallelRunner
-class ComputeSumContext :
-  public RangeBasedTaskGenerator<ComputeSumContext>,
-  public SupportCacheFileName<ComputeSumContext>
-{
-public:
-  ComputeSumContext(int64 first = 0, int64 last = 0, int64 block_size = 1, const char* file_name = NULL) :
-  RangeBasedTaskGenerator(first, last, block_size), result_(0), SupportCacheFileName(file_name){}
-
-  int64 result() const
-  {
-    return result_;
-  }
-
-  void on_finished()
-  {
-    cerr << "result = " << result_ << endl;
-  }
-
-  void handle_result(const Task& task, int64 result)
-  {
-    result_ += result;
-  }
-
-  bool handle_cached_result(const Task& task, int64 result)
-  {
-    handle_result(task, result);
-    return true;
-  }
-
-  int64 work(const Task& task, int64 worker_idx)
-  {
-    int64 t = 0;
-    auto range = task_id_to_range(task.id);
-    for (int64 i = range.first; i <= range.second; ++i)
-    {
-      t += i;
-    }
-    return t;
-  }
-
-  void run(int threads_count){runner_.run(*this, threads_count);}
-
-protected:
-  ParallelRunner<ComputeSumContext> runner_;
-  int64 result_;
-};
-
-int main()
-{
-  init_primes();
-  ComputeSumContext()
-    .set_range(1, 100000000, 10000000)
-    .run(8);
-  return 0;
-}
-
-#endif
 
 #endif // end PE_PARALLEL_HAS_CPP11
 

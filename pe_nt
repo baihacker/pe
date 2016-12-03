@@ -1,78 +1,3 @@
-/*
-static int plist[maxp/10];
-static int pmask[maxp+1];
-static int pcnt;
-int* phi = NULL;
-int* miu = NULL;
-const int64 pmpi[];
-
-SL int64 estimate_pmpi(int64 n)
-SL int is_prime(int64 n)
-SL void init_primes()
-SL void init_primes(int cal_phi, int cal_miu)
-
-SL vector<pair<int64, int> > factorize(int64 n)
-SL vector<int64> get_factors(const vector<pair<int64, int> >& f)
-SL vector<int64> get_factors(int64 value)
-
-SL int64 cal_phi(int64 n, const vector<pair<int64, int> >& fn)
-SL int64 cal_phi(int64 n)
-SL int64 square_root_safe(int64 n)
-SL int64 square_root_unsafe(int64 n)
-SL int64 square_root(int64 n)
-
-SL int64 regulate_mod(int64 a, int64 mod)
-SL int64 add_mod(int64 a, int64 b, int64 mod)
-SL int64 sub_mod(int64 a, int64 b, int64 mod)
-SL int64 mul_mod(int64 a, int64 b, int64 mod)
-SL int64 mul_mod_ex(int64 a, int64 b, int64 mod)
-SL int64 power_mod(int64 x, int64 n, int64 mod)
-SL int64 power_mod_ex(int64 x, int64 n, int64 mod)
-SL int64 inv_of(int64 x, int64 p)
-
-template<int64 P, int64 F = P>
-struct comb_moder;
-
-class comb_solver;
-
-gcd
-SL int64 exgcd(int64 a, int64 b, int64& x, int64& y)
-SL tuple<int64, int64, int64> exgcd(int64 a, int64 b)
-
-SL int solve_linear_equation(int64 a, int64 b, int64 m, int64& v, int64& u)
-SL int crt2(int64 a, int64 m1, int64 b, int64 m2, int64& v, int64& u)
-SL tuple<int, int64, int64> crt2(int64 a, int64 m1, int64 b, int64 m2)
-SL tuple<int, int64, int64> crtn(int64* val, int64* mod, int n)
-
-const int64 sopp[];
-SL int MR_test_impl(int s, int64 t, int64 n, int x)
-SL int MR_test(int64 n, int x)
-SL int is_prime_ex(int64 n)
-
-SL int crandbit()
-SL int crand15()
-SL int crand31()
-SL int64 crand63()
-SL int crandi()
-SL double crandd()
-
-make_uniform_generator(int seed, int min, int max)
-make_uniform_generator(int min, int max)
-
-// Primitive Root
-namespace pr{
-SL bool is_pr(int64 x, int64 p, const vector<pair<int64, int> >& f)
-SL bool is_pr(int64 x, int64 p)
-SL int64 find_pr(int64 p)
-SL int64 find_pr(int64 p, const vector<pair<int64, int> >& fp1)
-int64 ind(int64 a, int64 pr, int64 p)
-int64 ind(int64 a, int64 pr, int64 p)
-class ind_solver;
-}
-
-template<typename T>
-struct Fraction;
-*/
 #ifndef __PE_NT_H__
 #define __PE_NT_H__
 
@@ -83,6 +8,7 @@ struct Fraction;
 #define COMPILER_MSVC
 #endif
 
+// make sure the compiler supports c++11
 #ifdef COMPILER_GNU
   #if __cplusplus < 201103L
     #error "c++11 or above"
@@ -1099,72 +1025,6 @@ struct comb_moder
 template<int64 P, int64 F>
 int64 * comb_moder<P, F>:: fac;
 
-class comb_solver
-{
-public:
-  comb_solver(const int64 p, const int64 f = -1) :
-    P_(p),
-    F_(f < 0 ? p : f),
-    fac_(new int64[F_])
-    {
-      fac_[0] = 1;
-      for (int i = 1; i < F_; ++i)
-      fac_[i] = fac_[i-1] * i % P_;
-    }
-  ~comb_solver()
-  {
-    delete[] fac_;
-  }
-  int64 inv(int64 x) const
-  {
-    int64 result = 1;
-    int n = P_ - 2;
-    x %= P_;
-    for (; n; n >>= 1, x = x * x % P_)
-    if (n&1) result = result * x % P_;
-    return result;
-  }
-  int64 s(int64 x) const {return x & 1 ? -1 : 1;}
-  int64 comb(int64 m, int64 n) const
-  {
-    if (m < 0 || n > m) return 0;
-
-    int64 pp = 0;
-    int64 dist = m - n;
-
-    for (int64 mm = m/P_, nn = n/P_, dd = dist/P_;
-              mm;
-              mm /= P_, nn /= P_, dd /= P_)
-    {
-      pp += mm - nn - dd;
-    }
-    if (pp) return 0;
-    int64 l = 1, r = 1;
-    for (int64 x = m; x; x /= P_)
-    {
-      PE_ASSERT(x%P_<F_);
-      l = l * s(x/P_) * fac_[x%P_] % P_;
-    }
-    for (int64 x = n; x; x /= P_)
-    {
-      PE_ASSERT(x%P_<F_);
-      r = r * s(x/P_) * fac_[x%P_] % P_;
-    }
-    for (int64 x = dist; x; x /= P_)
-    {
-      PE_ASSERT(x%P_<F_);
-      r = r * s(x/P_) * fac_[x%P_] % P_;
-    }
-    l = (l + P_) % P_;
-    r = (r + P_) % P_;
-    int64 t  = (inv(r) * l % P_ + P_) % P_;
-    return t;
-  }
-private:
-  const int64 P_;
-  const int64 F_;
-  int64* fac_;
-};
 // greatest common divisor and extend greatest common divisor
 #ifndef COMPILER_GNU
 template<typename _EuclideanRingElement>
@@ -1495,51 +1355,7 @@ SL int64 find_pr(int64 p, const vector<pair<int64, int> >& fp1)
   return -1;
 }
 
-#if 0
-struct pr_pair
-{
-  int idx;
-  int64 value;
-  pr_pair(int64 _idx=0, int64 _value=0) : idx(_idx), value(_value){}
-  bool operator < (const pr_pair& r) const
-  {
-      return value < r.value;
-  }
-};
-
-pr_pair     l1[100005], l2[100005];
-int64 ind(int64 a, int64 pr, int64 p)
-{
-  int64 inv_pr = power_mod(pr, p-2, p);
-  int64 mx = sqrt(double(p-1)+0.5);
-  if (mx * mx != p - 1) ++mx;
-  int64 t1 = 1, t2 = a;
-  int64 temp = power_mod(pr, mx, p);
-  for (unsigned int i = 0; i <= mx - 1; ++i)
-  {
-    l1[i] = pr_pair(i, t1);
-    l2[i] = pr_pair(i, t2);
-    t2 = t2 * inv_pr % p;
-    t1 = t1 * temp % p;
-  }
-  sort(l1, l1+mx);
-  sort(l2, l2+mx);
-  int _i = -1, _j = -1;
-  for (int i = 0, j = 0;;)
-  if (l1[i].value == l2[j].value)
-  {
-    _i = l1[i].idx;
-    _j = l2[j].idx;
-    break;
-  }
-  else if (l1[i].value > l2[j].value)++j;
-  else ++i;
-  int64 ind_a = mx * _i + _j;
-  return ind_a;
-}
-#endif
-
-int64 ind(int64 a, int64 pr, int64 p)
+SL int64 ind(int64 a, int64 pr, int64 p)
 {
   typedef unordered_map<int64, int> map_t;
   PE_ASSERT(a > 0);

@@ -44,6 +44,7 @@ int main()
 {
   init_primes();
 
+  int64 result = PARALLEL_RESULT(
   BEGIN_PARALLEL
     FROM 1 TO 100000000 EACH_BLOCK_IS 10000000 CACHE ""
     THREADS 10
@@ -56,7 +57,8 @@ int main()
         result += value;
         return result;
       }
-  END_PARALLEL
+  END_PARALLEL);
+  dbg(result);
 
   return 0;
 }

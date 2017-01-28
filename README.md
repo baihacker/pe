@@ -22,6 +22,7 @@ File list:
 * pe_threads: Deprecated. A simple framework to solve problem with multi-threads. (c++11 or above for class MultiThreadsTask, windows only)
 * pe_bn: Big integer.
 * pe_memory: Memory manipulation such as allocating large memory. (windows only)
+* pe_geometry: Support Point2D and Point3D.
 
 
 Design rules:

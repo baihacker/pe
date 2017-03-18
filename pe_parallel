@@ -281,8 +281,6 @@ static inline void make_sure_process_singleton(const char* id)
 
 #if PE_PARALLEL_HAS_CPP11
 
-#include <cstdint>
-#include <algorithm>
 #include <iostream>
 #include "pe_util"
 
@@ -662,42 +660,6 @@ protected:
   int   threads_count_;
 };
 
-
-template<int TN, typename T>
-void parallel_sort(T* s, T* e)
-{
-  static_assert(TN > 0, "TN > 0");
-
-  const std::int64_t n = e - s;
-  const std::int64_t each = n / TN;
-  
-  std::int64_t pos[TN+1];
-  for (int i = 0; i < TN; ++i) pos[i] = i * each;
-  pos[TN] = n;
-  
-  #pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
-  for (int i = 0; i < TN; ++i)
-  {
-    std::sort(s + pos[i], s + pos[i+1]);
-  }
-
-  for (int remain = TN; remain > 1;)
-  {
-    #pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
-    for (int i = 0; i <= remain - 2; i += 2)
-    {
-      std::inplace_merge(s + pos[i], s + pos[i+1], s + pos[i+2]);
-    }
-
-    int top = 0;
-    for (int i = 0; i <= remain; ++i)
-    if (!(i % 2 == 1 && i + 1 <= remain))
-    {
-       pos[top++] = pos[i];
-    }
-    remain = top - 1;
-  }
-}
 
 #endif // end PE_PARALLEL_HAS_CPP11
 

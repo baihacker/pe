@@ -1,14 +1,35 @@
 #ifndef __PE_BASE_H__
 #define __PE_BASE_H__
 
+// compiler checking
 #if defined(__GNUC__)
+  #define COMPILER_GNU
   #if __cplusplus < 201103L
-    #error "c++11 or above"
+    #define PE_HAS_CPP11 0
+  #else
+    #define PE_HAS_CPP11 1
   #endif
 #elif defined(_MSC_VER)
+  #define COMPILER_MSVC
   #if _MSC_VER < 1800
-    #error "VS2013 or above"
+    #define PE_HAS_CPP11 0
+  #else
+    #define PE_HAS_CPP11 1
   #endif
+#else
+  #define PE_JAS_CPP11 0
+#endif
+
+#if defined(COMPILER_GNU)
+  #define PE_HAS_INT128 1
+  typedef __int128 int128;
+  typedef unsigned __int128 uint128;
+#else
+  #define PE_HAS_INT128 0
+#endif
+
+#if !PE_HAS_CPP11
+  #error "c++11 or above only"
 #endif
 
 #include <cstdint>
@@ -77,5 +98,11 @@ template<typename T> static inline void cmin(T& a, const T& b){if(b<a)a=b;}
 #define SL static inline
 
 #define dbg(x) cerr << (#x) << " = " << (x) << endl
+
+#ifdef DISABLE_ASSERT
+  #define PE_ASSERT(x)
+#else
+  #define PE_ASSERT(x) (void)assert((x))
+#endif
 
 #endif

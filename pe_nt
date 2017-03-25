@@ -47,10 +47,12 @@ using namespace std;
 #endif
 
 // PE_ASSERT
-#ifdef DISABLE_ASSERT
-  #define PE_ASSERT(x)
-#else
-  #define PE_ASSERT(x) assert((x))
+#ifndef PE_ASSERT
+  #ifdef DISABLE_ASSERT
+    #define PE_ASSERT(x)
+  #else
+    #define PE_ASSERT(x) assert((x))
+  #endif
 #endif
 
 // About numbers
@@ -60,12 +62,14 @@ static_assert(sizeof(int) >= 4, "sizeof(int) >= 4");
 
 // int64 and int128
 typedef std::int64_t int64;
-#ifdef COMPILER_GNU
-  #ifdef _M_X64
-    #define PE_HAS_INT128 1
-    typedef __int128 int128;
-  #else
-    #define PE_HAS_INT128 0
+#ifndef PE_HAS_INT128
+  #ifdef COMPILER_GNU
+    #ifdef _M_X64
+      #define PE_HAS_INT128 1
+      typedef __int128 int128;
+    #else
+      #define PE_HAS_INT128 0
+    #endif
   #endif
 #endif
 
@@ -1492,10 +1496,33 @@ void print_int128(int128 x)
 {
   int dig[64];
   int top = 0;
-  if (x < 0) putchar('-'), x = -x;
-  while (x) dig[top++] = x % 10, x /= 10;
+  uint128 y = (uint128&)x;
+  uint128 z = (~y) + 1;
+  if (x < 0 || x != 0 && y == z) putchar('-'), y = z;
+  while (y) dig[top++] = y % 10, y /= 10;
   if (top == 0) printf("%d", 0);
   while (top > 0) printf("%d", dig[--top]);
+}
+
+ostream& operator << (ostream& o, int128 x)
+{
+  char buff[64];
+  int top = 0;
+  if (x != 0)
+  {
+    uint128 y = (uint128&)x;
+    uint128 z = (~y) + 1;
+    if (x < 0 || y == z) buff[top++] = '-', y = z;
+    int last = top;
+    while (y > 0) buff[top++] = y % 10 + '0', y /= 10;
+    reverse(buff+last, buff+top);
+  }
+  else
+  {
+    buff[top++] = '0';
+  }
+  buff[top] = 0;
+  return o << buff;
 }
 #endif
 

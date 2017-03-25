@@ -36,6 +36,7 @@ using namespace std;
 #if defined(__GNUC__) && defined(_M_X64)
   #define BN_HAS_INT128 1
   typedef __int128 int128;
+  typedef unsigned __int128 uint128;
 #else
   #define BN_HAS_INT128 0
 #endif
@@ -300,16 +301,19 @@ public:
 
         if (value != 0)
         {
-            sign_ = value > 0 ? 1 : -1;
-            if (value < 0)
+            sign_ = 1;
+            uint128 y = value;
+            uint128 z = (~y) + 1;
+            if (value < 0 || y == z)
             {
-                value = - value;
+                y = z;
+                sign_ = -1;
             }
 
             int32_t curr = 0;
-            for (;value; value /= BIG_NUMBER_BASE, ++curr)
+            for (;y; y /= BIG_NUMBER_BASE, ++curr)
             {
-                BigNumberData::data_[curr] = value % BIG_NUMBER_BASE;
+                BigNumberData::data_[curr] = y % BIG_NUMBER_BASE;
             }
             length_ = curr;
         }

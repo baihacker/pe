@@ -386,6 +386,36 @@ prime_pi_sum(const int64 n)
   return make_tuple(std::move(scnt), std::move(lcnt), std::move(ssum), std::move(lsum));
 }
 
+SL void init_inv(int64* dest, int64 n, int64 mod)
+{
+  PE_ASSERT(n <= mod && n >= 2);
+  dest[0] = 0;
+  dest[1] = 1;
+  for (int i = 2; i < n; ++i)
+  {
+    const int64 t = mod / i;
+    const int64 k = mod % i;
+    const int64 v = t * t % mod;
+    const int64 u = dest[k] * dest[k] % mod;
+    dest[i] = i * v % mod * u % mod;
+  }
+}
+
+SL void init_inv(int* dest, int n, int mod)
+{
+  PE_ASSERT(n <= mod && n >= 2);
+  dest[0] = 0;
+  dest[1] = 1;
+  for (int i = 2; i < n; ++i)
+  {
+    const int t = mod / i;
+    const int k = mod % i;
+    const int v = (int64) t * t % mod;
+    const int u = (int64)dest[k] * dest[k] % mod;
+    dest[i] = (int64)i * v % mod * (int64)u % mod;
+  }
+}
+
 SL int64 square_root_safe(int64 n)
 {
   if (n <= 0) return 0;
@@ -1486,12 +1516,9 @@ struct Fraction
   T a, b;
 };
 
-template<typename T>
-T sq(T x) {return x*x;}
-
 // find the first n + 1 items of f such that: A*f = B
 // return empty vector if there is no integer solution.
-vector<int64> gf_first(const vector<int64>& A, const vector<int64>& B, const int n, const int64 mod)
+SL vector<int64> gf_first(const vector<int64>& A, const vector<int64>& B, const int n, const int64 mod)
 {
   const int sa = sz(A);
   const int sb = sz(B);
@@ -1524,7 +1551,7 @@ vector<int64> gf_first(const vector<int64>& A, const vector<int64>& B, const int
 
 // find the first n + 1 items of f such that: A*f = B
 // return -1 if there is no integer solution.
-int64 gf_at(const vector<int64>& A, const vector<int64>& B, const int64 n, const int64 mod)
+SL int64 gf_at(const vector<int64>& A, const vector<int64>& B, const int64 n, const int64 mod)
 {
   const int sa = sz(A);
   const int sb = sz(B);

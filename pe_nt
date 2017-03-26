@@ -1,77 +1,12 @@
 #ifndef __PE_NT_H__
 #define __PE_NT_H__
 
-// compiler checking
-#if defined(__GNUC__)
-#define COMPILER_GNU
-#elif defined(_MSC_VER)
-#define COMPILER_MSVC
-#endif
-
-// make sure the compiler supports c++11
-#ifdef COMPILER_GNU
-  #if __cplusplus < 201103L
-    #error "c++11 or above"
-  #endif
-#endif
-
-#ifdef COMPILER_MSVC
-  #if _MSC_VER < 1800
-    #error "VS2013 or above"
-  #endif
-#endif
-
-#include <cstdint>
-
-#include <cstdio>
-#include <cstdlib>
-#include <cmath>
-#include <ctime>
-#include <cassert>
-
-#include <random>
-#include <algorithm>
-#include <utility>
-#include <map>
-#include <vector>
-#include <unordered_map>
-#include <tuple>
-
-#include <iostream>
-
-using namespace std;
-
-// function specifier
-#ifndef SL
-#define SL static inline
-#endif
-
-// PE_ASSERT
-#ifndef PE_ASSERT
-  #ifdef DISABLE_ASSERT
-    #define PE_ASSERT(x)
-  #else
-    #define PE_ASSERT(x) assert((x))
-  #endif
-#endif
+#include "pe_base"
 
 // About numbers
 
 // Integer limits check
 static_assert(sizeof(int) >= 4, "sizeof(int) >= 4");
-
-// int64 and int128
-typedef std::int64_t int64;
-#ifndef PE_HAS_INT128
-  #ifdef COMPILER_GNU
-    #ifdef _M_X64
-      #define PE_HAS_INT128 1
-      typedef __int128 int128;
-    #else
-      #define PE_HAS_INT128 0
-    #endif
-  #endif
-#endif
 
 // square overflow integers
 static const int64 PE_SOI63 = 3037000499LL;   // x * x > 2^63 - 1 for x > PE_SOI63
@@ -1551,41 +1486,6 @@ struct Fraction
   T a, b;
 };
 
-#if PE_HAS_INT128
-void print_int128(int128 x)
-{
-  int dig[64];
-  int top = 0;
-  uint128 y = (uint128&)x;
-  uint128 z = (~y) + 1;
-  if (x < 0 || x != 0 && y == z) putchar('-'), y = z;
-  while (y) dig[top++] = y % 10, y /= 10;
-  if (top == 0) printf("%d", 0);
-  while (top > 0) printf("%d", dig[--top]);
-}
-
-ostream& operator << (ostream& o, int128 x)
-{
-  char buff[64];
-  int top = 0;
-  if (x != 0)
-  {
-    uint128 y = (uint128&)x;
-    uint128 z = (~y) + 1;
-    if (x < 0 || y == z) buff[top++] = '-', y = z;
-    int last = top;
-    while (y > 0) buff[top++] = y % 10 + '0', y /= 10;
-    reverse(buff+last, buff+top);
-  }
-  else
-  {
-    buff[top++] = '0';
-  }
-  buff[top] = 0;
-  return o << buff;
-}
-#endif
-
 template<typename T>
 T sq(T x) {return x*x;}
 
@@ -1621,7 +1521,6 @@ vector<int64> gf_first(const vector<int64>& A, const vector<int64>& B, const int
 
   return result;
 }
-
 
 // find the first n + 1 items of f such that: A*f = B
 // return -1 if there is no integer solution.

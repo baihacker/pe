@@ -17,7 +17,7 @@
     #define PE_HAS_CPP11 1
   #endif
 #else
-  #define PE_JAS_CPP11 0
+  #define PE_HAS_CPP11 0
 #endif
 
 #if defined(COMPILER_GNU)
@@ -66,8 +66,10 @@
 #include <memory>
 #include <cassert>
 
+#include <random>
 #include <tuple>
 #include <ratio>
+#include <chrono>
 #include <array>
 #include <forward_list>
 #include <unordered_map>
@@ -103,6 +105,41 @@ template<typename T> static inline void cmin(T& a, const T& b){if(b<a)a=b;}
   #define PE_ASSERT(x)
 #else
   #define PE_ASSERT(x) (void)assert((x))
+#endif
+
+#if PE_HAS_INT128
+void print_int128(int128 x)
+{
+  int dig[64];
+  int top = 0;
+  uint128 y = (uint128&)x;
+  uint128 z = (~y) + 1;
+  if (x < 0 || x != 0 && y == z) putchar('-'), y = z;
+  while (y) dig[top++] = y % 10, y /= 10;
+  if (top == 0) printf("%d", 0);
+  while (top > 0) printf("%d", dig[--top]);
+}
+
+ostream& operator << (ostream& o, int128 x)
+{
+  char buff[64];
+  int top = 0;
+  if (x != 0)
+  {
+    uint128 y = (uint128&)x;
+    uint128 z = (~y) + 1;
+    if (x < 0 || y == z) buff[top++] = '-', y = z;
+    int last = top;
+    while (y > 0) buff[top++] = y % 10 + '0', y /= 10;
+    reverse(buff+last, buff+top);
+  }
+  else
+  {
+    buff[top++] = '0';
+  }
+  buff[top] = 0;
+  return o << buff;
+}
 #endif
 
 #endif

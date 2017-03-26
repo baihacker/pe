@@ -589,6 +589,20 @@ SL void mat_mul_mat(T (*a)[D], T (*b)[D], T (*c)[D], int N = D)
   }
 }
 
+template<typename T>
+SL void mat_mul_mat(T* aa, T* bb, T* cc, int N)
+{
+  for (int i = 0; i < N; ++i) for (int j = 0; j < N; ++j)
+  {
+    T* a = aa + i * N;
+    T* c = cc + i * N;
+    T s = 0;
+    for (int k = 0; k < N; ++k)
+    s += a[k] * (bb + k * N)[j];
+    c[j] = s;
+  }
+}
+
 template<typename T, int D>
 SL void mat_mul_vec(T (*a)[D], T (*b)[D], T (*c)[D], int N = D)
 {
@@ -613,6 +627,19 @@ SL void mat_mul_vec(T (*a)[D], T* b, T* c, int N = D)
   }
 }
 
+template<typename T>
+SL void mat_mul_vec(T* aa, T* b, T* c, int N)
+{
+  for (int i = 0; i < N; ++i)
+  {
+    T* a = aa + i * N;
+    T s = 0;
+    for (int k = 0; k < N; ++k)
+    s += a[k] * b[k];
+    c[i] = s;
+  }
+}
+
 template<typename T, int D>
 SL void mat_mul_mat_mod(T (*a)[D], T (*b)[D], T (*c)[D], int64 mod, int N = D)
 {
@@ -625,6 +652,23 @@ SL void mat_mul_mat_mod(T (*a)[D], T (*b)[D], T (*c)[D], int64 mod, int N = D)
       if (s >= mod) s -= mod;
     }
     c[i][j] = s % mod;
+  }
+}
+
+template<typename T>
+SL void mat_mul_mat_mod(T* aa, T* bb, T* cc, int64 mod, int N)
+{
+  for (int i = 0; i < N; ++i) for (int j = 0; j < N; ++j)
+  {
+    T* a = aa + i * N;
+    T* c = cc + i * N;
+    int64 s = 0;
+    for (int k = 0; k < N; ++k)
+    {
+      s += mul_mod(a[k], (bb + k * N)[j], mod);
+      if (s >= mod) s -= mod;
+    }
+    c[j] = s % mod;
   }
 }
 
@@ -652,6 +696,22 @@ SL void mat_mul_vec_mod(T (*a)[D], T* b, T* c, int64 mod, int N = D)
     for (int k = 0; k < N; ++k)
     {
       s += mul_mod(a[i][k], b[k], mod);
+      if (s >= mod) s -= mod;
+    }
+    c[i] = s;
+  }
+}
+
+template<typename T>
+SL void mat_mul_vec_mod(T* aa, T* b, T* c, int64 mod, int N)
+{
+  for (int i = 0; i < N; ++i)
+  {
+    T* a = aa + i * N;
+    int64 s = 0;
+    for (int k = 0; k < N; ++k)
+    {
+      s += mul_mod(a[k], b[k], mod);
       if (s >= mod) s -= mod;
     }
     c[i] = s;
@@ -1529,5 +1589,104 @@ ostream& operator << (ostream& o, int128 x)
 template<typename T>
 T sq(T x) {return x*x;}
 
+// find the first n + 1 items of f such that: A*f = B
+// return empty vector if there is no integer solution.
+vector<int64> gf_first(const vector<int64>& A, const vector<int64>& B, const int n, const int64 mod)
+{
+  const int sa = sz(A);
+  const int sb = sz(B);
+  PE_ASSERT(sa > 0);
+  PE_ASSERT(sb > 0);
+
+  int64 v, u;
+  int has = solve_linear_equation(A[0], 1, mod, v, u);
+  if (!has) return vector<int64>();
+
+  vector<int64> result(n + 1, 0);
+
+  // if u < mod, we have more than one solution.
+  PE_ASSERT(u == mod);
+  const int64 invA0 = v;
+  result[0] = invA0 * B[0] % mod;
+
+  for (int i = 1; i <= n; ++i)
+  {
+    int64 t = regulate_mod(i < sb ? B[i] : 0, mod);
+    for (int j = 1; j <= min(i, sa-1); ++j)
+    {
+      t = sub_mod(t, (j < sa ? A[j] : 0) * result[i-j] % mod, mod);
+    }
+    result[i] = invA0 * t % mod;
+  }
+
+  return result;
+}
+
+
+// find the first n + 1 items of f such that: A*f = B
+// return -1 if there is no integer solution.
+int64 gf_at(const vector<int64>& A, const vector<int64>& B, const int64 n, const int64 mod)
+{
+  const int sa = sz(A);
+  const int sb = sz(B);
+  PE_ASSERT(sa > 0);
+  PE_ASSERT(sb > 0);
+
+  int64 v, u;
+  int has = solve_linear_equation(A[0], 1, mod, v, u);
+  if (!has) return -1;
+
+  const int64 m = min((int64)max(sa-1, sb-1), n);
+  vector<int64> result(m + 1, 0);
+
+  // if u < mod, we have more than one solution.
+  PE_ASSERT(u == mod);
+  const int64 invA0 = v;
+  result[0] = invA0 * B[0] % mod;
+
+  for (int i = 1; i <= m; ++i)
+  {
+    int64 t = regulate_mod(i < sb ? B[i] : 0, mod);
+    for (int j = 1; j <= min(i, sa-1); ++j)
+    {
+      t = sub_mod(t, (j < sa ? A[j] : 0) * result[i-j] % mod, mod);
+    }
+    result[i] = invA0 * t % mod;
+  }
+
+  if (m == n)
+  {
+    return result[m];
+  }
+
+  const int D = m + 1;
+  const int size = D * D;
+  string data(size * sizeof(int64) * 3 , '\0');
+  int64* buffer = (int64*)data.c_str();
+
+  int64* mat = buffer;
+  int64* res = mat + size;
+  int64* tmp = res + size;
+
+  for (int i = 0; i < m; ++i)
+  {
+    mat[i] = invA0 * regulate_mod(i + 1 < sa ? -A[i+1] : 0, mod) % mod;
+  }
+  for (int i = 1; i <= m; ++i)
+  {
+    (mat + i * D)[i-1] = 1;
+  }
+  for (int i = 0; i <= m; ++i)
+  {
+    res[i] = result[m-i];
+  }
+
+  for (int64 t = n - m; t > 0; t >>= 1)
+  {
+    if (t&1) mat_mul_vec_mod(mat, res, tmp, mod, D), swap(res, tmp);
+    mat_mul_mat_mod(mat, mat, tmp, mod, D), swap(mat, tmp);
+  }
+  return res[0];
+}
 // 65701
 #endif

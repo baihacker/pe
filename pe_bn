@@ -256,7 +256,7 @@ public:
     typedef BigNumber   SelfType;
     typedef BigNumberData::ElementType ElementType;
 
-#if PE_HAS_INT128
+#if PE_HAS_INT128 && 0
     BigNumber(int128 value = 0)
     {
         ZeroInit();
@@ -287,16 +287,19 @@ public:
 
         if (value != 0)
         {
-            sign_ = value > 0 ? 1 : -1;
-            if (value < 0)
+            sign_ = 1;
+            uint64 y = value;
+            uint64 z = (~y) + 1;
+            if (value < 0 || y == z)
             {
-                value = - value;
+                y = z;
+                sign_ = -1;
             }
 
             int curr = 0;
-            for (;value; value /= BIG_NUMBER_BASE, ++curr)
+            for (;y; y /= BIG_NUMBER_BASE, ++curr)
             {
-                BigNumberData::data_[curr] = value % BIG_NUMBER_BASE;
+                BigNumberData::data_[curr] = y % BIG_NUMBER_BASE;
             }
             length_ = curr;
         }

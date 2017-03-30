@@ -11,21 +11,25 @@ Put all the files in a folder (directory).
 For example, we put them in the directory D:\usr\include.
 Make sure CPLUS_INCLUDE_PATH contain D:\usr\include.
 
+Prerequirements:
+----------------
+C++11 or above
+
 File list:
 -----------
 
 * pe: Including all the files.
-* pe_base: Some pre-including headers. Some macros and typedef. (c++11 or above).
-* pe_util: Utilities such as TimeDelta, KVPersistance. (c++11 or above, it may support linux but we need change the generated cmdline and check the other codes)
-* pe_nt: Basic code of number theory. (c++11 or above)
-* pe_parallel: A simple framework to solve problem with multi-threads. (c++11 or above for class ParallelRunner and ParallelRange)
-* pe_threads: Deprecated. A simple framework to solve problem with multi-threads. (c++11 or above for class MultiThreadsTask, windows only)
+* pe_base: Some pre-including headers. Some macros and typedef.
+* pe_util: Utilities such as TimeDelta, KVPersistance. (it may support linux but we need change the generated cmdline and check the other codes)
+* pe_nt: Basic code of number theory.
+* pe_parallel: A simple framework to solve problem with multi-threads. (windows only)
+* pe_threads: Deprecated. A simple framework to solve problem with multi-threads. (windows only)
 * pe_bn: Big integer.
 * pe_memory: Memory manipulation such as allocating large memory. (windows only)
 * pe_geometry: Support Point2D and Point3D.
 
 
-Design rules:
+Design principle:
 --------------------
 Fast and easy to use.
 

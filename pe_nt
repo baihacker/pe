@@ -240,6 +240,108 @@ SL int64 cal_phi(int64 n)
   return phi_n;
 }
 
+class DVA
+{
+public:
+
+  int64 n;
+  int64 m;
+  int isPerfectSquare;
+  // Keys from large to small.
+  std::vector<int64> keys;
+  std::vector<int64> sv;
+  std::vector<int64> lv;
+  
+  DVA(int64 n):
+    n(n),
+    m(static_cast<int64>(sqrt(n))),
+    isPerfectSquare(m*m==n)
+  {
+    for (int64 i = 1; i <= m; ++i)
+    {
+      keys.push_back(i);
+    }
+    for (int64 i = n / m > m ? m : m - 1; i >= 1; --i)
+    {
+      keys.push_back(n / i);
+    }
+    reverse(keys.begin(), keys.end());
+    sv.resize(m+1);
+    lv.resize(m+1);
+    fill(sv.begin(), sv.end(), 0);
+    fill(lv.begin(), lv.end(), 0);
+  }
+  
+  DVA(DVA&& other):
+    n(other.n),
+    m(other.m),
+    isPerfectSquare(other.isPerfectSquare),
+    keys(std::move(other.keys)),
+    sv(std::move(other.sv)),
+    lv(std::move(other.lv))
+  {
+  }
+  
+  DVA& operator = (const DVA& other) = default;
+  DVA& operator = (const DVA&& other)
+  {
+    n = other.n;
+    m = other.m;
+    isPerfectSquare = other.isPerfectSquare;
+    keys = std::move(other.keys);
+    sv = std::move(other.sv);
+    lv = std::move(other.lv);
+    return *this;
+  }
+
+  int64& operator [] (int64 v)
+  {
+    return v <= m ? sv[v] : lv[n/v];
+  }
+};
+
+SL DVA prime_s0(const int64 n)
+{
+  PE_ASSERT(n >= 1);
+  DVA dva(n);
+
+  for (auto& key: dva.keys) dva[key] = key - 1;
+
+  for (int64 p = 2; p <= dva.m; ++p) if (dva[p] != dva[p-1])
+  {
+    const int64 pcnt = dva[p-1];
+    const int64 p2 = p * p;
+    for (auto& key: dva.keys)
+    {
+      if (key < p2) break;
+      dva[key] -= dva[key/p] - pcnt;
+    }
+  }
+  return dva;
+}
+
+#define prime_pi prime_s0
+
+SL DVA prime_s1(const int64 n)
+{
+  PE_ASSERT(n >= 1);
+  DVA dva(n);
+  for (auto& key: dva.keys) dva[key] = key * (key + 1) / 2 - 1;
+
+  for (int64 p = 2; p <= dva.m; ++p) if (dva[p] != dva[p-1])
+  {
+    const int64 psum = dva[p-1];
+    const int64 p2 = p * p;
+    for (auto& key: dva.keys)
+    {
+      if (key < p2) break;
+      dva[key] -= (dva[key/p] - psum) * p;
+    }
+  }
+  return dva;
+}
+
+#if 0
 SL tuple<vector<int64>, vector<int64>> prime_pi(const int64 n)
 {
   PE_ASSERT(n >= 1);
@@ -385,6 +487,7 @@ prime_pi_sum(const int64 n)
   }
   return make_tuple(std::move(scnt), std::move(lcnt), std::move(ssum), std::move(lsum));
 }
+#endif
 
 SL void init_inv(int64* dest, int64 n, int64 mod)
 {

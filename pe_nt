@@ -272,16 +272,8 @@ public:
     fill(lv.begin(), lv.end(), 0);
   }
   
-  DVA(DVA&& other):
-    n(other.n),
-    m(other.m),
-    isPerfectSquare(other.isPerfectSquare),
-    keys(std::move(other.keys)),
-    sv(std::move(other.sv)),
-    lv(std::move(other.lv))
-  {
-  }
-  
+  DVA(const DVA& other) = default;
+  DVA(DVA&& other) = default;
   DVA& operator = (const DVA& other) = default;
   DVA& operator = (DVA&& other) = default;
 
@@ -1708,5 +1700,345 @@ SL int64 gf_at(const vector<int64>& A, const vector<int64>& B, const int64 n, co
   }
   return res[0];
 }
+
+template<int64 P>
+struct Poly
+{
+  std::vector<int64> data;
+
+  Poly(){}
+
+  Poly(const std::vector<int64>& data): data(data)
+  {
+    adjust_leading_zeros().adjust_mod();
+  }
+
+  Poly(std::vector<int64>&& data): data(std::move(data))
+  {
+    adjust_leading_zeros().adjust_mod();
+  }
+
+  Poly(std::initializer_list<int64> l) : data(l)
+  {
+    adjust_leading_zeros().adjust_mod();
+  }
+
+  Poly(const Poly& p) = default;
+  Poly(Poly&& p) = default;
+  Poly<P>& operator = (const Poly& other) = default;
+  Poly<P>& operator = (Poly&& other) = default;
+  
+  Poly<P>& adjust_leading_zeros()
+  {
+    int n = data.size() - 1;
+    while (n >= 0 && data[n] == 0) --n;
+    data.resize(max(n+1, 1));
+    return *this;
+  }
+  
+  Poly<P>& adjust_mod()
+  {
+    for (auto& iter: data)
+    {
+      iter = regulate_mod(iter, P);
+    }
+    return *this;
+  }
+  
+  int deg() const
+  {
+    return static_cast<int>(data.size() - 1);
+  }
+
+  int64& operator [] (int idx)
+  {
+    PE_ASSERT(idx >= 0 && idx < data.size());
+    return data[idx];
+  }
+
+  int64 operator [] (int idx) const
+  {
+    PE_ASSERT(idx >= 0 && idx < data.size());
+    return data[idx];
+  }
+
+  int64 at(int idx) const
+  {
+    return idx >= 0 && idx < data.size() ? data[idx] : 0;
+  }
+
+  Poly<P> operator << (int m) const
+  {
+    if (m == 0)
+    {
+      return *this;
+    }
+    std::vector<int64> new_data(data.size() + m);
+    for (int i = static_cast<int>(data.size()) + m - 1; i >= m; --i)
+    {
+      new_data[i] = data[i-m];
+    }
+    for (int i = 0; i < m; ++i)
+    {
+      new_data[i] = 0;
+    }
+    return Poly<P>(std::move(new_data));
+  }
+
+  Poly<P> lower_terms(int n) const
+  {
+    int m = min(n, static_cast<int>(data.size()));
+    return Poly<P>(std::vector<int64>(data.begin(), data.begin()+m));
+  }
+};
+
+template<int64 P>
+Poly<P> operator - (const Poly<P>& x, const Poly<P>& y)
+{
+  int n = max(x.deg(), y.deg());
+  std::vector<int64> data(n+1);
+  for (int i = 0; i <= n; ++i)
+  {
+    data[i] = sub_mod(x.at(i), y.at(i), P);
+  }
+  return Poly<P>(std::move(data)).adjust_leading_zeros();
+}
+
+template<int64 P>
+Poly<P> operator + (const Poly<P>& x, const Poly<P>& y)
+{
+  const int n = max(x.deg(), y.deg());
+  std::vector<int64> data(n+1);
+  for (int i = 0; i <= n; ++i)
+  {
+    data[i] = add_mod(x.at(i), y.at(i), P);
+  }
+  return Poly<P>(std::move(data)).adjust_leading_zeros();
+}
+
+template<int64 P>
+Poly<P> operator * (const Poly<P>& x, int64 v)
+{
+  std::vector<int64> data(x.data);
+  for (auto& iter: data)
+  {
+    iter = iter * v % P;
+  }
+  return Poly<P>(std::move(data));
+}
+
+template<int64 P>
+Poly<P> operator * (const Poly<P>& x, const Poly<P>& y)
+{
+  const int n = x.deg();
+  const int m = y.deg();
+  std::vector<int64> data(n + m + 1, 0);
+  for (int i = 0; i <= n; ++i)
+    for (int j = 0; j <= m; ++j)
+    {
+      int64 t = x[i] * y[j] % P;
+      data[i+j] = add_mod(data[i+j], t, P);
+    }
+  return Poly<P>(std::move(data));
+}
+
+template<int64 P>
+Poly<P> operator * (int64 v, const Poly<P>& x)
+{
+  return x * v;
+}
+
+template<int64 P>
+tuple<Poly<P>, Poly<P>> operator / (const Poly<P>& x, const Poly<P>& y)
+{
+  const int d1 = x.deg();
+  const int d2 = y.deg();
+  if (d1 < d2)
+  {
+    make_tuple(Poly<P>{0}, x);
+  }
+
+  Poly<P> R(x);
+  std::vector<int64> q;
+  int64 t = inv_of(y[d2], P);
+  for (int i = d1; i >= d2; --i)
+  {
+    int64 u = R[i] * t % P;
+    for (int j = i, k = d2; k >= 0; --j, --k)
+    {
+      R[j] = sub_mod(R[j], u * y[k] % P, P);
+    }
+    q.push_back(u);
+  }
+  reverse(q.begin(), q.end());
+  return make_tuple(std::move(Poly<P>(q)), std::move(R.adjust_leading_zeros()));
+}
+
+template<int64 P>
+Poly<P> operator % (int64 n, Poly<P> mod)
+{
+  Poly<P> x{0, 1};
+  Poly<P> ret{1};
+  for (; n > 0; n >>= 1)
+  {
+    if (n & 1)
+    {
+      auto t = x * ret;
+      Poly<P> q, r;
+      tie(q, r) = t / mod;
+      ret = std::move(r);
+    }
+    auto t = x * x;
+    Poly<P> q, r;
+    tie(q, r) = t / mod;
+    x = r;
+  }
+  return ret;
+}
+
+template<int64 P>
+ostream& operator << (ostream& o, const Poly<P>& p)
+{
+  const int n = p.data.size();
+  for (int i = 0; i < n - 1; ++i)
+  {
+    o << p.data[i] << ", ";
+  }
+  return o << p.data[n-1];
+}
+
+// Berlekamp Massey
+template<int64 P>
+Poly<P> find_minimal_poly(const Poly<P>& s)
+{
+  const int m = s.data.size();
+  const int n = m >> 1;
+  
+  PE_ASSERT(n*2==m);
+  
+  Poly<P> r0{1}; r0 = r0 << m;
+  Poly<P> r1{s};
+  Poly<P> v0{0};
+  Poly<P> v1{1};
+
+  while (n + 1 <= r1.deg())
+  {
+    Poly<P> q, r;
+    tie(q, r) = r0 / r1;
+    Poly<P> v(v0 - q * v1);
+    v0 = std::move(v1);
+    v1 = std::move(v);
+    r0 = std::move(r1);
+    r1 = std::move(r);
+  }
+  v1 = std::move(inv_of(v1[0], P) * v1);
+  reverse(v1.data.begin(), v1.data.end());
+  return v1;
+}
+
+template<int64 P>
+int64 nth_element(const Poly<P>& s, int64 n, const Poly<P>& min_poly)
+{
+  if (n <= s.deg())
+  {
+    return s[n];
+  }
+
+  auto r = n % min_poly;
+  const int m = r.deg();
+  int64 ans = 0;
+  for (int i = 0; i <= m; ++i)
+  {
+    ans = add_mod(ans, s[i] * r[i] % P, P);
+  }
+  return ans;
+}
+
+template<int64 P>
+Poly<P> find_linear_recurrence(const Poly<P>& s)
+{
+  const int len = s.data.size();
+  for (int n = 2; n < len; n += 2)
+  {
+    auto use = s.lower_terms(n);
+    auto min_poly = find_minimal_poly(use);
+    int ok = 1;
+    for (int i = n; i < len; ++i)
+    {
+      auto value = nth_element(use, i, min_poly);
+      if (value != s[i])
+      {
+        ok = 0;
+        break;
+      }
+    }
+    if (ok)
+    {
+      return min_poly;
+    }
+  }
+  return Poly<P>();
+}
+
+template<int64 P>
+int64 nth_element(const Poly<P>& s, int64 n)
+{
+  if (n <= s.deg())
+  {
+    return s[n];
+  }
+
+  auto min_poly = find_linear_recurrence(s);
+  if (min_poly.deg() >= 0)
+  {
+    return nth_element(s, n, min_poly);
+  }
+  return -1;
+}
+
+#if 0
+template<int64 P>
+Poly<P> cal1(const Poly<P>& s)
+{
+  Poly<P> C{1};
+  Poly<P> B{1};
+  int L = 0;
+  int m = 1;
+  int64 b = 1;
+  const int N = s.data.size();
+  for (int n = 0; n < N; ++n)
+  {
+    int64 d = s[n];
+    for (int i = 1; i <= L; ++i)
+    {
+      d = add_mod(d, add_mod(C.at(i), s[n-i], P), P);
+    }
+    if (d == 0)
+    {
+      ++m;
+    }
+    else if (2 * L <= n)
+    {
+      auto T = C;
+      int64 coe = d * inv_of(b, P) % P;
+      C = C - (B << m) * coe;
+      L = n + 1 - L;
+      B = std::move(T);
+      b = d;
+      m = 1;
+    }
+    else
+    {
+      int64 coe = d * inv_of(b, P) % P;
+      C = C - (B << m) * coe;
+      m = m + 1;
+    }
+  }
+  return C;
+}
+#endif
 // 65701
 #endif
+/*
+
+*/

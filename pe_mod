@@ -1,0 +1,406 @@
+#ifndef __PE_MOD__
+#define __PE_MOD__
+
+#include "pe_base"
+
+// Modular arithmetic
+SL int64 regulate_mod(int64 a, int64 mod)
+{
+  PE_ASSERT(mod >= 1);
+  if (a >= 0)
+  {
+    if (a >= mod) a %= mod;
+  }
+  else
+  {
+    if (-a >= mod) a = a % mod + mod;
+    else a += mod;
+  }
+  return a;
+}
+
+SL int64 add_mod(int64 a, int64 b, int64 mod)
+{
+  a += b;
+  if (a >= mod) a -= mod;
+  return a;
+}
+
+SL int64 sub_mod(int64 a, int64 b, int64 mod)
+{
+  a -= b;
+  if (a < 0) a += mod;
+  return a;
+}
+
+SL int64 mul_mod(int64 a, int64 b, int64 mod)
+{
+  return a*b%mod;
+}
+
+SL int64 mul_mod_ex(int64 a, int64 b, int64 mod)
+{
+#if PE_HAS_INT128
+  return (int128)a * b % mod;
+#else
+  int64 ret = 0;
+  int64 flag = b;
+  for (int64 d = 1; d <= a; d <<= 1)
+  {
+    if (d & a)
+    {
+      ret = (ret + flag) % mod;
+    }
+    flag = (flag << 1) % mod;
+  }
+  return ret;
+#endif
+}
+
+SL int64 power_mod(int64 x, int64 n, int64 mod)
+{
+  if (mod == 1) return 0;
+
+  int64 ret = 1;
+  x %= mod;
+  if (x < 0) x += mod;
+  for (; n; n >>= 1)
+  {
+    if (n&1) ret = ret * x % mod;
+    x = x * x % mod;
+  }
+  return ret;
+}
+
+SL int64 power_mod_ex(int64 x, int64 n, int64 mod)
+{
+  if (mod == 1) return 0;
+
+#if PE_HAS_INT128
+  int64 ret = 1;
+  x %= mod;
+  if (x < 0) x += mod;
+  for (; n; n >>= 1)
+  {
+    if (n&1) ret = (int128)ret * x % mod;
+    x = (int128)x * x % mod;
+  }
+  return ret;
+#else
+  int64 ret = 1;
+  x %= mod;
+  if (x < 0) x += mod;
+  for (; n; n >>= 1)
+  {
+    if (n&1) ret = mul_mod_ex(x, ret, mod);
+    x = mul_mod_ex(x, x, mod);
+  }
+  return ret;
+#endif
+}
+
+struct init_direct_t{};
+static const init_direct_t __init_direct{};
+struct fake_int128{};
+
+template<typename S, typename B>
+struct mtype_policy
+{
+  typedef S   ints;
+  typedef B   intb;
+  static ints add(ints a, ints b, ints mod)
+  {
+    intb c = (intb)a + b;
+    if (c >= mod) c -= mod;
+    return static_cast<ints>(c);
+  }
+  static ints sub(ints a, ints b, ints mod)
+  {
+    intb c = (intb)a - b;
+    if (c < 0) c += mod;
+    return static_cast<ints>(c);
+  }
+  static ints mul(ints a, ints b, ints mod)
+  {
+    intb c = (intb)a * b % mod;
+    return static_cast<ints>(c);
+  }
+};
+
+template<typename S>
+struct mtype_policy<S, S>
+{
+  typedef S   ints;
+  typedef S   intb;
+  static ints add(ints a, ints b, ints mod)
+  {
+    a += b;
+    if (a >= mod) a -= mod;
+    return a;
+  }
+  static ints sub(ints a, ints b, ints mod)
+  {
+    a -= b;
+    if (a < 0) a += mod;
+    return b;
+  }
+  static ints mul(ints a, ints b, ints mod)
+  {
+    a = a * b % mod;
+    return a;
+  }
+};
+
+template<typename S>
+struct mtype_policy<S, fake_int128>
+{
+  typedef S   ints;
+  typedef fake_int128   intb;
+  static ints add(ints a, ints b, ints mod)
+  {
+    a += b;
+    if (a >= mod) a -= mod;
+    return a;
+  }
+  static ints sub(ints a, ints b, ints mod)
+  {
+    a -= b;
+    if (a < 0) a += mod;
+    return b;
+  }
+  static ints mul(ints a, ints b, ints mod)
+  {
+    return mul_mod_ex(a, b, mod);
+  }
+};
+
+template<typename S, typename B, S MOD>
+struct mint;
+
+template<typename S, typename B>
+struct mintd;
+
+template<typename S, typename B, S MOD>
+ostream& operator << (ostream& o, const mint<S, B, MOD>& m);
+
+template<typename S, typename B>
+ostream& operator << (ostream& o, const mintd<S, B>& m);
+
+template<typename S, typename B, S MOD>
+struct mint
+{
+typedef mtype_policy<S, B> MTI;
+typedef typename MTI::ints ints;
+typedef typename MTI::intb intb;
+
+static_assert(MOD > 0, "MOD > 0");
+
+mint(ints val = 0)
+{
+  if (val >= 0)
+  {
+    value_ = val >= MOD ? val % MOD : val;
+  }
+  else
+  {
+    value_ = val <= -MOD ? val % MOD + MOD : val + MOD;
+  }
+}
+
+mint(ints val, init_direct_t) : value_(val)
+{
+}
+
+mint operator + (const mint& y) const
+{
+  return mint(MTI::add(value_, y.value_, MOD), __init_direct);
+}
+
+mint& operator += (const mint& y)
+{
+  value_ = MTI::add(value_, y.value_, MOD);
+  return *this;
+}
+
+mint operator - (const mint& y) const
+{
+  return mint(MTI::sub(value_, y.value_, MOD), __init_direct);
+}
+
+mint& operator -= (const mint& y)
+{
+  value_ = MTI::sub(value_, y.value_, MOD);
+  return *this;
+}
+
+mint operator * (const mint& y) const
+{
+  return mint(MTI::mul(value_, y.value_, MOD), __init_direct);
+}
+
+mint& operator *= (const mint& y)
+{
+  value_ = MTI::mul(value_, y.value_, MOD);
+  return *this;
+}
+
+//operator ints () const {return value_;}
+ints value() const {return value_;}
+friend ostream& operator << <S,B,MOD>(ostream& o, const mint& m);
+
+ints value_;
+};
+
+template<typename S, typename B, S MOD>
+ostream& operator << (ostream& o, const mint<S, B, MOD>& m)
+{
+  o << m.value_;
+  return o;
+}
+
+template<int32_t mod>
+using mint3232 = mint<int32_t, int32_t, mod>;
+
+template<int32_t mod>
+using mint3264 = mint<int32_t, int64_t, mod>;
+
+template<int32_t mod>
+using mint6464 = mint<int64_t, int64_t, mod>;
+
+#if PE_HAS_INT128
+template<int32_t mod>
+using mint64128 = mint<int64_t, int128, mod>;
+#endif
+
+template<typename S, typename B>
+struct mintd
+{
+typedef mtype_policy<S, B> MTI;
+typedef typename MTI::ints ints;
+typedef typename MTI::intb intb;
+
+explicit mintd(ints val = 0, ints mod = 1) : MOD(mod)
+{
+  if (val >= 0)
+  {
+    value_ = val >= MOD ? val % MOD : val;
+  }
+  else
+  {
+    value_ = val <= -MOD ? val % MOD + MOD : val + MOD;
+  }
+}
+
+mintd(ints val, ints mod, init_direct_t) : value_(val), MOD(mod)
+{
+}
+
+mintd& operator = (ints v)
+{
+  mintd temp(v, MOD);
+  value_ = temp.value_;
+  return *this;
+}
+
+mintd& operator = (const mintd& other)
+{
+  value_ = other.value_;
+  MOD = other.MOD;
+  return *this;
+}
+
+mintd operator + (const mintd& y) const
+{
+  PE_ASSERT(y.MOD == MOD);
+  return mintd(MTI::add(value_, y.value, MOD), MOD, __init_direct);
+}
+
+mintd operator + (const ints y) const
+{
+  return *this + mintd(y, MOD);
+}
+
+mintd& operator += (const mintd& y)
+{
+  PE_ASSERT(y.MOD == MOD);
+  value_ = MTI::add(value_, y.value_, MOD);
+  return *this;
+}
+
+mintd& operator += (const ints y)
+{
+  return *this += mintd(y, MOD);
+}
+
+mintd operator - (const mintd& y) const
+{
+  PE_ASSERT(y.MOD == MOD);
+  return mintd(MTI::sub(value_, y.value, MOD), MOD, __init_direct);
+}
+
+mintd operator - (const ints y) const
+{
+  return *this - mintd(y, MOD);
+}
+
+mintd& operator -= (const mintd& y)
+{
+  PE_ASSERT(y.MOD == MOD);
+  value_ = MTI::sub(value_, y.value_, MOD);
+  return *this;
+}
+
+mintd& operator -= (const ints y)
+{
+  return *this -= mintd(y, MOD);
+}
+
+mintd operator * (const mintd& y) const
+{
+  PE_ASSERT(y.MOD == MOD);
+  return mintd(MTI::mul(value_, y.value_, MOD), MOD, __init_direct);
+}
+
+mintd operator * (const ints y) const
+{
+  return *this * mintd(y, MOD);
+}
+
+mintd& operator *= (const mintd& y)
+{
+  PE_ASSERT(y.MOD == MOD);
+  value_ = MTI::mul(value_, y.value_, MOD);
+  return *this;
+}
+
+mintd& operator *= (const ints y)
+{
+  return *this *= mintd(y, MOD);
+}
+
+//operator ints () const {return value_;}
+ints value() const {return value_;}
+friend ostream& operator << <S,B>(ostream& o, const mintd& m);
+
+ints value_;
+ints MOD;
+};
+
+template<typename S, typename B>
+ostream& operator << (ostream& o, const mintd<S, B>& m)
+{
+  o << m.value_;
+  return o;
+}
+
+using mintd3232 = mintd<int32_t, int32_t>;
+
+using mintd3264 = mintd<int32_t, int64_t>;
+
+using mintd6464 = mintd<int64_t, int64_t>;
+
+#if PE_HAS_INT128
+using mintd64128 = mintd<int64_t, int128>;
+#endif
+
+#endif

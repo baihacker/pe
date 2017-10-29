@@ -1,14 +1,147 @@
+/*
+static int plist[maxp/10];
+static int pmask[maxp+1];
+static int pcnt;
+int* phi = NULL;
+int* miu = NULL;
+const int64 pmpi[];
+
+SL int64 estimate_pmpi(int64 n)
+SL int is_prime(int64 n)
+SL void init_primes()
+SL void init_primes(int cal_phi, int cal_miu)
+
+SL vector<pair<int64, int> > factorize(int64 n)
+SL vector<int64> get_factors(const vector<pair<int64, int> >& f)
+SL vector<int64> get_factors(int64 value)
+
+SL int64 cal_phi(int64 n, const vector<pair<int64, int> >& fn)
+SL int64 cal_phi(int64 n)
+SL int64 square_root_safe(int64 n)
+SL int64 square_root_unsafe(int64 n)
+SL int64 square_root(int64 n)
+
+SL int64 regulate_mod(int64 a, int64 mod)
+SL int64 add_mod(int64 a, int64 b, int64 mod)
+SL int64 sub_mod(int64 a, int64 b, int64 mod)
+SL int64 mul_mod(int64 a, int64 b, int64 mod)
+SL int64 mul_mod_ex(int64 a, int64 b, int64 mod)
+SL int64 power_mod(int64 x, int64 n, int64 mod)
+SL int64 power_mod_ex(int64 x, int64 n, int64 mod)
+SL int64 inv_of(int64 x, int64 p)
+
+template<int64 P, int64 F = P>
+struct comb_moder;
+
+class comb_solver;
+
+gcd
+SL int64 exgcd(int64 a, int64 b, int64& x, int64& y)
+SL tuple<int64, int64, int64> exgcd(int64 a, int64 b)
+
+SL int solve_linear_equation(int64 a, int64 b, int64 m, int64& v, int64& u)
+SL int crt2(int64 a, int64 m1, int64 b, int64 m2, int64& v, int64& u)
+SL tuple<int, int64, int64> crt2(int64 a, int64 m1, int64 b, int64 m2)
+SL tuple<int, int64, int64> crtn(int64* val, int64* mod, int n)
+
+const int64 sopp[];
+SL int MR_test_impl(int s, int64 t, int64 n, int x)
+SL int MR_test(int64 n, int x)
+SL int is_prime_ex(int64 n)
+
+SL int crandbit()
+SL int crand15()
+SL int crand31()
+SL int64 crand63()
+SL int crandi()
+SL double crandd()
+
+make_uniform_generator(int seed, int min, int max)
+make_uniform_generator(int min, int max)
+
+// Primitive Root
+namespace pr{
+SL bool is_pr(int64 x, int64 p, const vector<pair<int64, int> >& f)
+SL bool is_pr(int64 x, int64 p)
+SL int64 find_pr(int64 p)
+SL int64 find_pr(int64 p, const vector<pair<int64, int> >& fp1)
+int64 ind(int64 a, int64 pr, int64 p)
+int64 ind(int64 a, int64 pr, int64 p)
+class ind_solver;
+}
+
+template<typename T>
+struct Fraction;
+*/
 #ifndef __PE_NT_H__
 #define __PE_NT_H__
 
-#include "pe_base"
-#include "pe_mod"
-#include "pe_mat"
+// compiler checking
+#if defined(__GNUC__)
+#define COMPILER_GNU
+#elif defined(_MSC_VER)
+#define COMPILER_MSVC
+#endif
+
+#ifdef COMPILER_GNU
+  #if __cplusplus < 201103L
+    #error "c++11 or above"
+  #endif
+#endif
+
+#ifdef COMPILER_MSVC
+  #if _MSC_VER < 1800
+    #error "VS2013 or above"
+  #endif
+#endif
+
+#include <cstdint>
+
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+#include <ctime>
+#include <cassert>
+
+#include <random>
+#include <algorithm>
+#include <utility>
+#include <map>
+#include <vector>
+#include <unordered_map>
+#include <tuple>
+
+#include <iostream>
+
+using namespace std;
+
+// function specifier
+#ifndef SL
+#define SL static inline
+#endif
+
+// PE_ASSERT
+#ifdef DISABLE_ASSERT
+  #define PE_ASSERT(x)
+#else
+  #define PE_ASSERT(x) assert((x))
+#endif
 
 // About numbers
 
 // Integer limits check
 static_assert(sizeof(int) >= 4, "sizeof(int) >= 4");
+
+// int64 and int128
+typedef std::int64_t int64;
+#ifdef COMPILER_GNU
+  #ifdef _M_X64
+    #define PE_HAS_INT128 1
+    typedef __int128 int128;
+  #else
+    #define PE_HAS_INT128 0
+  #endif
+#endif
 
 // square overflow integers
 static const int64 PE_SOI63 = 3037000499LL;   // x * x > 2^63 - 1 for x > PE_SOI63
@@ -126,8 +259,8 @@ SL void init_primes(int cal_phi, int cal_miu)
   if (cal_miu) miu = new int[maxp+1];
 
   for (int i = 1; i <= maxp; ++i) pmask[i] = i;
-  if (phi) phi[0] = 0, phi[1] = 1;
-  if (miu) miu[0] = 0, miu[1] = 1;
+  if (phi) phi[1] = 1;
+  if (miu) miu[1] = 1;
 
   for (int i = 2; i <= maxp; ++i)
   {
@@ -242,268 +375,6 @@ SL int64 cal_phi(int64 n)
   return phi_n;
 }
 
-class DVA
-{
-public:
-
-  int64 n;
-  int64 m;
-  int isPerfectSquare;
-  // Keys from large to small.
-  std::vector<int64> keys;
-  std::vector<int64> sv;
-  std::vector<int64> lv;
-  
-  DVA(int64 n):
-    n(n),
-    m(static_cast<int64>(sqrt(n))),
-    isPerfectSquare(m*m==n)
-  {
-    for (int64 i = 1; i <= m; ++i)
-    {
-      keys.push_back(i);
-    }
-    for (int64 i = n / m > m ? m : m - 1; i >= 1; --i)
-    {
-      keys.push_back(n / i);
-    }
-    reverse(keys.begin(), keys.end());
-    sv.resize(m+1);
-    lv.resize(m+1);
-    fill(sv.begin(), sv.end(), 0);
-    fill(lv.begin(), lv.end(), 0);
-  }
-  
-  DVA(const DVA& other) = default;
-  DVA(DVA&& other) = default;
-  DVA& operator = (const DVA& other) = default;
-  DVA& operator = (DVA&& other) = default;
-
-  int64& operator [] (int64 v)
-  {
-    return v <= m ? sv[v] : lv[n/v];
-  }
-};
-
-SL DVA prime_s0(const int64 n)
-{
-  PE_ASSERT(n >= 1);
-  DVA dva(n);
-
-  for (auto& key: dva.keys) dva[key] = key - 1;
-
-  for (int64 p = 2; p <= dva.m; ++p) if (dva[p] != dva[p-1])
-  {
-    const int64 pcnt = dva[p-1];
-    const int64 p2 = p * p;
-    for (auto& key: dva.keys)
-    {
-      if (key < p2) break;
-      dva[key] -= dva[key/p] - pcnt;
-    }
-  }
-  return dva;
-}
-
-#define prime_pi prime_s0
-
-SL DVA prime_s1(const int64 n)
-{
-  PE_ASSERT(n >= 1);
-  DVA dva(n);
-  for (auto& key: dva.keys) dva[key] = key * (key + 1) / 2 - 1;
-
-  for (int64 p = 2; p <= dva.m; ++p) if (dva[p] != dva[p-1])
-  {
-    const int64 psum = dva[p-1];
-    const int64 p2 = p * p;
-    for (auto& key: dva.keys)
-    {
-      if (key < p2) break;
-      dva[key] -= (dva[key/p] - psum) * p;
-    }
-  }
-  return dva;
-}
-
-#if 0
-SL tuple<vector<int64>, vector<int64>> prime_pi(const int64 n)
-{
-  PE_ASSERT(n >= 1);
-  const int64 v = static_cast<int64>(sqrt(n));
-
-  vector<int64> scnt(v+1);
-  vector<int64> lcnt(v+1);
-
-  for (int i = 1; i <= v; ++i)
-  {
-    scnt[i] = i - 1;
-    lcnt[i] = n / i - 1;
-  }
-
-  for (int64 p = 2; p <= v; ++p)
-  {
-    if (scnt[p] == scnt[p-1])
-    {
-      continue;
-    }
-    const int64 pcnt = scnt[p-1];
-    const int64 q = p * p;
-    const int64 end = min(v, n / q);
-    for (int i = 1; i <= end; ++i)
-    {
-      const int64 d = i * p;
-      if (d <= v)
-      {
-        lcnt[i] -= lcnt[d] - pcnt;
-      }
-      else
-      {
-        const int64 t = n / d;
-        lcnt[i] -= scnt[t] - pcnt;
-      }
-    }
-    for (int64 i = v; i >= q; --i)
-    {
-      const int64 t = i / p;
-      scnt[i] -= scnt[t] - pcnt;
-    }
-  }
-  return make_tuple(std::move(scnt), std::move(lcnt));
-}
-
-SL tuple<vector<int64>, vector<int64>> prime_sum(const int64 n)
-{
-  PE_ASSERT(n >= 1);
-  const int64 v = static_cast<int64>(sqrt(n));
-
-  vector<int64> ssum(v+1);
-  vector<int64> lsum(v+1);
-
-  for (int i = 1; i <= v; ++i)
-  {
-    ssum[i] = (int64)i * (i + 1) / 2 - 1;
-    const int64 t = n / i;
-    lsum[i] = t * (t + 1) / 2 - 1;
-  }
-
-  for (int64 p = 2; p <= v; ++p)
-  {
-    if (ssum[p] == ssum[p-1])
-    {
-      continue;
-    }
-    const int64 psum = ssum[p-1];
-    const int64 q = p * p;
-    const int64 end = min(v, n / q);
-    for (int i = 1; i <= end; ++i)
-    {
-      const int64 d = i * p;
-      if (d <= v)
-      {
-        lsum[i] -= (lsum[d] - psum) * p;
-      }
-      else
-      {
-        const int64 t = n / d;
-        lsum[i] -= (ssum[t] - psum) * p;
-      }
-    }
-    for (int64 i = v; i >= q; --i)
-    {
-      const int64 t = i / p;
-      ssum[i] -= (ssum[t] - psum) * p;
-    }
-  }
-  return make_tuple(std::move(ssum), std::move(lsum));
-}
-
-SL tuple<vector<int64>, vector<int64>, vector<int64>, vector<int64>>
-prime_pi_sum(const int64 n)
-{
-  PE_ASSERT(n >= 1);
-  const int64 v = static_cast<int64>(sqrt(n));
-
-  vector<int64> scnt(v+1);
-  vector<int64> lcnt(v+1);
-  vector<int64> ssum(v+1);
-  vector<int64> lsum(v+1);
-
-  for (int i = 1; i <= v; ++i)
-  {
-    scnt[i] = i - 1;
-    lcnt[i] = n / i - 1;
-    ssum[i] = (int64)i * (i + 1) / 2 - 1;
-    const int64 t = n / i;
-    lsum[i] = t * (t + 1) / 2 - 1;
-  }
-
-  for (int64 p = 2; p <= v; ++p)
-  {
-    if (scnt[p] == scnt[p-1])
-    {
-      continue;
-    }
-    const int64 pcnt = scnt[p-1];
-    const int64 psum = ssum[p-1];
-    const int64 q = p * p;
-    const int64 end = min(v, n / q);
-    for (int i = 1; i <= end; ++i)
-    {
-      const int64 d = i * p;
-      if (d <= v)
-      {
-        lcnt[i] -= lcnt[d] - pcnt;
-        lsum[i] -= (lsum[d] - psum) * p;
-      }
-      else
-      {
-        const int64 t = n / d;
-        lcnt[i] -= scnt[t] - pcnt;
-        lsum[i] -= (ssum[t] - psum) * p;
-      }
-    }
-    for (int64 i = v; i >= q; --i)
-    {
-      const int64 t = i / p;
-      scnt[i] -= scnt[t] - pcnt;
-      ssum[i] -= (ssum[t] - psum) * p;
-    }
-  }
-  return make_tuple(std::move(scnt), std::move(lcnt), std::move(ssum), std::move(lsum));
-}
-#endif
-
-SL void init_inv(int64* dest, int64 n, int64 mod)
-{
-  PE_ASSERT(n <= mod && n >= 2);
-  dest[0] = 0;
-  dest[1] = 1;
-  for (int i = 2; i < n; ++i)
-  {
-    const int64 t = mod / i;
-    const int64 k = mod % i;
-    const int64 v = t * t % mod;
-    const int64 u = dest[k] * dest[k] % mod;
-    dest[i] = i * v % mod * u % mod;
-  }
-}
-
-SL void init_inv(int* dest, int n, int mod)
-{
-  PE_ASSERT(n <= mod && n >= 2);
-  dest[0] = 0;
-  dest[1] = 1;
-  for (int i = 2; i < n; ++i)
-  {
-    const int t = mod / i;
-    const int k = mod % i;
-    const int v = (int64) t * t % mod;
-    const int u = (int64)dest[k] * dest[k] % mod;
-    dest[i] = (int64)i * v % mod * (int64)u % mod;
-  }
-}
-
 SL int64 square_root_safe(int64 n)
 {
   if (n <= 0) return 0;
@@ -533,6 +404,483 @@ SL int64 square_root(int64 n)
   int64 ret = static_cast<int64>(sqrt(n+0.5));
   return ret * ret == n ? ret : 0;
 }
+
+// Modular arithmetic
+SL int64 regulate_mod(int64 a, int64 mod)
+{
+  PE_ASSERT(mod >= 1);
+  if (a >= 0)
+  {
+    if (a >= mod) a %= mod;
+  }
+  else
+  {
+    if (-a >= mod) a = a % mod + mod;
+    else a += mod;
+  }
+  return a;
+}
+
+SL int64 add_mod(int64 a, int64 b, int64 mod)
+{
+  a += b;
+  if (a >= mod) a -= mod;
+  return a;
+}
+
+SL int64 sub_mod(int64 a, int64 b, int64 mod)
+{
+  a -= b;
+  if (a < 0) a += mod;
+  return a;
+}
+
+SL int64 mul_mod(int64 a, int64 b, int64 mod)
+{
+  return a*b%mod;
+}
+
+SL int64 mul_mod_ex(int64 a, int64 b, int64 mod)
+{
+#if PE_HAS_INT128
+  return (int128)a * b % mod;
+#else
+  int64 ret = 0;
+  int64 flag = b;
+  for (int64 d = 1; d <= a; d <<= 1)
+  {
+    if (d & a)
+    {
+      ret = (ret + flag) % mod;
+    }
+    flag = (flag << 1) % mod;
+  }
+  return ret;
+#endif
+}
+
+SL int64 power_mod(int64 x, int64 n, int64 mod)
+{
+  int64 ret = 1;
+  x %= mod;
+  if (x < 0) x += mod;
+  for (; n; n >>= 1)
+  {
+    if (n&1) ret = ret * x % mod;
+    x = x * x % mod;
+  }
+  return ret;
+}
+
+SL int64 power_mod_ex(int64 x, int64 n, int64 mod)
+{
+#if PE_HAS_INT128
+  int64 ret = 1;
+  x %= mod;
+  if (x < 0) x += mod;
+  for (; n; n >>= 1)
+  {
+    if (n&1) ret = (int128)ret * x % mod;
+    x = (int128)x * x % mod;
+  }
+  return ret;
+#else
+  int64 ret = 1;
+  x %= mod;
+  if (x < 0) x += mod;
+  for (; n; n >>= 1)
+  {
+    if (n&1) ret = mul_mod_ex(x, ret, mod);
+    x = mul_mod_ex(x, x, mod);
+  }
+  return ret;
+#endif
+}
+
+template<typename T, int D>
+SL void mat_mul_mat(T (*a)[D], T (*b)[D], T (*c)[D], int N = D)
+{
+  for (int i = 0; i < N; ++i) for (int j = 0; j < N; ++j)
+  {
+    T s = 0;
+    for (int k = 0; k < N; ++k)
+    s += a[i][k] * b[k][j];
+    c[i][j] = s;
+  }
+}
+
+template<typename T, int D>
+SL void mat_mul_vec(T (*a)[D], T (*b)[D], T (*c)[D], int N = D)
+{
+  for (int i = 0; i < N; ++i)
+  {
+    T s = 0;
+    for (int k = 0; k < N; ++k)
+    s += a[i][k] * b[k][0];
+    c[i][0] = s;
+  }
+}
+
+template<typename T, int D>
+SL void mat_mul_vec(T (*a)[D], T* b, T* c, int N = D)
+{
+  for (int i = 0; i < N; ++i)
+  {
+    T s = 0;
+    for (int k = 0; k < N; ++k)
+    s += a[i][k] * b[k];
+    c[i] = s;
+  }
+}
+
+template<typename T, int D>
+SL void mat_mul_mat_mod(T (*a)[D], T (*b)[D], T (*c)[D], int64 mod, int N = D)
+{
+  for (int i = 0; i < N; ++i) for (int j = 0; j < N; ++j)
+  {
+    int64 s = 0;
+    for (int k = 0; k < N; ++k)
+    {
+      s += mul_mod(a[i][k], b[k][j], mod);
+      if (s >= mod) s -= mod;
+    }
+    c[i][j] = s % mod;
+  }
+}
+
+template<typename T, int D>
+SL void mat_mul_vec_mod(T (*a)[D], T (*b)[D], T (*c)[D], int64 mod, int N = D)
+{
+  for (int i = 0; i < N; ++i)
+  {
+    int64 s = 0;
+    for (int k = 0; k < N; ++k)
+    {
+      s += mul_mod(a[i][k], b[k][0], mod);
+      if (s >= mod) s -= mod;
+    }
+    c[i][0] = s;
+  }
+}
+
+template<typename T, int D>
+SL void mat_mul_vec_mod(T (*a)[D], T* b, T* c, int64 mod, int N = D)
+{
+  for (int i = 0; i < N; ++i)
+  {
+    int64 s = 0;
+    for (int k = 0; k < N; ++k)
+    {
+      s += mul_mod(a[i][k], b[k], mod);
+      if (s >= mod) s -= mod;
+    }
+    c[i] = s;
+  }
+}
+
+struct init_direct_t{};
+static const init_direct_t __init_direct{};
+struct fake_int128{};
+
+template<typename S, typename B>
+struct mtype_policy
+{
+  typedef S   ints;
+  typedef B   intb;
+  static ints add(ints a, ints b, ints mod)
+  {
+    intb c = (intb)a + b;
+    if (c >= mod) c -= mod;
+    return static_cast<ints>(c);
+  }
+  static ints sub(ints a, ints b, ints mod)
+  {
+    intb c = (intb)a - b;
+    if (c < 0) c += mod;
+    return static_cast<ints>(c);
+  }
+  static ints mul(ints a, ints b, ints mod)
+  {
+    intb c = (intb)a * b % mod;
+    return static_cast<ints>(c);
+  }
+};
+
+template<typename S>
+struct mtype_policy<S, S>
+{
+  typedef S   ints;
+  typedef S   intb;
+  static ints add(ints a, ints b, ints mod)
+  {
+    a += b;
+    if (a >= mod) a -= mod;
+    return a;
+  }
+  static ints sub(ints a, ints b, ints mod)
+  {
+    a -= b;
+    if (a < 0) a += mod;
+    return b;
+  }
+  static ints mul(ints a, ints b, ints mod)
+  {
+    a = a * b % mod;
+    return a;
+  }
+};
+
+template<typename S>
+struct mtype_policy<S, fake_int128>
+{
+  typedef S   ints;
+  typedef fake_int128   intb;
+  static ints add(ints a, ints b, ints mod)
+  {
+    a += b;
+    if (a >= mod) a -= mod;
+    return a;
+  }
+  static ints sub(ints a, ints b, ints mod)
+  {
+    a -= b;
+    if (a < 0) a += mod;
+    return b;
+  }
+  static ints mul(ints a, ints b, ints mod)
+  {
+    return mul_mod_ex(a, b, mod);
+  }
+};
+
+template<typename S, typename B, S MOD>
+struct mint;
+
+template<typename S, typename B>
+struct mintd;
+
+template<typename S, typename B, S MOD>
+ostream& operator << (ostream& o, const mint<S, B, MOD>& m);
+
+template<typename S, typename B>
+ostream& operator << (ostream& o, const mintd<S, B>& m);
+
+template<typename S, typename B, S MOD>
+struct mint
+{
+typedef mtype_policy<S, B> MTI;
+typedef typename MTI::ints ints;
+typedef typename MTI::intb intb;
+
+static_assert(MOD > 0, "MOD > 0");
+
+mint(ints val = 0)
+{
+  if (val >= 0)
+  {
+    value_ = val >= MOD ? val % MOD : val;
+  }
+  else
+  {
+    value_ = val <= -MOD ? val % MOD + MOD : val + MOD;
+  }
+}
+
+mint(ints val, init_direct_t) : value_(val)
+{
+}
+
+mint operator + (const mint& y) const
+{
+  return mint(MTI::add(value_, y.value_, MOD), __init_direct);
+}
+
+mint& operator += (const mint& y)
+{
+  value_ = MTI::add(value_, y.value_, MOD);
+  return *this;
+}
+
+mint operator - (const mint& y) const
+{
+  return mint(MTI::sub(value_, y.value_, MOD), __init_direct);
+}
+
+mint& operator -= (const mint& y)
+{
+  value_ = MTI::sub(value_, y.value_, MOD);
+  return *this;
+}
+
+mint operator * (const mint& y) const
+{
+  return mint(MTI::mul(value_, y.value_, MOD), __init_direct);
+}
+
+mint& operator *= (const mint& y)
+{
+  value_ = MTI::mul(value_, y.value_, MOD);
+  return *this;
+}
+
+//operator ints () const {return value_;}
+ints value() const {return value_;}
+friend ostream& operator << <S,B,MOD>(ostream& o, const mint& m);
+
+ints value_;
+};
+
+template<typename S, typename B, S MOD>
+ostream& operator << (ostream& o, const mint<S, B, MOD>& m)
+{
+  o << m.value_;
+  return o;
+}
+
+template<int32_t mod>
+using mint3232 = mint<int32_t, int32_t, mod>;
+
+template<int32_t mod>
+using mint3264 = mint<int32_t, int64_t, mod>;
+
+template<int32_t mod>
+using mint6464 = mint<int64_t, int64_t, mod>;
+
+#if PE_HAS_INT128
+template<int32_t mod>
+using mint64128 = mint<int64_t, int128, mod>;
+#endif
+
+template<typename S, typename B>
+struct mintd
+{
+typedef mtype_policy<S, B> MTI;
+typedef typename MTI::ints ints;
+typedef typename MTI::intb intb;
+
+explicit mintd(ints val = 0, ints mod = 1) : MOD(mod)
+{
+  if (val >= 0)
+  {
+    value_ = val >= MOD ? val % MOD : val;
+  }
+  else
+  {
+    value_ = val <= -MOD ? val % MOD + MOD : val + MOD;
+  }
+}
+
+mintd(ints val, ints mod, init_direct_t) : value_(val), MOD(mod)
+{
+}
+
+mintd& operator = (ints v)
+{
+  mintd temp(v, MOD);
+  value_ = temp.value_;
+  return *this;
+}
+
+mintd& operator = (const mintd& other)
+{
+  value_ = other.value_;
+  MOD = other.MOD;
+  return *this;
+}
+
+mintd operator + (const mintd& y) const
+{
+  PE_ASSERT(y.MOD == MOD);
+  return mintd(MTI::add(value_, y.value, MOD), MOD, __init_direct);
+}
+
+mintd operator + (const ints y) const
+{
+  return *this + mintd(y, MOD);
+}
+
+mintd& operator += (const mintd& y)
+{
+  PE_ASSERT(y.MOD == MOD);
+  value_ = MTI::add(value_, y.value_, MOD);
+  return *this;
+}
+
+mintd& operator += (const ints y)
+{
+  return *this += mintd(y, MOD);
+}
+
+mintd operator - (const mintd& y) const
+{
+  PE_ASSERT(y.MOD == MOD);
+  return mintd(MTI::sub(value_, y.value, MOD), MOD, __init_direct);
+}
+
+mintd operator - (const ints y) const
+{
+  return *this - mintd(y, MOD);
+}
+
+mintd& operator -= (const mintd& y)
+{
+  PE_ASSERT(y.MOD == MOD);
+  value_ = MTI::sub(value_, y.value_, MOD);
+  return *this;
+}
+
+mintd& operator -= (const ints y)
+{
+  return *this -= mintd(y, MOD);
+}
+
+mintd operator * (const mintd& y) const
+{
+  PE_ASSERT(y.MOD == MOD);
+  return mintd(MTI::mul(value_, y.value_, MOD), MOD, __init_direct);
+}
+
+mintd operator * (const ints y) const
+{
+  return *this * mintd(y, MOD);
+}
+
+mintd& operator *= (const mintd& y)
+{
+  PE_ASSERT(y.MOD == MOD);
+  value_ = MTI::mul(value_, y.value_, MOD);
+  return *this;
+}
+
+mintd& operator *= (const ints y)
+{
+  return *this *= mintd(y, MOD);
+}
+
+//operator ints () const {return value_;}
+ints value() const {return value_;}
+friend ostream& operator << <S,B>(ostream& o, const mintd& m);
+
+ints value_;
+ints MOD;
+};
+
+template<typename S, typename B>
+ostream& operator << (ostream& o, const mintd<S, B>& m)
+{
+  o << m.value_;
+  return o;
+}
+
+using mintd3232 = mintd<int32_t, int32_t>;
+
+using mintd3264 = mintd<int32_t, int64_t>;
+
+using mintd6464 = mintd<int64_t, int64_t>;
+
+#if PE_HAS_INT128
+using mintd64128 = mintd<int64_t, int128>;
+#endif
 
 // p is prime
 SL int64 inv_of(int64 x, int64 p)
@@ -601,6 +949,72 @@ struct comb_moder
 template<int64 P, int64 F>
 int64 * comb_moder<P, F>:: fac;
 
+class comb_solver
+{
+public:
+  comb_solver(const int64 p, const int64 f = -1) :
+    P_(p),
+    F_(f < 0 ? p : f),
+    fac_(new int64[F_])
+    {
+      fac_[0] = 1;
+      for (int i = 1; i < F_; ++i)
+      fac_[i] = fac_[i-1] * i % P_;
+    }
+  ~comb_solver()
+  {
+    delete[] fac_;
+  }
+  int64 inv(int64 x) const
+  {
+    int64 result = 1;
+    int n = P_ - 2;
+    x %= P_;
+    for (; n; n >>= 1, x = x * x % P_)
+    if (n&1) result = result * x % P_;
+    return result;
+  }
+  int64 s(int64 x) const {return x & 1 ? -1 : 1;}
+  int64 comb(int64 m, int64 n) const
+  {
+    if (m < 0 || n > m) return 0;
+
+    int64 pp = 0;
+    int64 dist = m - n;
+
+    for (int64 mm = m/P_, nn = n/P_, dd = dist/P_;
+              mm;
+              mm /= P_, nn /= P_, dd /= P_)
+    {
+      pp += mm - nn - dd;
+    }
+    if (pp) return 0;
+    int64 l = 1, r = 1;
+    for (int64 x = m; x; x /= P_)
+    {
+      PE_ASSERT(x%P_<F_);
+      l = l * s(x/P_) * fac_[x%P_] % P_;
+    }
+    for (int64 x = n; x; x /= P_)
+    {
+      PE_ASSERT(x%P_<F_);
+      r = r * s(x/P_) * fac_[x%P_] % P_;
+    }
+    for (int64 x = dist; x; x /= P_)
+    {
+      PE_ASSERT(x%P_<F_);
+      r = r * s(x/P_) * fac_[x%P_] % P_;
+    }
+    l = (l + P_) % P_;
+    r = (r + P_) % P_;
+    int64 t  = (inv(r) * l % P_ + P_) % P_;
+    return t;
+  }
+private:
+  const int64 P_;
+  const int64 F_;
+  int64* fac_;
+};
 // greatest common divisor and extend greatest common divisor
 #ifndef COMPILER_GNU
 template<typename _EuclideanRingElement>
@@ -619,7 +1033,7 @@ __gcd(_EuclideanRingElement __m, _EuclideanRingElement __n)
 
 #define gcd __gcd
 
-int64 exgcd_impl(int64 a, int64 b, int64& x, int64& y)
+int128 exgcd_impl(int128 a, int128 b, int128& x, int128& y)
 {
   if (b == 0)
   {
@@ -628,8 +1042,8 @@ int64 exgcd_impl(int64 a, int64 b, int64& x, int64& y)
     return a;
   }
 
-  int64 x1 = 0, y1 = 0;
-  const int64 ret = exgcd_impl(b, a%b, x1, y1);
+  int128 x1 = 0, y1 = 0;
+  const int128 ret = exgcd_impl(b, a%b, x1, y1);
   // b * x1 + (a%b) * y1 = ret
   // b * x1 + (a - a / b * b) * y1 = ret
   // b * x1 + a * y1 - a / b * b * y1 = ret
@@ -639,27 +1053,18 @@ int64 exgcd_impl(int64 a, int64 b, int64& x, int64& y)
   return ret;
 }
 
-SL int64 exgcd(int64 a, int64 b, int64& x, int64& y)
+SL int128 exgcd(int128 a, int128 b, int128& x, int128& y)
 {
   PE_ASSERT(a != 0 || b != 0);
-  const int64 r = exgcd_impl(a, b, x, y);
+  const int128 r = exgcd_impl(a, b, x, y);
   PE_ASSERT(a*x+b*y==r);
   return r;
-}
-
-SL tuple<int64, int64, int64> exgcd(int64 a, int64 b)
-{
-  PE_ASSERT(a != 0 || b != 0);
-  int64 x = 0, y = 0;
-  const int64 r = exgcd_impl(a, b, x, y);
-  PE_ASSERT(a*x+b*y==r);
-  return tuple<int64, int64, int64>{r, x, y};
 }
 
 // solve equation a x = b (mod m)
 // return 0 and set u = -1 and v = 0 if failed
 // return 1, x = v (mod u)
-SL int solve_linear_equation(int64 a, int64 b, int64 m, int64& v, int64& u)
+SL int solve_linear_equation(int128 a, int128 b, int128 m, int128& v, int128& u)
 {
   v = 0;
   u = 0;
@@ -676,7 +1081,7 @@ SL int solve_linear_equation(int64 a, int64 b, int64 m, int64& v, int64& u)
   if (a < 0) a += m;
   if (b < 0) b += m;
 
-  int64 xx = 0, yy = 0, d = exgcd(a, m, xx, yy);
+  int128 xx = 0, yy = 0, d = exgcd(a, m, xx, yy);
 
   if (b % d) return 0;
 
@@ -692,7 +1097,7 @@ SL int solve_linear_equation(int64 a, int64 b, int64 m, int64& v, int64& u)
 // solve equation x = a (mod m1) x = b (mod m2)
 // return 0 and set u = 0 and t = 0 if failed
 // return 1, x = v (mod u)
-SL int crt2(int64 a, int64 m1, int64 b, int64 m2, int64& v, int64& u)
+SL int crt2(int128 a, int128 m1, int128 b, int128 m2, int128& v, int128& u)
 {
   v = 0;
   u = 0;
@@ -710,7 +1115,7 @@ SL int crt2(int64 a, int64 m1, int64 b, int64 m2, int64& v, int64& u)
   if (a < 0) a = -a;
   if (b < 0) b = -b;
 
-  int64 s = 0, t = 0;
+  int128 s = 0, t = 0;
   if (!solve_linear_equation(m1, b-a, m2, t, s)) return 0;
   // k0 = k1 * s + t
   // x = (k1 * s + t) * m1 + a
@@ -721,27 +1126,27 @@ SL int crt2(int64 a, int64 m1, int64 b, int64 m2, int64& v, int64& u)
   return 1;
 }
 
-SL tuple<int, int64, int64> crt2(int64 a, int64 m1, int64 b, int64 m2)
+SL tuple<int, int128, int128> crt2(int128 a, int128 m1, int128 b, int128 m2)
 {
-  int64 v = 0, u = 0;
+  int128 v = 0, u = 0;
   int r = crt2(a, m1, b, m2, v, u);
-  return tuple<int, int64, int64>{r, v, u};
+  return tuple<int, int128, int128>{r, v, u};
 }
 
-SL tuple<int, int64, int64> crtn(int64* val, int64* mod, int n)
+SL tuple<int, int128, int128> crtn(int64* val, int64* mod, int n)
 {
   PE_ASSERT(val != NULL && mod != NULL);
-  int64 v = 0, u = 1;
+  int128 v = 0, u = 1;
   int have = 1;
   for (int i = 0; i < n; ++i)
   {
     tie(have, v, u) = crt2(v, u, val[i], mod[i]);
     if (!have)
     {
-      return tuple<int, int64, int64>{0, 0, 0};
+      return tuple<int, int128, int128>{0, 0, 0};
     }
   }
-  return tuple<int, int64, int64>{have, v, u};
+  return tuple<int, int128, int128>{have, v, u};
 }
 
 // prime test for n <= 2^63 - 1
@@ -931,7 +1336,51 @@ SL int64 find_pr(int64 p, const vector<pair<int64, int> >& fp1)
   return -1;
 }
 
-SL int64 ind(int64 a, int64 pr, int64 p)
+#if 0
+struct pr_pair
+{
+  int idx;
+  int64 value;
+  pr_pair(int64 _idx=0, int64 _value=0) : idx(_idx), value(_value){}
+  bool operator < (const pr_pair& r) const
+  {
+      return value < r.value;
+  }
+};
+
+pr_pair     l1[100005], l2[100005];
+int64 ind(int64 a, int64 pr, int64 p)
+{
+  int64 inv_pr = power_mod(pr, p-2, p);
+  int64 mx = sqrt(double(p-1)+0.5);
+  if (mx * mx != p - 1) ++mx;
+  int64 t1 = 1, t2 = a;
+  int64 temp = power_mod(pr, mx, p);
+  for (unsigned int i = 0; i <= mx - 1; ++i)
+  {
+    l1[i] = pr_pair(i, t1);
+    l2[i] = pr_pair(i, t2);
+    t2 = t2 * inv_pr % p;
+    t1 = t1 * temp % p;
+  }
+  sort(l1, l1+mx);
+  sort(l2, l2+mx);
+  int _i = -1, _j = -1;
+  for (int i = 0, j = 0;;)
+  if (l1[i].value == l2[j].value)
+  {
+    _i = l1[i].idx;
+    _j = l2[j].idx;
+    break;
+  }
+  else if (l1[i].value > l2[j].value)++j;
+  else ++i;
+  int64 ind_a = mx * _i + _j;
+  return ind_a;
+}
+#endif
+
+int64 ind(int64 a, int64 pr, int64 p)
 {
   typedef unordered_map<int64, int> map_t;
   PE_ASSERT(a > 0);
@@ -1063,443 +1512,17 @@ struct Fraction
   T a, b;
 };
 
-// find the coefficient fof x^0..x^n of f such that: A*f = B
-// return empty vector if there is no integer solution.
-SL vector<int64> gf_first(const vector<int64>& A, const vector<int64>& B, const int n, const int64 mod)
+#if PE_HAS_INT128
+void print_int128(int128 x)
 {
-  const int sa = sz(A);
-  const int sb = sz(B);
-  PE_ASSERT(sa > 0);
-  PE_ASSERT(sb > 0);
-
-  int64 v, u;
-  int has = solve_linear_equation(A[0], 1, mod, v, u);
-  if (!has) return vector<int64>();
-
-  vector<int64> result(n + 1, 0);
-
-  // if u < mod, we have more than one solution.
-  PE_ASSERT(u == mod);
-  const int64 invA0 = v;
-  result[0] = invA0 * B[0] % mod;
-
-  for (int i = 1; i <= n; ++i)
-  {
-    int64 t = regulate_mod(i < sb ? B[i] : 0, mod);
-    for (int j = 1; j <= min(i, sa-1); ++j)
-    {
-      t = sub_mod(t, (j < sa ? A[j] : 0) * result[i-j] % mod, mod);
-    }
-    result[i] = invA0 * t % mod;
-  }
-
-  return result;
-}
-
-// find the coefficient of x^n of f such that: A*f = B
-// return -1 if there is no integer solution.
-SL int64 gf_at(const vector<int64>& A, const vector<int64>& B, const int64 n, const int64 mod)
-{
-  const int sa = sz(A);
-  const int sb = sz(B);
-  PE_ASSERT(sa > 0);
-  PE_ASSERT(sb > 0);
-
-  int64 v, u;
-  int has = solve_linear_equation(A[0], 1, mod, v, u);
-  if (!has) return -1;
-
-  const int64 m = min((int64)max(sa-1, sb-1), n);
-  vector<int64> result(m + 1, 0);
-
-  // if u < mod, we have more than one solution.
-  PE_ASSERT(u == mod);
-  const int64 invA0 = v;
-  result[0] = invA0 * B[0] % mod;
-
-  for (int i = 1; i <= m; ++i)
-  {
-    int64 t = regulate_mod(i < sb ? B[i] : 0, mod);
-    for (int j = 1; j <= min(i, sa-1); ++j)
-    {
-      t = sub_mod(t, (j < sa ? A[j] : 0) * result[i-j] % mod, mod);
-    }
-    result[i] = invA0 * t % mod;
-  }
-
-  if (m == n)
-  {
-    return result[m];
-  }
-
-  const int64 D = m + 1;
-  const int64 size = D * D;
-  string data(size * sizeof(int64) * 3 , '\0');
-  int64* buffer = (int64*)data.c_str();
-
-  int64* mat = buffer;
-  int64* res = mat + size;
-  int64* tmp = res + size;
-
-  for (int i = 0; i < m; ++i)
-  {
-    mat[i] = invA0 * regulate_mod(i + 1 < sa ? -A[i+1] : 0, mod) % mod;
-  }
-  for (int i = 1; i <= m; ++i)
-  {
-    (mat + i * D)[i-1] = 1;
-  }
-  for (int i = 0; i <= m; ++i)
-  {
-    res[i] = result[m-i];
-  }
-
-  for (int64 t = n - m; t > 0; t >>= 1)
-  {
-    if (t&1) mat_mul_vec_mod(mat, res, tmp, mod, static_cast<int>(D)), swap(res, tmp);
-    mat_mul_mat_mod(mat, mat, tmp, mod, static_cast<int>(D)), swap(mat, tmp);
-  }
-  return res[0];
-}
-
-template<int64 P>
-struct Poly
-{
-  std::vector<int64> data;
-
-  Poly(){}
-
-  Poly(const std::vector<int64>& data): data(data)
-  {
-    adjust_leading_zeros().adjust_mod();
-  }
-
-  Poly(std::vector<int64>&& data): data(std::move(data))
-  {
-    adjust_leading_zeros().adjust_mod();
-  }
-
-  Poly(std::initializer_list<int64> l) : data(l)
-  {
-    adjust_leading_zeros().adjust_mod();
-  }
-
-  Poly(const Poly& p) = default;
-  Poly(Poly&& p) = default;
-  Poly<P>& operator = (const Poly& other) = default;
-  Poly<P>& operator = (Poly&& other) = default;
-  
-  Poly<P>& adjust_leading_zeros()
-  {
-    int n = data.size() - 1;
-    while (n >= 0 && data[n] == 0) --n;
-    data.resize(max(n+1, 1));
-    return *this;
-  }
-  
-  Poly<P>& adjust_mod()
-  {
-    for (auto& iter: data)
-    {
-      iter = regulate_mod(iter, P);
-    }
-    return *this;
-  }
-  
-  int deg() const
-  {
-    return static_cast<int>(data.size() - 1);
-  }
-
-  int64& operator [] (int idx)
-  {
-    PE_ASSERT(idx >= 0 && idx < data.size());
-    return data[idx];
-  }
-
-  int64 operator [] (int idx) const
-  {
-    PE_ASSERT(idx >= 0 && idx < data.size());
-    return data[idx];
-  }
-
-  int64 at(int idx) const
-  {
-    return idx >= 0 && idx < data.size() ? data[idx] : 0;
-  }
-
-  Poly<P> operator << (int m) const
-  {
-    if (m == 0)
-    {
-      return *this;
-    }
-    std::vector<int64> new_data(data.size() + m);
-    for (int i = static_cast<int>(data.size()) + m - 1; i >= m; --i)
-    {
-      new_data[i] = data[i-m];
-    }
-    for (int i = 0; i < m; ++i)
-    {
-      new_data[i] = 0;
-    }
-    return Poly<P>(std::move(new_data));
-  }
-
-  Poly<P> lower_terms(int n) const
-  {
-    int m = min(n, static_cast<int>(data.size()));
-    return Poly<P>(std::vector<int64>(data.begin(), data.begin()+m));
-  }
-};
-
-template<int64 P>
-Poly<P> operator - (const Poly<P>& x, const Poly<P>& y)
-{
-  int n = max(x.deg(), y.deg());
-  std::vector<int64> data(n+1);
-  for (int i = 0; i <= n; ++i)
-  {
-    data[i] = sub_mod(x.at(i), y.at(i), P);
-  }
-  return Poly<P>(std::move(data)).adjust_leading_zeros();
-}
-
-template<int64 P>
-Poly<P> operator + (const Poly<P>& x, const Poly<P>& y)
-{
-  const int n = max(x.deg(), y.deg());
-  std::vector<int64> data(n+1);
-  for (int i = 0; i <= n; ++i)
-  {
-    data[i] = add_mod(x.at(i), y.at(i), P);
-  }
-  return Poly<P>(std::move(data)).adjust_leading_zeros();
-}
-
-template<int64 P>
-Poly<P> operator * (const Poly<P>& x, int64 v)
-{
-  std::vector<int64> data(x.data);
-  for (auto& iter: data)
-  {
-    iter = iter * v % P;
-  }
-  return Poly<P>(std::move(data));
-}
-
-template<int64 P>
-Poly<P> operator * (const Poly<P>& x, const Poly<P>& y)
-{
-  const int n = x.deg();
-  const int m = y.deg();
-  std::vector<int64> data(n + m + 1, 0);
-  for (int i = 0; i <= n; ++i)
-    for (int j = 0; j <= m; ++j)
-    {
-      int64 t = x[i] * y[j] % P;
-      data[i+j] = add_mod(data[i+j], t, P);
-    }
-  return Poly<P>(std::move(data));
-}
-
-template<int64 P>
-Poly<P> operator * (int64 v, const Poly<P>& x)
-{
-  return x * v;
-}
-
-template<int64 P>
-tuple<Poly<P>, Poly<P>> operator / (const Poly<P>& x, const Poly<P>& y)
-{
-  const int d1 = x.deg();
-  const int d2 = y.deg();
-  if (d1 < d2)
-  {
-    make_tuple(Poly<P>{0}, x);
-  }
-
-  Poly<P> R(x);
-  std::vector<int64> q;
-  int64 t = inv_of(y[d2], P);
-  for (int i = d1; i >= d2; --i)
-  {
-    int64 u = R[i] * t % P;
-    for (int j = i, k = d2; k >= 0; --j, --k)
-    {
-      R[j] = sub_mod(R[j], u * y[k] % P, P);
-    }
-    q.push_back(u);
-  }
-  reverse(q.begin(), q.end());
-  return make_tuple(std::move(Poly<P>(q)), std::move(R.adjust_leading_zeros()));
-}
-
-template<int64 P>
-Poly<P> operator % (int64 n, Poly<P> mod)
-{
-  Poly<P> x{0, 1};
-  Poly<P> ret{1};
-  for (; n > 0; n >>= 1)
-  {
-    if (n & 1)
-    {
-      auto t = x * ret;
-      Poly<P> q, r;
-      tie(q, r) = t / mod;
-      ret = std::move(r);
-    }
-    auto t = x * x;
-    Poly<P> q, r;
-    tie(q, r) = t / mod;
-    x = r;
-  }
-  return ret;
-}
-
-template<int64 P>
-ostream& operator << (ostream& o, const Poly<P>& p)
-{
-  const int n = p.data.size();
-  for (int i = 0; i < n - 1; ++i)
-  {
-    o << p.data[i] << ", ";
-  }
-  return o << p.data[n-1];
-}
-
-// Berlekamp Massey
-template<int64 P>
-Poly<P> find_minimal_poly(const Poly<P>& s)
-{
-  const int m = s.data.size();
-  const int n = m >> 1;
-  
-  PE_ASSERT(n*2==m);
-  
-  Poly<P> r0{1}; r0 = r0 << m;
-  Poly<P> r1{s};
-  Poly<P> v0{0};
-  Poly<P> v1{1};
-
-  while (n + 1 <= r1.deg())
-  {
-    Poly<P> q, r;
-    tie(q, r) = r0 / r1;
-    Poly<P> v(v0 - q * v1);
-    v0 = std::move(v1);
-    v1 = std::move(v);
-    r0 = std::move(r1);
-    r1 = std::move(r);
-  }
-  v1 = std::move(inv_of(v1[0], P) * v1);
-  reverse(v1.data.begin(), v1.data.end());
-  return v1;
-}
-
-template<int64 P>
-int64 nth_element(const Poly<P>& s, int64 n, const Poly<P>& min_poly)
-{
-  if (n <= s.deg())
-  {
-    return s[n];
-  }
-
-  auto r = n % min_poly;
-  const int m = r.deg();
-  int64 ans = 0;
-  for (int i = 0; i <= m; ++i)
-  {
-    ans = add_mod(ans, s[i] * r[i] % P, P);
-  }
-  return ans;
-}
-
-template<int64 P>
-Poly<P> find_linear_recurrence(const Poly<P>& s)
-{
-  const int len = s.data.size();
-  for (int n = 2; n < len; n += 2)
-  {
-    auto use = s.lower_terms(n);
-    auto min_poly = find_minimal_poly(use);
-    int ok = 1;
-    for (int i = n; i < len; ++i)
-    {
-      auto value = nth_element(use, i, min_poly);
-      if (value != s[i])
-      {
-        ok = 0;
-        break;
-      }
-    }
-    if (ok)
-    {
-      return min_poly;
-    }
-  }
-  return Poly<P>();
-}
-
-template<int64 P>
-int64 nth_element(const Poly<P>& s, int64 n)
-{
-  if (n <= s.deg())
-  {
-    return s[n];
-  }
-
-  auto min_poly = find_linear_recurrence(s);
-  if (min_poly.deg() >= 0)
-  {
-    return nth_element(s, n, min_poly);
-  }
-  return -1;
-}
-
-#if 0
-template<int64 P>
-Poly<P> cal1(const Poly<P>& s)
-{
-  Poly<P> C{1};
-  Poly<P> B{1};
-  int L = 0;
-  int m = 1;
-  int64 b = 1;
-  const int N = s.data.size();
-  for (int n = 0; n < N; ++n)
-  {
-    int64 d = s[n];
-    for (int i = 1; i <= L; ++i)
-    {
-      d = add_mod(d, add_mod(C.at(i), s[n-i], P), P);
-    }
-    if (d == 0)
-    {
-      ++m;
-    }
-    else if (2 * L <= n)
-    {
-      auto T = C;
-      int64 coe = d * inv_of(b, P) % P;
-      C = C - (B << m) * coe;
-      L = n + 1 - L;
-      B = std::move(T);
-      b = d;
-      m = 1;
-    }
-    else
-    {
-      int64 coe = d * inv_of(b, P) % P;
-      C = C - (B << m) * coe;
-      m = m + 1;
-    }
-  }
-  return C;
+  int dig[64];
+  int top = 0;
+  if (x < 0) putchar('-'), x = -x;
+  while (x) dig[top++] = x % 10, x /= 10;
+  if (top == 0) printf("%d", 0);
+  while (top > 0) printf("%d", dig[--top]);
 }
 #endif
+
 // 65701
 #endif
-/*
-
-*/

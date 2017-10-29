@@ -152,6 +152,13 @@ template<typename _Scalar, int _Rows, int _Cols>
 SL Eigen::Matrix<_Scalar, _Rows, _Cols>
 power_mod(const Eigen::Matrix<_Scalar, _Rows, _Cols>& x, int64 n, int64 mod)
 {
+  return power_mod(x, n, mod, mint_indicator<is_mint<_Scalar>::result>());
+}
+
+template<typename _Scalar, int _Rows, int _Cols>
+SL Eigen::Matrix<_Scalar, _Rows, _Cols>
+power_mod(const Eigen::Matrix<_Scalar, _Rows, _Cols>& x, int64 n, int64 mod, mint_indicator<0>)
+{
   typedef Eigen::Matrix<_Scalar, _Rows, _Cols> MatrixT;
   auto fixmod = [=](MatrixT& m)
   {
@@ -185,10 +192,56 @@ power_mod(const Eigen::Matrix<_Scalar, _Rows, _Cols>& x, int64 n, int64 mod)
   return e;
 }
 
+template<typename _Scalar, int _Rows, int _Cols>
+SL Eigen::Matrix<_Scalar, _Rows, _Cols>
+power_mod(const Eigen::Matrix<_Scalar, _Rows, _Cols>& x, int64 n, int64 mod, mint_indicator<1>)
+{
+  typedef Eigen::Matrix<_Scalar, _Rows, _Cols> MatrixT;
+  auto fixmod = [=](MatrixT& m)
+  {
+    const auto r = m.rows();
+    const auto c = m.cols();
+    for (int i = 0; i < r; ++i) for (int j = 0; j < c; ++j)
+    {
+      m(i, j).fix_value();
+    }
+  };
+
+  const int K = x.rows();
+
+  MatrixT e = MatrixT::Identity(K, K);
+  MatrixT y = x;
+
+  for (; n; n >>= 1)
+  {
+    // cout << "n = " << n << endl;
+    if (n & 1)
+    {
+      e *= y;
+      fixmod(e);
+    }
+    if (n > 1)
+    {
+      y *= y;
+      fixmod(y);
+    }
+  }
+  return e;
+}
+
 template<typename _Scalar, int _Rows, int _Cols, typename _ScalarV>
 SL vector<_ScalarV>
 power_mod(const Eigen::Matrix<_Scalar, _Rows, _Cols>& x, int64 n, const vector<_ScalarV>& v, int64 mod)
 {
+  return power_mod(x, n, v, mod, mint_indicator<is_mint<_Scalar>::result>());
+}
+
+template<typename _Scalar, int _Rows, int _Cols, typename _ScalarV>
+SL vector<_ScalarV>
+power_mod(const Eigen::Matrix<_Scalar, _Rows, _Cols>& x, int64 n, const vector<_ScalarV>& v, int64 mod, mint_indicator<0>)
+{
+  static_assert(std::is_same<_Scalar, _ScalarV>::value,
+      "Matrix's element type must be the same as vector's");
   typedef Eigen::Matrix<_Scalar, _Rows, _Cols> MatrixT;
   auto fixmod = [=](MatrixT& m)
   {
@@ -232,7 +285,63 @@ power_mod(const Eigen::Matrix<_Scalar, _Rows, _Cols>& x, int64 n, const vector<_
   return result;
 }
 
+template<typename _Scalar, int _Rows, int _Cols, typename _ScalarV>
+SL vector<_ScalarV>
+power_mod(const Eigen::Matrix<_Scalar, _Rows, _Cols>& x, int64 n, const vector<_ScalarV>& v, int64 mod, mint_indicator<1>)
+{
+  static_assert(std::is_same<_Scalar, _ScalarV>::value,
+      "Matrix's element type must be the same as vector's");
+  typedef Eigen::Matrix<_Scalar, _Rows, _Cols> MatrixT;
+  auto fixmod = [=](MatrixT& m)
+  {
+    const auto r = m.rows();
+    const auto c = m.cols();
+    for (int i = 0; i < r; ++i) for (int j = 0; j < c; ++j)
+    {
+      m(i, j).fix_value();
+    }
+  };
+
+  const int K = x.rows();
+
+  vector<_ScalarV> result(v);
+  MatrixT y = x;
+
+  for (; n; n >>= 1)
+  {
+    // cout << "n = " << n << endl;
+    if (n & 1)
+    {
+      vector<_ScalarV> temp(K, 0);
+      for (int i = 0; i < K; ++i)
+      {
+        _ScalarV s = 0;
+        for (int j = 0; j < K; ++j)
+        {
+          s += y(i, j) * result[j];
+        }
+        s.fix_value();
+        temp[i] = s;
+      }
+      result = std::move(temp);
+    }
+    if (n > 1)
+    {
+      y *= y;
+      fixmod(y);
+    }
+  }
+  return result;
+}
+
 typedef Eigen::Matrix<int64, Eigen::Dynamic, Eigen::Dynamic> Mat64;
+
+template<int32_t mod>
+using MatM = Eigen::Matrix<mint6464<mod>, Eigen::Dynamic, Eigen::Dynamic>;
+
+template<int32_t mod>
+using MatML = Eigen::Matrix<mintl<mod>, Eigen::Dynamic, Eigen::Dynamic>;
+
 #if PE_HAS_INT128
 typedef Eigen::Matrix<int128, Eigen::Dynamic, Eigen::Dynamic> Mat128;
 #endif

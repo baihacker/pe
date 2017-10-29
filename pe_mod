@@ -19,6 +19,23 @@ SL int64 regulate_mod(int64 a, int64 mod)
   return a;
 }
 
+#if PE_HAS_INT128
+SL int128 regulate_mod(int128 a, int64 mod)
+{
+  PE_ASSERT(mod >= 1);
+  if (a >= 0)
+  {
+    if (a >= mod) a %= mod;
+  }
+  else
+  {
+    if (-a >= mod) a = a % mod + mod;
+    else a += mod;
+  }
+  return a;
+}
+#endif
+
 SL int64 add_mod(int64 a, int64 b, int64 mod)
 {
   a += b;
@@ -244,8 +261,14 @@ mint& operator *= (const mint& y)
   return *this;
 }
 
+int operator < (const mint& y) const
+{
+  return value() < y.value();
+}
+
 //operator ints () const {return value_;}
 ints value() const {return value_;}
+mint& fix_value(){return *this;}
 friend ostream& operator << <S,B,MOD>(ostream& o, const mint& m);
 
 ints value_;
@@ -269,8 +292,101 @@ using mint6464 = mint<int64_t, int64_t, mod>;
 
 #if PE_HAS_INT128
 template<int32_t mod>
+using mint128128 = mint<int128, int128, mod>;
+template<int32_t mod>
 using mint64128 = mint<int64_t, int128, mod>;
 #endif
+
+template<int64 MOD>
+struct mintl
+{
+static_assert(MOD > 0, "MOD > 0");
+
+mintl(int128 val = 0): value_(val)
+{
+}
+
+mintl operator + (const mintl& y) const
+{
+  return mintl(value_ + y.value_);
+}
+
+mintl& operator += (const mintl& y)
+{
+  value_ += y.value_;
+  return *this;
+}
+
+mintl operator - (const mintl& y) const
+{
+  return mintl(value_ - y.value_);
+}
+
+mintl& operator -= (const mintl& y)
+{
+  value_ -= y.value_;
+  return *this;
+}
+
+mintl operator * (const mintl& y) const
+{
+  return mintl(value_ * y.value_);
+}
+
+mintl& operator *= (const mintl& y)
+{
+  value_ = value_ * y.value_;
+  return *this;
+}
+
+int operator < (const mintl& y) const
+{
+  return value_ < y.value_;
+}
+
+int128 value() const
+{
+  return value_;
+}
+
+mintl& fix_value()
+{
+  value_ = regulate_mod(value_, MOD);
+  return *this;
+}
+
+int128 value_;
+};
+
+template<int64 mod>
+ostream& operator << (ostream& o, const mintl<mod>& m)
+{
+  return o << m.value();
+}
+
+template<int v>
+struct mint_indicator
+{
+  enum {value=v};
+};
+
+template<typename X>
+struct is_mint
+{
+  static constexpr mint_indicator<0> mint_match(...);
+
+  template<typename S, typename B, S mod>
+  static constexpr mint_indicator<1> mint_match(mint<S, B, mod>);
+  
+  template<int64 mod>
+  static constexpr mint_indicator<1> mint_match(const mintl<mod>&);
+  
+  static X makeX();
+
+  typedef decltype(mint_match(makeX())) result_type;
+  
+  enum {result = result_type::value};
+};
 
 template<typename S, typename B>
 struct mintd
@@ -380,6 +496,7 @@ mintd& operator *= (const ints y)
 
 //operator ints () const {return value_;}
 ints value() const {return value_;}
+mintd& fix_value(){return *this;}
 friend ostream& operator << <S,B>(ostream& o, const mintd& m);
 
 ints value_;
@@ -400,6 +517,7 @@ using mintd3264 = mintd<int32_t, int64_t>;
 using mintd6464 = mintd<int64_t, int64_t>;
 
 #if PE_HAS_INT128
+using mintd128128 = mintd<int128, int128>;
 using mintd64128 = mintd<int64_t, int128>;
 #endif
 

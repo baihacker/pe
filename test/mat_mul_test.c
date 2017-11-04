@@ -56,7 +56,7 @@ int main()
   }
   {
     srand(123);
-    std::vector<mintl<mod>> v(K, 0);
+    std::vector<mintl<int128, mod>> v(K, 0);
     MatML<mod> m = MatML<mod>::Zero(K, K);
 
     for (auto& i: v) i = rand();

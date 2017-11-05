@@ -10,6 +10,7 @@ Installation:
 Put all the files in a folder (directory).
 For example, we put them in the directory D:\usr\include.
 Make sure CPLUS_INCLUDE_PATH contain D:\usr\include.
+In pe_base, configure this library.
 
 Prerequirements:
 ----------------
@@ -20,13 +21,16 @@ File list:
 
 * pe: Including all the files.
 * pe_base: Some pre-including headers. Some macros and typedef.
-* pe_util: Utilities such as TimeDelta, KVPersistance. (it may support linux but we need change the generated cmdline and check the other codes)
+* pe_bn: Big integer.
+* pe_geometry: Support Point2D and Point3D.
+* pe_mat: Matrix operations.
+* pe_memory: Memory manipulation such as allocating large memory. (windows only)
+* pe_mod: Modular arithmetic.
 * pe_nt: Basic code of number theory.
 * pe_parallel: A simple framework to solve problem with multi-threads. (windows only)
-* pe_threads: Deprecated. A simple framework to solve problem with multi-threads. (windows only)
-* pe_bn: Big integer.
-* pe_memory: Memory manipulation such as allocating large memory. (windows only)
-* pe_geometry: Support Point2D and Point3D.
+* pe_parallel_algo: Parallel algorithms.
+* pe_util: Utilities such as TimeDelta, KVPersistance. (it may support linux but we need change the generated cmdline and check the other codes)
+
 
 
 Design principle:

@@ -23,6 +23,7 @@ C++11 or above
 File list:
 -----------
 * pe: Including all the files.
+* pe.hpp: The file for generating precompile header.
 * pe_base: Some pre-including headers. Some macros and typedef.
 * pe_bn: Big integer.
 * pe_geometry: Support Point2D and Point3D.

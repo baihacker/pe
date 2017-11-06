@@ -1,5 +1,4 @@
-const int maxp = 100000;
-#include <pe>
+#include <pe.hpp>
 
 const int64 N = 1000000000;
 LargeMemory lm;

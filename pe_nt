@@ -15,20 +15,21 @@ static const int64 PE_SOI63 = 3037000499LL;   // x * x > 2^63 - 1 for x > PE_SOI
 static const int64 PE_SOI64 = 4294967295LL;   // x * x > 2^64 - 1 for x > PE_SOI64
 
 // About primes
-static int pcnt;
-#ifdef PLIST_ARRAY
-  static int pmask[maxp+1];
-  static int plist[maxp/10];
-  static_assert(maxp >= 100000, "maxp >= 100000");
-#else
-  int* pmask = NULL;
-  int* plist = NULL;
-#endif
+int pcnt;
+int* pmask = NULL;
+int* plist = NULL;
 int* phi = NULL;
 int* miu = NULL;
+int64 maxp;
+int64 maxp2;
 
-static_assert(maxp <= INT_MAX, "maxp <= INT_MAX");
-static const int64 maxp2 = (int64)maxp * maxp;
+SL void INIT_MAXP(int64 v)
+{
+  ::maxp = v;
+  ::maxp2 = (int64) maxp * maxp;
+  assert(maxp >= 100000);
+  assert(maxp <= INT_MAX);
+}
 
 // http://oeis.org/A006880
 const int64 pmpi[] =
@@ -94,6 +95,11 @@ SL int is_prime(int64 n)
 
 SL void init_primes()
 {
+  if (maxp == 0)
+  {
+    INIT_MAXP(1000000);
+  }
+
   init_pmask_plist(pmask, plist);
 
   pcnt = 0;
@@ -119,6 +125,11 @@ SL void init_primes()
 
 SL void init_primes(int cal_phi, int cal_miu)
 {
+  if (maxp == 0)
+  {
+    INIT_MAXP(1000000);
+  }
+
   init_pmask_plist(pmask, plist);
 
   pcnt = 0;

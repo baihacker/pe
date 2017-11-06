@@ -1,5 +1,4 @@
-const int maxp = 10000000;
-#include <pe>
+#include <pe.hpp>
 
 struct CalPI : public ParallelRangeT<CalPI>
 {

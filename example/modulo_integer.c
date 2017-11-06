@@ -1,5 +1,5 @@
-const int maxp = 100000;
-#include <pe>
+#include <pe.hpp>
+
 template<typename S>
 struct mtype_policy<S, bn>
 {

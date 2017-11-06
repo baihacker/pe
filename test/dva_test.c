@@ -1,5 +1,4 @@
-const int maxp = 1000000;
-#include <pe>
+#include <pe.hpp>
 
 int main()
 {

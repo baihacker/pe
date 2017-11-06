@@ -1,5 +1,5 @@
-const int maxp = 100000;
-#include "pe"
+#include <pe.hpp>
+
 int arr[100000000];
 
 int main()

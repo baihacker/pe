@@ -1,5 +1,4 @@
-const int maxp = 100000;
-#include "pe"
+#include <pe.hpp>
 
 template<typename T>
 void demo(T a, T b)

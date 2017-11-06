@@ -1,5 +1,4 @@
-const int maxp = 100000;
-#include <pe>
+#include <pe.hpp>
 
 void correctness_test()
 {

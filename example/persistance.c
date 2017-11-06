@@ -1,5 +1,4 @@
-const int maxp = 100000;
-#include <pe>
+#include <pe.hpp>
 KVPersistance kv("fff.txt");
 int main()
 {

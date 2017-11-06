@@ -7,10 +7,14 @@ The developing version is 2.0. It will be more interesting.
 
 Installation:
 -------------
-Put all the files in a folder (directory).
-For example, we put them in the directory D:\usr\include.
-Make sure CPLUS_INCLUDE_PATH contain D:\usr\include.
-In pe_base, configure this library.
+* Put all the files in a folder (directory). For example, we put them in the directory D:\usr\include.
+* Make sure CPLUS_INCLUDE_PATH contain D:\usr\include.
+* In pe_base, configure this library. Especially, ENABLE_EIGEN should be zero if you don't have the library Eigen.
+* [optional, recommended] Run "g++ -xc++-header "pe.hpp" --std=c++11 -O3 -march=native -fopenmp" in D:\usr\include to generate precompile header "pe.hpp.gch". The compile options are the same as the options you will compile your target files.
+
+Use:
+----
+#include <pe.hpp> in your source code.
 
 Prerequirements:
 ----------------
@@ -18,7 +22,6 @@ C++11 or above
 
 File list:
 -----------
-
 * pe: Including all the files.
 * pe_base: Some pre-including headers. Some macros and typedef.
 * pe_bn: Big integer.
@@ -30,8 +33,6 @@ File list:
 * pe_parallel: A simple framework to solve problem with multi-threads. (windows only)
 * pe_parallel_algo: Parallel algorithms.
 * pe_util: Utilities such as TimeDelta, KVPersistance. (it may support linux but we need change the generated cmdline and check the other codes)
-
-
 
 Design principle:
 --------------------
@@ -46,8 +47,7 @@ The factorizing interface is c++ style. It will be a little slower but it's easy
 Example:
 --------
 ```cpp
-const int maxp = 100000;
-#include <pe>
+#include <pe.hpp>
 
 int main()
 {

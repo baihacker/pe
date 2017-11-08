@@ -8,198 +8,171 @@
 #include <windows.h>
 #include <process.h>
 
-template<typename Task>
-class MultiThreadsTaskRunner
-{
-public:
-struct TaskItem
-{
-  Task task;
-  int64 task_item_id;
-  int worker_idx;
-  int is_stop_task;
-};
+template <typename Task>
+class MultiThreadsTaskRunner {
+ public:
+  struct TaskItem {
+    Task task;
+    int64 task_item_id;
+    int worker_idx;
+    int is_stop_task;
+  };
 
-private:
-enum
-{
-  min_thread = 1,
-  max_thread = 64,
-  max_pending_tasks = 1024,//1<<20,  // the actual maximum pending task is max_pending_tasks - 1
-};
+ private:
+  enum {
+    min_thread = 1,
+    max_thread = 64,
+    max_pending_tasks = 1024,  // 1<<20,  // the actual maximum pending task is
+                               // max_pending_tasks - 1
+  };
 
 #if PE_HAS_CPP11
-  typedef std::function<void (TaskItem)>* worker_ptr_t;
+  typedef std::function<void(TaskItem)>* worker_ptr_t;
 #else
   typedef void (*worker_ptr_t)(TaskItem task_item);
 #endif
 
-struct ThreadContext
-{
-  int idx;
-  worker_ptr_t worker_ptr;
-  MultiThreadsTaskRunner* host;
-};
+  struct ThreadContext {
+    int idx;
+    worker_ptr_t worker_ptr;
+    MultiThreadsTaskRunner* host;
+  };
 
-public:
-MultiThreadsTaskRunner() : threads_count(0), worker_ptr(NULL), next_task_item_id(0), p(0), q(0)
-{
-  memset(threads_context, 0, sizeof threads_context);
-}
-
-void reset()
-{
-  threads_count = 0;
-  worker_ptr = NULL;
-  p = q = 0;
-  memset(threads_context, 0, sizeof threads_context);
-}
-
-void init(worker_ptr_t worker, const int threads = 3, const int stack = 100*(1<<20))
-{
-  assert(worker_ptr == NULL);
-
-  p = q = 0;
-  InitializeCriticalSection(&request_access);
-  has_new_request = CreateEvent(NULL, FALSE, FALSE, NULL);
-  request_removed = CreateEvent(NULL, FALSE, FALSE, NULL);
-  threads_count = max(threads, (int)min_thread);
-  threads_count = min(threads_count, (int)max_thread);
-  worker_ptr = worker;
-  for (int i = 0; i < threads_count; ++i)
-  {
-    threads_context[i].idx = i;
-    threads_context[i].worker_ptr = worker_ptr;
-    threads_context[i].host = this;
-    threads_handle[i] = (HANDLE)_beginthreadex(
-        NULL, max(stack, 100*(1<<20)), work_thread, (void*)&threads_context[i], 0, NULL);
+ public:
+  MultiThreadsTaskRunner()
+      : threads_count(0), worker_ptr(NULL), next_task_item_id(0), p(0), q(0) {
+    memset(threads_context, 0, sizeof threads_context);
   }
-  start = GetTickCount();
-}
 
-void wait_for_queue(int max_request = -1)
-{
-  if (max_request == -1) max_request = threads_count;
-  if (max_request > max_pending_tasks - 1) max_request = max_pending_tasks - 1;
-  for (;;)
-  {
-    if (get_request_count() < max_request) break;
-    WaitForSingleObject(request_removed, static_cast<DWORD>(INFINITY));
+  void reset() {
+    threads_count = 0;
+    worker_ptr = NULL;
+    p = q = 0;
+    memset(threads_context, 0, sizeof threads_context);
   }
-}
 
-void add_request(const Task& task, int is_stop_task = 0)
-{
-  EnterCriticalSection(&request_access);
-  assert((q + 1) % max_pending_tasks != p);
-  TaskItem item = {task, next_task_item_id++, -1, is_stop_task};
-  task_que[q++] = item;
-  if (q >= max_pending_tasks)
-  {
-    q -= max_pending_tasks;
+  void init(worker_ptr_t worker, const int threads = 3,
+            const int stack = 100 * (1 << 20)) {
+    assert(worker_ptr == NULL);
+
+    p = q = 0;
+    InitializeCriticalSection(&request_access);
+    has_new_request = CreateEvent(NULL, FALSE, FALSE, NULL);
+    request_removed = CreateEvent(NULL, FALSE, FALSE, NULL);
+    threads_count = max(threads, (int)min_thread);
+    threads_count = min(threads_count, (int)max_thread);
+    worker_ptr = worker;
+    for (int i = 0; i < threads_count; ++i) {
+      threads_context[i].idx = i;
+      threads_context[i].worker_ptr = worker_ptr;
+      threads_context[i].host = this;
+      threads_handle[i] =
+          (HANDLE)_beginthreadex(NULL, max(stack, 100 * (1 << 20)), work_thread,
+                                 (void*)&threads_context[i], 0, NULL);
+    }
+    start = GetTickCount();
   }
-  LeaveCriticalSection(&request_access);
-  SetEvent(has_new_request);
-}
 
-void wait_for_end()
-{
-  wait_for_queue();
-  add_request(Task(), 1);
-  WaitForMultipleObjects(threads_count, threads_handle, TRUE, INFINITE);
-  for (int i = 0; i < threads_count; ++i) CloseHandle(threads_handle[i]);
-  CloseHandle(request_removed);
-  CloseHandle(has_new_request);
-  DeleteCriticalSection(&request_access);
-  end = GetTickCount();
-  fprintf(stderr, "time : %u\n", (unsigned)(end - start));
-}
+  void wait_for_queue(int max_request = -1) {
+    if (max_request == -1) max_request = threads_count;
+    if (max_request > max_pending_tasks - 1)
+      max_request = max_pending_tasks - 1;
+    for (;;) {
+      if (get_request_count() < max_request) break;
+      WaitForSingleObject(request_removed, static_cast<DWORD>(INFINITY));
+    }
+  }
 
-void lock()
-{
-  EnterCriticalSection(&request_access);
-}
+  void add_request(const Task& task, int is_stop_task = 0) {
+    EnterCriticalSection(&request_access);
+    assert((q + 1) % max_pending_tasks != p);
+    TaskItem item = {task, next_task_item_id++, -1, is_stop_task};
+    task_que[q++] = item;
+    if (q >= max_pending_tasks) {
+      q -= max_pending_tasks;
+    }
+    LeaveCriticalSection(&request_access);
+    SetEvent(has_new_request);
+  }
 
-void unlock()
-{
-  LeaveCriticalSection(&request_access);
-}
+  void wait_for_end() {
+    wait_for_queue();
+    add_request(Task(), 1);
+    WaitForMultipleObjects(threads_count, threads_handle, TRUE, INFINITE);
+    for (int i = 0; i < threads_count; ++i) CloseHandle(threads_handle[i]);
+    CloseHandle(request_removed);
+    CloseHandle(has_new_request);
+    DeleteCriticalSection(&request_access);
+    end = GetTickCount();
+    fprintf(stderr, "time : %u\n", (unsigned)(end - start));
+  }
 
-private:
-// inc = 0 or 1
-bool get_next_request(TaskItem& item, int inc)
-{
-  item.task_item_id = -1;
-  int oldp = p;
-  EnterCriticalSection(&request_access);
-  if (p != q)
-  {
-    item = task_que[p];
-    if (inc > 0 && !item.is_stop_task)
-    {
-      p += inc;
-      if (p >= max_pending_tasks)
-      {
-        p -= max_pending_tasks;
+  void lock() { EnterCriticalSection(&request_access); }
+
+  void unlock() { LeaveCriticalSection(&request_access); }
+
+ private:
+  // inc = 0 or 1
+  bool get_next_request(TaskItem& item, int inc) {
+    item.task_item_id = -1;
+    int oldp = p;
+    EnterCriticalSection(&request_access);
+    if (p != q) {
+      item = task_que[p];
+      if (inc > 0 && !item.is_stop_task) {
+        p += inc;
+        if (p >= max_pending_tasks) {
+          p -= max_pending_tasks;
+        }
+      }
+    }
+    LeaveCriticalSection(&request_access);
+    if (oldp != p) {
+      SetEvent(request_removed);
+    }
+    return item.task_item_id != -1;
+  }
+
+  int get_request_count() {
+    int ret = 0;
+    EnterCriticalSection(&request_access);
+    ret = q - p;
+    if (ret < 0) {
+      ret += max_pending_tasks;
+    }
+    LeaveCriticalSection(&request_access);
+    return ret;
+  }
+
+  void work(ThreadContext thread_context) {
+    for (;;) {
+      TaskItem item;
+      if (get_next_request(item, 0) == false) {
+        DWORD wait_result = WaitForSingleObject(has_new_request, INFINITE);
+        if (wait_result != WAIT_OBJECT_0) continue;
+      }
+      if (get_next_request(item, 1) == false) continue;
+      if (item.is_stop_task) {
+        SetEvent(has_new_request);
+        break;
+      }
+      if (thread_context.worker_ptr) {
+        item.worker_idx = thread_context.idx;
+        (*thread_context.worker_ptr)(item);
       }
     }
   }
-  LeaveCriticalSection(&request_access);
-  if (oldp != p)
-  {
-    SetEvent(request_removed);
+
+  static unsigned int __stdcall work_thread(void* p) {
+    ThreadContext context_copy = *(ThreadContext*)p;
+    context_copy.host->work(context_copy);
+    return 0;
   }
-  return item.task_item_id != -1;
-}
 
-int get_request_count()
-{
-  int ret = 0;
-  EnterCriticalSection(&request_access);
-  ret = q - p;
-  if (ret < 0)
-  {
-    ret += max_pending_tasks;
-  }
-  LeaveCriticalSection(&request_access);
-  return ret;
-}
-
-void work(ThreadContext thread_context)
-{
-  for (;;)
-  {
-    TaskItem item;
-    if (get_next_request(item, 0) == false)
-    {
-      DWORD wait_result = WaitForSingleObject(has_new_request, INFINITE);
-      if (wait_result != WAIT_OBJECT_0) continue;
-    }
-    if (get_next_request(item, 1) == false) continue;
-    if (item.is_stop_task)
-    {
-      SetEvent(has_new_request);
-      break;
-    }
-    if (thread_context.worker_ptr)
-    {
-      item.worker_idx = thread_context.idx;
-      (*thread_context.worker_ptr)(item);
-    }
-  }
-}
-
-static unsigned int __stdcall work_thread(void* p)
-{
-  ThreadContext context_copy = *(ThreadContext*)p;
-  context_copy.host->work(context_copy);
-  return 0;
-}
-
-private:
+ private:
   DWORD start, end;
 
-private:
+ private:
   int threads_count;
 
   HANDLE threads_handle[max_thread];
@@ -210,42 +183,37 @@ private:
   CRITICAL_SECTION request_access;
   worker_ptr_t worker_ptr;
 
-  TaskItem task_que[max_pending_tasks+1];
+  TaskItem task_que[max_pending_tasks + 1];
   int64 next_task_item_id;
   int p, q;
 };
 
-enum
-{
-  PRIORITY_REALTIME     = REALTIME_PRIORITY_CLASS,
-  PRIORITY_HIGH         = HIGH_PRIORITY_CLASS,
+enum {
+  PRIORITY_REALTIME = REALTIME_PRIORITY_CLASS,
+  PRIORITY_HIGH = HIGH_PRIORITY_CLASS,
   PRIORITY_ABOVE_NORMAL = ABOVE_NORMAL_PRIORITY_CLASS,
-  PRIORITY_NORMAL       = NORMAL_PRIORITY_CLASS,
+  PRIORITY_NORMAL = NORMAL_PRIORITY_CLASS,
   PRIORITY_BELOW_NORMAL = BELOW_NORMAL_PRIORITY_CLASS,
-  PRIORITY_BACKGROUND   = 0x00100000, // PROCESS_MODE_BACKGROUND_BEGIN,
-  PRIORITY_IDLE         = IDLE_PRIORITY_CLASS,
+  PRIORITY_BACKGROUND = 0x00100000,  // PROCESS_MODE_BACKGROUND_BEGIN,
+  PRIORITY_IDLE = IDLE_PRIORITY_CLASS,
 };
 
-static inline void set_process_priority(int priority)
-{
+static inline void set_process_priority(int priority) {
   ::SetPriorityClass(::GetCurrentProcess(), priority);
 }
 
-static inline void make_sure_process_singleton(const char* id)
-{
+static inline void make_sure_process_singleton(const char* id) {
   string mutex_name = "pe_mutex_prefix_";
   mutex_name += id;
   HANDLE hMutex = ::OpenMutex(MUTEX_ALL_ACCESS, FALSE, mutex_name.c_str());
-  if (hMutex)
-  {
+  if (hMutex) {
     fprintf(stderr, "another process is running\n");
     ::CloseHandle(hMutex);
     exit(-1);
     return;
   }
   hMutex = ::CreateMutex(NULL, TRUE, mutex_name.c_str());
-  if (::GetLastError() == ERROR_ALREADY_EXISTS)
-  {
+  if (::GetLastError() == ERROR_ALREADY_EXISTS) {
     fprintf(stderr, "another process is running\n");
     ::CloseHandle(hMutex);
     exit(-1);
@@ -258,33 +226,24 @@ static inline void make_sure_process_singleton(const char* id)
 #include <iostream>
 #include "pe_util"
 
-template<typename Derived>
-struct RangeBasedTaskGenerator
-{
-  struct Task
-  {
+template <typename Derived>
+struct RangeBasedTaskGenerator {
+  struct Task {
     int64 id;
-    int operator == (const Task& other) const
-    {
-      return id == other.id;
-    }
+    int operator==(const Task& other) const { return id == other.id; }
   };
 
-  RangeBasedTaskGenerator(int64 first = 0, int64 last = 0, int64 block_size = 1) :
-    first_(first), last_(last), block_size_(block_size)
-    {
-      assert(block_size_ >= 1);
-      const int64 cnt = last_ - first_ + 1;
-      first_task_ = 1;
-      last_task_ = (cnt + block_size - 1) / block_size;
-    }
-
-  ~RangeBasedTaskGenerator()
-  {
+  RangeBasedTaskGenerator(int64 first = 0, int64 last = 0, int64 block_size = 1)
+      : first_(first), last_(last), block_size_(block_size) {
+    assert(block_size_ >= 1);
+    const int64 cnt = last_ - first_ + 1;
+    first_task_ = 1;
+    last_task_ = (cnt + block_size - 1) / block_size;
   }
 
-  Derived& set_range(int64 first = 0, int64 last = 0, int64 block_size = 1)
-  {
+  ~RangeBasedTaskGenerator() {}
+
+  Derived& set_range(int64 first = 0, int64 last = 0, int64 block_size = 1) {
     first_ = first;
     last_ = last;
     block_size_ = block_size;
@@ -295,26 +254,22 @@ struct RangeBasedTaskGenerator
     return static_cast<Derived&>(*this);
   }
 
-  Task first_task()
-  {
+  Task first_task() {
     Task first = {first_task_};
     return first;
   }
 
-  Task next_task(Task curr)
-  {
+  Task next_task(Task curr) {
     curr.id++;
     return curr;
   }
 
-  Task last_task()
-  {
+  Task last_task() {
     Task last = {last_task_};
     return last;
   }
 
-  pair<int64, int64> task_id_to_range(int64 id) const
-  {
+  pair<int64, int64> task_id_to_range(int64 id) const {
     assert(id >= first_task_ && id <= last_task_);
 
     int64 u = (id - 1) * block_size_ + first_;
@@ -330,18 +285,13 @@ struct RangeBasedTaskGenerator
   int64 last_task_;
 };
 
-template<typename Derived>
-struct SupportCacheFileName
-{
-  SupportCacheFileName(const char* file_name = NULL) : file_name_(NULL){}
+template <typename Derived>
+struct SupportCacheFileName {
+  SupportCacheFileName(const char* file_name = NULL) : file_name_(NULL) {}
 
-  const char* cache_file_name() const
-  {
-    return file_name_;
-  }
+  const char* cache_file_name() const { return file_name_; }
 
-  Derived& set_cache_file_name(const char* file_name)
-  {
+  Derived& set_cache_file_name(const char* file_name) {
     file_name_ = file_name;
     return static_cast<Derived&>(*this);
   }
@@ -349,37 +299,30 @@ struct SupportCacheFileName
   const char* file_name_;
 };
 
-template<typename CONTEXT, bool has_file_name>
-struct GetCacheFileNameHelper
-{
-  const char* get(CONTEXT& context){return context.cache_file_name();}
+template <typename CONTEXT, bool has_file_name>
+struct GetCacheFileNameHelper {
+  const char* get(CONTEXT& context) { return context.cache_file_name(); }
 };
 
-template<typename CONTEXT>
-struct GetCacheFileNameHelper<CONTEXT, false>
-{
-  const char* get(CONTEXT& context){return NULL;}
+template <typename CONTEXT>
+struct GetCacheFileNameHelper<CONTEXT, false> {
+  const char* get(CONTEXT& context) { return NULL; }
 };
 
-template<typename CONTEXT>
-class ParallelRunner
-{
+template <typename CONTEXT>
+class ParallelRunner {
   typedef MultiThreadsTaskRunner<typename CONTEXT::Task> runner_t;
   typedef typename runner_t::TaskItem TaskItem;
-public:
-  ParallelRunner() : kv_(NULL)
-  {
-  }
 
-  ~ParallelRunner()
-  {
-  }
+ public:
+  ParallelRunner() : kv_(NULL) {}
 
-  void work_on_thread(TaskItem ti)
-  {
+  ~ParallelRunner() {}
+
+  void work_on_thread(TaskItem ti) {
     // step 1: check cache
     lock();
-      bool can_skip = on_start(ti);
+    bool can_skip = on_start(ti);
     unlock();
     if (can_skip) return;
 
@@ -390,18 +333,15 @@ public:
 
     // step 3: finish
     lock();
-      on_stop(ti, local_result, usage);
+    on_stop(ti, local_result, usage);
     unlock();
   }
 
-  bool on_start(const TaskItem& task_item)
-  {
+  bool on_start(const TaskItem& task_item) {
     cerr << task_item.task.id << " begins" << endl;
-    if (kv_)
-    {
+    if (kv_) {
       auto iter = kv_->storage().find(task_item.task.id);
-      if (iter != kv_->storage().end())
-      {
+      if (iter != kv_->storage().end()) {
         const int64 old_value = iter->second;
         return context_ptr_->handle_cached_result(task_item.task, old_value);
       }
@@ -409,9 +349,9 @@ public:
     return false;
   }
 
-  bool on_stop(const TaskItem& task_item, int64 local_result, TimeDelta usage)
-  {
-    cerr << task_item.task.id << " finishes. (" << usage.format() << ")" << endl;
+  bool on_stop(const TaskItem& task_item, int64 local_result, TimeDelta usage) {
+    cerr << task_item.task.id << " finishes. (" << usage.format() << ")"
+         << endl;
     cerr << "local_result = " << local_result << endl;
     if (kv_) kv_->set(task_item.task.id, local_result);
     context_ptr_->handle_result(task_item.task, local_result);
@@ -419,39 +359,35 @@ public:
     return true;
   }
 
-  void lock(){oml_.lock();}
+  void lock() { oml_.lock(); }
 
-  void unlock(){oml_.unlock();}
+  void unlock() { oml_.unlock(); }
 
-  int64 run(CONTEXT&& context, int threads_count) {return run(context, threads_count);}
-  int64 run(CONTEXT& context, int threads_count)
-  {
-    const char* file_name = GetCacheFileNameHelper<
-        CONTEXT, is_base_of<SupportCacheFileName<CONTEXT>, CONTEXT>::value
-            >().get(context);
+  int64 run(CONTEXT&& context, int threads_count) {
+    return run(context, threads_count);
+  }
+  int64 run(CONTEXT& context, int threads_count) {
+    const char* file_name =
+        GetCacheFileNameHelper<
+            CONTEXT,
+            is_base_of<SupportCacheFileName<CONTEXT>, CONTEXT>::value>()
+            .get(context);
     if (file_name && file_name[0]) kv_ = new KVPersistance(file_name);
     context_ptr_ = &context;
 
-    std::function<void (TaskItem)> worker([=](TaskItem ti)
-      {
-        work_on_thread(ti);
-      }
-    );
+    std::function<void(TaskItem)> worker(
+        [=](TaskItem ti) { work_on_thread(ti); });
 
     set_process_priority(PRIORITY_IDLE);
 
-    if (threads_count > 0)
-    {
+    if (threads_count > 0) {
       oml_.init(&worker, threads_count);
-    }
-    else
-    {
+    } else {
       oml_.init(&worker);
     }
     auto curr = context.first_task();
     auto last = context.last_task();
-    for (;;)
-    {
+    for (;;) {
       oml_.wait_for_queue();
       oml_.add_request(curr);
       if (curr == last) break;
@@ -461,95 +397,113 @@ public:
     oml_.reset();
     context.on_finished();
 
-    if (kv_) {delete kv_; kv_ = NULL;}
+    if (kv_) {
+      delete kv_;
+      kv_ = NULL;
+    }
     context_ptr_ = NULL;
 
     return context.result();
   }
 
-private:
-runner_t oml_;
-KVPersistance* kv_;
-CONTEXT* context_ptr_;
+ private:
+  runner_t oml_;
+  KVPersistance* kv_;
+  CONTEXT* context_ptr_;
 };
 
-class ParallelRange :
-  public RangeBasedTaskGenerator<ParallelRange>,
-  public SupportCacheFileName<ParallelRange>
-{
-public:
-  ParallelRange(int64 first = 0, int64 last = 0, int64 block_size = 1, const char* file_name = NULL) :
-    RangeBasedTaskGenerator(first, last, block_size),
-    SupportCacheFileName(file_name),
-    result_(0),
-    threads_count_(-1),
-    has_woi_(false),
-    has_wob_(false)
-    {}
+class ParallelRange : public RangeBasedTaskGenerator<ParallelRange>,
+                      public SupportCacheFileName<ParallelRange> {
+ public:
+  ParallelRange(int64 first = 0, int64 last = 0, int64 block_size = 1,
+                const char* file_name = NULL)
+      : RangeBasedTaskGenerator(first, last, block_size),
+        SupportCacheFileName(file_name),
+        result_(0),
+        threads_count_(-1),
+        has_woi_(false),
+        has_wob_(false) {}
 
-  int64 result() const
-  {
-    return result_;
-  }
+  int64 result() const { return result_; }
 
-  void on_finished()
-  {
-    cerr << "result = " << result_ << endl;
-  }
+  void on_finished() { cerr << "result = " << result_ << endl; }
 
-  void handle_result(const Task& task, int64 result)
-  {
+  void handle_result(const Task& task, int64 result) {
     result_ = update_result_(result_, result);
   }
 
-  bool handle_cached_result(const Task& task, int64 result)
-  {
+  bool handle_cached_result(const Task& task, int64 result) {
     handle_result(task, result);
     return true;
   }
 
-  int64 work(const Task& task, int64 worker_idx)
-  {
+  int64 work(const Task& task, int64 worker_idx) {
     auto range = task_id_to_range(task.id);
-    if (has_wob_)
-    {
+    if (has_wob_) {
       return work_on_block_(range.first, range.second, worker_idx);
     }
     assert(has_woi_);
     int64 t = 0;
-    for (int64 i = range.first; i <= range.second; ++i)
-    {
+    for (int64 i = range.first; i <= range.second; ++i) {
       t = update_result_(t, work_on_item_(i, worker_idx));
     }
     return t;
   }
 
-  ParallelRange& from(int64 first) {first_ = first; return *this;}
-  ParallelRange& to(int64 last) {last_ = last; return *this;}
-  ParallelRange& divided_by(int64 block_size) {block_size_ = block_size; return *this;}
-  ParallelRange& cache(const char* file_name){set_cache_file_name(file_name); return *this;}
-  ParallelRange& set_result(int64 result) {result_ = result; return *this;}
-  ParallelRange& threads(int threads_count){threads_count_ = threads_count; return *this;}
-  ParallelRange& map(std::function<int64 (int64, int64)> woi){work_on_item_ = woi; has_woi_ = true; return *this;}
-  ParallelRange& block_map(std::function<int64 (int64, int64, int64)> wor){work_on_block_ = wor; has_wob_ = true; return *this;}
-  ParallelRange& reduce(std::function<int64 (int64, int64)> ur){update_result_ = ur; return *this;}
-  ParallelRange& start()
-  {
+  ParallelRange& from(int64 first) {
+    first_ = first;
+    return *this;
+  }
+  ParallelRange& to(int64 last) {
+    last_ = last;
+    return *this;
+  }
+  ParallelRange& divided_by(int64 block_size) {
+    block_size_ = block_size;
+    return *this;
+  }
+  ParallelRange& cache(const char* file_name) {
+    set_cache_file_name(file_name);
+    return *this;
+  }
+  ParallelRange& set_result(int64 result) {
+    result_ = result;
+    return *this;
+  }
+  ParallelRange& threads(int threads_count) {
+    threads_count_ = threads_count;
+    return *this;
+  }
+  ParallelRange& map(std::function<int64(int64, int64)> woi) {
+    work_on_item_ = woi;
+    has_woi_ = true;
+    return *this;
+  }
+  ParallelRange& block_map(std::function<int64(int64, int64, int64)> wor) {
+    work_on_block_ = wor;
+    has_wob_ = true;
+    return *this;
+  }
+  ParallelRange& reduce(std::function<int64(int64, int64)> ur) {
+    update_result_ = ur;
+    return *this;
+  }
+  ParallelRange& start() {
     set_range(first_, last_, block_size_);
     runner_.run(*this, threads_count_);
     return *this;
   }
-  void run(int threads_count){runner_.run(*this, threads_count);}
+  void run(int threads_count) { runner_.run(*this, threads_count); }
 
-protected:
+ protected:
   ParallelRunner<ParallelRange> runner_;
   int64 result_;
-  int   threads_count_;
+  int threads_count_;
   bool has_woi_;
   bool has_wob_;
-  std::function<int64 (int64, int64)> update_result_;
-  std::function<int64 (int64, int64)> work_on_item_;
-  std::function<int64 (int64, int64, int64)> work_on_block_;
+  std::function<int64(int64, int64)> update_result_;
+  std::function<int64(int64, int64)> work_on_item_;
+  std::function<int64(int64, int64, int64)> work_on_block_;
 };
 
 #define BEGIN_PARALLEL    ParallelRange()
@@ -567,73 +521,72 @@ protected:
 #define END_PARALLEL_WITH_RESULT      )).start().result()
 #define PARALLEL_RESULT(x) (x.result())
 
-template<typename Derived>
-class ParallelRangeT :
-  public RangeBasedTaskGenerator<ParallelRangeT<Derived>>,
-  public SupportCacheFileName<ParallelRangeT<Derived>>
-{
-public:
+template <typename Derived>
+class ParallelRangeT : public RangeBasedTaskGenerator<ParallelRangeT<Derived>>,
+                       public SupportCacheFileName<ParallelRangeT<Derived>> {
+ public:
   typedef ParallelRangeT<Derived> Self;
   typedef typename RangeBasedTaskGenerator<Self>::Task Task;
-  int64 result() const
-  {
-    return result_;
-  }
+  int64 result() const { return result_; }
 
-  void on_finished()
-  {
-    cerr << "result = " << result_ << endl;
-  }
+  void on_finished() { cerr << "result = " << result_ << endl; }
 
-  void handle_result(const Task& task, int64 result)
-  {
+  void handle_result(const Task& task, int64 result) {
     Derived& obj = static_cast<Derived&>(*this);
     result_ = obj.update_result(result_, result);
   }
 
-  bool handle_cached_result(const Task& task, int64 result)
-  {
+  bool handle_cached_result(const Task& task, int64 result) {
     handle_result(task, result);
     return true;
   }
 
-  int64 update_result(int64 result, int64 value)
-  {
-    return result;
-  }
+  int64 update_result(int64 result, int64 value) { return result; }
 
-  int64 work_on_block(int64 first, int64 last, int64 worker)
-  {
-    return 0;
-  }
+  int64 work_on_block(int64 first, int64 last, int64 worker) { return 0; }
 
-  int64 work(const Task& task, int64 worker_idx)
-  {
+  int64 work(const Task& task, int64 worker_idx) {
     Derived& obj = static_cast<Derived&>(*this);
     auto range = obj.task_id_to_range(task.id);
     return obj.work_on_block(range.first, range.second, worker_idx);
   }
 
-  Self& from(int64 first) {this->first_ = first; return *this;}
-  Self& to(int64 last) {this->last_ = last; return *this;}
-  Self& divided_by(int64 block_size) {this->block_size_ = block_size; return *this;}
-  Self& cache(const char* file_name){this->set_cache_file_name(file_name); return *this;}
-  Self& set_result(int64 result) {result_ = result; return *this;}
-  Self& threads(int threads_count){threads_count_ = threads_count; return *this;}
-  Self& start()
-  {
+  Self& from(int64 first) {
+    this->first_ = first;
+    return *this;
+  }
+  Self& to(int64 last) {
+    this->last_ = last;
+    return *this;
+  }
+  Self& divided_by(int64 block_size) {
+    this->block_size_ = block_size;
+    return *this;
+  }
+  Self& cache(const char* file_name) {
+    this->set_cache_file_name(file_name);
+    return *this;
+  }
+  Self& set_result(int64 result) {
+    result_ = result;
+    return *this;
+  }
+  Self& threads(int threads_count) {
+    threads_count_ = threads_count;
+    return *this;
+  }
+  Self& start() {
     this->set_range(this->first_, this->last_, this->block_size_);
     runner_.run(*this, threads_count_);
     return *this;
   }
-  void run(int threads_count){runner_.run(*this, threads_count);}
+  void run(int threads_count) { runner_.run(*this, threads_count); }
 
-protected:
+ protected:
   ParallelRunner<ParallelRangeT<Derived>> runner_;
   int64 result_;
-  int   threads_count_;
+  int threads_count_;
 };
-
 
 #endif // end PE_PARALLEL_HAS_CPP11
 

@@ -3,193 +3,145 @@
 
 #include "pe_base"
 
-template<typename ET>
-class   DataBlock
-{
-public:
-    typedef ET       ElementType;
-public:
+template <typename ET>
+class DataBlock {
+ public:
+  typedef ET ElementType;
 
-    enum    {NOT_COPY_DATA = false, COPY_DATA = true, COPY_ALL = -1};
+ public:
+  enum { NOT_COPY_DATA = false, COPY_DATA = true, COPY_ALL = -1 };
 
-    DataBlock()
-        :   data_(0),
-            ref_count_(0),
-            data_size_(0)
-    {
-    }
+  DataBlock() : data_(0), ref_count_(0), data_size_(0) {}
 
-    DataBlock(int   size)
-    {
-        PE_ASSERT(size > 0);
+  DataBlock(int size) {
+    PE_ASSERT(size > 0);
 
-        data_         =   new ElementType[size];
-        ref_count_    =   new int(0);
-        data_size_    =   size;
+    data_ = new ElementType[size];
+    ref_count_ = new int(0);
+    data_size_ = size;
 
-        IncReference();
-    }
+    IncReference();
+  }
 
-    DataBlock(ElementType * data, int size, int CanCopy = NOT_COPY_DATA, int RequiredSize = COPY_ALL)
-    {
-        DoBindData(data, size, CanCopy, RequiredSize);
+  DataBlock(ElementType* data, int size, int CanCopy = NOT_COPY_DATA,
+            int RequiredSize = COPY_ALL) {
+    DoBindData(data, size, CanCopy, RequiredSize);
 
-        IncReference();
-    }
+    IncReference();
+  }
 
-    DataBlock(const DataBlock& other)
-    {
-        data_         =   other.data_;
-        ref_count_    =   other.ref_count_;
-        data_size_    =   other.data_size_;
+  DataBlock(const DataBlock& other) {
+    data_ = other.data_;
+    ref_count_ = other.ref_count_;
+    data_size_ = other.data_size_;
 
-        IncReference();
-    }
+    IncReference();
+  }
 #if PE_HAS_CPP11
-    DataBlock(DataBlock&& other) : DataBlock()
-    {
-        Swap(other);
-    }
+  DataBlock(DataBlock&& other) : DataBlock() { Swap(other); }
 #endif
-    ~DataBlock()
-    {
-        DecReference();
+  ~DataBlock() { DecReference(); }
+
+  DataBlock& operator=(const DataBlock& other) {
+    if (this != &other) {
+      DecReference();
+
+      DataBlock temp(other);
+      Swap(temp);
+
+      IncReference();
     }
-
-    DataBlock&  operator  = (const DataBlock& other)
-    {
-        if (this != &other)
-        {
-            DecReference();
-
-            DataBlock   temp(other);
-            Swap(temp);
-
-            IncReference();
-        }
-        return *this;
-    }
+    return *this;
+  }
 #if PE_HAS_CPP11
-    DataBlock& operator = (DataBlock&& other)
-    {
-        if (this != &other)
-        {
-            Swap(other);
-        }
-        return *this;
+  DataBlock& operator=(DataBlock&& other) {
+    if (this != &other) {
+      Swap(other);
     }
+    return *this;
+  }
 #endif
-    void    Swap(DataBlock& other)
-    {
-        std::swap(data_, other.data_);
-        std::swap(ref_count_, other.ref_count_);
-        std::swap(data_size_, other.data_size_);
-    }
+  void Swap(DataBlock& other) {
+    std::swap(data_, other.data_);
+    std::swap(ref_count_, other.ref_count_);
+    std::swap(data_size_, other.data_size_);
+  }
 
-    void    SetOwned()
-    {
-        if (ref_count_ && *ref_count_ > 1)
-        {
-            DataBlock   temp(data_, data_size_, COPY_DATA,  COPY_ALL);
-            Swap(temp);
+  void SetOwned() {
+    if (ref_count_ && *ref_count_ > 1) {
+      DataBlock temp(data_, data_size_, COPY_DATA, COPY_ALL);
+      Swap(temp);
+    }
+  }
+
+  void BindData(ElementType* data, int size, int CanCopy = NOT_COPY_DATA,
+                int RequiredSize = COPY_ALL) {
+    DecReference();
+
+    DoBindData(data, size, CanCopy, RequiredSize);
+
+    IncReference();
+  }
+
+  ElementType* Buffer() const { return data_; }
+
+  ElementType operator[](int pos) const { return data_[pos]; }
+
+  ElementType& operator[](int pos) { return data_[pos]; }
+
+ protected:
+  void IncReference() const {
+    if (ref_count_) {
+      ++*ref_count_;
+    }
+  }
+
+  void DecReference() {
+    if (ref_count_ && !--*ref_count_) {
+      PE_ASSERT(data_ != 0);
+
+      DoRelease();
+    }
+  }
+
+ private:
+  void DoBindData(ElementType* data, int size, int CanCopy, int RequiredSize) {
+    if (CanCopy == COPY_DATA || data == NULL) {
+      if (RequiredSize == COPY_ALL) {
+        data_size_ = size;
+      } else {
+        PE_ASSERT(size >= RequiredSize);
+
+        data_size_ = RequiredSize;
+      }
+
+      data_ = new ElementType[data_size_];
+      ref_count_ = new int(0);
+
+      if (data) {
+        for (int i = 0; i < data_size_; ++i) {
+          data_[i] = data[i];
         }
+      }
+    } else {
+      data_size_ = size;
+      data_ = data;
+      ref_count_ = 0;
     }
+  }
 
-    void    BindData(ElementType * data, int size, int CanCopy = NOT_COPY_DATA, int RequiredSize = COPY_ALL)
-    {
-        DecReference();
+  void DoRelease() {
+    delete[] data_;
+    data_ = 0;
 
-        DoBindData(data, size, CanCopy, RequiredSize);
+    delete ref_count_;
+    ref_count_ = 0;
+  }
 
-        IncReference();
-    }
-
-    ElementType*   Buffer() const
-    {
-        return data_;
-    }
-
-    ElementType    operator [] (int pos) const
-    {
-        return data_[pos];
-    }
-
-    ElementType&   operator[] (int pos)
-    {
-        return data_[pos];
-    }
-
-protected:
-
-    void    IncReference() const
-    {
-        if (ref_count_)
-        {
-            ++*ref_count_;
-        }
-    }
-
-    void    DecReference()
-    {
-        if (ref_count_ && !--*ref_count_)
-        {
-            PE_ASSERT(data_ != 0);
-
-            DoRelease();
-        }
-    }
-
-private:
-
-    void    DoBindData(ElementType * data, int size, int CanCopy, int RequiredSize)
-    {
-        if (CanCopy == COPY_DATA || data == NULL)
-        {
-            if (RequiredSize == COPY_ALL)
-            {
-                data_size_    =   size;
-            }
-            else
-            {
-                PE_ASSERT(size >= RequiredSize);
-
-                data_size_    =   RequiredSize;
-            }
-
-            data_         =   new ElementType[data_size_]; 
-            ref_count_    =   new int(0);
-
-            if (data)
-            {
-                for (int i = 0; i < data_size_; ++i)
-                {
-                    data_[i] = data[i];
-                }
-            }
-        }
-        else
-        {
-            data_size_  =   size;
-            data_       =   data;
-            ref_count_  =   0;
-        }
-    }
-
-    void    DoRelease()
-    {
-        delete[] data_;
-        data_ = 0;
-
-        delete ref_count_;
-        ref_count_   =   0;
-    }
-
-protected:
-
-    ElementType*    data_;
-    int*        ref_count_;
-    int         data_size_;
-
+ protected:
+  ElementType* data_;
+  int* ref_count_;
+  int data_size_;
 };
 
 // very slow in general scene (under testing)
@@ -199,8 +151,8 @@ const int64   BIG_NUMBER_BASE =   1000000000000000000LL;
 const int   DIG_COUNT       =   18;
 const int   ALLOC_SIZE      =   16;
 typedef int128 MUL_TYPE;
-#define PRT_FORMAT_STRING_PREFIX  "%I64d"
-#define PRT_FORMAT_STRING         "%018I64d"
+#define PRT_FORMAT_STRING_PREFIX "%I64d"
+#define PRT_FORMAT_STRING "%018I64d"
 #endif
 
 // fast in general scene (under testing)
@@ -210,1088 +162,867 @@ const int   BIG_NUMBER_BASE =   1000000000;
 const int   DIG_COUNT       =   9;
 const int   ALLOC_SIZE      =   16;
 typedef int64 MUL_TYPE;
-#define PRT_FORMAT_STRING_PREFIX  "%d"
-#define PRT_FORMAT_STRING         "%09d"
+#define PRT_FORMAT_STRING_PREFIX "%d"
+#define PRT_FORMAT_STRING "%09d"
 #endif
 
 // tested
 #if 1
-typedef DataBlock<int>  BigNumberData;
-const int   BIG_NUMBER_BASE =   10000;
-const int   DIG_COUNT       =   4;
-const int   ALLOC_SIZE      =   16;
+typedef DataBlock<int> BigNumberData;
+const int BIG_NUMBER_BASE = 10000;
+const int DIG_COUNT = 4;
+const int ALLOC_SIZE = 16;
 typedef int MUL_TYPE;
-#define PRT_FORMAT_STRING_PREFIX  "%d"
-#define PRT_FORMAT_STRING         "%04d"
+#define PRT_FORMAT_STRING_PREFIX "%d"
+#define PRT_FORMAT_STRING "%04d"
 #endif
 
+class BigNumber : protected BigNumberData {
+  friend inline BigNumber operator+(const BigNumber& l, const BigNumber& r);
+  friend inline BigNumber operator-(const BigNumber& l, const BigNumber& r);
+  friend inline BigNumber operator*(const BigNumber& l, const BigNumber& r);
+  friend inline BigNumber operator/(const BigNumber& l, const BigNumber& r);
+  friend inline BigNumber operator^(const BigNumber& l, int n);
+  friend inline BigNumber operator^(const BigNumber& l, BigNumber& r);
+  friend inline BigNumber operator%(const BigNumber& l, const BigNumber& r);
+  friend inline int operator>(const BigNumber& l, const BigNumber& r);
+  friend inline int operator<(const BigNumber& l, const BigNumber& r);
+  friend inline int operator==(const BigNumber& l, const BigNumber& r);
+  friend inline int operator>=(const BigNumber& l, const BigNumber& r);
+  friend inline int operator<=(const BigNumber& l, const BigNumber& r);
+  friend inline std::ostream& operator<<(std::ostream& o, const BigNumber& n);
 
+  friend inline BigNumber GCD(const BigNumber& l, const BigNumber& r);
+  friend inline BigNumber GCDEX(const BigNumber& p, const BigNumber& m);
+  friend inline BigNumber fabs(const BigNumber& n);
+  friend inline BigNumber abs(const BigNumber& n);
 
-class   BigNumber
-    :   protected   BigNumberData
-{
-    friend  inline  BigNumber   operator + (const BigNumber& l, const BigNumber& r);
-    friend  inline  BigNumber   operator - (const BigNumber& l, const BigNumber& r);
-    friend  inline  BigNumber   operator * (const BigNumber& l, const BigNumber& r);
-    friend  inline  BigNumber   operator / (const BigNumber& l, const BigNumber& r);
-    friend  inline  BigNumber   operator ^ (const BigNumber& l, int n);
-    friend  inline  BigNumber   operator ^ (const BigNumber& l, BigNumber& r);
-    friend  inline  BigNumber   operator % (const BigNumber& l, const BigNumber& r);
-    friend  inline  int     operator > (const BigNumber& l, const BigNumber& r);
-    friend  inline  int     operator < (const BigNumber& l, const BigNumber& r);
-    friend  inline  int     operator == (const BigNumber& l, const BigNumber& r);
-    friend  inline  int     operator >= (const BigNumber& l, const BigNumber& r);
-    friend  inline  int     operator <= (const BigNumber& l, const BigNumber& r);
-    friend  inline  std::ostream&   operator << (std::ostream& o, const BigNumber& n);
+  friend inline void print_bn(const BigNumber& n);
 
-    friend  inline  BigNumber   GCD(const BigNumber& l, const BigNumber& r);
-    friend  inline  BigNumber   GCDEX(const BigNumber& p, const BigNumber& m);
-    friend  inline  BigNumber   fabs(const BigNumber& n);
-    friend  inline  BigNumber   abs(const BigNumber& n);
-
-    friend  inline  void print_bn(const BigNumber& n);
-
-public:
-
-    typedef BigNumber   SelfType;
-    typedef BigNumberData::ElementType ElementType;
+ public:
+  typedef BigNumber SelfType;
+  typedef BigNumberData::ElementType ElementType;
 
 #if PE_HAS_INT128
-    BigNumber(int128 value = 0)
-    {
-        ZeroInit();
+  BigNumber(int128 value = 0) {
+    ZeroInit();
 
-        if (value != 0)
-        {
-            sign_ = 1;
-            uint128 y = value;
-            uint128 z = (~y) + 1;
-            if (value < 0 || y == z)
-            {
-                y = z;
-                sign_ = -1;
-            }
+    if (value != 0) {
+      sign_ = 1;
+      uint128 y = value;
+      uint128 z = (~y) + 1;
+      if (value < 0 || y == z) {
+        y = z;
+        sign_ = -1;
+      }
 
-            int curr = 0;
-            for (;y; y /= BIG_NUMBER_BASE, ++curr)
-            {
-                BigNumberData::data_[curr] = y % BIG_NUMBER_BASE;
-            }
-            length_ = curr;
-        }
+      int curr = 0;
+      for (; y; y /= BIG_NUMBER_BASE, ++curr) {
+        BigNumberData::data_[curr] = y % BIG_NUMBER_BASE;
+      }
+      length_ = curr;
     }
+  }
 #else
-    BigNumber(int64 value = 0)
-    {
-        ZeroInit();
+  BigNumber(int64 value = 0) {
+    ZeroInit();
 
-        if (value != 0)
-        {
-            sign_ = 1;
-            uint64 y = value;
-            uint64 z = (~y) + 1;
-            if (value < 0 || y == z)
-            {
-                y = z;
-                sign_ = -1;
-            }
+    if (value != 0) {
+      sign_ = 1;
+      uint64 y = value;
+      uint64 z = (~y) + 1;
+      if (value < 0 || y == z) {
+        y = z;
+        sign_ = -1;
+      }
 
-            int curr = 0;
-            for (;y; y /= BIG_NUMBER_BASE, ++curr)
-            {
-                BigNumberData::data_[curr] = y % BIG_NUMBER_BASE;
-            }
-            length_ = curr;
-        }
+      int curr = 0;
+      for (; y; y /= BIG_NUMBER_BASE, ++curr) {
+        BigNumberData::data_[curr] = y % BIG_NUMBER_BASE;
+      }
+      length_ = curr;
     }
+  }
 #endif
-    struct StringNumberTag{};
-    explicit BigNumber(const char* pCharNumber, StringNumberTag)
-    {
-        ReadCharNumber(pCharNumber);
-    }
+  struct StringNumberTag {};
+  explicit BigNumber(const char* pCharNumber, StringNumberTag) {
+    ReadCharNumber(pCharNumber);
+  }
 
-    BigNumber(const BigNumber& other)
-        :   BigNumberData(other)
-    {
-        length_      = other.length_;
-        sign_        = other.sign_;
-    }
+  BigNumber(const BigNumber& other) : BigNumberData(other) {
+    length_ = other.length_;
+    sign_ = other.sign_;
+  }
 #if PE_HAS_CPP11
-    BigNumber(BigNumber&& other)
-        : BigNumberData(std::move(other))
-    {
-        length_      = other.length_;
-        sign_        = other.sign_;
-    }
+  BigNumber(BigNumber&& other) : BigNumberData(std::move(other)) {
+    length_ = other.length_;
+    sign_ = other.sign_;
+  }
 #endif
-    BigNumber(ElementType* _pBuff, int size, int copy = BigNumberData::NOT_COPY_DATA, int copy_size = BigNumberData::COPY_ALL)
-        :   BigNumberData(_pBuff, size, copy, copy_size),
-            length_(size),
-            sign_(1)
-    {
-        if (_pBuff == 0)
-        {
-            memset(data_, 0, sizeof(ElementType) * size);
-        }
-        ZeroAdjust();
+  BigNumber(ElementType* _pBuff, int size,
+            int copy = BigNumberData::NOT_COPY_DATA,
+            int copy_size = BigNumberData::COPY_ALL)
+      : BigNumberData(_pBuff, size, copy, copy_size), length_(size), sign_(1) {
+    if (_pBuff == 0) {
+      memset(data_, 0, sizeof(ElementType) * size);
     }
+    ZeroAdjust();
+  }
 
-    BigNumber&  operator = (const BigNumber& other)
-    {
-        if (&other != this)
-        {
-            BigNumber   temp(other);
-            Swap(temp);
-        }
-        return *this;
+  BigNumber& operator=(const BigNumber& other) {
+    if (&other != this) {
+      BigNumber temp(other);
+      Swap(temp);
     }
+    return *this;
+  }
 #if PE_HAS_CPP11
-    BigNumber& operator = (BigNumber&& other)
-    {
-        if (this != &other)
-        {
-            length_ = other.length_;
-            sign_ = other.sign_;
-            this->BigNumberData::operator =(std::move(other));
-            
-        }
-        return *this;
+  BigNumber& operator=(BigNumber&& other) {
+    if (this != &other) {
+      length_ = other.length_;
+      sign_ = other.sign_;
+      this->BigNumberData::operator=(std::move(other));
     }
+    return *this;
+  }
 #endif
-    void    Swap(BigNumber& other)
-    {
-        BigNumberData::Swap(other);
-        std::swap(length_, other.length_);
-        std::swap(sign_, other.sign_);
+  void Swap(BigNumber& other) {
+    BigNumberData::Swap(other);
+    std::swap(length_, other.length_);
+    std::swap(sign_, other.sign_);
+  }
+
+  ElementType* Buffer() const { return BigNumberData::Buffer(); }
+
+  int GetLength() const { return length_; }
+
+  int GetSign() const { return sign_; }
+
+  void Neg() { sign_ = -sign_; }
+
+  int IsZero() const { return !GetSign(); }
+
+  ElementType operator[](int pos) const { return BigNumberData::data_[pos]; }
+
+  ElementType& operator[](int pos) {
+    // Dangerous, if data_ is shared by another bignumber
+    return BigNumberData::data_[pos];
+  }
+
+  int Capacity() const { return BigNumberData::data_size_; }
+
+  void Reserve(int size) {
+    if (Capacity() < size) {
+      BigNumberData temp(size);
+      ElementType* buff = temp.Buffer();
+      for (int i = 0; i < Capacity(); ++i) {
+        buff[i] = BigNumberData::data_[i];
+      }
+      BigNumberData::Swap(temp);
+    }
+  }
+
+ protected:
+  void ReadCharNumber(const char* _pCharNumber) {
+    PE_ASSERT(_pCharNumber != NULL);
+
+    int s = 1;
+    int i = 0, j = 0;
+    if (_pCharNumber[i] == '-') {
+      s = -s;
+      ++i;
+    } else if (_pCharNumber[i] == '+') {
+      ++i;
     }
 
-    ElementType*    Buffer() const
-    {
-        return BigNumberData::Buffer();
+    for (j = i; _pCharNumber[j] != '\0'; ++j)
+      ;
+    --j;
+
+    int length = j - i + 1;
+
+    if (length == 0) {
+      ZeroInit();
+      return;
     }
 
-    int   GetLength() const
-    {
-        return length_;
+    int size = (length + DIG_COUNT - 1) / DIG_COUNT;
+
+    BigNumberData temp_data(size);
+    BigNumberData::Swap(temp_data);
+
+    ElementType* temp = BigNumberData::Buffer();
+    int curr = 0;
+
+    while (j >= i) {
+      ElementType value = 0;
+      ElementType base = 1;
+      int count = 0;
+      while (j >= i && count++ < DIG_COUNT) {
+        value += base * (_pCharNumber[j--] - '0');
+        base *= 10;
+      }
+      temp[curr++] = value;
     }
 
-    int   GetSign() const
-    {
-        return sign_;
+    length_ = size;
+    sign_ = s;
+    ZeroAdjust();
+  }
+
+  void ZeroAdjust() const {
+    int i;
+    for (i = length_ - 1; i >= 0 && BigNumberData::data_[i] == 0; --i)
+      ;
+    if (i < 0) {
+      length_ = 1;
+      sign_ = 0;
+    } else {
+      length_ = i + 1;
     }
+  }
 
-    void      Neg()
-    {
-        sign_ = -sign_;
-    }
-
-    int IsZero() const
-    {
-        return !GetSign();
-    }
-
-    ElementType operator [] (int pos) const
-    {
-        return BigNumberData::data_[pos];
-    }
-
-    ElementType& operator [] (int pos)
-    {
-        //Dangerous, if data_ is shared by another bignumber
-        return BigNumberData::data_[pos];
-    }
-
-    int Capacity() const
-    {
-        return BigNumberData::data_size_;
-    }
-
-    void    Reserve(int size)
-    {
-        if (Capacity() < size)
-        {
-            BigNumberData   temp(size);
-            ElementType *   buff = temp.Buffer();
-            for (int i = 0; i < Capacity(); ++i)
-            {
-                buff[i] = BigNumberData::data_[i];
-            }
-            BigNumberData::Swap(temp);
-        }
-    }
-
-protected:
-
-    void    ReadCharNumber(const char* _pCharNumber)
-    {
-        PE_ASSERT(_pCharNumber != NULL);
-
-        int s = 1;
-        int i = 0, j = 0;
-        if (_pCharNumber[i] == '-')
-        {
-            s = -s;
-            ++i;
-        }
-        else if (_pCharNumber[i] == '+')
-        {
-            ++i;
-        }
-
-        for (j = i; _pCharNumber[j] != '\0'; ++j)
-            ;
-        --j;
-
-        int length = j - i + 1;
-
-        if (length == 0)
-        {
-            ZeroInit();
-            return;
-        }
-
-        int size = (length + DIG_COUNT - 1) / DIG_COUNT;
-
-        BigNumberData temp_data(size);
-        BigNumberData::Swap(temp_data);
-
-        ElementType* temp = BigNumberData::Buffer();
-        int curr = 0;
-
-        while (j >= i)
-        {
-            ElementType value = 0;
-            ElementType base = 1;
-            int     count = 0;
-            while (j >= i && count++ < DIG_COUNT)
-            {
-                value += base * (_pCharNumber[j--] - '0');
-                base *= 10;
-            }
-            temp[curr++] = value;
-        }
-
-        length_ = size;
-        sign_ = s;
-        ZeroAdjust();
-    }
-
-    void    ZeroAdjust() const
-    {
-        int i;
-        for (i = length_ - 1; i >= 0 && BigNumberData::data_[i] == 0; --i)
-            ;
-        if (i < 0)
-        {
-            length_ = 1;
-            sign_ = 0;
-        }
-        else
-        {
-            length_ = i + 1;
-        }
-    }
-
-  void ToString(char* buffer, int size)
-  { 
+  void ToString(char* buffer, int size) {
     int curr = GetLength() - 1;
-    if (GetSign() < 0)
-    {
-      *buffer++='-';
+    if (GetSign() < 0) {
+      *buffer++ = '-';
     }
-    int cnt = sprintf(buffer, PRT_FORMAT_STRING_PREFIX, this->operator[](curr--));
-    buffer+=cnt;
-    
-    for (; curr >= 0; )
-    {
+    int cnt =
+        sprintf(buffer, PRT_FORMAT_STRING_PREFIX, this->operator[](curr--));
+    buffer += cnt;
+
+    for (; curr >= 0;) {
       cnt = sprintf(buffer, PRT_FORMAT_STRING_PREFIX, this->operator[](curr--));
       buffer += cnt;
     }
   }
-public:
+
+ public:
 #if PE_HAS_INT128
-  int128 ToInt() const
-  {
+  int128 ToInt() const {
     int128 ret = 0;
     for (int i = GetLength() - 1; i >= 0; --i)
-    ret = ret * BIG_NUMBER_BASE + this->operator [](i);
+      ret = ret * BIG_NUMBER_BASE + this->operator[](i);
     if (GetSign() < 0) ret = -ret;
     return ret;
   }
 #else
-  int64 ToInt() const
-  {
+  int64 ToInt() const {
     int64 ret = 0;
     for (int i = GetLength() - 1; i >= 0; --i)
-    ret = ret * BIG_NUMBER_BASE + this->operator [](i);
+      ret = ret * BIG_NUMBER_BASE + this->operator[](i);
     if (GetSign() < 0) ret = -ret;
     return ret;
   }
 #endif
 
-private:
+ private:
+  void ZeroInit() {
+    BigNumberData temp_data(ALLOC_SIZE);
+    BigNumberData::Swap(temp_data);
 
-    void    ZeroInit()
-    {
-        BigNumberData temp_data(ALLOC_SIZE);
-        BigNumberData::Swap(temp_data);
+    memset(this->Buffer(), 0, sizeof(int) * ALLOC_SIZE);
+    length_ = 1;
+    sign_ = 0;
+  }
 
-        memset(this->Buffer(), 0, sizeof(int) * ALLOC_SIZE);
-        length_ = 1;
-        sign_ = 0;
+ public:
+  static ElementType AbsCompare(const BigNumber& l, const BigNumber& r) {
+    l.ZeroAdjust();
+    r.ZeroAdjust();
+
+    int l_length = l.GetLength();
+    int r_length = r.GetLength();
+
+    if (l_length != r_length) {
+      return l_length - r_length;
     }
 
-public:
+    for (--l_length; l_length >= 0 && l[l_length] == r[l_length]; --l_length)
+      ;
 
-    static  ElementType AbsCompare(const BigNumber& l, const BigNumber& r)
-    {
-        l.ZeroAdjust();
-        r.ZeroAdjust();
+    return l_length >= 0 ? l[l_length] - r[l_length] : 0;
+  }
 
-        int l_length = l.GetLength();
-        int r_length = r.GetLength();
+  static BigNumber AbsAddImpl(BigNumber& l, const BigNumber& r) {
+    l.ZeroAdjust();
+    r.ZeroAdjust();
 
-        if (l_length != r_length)
-        {
-            return l_length - r_length;
+    int longer = l.GetLength();
+    int shorter = r.GetLength();
+    ElementType* longer_buffer = l.Buffer();
+    ElementType* shorter_buffer = r.Buffer();
+
+    PE_ASSERT(longer >= shorter);
+
+    ElementType inc = 0;
+    ElementType curr = 0;
+
+    for (; curr < shorter; ++curr) {
+      inc += longer_buffer[curr] + shorter_buffer[curr];
+      longer_buffer[curr] = inc % BIG_NUMBER_BASE;
+      inc /= BIG_NUMBER_BASE;
+    }
+
+    for (; curr < longer; ++curr) {
+      ElementType value = longer_buffer[curr] + inc;
+      longer_buffer[curr] = value % BIG_NUMBER_BASE;
+      inc = value / BIG_NUMBER_BASE;
+    }
+
+    if (inc) {
+      l.Reserve(curr + 1);
+      l[curr++] = inc;
+    }
+
+    l.length_ = curr;
+    return l;
+  }
+
+  static BigNumber AbsAdd(const BigNumber& l, const BigNumber& r) {
+    l.ZeroAdjust();
+    r.ZeroAdjust();
+    if (l.length_ >= r.length_) {
+      BigNumber l_temp(l.Buffer(), l.length_, BigNumberData::COPY_DATA);
+      return AbsAddImpl(l_temp, r);
+    } else {
+      BigNumber l_temp(r.Buffer(), r.length_, BigNumberData::COPY_DATA);
+      return AbsAddImpl(l_temp, l);
+    }
+  }
+
+  static BigNumber AbsSubImpl(BigNumber& l, const BigNumber& r) {
+    int longer = l.GetLength();
+    int shorter = r.GetLength();
+    ElementType* shorter_buffer = r.Buffer();
+    ElementType* longer_buffer = l.Buffer();
+
+    (void)longer;
+
+    PE_ASSERT(BigNumber::AbsCompare(l, r) >= 0);
+
+    for (int curr = 0; curr < shorter; ++curr) {
+      ElementType value = longer_buffer[curr] - shorter_buffer[curr];
+      while (value < 0) {
+        --longer_buffer[curr + 1];
+        value += BIG_NUMBER_BASE;
+      }
+      longer_buffer[curr] = value;
+    }
+    for (int curr = shorter; curr < longer; ++curr) {
+      if (longer_buffer[curr] < 0)
+        longer_buffer[curr] += BIG_NUMBER_BASE, --longer_buffer[curr + 1];
+      else
+        break;
+    }
+    l.ZeroAdjust();
+
+    return l;
+  }
+
+  static BigNumber AbsSub(const BigNumber& l, const BigNumber& r) {
+    l.ZeroAdjust();
+    r.ZeroAdjust();
+    if (l.length_ >= r.length_) {
+      BigNumber l_temp(l.Buffer(), l.length_, BigNumberData::COPY_DATA);
+      return AbsSubImpl(l_temp, r);
+    } else {
+      BigNumber l_temp(r.Buffer(), r.length_, BigNumberData::COPY_DATA);
+      return AbsSubImpl(l_temp, l);
+    }
+  }
+
+  static BigNumber AbsMulImpl(const BigNumber& l, const BigNumber& r) {
+    l.ZeroAdjust();
+    r.ZeroAdjust();
+
+    int l_length = l.GetLength();
+    int r_length = r.GetLength();
+    int ret_length = l_length + r_length;
+
+    BigNumber ret(NULL, ret_length);
+
+    ElementType* ret_buffer = ret.Buffer();
+    ElementType* l_buffer = l.Buffer();
+    ElementType* r_buffer = r.Buffer();
+
+    for (int i = 0; i < ret_length; ++i) {
+      ret_buffer[i] = 0;
+    }
+
+    for (int i = 0; i < r_length; ++i) {
+      MUL_TYPE inc = 0;
+      ElementType t = r_buffer[i];
+
+      int j = 0;
+      for (; j < l_length; ++j) {
+        inc += (MUL_TYPE)t * l_buffer[j] + ret_buffer[i + j];
+        ret_buffer[i + j] = inc % BIG_NUMBER_BASE;
+        inc /= BIG_NUMBER_BASE;
+      }
+      for (; inc; inc /= BIG_NUMBER_BASE) {
+        ret_buffer[i + j++] = inc % BIG_NUMBER_BASE;
+      }
+    }
+    ret.length_ = ret_length;
+    ret.ZeroAdjust();
+    return ret;
+  }
+
+  static BigNumber AbsMul(const BigNumber& l, const BigNumber& r) {
+    return AbsMulImpl(l, r);
+  }
+
+  static int DoMemMul(ElementType* ResultBuff, ElementType* LeftBuff,
+                      int LeftLength, int RightValue) {
+    MUL_TYPE inc = 0;
+    int curr = 0;
+    for (; curr < LeftLength; ++curr) {
+      MUL_TYPE value = (MUL_TYPE)RightValue * LeftBuff[curr] + inc;
+      ResultBuff[curr] = value % BIG_NUMBER_BASE;
+      inc = value / BIG_NUMBER_BASE;
+    }
+    if (inc) {
+      ResultBuff[curr++] = inc;
+    }
+    return curr;
+  }
+
+  static int DoSub(ElementType* LeftBuff, int hi_l, int lo_l,
+                   ElementType* RightBuff, int hi_r, int lo_r, int test,
+                   ElementType* temp) {
+    int hi2 = DoMemMul(temp + lo_r, RightBuff, hi_r - lo_r + 1, test) - 1;
+
+    if (hi2 >= hi_l - lo_l + 1) {
+      return 0;
+    }
+
+    if (hi_l - lo_l == hi2 - lo_r) {
+      for (int i = hi_l, j = hi2; i >= lo_l; --i, --j) {
+        if (LeftBuff[i] < temp[j]) {
+          return 0;
         }
-
-        for (--l_length; l_length >= 0 && l[l_length] == r[l_length]; --l_length)
-            ;
-
-        return l_length >= 0 ? l[l_length] - r[l_length] : 0;
-    }
-
-    static  BigNumber   AbsAddImpl(BigNumber& l, const BigNumber& r)
-    {
-        l.ZeroAdjust();
-        r.ZeroAdjust();
-
-        int         longer          = l.GetLength();
-        int         shorter         = r.GetLength();
-        ElementType*    longer_buffer   = l.Buffer();
-        ElementType*    shorter_buffer  = r.Buffer();
-
-        PE_ASSERT(longer >= shorter);
-
-        ElementType     inc = 0;
-        ElementType     curr = 0;
-
-        for (; curr < shorter; ++curr)
-        {
-            inc += longer_buffer[curr] + shorter_buffer[curr];
-            longer_buffer[curr] = inc % BIG_NUMBER_BASE;
-            inc /= BIG_NUMBER_BASE;
+        if (LeftBuff[i] > temp[j]) {
+          break;
         }
+      }
+    }
 
-        for (; curr < longer; ++curr)
-        {
-            ElementType value = longer_buffer[curr] + inc;
-            longer_buffer[curr] = value % BIG_NUMBER_BASE;
-            inc = value / BIG_NUMBER_BASE;
+    for (int i = lo_r, j = lo_l; i <= hi2; ++i, ++j) {
+      if ((LeftBuff[j] -= temp[i]) < 0) {
+        LeftBuff[j] += BIG_NUMBER_BASE;
+        --LeftBuff[j + 1];
+      }
+    }
+
+    return 1;
+  }
+
+  static BigNumber AbsDivImpl(BigNumber& remain, const BigNumber& r) {
+    if (BigNumber::AbsCompare(remain, r) < 0) {
+      return 0;
+    }
+
+    DataBlock<ElementType> buffer_data(remain.length_ + 5);
+
+    remain.ZeroAdjust();
+    r.ZeroAdjust();
+
+    int l_length = remain.GetLength();
+    int r_length = r.GetLength();
+    int ret_length = l_length - r_length + 1;
+
+    BigNumber ret(NULL, ret_length);
+
+    ElementType* ret_buffer = ret.Buffer();
+    ElementType* l_buffer = remain.Buffer();
+    ElementType* r_buffer = r.Buffer();
+
+    int curr = ret_length - 1;
+    int hi_l = l_length - 1, lo_l = curr;
+    const int hi_r = r_length - 1, lo_r = 0;
+
+    for (; curr >= 0; --curr, --lo_l) {
+      MUL_TYPE test;
+      if (r_length > 1) {
+        if (hi_l - lo_l > hi_r - lo_r) {
+          test = ((MUL_TYPE)l_buffer[hi_l] * BIG_NUMBER_BASE +
+                  l_buffer[hi_l - 1]) /
+                 r_buffer[hi_r];
+        } else if (hi_l == lo_l) {
+          test = 0;
+        } else {
+          test =
+              ((MUL_TYPE)l_buffer[hi_l] * BIG_NUMBER_BASE +
+               l_buffer[hi_l - 1]) /
+              ((MUL_TYPE)r_buffer[hi_r] * BIG_NUMBER_BASE + r_buffer[hi_r - 1]);
         }
-
-        if (inc)
-        {
-            l.Reserve(curr+1);
-            l[curr++] = inc;
+      } else {
+        if (hi_l - lo_l + 1 > 1) {
+          test = ((MUL_TYPE)l_buffer[hi_l] * BIG_NUMBER_BASE +
+                  l_buffer[hi_l - 1]) /
+                 r_buffer[hi_r];
+        } else {
+          test = l_buffer[hi_l] / r_buffer[hi_r];
         }
+      }
 
-        l.length_ = curr;
-        return l;
-    }
-
-    static  BigNumber   AbsAdd(const BigNumber& l, const BigNumber& r)
-    {
-        l.ZeroAdjust();
-        r.ZeroAdjust();
-        if (l.length_ >= r.length_)
-        {
-            BigNumber   l_temp(l.Buffer(), l.length_, BigNumberData::COPY_DATA);
-            return AbsAddImpl(l_temp, r);
+      for (; test > 0; --test) {
+        if (BigNumber::DoSub(l_buffer, hi_l, lo_l, r_buffer, hi_r, lo_r, test,
+                             buffer_data.Buffer())) {
+          break;
         }
-        else
-        {
-            BigNumber   l_temp(r.Buffer(), r.length_, BigNumberData::COPY_DATA);
-            return AbsAddImpl(l_temp, l);
-        }
+      }
+
+      for (; l_buffer[hi_l] == 0 && hi_l >= lo_l; --hi_l)
+        ;
+      ret_buffer[curr] = test;
     }
 
-    static  BigNumber   AbsSubImpl(BigNumber& l, const BigNumber& r)
-    {
-        int         longer          = l.GetLength();
-        int         shorter         = r.GetLength();
-        ElementType*    shorter_buffer  = r.Buffer();
-        ElementType*    longer_buffer   = l.Buffer();
+    ret.length_ = ret_length;
+    ret.ZeroAdjust();
+    remain.ZeroAdjust();
+    return ret;
+  }
 
-        (void)longer;
+  static BigNumber AbsDiv(const BigNumber& l, const BigNumber& r) {
+    BigNumber l_temp(l.Buffer(), l.length_, BigNumberData::COPY_DATA);
 
-        PE_ASSERT(BigNumber::AbsCompare(l, r) >= 0);
+    return AbsDivImpl(l_temp, r);
+  }
 
-        for (int curr = 0; curr < shorter; ++curr)
-        {
-            ElementType value = longer_buffer[curr] - shorter_buffer[curr];
-            while (value < 0)
-            {
-                --longer_buffer[curr+1];
-                value += BIG_NUMBER_BASE;
-            }
-            longer_buffer[curr] = value;
-        }
-        for (int curr = shorter; curr < longer; ++curr)
-        {
-            if (longer_buffer[curr] < 0) longer_buffer[curr] += BIG_NUMBER_BASE, --longer_buffer[curr+1];
-            else break;
-        }
-        l.ZeroAdjust();
+ public:
+  BigNumber operator-() const {
+    BigNumber ret(*this);
+    ret.Neg();
+    return ret;
+  }
 
-        return l;
-    }
+  BigNumber operator+() const { return *this; }
 
-    static  BigNumber   AbsSub(const BigNumber& l, const BigNumber& r)
-    {
-        l.ZeroAdjust();
-        r.ZeroAdjust();
-        if (l.length_ >= r.length_)
-        {
-            BigNumber   l_temp(l.Buffer(), l.length_, BigNumberData::COPY_DATA);
-            return AbsSubImpl(l_temp, r);
-        }
-        else
-        {
-            BigNumber   l_temp(r.Buffer(), r.length_, BigNumberData::COPY_DATA);
-            return AbsSubImpl(l_temp, l);
-        }
-    }
+  BigNumber& operator+=(const BigNumber& other) {
+    *this = *this + other;
+    return *this;
+  }
 
-    static  BigNumber   AbsMulImpl(const BigNumber& l, const BigNumber& r)
-    {
-        l.ZeroAdjust();
-        r.ZeroAdjust();
+  BigNumber& operator-=(const BigNumber& other) {
+    *this = *this - other;
+    return *this;
+  }
 
-        int l_length    = l.GetLength();
-        int r_length    = r.GetLength();
-        int ret_length  = l_length + r_length;
+  BigNumber& operator*=(const BigNumber& other) {
+    *this = *this * other;
+    return *this;
+  }
 
-        BigNumber   ret(NULL, ret_length);
+  BigNumber& operator/=(const BigNumber& other) {
+    *this = *this / other;
+    return *this;
+  }
 
-        ElementType*    ret_buffer  = ret.Buffer();
-        ElementType*    l_buffer    = l.Buffer();
-        ElementType*    r_buffer    = r.Buffer();
+  BigNumber& operator%=(const BigNumber& other) {
+    *this = *this % other;
+    return *this;
+  }
 
-        for (int i = 0; i < ret_length; ++i)
-        {
-            ret_buffer[i] = 0;
-        }
+  BigNumber& operator^=(int n) {
+    *this = *this ^ n;
+    return *this;
+  }
 
-        for (int i = 0; i < r_length; ++i)
-        {
-            MUL_TYPE inc = 0;
-            ElementType t = r_buffer[i];
-            
-            int j = 0;
-            for (; j < l_length; ++j)
-            {
-                inc += (MUL_TYPE)t * l_buffer[j] + ret_buffer[i+j];
-                ret_buffer[i+j] = inc % BIG_NUMBER_BASE;
-                inc /= BIG_NUMBER_BASE;
-            }
-            for ( ;inc; inc /= BIG_NUMBER_BASE)
-            {
-                ret_buffer[i+j++] = inc % BIG_NUMBER_BASE;
-            }
-        }
-        ret.length_ = ret_length;
-        ret.ZeroAdjust();
-        return ret;
-    }
+  BigNumber& operator++() {
+    *this = *this + 1;
+    return *this;
+  }
 
-    static  BigNumber   AbsMul(const BigNumber& l, const BigNumber& r)
-    {
-        return AbsMulImpl(l, r);
-    }
+  BigNumber operator++(int) {
+    BigNumber ret(*this);
+    *this = *this + 1;
+    return ret;
+  }
 
-    static  int     DoMemMul(ElementType* ResultBuff, ElementType* LeftBuff, int LeftLength, int RightValue)
-    {
-        MUL_TYPE inc = 0;
-        int curr = 0;
-        for (; curr < LeftLength; ++curr)
-        {
-            MUL_TYPE value = (MUL_TYPE)RightValue * LeftBuff[curr] + inc;
-            ResultBuff[curr] = value % BIG_NUMBER_BASE;
-            inc = value / BIG_NUMBER_BASE;
-        }
-        if (inc)
-        {
-            ResultBuff[curr++] = inc;
-        }
-        return curr;
-    }
+  BigNumber& operator--() {
+    *this = *this - 1;
+    return *this;
+  }
 
-    static  int     DoSub(ElementType* LeftBuff, int hi_l, int lo_l,
-                              ElementType* RightBuff, int hi_r, int lo_r,
-                              int test, ElementType* temp)
-    {
-            int hi2 = DoMemMul(temp+lo_r, RightBuff, hi_r-lo_r+1, test) - 1;
+  BigNumber operator--(int) {
+    BigNumber ret(*this);
+    *this = *this - 1;
+    return ret;
+  }
 
-            if (hi2 >= hi_l - lo_l + 1)
-            {
-                return 0;
-            }
-
-            if (hi_l - lo_l == hi2 - lo_r)
-            {
-                for (int i = hi_l, j = hi2; i >= lo_l; --i, --j)
-                {
-                    if(LeftBuff[i] < temp[j])
-                    {
-                        return 0;
-                    }
-                    if (LeftBuff[i] > temp[j])
-                    {
-                        break;
-                    }
-                }
-            }
-
-            for (int i = lo_r, j = lo_l; i <= hi2; ++i, ++j)
-            {
-                if ((LeftBuff[j] -= temp[i]) < 0)
-                {
-                    LeftBuff[j] += BIG_NUMBER_BASE;
-                    --LeftBuff[j+1];
-                }
-            }
-
-            return 1;
-    }
-
-    static  BigNumber   AbsDivImpl(BigNumber& remain, const BigNumber& r)
-    {
-        if (BigNumber::AbsCompare(remain, r) < 0)
-        {
-            return 0;
-        }
-
-        DataBlock<ElementType>  buffer_data(remain.length_ + 5);
-
-        remain.ZeroAdjust();
-        r.ZeroAdjust();
-
-        int l_length    = remain.GetLength();
-        int r_length    = r.GetLength();
-        int ret_length  = l_length - r_length + 1;
-
-        BigNumber   ret(NULL, ret_length);
-
-        ElementType*    ret_buffer  = ret.Buffer();
-        ElementType*    l_buffer    = remain.Buffer();
-        ElementType*    r_buffer    = r.Buffer();
-
-        int curr = ret_length - 1;
-        int hi_l = l_length - 1, lo_l = curr;
-        const int hi_r = r_length - 1, lo_r = 0;
-
-        for (; curr >= 0; --curr, --lo_l)
-        {
-            MUL_TYPE test;
-            if (r_length > 1)
-            {
-                if (hi_l-lo_l>hi_r-lo_r)
-                {
-                    test = ((MUL_TYPE)l_buffer[hi_l]*BIG_NUMBER_BASE + l_buffer[hi_l-1]) / r_buffer[hi_r];
-                }
-                else if (hi_l == lo_l)
-                {
-                    test = 0;
-                }
-                else
-                {
-                    test = ((MUL_TYPE)l_buffer[hi_l]*BIG_NUMBER_BASE + l_buffer[hi_l-1]) / ((MUL_TYPE)r_buffer[hi_r]*BIG_NUMBER_BASE + r_buffer[hi_r-1]);
-                }
-            }
-            else
-            {
-                if (hi_l-lo_l+1>1)
-                {
-                    test = ((MUL_TYPE)l_buffer[hi_l]*BIG_NUMBER_BASE + l_buffer[hi_l-1]) / r_buffer[hi_r];
-                }
-                else
-                {
-                    test = l_buffer[hi_l]/r_buffer[hi_r];
-                }
-                
-            }
-
-            for( ; test > 0; --test)
-            {
-                if (BigNumber::DoSub(l_buffer, hi_l, lo_l, r_buffer, hi_r, lo_r, test, buffer_data.Buffer()))
-                {
-                    break;
-                }
-            }
-            
-            for (;l_buffer[hi_l] == 0 && hi_l >= lo_l; --hi_l)
-                ;
-            ret_buffer[curr] = test;
-        }
-
-        ret.length_ = ret_length;
-        ret.ZeroAdjust();
-        remain.ZeroAdjust();
-        return ret;
-    }
-
-    static  BigNumber   AbsDiv(const BigNumber& l, const BigNumber& r)
-    {
-        BigNumber   l_temp(l.Buffer(), l.length_, BigNumberData::COPY_DATA);
-
-        return AbsDivImpl(l_temp, r);
-    }
-
-public:
-
-    BigNumber   operator - () const
-    {
-        BigNumber ret(*this);
-        ret.Neg();
-        return ret;
-    }
-
-    BigNumber   operator + () const
-    {
-        return *this;
-    }
-
-    BigNumber&  operator += (const BigNumber& other)
-    {
-        *this = *this + other;
-        return *this;
-    }
-
-    BigNumber&  operator -= (const BigNumber& other)
-    {
-        *this = *this - other;
-        return *this;
-    }
-
-    BigNumber&  operator *= (const BigNumber& other)
-    {
-        *this = *this * other;
-        return *this;
-    }
-
-    BigNumber&  operator /= (const BigNumber& other)
-    {
-        *this = *this / other;
-        return *this;
-    }
-
-    BigNumber&  operator %= (const BigNumber& other)
-    {
-        *this = *this % other;
-        return *this;
-    }
-
-    BigNumber&  operator ^= (int n)
-    {
-        *this = *this ^ n;
-        return *this;
-    }
-
-    BigNumber& operator ++ ()
-    {
-        *this = *this + 1;
-        return *this;
-    }
-
-    BigNumber operator ++ (int)
-    {
-        BigNumber ret(*this);
-        *this = *this + 1;
-        return ret;
-    }
-
-    BigNumber& operator -- ()
-    {
-        *this = *this - 1;
-        return *this;
-    }
-
-    BigNumber operator -- (int)
-    {
-        BigNumber ret(*this);
-        *this = *this - 1;
-        return ret;
-    }
-
-protected:
-
-    mutable int length_;
-    mutable int sign_;
-
+ protected:
+  mutable int length_;
+  mutable int sign_;
 };
 
-inline
-std::ostream&   operator << (std::ostream& o, const BigNumber& n)
-{
-    int curr = n.GetLength() - 1;
-    if (n.GetSign() < 0)
-    {
-        o << '-';
-    }
+inline std::ostream& operator<<(std::ostream& o, const BigNumber& n) {
+  int curr = n.GetLength() - 1;
+  if (n.GetSign() < 0) {
+    o << '-';
+  }
+  o << n[curr--];
+  while (curr >= 0) {
+    o.fill('0');
+    o.width(DIG_COUNT);
     o << n[curr--];
-    while (curr>=0)
-    {
-        o.fill('0');
-        o.width(DIG_COUNT);
-        o << n[curr--];
-    }
-    return o;
+  }
+  return o;
 }
 
-inline
-BigNumber   operator + (const BigNumber& l, const BigNumber& r)
-{
-    if (l.IsZero())
-    {
-        return r;
-    }
+inline BigNumber operator+(const BigNumber& l, const BigNumber& r) {
+  if (l.IsZero()) {
+    return r;
+  }
 
-    if (r.IsZero())
-    {
-        return l;
-    }
+  if (r.IsZero()) {
+    return l;
+  }
 
-    if (l.GetSign() == r.GetSign())
-    {
-        BigNumber   ret(BigNumber::AbsAdd(l, r));
-        ret.sign_ = l.sign_;
-        ret.ZeroAdjust();
-        return ret;
-    }
-
-    int cmp;
-    if ((cmp = BigNumber::AbsCompare(l, r)) > 0)
-    {
-        BigNumber   ret(BigNumber::AbsSub(l, r));
-        ret.sign_ = l.sign_;
-        ret.ZeroAdjust();
-        return ret;
-    }
-    else if (cmp < 0)
-    {
-        BigNumber   ret(BigNumber::AbsSub(r, l));
-        ret.sign_ = r.sign_;
-        ret.ZeroAdjust();
-        return ret;
-    }
-    else
-    {
-        return 0;
-    }
-}
-
-inline
-BigNumber   operator - (const BigNumber& l, const BigNumber& r)
-{
-    if (l.IsZero())
-    {
-        return -r;
-    }
-
-    if (r.IsZero())
-    {
-        return l;
-    }
-
-    if (l.GetSign() != r.GetSign())
-    {
-        BigNumber   ret(BigNumber::AbsAdd(l, r));
-        ret.sign_ = l.sign_;
-        ret.ZeroAdjust();
-        return ret;
-    }
-
-    int cmp;
-    if ((cmp = BigNumber::AbsCompare(l, r)) > 0)
-    {
-        BigNumber   ret(BigNumber::AbsSub(l, r));
-        ret.sign_ = l.sign_;
-        ret.ZeroAdjust();
-        return ret;
-    }
-    else if (cmp < 0)
-    {
-        BigNumber   ret(BigNumber::AbsSub(r, l));
-        ret.sign_ = -r.sign_;
-        ret.ZeroAdjust();
-        return ret;
-    }
-    else
-    {
-        return 0;
-    }
-}
-
-inline
-BigNumber   operator * (const BigNumber& l, const BigNumber& r)
-{
-    int s = l.GetSign() * r.GetSign();
-
-    if (s == 0)
-    {
-        return 0;
-    }
-
-    BigNumber   ret(BigNumber::AbsMul(l, r));
-    ret.sign_ = s;
-
-    return ret;
-}
-
-inline
-BigNumber   operator / (const BigNumber& l, const BigNumber& r)
-{
-    int s = l.GetSign() * r.GetSign();
-    int cmp = BigNumber::AbsCompare(l, r);
-
-    if (s == 0 || cmp < 0)
-    {
-        return 0;
-    }
-
-    if (cmp == 0)
-    {
-        return 1;
-    }
-
-    BigNumber   ret(BigNumber::AbsDiv(l, r));
-    ret.sign_ = s;
-
-    return ret;
-}
-
-inline
-BigNumber   operator ^ (const BigNumber& l, int n)
-{
-    BigNumber   ret(1);
-    BigNumber   t(l);
-
-    for (;n; n /= 2)
-    {
-        if (n & 1)
-        {
-            ret *= t;
-        }
-        t *= t;
-    }
-
-    return ret;
-}
-
-inline
-BigNumber   operator ^ (const BigNumber& l, BigNumber& n)
-{
-    BigNumber   ret(1);
-    BigNumber   t(l);
-
-    for (;!n.IsZero(); n /= 2)
-    {
-        if (n[0]&1)
-        {
-            ret *= t;
-        }
-        t *= t;
-    }
-
-    return ret;
-}
-
-inline
-BigNumber   operator % (const BigNumber& l, const BigNumber& r)
-{
-    int s = l.sign_ * r.sign_;
-
-    if (s == 0)
-    {
-        return 0;
-    }
-
-    BigNumber ret(l.Buffer(), l.length_, BigNumberData::COPY_DATA);
-
-    BigNumber::AbsDivImpl(ret, r);
+  if (l.GetSign() == r.GetSign()) {
+    BigNumber ret(BigNumber::AbsAdd(l, r));
     ret.sign_ = l.sign_;
     ret.ZeroAdjust();
-
     return ret;
+  }
+
+  int cmp;
+  if ((cmp = BigNumber::AbsCompare(l, r)) > 0) {
+    BigNumber ret(BigNumber::AbsSub(l, r));
+    ret.sign_ = l.sign_;
+    ret.ZeroAdjust();
+    return ret;
+  } else if (cmp < 0) {
+    BigNumber ret(BigNumber::AbsSub(r, l));
+    ret.sign_ = r.sign_;
+    ret.ZeroAdjust();
+    return ret;
+  } else {
+    return 0;
+  }
 }
 
-inline
-int operator > (const BigNumber& l, const BigNumber& r)
-{
-    int s1 = l.sign_;
-    int s2 = r.sign_;
+inline BigNumber operator-(const BigNumber& l, const BigNumber& r) {
+  if (l.IsZero()) {
+    return -r;
+  }
 
-    if (s1 < 0)
-    {
-        return s2 < 0 && BigNumber::AbsCompare(l, r) < 0;
-    }
-    else if (s1 > 0)
-    {
-        return s2 <= 0 || BigNumber::AbsCompare(l, r) > 0;
-    }
-    else
-    {
-        return s2 < 0;
-    }
+  if (r.IsZero()) {
+    return l;
+  }
+
+  if (l.GetSign() != r.GetSign()) {
+    BigNumber ret(BigNumber::AbsAdd(l, r));
+    ret.sign_ = l.sign_;
+    ret.ZeroAdjust();
+    return ret;
+  }
+
+  int cmp;
+  if ((cmp = BigNumber::AbsCompare(l, r)) > 0) {
+    BigNumber ret(BigNumber::AbsSub(l, r));
+    ret.sign_ = l.sign_;
+    ret.ZeroAdjust();
+    return ret;
+  } else if (cmp < 0) {
+    BigNumber ret(BigNumber::AbsSub(r, l));
+    ret.sign_ = -r.sign_;
+    ret.ZeroAdjust();
+    return ret;
+  } else {
+    return 0;
+  }
 }
 
-inline
-int operator < (const BigNumber& l, const BigNumber& r)
-{
-    int s1 = l.sign_;
-    int s2 = r.sign_;
+inline BigNumber operator*(const BigNumber& l, const BigNumber& r) {
+  int s = l.GetSign() * r.GetSign();
 
-    if (s1 < 0)
-    {
-        return s2 >= 0 || BigNumber::AbsCompare(l, r) > 0;
-    }
-    else if (s1 > 0)
-    {
-        return s2 > 0 && BigNumber::AbsCompare(l, r) < 0;
-    }
-    else
-    {
-        return s2 > 0;
-    }
+  if (s == 0) {
+    return 0;
+  }
+
+  BigNumber ret(BigNumber::AbsMul(l, r));
+  ret.sign_ = s;
+
+  return ret;
 }
 
-inline
-int operator == (const BigNumber& l, const BigNumber& r)
-{
-    return l.sign_ == r.sign_ && BigNumber::AbsCompare(l, r) == 0;
+inline BigNumber operator/(const BigNumber& l, const BigNumber& r) {
+  int s = l.GetSign() * r.GetSign();
+  int cmp = BigNumber::AbsCompare(l, r);
+
+  if (s == 0 || cmp < 0) {
+    return 0;
+  }
+
+  if (cmp == 0) {
+    return 1;
+  }
+
+  BigNumber ret(BigNumber::AbsDiv(l, r));
+  ret.sign_ = s;
+
+  return ret;
 }
 
-inline
-int operator >= (const BigNumber& l, const BigNumber& r)
-{
-    int s1 = l.sign_;
-    int s2 = r.sign_;
+inline BigNumber operator^(const BigNumber& l, int n) {
+  BigNumber ret(1);
+  BigNumber t(l);
 
-    if (s1 < 0)
-    {
-        return s2 < 0 && BigNumber::AbsCompare(l, r) <= 0;
+  for (; n; n /= 2) {
+    if (n & 1) {
+      ret *= t;
     }
-    else if (s1 > 0)
-    {
-        return s2 <= 0 || BigNumber::AbsCompare(l, r) >= 0;
-    }
-    else
-    {
-        return s2 <= 0;
-    }
+    t *= t;
+  }
+
+  return ret;
 }
 
-inline
-int operator <= (const BigNumber& l, const BigNumber& r)
-{
-    int s1 = l.sign_;
-    int s2 = r.sign_;
+inline BigNumber operator^(const BigNumber& l, BigNumber& n) {
+  BigNumber ret(1);
+  BigNumber t(l);
 
-    if (s1 < 0)
-    {
-        return s2 >= 0 || BigNumber::AbsCompare(l, r) >= 0;
+  for (; !n.IsZero(); n /= 2) {
+    if (n[0] & 1) {
+      ret *= t;
     }
-    else if (s1 > 0)
-    {
+    t *= t;
+  }
 
-        return s2 > 0 && BigNumber::AbsCompare(l, r) <= 0;
-    }
-    else
-    {
-        return s2 >= 0;
-    }
+  return ret;
 }
 
-inline
-BigNumber   GCD(const BigNumber& l, const BigNumber& r)
-{
-    BigNumber   a(l);
-    BigNumber   b(r);
-    BigNumber   t;
+inline BigNumber operator%(const BigNumber& l, const BigNumber& r) {
+  int s = l.sign_ * r.sign_;
 
-    while (!b.IsZero())
-    {
-        t = b;
-        b = a % b;
-        a = t;
-    }
+  if (s == 0) {
+    return 0;
+  }
 
-    return a;
+  BigNumber ret(l.Buffer(), l.length_, BigNumberData::COPY_DATA);
+
+  BigNumber::AbsDivImpl(ret, r);
+  ret.sign_ = l.sign_;
+  ret.ZeroAdjust();
+
+  return ret;
 }
 
-inline
-BigNumber   GCDEX(const BigNumber& p, const BigNumber& m)
-{
-    BigNumber   d(m), c(p);
-    BigNumber   b(1), b1(0);
-    BigNumber   q, r, t;
+inline int operator>(const BigNumber& l, const BigNumber& r) {
+  int s1 = l.sign_;
+  int s2 = r.sign_;
 
-    for (;;)
-    {
-        q = c / d;
-        r = c % d;
-        if (r.IsZero()) break;
-        t = b1;
-        b1 = b;
-        b = t - q * b;
-        c = d;
-        d = r;
-    }
-    
-    return (b % p + p) % p;
+  if (s1 < 0) {
+    return s2 < 0 && BigNumber::AbsCompare(l, r) < 0;
+  } else if (s1 > 0) {
+    return s2 <= 0 || BigNumber::AbsCompare(l, r) > 0;
+  } else {
+    return s2 < 0;
+  }
 }
 
-inline
-BigNumber   fabs(const BigNumber& n)
-{
-    return n.sign_ >= 0 ? n : -n;
+inline int operator<(const BigNumber& l, const BigNumber& r) {
+  int s1 = l.sign_;
+  int s2 = r.sign_;
+
+  if (s1 < 0) {
+    return s2 >= 0 || BigNumber::AbsCompare(l, r) > 0;
+  } else if (s1 > 0) {
+    return s2 > 0 && BigNumber::AbsCompare(l, r) < 0;
+  } else {
+    return s2 > 0;
+  }
 }
 
-inline
-BigNumber   abs(const BigNumber& n)
-{
-    return n.sign_ >= 0 ? n : -n;
+inline int operator==(const BigNumber& l, const BigNumber& r) {
+  return l.sign_ == r.sign_ && BigNumber::AbsCompare(l, r) == 0;
 }
 
-inline
-void print_bn(const BigNumber& n)
-{
-    int curr = n.GetLength() - 1;
-    const BigNumber::ElementType* data = n.Buffer();
-    
-    while (curr >= 0 && data[curr] == 0) --curr;
-    if (curr < 0)
-    {
-        printf("0");
-        return;
-    }
-    
-    if (n.GetSign() < 0)
-    {
-        putchar('-');
-    }
-    
-    printf(PRT_FORMAT_STRING_PREFIX, data[curr--]);
-    while (curr >= 0) printf(PRT_FORMAT_STRING, data[curr--]);
+inline int operator>=(const BigNumber& l, const BigNumber& r) {
+  int s1 = l.sign_;
+  int s2 = r.sign_;
+
+  if (s1 < 0) {
+    return s2 < 0 && BigNumber::AbsCompare(l, r) <= 0;
+  } else if (s1 > 0) {
+    return s2 <= 0 || BigNumber::AbsCompare(l, r) >= 0;
+  } else {
+    return s2 <= 0;
+  }
 }
 
-inline
-BigNumber from_string(const char* number)
-{
-    return number ? BigNumber(number, BigNumber::StringNumberTag()) : 0;
+inline int operator<=(const BigNumber& l, const BigNumber& r) {
+  int s1 = l.sign_;
+  int s2 = r.sign_;
+
+  if (s1 < 0) {
+    return s2 >= 0 || BigNumber::AbsCompare(l, r) >= 0;
+  } else if (s1 > 0) {
+    return s2 > 0 && BigNumber::AbsCompare(l, r) <= 0;
+  } else {
+    return s2 >= 0;
+  }
+}
+
+inline BigNumber GCD(const BigNumber& l, const BigNumber& r) {
+  BigNumber a(l);
+  BigNumber b(r);
+  BigNumber t;
+
+  while (!b.IsZero()) {
+    t = b;
+    b = a % b;
+    a = t;
+  }
+
+  return a;
+}
+
+inline BigNumber GCDEX(const BigNumber& p, const BigNumber& m) {
+  BigNumber d(m), c(p);
+  BigNumber b(1), b1(0);
+  BigNumber q, r, t;
+
+  for (;;) {
+    q = c / d;
+    r = c % d;
+    if (r.IsZero()) break;
+    t = b1;
+    b1 = b;
+    b = t - q * b;
+    c = d;
+    d = r;
+  }
+
+  return (b % p + p) % p;
+}
+
+inline BigNumber fabs(const BigNumber& n) { return n.sign_ >= 0 ? n : -n; }
+
+inline BigNumber abs(const BigNumber& n) { return n.sign_ >= 0 ? n : -n; }
+
+inline void print_bn(const BigNumber& n) {
+  int curr = n.GetLength() - 1;
+  const BigNumber::ElementType* data = n.Buffer();
+
+  while (curr >= 0 && data[curr] == 0) --curr;
+  if (curr < 0) {
+    printf("0");
+    return;
+  }
+
+  if (n.GetSign() < 0) {
+    putchar('-');
+  }
+
+  printf(PRT_FORMAT_STRING_PREFIX, data[curr--]);
+  while (curr >= 0) printf(PRT_FORMAT_STRING, data[curr--]);
+}
+
+inline BigNumber from_string(const char* number) {
+  return number ? BigNumber(number, BigNumber::StringNumberTag()) : 0;
 }
 
 typedef BigNumber bn;

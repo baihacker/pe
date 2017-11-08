@@ -2,8 +2,8 @@
 #define __PE_NT_H__
 
 #include "pe_base"
-#include "pe_mod"
 #include "pe_mat"
+#include "pe_mod"
 
 // About numbers
 
@@ -11,8 +11,10 @@
 static_assert(sizeof(int) >= 4, "sizeof(int) >= 4");
 
 // square overflow integers
-static const int64 PE_SOI63 = 3037000499LL;   // x * x > 2^63 - 1 for x > PE_SOI63
-static const int64 PE_SOI64 = 4294967295LL;   // x * x > 2^64 - 1 for x > PE_SOI64
+static const int64 PE_SOI63 =
+    3037000499LL;  // x * x > 2^63 - 1 for x > PE_SOI63
+static const int64 PE_SOI64 =
+    4294967295LL;  // x * x > 2^64 - 1 for x > PE_SOI64
 
 // About primes
 int pcnt;
@@ -23,68 +25,62 @@ int* miu = NULL;
 int64 maxp;
 int64 maxp2;
 
-SL void INIT_MAXP(int64 v)
-{
+SL void INIT_MAXP(int64 v) {
   ::maxp = v;
-  ::maxp2 = (int64) maxp * maxp;
+  ::maxp2 = (int64)maxp * maxp;
   assert(maxp >= 100000);
   assert(maxp <= INT_MAX);
 }
 
 // http://oeis.org/A006880
-const int64 pmpi[] =
-{
-0LL,
-4LL,                        // 10
-25LL,                       // 100
-168LL,                      // 1000
-1229LL,                     // 1e4
-9592LL,                     // 1e5
-78498LL,                    // 1e6
-664579LL,                   // 1e7
-5761455LL,                  // 1e8
-50847534LL,                 // 1e9
-455052511LL,                // 1e10
-4118054813LL,               // 1e11
-37607912018LL,              // 1e12
-346065536839LL,             // 1e13
-3204941750802LL,            // 1e14
-29844570422669LL,           // 1e15
-279238341033925LL,          // 1e16
-2623557157654233LL,         // 1e17
-24739954287740860LL,        // 1e18
-234057667276344607LL,       // 1e19
-2220819602560918840LL,      // 1e20
+const int64 pmpi[] = {
+    0LL,
+    4LL,                    // 10
+    25LL,                   // 100
+    168LL,                  // 1000
+    1229LL,                 // 1e4
+    9592LL,                 // 1e5
+    78498LL,                // 1e6
+    664579LL,               // 1e7
+    5761455LL,              // 1e8
+    50847534LL,             // 1e9
+    455052511LL,            // 1e10
+    4118054813LL,           // 1e11
+    37607912018LL,          // 1e12
+    346065536839LL,         // 1e13
+    3204941750802LL,        // 1e14
+    29844570422669LL,       // 1e15
+    279238341033925LL,      // 1e16
+    2623557157654233LL,     // 1e17
+    24739954287740860LL,    // 1e18
+    234057667276344607LL,   // 1e19
+    2220819602560918840LL,  // 1e20
 };
 
-SL int64 estimate_pmpi(int64 n)
-{
+SL int64 estimate_pmpi(int64 n) {
   if (n <= 1) return 0;
-  int64 ret = static_cast<int64>(1. * n / log(1.*n));
+  int64 ret = static_cast<int64>(1. * n / log(1. * n));
   return max(ret, static_cast<int64>(1LL));
 }
 
-template<int d1, int d2>
-SL void init_pmask_plist(int (&pmask)[d1], int (&plist)[d2])
-{
+template <int d1, int d2>
+SL void init_pmask_plist(int (&pmask)[d1], int (&plist)[d2]) {
   (void)pmask;
   (void)plist;
 }
 
-SL void init_pmask_plist(int*& pmask, int*& plist)
-{
-  pmask = new int[maxp+1];
-  int64 size = max(static_cast<int64>((estimate_pmpi(maxp+1) + 1) * 1.1), static_cast<int64>(100000LL));
+SL void init_pmask_plist(int*& pmask, int*& plist) {
+  pmask = new int[maxp + 1];
+  int64 size = max(static_cast<int64>((estimate_pmpi(maxp + 1) + 1) * 1.1),
+                   static_cast<int64>(100000LL));
   plist = new int[size];
 }
 
-SL int is_prime(int64 n)
-{
+SL int is_prime(int64 n) {
   if (n <= 1) return 0;
   if (n <= maxp) return pmask[n] == n;
   PE_ASSERT(n <= maxp2);
-  for (int i = 0; i < pcnt; ++i)
-  {
+  for (int i = 0; i < pcnt; ++i) {
     const int64 p = plist[i];
     const int64 test = p * p;
     if (test > n) break;
@@ -93,10 +89,8 @@ SL int is_prime(int64 n)
   return 1;
 }
 
-SL void init_primes()
-{
-  if (maxp == 0)
-  {
+SL void init_primes() {
+  if (maxp == 0) {
     INIT_MAXP(1000000);
   }
 
@@ -104,63 +98,51 @@ SL void init_primes()
 
   pcnt = 0;
   for (int i = 1; i <= maxp; ++i) pmask[i] = i;
-  for (int i = 2; i <= maxp; ++i)
-  {
-    if (pmask[i] == i)
-    {
+  for (int i = 2; i <= maxp; ++i) {
+    if (pmask[i] == i) {
       plist[pcnt++] = i;
     }
-    for (int j = 0; j < pcnt; ++j)
-    {
+    for (int j = 0; j < pcnt; ++j) {
       const int64 t = (int64)plist[j] * i;
       if (t > maxp) break;
       pmask[t] = plist[j];
-      if (i % plist[j] == 0)
-      {
+      if (i % plist[j] == 0) {
         break;
       }
     }
   }
 }
 
-SL void init_primes(int cal_phi, int cal_miu)
-{
-  if (maxp == 0)
-  {
+SL void init_primes(int cal_phi, int cal_miu) {
+  if (maxp == 0) {
     INIT_MAXP(1000000);
   }
 
   init_pmask_plist(pmask, plist);
 
   pcnt = 0;
-  if (cal_phi) phi = new int[maxp+1];
-  if (cal_miu) miu = new int[maxp+1];
+  if (cal_phi) phi = new int[maxp + 1];
+  if (cal_miu) miu = new int[maxp + 1];
 
   for (int i = 1; i <= maxp; ++i) pmask[i] = i;
   if (phi) phi[0] = 0, phi[1] = 1;
   if (miu) miu[0] = 0, miu[1] = 1;
 
-  for (int i = 2; i <= maxp; ++i)
-  {
-    if (pmask[i] == i)
-    {
+  for (int i = 2; i <= maxp; ++i) {
+    if (pmask[i] == i) {
       if (miu) miu[i] = -1;
       if (phi) phi[i] = i - 1;
       plist[pcnt++] = i;
     }
-    for (int j = 0; j < pcnt; ++j)
-    {
+    for (int j = 0; j < pcnt; ++j) {
       const int64 t = (int64)plist[j] * i;
       if (t > maxp) break;
       pmask[t] = plist[j];
-      if (i % plist[j] == 0)
-      {
+      if (i % plist[j] == 0) {
         if (miu) miu[t] = 0;
         if (phi) phi[t] = phi[i] * plist[j];
         break;
-      }
-      else
-      {
+      } else {
         if (miu) miu[t] = -miu[i];
         if (phi) phi[t] = phi[i] * (plist[j] - 1);
       }
@@ -168,29 +150,22 @@ SL void init_primes(int cal_phi, int cal_miu)
   }
 }
 
-SL vector<pair<int64, int> > factorize(int64 n)
-{
-  vector<pair<int64, int> > ret;
-  if (n <= 1)
-  {
+SL vector<pair<int64, int>> factorize(int64 n) {
+  vector<pair<int64, int>> ret;
+  if (n <= 1) {
     return ret;
   }
 
-  if (n <= maxp)
-  {
-    while (n != 1)
-    {
+  if (n <= maxp) {
+    while (n != 1) {
       int now = pmask[n];
       int c = 0;
       while (n % now == 0) n /= now, ++c;
       if (c) ret.emplace_back((int64)now, c);
     }
-  }
-  else
-  {
+  } else {
     PE_ASSERT(n <= maxp2);
-    for (int i = 0; i < pcnt; ++i)
-    {
+    for (int i = 0; i < pcnt; ++i) {
       const int64 p = plist[i];
       const int64 test = p * p;
       if (test > n) break;
@@ -203,60 +178,52 @@ SL vector<pair<int64, int> > factorize(int64 n)
   return ret;
 }
 
-void get_factors_impl(const int limit, const vector<pair<int64, int> >& f, int64 value, vector<int64>& result)
-{
+void get_factors_impl(const int limit, const vector<pair<int64, int>>& f,
+                      int64 value, vector<int64>& result) {
   result.push_back(value);
-  for (int i = 0; i < limit; ++i)
-  {
+  for (int i = 0; i < limit; ++i) {
     int64 tvalue = value;
     const int64 p = f[i].first;
     const int c = f[i].second;
-    for (int j = 1; j <= c; ++j)
-    {
+    for (int j = 1; j <= c; ++j) {
       tvalue *= p;
       get_factors_impl(i, f, tvalue, result);
     }
   }
 }
 
-SL vector<int64> get_factors(const vector<pair<int64, int> >& f)
-{
+SL vector<int64> get_factors(const vector<pair<int64, int>>& f) {
   vector<int64> result;
   get_factors_impl(static_cast<int>(f.size()), f, 1, result);
   return result;
 }
 
-SL vector<int64> get_factors(int64 value)
-{
+SL vector<int64> get_factors(int64 value) {
   vector<int64> result;
   auto f = factorize(value);
   get_factors_impl(static_cast<int>(f.size()), f, 1, result);
   return result;
 }
 
-SL int64 cal_phi(int64 n, const vector<pair<int64, int> >& fn)
-{
+SL int64 cal_phi(int64 n, const vector<pair<int64, int>>& fn) {
   if (n <= 0) return -1;
   if (phi && n <= maxp) return phi[n];
   int64 phi_n = n;
-  for (auto& it: fn) phi_n -= phi_n / it.first;
+  for (auto& it : fn) phi_n -= phi_n / it.first;
   return phi_n;
 }
 
-SL int64 cal_phi(int64 n)
-{
+SL int64 cal_phi(int64 n) {
   if (n <= 0) return -1;
   if (phi && n <= maxp) return phi[n];
   auto fn = factorize(n);
   int64 phi_n = n;
-  for (auto& it: fn) phi_n -= phi_n / it.first;
+  for (auto& it : fn) phi_n -= phi_n / it.first;
   return phi_n;
 }
 
-class DVA
-{
-public:
-
+class DVA {
+ public:
   int64 n;
   int64 m;
   int isPerfectSquare;
@@ -264,125 +231,101 @@ public:
   std::vector<int64> keys;
   std::vector<int64> sv;
   std::vector<int64> lv;
-  
-  DVA(int64 n):
-    n(n),
-    m(static_cast<int64>(sqrt(n))),
-    isPerfectSquare(m*m==n)
-  {
-    for (int64 i = 1; i <= m; ++i)
-    {
+
+  DVA(int64 n)
+      : n(n), m(static_cast<int64>(sqrt(n))), isPerfectSquare(m * m == n) {
+    for (int64 i = 1; i <= m; ++i) {
       keys.push_back(i);
     }
-    for (int64 i = n / m > m ? m : m - 1; i >= 1; --i)
-    {
+    for (int64 i = n / m > m ? m : m - 1; i >= 1; --i) {
       keys.push_back(n / i);
     }
     reverse(keys.begin(), keys.end());
-    sv.resize(m+1);
-    lv.resize(m+1);
+    sv.resize(m + 1);
+    lv.resize(m + 1);
     fill(sv.begin(), sv.end(), 0);
     fill(lv.begin(), lv.end(), 0);
   }
-  
+
   DVA(const DVA& other) = default;
   DVA(DVA&& other) = default;
-  DVA& operator = (const DVA& other) = default;
-  DVA& operator = (DVA&& other) = default;
+  DVA& operator=(const DVA& other) = default;
+  DVA& operator=(DVA&& other) = default;
 
-  int64& operator [] (int64 v)
-  {
-    return v <= m ? sv[v] : lv[n/v];
-  }
+  int64& operator[](int64 v) { return v <= m ? sv[v] : lv[n / v]; }
 
-  int64 operator [] (int64 v) const
-  {
-    return v <= m ? sv[v] : lv[n/v];
-  }
+  int64 operator[](int64 v) const { return v <= m ? sv[v] : lv[n / v]; }
 };
 
-SL DVA prime_s0(const int64 n)
-{
+SL DVA prime_s0(const int64 n) {
   PE_ASSERT(n >= 1);
   DVA dva(n);
 
-  for (auto& key: dva.keys) dva[key] = key - 1;
+  for (auto& key : dva.keys) dva[key] = key - 1;
 
-  for (int64 p = 2; p <= dva.m; ++p) if (dva[p] != dva[p-1])
-  {
-    const int64 pcnt = dva[p-1];
-    const int64 p2 = p * p;
-    for (auto& key: dva.keys)
-    {
-      if (key < p2) break;
-      dva[key] -= dva[key/p] - pcnt;
+  for (int64 p = 2; p <= dva.m; ++p)
+    if (dva[p] != dva[p - 1]) {
+      const int64 pcnt = dva[p - 1];
+      const int64 p2 = p * p;
+      for (auto& key : dva.keys) {
+        if (key < p2) break;
+        dva[key] -= dva[key / p] - pcnt;
+      }
     }
-  }
   return dva;
 }
 
 #define prime_pi prime_s0
 
-SL DVA prime_s1(const int64 n)
-{
+SL DVA prime_s1(const int64 n) {
   PE_ASSERT(n >= 1);
   DVA dva(n);
-  for (auto& key: dva.keys) dva[key] = key * (key + 1) / 2 - 1;
+  for (auto& key : dva.keys) dva[key] = key * (key + 1) / 2 - 1;
 
-  for (int64 p = 2; p <= dva.m; ++p) if (dva[p] != dva[p-1])
-  {
-    const int64 psum = dva[p-1];
-    const int64 p2 = p * p;
-    for (auto& key: dva.keys)
-    {
-      if (key < p2) break;
-      dva[key] -= (dva[key/p] - psum) * p;
+  for (int64 p = 2; p <= dva.m; ++p)
+    if (dva[p] != dva[p - 1]) {
+      const int64 psum = dva[p - 1];
+      const int64 p2 = p * p;
+      for (auto& key : dva.keys) {
+        if (key < p2) break;
+        dva[key] -= (dva[key / p] - psum) * p;
+      }
     }
-  }
   return dva;
 }
 
 #define prime_sum prime_s1
 
 #if 0
-SL tuple<vector<int64>, vector<int64>> prime_pi(const int64 n)
-{
+SL tuple<vector<int64>, vector<int64>> prime_pi(const int64 n) {
   PE_ASSERT(n >= 1);
   const int64 v = static_cast<int64>(sqrt(n));
 
-  vector<int64> scnt(v+1);
-  vector<int64> lcnt(v+1);
+  vector<int64> scnt(v + 1);
+  vector<int64> lcnt(v + 1);
 
-  for (int i = 1; i <= v; ++i)
-  {
+  for (int i = 1; i <= v; ++i) {
     scnt[i] = i - 1;
     lcnt[i] = n / i - 1;
   }
 
-  for (int64 p = 2; p <= v; ++p)
-  {
-    if (scnt[p] == scnt[p-1])
-    {
+  for (int64 p = 2; p <= v; ++p) {
+    if (scnt[p] == scnt[p - 1]) {
       continue;
     }
-    const int64 pcnt = scnt[p-1];
+    const int64 pcnt = scnt[p - 1];
     const int64 q = p * p;
     const int64 end = min(v, n / q);
-    for (int i = 1; i <= end; ++i)
-    {
+    for (int i = 1; i <= end; ++i) {
       const int64 d = i * p;
-      if (d <= v)
-      {
+      if (d <= v) {
         lcnt[i] -= lcnt[d] - pcnt;
-      }
-      else
-      {
+      } else {
         const int64 t = n / d;
         lcnt[i] -= scnt[t] - pcnt;
       }
     }
-    for (int64 i = v; i >= q; --i)
-    {
+    for (int64 i = v; i >= q; --i) {
       const int64 t = i / p;
       scnt[i] -= scnt[t] - pcnt;
     }
@@ -390,45 +333,36 @@ SL tuple<vector<int64>, vector<int64>> prime_pi(const int64 n)
   return make_tuple(std::move(scnt), std::move(lcnt));
 }
 
-SL tuple<vector<int64>, vector<int64>> prime_sum(const int64 n)
-{
+SL tuple<vector<int64>, vector<int64>> prime_sum(const int64 n) {
   PE_ASSERT(n >= 1);
   const int64 v = static_cast<int64>(sqrt(n));
 
-  vector<int64> ssum(v+1);
-  vector<int64> lsum(v+1);
+  vector<int64> ssum(v + 1);
+  vector<int64> lsum(v + 1);
 
-  for (int i = 1; i <= v; ++i)
-  {
+  for (int i = 1; i <= v; ++i) {
     ssum[i] = (int64)i * (i + 1) / 2 - 1;
     const int64 t = n / i;
     lsum[i] = t * (t + 1) / 2 - 1;
   }
 
-  for (int64 p = 2; p <= v; ++p)
-  {
-    if (ssum[p] == ssum[p-1])
-    {
+  for (int64 p = 2; p <= v; ++p) {
+    if (ssum[p] == ssum[p - 1]) {
       continue;
     }
-    const int64 psum = ssum[p-1];
+    const int64 psum = ssum[p - 1];
     const int64 q = p * p;
     const int64 end = min(v, n / q);
-    for (int i = 1; i <= end; ++i)
-    {
+    for (int i = 1; i <= end; ++i) {
       const int64 d = i * p;
-      if (d <= v)
-      {
+      if (d <= v) {
         lsum[i] -= (lsum[d] - psum) * p;
-      }
-      else
-      {
+      } else {
         const int64 t = n / d;
         lsum[i] -= (ssum[t] - psum) * p;
       }
     }
-    for (int64 i = v; i >= q; --i)
-    {
+    for (int64 i = v; i >= q; --i) {
       const int64 t = i / p;
       ssum[i] -= (ssum[t] - psum) * p;
     }
@@ -437,18 +371,16 @@ SL tuple<vector<int64>, vector<int64>> prime_sum(const int64 n)
 }
 
 SL tuple<vector<int64>, vector<int64>, vector<int64>, vector<int64>>
-prime_pi_sum(const int64 n)
-{
+prime_pi_sum(const int64 n) {
   PE_ASSERT(n >= 1);
   const int64 v = static_cast<int64>(sqrt(n));
 
-  vector<int64> scnt(v+1);
-  vector<int64> lcnt(v+1);
-  vector<int64> ssum(v+1);
-  vector<int64> lsum(v+1);
+  vector<int64> scnt(v + 1);
+  vector<int64> lcnt(v + 1);
+  vector<int64> ssum(v + 1);
+  vector<int64> lsum(v + 1);
 
-  for (int i = 1; i <= v; ++i)
-  {
+  for (int i = 1; i <= v; ++i) {
     scnt[i] = i - 1;
     lcnt[i] = n / i - 1;
     ssum[i] = (int64)i * (i + 1) / 2 - 1;
@@ -456,49 +388,41 @@ prime_pi_sum(const int64 n)
     lsum[i] = t * (t + 1) / 2 - 1;
   }
 
-  for (int64 p = 2; p <= v; ++p)
-  {
-    if (scnt[p] == scnt[p-1])
-    {
+  for (int64 p = 2; p <= v; ++p) {
+    if (scnt[p] == scnt[p - 1]) {
       continue;
     }
-    const int64 pcnt = scnt[p-1];
-    const int64 psum = ssum[p-1];
+    const int64 pcnt = scnt[p - 1];
+    const int64 psum = ssum[p - 1];
     const int64 q = p * p;
     const int64 end = min(v, n / q);
-    for (int i = 1; i <= end; ++i)
-    {
+    for (int i = 1; i <= end; ++i) {
       const int64 d = i * p;
-      if (d <= v)
-      {
+      if (d <= v) {
         lcnt[i] -= lcnt[d] - pcnt;
         lsum[i] -= (lsum[d] - psum) * p;
-      }
-      else
-      {
+      } else {
         const int64 t = n / d;
         lcnt[i] -= scnt[t] - pcnt;
         lsum[i] -= (ssum[t] - psum) * p;
       }
     }
-    for (int64 i = v; i >= q; --i)
-    {
+    for (int64 i = v; i >= q; --i) {
       const int64 t = i / p;
       scnt[i] -= scnt[t] - pcnt;
       ssum[i] -= (ssum[t] - psum) * p;
     }
   }
-  return make_tuple(std::move(scnt), std::move(lcnt), std::move(ssum), std::move(lsum));
+  return make_tuple(std::move(scnt), std::move(lcnt), std::move(ssum),
+                    std::move(lsum));
 }
 #endif
 
-SL void init_inv(int64* dest, int64 n, int64 mod)
-{
+SL void init_inv(int64* dest, int64 n, int64 mod) {
   PE_ASSERT(n <= mod && n >= 2);
   dest[0] = 0;
   dest[1] = 1;
-  for (int i = 2; i < n; ++i)
-  {
+  for (int i = 2; i < n; ++i) {
     const int64 t = mod / i;
     const int64 k = mod % i;
     const int64 v = t * t % mod;
@@ -507,27 +431,23 @@ SL void init_inv(int64* dest, int64 n, int64 mod)
   }
 }
 
-SL void init_inv(int* dest, int n, int mod)
-{
+SL void init_inv(int* dest, int n, int mod) {
   PE_ASSERT(n <= mod && n >= 2);
   dest[0] = 0;
   dest[1] = 1;
-  for (int i = 2; i < n; ++i)
-  {
+  for (int i = 2; i < n; ++i) {
     const int t = mod / i;
     const int k = mod % i;
-    const int v = (int64) t * t % mod;
+    const int v = (int64)t * t % mod;
     const int u = (int64)dest[k] * dest[k] % mod;
     dest[i] = (int64)i * v % mod * (int64)u % mod;
   }
 }
 
-SL int64 square_root_safe(int64 n)
-{
+SL int64 square_root_safe(int64 n) {
   if (n <= 0) return 0;
   if (n == 1) return 1;
-  for (int64 test = static_cast<int64>(sqrt(n));; ++test)
-  {
+  for (int64 test = static_cast<int64>(sqrt(n));; ++test) {
     const int64 t = test * test;
     if (t == n) return test;
     if (t > n) return 0;
@@ -535,65 +455,53 @@ SL int64 square_root_safe(int64 n)
   return 0;
 }
 
-SL int64 square_root_unsafe(int64 n)
-{
+SL int64 square_root_unsafe(int64 n) {
   if (n <= 0) return 0;
   if (n == 1) return 1;
   int64 ret = static_cast<int64>(sqrt(n));
   return ret * ret == n ? ret : 0;
 }
 
-SL int64 square_root(int64 n)
-{
+SL int64 square_root(int64 n) {
   if (n <= 0) return 0;
   if (n == 1) return 1;
-  // see Donald L. Graham, Donald E. Knuth, Oren Patashnik, CONCRETE MATHEMATICS, pp 70-72
-  int64 ret = static_cast<int64>(sqrt(n+0.5));
+  // see Donald L. Graham, Donald E. Knuth, Oren Patashnik, CONCRETE
+  // MATHEMATICS, pp 70-72
+  int64 ret = static_cast<int64>(sqrt(n + 0.5));
   return ret * ret == n ? ret : 0;
 }
 
 // p is prime
-SL int64 inv_of(int64 x, int64 p)
-{
-  return power_mod(x, p-2, p);
-}
+SL int64 inv_of(int64 x, int64 p) { return power_mod(x, p - 2, p); }
 
 // calculate C(n, m) % P where P is prime
-template<int64 P, int64 F = P>
-struct comb_moder
-{
+template <int64 P, int64 F = P>
+struct comb_moder {
   static_assert(P <= PE_SOI63, "P <= PE_SOI63");
   static_assert(F > 0, "F > 0");
-  comb_moder()
-  {
-    init();
-  }
-  static int64 inv(int64 x)
-  {
+  comb_moder() { init(); }
+  static int64 inv(int64 x) {
     int64 result = 1;
     int n = P - 2;
     x %= P;
-    for (; n; n >>= 1, x = x * x % P) if (n&1) result = result * x % P;
+    for (; n; n >>= 1, x = x * x % P)
+      if (n & 1) result = result * x % P;
     return result;
   }
   static int64* fac;
-  static void init()
-  {
-    if (fac == NULL)
-    {
+  static void init() {
+    if (fac == NULL) {
       fac = new int64[F];
       fac[0] = 1;
-      for (int i = 1; i < F; ++i) fac[i] = fac[i-1] * i % P;
+      for (int i = 1; i < F; ++i) fac[i] = fac[i - 1] * i % P;
     }
   }
-  static void destroy_fac()
-  {
+  static void destroy_fac() {
     delete[] fac;
     fac = NULL;
   }
-  static int64 s(int64 x) {return x & 1 ? -1 : 1;}
-  static int64 comb(int64 m, int64 n)
-  {
+  static int64 s(int64 x) { return x & 1 ? -1 : 1; }
+  static int64 comb(int64 m, int64 n) {
     PE_ASSERT(fac);
 
     if (m < 0 || n > m) return 0;
@@ -601,32 +509,39 @@ struct comb_moder
     int64 pp = 0;
     int64 dist = m - n;
 
-    for (int64 mm = m/P, nn = n/P, dd = dist/P; mm; mm /= P, nn /= P, dd /= P)
-    {
+    for (int64 mm = m / P, nn = n / P, dd = dist / P; mm;
+         mm /= P, nn /= P, dd /= P) {
       pp += mm - nn - dd;
     }
     if (pp) return 0;
     int64 l = 1, r = 1;
-    for (int64 x = m; x; x /= P) {PE_ASSERT(x%P<F); l = l * s(x/P) * fac[x%P] % P;}
-    for (int64 x = n; x; x /= P) {PE_ASSERT(x%P<F); r = r * s(x/P) * fac[x%P] % P;}
-    for (int64 x = dist; x; x /= P) {PE_ASSERT(x%P<F); r = r * s(x/P) * fac[x%P] % P;}
+    for (int64 x = m; x; x /= P) {
+      PE_ASSERT(x % P < F);
+      l = l * s(x / P) * fac[x % P] % P;
+    }
+    for (int64 x = n; x; x /= P) {
+      PE_ASSERT(x % P < F);
+      r = r * s(x / P) * fac[x % P] % P;
+    }
+    for (int64 x = dist; x; x /= P) {
+      PE_ASSERT(x % P < F);
+      r = r * s(x / P) * fac[x % P] % P;
+    }
     l = (l + P) % P;
     r = (r + P) % P;
-    int64 t  = (inv(r) * l % P + P) % P;
+    int64 t = (inv(r) * l % P + P) % P;
     return t;
   }
 };
-template<int64 P, int64 F>
-int64 * comb_moder<P, F>:: fac;
+template <int64 P, int64 F>
+int64* comb_moder<P, F>::fac;
 
 // greatest common divisor and extend greatest common divisor
 #ifndef COMPILER_GNU
-template<typename _EuclideanRingElement>
-_EuclideanRingElement
-__gcd(_EuclideanRingElement __m, _EuclideanRingElement __n)
-{
-  while (__n != 0)
-  {
+template <typename _EuclideanRingElement>
+_EuclideanRingElement __gcd(_EuclideanRingElement __m,
+                            _EuclideanRingElement __n) {
+  while (__n != 0) {
     _EuclideanRingElement __t = __m % __n;
     __m = __n;
     __n = __t;
@@ -637,17 +552,15 @@ __gcd(_EuclideanRingElement __m, _EuclideanRingElement __n)
 
 #define gcd __gcd
 
-int64 exgcd_impl(int64 a, int64 b, int64& x, int64& y)
-{
-  if (b == 0)
-  {
+int64 exgcd_impl(int64 a, int64 b, int64& x, int64& y) {
+  if (b == 0) {
     x = 1;
     y = 0;
     return a;
   }
 
   int64 x1 = 0, y1 = 0;
-  const int64 ret = exgcd_impl(b, a%b, x1, y1);
+  const int64 ret = exgcd_impl(b, a % b, x1, y1);
   // b * x1 + (a%b) * y1 = ret
   // b * x1 + (a - a / b * b) * y1 = ret
   // b * x1 + a * y1 - a / b * b * y1 = ret
@@ -657,28 +570,25 @@ int64 exgcd_impl(int64 a, int64 b, int64& x, int64& y)
   return ret;
 }
 
-SL int64 exgcd(int64 a, int64 b, int64& x, int64& y)
-{
+SL int64 exgcd(int64 a, int64 b, int64& x, int64& y) {
   PE_ASSERT(a != 0 || b != 0);
   const int64 r = exgcd_impl(a, b, x, y);
-  PE_ASSERT(a*x+b*y==r);
+  PE_ASSERT(a * x + b * y == r);
   return r;
 }
 
-SL tuple<int64, int64, int64> exgcd(int64 a, int64 b)
-{
+SL tuple<int64, int64, int64> exgcd(int64 a, int64 b) {
   PE_ASSERT(a != 0 || b != 0);
   int64 x = 0, y = 0;
   const int64 r = exgcd_impl(a, b, x, y);
-  PE_ASSERT(a*x+b*y==r);
+  PE_ASSERT(a * x + b * y == r);
   return tuple<int64, int64, int64>{r, x, y};
 }
 
 // solve equation a x = b (mod m)
 // return 0 and set u = -1 and v = 0 if failed
 // return 1, x = v (mod u)
-SL int solve_linear_equation(int64 a, int64 b, int64 m, int64& v, int64& u)
-{
+SL int solve_linear_equation(int64 a, int64 b, int64 m, int64& v, int64& u) {
   v = 0;
   u = 0;
 
@@ -710,8 +620,7 @@ SL int solve_linear_equation(int64 a, int64 b, int64 m, int64& v, int64& u)
 // solve equation x = a (mod m1) x = b (mod m2)
 // return 0 and set u = 0 and t = 0 if failed
 // return 1, x = v (mod u)
-SL int crt2(int64 a, int64 m1, int64 b, int64 m2, int64& v, int64& u)
-{
+SL int crt2(int64 a, int64 m1, int64 b, int64 m2, int64& v, int64& u) {
   v = 0;
   u = 0;
 
@@ -729,7 +638,7 @@ SL int crt2(int64 a, int64 m1, int64 b, int64 m2, int64& v, int64& u)
   if (b < 0) b = -b;
 
   int64 s = 0, t = 0;
-  if (!solve_linear_equation(m1, b-a, m2, t, s)) return 0;
+  if (!solve_linear_equation(m1, b - a, m2, t, s)) return 0;
   // k0 = k1 * s + t
   // x = (k1 * s + t) * m1 + a
   // x = k1 * s * m1 + (a + t * m1)
@@ -739,23 +648,19 @@ SL int crt2(int64 a, int64 m1, int64 b, int64 m2, int64& v, int64& u)
   return 1;
 }
 
-SL tuple<int, int64, int64> crt2(int64 a, int64 m1, int64 b, int64 m2)
-{
+SL tuple<int, int64, int64> crt2(int64 a, int64 m1, int64 b, int64 m2) {
   int64 v = 0, u = 0;
   int r = crt2(a, m1, b, m2, v, u);
   return tuple<int, int64, int64>{r, v, u};
 }
 
-SL tuple<int, int64, int64> crtn(int64* val, int64* mod, int n)
-{
+SL tuple<int, int64, int64> crtn(int64* val, int64* mod, int n) {
   PE_ASSERT(val != NULL && mod != NULL);
   int64 v = 0, u = 1;
   int have = 1;
-  for (int i = 0; i < n; ++i)
-  {
+  for (int i = 0; i < n; ++i) {
     tie(have, v, u) = crt2(v, u, val[i], mod[i]);
-    if (!have)
-    {
+    if (!have) {
       return tuple<int, int64, int64>{0, 0, 0};
     }
   }
@@ -764,46 +669,39 @@ SL tuple<int, int64, int64> crtn(int64* val, int64* mod, int n)
 
 // prime test for n <= 2^63 - 1
 // http://oeis.org/A014233
-const int64 sopp[] =
-{
-2047LL,                         // 2
-1373653LL,                      // 3
-25326001LL,                     // 5
-3215031751LL,                   // 7
-2152302898747LL,                // 11
-3474749660383LL,                // 13
-341550071728321LL,              // 17
-341550071728321LL,              // 19
-3825123056546413051LL,          // 23
-3825123056546413051LL,          // 29
-3825123056546413051LL,          // 31
-// bigger than 2^64             // 37
-// 2^63 = 9223372036854775808   //
+const int64 sopp[] = {
+    2047LL,                 // 2
+    1373653LL,              // 3
+    25326001LL,             // 5
+    3215031751LL,           // 7
+    2152302898747LL,        // 11
+    3474749660383LL,        // 13
+    341550071728321LL,      // 17
+    341550071728321LL,      // 19
+    3825123056546413051LL,  // 23
+    3825123056546413051LL,  // 29
+    3825123056546413051LL,  // 31
+                            // bigger than 2^64             // 37
+                            // 2^63 = 9223372036854775808   //
 };
 const int64 sopp_size = sizeof(sopp) / sizeof(sopp[0]);
 
-SL int MR_test_impl(int s, int64 t, int64 n, int x)
-{
+SL int MR_test_impl(int s, int64 t, int64 n, int x) {
   // PE_ASSERT((n&1) == 0)
 
-  if (n <= PE_SOI63)
-  {
+  if (n <= PE_SOI63) {
     t = power_mod(x, t, n);
     if (t == 1 || t == n - 1) return 1;
 
-    for (int i = 1; i < s; ++i)
-    {
+    for (int i = 1; i < s; ++i) {
       t = mul_mod(t, t, n);
       if (t == n - 1) return 1;
     }
-  }
-  else
-  {
+  } else {
     t = power_mod_ex(x, t, n);
     if (t == 1 || t == n - 1) return 1;
 
-    for (int i = 1; i < s; ++i)
-    {
+    for (int i = 1; i < s; ++i) {
       t = mul_mod_ex(t, t, n);
       if (t == n - 1) return 1;
     }
@@ -811,34 +709,31 @@ SL int MR_test_impl(int s, int64 t, int64 n, int x)
   return 0;
 }
 
-SL int MR_test(int64 n, int x)
-{
+SL int MR_test(int64 n, int x) {
   if (n <= 1) return 0;
-  if ((n&1) == 0) return 0;
+  if ((n & 1) == 0) return 0;
 
   int s = 0;
   int64 t = n - 1;
-  while ((t&1) == 0) ++s, t >>= 1;
+  while ((t & 1) == 0) ++s, t >>= 1;
 
   return MR_test_impl(s, t, n, x);
 }
 
-SL int is_prime_ex(int64 n)
-{
+SL int is_prime_ex(int64 n) {
   if (n <= 1) return 0;
   if (n == 2) return 1;
-  if ((n&1) == 0) return 0;
+  if ((n & 1) == 0) return 0;
   if (n <= maxp) return pmask[n] == n;
 
   for (int i = 1; i < 20; ++i)
-  if (n % plist[i] == 0) return 0;
+    if (n % plist[i] == 0) return 0;
 
   int s = 0;
   int64 t = n - 1;
-  while ((t&1) == 0) ++s, t >>= 1;
+  while ((t & 1) == 0) ++s, t >>= 1;
 
-  for (int i = 0; i < sopp_size; ++i)
-  {
+  for (int i = 0; i < sopp_size; ++i) {
     const int64 val = sopp[i];
     if (n == val) return 0;
     if (!MR_test_impl(s, t, n, plist[i])) return 0;
@@ -852,23 +747,33 @@ SL int is_prime_ex(int64 n)
 // We assume RAND_MAX is either 32767 or 2147483647
 #if RAND_MAX == 32767
 
-SL int crandbit() {return rand()&1;}
-SL int crand15() {return rand();}
-SL int crand31() {return crand15() << 16 | crand15() << 1 | crandbit();}
-SL int64 crand63(){return (int64)crand31() << 32 | crand31() << 1 | crandbit();}
+SL int crandbit() { return rand() & 1; }
+SL int crand15() { return rand(); }
+SL int crand31() { return crand15() << 16 | crand15() << 1 | crandbit(); }
+SL int64 crand63() {
+  return (int64)crand31() << 32 | crand31() << 1 | crandbit();
+}
 
-SL int crandi() {return crand31();}
-SL double crandd() {static const double coe = 1. / (RAND_MAX + 1); return coe * rand();}
+SL int crandi() { return crand31(); }
+SL double crandd() {
+  static const double coe = 1. / (RAND_MAX + 1);
+  return coe * rand();
+}
 
 #elif RAND_MAX == 2147483647
 
-SL int crandbit() {return rand()&1;}
-SL int crand15() {return rand() & 32767;}
-SL int crand31() {return rand();}
-SL int64 crand63(){return (int64)crand31() << 32 | crand31() << 1 | crandbit();}
+SL int crandbit() { return rand() & 1; }
+SL int crand15() { return rand() & 32767; }
+SL int crand31() { return rand(); }
+SL int64 crand63() {
+  return (int64)crand31() << 32 | crand31() << 1 | crandbit();
+}
 
-SL int crandi() {return crand31();}
-SL double crandd() {static const double coe = 1. / ((int64)RAND_MAX + 1LL); return coe * rand();}
+SL int crandi() { return crand31(); }
+SL double crandd() {
+  static const double coe = 1. / ((int64)RAND_MAX + 1LL);
+  return coe * rand();
+}
 
 #else
 
@@ -877,98 +782,81 @@ SL double crandd() {static const double coe = 1. / ((int64)RAND_MAX + 1LL); retu
 #endif
 
 // C++ style random number generator
-template<typename RE, typename DS>
-class RandomGenerator
-{
-public:
-  RandomGenerator(const RE& engine, const DS& distribution) :
-      random_engine_(engine), distribution_(distribution){}
-  int operator ()()
-  {
-      return distribution_(random_engine_);
-  }
-private:
+template <typename RE, typename DS>
+class RandomGenerator {
+ public:
+  RandomGenerator(const RE& engine, const DS& distribution)
+      : random_engine_(engine), distribution_(distribution) {}
+  int operator()() { return distribution_(random_engine_); }
+
+ private:
   RE random_engine_;
   DS distribution_;
 };
 
-RandomGenerator<std::mt19937, uniform_int_distribution<int> >
-make_uniform_generator(int seed, int min, int max)
-{
+RandomGenerator<std::mt19937, uniform_int_distribution<int>>
+make_uniform_generator(int seed, int min, int max) {
   PE_ASSERT(min <= max);
-  return RandomGenerator<std::mt19937, uniform_int_distribution<int> >
-      (std::mt19937(seed), std::uniform_int_distribution<int>(min, max));
+  return RandomGenerator<std::mt19937, uniform_int_distribution<int>>(
+      std::mt19937(seed), std::uniform_int_distribution<int>(min, max));
 }
 
-RandomGenerator<std::mt19937, uniform_int_distribution<int> >
-make_uniform_generator(int min, int max)
-{
+RandomGenerator<std::mt19937, uniform_int_distribution<int>>
+make_uniform_generator(int min, int max) {
   std::random_device rd;
   PE_ASSERT(min <= max);
-  return RandomGenerator<std::mt19937, uniform_int_distribution<int> >
-      (std::mt19937(rd()), std::uniform_int_distribution<int>(min, max));
+  return RandomGenerator<std::mt19937, uniform_int_distribution<int>>(
+      std::mt19937(rd()), std::uniform_int_distribution<int>(min, max));
 }
 
 // Primitive Root
-namespace pr{
+namespace pr {
 
 /*
   test, find the primitive of a prime
 */
-SL bool is_pr(int64 x, int64 p, const vector<pair<int64, int> >& f)
-{
+SL bool is_pr(int64 x, int64 p, const vector<pair<int64, int>>& f) {
   return std::none_of(std::begin(f), std::end(f),
-    [=](const pair<int64, int>& it)
-    {
-      return power_mod(x, (p-1)/it.first, p) == 1;
-    }
-  );
+                      [=](const pair<int64, int>& it) {
+                        return power_mod(x, (p - 1) / it.first, p) == 1;
+                      });
 }
 
-SL bool is_pr(int64 x, int64 p)
-{
-  return is_pr(x, p, factorize(p-1));
-}
+SL bool is_pr(int64 x, int64 p) { return is_pr(x, p, factorize(p - 1)); }
 
-SL int64 find_pr(int64 p)
-{
+SL int64 find_pr(int64 p) {
   if (p <= 1) return -1;
   if (p == 2) return 1;
-  auto fp1 = factorize(p-1);
-  for (int64 i = 2; ; ++i)
-  if (is_pr(i, p, fp1)) return i;
+  auto fp1 = factorize(p - 1);
+  for (int64 i = 2;; ++i)
+    if (is_pr(i, p, fp1)) return i;
   return -1;
 }
 
-SL int64 find_pr(int64 p, const vector<pair<int64, int> >& fp1)
-{
+SL int64 find_pr(int64 p, const vector<pair<int64, int>>& fp1) {
   if (p <= 1) return -1;
   if (p == 2) return 1;
-  for (int64 i = 2; ; ++i)
-  if (is_pr(i, p, fp1)) return i;
+  for (int64 i = 2;; ++i)
+    if (is_pr(i, p, fp1)) return i;
   return -1;
 }
 
-SL int64 ind(int64 a, int64 pr, int64 p)
-{
+SL int64 ind(int64 a, int64 pr, int64 p) {
   typedef unordered_map<int64, int> map_t;
   PE_ASSERT(a > 0);
   int64 inv_pr = inv_of(pr, p);
-  int64 mx = static_cast<int64>(sqrt(double(p-1)+0.5));
+  int64 mx = static_cast<int64>(sqrt(double(p - 1) + 0.5));
   if (mx * mx != p - 1) ++mx;
   map_t mem;
   int64 t1 = 1, t2 = a;
-  for (unsigned int i = 0; i <= mx - 1; ++i)
-  {
+  for (unsigned int i = 0; i <= mx - 1; ++i) {
     mem[t2] = i;
     t2 = t2 * inv_pr % p;
   }
   int64 temp = power_mod(pr, mx, p);
-  for (unsigned int i = 0; i <= mx - 1; ++i)
-  {
+  for (unsigned int i = 0; i <= mx - 1; ++i) {
     auto where = mem.find(t1);
-    if (where != mem.end())
-    {
+    if (where != mem.end()) {
       return i * mx + where->second;
     }
     t1 = t1 * temp % p;
@@ -976,34 +864,27 @@ SL int64 ind(int64 a, int64 pr, int64 p)
   return -1;
 }
 
-class ind_solver
-{
+class ind_solver {
   typedef unordered_map<int64, int> map_t;
-  static int64 square_root_for_ind(int64 x)
-  {
+  static int64 square_root_for_ind(int64 x) {
     int64 ret = static_cast<int64>(sqrt(double(x)));
     if (ret * ret < x) ++ret;
     PE_ASSERT(ret * ret >= x);
     return ret;
   }
 
-public:
-  ind_solver(const int64 p, int64 pr = -1) :
-    p_(p),
-    pr_(pr < 0 ? find_pr(p) : pr),
-    mx_(square_root_for_ind(p_-1))
-  {
+ public:
+  ind_solver(const int64 p, int64 pr = -1)
+      : p_(p), pr_(pr < 0 ? find_pr(p) : pr), mx_(square_root_for_ind(p_ - 1)) {
     const int64 inv_pr = inv_of(pr_, p);
     int64 t = 1;
-    for (int i = 0; i <= mx_ - 1; ++i)
-    {
+    for (int i = 0; i <= mx_ - 1; ++i) {
       mem_[t] = i;
       t = t * inv_pr % p_;
     }
   }
 
-  int64 operator () (int64 a) const
-  {
+  int64 operator()(int64 a) const {
     PE_ASSERT(a > 0);
     a %= p_;
 
@@ -1011,11 +892,9 @@ public:
     const int64 inv_a = inv_of(a, p_);
     int64 t = 1;
 
-    for (int i = 0; i <= mx_ - 1; ++i)
-    {
+    for (int i = 0; i <= mx_ - 1; ++i) {
       auto where = mem_.find(mul_mod(t, inv_a, p_));
-      if (where != mem_.end())
-      {
+      if (where != mem_.end()) {
         return i * mx_ + where->second;
       }
       t = t * temp % p_;
@@ -1024,67 +903,46 @@ public:
     return -1;
   }
 
-  int64 pr() const
-  {
-    return pr_;
-  }
+  int64 pr() const { return pr_; }
 
-private:
+ private:
   const int64 p_;
   const int64 pr_;
   const int64 mx_;
   map_t mem_;
 };
-}
+}  // namespace pr
 
-template<typename T>
-struct Fraction
-{
-  Fraction(T u = 0, T v = 1) : a(u), b(v)
-  {
+template <typename T>
+struct Fraction {
+  Fraction(T u = 0, T v = 1) : a(u), b(v) {
     T d = __gcd(abs(a), abs(b));
     if (d > 1) a /= d, b /= d;
     if (b < 0) b = -b, a = -a;
   }
-  int operator < (const Fraction& o) const
-  {
-    return a * o.b < b * o.a;
-  }
-  int operator > (const Fraction& o) const
-  {
-    return a * o.b > b * o.a;
-  }
-  int operator == (const Fraction& o) const
-  {
-    return a * o.b == b * o.a;
-  }
-  Fraction operator + (const Fraction& o) const
-  {
+  int operator<(const Fraction& o) const { return a * o.b < b * o.a; }
+  int operator>(const Fraction& o) const { return a * o.b > b * o.a; }
+  int operator==(const Fraction& o) const { return a * o.b == b * o.a; }
+  Fraction operator+(const Fraction& o) const {
     return Fraction(a * o.b + o.a * b, b * o.b);
   }
-  Fraction operator - (const Fraction& o) const
-  {
+  Fraction operator-(const Fraction& o) const {
     return Fraction(a * o.b - o.a * b, b * o.b);
   }
-  Fraction operator * (const Fraction& o) const
-  {
+  Fraction operator*(const Fraction& o) const {
     return Fraction(a * o.a, b * o.b);
   }
-  Fraction operator / (const Fraction& o) const
-  {
+  Fraction operator/(const Fraction& o) const {
     return Fraction(a * o.b, b * o.a);
   }
-  double ToFloat()
-  {
-    return 1. * a / b;
-  }
+  double ToFloat() { return 1. * a / b; }
   T a, b;
 };
 
 // find the coefficient fof x^0..x^n of f such that: A*f = B
 // return empty vector if there is no integer solution.
-SL vector<int64> gf_first(const vector<int64>& A, const vector<int64>& B, const int n, const int64 mod)
-{
+SL vector<int64> gf_first(const vector<int64>& A, const vector<int64>& B,
+                          const int n, const int64 mod) {
   const int sa = sz(A);
   const int sb = sz(B);
   PE_ASSERT(sa > 0);
@@ -1101,12 +959,10 @@ SL vector<int64> gf_first(const vector<int64>& A, const vector<int64>& B, const 
   const int64 invA0 = v;
   result[0] = invA0 * B[0] % mod;
 
-  for (int i = 1; i <= n; ++i)
-  {
+  for (int i = 1; i <= n; ++i) {
     int64 t = regulate_mod(i < sb ? B[i] : 0, mod);
-    for (int j = 1; j <= min(i, sa-1); ++j)
-    {
-      t = sub_mod(t, (j < sa ? A[j] : 0) * result[i-j] % mod, mod);
+    for (int j = 1; j <= min(i, sa - 1); ++j) {
+      t = sub_mod(t, (j < sa ? A[j] : 0) * result[i - j] % mod, mod);
     }
     result[i] = invA0 * t % mod;
   }
@@ -1116,8 +972,8 @@ SL vector<int64> gf_first(const vector<int64>& A, const vector<int64>& B, const 
 
 // find the coefficient of x^n of f such that: A*f = B
 // return -1 if there is no integer solution.
-SL int64 gf_at(const vector<int64>& A, const vector<int64>& B, const int64 n, const int64 mod)
-{
+SL int64 gf_at(const vector<int64>& A, const vector<int64>& B, const int64 n,
+               const int64 mod) {
   const int sa = sz(A);
   const int sb = sz(B);
   PE_ASSERT(sa > 0);
@@ -1127,7 +983,7 @@ SL int64 gf_at(const vector<int64>& A, const vector<int64>& B, const int64 n, co
   int has = solve_linear_equation(A[0], 1, mod, v, u);
   if (!has) return -1;
 
-  const int64 m = min((int64)max(sa-1, sb-1), n);
+  const int64 m = min((int64)max(sa - 1, sb - 1), n);
   vector<int64> result(m + 1, 0);
 
   // if u < mod, we have more than one solution.
@@ -1135,216 +991,179 @@ SL int64 gf_at(const vector<int64>& A, const vector<int64>& B, const int64 n, co
   const int64 invA0 = v;
   result[0] = invA0 * B[0] % mod;
 
-  for (int i = 1; i <= m; ++i)
-  {
+  for (int i = 1; i <= m; ++i) {
     int64 t = regulate_mod(i < sb ? B[i] : 0, mod);
-    for (int j = 1; j <= min(i, sa-1); ++j)
-    {
-      t = sub_mod(t, (j < sa ? A[j] : 0) * result[i-j] % mod, mod);
+    for (int j = 1; j <= min(i, sa - 1); ++j) {
+      t = sub_mod(t, (j < sa ? A[j] : 0) * result[i - j] % mod, mod);
     }
     result[i] = invA0 * t % mod;
   }
 
-  if (m == n)
-  {
+  if (m == n) {
     return result[m];
   }
 
   const int64 D = m + 1;
   const int64 size = D * D;
-  string data(size * sizeof(int64) * 3 , '\0');
+  string data(size * sizeof(int64) * 3, '\0');
   int64* buffer = (int64*)data.c_str();
 
   int64* mat = buffer;
   int64* res = mat + size;
   int64* tmp = res + size;
 
-  for (int i = 0; i < m; ++i)
-  {
-    mat[i] = invA0 * regulate_mod(i + 1 < sa ? -A[i+1] : 0, mod) % mod;
+  for (int i = 0; i < m; ++i) {
+    mat[i] = invA0 * regulate_mod(i + 1 < sa ? -A[i + 1] : 0, mod) % mod;
   }
-  for (int i = 1; i <= m; ++i)
-  {
-    (mat + i * D)[i-1] = 1;
+  for (int i = 1; i <= m; ++i) {
+    (mat + i * D)[i - 1] = 1;
   }
-  for (int i = 0; i <= m; ++i)
-  {
-    res[i] = result[m-i];
+  for (int i = 0; i <= m; ++i) {
+    res[i] = result[m - i];
   }
 
-  for (int64 t = n - m; t > 0; t >>= 1)
-  {
-    if (t&1) mat_mul_vec_mod(mat, res, tmp, mod, static_cast<int>(D)), swap(res, tmp);
+  for (int64 t = n - m; t > 0; t >>= 1) {
+    if (t & 1)
+      mat_mul_vec_mod(mat, res, tmp, mod, static_cast<int>(D)), swap(res, tmp);
     mat_mul_mat_mod(mat, mat, tmp, mod, static_cast<int>(D)), swap(mat, tmp);
   }
   return res[0];
 }
 
-template<int64 P>
-struct Poly
-{
+template <int64 P>
+struct Poly {
   std::vector<int64> data;
 
-  Poly(){}
+  Poly() {}
 
-  Poly(const std::vector<int64>& data): data(data)
-  {
+  Poly(const std::vector<int64>& data) : data(data) {
     adjust_leading_zeros().adjust_mod();
   }
 
-  Poly(std::vector<int64>&& data): data(std::move(data))
-  {
+  Poly(std::vector<int64>&& data) : data(std::move(data)) {
     adjust_leading_zeros().adjust_mod();
   }
 
-  Poly(std::initializer_list<int64> l) : data(l)
-  {
+  Poly(std::initializer_list<int64> l) : data(l) {
     adjust_leading_zeros().adjust_mod();
   }
 
   Poly(const Poly& p) = default;
   Poly(Poly&& p) = default;
-  Poly<P>& operator = (const Poly& other) = default;
-  Poly<P>& operator = (Poly&& other) = default;
-  
-  Poly<P>& adjust_leading_zeros()
-  {
+  Poly<P>& operator=(const Poly& other) = default;
+  Poly<P>& operator=(Poly&& other) = default;
+
+  Poly<P>& adjust_leading_zeros() {
     int n = data.size() - 1;
     while (n >= 0 && data[n] == 0) --n;
-    data.resize(max(n+1, 1));
+    data.resize(max(n + 1, 1));
     return *this;
   }
-  
-  Poly<P>& adjust_mod()
-  {
-    for (auto& iter: data)
-    {
+
+  Poly<P>& adjust_mod() {
+    for (auto& iter : data) {
       iter = regulate_mod(iter, P);
     }
     return *this;
   }
-  
-  int deg() const
-  {
-    return static_cast<int>(data.size() - 1);
-  }
 
-  int64& operator [] (int idx)
-  {
+  int deg() const { return static_cast<int>(data.size() - 1); }
+
+  int64& operator[](int idx) {
     PE_ASSERT(idx >= 0 && idx < data.size());
     return data[idx];
   }
 
-  int64 operator [] (int idx) const
-  {
+  int64 operator[](int idx) const {
     PE_ASSERT(idx >= 0 && idx < data.size());
     return data[idx];
   }
 
-  int64 at(int idx) const
-  {
+  int64 at(int idx) const {
     return idx >= 0 && idx < data.size() ? data[idx] : 0;
   }
 
-  Poly<P> operator << (int m) const
-  {
-    if (m == 0)
-    {
+  Poly<P> operator<<(int m) const {
+    if (m == 0) {
       return *this;
     }
     std::vector<int64> new_data(data.size() + m);
-    for (int i = static_cast<int>(data.size()) + m - 1; i >= m; --i)
-    {
-      new_data[i] = data[i-m];
+    for (int i = static_cast<int>(data.size()) + m - 1; i >= m; --i) {
+      new_data[i] = data[i - m];
     }
-    for (int i = 0; i < m; ++i)
-    {
+    for (int i = 0; i < m; ++i) {
       new_data[i] = 0;
     }
     return Poly<P>(std::move(new_data));
   }
 
-  Poly<P> lower_terms(int n) const
-  {
+  Poly<P> lower_terms(int n) const {
     int m = min(n, static_cast<int>(data.size()));
-    return Poly<P>(std::vector<int64>(data.begin(), data.begin()+m));
+    return Poly<P>(std::vector<int64>(data.begin(), data.begin() + m));
   }
 };
 
-template<int64 P>
-Poly<P> operator - (const Poly<P>& x, const Poly<P>& y)
-{
+template <int64 P>
+Poly<P> operator-(const Poly<P>& x, const Poly<P>& y) {
   int n = max(x.deg(), y.deg());
-  std::vector<int64> data(n+1);
-  for (int i = 0; i <= n; ++i)
-  {
+  std::vector<int64> data(n + 1);
+  for (int i = 0; i <= n; ++i) {
     data[i] = sub_mod(x.at(i), y.at(i), P);
   }
   return Poly<P>(std::move(data)).adjust_leading_zeros();
 }
 
-template<int64 P>
-Poly<P> operator + (const Poly<P>& x, const Poly<P>& y)
-{
+template <int64 P>
+Poly<P> operator+(const Poly<P>& x, const Poly<P>& y) {
   const int n = max(x.deg(), y.deg());
-  std::vector<int64> data(n+1);
-  for (int i = 0; i <= n; ++i)
-  {
+  std::vector<int64> data(n + 1);
+  for (int i = 0; i <= n; ++i) {
     data[i] = add_mod(x.at(i), y.at(i), P);
   }
   return Poly<P>(std::move(data)).adjust_leading_zeros();
 }
 
-template<int64 P>
-Poly<P> operator * (const Poly<P>& x, int64 v)
-{
+template <int64 P>
+Poly<P> operator*(const Poly<P>& x, int64 v) {
   std::vector<int64> data(x.data);
-  for (auto& iter: data)
-  {
+  for (auto& iter : data) {
     iter = iter * v % P;
   }
   return Poly<P>(std::move(data));
 }
 
-template<int64 P>
-Poly<P> operator * (const Poly<P>& x, const Poly<P>& y)
-{
+template <int64 P>
+Poly<P> operator*(const Poly<P>& x, const Poly<P>& y) {
   const int n = x.deg();
   const int m = y.deg();
   std::vector<int64> data(n + m + 1, 0);
   for (int i = 0; i <= n; ++i)
-    for (int j = 0; j <= m; ++j)
-    {
+    for (int j = 0; j <= m; ++j) {
       int64 t = x[i] * y[j] % P;
-      data[i+j] = add_mod(data[i+j], t, P);
+      data[i + j] = add_mod(data[i + j], t, P);
     }
   return Poly<P>(std::move(data));
 }
 
-template<int64 P>
-Poly<P> operator * (int64 v, const Poly<P>& x)
-{
+template <int64 P>
+Poly<P> operator*(int64 v, const Poly<P>& x) {
   return x * v;
 }
 
-template<int64 P>
-tuple<Poly<P>, Poly<P>> operator / (const Poly<P>& x, const Poly<P>& y)
-{
+template <int64 P>
+tuple<Poly<P>, Poly<P>> operator/(const Poly<P>& x, const Poly<P>& y) {
   const int d1 = x.deg();
   const int d2 = y.deg();
-  if (d1 < d2)
-  {
+  if (d1 < d2) {
     make_tuple(Poly<P>{0}, x);
   }
 
   Poly<P> R(x);
   std::vector<int64> q;
   int64 t = inv_of(y[d2], P);
-  for (int i = d1; i >= d2; --i)
-  {
+  for (int i = d1; i >= d2; --i) {
     int64 u = R[i] * t % P;
-    for (int j = i, k = d2; k >= 0; --j, --k)
-    {
+    for (int j = i, k = d2; k >= 0; --j, --k) {
       R[j] = sub_mod(R[j], u * y[k] % P, P);
     }
     q.push_back(u);
@@ -1353,15 +1172,12 @@ tuple<Poly<P>, Poly<P>> operator / (const Poly<P>& x, const Poly<P>& y)
   return make_tuple(std::move(Poly<P>(q)), std::move(R.adjust_leading_zeros()));
 }
 
-template<int64 P>
-Poly<P> operator % (int64 n, Poly<P> mod)
-{
+template <int64 P>
+Poly<P> operator%(int64 n, Poly<P> mod) {
   Poly<P> x{0, 1};
   Poly<P> ret{1};
-  for (; n > 0; n >>= 1)
-  {
-    if (n & 1)
-    {
+  for (; n > 0; n >>= 1) {
+    if (n & 1) {
       auto t = x * ret;
       Poly<P> q, r;
       tie(q, r) = t / mod;
@@ -1375,33 +1191,30 @@ Poly<P> operator % (int64 n, Poly<P> mod)
   return ret;
 }
 
-template<int64 P>
-ostream& operator << (ostream& o, const Poly<P>& p)
-{
+template <int64 P>
+ostream& operator<<(ostream& o, const Poly<P>& p) {
   const int n = p.data.size();
-  for (int i = 0; i < n - 1; ++i)
-  {
+  for (int i = 0; i < n - 1; ++i) {
     o << p.data[i] << ", ";
   }
-  return o << p.data[n-1];
+  return o << p.data[n - 1];
 }
 
 // Berlekamp Massey
-template<int64 P>
-Poly<P> find_minimal_poly(const Poly<P>& s)
-{
+template <int64 P>
+Poly<P> find_minimal_poly(const Poly<P>& s) {
   const int m = s.data.size();
   const int n = m >> 1;
-  
-  PE_ASSERT(n*2==m);
-  
-  Poly<P> r0{1}; r0 = r0 << m;
+
+  PE_ASSERT(n * 2 == m);
+
+  Poly<P> r0{1};
+  r0 = r0 << m;
   Poly<P> r1{s};
   Poly<P> v0{0};
   Poly<P> v1{1};
 
-  while (n + 1 <= r1.deg())
-  {
+  while (n + 1 <= r1.deg()) {
     Poly<P> q, r;
     tie(q, r) = r0 / r1;
     Poly<P> v(v0 - q * v1);
@@ -1415,89 +1228,72 @@ Poly<P> find_minimal_poly(const Poly<P>& s)
   return v1;
 }
 
-template<int64 P>
-int64 nth_element(const Poly<P>& s, int64 n, const Poly<P>& min_poly)
-{
-  if (n <= s.deg())
-  {
+template <int64 P>
+int64 nth_element(const Poly<P>& s, int64 n, const Poly<P>& min_poly) {
+  if (n <= s.deg()) {
     return s[n];
   }
 
   auto r = n % min_poly;
   const int m = r.deg();
   int64 ans = 0;
-  for (int i = 0; i <= m; ++i)
-  {
+  for (int i = 0; i <= m; ++i) {
     ans = add_mod(ans, s[i] * r[i] % P, P);
   }
   return ans;
 }
 
-template<int64 P>
-Poly<P> find_linear_recurrence(const Poly<P>& s)
-{
+template <int64 P>
+Poly<P> find_linear_recurrence(const Poly<P>& s) {
   const int len = s.data.size();
-  for (int n = 2; n < len; n += 2)
-  {
+  for (int n = 2; n < len; n += 2) {
     auto use = s.lower_terms(n);
     auto min_poly = find_minimal_poly(use);
     int ok = 1;
-    for (int i = n; i < len; ++i)
-    {
+    for (int i = n; i < len; ++i) {
       auto value = nth_element(use, i, min_poly);
-      if (value != s[i])
-      {
+      if (value != s[i]) {
         ok = 0;
         break;
       }
     }
-    if (ok)
-    {
+    if (ok) {
       return min_poly;
     }
   }
   return Poly<P>();
 }
 
-template<int64 P>
-int64 nth_element(const Poly<P>& s, int64 n)
-{
-  if (n <= s.deg())
-  {
+template <int64 P>
+int64 nth_element(const Poly<P>& s, int64 n) {
+  if (n <= s.deg()) {
     return s[n];
   }
 
   auto min_poly = find_linear_recurrence(s);
-  if (min_poly.deg() >= 0)
-  {
+  if (min_poly.deg() >= 0) {
     return nth_element(s, n, min_poly);
   }
   return -1;
 }
 
 #if 0
-template<int64 P>
-Poly<P> cal1(const Poly<P>& s)
-{
+template <int64 P>
+Poly<P> cal1(const Poly<P>& s) {
   Poly<P> C{1};
   Poly<P> B{1};
   int L = 0;
   int m = 1;
   int64 b = 1;
   const int N = s.data.size();
-  for (int n = 0; n < N; ++n)
-  {
+  for (int n = 0; n < N; ++n) {
     int64 d = s[n];
-    for (int i = 1; i <= L; ++i)
-    {
-      d = add_mod(d, add_mod(C.at(i), s[n-i], P), P);
+    for (int i = 1; i <= L; ++i) {
+      d = add_mod(d, add_mod(C.at(i), s[n - i], P), P);
     }
-    if (d == 0)
-    {
+    if (d == 0) {
       ++m;
-    }
-    else if (2 * L <= n)
-    {
+    } else if (2 * L <= n) {
       auto T = C;
       int64 coe = d * inv_of(b, P) % P;
       C = C - (B << m) * coe;
@@ -1505,9 +1301,7 @@ Poly<P> cal1(const Poly<P>& s)
       B = std::move(T);
       b = d;
       m = 1;
-    }
-    else
-    {
+    } else {
       int64 coe = d * inv_of(b, P) % P;
       C = C - (B << m) * coe;
       m = m + 1;

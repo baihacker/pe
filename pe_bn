@@ -177,12 +177,12 @@ typedef int MUL_TYPE;
 #define PRT_FORMAT_STRING "%04d"
 #endif
 
-class BigNumber : protected BigNumberData {
+class BigNumber : public BigNumberData {
   friend inline BigNumber operator+(const BigNumber& l, const BigNumber& r);
   friend inline BigNumber operator-(const BigNumber& l, const BigNumber& r);
   friend inline BigNumber operator*(const BigNumber& l, const BigNumber& r);
   friend inline BigNumber operator/(const BigNumber& l, const BigNumber& r);
-  friend inline BigNumber operator^(const BigNumber& l, int n);
+  friend inline BigNumber operator^(const BigNumber& l, int64 n);
   friend inline BigNumber operator^(const BigNumber& l, BigNumber& r);
   friend inline BigNumber operator%(const BigNumber& l, const BigNumber& r);
   friend inline int operator>(const BigNumber& l, const BigNumber& r);
@@ -623,6 +623,7 @@ class BigNumber : protected BigNumberData {
       return 0;
     }
 
+    remain.SetOwned();
     DataBlock<ElementType> buffer_data(remain.length_ + 5);
 
     remain.ZeroAdjust();
@@ -853,10 +854,13 @@ inline BigNumber operator/(const BigNumber& l, const BigNumber& r) {
   int cmp = BigNumber::AbsCompare(l, r);
 
   if (s == 0 || cmp < 0) {
+    //dbg(s);
+    //dbg(cmp);
     return 0;
   }
 
   if (cmp == 0) {
+    //cerr << "orz " << cmp << endl;
     return 1;
   }
 
@@ -866,7 +870,7 @@ inline BigNumber operator/(const BigNumber& l, const BigNumber& r) {
   return ret;
 }
 
-inline BigNumber operator^(const BigNumber& l, int n) {
+inline BigNumber operator^(const BigNumber& l, int64 n) {
   BigNumber ret(1);
   BigNumber t(l);
 
@@ -874,7 +878,9 @@ inline BigNumber operator^(const BigNumber& l, int n) {
     if (n & 1) {
       ret *= t;
     }
-    t *= t;
+    if (n > 1) {
+      t *= t;
+    }
   }
 
   return ret;
@@ -894,6 +900,15 @@ inline BigNumber operator^(const BigNumber& l, BigNumber& n) {
   return ret;
 }
 
+BigNumber power_mod(const BigNumber& y, const BigNumber& m, const BigNumber& mod) {
+  auto x = y % mod;
+  BigNumber ret = 1;
+  for (BigNumber n = m; !n.IsZero(); n = n / 2) {
+    if (n[0]&1) ret = ret * x % mod;
+    x = x * x % mod;
+  }
+  return ret;
+}
 inline BigNumber operator%(const BigNumber& l, const BigNumber& r) {
   int s = l.sign_ * r.sign_;
 
@@ -999,6 +1014,10 @@ inline BigNumber GCDEX(const BigNumber& p, const BigNumber& m) {
   return (b % p + p) % p;
 }
 
+inline BigNumber mod_inv(const BigNumber& x, const BigNumber& mod) {
+  return GCDEX(mod, x);
+}
+
 inline BigNumber fabs(const BigNumber& n) { return n.sign_ >= 0 ? n : -n; }
 
 inline BigNumber abs(const BigNumber& n) { return n.sign_ >= 0 ? n : -n; }
@@ -1026,4 +1045,81 @@ inline BigNumber from_string(const char* number) {
 }
 
 typedef BigNumber bn;
+
+
+struct FacModer
+{
+  std::vector<bn> F;
+  int64 p;
+  int64 e;
+  bn mod;
+  bn phi;
+  
+  FacModer(const int64 p, const int64 e): p(p), e(e)
+  {
+    int64 pe = p * e;
+    mod = bn(p) ^ e;
+    phi = (bn(p) ^ (e - 1)) * (p - 1);
+    F.resize(pe + 1, 1);
+    for (int i = 1; i <= pe; ++i) {
+      if (i % p == 0) F[i] = F[i-1];
+      else F[i] = F[i-1] * i % mod;
+    }
+  }
+  
+  bn cal(const bn& N) {
+    bn u = N / p;
+    bn v = N - u * p;
+    int64 vv = v.ToInt();
+    int64 r = e + 1 >> 1;
+    
+    bn ret = 1;
+    // F(up, p)
+    bn u2 = u*u;
+
+    for (int j = 1; j <= r; ++j)
+    {
+      bn beta_numer = u;
+      bn beta_denom = j;
+      
+      for (int i = 1; i <= r; ++i) if (i != j)
+        beta_numer *= u2 - i * i,
+        beta_denom *= j * j - i * i;//, cout << "orz " << u2-i*i << endl;
+      //cout << beta_numer << endl;
+      auto beta = beta_numer / beta_denom % phi;
+      if (beta < 0) beta += phi;
+      ret *= power_mod(F[j*p], beta, mod);
+      ret %= mod;
+
+    }
+
+    if (p == 2) {
+      int64 left_mod4 = ((((u * p + 1) % 8)[0] & 4) >> 1) + 1;
+      int64 right_mod4 = (ret % 4)[0] & 3;
+      if (left_mod4 != right_mod4) {
+        ret = (mod - ret) % mod;
+      }
+    }
+
+    // F(v, p)
+    ret = ret * F[vv] % mod;
+    
+    // (p + v, v)_p
+    for (int j = 1; j < e; ++j) {
+      auto base = F[j*p+vv] * mod_inv(F[vv] * F[j*p], mod) % mod;
+      bn alpha_numer = u;
+      bn alpha_denom = j;
+      for (int i = 1; i < e; ++i) if (i != j) {
+        alpha_numer *= u - i;
+        alpha_denom *= j - i;
+      }
+      auto alpha = alpha_numer / alpha_denom % phi;
+      if (alpha < 0) alpha += phi;
+      ret *= power_mod(base, alpha, mod);
+      ret %= mod;
+    }
+    
+    return ret;
+  }
+};
 #endif

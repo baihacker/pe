@@ -1,0 +1,583 @@
+#ifndef __PE_BI_H__
+#define __PE_BI_H__
+
+#include "pe_base"
+
+struct bi_trait {
+  static const int bit_count = 8;
+  static const unsigned int bit_value = 1u << 8;
+  static const unsigned int bit_mod_mask = bit_value - 1;
+  static const unsigned int output_mod = 100;
+  static const unsigned int output_mod_dig = 2;
+};
+
+struct bi_allocator {
+  static unsigned int* allocate(unsigned int length) {
+    return new unsigned int[length];
+  }
+  static void deallocate(unsigned int* data) {
+    delete[] data;
+  }
+};
+
+struct alloc_mem {} alloc_mem_tag;
+
+class BigInteger {
+public:
+  // constructors, destructors, value semantics.
+  BigInteger() : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
+    grow(1);
+    data_[0] = 0;
+    sign_ = 0;
+  }
+
+  BigInteger(int size, alloc_mem) : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
+    grow(size);
+    fill(data_, data_ + bufferLength_, 0);
+    sign_ = 0;
+  }
+
+  ~BigInteger() {
+    if (data_) {
+      bi_allocator::deallocate(data_);
+    }
+  }
+
+  BigInteger(const BigInteger& other) {
+    data_ = bi_allocator::allocate(bufferLength_ = other.bufferLength_);
+    sign_ = other.sign_;
+    pos_ = other.pos_;
+    copy(other.data_, other.data_ + bufferLength_, data_);
+  }
+
+  BigInteger(BigInteger&& other) : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
+    std::swap(data_, other.data_);
+    std::swap(bufferLength_, other.bufferLength_);
+    std::swap(sign_, other.sign_);
+    std::swap(pos_, other.pos_);
+  }
+
+  BigInteger& operator = (const BigInteger& other) {
+    BigInteger t(other);
+    std::swap(data_, t.data_);
+    std::swap(bufferLength_, t.bufferLength_);
+    std::swap(sign_, t.sign_);
+    std::swap(pos_, t.pos_);
+    return *this;
+  }
+
+  BigInteger& operator = (BigInteger&& other) {
+    std::swap(data_, other.data_);
+    std::swap(bufferLength_, other.bufferLength_);
+    std::swap(sign_, other.sign_);
+    std::swap(pos_, other.pos_);
+    return *this;
+  }
+
+  template<typename T>
+  BigInteger(T value) : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
+    int need = 0;
+    auto absValue = value >= 0 ? value : -value;
+
+    for (auto t = absValue; t > 0; ++need, t >>= bi_trait::bit_count);
+    if (need == 0) need = 1;
+    grow(need);
+
+    pos_ = -1;
+    data_[0] = 0;
+    for (auto t = absValue; t > 0;
+      data_[++pos_] = t & bi_trait::bit_mod_mask, t >>= bi_trait::bit_count);
+    if (pos_ == -1) ++pos_;
+
+    if (value != 0) {
+      sign_ = value > 0 ? 1 : -1;
+    }
+  }
+
+  template<typename T>
+  BigInteger& operator = (T value) {
+    return *this = BigInteger(value);
+  }
+
+  BigInteger(const string& str) : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
+    std::vector<unsigned int> value;
+    for (int i = (int)str.size() - 1; i >= 0; --i) {
+      value.push_back(str[i] - '0');
+    }
+
+    int now = (int)value.size() - 1;
+    while (now > 0 && value[now] == 0) --now;
+
+    std::vector<unsigned int> result;
+    do {
+      uint64 add = 0;
+      for (int i = now; i > 0; --i) {
+        const uint64 x = add + value[i];
+        const uint64 next_add = (x & bi_trait::bit_mod_mask) * 10;
+        value[i] = x >> bi_trait::bit_count;
+        add = next_add;
+      }
+      uint64 x = add + value[0];
+      value[0] = x >> bi_trait::bit_count;
+      result.push_back(x & bi_trait::bit_mod_mask);
+      while (now > 0 && value[now] == 0) --now;
+    } while (now > 0 || value[now] > 0);
+
+    grow(result.size());
+    sign_ = 1;
+    pos_ = (int)result.size() - 1;
+    copy(result.begin(), result.end(), data_);
+    adjustPos();
+  }
+  
+  BigInteger(const vector<char>& v) : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
+    const int n = (int) v.size();
+    int need = (n + bi_trait::bit_count - 1) / bi_trait::bit_count;
+    grow(need);
+
+    unsigned int value = 0;
+    unsigned int flag = 1;
+    for (int i = 0; i < n; ++i) {
+      if (v[i]) {
+        value |= flag;
+      }
+      flag <<= 1;
+      if ((i + 1) % bi_trait::bit_count == 0) {
+        data_[pos_++] = value;
+        value = 0;
+        flag = 1;
+      }
+    }
+    if (n % bi_trait::bit_count) {
+      data_[pos_++] = value;
+    }
+    --pos_;
+    sign_ = 1;
+    adjustPos();
+  }
+public:
+  // compare operators
+  friend inline int operator > (const BigInteger& l, const BigInteger& r);
+  friend inline int operator < (const BigInteger& l, const BigInteger& r);
+  friend inline int operator == (const BigInteger& l, const BigInteger& r);
+  friend inline int operator >= (const BigInteger& l, const BigInteger& r);
+  friend inline int operator <= (const BigInteger& l, const BigInteger& r);
+
+  static int absCompare(const BigInteger& l, const BigInteger& r) {
+    int lengthL = l.pos_;
+    int lengthR = r.pos_;
+
+    if (lengthL != lengthR) {
+      return lengthL > lengthR ? 1 : -1;
+    }
+
+    for (--lengthL; lengthL >= 0 && l[lengthL] == r[lengthL]; --lengthL)
+      ;
+
+    return lengthL >= 0 ? (l[lengthL] > r[lengthL] ? 1 : -1) : 0;
+  }
+public:
+  // unary operations
+  BigInteger operator-() const {
+    BigInteger ret(*this);
+    ret.sign_ = -ret.sign_;
+    return ret;
+  }
+
+  const BigInteger& operator+() const {
+    return *this;
+  }
+public:
+  // operators
+  friend inline BigInteger operator+(const BigInteger& l, const BigInteger& r);
+  friend inline BigInteger operator-(const BigInteger& l, const BigInteger& r);
+  friend inline BigInteger operator*(const BigInteger& l, const BigInteger& r);
+  //friend inline BigInteger operator/(const BigInteger& l, const BigInteger& r);
+  static BigInteger absAdd(const BigInteger& l, const BigInteger& r) {
+    int maxPos = max(l.pos_, r.pos_);
+    int minPos = min(l.pos_, r.pos_);
+    BigInteger ret(maxPos + 2, alloc_mem_tag);
+
+    int idx = 0;
+    unsigned int inc = 0;
+
+    while (idx <= minPos) {
+      unsigned int t = l[idx] + r[idx] + inc;
+      ret[idx++] = t & bi_trait::bit_mod_mask;
+      inc = t >> bi_trait::bit_count;
+    }
+
+    const auto* largeData = l.pos_ > r.pos_ ? l.data_ : r.data_;
+    while (idx <= maxPos) {
+      unsigned t = largeData[idx] + inc;
+      ret[idx++] = t & bi_trait::bit_mod_mask;
+      inc = t >> bi_trait::bit_count;
+    }
+
+    if (inc) {
+      ret[idx++] = inc;
+    }
+
+    ret.pos_ = idx;
+    return ret;
+  }
+
+  static BigInteger absSub(const BigInteger& l, const BigInteger& r) {
+    PE_ASSERT(BigInteger::absCompare(l, r) >= 0);
+
+    BigInteger ret = l;
+
+    int maxPos = l.pos_;
+    int minPos = r.pos_;
+
+    int borrow = 0;
+    for (int curr = 0; curr <= minPos; ++curr) {
+      int nextBorrow = 0;
+      while (ret[curr] < r[curr] + borrow) {
+        nextBorrow++;
+        ret[curr] += bi_trait::bit_value;
+      }
+      ret[curr] -= r[curr] + borrow;
+      borrow = nextBorrow;
+    }
+    for (int curr = minPos + 1; curr <= maxPos; ++curr) {
+      int nextBorrow = 0;
+      while (ret[curr] < borrow) {
+        nextBorrow++;
+        ret[curr] += bi_trait::bit_value;
+      }
+      ret[curr] -= borrow;
+      borrow = nextBorrow;
+    }
+    ret.adjustPos();
+    return ret;
+  }
+
+  static BigInteger absMul(const BigInteger& l, const BigInteger& r) {
+    int posL = l.pos_;
+    int posR = r.pos_;
+
+    BigInteger ret(posL + posR + 2, alloc_mem_tag);
+
+    for (int i = 0; i <= posR; ++i) {
+      auto t = r[i];
+      uint64 inc = 0;
+      int j = 0;
+      for (; j <= posL; ++j) {
+        inc += (uint64)t * l[j] + ret[i + j];
+        ret[i + j] = inc & bi_trait::bit_mod_mask;
+        inc >>= bi_trait::bit_count;
+      }
+      for (; inc; inc >>= bi_trait::bit_count) {
+        ret[i + j++] = inc & bi_trait::bit_mod_mask;
+      }
+    }
+    ret.pos_ = posL + posR + 1;
+    ret.adjustPos();
+    return ret;
+  }
+
+  static BigInteger AbsDivImpl(const BigInteger& l, const BigInteger& r, BigInteger& remain) {
+    remain = l;
+    if (BigInteger::absCompare(remain, r) < 0) {
+      return 0;
+    }
+    /*
+    remain.SetOwned();
+    DataBlock<ElementType> buffer_data(remain.length_ + 5);
+
+    remain.ZeroAdjust();
+    r.ZeroAdjust();
+
+    int l_length = remain.GetLength();
+    int r_length = r.GetLength();
+    int ret_length = l_length - r_length + 1;
+
+    BigInteger ret(NULL, ret_length);
+
+    ElementType* ret_buffer = ret.Buffer();
+    ElementType* l_buffer = remain.Buffer();
+    ElementType* r_buffer = r.Buffer();
+
+    int curr = ret_length - 1;
+    int hi_l = l_length - 1, lo_l = curr;
+    const int hi_r = r_length - 1, lo_r = 0;
+
+    for (; curr >= 0; --curr, --lo_l) {
+      MUL_TYPE test;
+      if (r_length > 1) {
+        if (hi_l - lo_l > hi_r - lo_r) {
+          test = ((MUL_TYPE)l_buffer[hi_l] * BIG_NUMBER_BASE +
+                  l_buffer[hi_l - 1]) /
+                 r_buffer[hi_r];
+        } else if (hi_l == lo_l) {
+          test = 0;
+        } else {
+          test =
+              ((MUL_TYPE)l_buffer[hi_l] * BIG_NUMBER_BASE +
+               l_buffer[hi_l - 1]) /
+              ((MUL_TYPE)r_buffer[hi_r] * BIG_NUMBER_BASE + r_buffer[hi_r - 1]);
+        }
+      } else {
+        if (hi_l - lo_l + 1 > 1) {
+          test = ((MUL_TYPE)l_buffer[hi_l] * BIG_NUMBER_BASE +
+                  l_buffer[hi_l - 1]) /
+                 r_buffer[hi_r];
+        } else {
+          test = l_buffer[hi_l] / r_buffer[hi_r];
+        }
+      }
+
+      for (; test > 0; --test) {
+        if (BigInteger::DoSub(l_buffer, hi_l, lo_l, r_buffer, hi_r, lo_r, test,
+                             buffer_data.Buffer())) {
+          break;
+        }
+      }
+
+      for (; l_buffer[hi_l] == 0 && hi_l >= lo_l; --hi_l)
+        ;
+      ret_buffer[curr] = test;
+    }
+
+    ret.length_ = ret_length;
+    ret.ZeroAdjust();
+    remain.ZeroAdjust();*/
+    //return ret;
+  }
+public:
+  // output
+  string toString() const {
+    BigInteger t(*this);
+    std::vector<unsigned int> mods;
+    t.adjustPos();
+    do {
+      uint64 add = 0;
+      for (int i = t.pos_; i > 0; --i) {
+        const uint64 x = add + t.data_[i];
+        const uint64 next_add = (x % bi_trait::output_mod) << bi_trait::bit_count;
+        t.data_[i] = x / bi_trait::output_mod;
+        add = next_add;
+      }
+      uint64 x = add + t.data_[0];
+      t.data_[0] = x / bi_trait::output_mod;
+      mods.push_back(x % bi_trait::output_mod);
+      t.adjustPos();
+    } while (!t.isZero());
+
+    string ret = t.sign_ == -1 ? "-" : "";
+    int idx = (int)mods.size() - 1;
+    char buff[32];
+    sprintf(buff, "%u", mods[idx--]);
+    ret += buff;
+    for (; idx >= 0; --idx) {
+      sprintf(buff, "%0*u", bi_trait::output_mod_dig, mods[idx]);
+      ret += buff;
+    }
+    return ret;
+  }
+
+  void adjustPos() const {
+    while (pos_ > 0 && data_[pos_] == 0) --pos_;
+    if (pos_ == 0 && data_[0] == 0) sign_ = 0;
+  }
+
+  bool isZero() const {
+    return sign_ == 0;
+  }
+
+  int getSign() const {
+    return sign_;
+  }
+
+  unsigned int operator[](int idx) const {
+    return data_[idx];
+  }
+
+  unsigned int& operator[](int idx) {
+    return data_[idx];
+  }
+  
+  const unsigned int* data() const {
+    return data_;
+  }
+
+  unsigned int* data() {
+    return data_;
+  }
+  
+  vector<char> binVector() const {
+    vector<char> ret;
+    for (int i = 0; i <= pos_; ++i) {
+      auto t = data_[i];
+      for (int j = 0; j < bi_trait::bit_count; ++j)
+        ret.push_back(t&1), t >>= 1;
+    }
+    int now = (int)ret.size() - 1;
+    while (now > 0 && ret[now] == 0) --now;
+    ret.resize(now);
+    
+    return ret;
+  }
+private:
+  void grow(unsigned int newSize) {
+    PE_ASSERT(newSize > 0);
+
+    if (data_) {
+      if (newSize > bufferLength_) {
+        bi_allocator::deallocate(data_);
+      } else {
+        return;
+      }
+    }
+
+    data_ = bi_allocator::allocate(bufferLength_ = newSize);
+  }
+private:
+public:
+  unsigned int* data_;
+  unsigned int bufferLength_;
+  mutable unsigned int pos_;
+  mutable int sign_;
+};
+
+inline int operator>(const BigInteger& l, const BigInteger& r) {
+  int s1 = l.sign_;
+  int s2 = r.sign_;
+
+  if (s1 < 0) {
+    return s2 < 0 && BigInteger::absCompare(l, r) < 0;
+  } else if (s1 > 0) {
+    return s2 <= 0 || BigInteger::absCompare(l, r) > 0;
+  } else {
+    return s2 < 0;
+  }
+}
+
+inline int operator<(const BigInteger& l, const BigInteger& r) {
+  int s1 = l.sign_;
+  int s2 = r.sign_;
+
+  if (s1 < 0) {
+    return s2 >= 0 || BigInteger::absCompare(l, r) > 0;
+  } else if (s1 > 0) {
+    return s2 > 0 && BigInteger::absCompare(l, r) < 0;
+  } else {
+    return s2 > 0;
+  }
+}
+
+inline int operator==(const BigInteger& l, const BigInteger& r) {
+  return l.sign_ == r.sign_ && BigInteger::absCompare(l, r) == 0;
+}
+
+inline int operator>=(const BigInteger& l, const BigInteger& r) {
+  int s1 = l.sign_;
+  int s2 = r.sign_;
+
+  if (s1 < 0) {
+    return s2 < 0 && BigInteger::absCompare(l, r) <= 0;
+  } else if (s1 > 0) {
+    return s2 <= 0 || BigInteger::absCompare(l, r) >= 0;
+  } else {
+    return s2 <= 0;
+  }
+}
+
+inline int operator<=(const BigInteger& l, const BigInteger& r) {
+  int s1 = l.sign_;
+  int s2 = r.sign_;
+
+  if (s1 < 0) {
+    return s2 >= 0 || BigInteger::absCompare(l, r) >= 0;
+  } else if (s1 > 0) {
+    return s2 > 0 && BigInteger::absCompare(l, r) <= 0;
+  } else {
+    return s2 >= 0;
+  }
+}
+
+inline BigInteger operator+(const BigInteger& l, const BigInteger& r) {
+  if (l.isZero()) {
+    return r;
+  }
+
+  if (r.isZero()) {
+    return l;
+  }
+
+  if (l.getSign() == r.getSign()) {
+    BigInteger ret(BigInteger::absAdd(l, r));
+    ret.sign_ = l.sign_;
+    ret.adjustPos();
+    return ret;
+  }
+
+  int cmp = BigInteger::absCompare(l, r);
+  if (cmp > 0) {
+    BigInteger ret(BigInteger::absSub(l, r));
+    ret.sign_ = l.sign_;
+    ret.adjustPos();
+    return ret;
+  } else if (cmp < 0) {
+    BigInteger ret(BigInteger::absSub(r, l));
+    ret.sign_ = r.sign_;
+    ret.adjustPos();
+    return ret;
+  } else {
+    return 0;
+  }
+}
+inline BigInteger operator-(const BigInteger& l, const BigInteger& r) {
+  if (l.isZero()) {
+    return -r;
+  }
+
+  if (r.isZero()) {
+    return l;
+  }
+
+  if (l.getSign() != r.getSign()) {
+    BigInteger ret(BigInteger::absAdd(l, r));
+    ret.sign_ = l.sign_;
+    ret.adjustPos();
+    return ret;
+  }
+
+  int cmp = BigInteger::absCompare(l, r);
+  if (cmp > 0) {
+    BigInteger ret(BigInteger::absSub(l, r));
+    ret.sign_ = l.sign_;
+    ret.adjustPos();
+    return ret;
+  } else if (cmp < 0) {
+    BigInteger ret(BigInteger::absSub(r, l));
+    ret.sign_ = -r.sign_;
+    ret.adjustPos();
+    return ret;
+  } else {
+    return 0;
+  }
+}
+inline BigInteger operator*(const BigInteger& l, const BigInteger& r) {
+  int s = l.getSign() * r.getSign();
+
+  if (s == 0) {
+    return 0;
+  }
+
+  BigInteger ret(BigInteger::absMul(l, r));
+  ret.sign_ = s;
+
+  return ret;
+}
+//inline BigInteger operator/(const BigInteger& l, const BigInteger& r);
+
+ostream& operator << (ostream& o, const BigInteger& bi) {
+  return o << bi.toString();
+}
+
+BigInteger operator "" _bi(const char* sv, size_t sc) {
+  return BigInteger(string(sv));
+}
+#endif

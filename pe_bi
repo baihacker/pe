@@ -22,7 +22,8 @@ struct bi_trait8 {
 
 // Predefined allocator
 struct bi_allocator_std {
-  static unsigned int* allocate(unsigned int length) {
+  static unsigned int* allocate(int& length) {
+    length = (length + 3 >> 2) << 2;
     return new unsigned int[length];
   }
   static void deallocate(unsigned int* data) { delete[] data; }
@@ -35,11 +36,12 @@ struct bi_allocator_fixed_size_impl {
 
   bi_allocator_fixed_size_impl() { top = 0; }
 
-  unsigned int* allocate(unsigned int length) {
+  unsigned int* allocate(int& length) {
     if (length > SIZE) {
       dbg(length);
     }
     PE_ASSERT(length <= SIZE);
+    length = SIZE;
     if (top == available.size()) {
       available.push_back(new unsigned int[SIZE]);
     }
@@ -55,7 +57,7 @@ static bi_allocator_fixed_size_impl<1 << 20> allocator_20;
 auto& allocator_impl = allocator_16;
 
 struct bi_allocator_fixed_size {
-  static unsigned int* allocate(unsigned int length) {
+  static unsigned int* allocate(int& length) {
     return allocator_impl.allocate(length);
   }
   static void deallocate(unsigned int* data) {
@@ -87,7 +89,7 @@ class BigInteger {
     reserve(other.bufferLength_);
     sign_ = other.sign_;
     pos_ = other.pos_;
-    copy(other.data_, other.data_ + bufferLength_, data_);
+    copy(other.data_, other.data_ + pos_ + 1, data_);
   }
 
   BigInteger(BigInteger&& other)
@@ -184,6 +186,12 @@ class BigInteger {
   template <typename T>
   BigInteger(const vector<T>& v)
       : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
+    if (v.empty()) {
+      reserve(1);
+      data_[0] = 0;
+      sign_ = 0;
+      return;
+    }
     const int n = (int)v.size();
     int need = (n + bi_trait::bit_count - 1) / bi_trait::bit_count;
     reserve(need);
@@ -217,7 +225,7 @@ class BigInteger {
   BigInteger(int size, alloc_mem)
       : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
     reserve(size);
-    fill(data_, data_ + bufferLength_, 0);
+    data_[0] = 0;
     sign_ = 0;
   }
 
@@ -226,7 +234,7 @@ class BigInteger {
     reserve(max(other.bufferLength_, minBuffer));
     sign_ = other.sign_;
     pos_ = other.pos_;
-    copy(other.data_, other.data_ + bufferLength_, data_);
+    copy(other.data_, other.data_ + other.pos_ + 1, data_);
   }
 
  public:
@@ -382,6 +390,7 @@ class BigInteger {
     int posR = r.pos_;
 
     BigInteger ret(posL + posR + 3, alloc_mem_tag);
+    fill(ret.data_, ret.data_ + posL + posR + 3, 0);
 
     for (int i = 0; i <= posR; ++i) {
       auto t = r[i];
@@ -710,7 +719,6 @@ class BigInteger {
     if (data_) {
       if (newSize > bufferLength_) {
         oldData = data_;
-        bi_allocator::deallocate(data_);
       } else {
         return;
       }
@@ -720,6 +728,7 @@ class BigInteger {
     if (oldData != nullptr) {
       // copy used data only.
       copy(oldData, oldData + pos_ + 1, data_);
+      bi_allocator::deallocate(oldData);
     }
     bufferLength_ = newSize;
   }
@@ -819,7 +828,7 @@ class BigInteger {
  private:
   unsigned int* data_;
   int bufferLength_;
-  mutable unsigned int pos_;
+  mutable int pos_;
   mutable int sign_;
 };
 

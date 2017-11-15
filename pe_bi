@@ -262,6 +262,8 @@ class BigInteger {
                                                   const BigInteger& r);
   template <typename T>
   friend inline tuple<BigInteger, T> div(const BigInteger& l, T r);
+  template <typename T>
+  friend inline void divInplace(BigInteger& l, T r, T& remain);
 
   friend inline BigInteger operator%(const BigInteger& l, const BigInteger& r);
   template <typename T>
@@ -543,22 +545,25 @@ class BigInteger {
   template <typename T>
   static BigInteger absDiv(const BigInteger& l, T r, T& remain) {
     BigInteger t(l);
-    std::vector<unsigned int> mods;
-    t.fixPos();
+    absDivInplace(t, r, remain);
+    return t;
+  }
+
+  template <typename T>
+  static void absDivInplace(BigInteger& l, T r, T& remain) {
+    l.fixPos();
 
     uint64 add = 0;
-    for (int i = t.pos_; i > 0; --i) {
-      const uint64 x = add + t.data_[i];
+    for (int i = l.pos_; i > 0; --i) {
+      const uint64 x = add + l.data_[i];
       const uint64 next_add = (x % r) << bi_trait::bit_count;
-      t.data_[i] = x / r;
+      l.data_[i] = x / r;
       add = next_add;
     }
-    uint64 x = add + t.data_[0];
-    t.data_[0] = x / r;
+    uint64 x = add + l.data_[0];
+    l.data_[0] = x / r;
     remain = x % r;
-    t.fixPos();
-
-    return t;
+    l.fixPos();
   }
 
  public:
@@ -640,7 +645,8 @@ class BigInteger {
 
   template <typename T>
   BigInteger& operator/=(T other) {
-    *this = *this / other;
+    T r;
+    divInplace(*this, other, &r);
     return *this;
   }
 
@@ -651,8 +657,9 @@ class BigInteger {
 
   template <typename T>
   BigInteger& operator%=(T other) {
-    *this = *this % other;
-    return *this;
+    T r;
+    divInplace(*this, other, &r);
+    return *this = r;
   }
 
   BigInteger& operator^=(const BigInteger& other) {
@@ -989,13 +996,40 @@ inline tuple<BigInteger, T> div(const BigInteger& l, T r) {
     return make_tuple(0, 0);
   }
 
+  int signl = l.sign_;
   T x;
-  BigInteger ret(BigInteger::absDiv(l, r, x));
-  ret.sign_ = l.sign_ * (r > 0 ? 1 : -1);
+  BigInteger ret(l);
+  BigInteger::absDivInplace(ret, r, x);
+  ret.sign_ = signl * (r > 0 ? 1 : -1);
   ret.fixPos();
   if (l.sign_ < 0) x = -x;
 
   return make_tuple(std::move(ret), x);
+}
+
+template <typename T>
+inline void divInplace(BigInteger& l, T r, T& remain) {
+  if (l.isZero() && r == 0) {
+    l = 1;
+    remain = 0;
+    return;
+  }
+
+  if (l.isZero() || r == 0) {
+    if (!l.isZero()) {
+      l.pos_ = 0;
+      l.data_[0] = 0;
+      l.sign_ = 0;
+    }
+    remain = 0;
+    return;
+  }
+
+  int signl = l.sign_;
+  BigInteger::absDivInplace(l, r, remain);
+  l.sign_ = signl * (r > 0 ? 1 : -1);
+  l.fixPos();
+  if (l.sign_ < 0) remain = -remain;
 }
 
 inline BigInteger operator%(const BigInteger& l, const BigInteger& r) {

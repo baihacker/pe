@@ -1,3 +1,4 @@
+#define USE_BIG_NUMBER
 #include <pe.hpp>
 
 void performance_test()

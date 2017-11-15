@@ -6,6 +6,7 @@
   N = 150:           55335570173801.14
   output:            55335570173801
 */
+#define USE_BIG_NUMBER
 #include <pe.hpp>
 const int N = 100;
 bn choose[505][505];

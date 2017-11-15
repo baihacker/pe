@@ -3,37 +3,76 @@
 
 #include "pe_base"
 
-struct bi_trait {
+// Predefined trait
+struct bi_trait30 {
+  static const int bit_count = 30;
+  static const unsigned int bit_value = 1u << 30;
+  static const unsigned int bit_mod_mask = bit_value - 1;
+  static const unsigned int output_mod = 100000000;
+  static const unsigned int output_mod_dig = 8;
+};
+
+struct bi_trait8 {
   static const int bit_count = 8;
   static const unsigned int bit_value = 1u << 8;
   static const unsigned int bit_mod_mask = bit_value - 1;
-  static const unsigned int output_mod = 100;
-  static const unsigned int output_mod_dig = 2;
+  static const unsigned int output_mod = 100000000;
+  static const unsigned int output_mod_dig = 8;
 };
 
-struct bi_allocator {
+// Predefined allocator
+struct bi_allocator_std {
   static unsigned int* allocate(unsigned int length) {
     return new unsigned int[length];
   }
+  static void deallocate(unsigned int* data) { delete[] data; }
+};
+
+template <int SIZE>
+struct bi_allocator_fixed_size_impl {
+  vector<unsigned int*> available;
+  int top;
+
+  bi_allocator_fixed_size_impl() { top = 0; }
+
+  unsigned int* allocate(unsigned int length) {
+    if (length > SIZE) {
+      dbg(length);
+    }
+    PE_ASSERT(length <= SIZE);
+    if (top == available.size()) {
+      available.push_back(new unsigned int[SIZE]);
+    }
+    return available[top++];
+  }
+
+  void deallocate(unsigned int* ptr) { available[--top] = ptr; }
+};
+
+static bi_allocator_fixed_size_impl<1 << 16> allocator_16;
+static bi_allocator_fixed_size_impl<1 << 20> allocator_20;
+
+auto& allocator_impl = allocator_16;
+
+struct bi_allocator_fixed_size {
+  static unsigned int* allocate(unsigned int length) {
+    return allocator_impl.allocate(length);
+  }
   static void deallocate(unsigned int* data) {
-    delete[] data;
+    allocator_impl.deallocate(data);
   }
 };
 
-struct alloc_mem {} alloc_mem_tag;
+// Configuration of BigInteger.
+typedef bi_trait30 bi_trait;
+typedef bi_allocator_fixed_size bi_allocator;
 
 class BigInteger {
-public:
+ public:
   // constructors, destructors, value semantics.
   BigInteger() : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
     grow(1);
     data_[0] = 0;
-    sign_ = 0;
-  }
-
-  BigInteger(int size, alloc_mem) : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
-    grow(size);
-    fill(data_, data_ + bufferLength_, 0);
     sign_ = 0;
   }
 
@@ -50,14 +89,15 @@ public:
     copy(other.data_, other.data_ + bufferLength_, data_);
   }
 
-  BigInteger(BigInteger&& other) : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
+  BigInteger(BigInteger&& other)
+      : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
     std::swap(data_, other.data_);
     std::swap(bufferLength_, other.bufferLength_);
     std::swap(sign_, other.sign_);
     std::swap(pos_, other.pos_);
   }
 
-  BigInteger& operator = (const BigInteger& other) {
+  BigInteger& operator=(const BigInteger& other) {
     BigInteger t(other);
     std::swap(data_, t.data_);
     std::swap(bufferLength_, t.bufferLength_);
@@ -66,7 +106,7 @@ public:
     return *this;
   }
 
-  BigInteger& operator = (BigInteger&& other) {
+  BigInteger& operator=(BigInteger&& other) {
     std::swap(data_, other.data_);
     std::swap(bufferLength_, other.bufferLength_);
     std::swap(sign_, other.sign_);
@@ -74,38 +114,47 @@ public:
     return *this;
   }
 
-  template<typename T>
+  template <typename T>
   BigInteger(T value) : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
+    if (value == 0) {
+      *this = BigInteger();
+      return;
+    }
+
     int need = 0;
     auto absValue = value >= 0 ? value : -value;
 
-    for (auto t = absValue; t > 0; ++need, t >>= bi_trait::bit_count);
-    if (need == 0) need = 1;
+    for (auto t = absValue; t > 0; ++need, t >>= bi_trait::bit_count)
+      ;
     grow(need);
 
     pos_ = -1;
     data_[0] = 0;
     for (auto t = absValue; t > 0;
-      data_[++pos_] = t & bi_trait::bit_mod_mask, t >>= bi_trait::bit_count);
-    if (pos_ == -1) ++pos_;
+         data_[++pos_] = t & bi_trait::bit_mod_mask, t >>= bi_trait::bit_count)
+      ;
 
-    if (value != 0) {
-      sign_ = value > 0 ? 1 : -1;
-    }
+    sign_ = value > 0 ? 1 : -1;
   }
 
-  template<typename T>
-  BigInteger& operator = (T value) {
+  template <typename T>
+  BigInteger& operator=(T value) {
     return *this = BigInteger(value);
   }
 
-  BigInteger(const string& str) : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
-    std::vector<unsigned int> value;
-    for (int i = (int)str.size() - 1; i >= 0; --i) {
-      value.push_back(str[i] - '0');
+  BigInteger(const string& str)
+      : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
+    const int n = str.size();
+    if (n == 0) {
+      *this = BigInteger();
+      return;
+    }
+    std::vector<unsigned int> value(n);
+    for (int i = 0, j = n - 1; i < n; ++i, --j) {
+      value[j] = str[i] - '0';
     }
 
-    int now = (int)value.size() - 1;
+    int now = n - 1;
     while (now > 0 && value[now] == 0) --now;
 
     std::vector<unsigned int> result;
@@ -124,14 +173,17 @@ public:
     } while (now > 0 || value[now] > 0);
 
     grow(result.size());
+
     sign_ = 1;
     pos_ = (int)result.size() - 1;
     copy(result.begin(), result.end(), data_);
-    adjustPos();
+    fixPos();
   }
-  
-  BigInteger(const vector<char>& v) : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
-    const int n = (int) v.size();
+
+  template <typename T>
+  BigInteger(const vector<T>& v)
+      : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
+    const int n = (int)v.size();
     int need = (n + bi_trait::bit_count - 1) / bi_trait::bit_count;
     grow(need);
 
@@ -153,30 +205,61 @@ public:
     }
     --pos_;
     sign_ = 1;
-    adjustPos();
+    fixPos();
   }
-public:
+
+ private:
+  // Internal constructor
+  static const struct alloc_mem {
+  } alloc_mem_tag;
+
+  BigInteger(int size, alloc_mem)
+      : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
+    grow(size);
+    fill(data_, data_ + bufferLength_, 0);
+    sign_ = 0;
+  }
+
+ public:
   // compare operators
-  friend inline int operator > (const BigInteger& l, const BigInteger& r);
-  friend inline int operator < (const BigInteger& l, const BigInteger& r);
-  friend inline int operator == (const BigInteger& l, const BigInteger& r);
-  friend inline int operator >= (const BigInteger& l, const BigInteger& r);
-  friend inline int operator <= (const BigInteger& l, const BigInteger& r);
+  friend inline int operator>(const BigInteger& l, const BigInteger& r);
+  friend inline int operator<(const BigInteger& l, const BigInteger& r);
+  friend inline int operator==(const BigInteger& l, const BigInteger& r);
+  friend inline int operator>=(const BigInteger& l, const BigInteger& r);
+  friend inline int operator<=(const BigInteger& l, const BigInteger& r);
 
-  static int absCompare(const BigInteger& l, const BigInteger& r) {
-    int lengthL = l.pos_;
-    int lengthR = r.pos_;
+  // binary operators
+  friend inline BigInteger operator+(const BigInteger& l, const BigInteger& r);
+  friend inline BigInteger operator-(const BigInteger& l, const BigInteger& r);
 
-    if (lengthL != lengthR) {
-      return lengthL > lengthR ? 1 : -1;
-    }
+  friend inline BigInteger operator*(const BigInteger& l, const BigInteger& r);
+  template <typename T>
+  friend inline BigInteger operator*(const BigInteger& l, T r);
+  template <typename T>
+  friend inline BigInteger operator*(T l, const BigInteger& r);
 
-    for (--lengthL; lengthL >= 0 && l[lengthL] == r[lengthL]; --lengthL)
-      ;
+  friend inline BigInteger operator/(const BigInteger& l, const BigInteger& r);
+  template <typename T>
+  friend inline BigInteger operator/(const BigInteger& l, T r);
+  friend inline tuple<BigInteger, BigInteger> div(const BigInteger& l, const BigInteger& r);
+  template <typename T>
+  friend inline tuple<BigInteger, T> div(const BigInteger& l, T r);
 
-    return lengthL >= 0 ? (l[lengthL] > r[lengthL] ? 1 : -1) : 0;
-  }
-public:
+  friend inline BigInteger operator%(const BigInteger& l, const BigInteger& r);
+  template <typename T>
+  friend inline T operator%(const BigInteger& l, T r);
+
+  friend inline BigInteger operator&(const BigInteger& l, const BigInteger& r);
+  friend inline BigInteger operator^(const BigInteger& l, const BigInteger& r);
+  friend inline BigInteger operator|(const BigInteger& l, const BigInteger& r);
+
+  template<typename T>
+  friend inline BigInteger operator<<(const BigInteger& l, T n);
+
+  template<typename T>
+  friend inline BigInteger operator>>(const BigInteger& l, T n);
+
+ public:
   // unary operations
   BigInteger operator-() const {
     BigInteger ret(*this);
@@ -187,12 +270,33 @@ public:
   const BigInteger& operator+() const {
     return *this;
   }
-public:
-  // operators
-  friend inline BigInteger operator+(const BigInteger& l, const BigInteger& r);
-  friend inline BigInteger operator-(const BigInteger& l, const BigInteger& r);
-  friend inline BigInteger operator*(const BigInteger& l, const BigInteger& r);
-  //friend inline BigInteger operator/(const BigInteger& l, const BigInteger& r);
+
+  BigInteger operator~() const {
+    BigInteger ret(*this);
+    for (int i = 0; i < ret.pos_; ++i) ret[i] ^= bi_trait::bit_mod_mask;
+    for (unsigned int x = 1; x <= ret[ret.pos_]; ret[ret.pos_] ^= x, x <<= 1)
+      ;
+
+    ret.fixPos();
+
+    return ret;
+  }
+
+ public:
+  static int absCompare(const BigInteger& l, const BigInteger& r) {
+    int posL = l.pos_;
+    int posR = r.pos_;
+
+    if (posL != posR) {
+      return posL > posR ? 1 : -1;
+    }
+
+    for (; posL >= 0 && l[posL] == r[posL]; --posL)
+      ;
+
+    return posL >= 0 ? (l[posL] > r[posL] ? 1 : -1) : 0;
+  }
+
   static BigInteger absAdd(const BigInteger& l, const BigInteger& r) {
     int maxPos = max(l.pos_, r.pos_);
     int minPos = min(l.pos_, r.pos_);
@@ -209,7 +313,7 @@ public:
 
     const auto* largeData = l.pos_ > r.pos_ ? l.data_ : r.data_;
     while (idx <= maxPos) {
-      unsigned t = largeData[idx] + inc;
+      unsigned int t = largeData[idx] + inc;
       ret[idx++] = t & bi_trait::bit_mod_mask;
       inc = t >> bi_trait::bit_count;
     }
@@ -219,6 +323,7 @@ public:
     }
 
     ret.pos_ = idx;
+    ret.fixPos();
     return ret;
   }
 
@@ -249,7 +354,7 @@ public:
       ret[curr] -= borrow;
       borrow = nextBorrow;
     }
-    ret.adjustPos();
+    ret.fixPos();
     return ret;
   }
 
@@ -257,7 +362,7 @@ public:
     int posL = l.pos_;
     int posR = r.pos_;
 
-    BigInteger ret(posL + posR + 2, alloc_mem_tag);
+    BigInteger ret(posL + posR + 3, alloc_mem_tag);
 
     for (int i = 0; i <= posR; ++i) {
       auto t = r[i];
@@ -272,155 +377,253 @@ public:
         ret[i + j++] = inc & bi_trait::bit_mod_mask;
       }
     }
-    ret.pos_ = posL + posR + 1;
-    ret.adjustPos();
+    ret.pos_ = posL + posR + 2;
+    ret.fixPos();
     return ret;
   }
 
-  static BigInteger AbsDivImpl(const BigInteger& l, const BigInteger& r, BigInteger& remain) {
-    remain = l;
-    if (BigInteger::absCompare(remain, r) < 0) {
+  template <typename T>
+  static BigInteger absMul(const BigInteger& l, T r) {
+    BigInteger ret(l.size() + BigInteger(r).size() + 1, alloc_mem_tag);
+    uint64 inc = 0;
+    int top = 0;
+    for (int i = 0; i <= l.pos_; ++i) {
+      uint64 v = (uint64)l[i] * r + inc;
+      ret[top++] = v & bi_trait::bit_mod_mask;
+      inc = v >> bi_trait::bit_count;
+    }
+
+    while (inc > 0) {
+      ret[top++] = inc & bi_trait::bit_mod_mask;
+      inc >>= bi_trait::bit_count;
+    }
+
+    ret.pos_ = top - 1;
+    ret.fixPos();
+    return ret;
+  }
+
+  static BigInteger absDiv(const BigInteger& l, const BigInteger& r,
+                           BigInteger& remain) {
+    int t = absCompare(l, r);
+    if (t < 0) {
+      remain = l;
       return 0;
     }
-    /*
-    remain.SetOwned();
-    DataBlock<ElementType> buffer_data(remain.length_ + 5);
-
-    remain.ZeroAdjust();
-    r.ZeroAdjust();
-
-    int l_length = remain.GetLength();
-    int r_length = r.GetLength();
-    int ret_length = l_length - r_length + 1;
-
-    BigInteger ret(NULL, ret_length);
-
-    ElementType* ret_buffer = ret.Buffer();
-    ElementType* l_buffer = remain.Buffer();
-    ElementType* r_buffer = r.Buffer();
-
-    int curr = ret_length - 1;
-    int hi_l = l_length - 1, lo_l = curr;
-    const int hi_r = r_length - 1, lo_r = 0;
-
-    for (; curr >= 0; --curr, --lo_l) {
-      MUL_TYPE test;
-      if (r_length > 1) {
-        if (hi_l - lo_l > hi_r - lo_r) {
-          test = ((MUL_TYPE)l_buffer[hi_l] * BIG_NUMBER_BASE +
-                  l_buffer[hi_l - 1]) /
-                 r_buffer[hi_r];
-        } else if (hi_l == lo_l) {
-          test = 0;
-        } else {
-          test =
-              ((MUL_TYPE)l_buffer[hi_l] * BIG_NUMBER_BASE +
-               l_buffer[hi_l - 1]) /
-              ((MUL_TYPE)r_buffer[hi_r] * BIG_NUMBER_BASE + r_buffer[hi_r - 1]);
-        }
-      } else {
-        if (hi_l - lo_l + 1 > 1) {
-          test = ((MUL_TYPE)l_buffer[hi_l] * BIG_NUMBER_BASE +
-                  l_buffer[hi_l - 1]) /
-                 r_buffer[hi_r];
-        } else {
-          test = l_buffer[hi_l] / r_buffer[hi_r];
-        }
-      }
-
-      for (; test > 0; --test) {
-        if (BigInteger::DoSub(l_buffer, hi_l, lo_l, r_buffer, hi_r, lo_r, test,
-                             buffer_data.Buffer())) {
-          break;
-        }
-      }
-
-      for (; l_buffer[hi_l] == 0 && hi_l >= lo_l; --hi_l)
-        ;
-      ret_buffer[curr] = test;
+    if (t == 0) {
+      remain = 0;
+      return 1;
     }
 
-    ret.length_ = ret_length;
-    ret.ZeroAdjust();
-    remain.ZeroAdjust();*/
-    //return ret;
+    vector<unsigned int> rb;
+    vector<unsigned int> rr = absDiv<unsigned int>(
+        l.toBinVector<unsigned int>(), r.toBinVector<unsigned int>(), rb);
+    remain = BigInteger(rb);
+    return rr;
   }
-public:
-  // output
-  string toString() const {
-    BigInteger t(*this);
-    std::vector<unsigned int> mods;
-    t.adjustPos();
-    do {
-      uint64 add = 0;
-      for (int i = t.pos_; i > 0; --i) {
-        const uint64 x = add + t.data_[i];
-        const uint64 next_add = (x % bi_trait::output_mod) << bi_trait::bit_count;
-        t.data_[i] = x / bi_trait::output_mod;
-        add = next_add;
-      }
-      uint64 x = add + t.data_[0];
-      t.data_[0] = x / bi_trait::output_mod;
-      mods.push_back(x % bi_trait::output_mod);
-      t.adjustPos();
-    } while (!t.isZero());
 
-    string ret = t.sign_ == -1 ? "-" : "";
-    int idx = (int)mods.size() - 1;
-    char buff[32];
-    sprintf(buff, "%u", mods[idx--]);
-    ret += buff;
-    for (; idx >= 0; --idx) {
-      sprintf(buff, "%0*u", bi_trait::output_mod_dig, mods[idx]);
-      ret += buff;
+  static BigInteger absDiv(const BigInteger& l, const BigInteger& r) {
+    int t = absCompare(l, r);
+    if (t < 0) {
+      return 0;
     }
+    if (t == 0) {
+      return 1;
+    }
+
+    vector<unsigned int> rb;
+    vector<unsigned int> rr = absDiv<unsigned int>(
+        l.toBinVector<unsigned int>(), r.toBinVector<unsigned int>(), rb);
+    return rr;
+  }
+
+  template <typename T>
+  static vector<T> absDiv(const vector<T>& l, const vector<T>& r,
+                          vector<T>& remain) {
+    vector<T> result;
+    remain = l;
+
+    int divR = r.size();
+    int pos = (int)l.size() - 1;
+    int end = pos - divR + 1;
+    for (; end >= 0;) {
+      if (pos - end + 1 < divR) {
+        result.push_back(0);
+        --end;
+        continue;
+      }
+      if (remain[pos] == 0) {
+        --pos;
+        continue;
+      }
+      int gt = 1;
+      if (pos - end + 1 == divR) {
+        for (int i = pos, j = divR - 1; i >= end; --i, --j) {
+          if (remain[i] < r[j]) {
+            gt = 0;
+            break;
+          } else if (remain[i] > r[j]) {
+            break;
+          }
+        }
+      }
+      result.push_back(gt);
+      if (gt == 0) {
+        --end;
+        continue;
+      }
+
+      int borrow = 0;
+      int i = end, j = 0;
+      for (; j < divR; ++i, ++j) {
+        int nextBorrow = 0;
+        int t = remain[i];
+        while (t < r[j] + borrow) {
+          t += 2;
+          ++nextBorrow;
+        }
+        remain[i] = t - r[j] - borrow;
+        borrow = nextBorrow;
+      }
+
+      for (; i <= pos; ++i) {
+        int nextBorrow = 0;
+        int t = remain[i];
+        while (t < borrow) {
+          t += 2;
+          ++nextBorrow;
+        }
+        remain[i] = t - borrow;
+        borrow = nextBorrow;
+      }
+      --end;
+    }
+
+    if (result.size() == 0) result.push_back(0);
+    reverse(result.begin(), result.end());
+    fixSize(result);
+    fixSize(remain);
+    return result;
+  }
+
+  template <typename T>
+  static BigInteger absDiv(const BigInteger& l, T r, T& remain) {
+    BigInteger t(l);
+    std::vector<unsigned int> mods;
+    t.fixPos();
+
+    uint64 add = 0;
+    for (int i = t.pos_; i > 0; --i) {
+      const uint64 x = add + t.data_[i];
+      const uint64 next_add = (x % r) << bi_trait::bit_count;
+      t.data_[i] = x / r;
+      add = next_add;
+    }
+    uint64 x = add + t.data_[0];
+    t.data_[0] = x / r;
+    remain = x % r;
+    t.fixPos();
+
+    return t;
+  }
+
+ public:
+  BigInteger& operator+=(const BigInteger& other) {
+    *this = *this + other;
+    return *this;
+  }
+
+  BigInteger& operator-=(const BigInteger& other) {
+    *this = *this - other;
+    return *this;
+  }
+
+  BigInteger& operator*=(const BigInteger& other) {
+    *this = *this * other;
+    return *this;
+  }
+
+  BigInteger& operator/=(const BigInteger& other) {
+    *this = *this / other;
+    return *this;
+  }
+
+  template<typename T>
+  BigInteger& operator/=(T other) {
+    *this = *this / other;
+    return *this;
+  }
+
+  BigInteger& operator%=(const BigInteger& other) {
+    *this = *this % other;
+    return *this;
+  }
+
+  template<typename T>
+  BigInteger& operator%=(T other) {
+    *this = *this % other;
+    return *this;
+  }
+
+  BigInteger& operator^=(const BigInteger& other) {
+    *this = *this ^ other;
+    return *this;
+  }
+
+  BigInteger& operator|=(const BigInteger& other) {
+    *this = *this | other;
+    return *this;
+  }
+
+  template<typename T>
+  BigInteger& operator>>=(T other) {
+    *this = *this >> other;
+    return *this;
+  }
+
+  template<typename T>
+  BigInteger& operator<<=(T other) {
+    *this = *this << other;
+    return *this;
+  }
+
+  BigInteger& operator++() {
+    *this = *this + 1;
+    return *this;
+  }
+
+  BigInteger operator++(int) {
+    BigInteger ret(*this);
+    *this = *this + 1;
     return ret;
   }
 
-  void adjustPos() const {
+  BigInteger& operator--() {
+    *this = *this - 1;
+    return *this;
+  }
+
+  BigInteger operator--(int) {
+    BigInteger ret(*this);
+    *this = *this - 1;
+    return ret;
+  }
+
+ private:
+  void fixPos() const {
     while (pos_ > 0 && data_[pos_] == 0) --pos_;
     if (pos_ == 0 && data_[0] == 0) sign_ = 0;
   }
 
-  bool isZero() const {
-    return sign_ == 0;
+  template <typename T>
+  static void fixSize(vector<T>& v) {
+    if (v.empty()) v.push_back(0);
+    int now = (int)v.size() - 1;
+    while (now > 0 && v[now] == 0) --now;
+    v.resize(now + 1);
   }
 
-  int getSign() const {
-    return sign_;
-  }
-
-  unsigned int operator[](int idx) const {
-    return data_[idx];
-  }
-
-  unsigned int& operator[](int idx) {
-    return data_[idx];
-  }
-  
-  const unsigned int* data() const {
-    return data_;
-  }
-
-  unsigned int* data() {
-    return data_;
-  }
-  
-  vector<char> binVector() const {
-    vector<char> ret;
-    for (int i = 0; i <= pos_; ++i) {
-      auto t = data_[i];
-      for (int j = 0; j < bi_trait::bit_count; ++j)
-        ret.push_back(t&1), t >>= 1;
-    }
-    int now = (int)ret.size() - 1;
-    while (now > 0 && ret[now] == 0) --now;
-    ret.resize(now);
-    
-    return ret;
-  }
-private:
-  void grow(unsigned int newSize) {
+  void grow(int newSize) {
     PE_ASSERT(newSize > 0);
 
     if (data_) {
@@ -433,17 +636,108 @@ private:
 
     data_ = bi_allocator::allocate(bufferLength_ = newSize);
   }
-private:
-public:
+
+ public:
+  // generao util method
+  friend ostream& operator<<(ostream& o, const BigInteger& bi);
+
+  string toString() const {
+    BigInteger t(*this);
+    std::vector<unsigned int> mods;
+    t.fixPos();
+    string ret = t.sign_ == -1 ? "-" : "";
+    do {
+      uint64 add = 0;
+      for (int i = t.pos_; i > 0; --i) {
+        const uint64 x = add + t.data_[i];
+        const uint64 next_add = (x % bi_trait::output_mod)
+                                << bi_trait::bit_count;
+        t.data_[i] = x / bi_trait::output_mod;
+        add = next_add;
+      }
+      uint64 x = add + t.data_[0];
+      t.data_[0] = x / bi_trait::output_mod;
+      mods.push_back(x % bi_trait::output_mod);
+      t.fixPos();
+    } while (!t.isZero());
+
+    int idx = (int)mods.size() - 1;
+    char buff[32];
+    sprintf(buff, "%u", mods[idx--]);
+    ret += buff;
+    for (; idx >= 0; --idx) {
+      sprintf(buff, "%0*u", bi_trait::output_mod_dig, mods[idx]);
+      ret += buff;
+    }
+    return ret;
+  }
+
+  void dump() const {
+    dbg(sign_);
+    dbg(pos_);
+    dbg(bufferLength_);
+    for (int i = 0; i <= pos_; ++i)
+      cerr << data_[i] << ",";
+    cerr << endl;
+  }
+
+  bool isZero() const { return sign_ == 0; }
+
+  int getSign() const { return sign_; }
+
+  unsigned int operator[](int idx) const { return data_[idx]; }
+
+  unsigned int& operator[](int idx) { return data_[idx]; }
+
+  const unsigned int* data() const { return data_; }
+
+  unsigned int* data() { return data_; }
+
+  int size() const { return pos_ + 1; }
+
+  template <typename T>
+  vector<T> toBinVector() const {
+    vector<T> ret;
+    for (int i = 0; i <= pos_; ++i) {
+      auto t = data_[i];
+      for (int j = 0; j < bi_trait::bit_count; ++j)
+        ret.push_back(t & 1), t >>= 1;
+    }
+    fixSize(ret);
+    return ret;
+  }
+
+  template<typename T>
+  T toInt() const {
+    T result = 0;
+    for (int i = pos_; i >= 0; --i) result = (result << bi_trait::bit_count) | data_[i];
+    return result;
+  }
+
+  int bitCount() const {
+    int ret = pos_ * bi_trait::bit_count;
+    int hiCnt = 0;
+    for (unsigned int x = 1; x <= data_[pos_]; ++hiCnt, x <<= 1);
+    return ret + hiCnt;
+  }
+
+  int bitAt(int t) const {
+    const int x = t / bi_trait::bit_count;
+    const int y = t % bi_trait::bit_count;
+    PE_ASSERT(x <= pos_);
+    return (data_[x] >> y) & 1;
+  }
+
+ private:
   unsigned int* data_;
-  unsigned int bufferLength_;
+  int bufferLength_;
   mutable unsigned int pos_;
   mutable int sign_;
 };
 
 inline int operator>(const BigInteger& l, const BigInteger& r) {
-  int s1 = l.sign_;
-  int s2 = r.sign_;
+  const int s1 = l.sign_;
+  const int s2 = r.sign_;
 
   if (s1 < 0) {
     return s2 < 0 && BigInteger::absCompare(l, r) < 0;
@@ -455,8 +749,8 @@ inline int operator>(const BigInteger& l, const BigInteger& r) {
 }
 
 inline int operator<(const BigInteger& l, const BigInteger& r) {
-  int s1 = l.sign_;
-  int s2 = r.sign_;
+  const int s1 = l.sign_;
+  const int s2 = r.sign_;
 
   if (s1 < 0) {
     return s2 >= 0 || BigInteger::absCompare(l, r) > 0;
@@ -472,8 +766,8 @@ inline int operator==(const BigInteger& l, const BigInteger& r) {
 }
 
 inline int operator>=(const BigInteger& l, const BigInteger& r) {
-  int s1 = l.sign_;
-  int s2 = r.sign_;
+  const int s1 = l.sign_;
+  const int s2 = r.sign_;
 
   if (s1 < 0) {
     return s2 < 0 && BigInteger::absCompare(l, r) <= 0;
@@ -485,8 +779,8 @@ inline int operator>=(const BigInteger& l, const BigInteger& r) {
 }
 
 inline int operator<=(const BigInteger& l, const BigInteger& r) {
-  int s1 = l.sign_;
-  int s2 = r.sign_;
+  const int s1 = l.sign_;
+  const int s2 = r.sign_;
 
   if (s1 < 0) {
     return s2 >= 0 || BigInteger::absCompare(l, r) >= 0;
@@ -509,25 +803,26 @@ inline BigInteger operator+(const BigInteger& l, const BigInteger& r) {
   if (l.getSign() == r.getSign()) {
     BigInteger ret(BigInteger::absAdd(l, r));
     ret.sign_ = l.sign_;
-    ret.adjustPos();
+    ret.fixPos();
     return ret;
   }
 
-  int cmp = BigInteger::absCompare(l, r);
+  const int cmp = BigInteger::absCompare(l, r);
   if (cmp > 0) {
     BigInteger ret(BigInteger::absSub(l, r));
     ret.sign_ = l.sign_;
-    ret.adjustPos();
+    ret.fixPos();
     return ret;
   } else if (cmp < 0) {
     BigInteger ret(BigInteger::absSub(r, l));
     ret.sign_ = r.sign_;
-    ret.adjustPos();
+    ret.fixPos();
     return ret;
   } else {
     return 0;
   }
 }
+
 inline BigInteger operator-(const BigInteger& l, const BigInteger& r) {
   if (l.isZero()) {
     return -r;
@@ -540,7 +835,7 @@ inline BigInteger operator-(const BigInteger& l, const BigInteger& r) {
   if (l.getSign() != r.getSign()) {
     BigInteger ret(BigInteger::absAdd(l, r));
     ret.sign_ = l.sign_;
-    ret.adjustPos();
+    ret.fixPos();
     return ret;
   }
 
@@ -548,36 +843,366 @@ inline BigInteger operator-(const BigInteger& l, const BigInteger& r) {
   if (cmp > 0) {
     BigInteger ret(BigInteger::absSub(l, r));
     ret.sign_ = l.sign_;
-    ret.adjustPos();
+    ret.fixPos();
     return ret;
   } else if (cmp < 0) {
     BigInteger ret(BigInteger::absSub(r, l));
     ret.sign_ = -r.sign_;
-    ret.adjustPos();
+    ret.fixPos();
     return ret;
   } else {
     return 0;
   }
 }
+
 inline BigInteger operator*(const BigInteger& l, const BigInteger& r) {
-  int s = l.getSign() * r.getSign();
+  if (l.isZero() || r.isZero()) return 0;
 
-  if (s == 0) {
-    return 0;
-  }
-
+  const int s = l.getSign() * (r > 0 ? 1 : -1);
   BigInteger ret(BigInteger::absMul(l, r));
   ret.sign_ = s;
 
   return ret;
 }
-//inline BigInteger operator/(const BigInteger& l, const BigInteger& r);
 
-ostream& operator << (ostream& o, const BigInteger& bi) {
+template <typename T>
+inline BigInteger operator*(const BigInteger& l, T r) {
+  if (r == 0 || l.isZero()) return 0;
+
+  const int s = l.getSign() * (r > 0 ? 1 : -1);
+  BigInteger ret(BigInteger::absMul(l, r > 0 ? r : -r));
+  ret.sign_ = s;
+
+  return ret;
+}
+
+template <typename T>
+inline BigInteger operator*(T l, const BigInteger& r) {
+  return r * l;
+}
+
+inline BigInteger operator/(const BigInteger& l, const BigInteger& r) {
+  BigInteger u, v;
+  tie(u, v) = div(l, r);
+  return u;
+}
+
+template <typename T>
+inline BigInteger operator/(const BigInteger& l, T r) {
+  BigInteger u;
+  T v;
+  tie(u, v) = div(l, r);
+  return u;
+}
+
+inline tuple<BigInteger, BigInteger> div(const BigInteger& l, const BigInteger& r) {
+  if (l.isZero() && r.isZero()) {
+    return make_tuple(1, 0);
+  }
+  if (l.isZero() || r.isZero()) {
+    return make_tuple(0, 0);
+  }
+
+  BigInteger x;
+  BigInteger ret(BigInteger::absDiv(l, r, x));
+  ret.sign_ = l.sign_ * r.sign_;
+  ret.fixPos();
+  x.fixPos();
+  x.sign_ = l.sign_;
+  x.fixPos();
+
+  return make_tuple(std::move(ret), std::move(x));
+}
+
+template <typename T>
+inline tuple<BigInteger, T> div(const BigInteger& l, T r) {
+  if (l.isZero() && r == 0) {
+    return make_tuple(1, 0);
+  }
+  if (l.isZero() || r == 0) {
+    return make_tuple(0, 0);
+  }
+
+  T x;
+  BigInteger ret(BigInteger::absDiv(l, r, x));
+  ret.sign_ = l.sign_ * (r > 0 ? 1 : -1);
+  ret.fixPos();
+  if (l.sign_ < 0) x = -x;
+
+  return make_tuple(std::move(ret), x);
+}
+
+inline BigInteger operator%(const BigInteger& l, const BigInteger& r) {
+  BigInteger u, v;
+  tie(u, v) = div(l, r);
+  return v;
+}
+
+template<typename T>
+inline T operator%(const BigInteger& l, T r) {
+  BigInteger u;
+  T v;
+  tie(u, v) = div(l, r);
+  return v;
+}
+
+inline BigInteger operator&(const BigInteger& l, const BigInteger& r) {
+  const int minPos = min(l.pos_, r.pos_);
+  BigInteger ret(minPos + 1, BigInteger::alloc_mem_tag);
+  for (int i = 0; i <= minPos; ++i) {
+    ret[i] = l[i] & r[i];
+  }
+  ret.pos_ = minPos;
+  ret.fixPos();
+  return ret;
+}
+
+inline BigInteger operator^(const BigInteger& l, const BigInteger& r) {
+  const int maxPos = max(l.pos_, r.pos_);
+  BigInteger ret(maxPos + 1, BigInteger::alloc_mem_tag);
+  for (int i = 0; i <= maxPos; ++i) {
+    unsigned int t = 0;
+    if (i <= l.pos_) t ^= l[i];
+    if (i <= r.pos_) t ^= r[i];
+    ret[i] = t;
+  }
+  ret.pos_ = maxPos;
+  ret.fixPos();
+  return ret;
+}
+
+inline BigInteger operator|(const BigInteger& l, const BigInteger& r) {
+  const int maxPos = max(l.pos_, r.pos_);
+  BigInteger ret(maxPos + 1, BigInteger::alloc_mem_tag);
+  for (int i = 0; i <= maxPos; ++i) {
+    unsigned int t = 0;
+    if (i <= l.pos_) t |= l[i];
+    if (i <= r.pos_) t |= r[i];
+    ret[i] = t;
+  }
+  ret.pos_ = maxPos;
+  ret.fixPos();
+  return ret;
+}
+
+template<typename T>
+inline BigInteger operator<<(const BigInteger& l, T n) {
+  if (l.getSign() == 0) {
+    return 0;
+  }
+  if (n == 0) {
+    return l;
+  }
+  const int bitCnt = l.bitCount();
+  vector<unsigned int> v(n+bitCnt, 0);
+  for (int i = 0, j = n; i < bitCnt; ++i, ++j) {
+    const int x = i / bi_trait::bit_count;
+    const int y = i % bi_trait::bit_count;
+    v[j] = (l[x]>>y)&1;
+  }
+  BigInteger ret(v);
+  ret.sign_ = l.sign_;
+  ret.fixPos();
+  return ret;
+}
+
+template<typename T>
+inline BigInteger operator>>(const BigInteger& l, T n) {
+  if (l.getSign() == 0) {
+    return 0;
+  }
+  if (n == 0) {
+    return l;
+  }
+  const int bitCnt = l.bitCount();
+  if (n >= bitCnt) {
+    return 0;
+  }
+
+  vector<unsigned int> v(bitCnt - n, 0);
+  for (int i = n, j = 0; i < bitCnt; ++i, ++j) {
+    const int x = i / bi_trait::bit_count;
+    const int y = i % bi_trait::bit_count;
+    v[j] = (l[x]>>y)&1;
+  }
+
+  BigInteger ret(v);
+  ret.sign_ = l.sign_;
+  ret.fixPos();
+
+  return ret;
+}
+
+template<typename T>
+inline BigInteger power(const BigInteger& l, T n) {
+  BigInteger ret(1);
+  BigInteger x(l);
+  for (; n > 0; n >>= 1) {
+    if (n & 1) ret = ret * x;
+    if (n > 1) x = x * x;
+  }
+  return ret;
+}
+
+template<typename T>
+inline BigInteger power_mod(const BigInteger& l, T n, const BigInteger& mod) {
+  if (mod == 1) {
+    return 0;
+  }
+  BigInteger ret(1);
+  BigInteger x(l%mod);
+  for (; n > 0; n >>= 1) {
+    if (n & 1) ret = ret * x % mod;
+    if (n > 1) x = x * x % mod;
+  }
+  return ret;
+}
+
+inline BigInteger power_mod(const BigInteger& l, const BigInteger& m, const BigInteger& mod) {
+  if (mod == 1) {
+    return 0;
+  }
+  BigInteger ret(1);
+  BigInteger x(l%mod);
+  BigInteger n(m);
+  for (; n.getSign() > 0;) {
+    if (n[0] & 1) ret = ret * x % mod;
+    n >>= 1;
+    if (n.getSign() > 0) x = x * x % mod;
+  }
+  return ret;
+}
+
+inline BigInteger exgcd(const BigInteger& a, const BigInteger& b, BigInteger& x, BigInteger& y) {
+  if (b == 0) {
+    x = 1;
+    y = 0;
+    return a;
+  }
+
+  BigInteger x1 = 0, y1 = 0;
+  BigInteger ret = exgcd(b, a % b, x1, y1);
+  // b * x1 + (a%b) * y1 = ret
+  // b * x1 + (a - a / b * b) * y1 = ret
+  // b * x1 + a * y1 - a / b * b * y1 = ret
+  // y1 * a + (x1 - a / b * y1) b = ret
+  y = x1 - a / b * y1;
+  x = std::move(y1);
+  return ret;
+}
+
+inline BigInteger gcd(BigInteger m, BigInteger n) {
+  while (!n.isZero()) {
+    BigInteger t = m % n;
+    m = n;
+    n = std::move(t);
+  }
+  return m;
+}
+
+inline BigInteger mod_inv(const BigInteger& a, const BigInteger& mod) {
+  BigInteger x, y;
+  exgcd(a, mod, x, y);
+  x %= mod;
+  if (x.getSign() < 0) {
+    x += mod;
+  }
+  return x;
+}
+
+inline BigInteger fabs(const BigInteger& n) {
+  return n.getSign() >= 0 ? n : -n;
+}
+
+inline BigInteger abs(const BigInteger& n) {
+  return n.getSign() >= 0 ? n : -n;
+}
+
+ostream& operator<<(ostream& o, const BigInteger& bi) {
   return o << bi.toString();
 }
 
-BigInteger operator "" _bi(const char* sv, size_t sc) {
+BigInteger operator"" _bi(const char* sv, size_t sc) {
   return BigInteger(string(sv));
 }
+
+BigInteger operator "" _bi(unsigned long long v) {
+  return BigInteger(v);
+}
+
+typedef BigInteger bi;
+
+struct FacModer
+{
+  std::vector<bi> F;
+  int64 p;
+  int64 e;
+  bi mod;
+  bi phi;
+
+  FacModer(const int64 p, const int64 e): p(p), e(e)
+  {
+    int64 pe = p * e;
+    mod = power(bi(p), e);
+    phi = power(bi(p), (e - 1)) * (p - 1);
+    F.resize(pe + 1, 1);
+    for (int i = 1; i <= pe; ++i) {
+      if (i % p == 0) F[i] = F[i-1];
+      else F[i] = F[i-1] * i % mod;
+    }
+  }
+
+  bi cal(const bi& N) {
+    bi u;
+    bi v;
+    tie(u, v) = div(N, p);
+    int64 vv = v.toInt<int64>();
+    int64 r = e + 1 >> 1;
+
+    bi ret = 1;
+    // F(up, p)
+    const bi u2 = u*u;
+
+    for (int j = 1; j <= r; ++j)
+    {
+      bi beta_numer = u;
+      bi beta_denom = j;
+      const int j2 = j * j;
+      for (int i = 1; i <= r; ++i) if (i != j)
+        beta_numer *= u2 - i * i,
+        beta_denom *= j2 - i * i;
+      auto beta = beta_numer / beta_denom % phi;
+      if (beta.getSign() < 0) beta += phi;
+      ret = ret * power_mod(F[j*p], beta, mod) % mod;
+    }
+
+    if (p == 2) {
+      int64 left_mod4 = (((u * p + 1)[0] & 4) >> 1) + 1;
+      int64 right_mod4 = ret[0] & 3;
+      if (left_mod4 != right_mod4) {
+        ret = (mod - ret) % mod;
+      }
+    }
+
+    // F(v, p)
+    ret = ret * F[vv] % mod;
+
+    // (p + v, v)_p
+    for (int j = 1; j < e; ++j) {
+      auto base = F[j*p+vv] * mod_inv(F[vv] * F[j*p], mod) % mod;
+      bi alpha_numer = u;
+      bi alpha_denom = j;
+      for (int i = 1; i < e; ++i) if (i != j) {
+        alpha_numer *= u - i;
+        alpha_denom *= j - i;
+      }
+      auto alpha = alpha_numer / alpha_denom % phi;
+      if (alpha.getSign() < 0) alpha += phi;
+      ret = ret * power_mod(base, alpha, mod) % mod;
+    }
+
+    return ret;
+  }
+};
 #endif
+

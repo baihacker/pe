@@ -65,13 +65,13 @@ struct bi_allocator_fixed_size {
 
 // Configuration of BigInteger.
 typedef bi_trait30 bi_trait;
-typedef bi_allocator_fixed_size bi_allocator;
+typedef bi_allocator_std bi_allocator;
 
 class BigInteger {
  public:
   // constructors, destructors, value semantics.
   BigInteger() : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
-    grow(1);
+    reserve(1);
     data_[0] = 0;
     sign_ = 0;
   }
@@ -82,8 +82,8 @@ class BigInteger {
     }
   }
 
-  BigInteger(const BigInteger& other) {
-    data_ = bi_allocator::allocate(bufferLength_ = other.bufferLength_);
+  BigInteger(const BigInteger& other) : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
+    reserve(other.bufferLength_);
     sign_ = other.sign_;
     pos_ = other.pos_;
     copy(other.data_, other.data_ + bufferLength_, data_);
@@ -126,7 +126,7 @@ class BigInteger {
 
     for (auto t = absValue; t > 0; ++need, t >>= bi_trait::bit_count)
       ;
-    grow(need);
+    reserve(need);
 
     pos_ = -1;
     data_[0] = 0;
@@ -172,7 +172,7 @@ class BigInteger {
       while (now > 0 && value[now] == 0) --now;
     } while (now > 0 || value[now] > 0);
 
-    grow(result.size());
+    reserve(result.size());
 
     sign_ = 1;
     pos_ = (int)result.size() - 1;
@@ -185,7 +185,7 @@ class BigInteger {
       : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
     const int n = (int)v.size();
     int need = (n + bi_trait::bit_count - 1) / bi_trait::bit_count;
-    grow(need);
+    reserve(need);
 
     unsigned int value = 0;
     unsigned int flag = 1;
@@ -215,9 +215,16 @@ class BigInteger {
 
   BigInteger(int size, alloc_mem)
       : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
-    grow(size);
+    reserve(size);
     fill(data_, data_ + bufferLength_, 0);
     sign_ = 0;
+  }
+
+  BigInteger(const BigInteger& other, int minBuffer) : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
+    reserve(max(other.bufferLength_, minBuffer));
+    sign_ = other.sign_;
+    pos_ = other.pos_;
+    copy(other.data_, other.data_ + bufferLength_, data_);
   }
 
  public:
@@ -298,39 +305,49 @@ class BigInteger {
   }
 
   static BigInteger absAdd(const BigInteger& l, const BigInteger& r) {
+    BigInteger ret(l, max(l.size(), r.size()) + 1);
+    absAddInplace(ret, r);
+    return ret;
+  }
+
+  static void absAddInplace(BigInteger& l, const BigInteger& r) {
+    l.reserve(l.size() + r.size() + 1);
+
     int maxPos = max(l.pos_, r.pos_);
     int minPos = min(l.pos_, r.pos_);
-    BigInteger ret(maxPos + 2, alloc_mem_tag);
 
     int idx = 0;
     unsigned int inc = 0;
 
     while (idx <= minPos) {
       unsigned int t = l[idx] + r[idx] + inc;
-      ret[idx++] = t & bi_trait::bit_mod_mask;
+      l[idx++] = t & bi_trait::bit_mod_mask;
       inc = t >> bi_trait::bit_count;
     }
 
     const auto* largeData = l.pos_ > r.pos_ ? l.data_ : r.data_;
     while (idx <= maxPos) {
       unsigned int t = largeData[idx] + inc;
-      ret[idx++] = t & bi_trait::bit_mod_mask;
+      l[idx++] = t & bi_trait::bit_mod_mask;
       inc = t >> bi_trait::bit_count;
     }
 
     if (inc) {
-      ret[idx++] = inc;
+      l[idx++] = inc;
     }
 
-    ret.pos_ = idx;
-    ret.fixPos();
-    return ret;
+    l.pos_ = max(idx - 1, 0);
+    l.fixPos();
   }
 
   static BigInteger absSub(const BigInteger& l, const BigInteger& r) {
-    PE_ASSERT(BigInteger::absCompare(l, r) >= 0);
+    BigInteger ret(l);
+    absSubInplace(ret, r);
+    return ret;
+  }
 
-    BigInteger ret = l;
+  static void absSubInplace(BigInteger& l, const BigInteger& r) {
+    PE_ASSERT(BigInteger::absCompare(l, r) >= 0);
 
     int maxPos = l.pos_;
     int minPos = r.pos_;
@@ -338,24 +355,25 @@ class BigInteger {
     int borrow = 0;
     for (int curr = 0; curr <= minPos; ++curr) {
       int nextBorrow = 0;
-      while (ret[curr] < r[curr] + borrow) {
+      unsigned int t = l[curr];
+      while (t < r[curr] + borrow) {
         nextBorrow++;
-        ret[curr] += bi_trait::bit_value;
+        t += bi_trait::bit_value;
       }
-      ret[curr] -= r[curr] + borrow;
+      l[curr] = t - r[curr] - borrow;
       borrow = nextBorrow;
     }
     for (int curr = minPos + 1; curr <= maxPos; ++curr) {
       int nextBorrow = 0;
-      while (ret[curr] < borrow) {
+      unsigned int t = l[curr];
+      while (l[curr] < borrow) {
         nextBorrow++;
-        ret[curr] += bi_trait::bit_value;
+        t += bi_trait::bit_value;
       }
-      ret[curr] -= borrow;
+      l[curr] = t - borrow;
       borrow = nextBorrow;
     }
-    ret.fixPos();
-    return ret;
+    l.fixPos();
   }
 
   static BigInteger absMul(const BigInteger& l, const BigInteger& r) {
@@ -384,23 +402,29 @@ class BigInteger {
 
   template <typename T>
   static BigInteger absMul(const BigInteger& l, T r) {
-    BigInteger ret(l.size() + BigInteger(r).size() + 1, alloc_mem_tag);
+    BigInteger ret(l, l.size() + BigInteger(r).size() + 1);
+    absMulInplace(ret, r);
+    return ret;
+  }
+
+  template <typename T>
+  static void absMulInplace(BigInteger& l, T r) {
+    l.reserve(l.size() + BigInteger(r).size() + 1);
     uint64 inc = 0;
     int top = 0;
     for (int i = 0; i <= l.pos_; ++i) {
       uint64 v = (uint64)l[i] * r + inc;
-      ret[top++] = v & bi_trait::bit_mod_mask;
+      l[top++] = v & bi_trait::bit_mod_mask;
       inc = v >> bi_trait::bit_count;
     }
 
     while (inc > 0) {
-      ret[top++] = inc & bi_trait::bit_mod_mask;
+      l[top++] = inc & bi_trait::bit_mod_mask;
       inc >>= bi_trait::bit_count;
     }
 
-    ret.pos_ = top - 1;
-    ret.fixPos();
-    return ret;
+    l.pos_ = top - 1;
+    l.fixPos();
   }
 
   static BigInteger absDiv(const BigInteger& l, const BigInteger& r,
@@ -529,17 +553,73 @@ class BigInteger {
 
  public:
   BigInteger& operator+=(const BigInteger& other) {
-    *this = *this + other;
+    if (other.isZero()) {
+       // Do nothing
+    } else if (isZero()) {
+      *this = other;
+    } else if (getSign() == other.getSign()) {
+      absAddInplace(*this, other);
+    } else {
+      int c = absCompare(*this, other);
+      if (c == 0) {
+        pos_ = 0;
+        data_[0] = 0;
+        sign_ = 0;
+      } else if (c > 0) {
+        absSubInplace(*this, other);
+      } else {
+        BigInteger t(other);
+        absSubInplace(t, *this);
+	*this = std::move(t);
+      }
+    }
     return *this;
   }
 
   BigInteger& operator-=(const BigInteger& other) {
-    *this = *this - other;
+    if (other.isZero()) {
+      // Do nothing
+    } else if (isZero()) {
+      *this = other;
+      sign_ = -other.sign_;
+    } else if (getSign() != other.getSign()) {
+      absAddInplace(*this, other);
+    } else {
+      int c = absCompare(*this, other);
+      if (c == 0) {
+        pos_ = 0;
+        data_[0] = 0;
+        sign_ = 0;
+      } else if (c > 0) {
+        absSubInplace(*this, other);
+      } else {
+        BigInteger t(other);
+        absSubInplace(t, *this);
+        *this = std::move(t);
+        sign_ = -other.sign_;
+      }
+    }
     return *this;
   }
 
   BigInteger& operator*=(const BigInteger& other) {
     *this = *this * other;
+    return *this;
+  }
+
+  template<typename T>
+  BigInteger& operator*=(T other) {
+    if (isZero()) {
+      return *this;
+    }
+    if (other == 0) {
+      pos_ = 0;
+      data_[0] = 0;
+      sign_ = 0;
+      return *this;
+    }
+    absMulInplace(*this, other > 0 ? other : -other);
+    sign_ = sign_ * (other > 0 ? 1 : -1);
     return *this;
   }
 
@@ -623,18 +703,24 @@ class BigInteger {
     v.resize(now + 1);
   }
 
-  void grow(int newSize) {
+  void reserve(int newSize) {
     PE_ASSERT(newSize > 0);
-
+    unsigned int* oldData = nullptr;
     if (data_) {
       if (newSize > bufferLength_) {
+        oldData = data_;
         bi_allocator::deallocate(data_);
       } else {
         return;
       }
     }
 
-    data_ = bi_allocator::allocate(bufferLength_ = newSize);
+    data_ = bi_allocator::allocate(newSize);
+    if (oldData != nullptr) {
+      // copy used data only.
+      copy(oldData, oldData + pos_ + 1, data_);
+    }
+    bufferLength_ = newSize;
   }
 
  public:
@@ -792,67 +878,35 @@ inline int operator<=(const BigInteger& l, const BigInteger& r) {
 }
 
 inline BigInteger operator+(const BigInteger& l, const BigInteger& r) {
-  if (l.isZero()) {
-    return r;
-  }
-
-  if (r.isZero()) {
-    return l;
-  }
-
-  if (l.getSign() == r.getSign()) {
-    BigInteger ret(BigInteger::absAdd(l, r));
-    ret.sign_ = l.sign_;
-    ret.fixPos();
-    return ret;
-  }
-
-  const int cmp = BigInteger::absCompare(l, r);
-  if (cmp > 0) {
-    BigInteger ret(BigInteger::absSub(l, r));
-    ret.sign_ = l.sign_;
-    ret.fixPos();
-    return ret;
-  } else if (cmp < 0) {
-    BigInteger ret(BigInteger::absSub(r, l));
-    ret.sign_ = r.sign_;
-    ret.fixPos();
-    return ret;
-  } else {
-    return 0;
-  }
+  BigInteger ret(l);
+  ret += r;
+  return ret;
 }
 
 inline BigInteger operator-(const BigInteger& l, const BigInteger& r) {
-  if (l.isZero()) {
-    return -r;
-  }
-
-  if (r.isZero()) {
-    return l;
-  }
-
-  if (l.getSign() != r.getSign()) {
-    BigInteger ret(BigInteger::absAdd(l, r));
-    ret.sign_ = l.sign_;
-    ret.fixPos();
-    return ret;
-  }
-
-  int cmp = BigInteger::absCompare(l, r);
-  if (cmp > 0) {
-    BigInteger ret(BigInteger::absSub(l, r));
-    ret.sign_ = l.sign_;
-    ret.fixPos();
-    return ret;
-  } else if (cmp < 0) {
-    BigInteger ret(BigInteger::absSub(r, l));
-    ret.sign_ = -r.sign_;
-    ret.fixPos();
-    return ret;
-  } else {
-    return 0;
-  }
+    if (r.isZero()) {
+      return l;
+    } else if (l.isZero()) {
+      return -r;
+    } else if (l.getSign() != r.getSign()) {
+      BigInteger t(l);
+      BigInteger::absAddInplace(t, r);
+      return t;
+    } else {
+      int c = BigInteger::absCompare(l, r);
+      if (c == 0) {
+        return 0;
+      } else if (c > 0) {
+        BigInteger t(l);
+        BigInteger::absSubInplace(t, r);
+        return t;
+      } else {
+        BigInteger t(r);
+        BigInteger::absSubInplace(t, l);
+        t.sign_ = -r.sign_;
+        return t;
+      }
+    }
 }
 
 inline BigInteger operator*(const BigInteger& l, const BigInteger& r) {

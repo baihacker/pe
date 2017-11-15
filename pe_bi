@@ -82,7 +82,8 @@ class BigInteger {
     }
   }
 
-  BigInteger(const BigInteger& other) : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
+  BigInteger(const BigInteger& other)
+      : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
     reserve(other.bufferLength_);
     sign_ = other.sign_;
     pos_ = other.pos_;
@@ -220,7 +221,8 @@ class BigInteger {
     sign_ = 0;
   }
 
-  BigInteger(const BigInteger& other, int minBuffer) : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
+  BigInteger(const BigInteger& other, int minBuffer)
+      : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
     reserve(max(other.bufferLength_, minBuffer));
     sign_ = other.sign_;
     pos_ = other.pos_;
@@ -248,7 +250,8 @@ class BigInteger {
   friend inline BigInteger operator/(const BigInteger& l, const BigInteger& r);
   template <typename T>
   friend inline BigInteger operator/(const BigInteger& l, T r);
-  friend inline tuple<BigInteger, BigInteger> div(const BigInteger& l, const BigInteger& r);
+  friend inline tuple<BigInteger, BigInteger> div(const BigInteger& l,
+                                                  const BigInteger& r);
   template <typename T>
   friend inline tuple<BigInteger, T> div(const BigInteger& l, T r);
 
@@ -260,10 +263,10 @@ class BigInteger {
   friend inline BigInteger operator^(const BigInteger& l, const BigInteger& r);
   friend inline BigInteger operator|(const BigInteger& l, const BigInteger& r);
 
-  template<typename T>
+  template <typename T>
   friend inline BigInteger operator<<(const BigInteger& l, T n);
 
-  template<typename T>
+  template <typename T>
   friend inline BigInteger operator>>(const BigInteger& l, T n);
 
  public:
@@ -274,9 +277,7 @@ class BigInteger {
     return ret;
   }
 
-  const BigInteger& operator+() const {
-    return *this;
-  }
+  const BigInteger& operator+() const { return *this; }
 
   BigInteger operator~() const {
     BigInteger ret(*this);
@@ -554,7 +555,7 @@ class BigInteger {
  public:
   BigInteger& operator+=(const BigInteger& other) {
     if (other.isZero()) {
-       // Do nothing
+      // Do nothing
     } else if (isZero()) {
       *this = other;
     } else if (getSign() == other.getSign()) {
@@ -570,7 +571,7 @@ class BigInteger {
       } else {
         BigInteger t(other);
         absSubInplace(t, *this);
-	*this = std::move(t);
+        *this = std::move(t);
       }
     }
     return *this;
@@ -607,7 +608,7 @@ class BigInteger {
     return *this;
   }
 
-  template<typename T>
+  template <typename T>
   BigInteger& operator*=(T other) {
     if (isZero()) {
       return *this;
@@ -628,7 +629,7 @@ class BigInteger {
     return *this;
   }
 
-  template<typename T>
+  template <typename T>
   BigInteger& operator/=(T other) {
     *this = *this / other;
     return *this;
@@ -639,7 +640,7 @@ class BigInteger {
     return *this;
   }
 
-  template<typename T>
+  template <typename T>
   BigInteger& operator%=(T other) {
     *this = *this % other;
     return *this;
@@ -655,13 +656,13 @@ class BigInteger {
     return *this;
   }
 
-  template<typename T>
+  template <typename T>
   BigInteger& operator>>=(T other) {
     *this = *this >> other;
     return *this;
   }
 
-  template<typename T>
+  template <typename T>
   BigInteger& operator<<=(T other) {
     *this = *this << other;
     return *this;
@@ -762,8 +763,7 @@ class BigInteger {
     dbg(sign_);
     dbg(pos_);
     dbg(bufferLength_);
-    for (int i = 0; i <= pos_; ++i)
-      cerr << data_[i] << ",";
+    for (int i = 0; i <= pos_; ++i) cerr << data_[i] << ",";
     cerr << endl;
   }
 
@@ -793,17 +793,19 @@ class BigInteger {
     return ret;
   }
 
-  template<typename T>
+  template <typename T>
   T toInt() const {
     T result = 0;
-    for (int i = pos_; i >= 0; --i) result = (result << bi_trait::bit_count) | data_[i];
+    for (int i = pos_; i >= 0; --i)
+      result = (result << bi_trait::bit_count) | data_[i];
     return result;
   }
 
   int bitCount() const {
     int ret = pos_ * bi_trait::bit_count;
     int hiCnt = 0;
-    for (unsigned int x = 1; x <= data_[pos_]; ++hiCnt, x <<= 1);
+    for (unsigned int x = 1; x <= data_[pos_]; ++hiCnt, x <<= 1)
+      ;
     return ret + hiCnt;
   }
 
@@ -884,29 +886,29 @@ inline BigInteger operator+(const BigInteger& l, const BigInteger& r) {
 }
 
 inline BigInteger operator-(const BigInteger& l, const BigInteger& r) {
-    if (r.isZero()) {
-      return l;
-    } else if (l.isZero()) {
-      return -r;
-    } else if (l.getSign() != r.getSign()) {
+  if (r.isZero()) {
+    return l;
+  } else if (l.isZero()) {
+    return -r;
+  } else if (l.getSign() != r.getSign()) {
+    BigInteger t(l);
+    BigInteger::absAddInplace(t, r);
+    return t;
+  } else {
+    int c = BigInteger::absCompare(l, r);
+    if (c == 0) {
+      return 0;
+    } else if (c > 0) {
       BigInteger t(l);
-      BigInteger::absAddInplace(t, r);
+      BigInteger::absSubInplace(t, r);
       return t;
     } else {
-      int c = BigInteger::absCompare(l, r);
-      if (c == 0) {
-        return 0;
-      } else if (c > 0) {
-        BigInteger t(l);
-        BigInteger::absSubInplace(t, r);
-        return t;
-      } else {
-        BigInteger t(r);
-        BigInteger::absSubInplace(t, l);
-        t.sign_ = -r.sign_;
-        return t;
-      }
+      BigInteger t(r);
+      BigInteger::absSubInplace(t, l);
+      t.sign_ = -r.sign_;
+      return t;
     }
+  }
 }
 
 inline BigInteger operator*(const BigInteger& l, const BigInteger& r) {
@@ -949,7 +951,8 @@ inline BigInteger operator/(const BigInteger& l, T r) {
   return u;
 }
 
-inline tuple<BigInteger, BigInteger> div(const BigInteger& l, const BigInteger& r) {
+inline tuple<BigInteger, BigInteger> div(const BigInteger& l,
+                                         const BigInteger& r) {
   if (l.isZero() && r.isZero()) {
     return make_tuple(1, 0);
   }
@@ -992,7 +995,7 @@ inline BigInteger operator%(const BigInteger& l, const BigInteger& r) {
   return v;
 }
 
-template<typename T>
+template <typename T>
 inline T operator%(const BigInteger& l, T r) {
   BigInteger u;
   T v;
@@ -1039,7 +1042,7 @@ inline BigInteger operator|(const BigInteger& l, const BigInteger& r) {
   return ret;
 }
 
-template<typename T>
+template <typename T>
 inline BigInteger operator<<(const BigInteger& l, T n) {
   if (l.getSign() == 0) {
     return 0;
@@ -1048,11 +1051,11 @@ inline BigInteger operator<<(const BigInteger& l, T n) {
     return l;
   }
   const int bitCnt = l.bitCount();
-  vector<unsigned int> v(n+bitCnt, 0);
+  vector<unsigned int> v(n + bitCnt, 0);
   for (int i = 0, j = n; i < bitCnt; ++i, ++j) {
     const int x = i / bi_trait::bit_count;
     const int y = i % bi_trait::bit_count;
-    v[j] = (l[x]>>y)&1;
+    v[j] = (l[x] >> y) & 1;
   }
   BigInteger ret(v);
   ret.sign_ = l.sign_;
@@ -1060,7 +1063,7 @@ inline BigInteger operator<<(const BigInteger& l, T n) {
   return ret;
 }
 
-template<typename T>
+template <typename T>
 inline BigInteger operator>>(const BigInteger& l, T n) {
   if (l.getSign() == 0) {
     return 0;
@@ -1077,7 +1080,7 @@ inline BigInteger operator>>(const BigInteger& l, T n) {
   for (int i = n, j = 0; i < bitCnt; ++i, ++j) {
     const int x = i / bi_trait::bit_count;
     const int y = i % bi_trait::bit_count;
-    v[j] = (l[x]>>y)&1;
+    v[j] = (l[x] >> y) & 1;
   }
 
   BigInteger ret(v);
@@ -1087,7 +1090,7 @@ inline BigInteger operator>>(const BigInteger& l, T n) {
   return ret;
 }
 
-template<typename T>
+template <typename T>
 inline BigInteger power(const BigInteger& l, T n) {
   BigInteger ret(1);
   BigInteger x(l);
@@ -1098,13 +1101,13 @@ inline BigInteger power(const BigInteger& l, T n) {
   return ret;
 }
 
-template<typename T>
+template <typename T>
 inline BigInteger power_mod(const BigInteger& l, T n, const BigInteger& mod) {
   if (mod == 1) {
     return 0;
   }
   BigInteger ret(1);
-  BigInteger x(l%mod);
+  BigInteger x(l % mod);
   for (; n > 0; n >>= 1) {
     if (n & 1) ret = ret * x % mod;
     if (n > 1) x = x * x % mod;
@@ -1112,12 +1115,13 @@ inline BigInteger power_mod(const BigInteger& l, T n, const BigInteger& mod) {
   return ret;
 }
 
-inline BigInteger power_mod(const BigInteger& l, const BigInteger& m, const BigInteger& mod) {
+inline BigInteger power_mod(const BigInteger& l, const BigInteger& m,
+                            const BigInteger& mod) {
   if (mod == 1) {
     return 0;
   }
   BigInteger ret(1);
-  BigInteger x(l%mod);
+  BigInteger x(l % mod);
   BigInteger n(m);
   for (; n.getSign() > 0;) {
     if (n[0] & 1) ret = ret * x % mod;
@@ -1127,7 +1131,8 @@ inline BigInteger power_mod(const BigInteger& l, const BigInteger& m, const BigI
   return ret;
 }
 
-inline BigInteger exgcd(const BigInteger& a, const BigInteger& b, BigInteger& x, BigInteger& y) {
+inline BigInteger exgcd(const BigInteger& a, const BigInteger& b, BigInteger& x,
+                        BigInteger& y) {
   if (b == 0) {
     x = 1;
     y = 0;
@@ -1168,9 +1173,7 @@ inline BigInteger fabs(const BigInteger& n) {
   return n.getSign() >= 0 ? n : -n;
 }
 
-inline BigInteger abs(const BigInteger& n) {
-  return n.getSign() >= 0 ? n : -n;
-}
+inline BigInteger abs(const BigInteger& n) { return n.getSign() >= 0 ? n : -n; }
 
 ostream& operator<<(ostream& o, const BigInteger& bi) {
   return o << bi.toString();
@@ -1180,29 +1183,27 @@ BigInteger operator"" _bi(const char* sv, size_t sc) {
   return BigInteger(string(sv));
 }
 
-BigInteger operator "" _bi(unsigned long long v) {
-  return BigInteger(v);
-}
+BigInteger operator"" _bi(unsigned long long v) { return BigInteger(v); }
 
 typedef BigInteger bi;
 
-struct FacModer
-{
+struct FacModer {
   std::vector<bi> F;
   int64 p;
   int64 e;
   bi mod;
   bi phi;
 
-  FacModer(const int64 p, const int64 e): p(p), e(e)
-  {
+  FacModer(const int64 p, const int64 e) : p(p), e(e) {
     int64 pe = p * e;
     mod = power(bi(p), e);
     phi = power(bi(p), (e - 1)) * (p - 1);
     F.resize(pe + 1, 1);
     for (int i = 1; i <= pe; ++i) {
-      if (i % p == 0) F[i] = F[i-1];
-      else F[i] = F[i-1] * i % mod;
+      if (i % p == 0)
+        F[i] = F[i - 1];
+      else
+        F[i] = F[i - 1] * i % mod;
     }
   }
 
@@ -1215,19 +1216,17 @@ struct FacModer
 
     bi ret = 1;
     // F(up, p)
-    const bi u2 = u*u;
+    const bi u2 = u * u;
 
-    for (int j = 1; j <= r; ++j)
-    {
+    for (int j = 1; j <= r; ++j) {
       bi beta_numer = u;
       bi beta_denom = j;
       const int j2 = j * j;
-      for (int i = 1; i <= r; ++i) if (i != j)
-        beta_numer *= u2 - i * i,
-        beta_denom *= j2 - i * i;
+      for (int i = 1; i <= r; ++i)
+        if (i != j) beta_numer *= u2 - i * i, beta_denom *= j2 - i * i;
       auto beta = beta_numer / beta_denom % phi;
       if (beta.getSign() < 0) beta += phi;
-      ret = ret * power_mod(F[j*p], beta, mod) % mod;
+      ret = ret * power_mod(F[j * p], beta, mod) % mod;
     }
 
     if (p == 2) {
@@ -1243,13 +1242,14 @@ struct FacModer
 
     // (p + v, v)_p
     for (int j = 1; j < e; ++j) {
-      auto base = F[j*p+vv] * mod_inv(F[vv] * F[j*p], mod) % mod;
+      auto base = F[j * p + vv] * mod_inv(F[vv] * F[j * p], mod) % mod;
       bi alpha_numer = u;
       bi alpha_denom = j;
-      for (int i = 1; i < e; ++i) if (i != j) {
-        alpha_numer *= u - i;
-        alpha_denom *= j - i;
-      }
+      for (int i = 1; i < e; ++i)
+        if (i != j) {
+          alpha_numer *= u - i;
+          alpha_denom *= j - i;
+        }
       auto alpha = alpha_numer / alpha_denom % phi;
       if (alpha.getSign() < 0) alpha += phi;
       ret = ret * power_mod(base, alpha, mod) % mod;
@@ -1259,4 +1259,3 @@ struct FacModer
   }
 };
 #endif
-

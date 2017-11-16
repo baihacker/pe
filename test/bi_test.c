@@ -24,6 +24,16 @@ void test() {
   printf("%llx\n", (unsigned long long)ans.toInt<unsigned long long>());
 }
 
+void facTest()
+{
+  TimeRecorder tr;
+  BigInteger result = 1;
+  for (int i = 1; i <= 100000; ++i) result = result * i;
+  cout << tr.elapsed().format() << endl;
+  cout << result.toString().size() << endl;
+  cout << result.size() << endl;
+}
+
 int main()
 {
 //cout << GCDEX(281474976710656_bi, 207628560027673_bi) << endl;
@@ -98,6 +108,10 @@ tie(a, b) = div("12340000000000000000000"_bi, 5);
 cout << a << " " << b << endl;
 cout << "12340000000000000000000"_bi % 5 << endl;
 //  cout << div("1234"_bi, "5"_bi) << endl;
+
+facTest();
+
+cout << "1234556"_bi % (unsigned)123 << endl;
   return 0;
 }
 /*

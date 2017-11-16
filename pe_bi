@@ -89,7 +89,7 @@ class BigInteger {
     reserve(other.bufferLength_);
     sign_ = other.sign_;
     pos_ = other.pos_;
-    copy(other.data_, other.data_ + pos_ + 1, data_);
+    copy(other.data_, other.data_ + other.pos_ + 1, data_);
   }
 
   BigInteger(BigInteger&& other)
@@ -101,12 +101,7 @@ class BigInteger {
   }
 
   BigInteger& operator=(const BigInteger& other) {
-    BigInteger t(other);
-    std::swap(data_, t.data_);
-    std::swap(bufferLength_, t.bufferLength_);
-    std::swap(sign_, t.sign_);
-    std::swap(pos_, t.pos_);
-    return *this;
+    return *this = BigInteger(other);
   }
 
   BigInteger& operator=(BigInteger&& other) {
@@ -120,23 +115,27 @@ class BigInteger {
   template <typename T>
   BigInteger(T value) : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
     if (value == 0) {
-      *this = BigInteger();
+      reserve(1);
+      data_[0] = 0;
+      sign_ = 0;
       return;
     }
 
     int need = 0;
-    typename std::make_unsigned<T>::type absValue = value >= 0 ? value : -value;
+    typedef typename std::make_unsigned<T>::type unsingedT;
+    unsingedT absValue = value > 0 ? value : -value;
+    
+    if (absValue < bi_trait::bit_value) {
+      reserve(1);
+      data_[0] = absValue;
+    } else {
+      for (auto t = absValue; t > 0; ++need, t >>= bi_trait::bit_count);
+      reserve(need);
 
-    for (auto t = absValue; t > 0; ++need, t >>= bi_trait::bit_count)
-      ;
-    reserve(need);
-
-    pos_ = -1;
-    data_[0] = 0;
-    for (auto t = absValue; t > 0;
-         data_[++pos_] = t & bi_trait::bit_mod_mask, t >>= bi_trait::bit_count)
-      ;
-
+      pos_ = -1;
+      for (auto t = absValue; t > 0;
+           data_[++pos_] = t & bi_trait::bit_mod_mask, t >>= bi_trait::bit_count);
+    }
     sign_ = value > 0 ? 1 : -1;
   }
 
@@ -149,7 +148,9 @@ class BigInteger {
       : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
     const int n = str.size();
     if (n == 0) {
-      *this = BigInteger();
+      reserve(1);
+      data_[0] = 0;
+      sign_ = 0;
       return;
     }
     std::vector<unsigned int> value(n);
@@ -178,7 +179,7 @@ class BigInteger {
     reserve(result.size());
 
     sign_ = 1;
-    pos_ = (int)result.size() - 1;
+    pos_ = max(0, (int)result.size() - 1);
     copy(result.begin(), result.end(), data_);
     fixPos();
   }
@@ -192,6 +193,7 @@ class BigInteger {
       sign_ = 0;
       return;
     }
+
     const int n = (int)v.size();
     int need = (n + bi_trait::bit_count - 1) / bi_trait::bit_count;
     reserve(need);
@@ -292,15 +294,14 @@ class BigInteger {
   BigInteger operator~() const {
     BigInteger ret(*this);
     for (int i = 0; i < ret.pos_; ++i) ret[i] ^= bi_trait::bit_mod_mask;
-    for (unsigned int x = 1; x <= ret[ret.pos_]; ret[ret.pos_] ^= x, x <<= 1)
-      ;
+    for (unsigned int x = 1, y = ret[ret.pos_]; x <= y; ret[ret.pos_] ^= x, x <<= 1);
 
     ret.fixPos();
 
     return ret;
   }
 
- public:
+ private:
   static int absCompare(const BigInteger& l, const BigInteger& r) {
     int posL = l.pos_;
     int posR = r.pos_;
@@ -309,8 +310,7 @@ class BigInteger {
       return posL > posR ? 1 : -1;
     }
 
-    for (; posL >= 0 && l[posL] == r[posL]; --posL)
-      ;
+    for (; posL >= 0 && l[posL] == r[posL]; --posL);
 
     return posL >= 0 ? (l[posL] > r[posL] ? 1 : -1) : 0;
   }
@@ -377,7 +377,7 @@ class BigInteger {
     for (int curr = minPos + 1; curr <= maxPos; ++curr) {
       int nextBorrow = 0;
       unsigned int t = l[curr];
-      while (l[curr] < borrow) {
+      while (t < borrow) {
         nextBorrow++;
         t += bi_trait::bit_value;
       }
@@ -391,8 +391,10 @@ class BigInteger {
     int posL = l.pos_;
     int posR = r.pos_;
 
-    BigInteger ret(posL + posR + 3, alloc_mem_tag);
-    fill(ret.data_, ret.data_ + posL + posR + 3, 0);
+    const int newSize = l.size() + r.size() + 1;
+
+    BigInteger ret(newSize, alloc_mem_tag);
+    fill(ret.data_, ret.data_ + newSize, 0);
 
     for (int i = 0; i <= posR; ++i) {
       auto t = r[i];
@@ -422,6 +424,7 @@ class BigInteger {
   template <typename T>
   static void absMulInplace(BigInteger& l, T r) {
     l.reserve(l.size() + BigInteger(r).size() + 1);
+
     uint64 inc = 0;
     int top = 0;
     for (int i = 0; i <= l.pos_; ++i) {
@@ -980,7 +983,6 @@ inline tuple<BigInteger, BigInteger> div(const BigInteger& l,
   BigInteger ret(BigInteger::absDiv(l, r, x));
   ret.sign_ = l.sign_ * r.sign_;
   ret.fixPos();
-  x.fixPos();
   x.sign_ = l.sign_;
   x.fixPos();
 
@@ -1002,7 +1004,10 @@ inline tuple<BigInteger, T> div(const BigInteger& l, T r) {
   BigInteger::absDivInplace(ret, r, x);
   ret.sign_ = signl * (r > 0 ? 1 : -1);
   ret.fixPos();
-  if (l.sign_ < 0) x = -x;
+  if (l.sign_ < 0) {
+    PE_ASSERT(x == 0 || !std::is_unsigned<T>::value);
+    x = -x;
+  }
 
   return make_tuple(std::move(ret), x);
 }
@@ -1029,7 +1034,10 @@ inline void divInplace(BigInteger& l, T r, T& remain) {
   BigInteger::absDivInplace(l, r, remain);
   l.sign_ = signl * (r > 0 ? 1 : -1);
   l.fixPos();
-  if (l.sign_ < 0) remain = -remain;
+  if (l.sign_ < 0) {
+    PE_ASSERT(remain == 0 || !std::is_unsigned<T>::value);
+    remain = -remain;
+  }
 }
 
 inline BigInteger operator%(const BigInteger& l, const BigInteger& r) {

@@ -72,7 +72,7 @@ typedef bi_allocator_std bi_allocator;
 class BigInteger {
  public:
   // constructors, destructors, value semantics.
-  BigInteger() : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
+  BigInteger() : BigInteger(zero_initialize_tag) {
     reserve(1);
     data_[0] = 0;
     sign_ = 0;
@@ -84,16 +84,14 @@ class BigInteger {
     }
   }
 
-  BigInteger(const BigInteger& other)
-      : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
+  BigInteger(const BigInteger& other) : BigInteger(zero_initialize_tag) {
     reserve(other.bufferLength_);
     sign_ = other.sign_;
     pos_ = other.pos_;
     copy(other.data_, other.data_ + other.pos_ + 1, data_);
   }
 
-  BigInteger(BigInteger&& other)
-      : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
+  BigInteger(BigInteger&& other) : BigInteger(zero_initialize_tag) {
     std::swap(data_, other.data_);
     std::swap(bufferLength_, other.bufferLength_);
     std::swap(sign_, other.sign_);
@@ -113,7 +111,7 @@ class BigInteger {
   }
 
   template <typename T>
-  BigInteger(T value) : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
+  BigInteger(T value) : BigInteger(zero_initialize_tag) {
     if (value == 0) {
       reserve(1);
       data_[0] = 0;
@@ -146,8 +144,7 @@ class BigInteger {
     return *this = BigInteger(value);
   }
 
-  BigInteger(const string& str)
-      : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
+  BigInteger(const string& str) : BigInteger(zero_initialize_tag) {
     const int n = str.size();
     if (n == 0) {
       reserve(1);
@@ -187,8 +184,7 @@ class BigInteger {
   }
 
   template <typename T>
-  BigInteger(const vector<T>& v)
-      : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
+  BigInteger(const vector<T>& v) : BigInteger(zero_initialize_tag) {
     if (v.empty()) {
       reserve(1);
       data_[0] = 0;
@@ -225,20 +221,25 @@ class BigInteger {
   // Internal constructor
   static const struct alloc_mem {
   } alloc_mem_tag;
+  
+  static const struct zero_initialize {
+  } zero_initialize_tag;
 
-  BigInteger(int size, alloc_mem)
-      : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
+  BigInteger(int size, alloc_mem) : BigInteger(zero_initialize_tag) {
     reserve(size);
     data_[0] = 0;
     sign_ = 0;
   }
 
-  BigInteger(const BigInteger& other, int minBuffer)
-      : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
+  BigInteger(const BigInteger& other, int minBuffer) : BigInteger(zero_initialize_tag) {
     reserve(max(other.bufferLength_, minBuffer));
     sign_ = other.sign_;
     pos_ = other.pos_;
     copy(other.data_, other.data_ + other.pos_ + 1, data_);
+  }
+  
+  BigInteger(zero_initialize)
+      : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
   }
 
  public:
@@ -693,24 +694,24 @@ class BigInteger {
   }
 
   BigInteger& operator++() {
-    *this = *this + 1;
+    *this += 1;
     return *this;
   }
 
   BigInteger operator++(int) {
     BigInteger ret(*this);
-    *this = *this + 1;
+    *this += 1;
     return ret;
   }
 
   BigInteger& operator--() {
-    *this = *this - 1;
+    *this -= 1;
     return *this;
   }
 
   BigInteger operator--(int) {
     BigInteger ret(*this);
-    *this = *this - 1;
+    *this -= 1;
     return ret;
   }
 
@@ -749,7 +750,7 @@ class BigInteger {
   }
 
  public:
-  // generao util method
+  // general util method
   friend ostream& operator<<(ostream& o, const BigInteger& bi);
 
   string toString() const {
@@ -836,8 +837,7 @@ class BigInteger {
   int bitAt(int t) const {
     const int x = t / bi_trait::bit_count;
     const int y = t % bi_trait::bit_count;
-    PE_ASSERT(x <= pos_);
-    return (data_[x] >> y) & 1;
+    return x > pos_ ? 0 : (data_[x] >> y) & 1;
   }
 
  private:

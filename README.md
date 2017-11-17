@@ -9,7 +9,7 @@ Installation:
 -------------
 * Put all the files in a folder (directory). For example, we put them in the directory D:\usr\include.
 * Make sure CPLUS_INCLUDE_PATH contain D:\usr\include.
-* In pe_base, configure this library. Especially, ENABLE_EIGEN should be zero if you don't have the library Eigen.
+* In pe, configure this library. Especially, ENABLE_EIGEN should be zero if you don't have the library Eigen.
 * [optional, recommended] Run "g++ -xc++-header "pe.hpp" --std=c++11 -O3 -march=native -fopenmp" in D:\usr\include to generate precompile header "pe.hpp.gch". The compile options are the same as the options you will compile your target files.
 
 Use:

@@ -3,29 +3,6 @@
 
 #include "pe_base"
 
-// Predefined trait
-struct bi_trait30 {
-  static const int bit_count = 30;
-  static const unsigned int bit_value = 1u << bit_count;
-  static const unsigned int max_bit_value = (1ull << bit_count) - 1;
-  static const uint64 bit_value2 = 1ull << bit_count * 2;
-  static const uint64 max_bit_value2 = (1ull << bit_count * 2) - 1;
-  static const unsigned int bit_mod_mask = bit_value - 1;
-  static const unsigned int output_mod = 100000000;
-  static const unsigned int output_mod_dig = 8;
-};
-
-struct bi_trait8 {
-  static const int bit_count = 8;
-  static const unsigned int bit_value = 1u << bit_count;
-  static const unsigned int max_bit_value = (1u << bit_count) - 1;
-  static const uint64 bit_value2 = 1ull << bit_count * 2;
-  static const uint64 max_bit_value2 = (1ull << bit_count) - 1;
-  static const unsigned int bit_mod_mask = bit_value - 1;
-  static const unsigned int output_mod = 100000000;
-  static const unsigned int output_mod_dig = 8;
-};
-
 // Predefined allocator
 struct bi_allocator_std {
   static unsigned int* allocate(int& length) {
@@ -72,10 +49,16 @@ struct bi_allocator_fixed_size {
 };
 
 // Configuration of BigInteger.
-typedef bi_trait30 bi_trait;
-typedef bi_allocator_std bi_allocator;
+typedef bi_allocator_fixed_size bi_allocator;
 
 class BigInteger {
+  static const unsigned int max_32bit_value = 0xFFFFFFFF;
+  static const uint64 bit32_value = 1ull << 32;
+  static const unsigned int output_mod = 100000000;
+  static const unsigned int output_mod_dig = 8;
+
+  static const unsigned int div32_bit = 5;
+  static const unsigned int mod32_mask = 31;
  public:
   // constructors, destructors, value semantics.
   BigInteger() : BigInteger(zero_initialize_tag) {
@@ -127,18 +110,17 @@ class BigInteger {
 
     typedef typename std::make_unsigned<T>::type unsignedT;
     unsignedT absValue = value > 0 ? value : -value;
-
-    if (absValue <= bi_trait::max_bit_value2) {
+    if (sizeof(T) <= 8) {
       resetAbs(absValue);
     } else {
       int need = 0;
-      for (auto t = absValue; t > 0; ++need, t >>= bi_trait::bit_count)
+      for (auto t = absValue; t > 0; ++need, t >>= 32)
         ;
       reserve(need);
 
       pos_ = -1;
-      for (auto t = absValue; t > 0; data_[++pos_] = t & bi_trait::bit_mod_mask,
-                t >>= bi_trait::bit_count)
+      for (auto t = absValue; t > 0; data_[++pos_] = t & max_32bit_value,
+                t >>= 32)
         ;
     }
     sign_ = value > 0 ? 1 : -1;
@@ -170,13 +152,13 @@ class BigInteger {
       uint64 add = 0;
       for (int i = now; i > 0; --i) {
         const uint64 x = add + value[i];
-        const uint64 next_add = (x & bi_trait::bit_mod_mask) * 10;
-        value[i] = x >> bi_trait::bit_count;
+        const uint64 next_add = (x & max_32bit_value) * 10;
+        value[i] = x >> 32;
         add = next_add;
       }
       uint64 x = add + value[0];
-      value[0] = x >> bi_trait::bit_count;
-      result.push_back(x & bi_trait::bit_mod_mask);
+      value[0] = x >> 32;
+      result.push_back(x & max_32bit_value);
       while (now > 0 && value[now] == 0) --now;
     } while (now > 0 || value[now] > 0);
 
@@ -197,8 +179,8 @@ class BigInteger {
       return;
     }
 
-    const int n = (int)v.size();
-    int need = (n + bi_trait::bit_count - 1) / bi_trait::bit_count;
+    const unsigned int n = v.size();
+    unsigned int need = (n + 31) >> 5;
     reserve(need);
 
     unsigned int value = 0;
@@ -208,13 +190,13 @@ class BigInteger {
         value |= flag;
       }
       flag <<= 1;
-      if ((i + 1) % bi_trait::bit_count == 0) {
+      if (((i + 1) & mod32_mask) == 0) {
         data_[pos_++] = value;
         value = 0;
         flag = 1;
       }
     }
-    if (n % bi_trait::bit_count) {
+    if (n & mod32_mask) {
       data_[pos_++] = value;
     }
     --pos_;
@@ -250,24 +232,16 @@ class BigInteger {
  private:
   void resetAbs(uint64 v) {
     // v < bi_trait::bit_value * bi_trait::bit_value
-    if (v <= bi_trait::max_bit_value) {
+    if (v <= max_32bit_value) {
       reserve(1);
       data_[0] = v;
       pos_ = 0;
     }
-    else if (v <= bi_trait::max_bit_value2) {
+    else {
       reserve(2);
-      data_[0] = v & bi_trait::bit_mod_mask;
-      data_[1] = v >> bi_trait::bit_count;
+      data_[0] = v & max_32bit_value;
+      data_[1] = v >> 32;
       pos_ = 1;
-    } else {
-      reserve(3);
-      data_[0] = v & bi_trait::bit_mod_mask;
-      v >>= bi_trait::bit_count;
-      data_[1] = v & bi_trait::bit_mod_mask;
-      v >>= bi_trait::bit_count;
-      data_[2] = v & bi_trait::bit_mod_mask;
-      pos_ = 2;
     }
   }
  public:
@@ -325,9 +299,9 @@ class BigInteger {
 
   BigInteger operator~() const {
     BigInteger ret(*this);
-    for (int i = 0; i < ret.pos_; ++i) ret[i] ^= bi_trait::bit_mod_mask;
-    for (unsigned int x = 1, y = ret[ret.pos_]; x <= y;
-         ret[ret.pos_] ^= x, x <<= 1)
+    for (int i = 0; i < ret.pos_; ++i) ret[i] ^= max_32bit_value;
+    unsigned int y = ret[ret.pos_];
+    for (unsigned int x = 1; y; ret[ret.pos_] ^= x, x <<= 1, y >>= 1)
       ;
 
     ret.fixPos();
@@ -364,7 +338,7 @@ class BigInteger {
   }
 
   static void absAddInplace(BigInteger& l, const BigInteger& r) {
-    if (l.size() <= 2 && r.size() <= 2) {
+    if (l.size() <= 2 && r.size() <= 1 || l.size() <= 1 && r.size() <= 2) {
       l.resetAbs(l.toInt<uint64>() + r.toInt<uint64>());
       return;
     }
@@ -378,16 +352,16 @@ class BigInteger {
     unsigned int inc = 0;
 
     while (idx <= minPos) {
-      unsigned int t = l[idx] + r[idx] + inc;
-      l[idx++] = t & bi_trait::bit_mod_mask;
-      inc = t >> bi_trait::bit_count;
+      uint64 t = (uint64)l[idx] + r[idx] + inc;
+      l[idx++] = t & max_32bit_value;
+      inc = t >> 32;
     }
 
     const auto* largeData = l.pos_ > r.pos_ ? l.data_ : r.data_;
     while (idx <= maxPos) {
-      unsigned int t = largeData[idx] + inc;
-      l[idx++] = t & bi_trait::bit_mod_mask;
-      inc = t >> bi_trait::bit_count;
+      uint64 t = (uint64)largeData[idx] + inc;
+      l[idx++] = t & max_32bit_value;
+      inc = t >> 32;
     }
 
     if (inc) {
@@ -418,20 +392,20 @@ class BigInteger {
     unsigned int borrow = 0;
     for (int curr = 0; curr <= minPos; ++curr) {
       unsigned int nextBorrow = 0;
-      unsigned int t = l[curr];
-      while (t < r[curr] + borrow) {
+      uint64 t = l[curr];
+      while (t < (uint64)r[curr] + borrow) {
         nextBorrow++;
-        t += bi_trait::bit_value;
+        t += bit32_value;
       }
       l[curr] = t - r[curr] - borrow;
       borrow = nextBorrow;
     }
     for (int curr = minPos + 1; curr <= maxPos; ++curr) {
       unsigned int nextBorrow = 0;
-      unsigned int t = l[curr];
+      uint64 t = l[curr];
       while (t < borrow) {
         nextBorrow++;
-        t += bi_trait::bit_value;
+        t += bit32_value;
       }
       l[curr] = t - borrow;
       borrow = nextBorrow;
@@ -458,11 +432,11 @@ class BigInteger {
       int j = 0;
       for (; j <= posL; ++j) {
         inc += (uint64)t * l[j] + ret[i + j];
-        ret[i + j] = inc & bi_trait::bit_mod_mask;
-        inc >>= bi_trait::bit_count;
+        ret[i + j] = inc & max_32bit_value;
+        inc >>= 32;
       }
-      for (; inc; inc >>= bi_trait::bit_count) {
-        ret[i + j++] = inc & bi_trait::bit_mod_mask;
+      for (; inc; inc >>= 32) {
+        ret[i + j++] = inc & max_32bit_value;
       }
     }
     ret.pos_ = posL + posR + 2;
@@ -481,7 +455,7 @@ class BigInteger {
   template <typename T>
   static void absMulInplace(BigInteger& l, T r) {
     static_assert(is_unsigned<T>::value);
-    if (l.size() <= 1 && r <= bi_trait::max_bit_value) {
+    if (l.size() <= 1 && r <= max_32bit_value) {
       l.resetAbs((uint64)l[0] * r);
       return;
     }
@@ -492,13 +466,13 @@ class BigInteger {
     int top = 0;
     for (int i = 0; i <= l.pos_; ++i) {
       uint64 v = (uint64)l[i] * r + inc;
-      l[top++] = v & bi_trait::bit_mod_mask;
-      inc = v >> bi_trait::bit_count;
+      l[top++] = v & max_32bit_value;
+      inc = v >> 32;
     }
 
     while (inc > 0) {
-      l[top++] = inc & bi_trait::bit_mod_mask;
-      inc >>= bi_trait::bit_count;
+      l[top++] = inc & max_32bit_value;
+      inc >>= 32;
     }
 
     l.pos_ = top - 1;
@@ -624,7 +598,8 @@ class BigInteger {
   template <typename T>
   static BigInteger absDiv(const BigInteger& l, T r, T& remain) {
     static_assert(is_unsigned<T>::value);
-    if (l.size() <= 2 && r <= bi_trait::max_bit_value2) {
+    static_assert(sizeof(T) <= 8);
+    if (l.size() <= 2) {
       const uint64 a = l.toInt<uint64>();
       const uint64 b = r;
       remain = a % b;
@@ -639,8 +614,9 @@ class BigInteger {
   template <typename T>
   static void absDivInplace(BigInteger& l, T r, T& remain) {
     static_assert(is_unsigned<T>::value);
+    static_assert(sizeof(T) <= 8);
     l.fixPos();
-    if (l.size() <= 2 && r <= bi_trait::max_bit_value2) {
+    if (l.size() <= 2) {
       const uint64 a = l.toInt<uint64>();
       const uint64 b = r;
       remain = a % b;
@@ -651,7 +627,7 @@ class BigInteger {
     uint64 add = 0;
     for (int i = l.pos_; i > 0; --i) {
       const uint64 x = add + l.data_[i];
-      const uint64 next_add = (x % r) << bi_trait::bit_count;
+      const uint64 next_add = (x % r) << 32;
       l.data_[i] = x / r;
       add = next_add;
     }
@@ -852,14 +828,13 @@ class BigInteger {
       uint64 add = 0;
       for (int i = t.pos_; i > 0; --i) {
         const uint64 x = add + t.data_[i];
-        const uint64 next_add = (x % bi_trait::output_mod)
-                                << bi_trait::bit_count;
-        t.data_[i] = x / bi_trait::output_mod;
+        const uint64 next_add = (x % output_mod) << 32;
+        t.data_[i] = x / output_mod;
         add = next_add;
       }
       uint64 x = add + t.data_[0];
-      t.data_[0] = x / bi_trait::output_mod;
-      mods.push_back(x % bi_trait::output_mod);
+      t.data_[0] = x / output_mod;
+      mods.push_back(x % output_mod);
       t.fixPos();
     } while (!t.isZero());
 
@@ -868,7 +843,7 @@ class BigInteger {
     sprintf(buff, "%u", mods[idx--]);
     ss << buff;
     for (; idx >= 0; --idx) {
-      sprintf(buff, "%0*u", bi_trait::output_mod_dig, mods[idx]);
+      sprintf(buff, "%0*u", output_mod_dig, mods[idx]);
       ss << buff;
     }
     string ret;
@@ -903,7 +878,7 @@ class BigInteger {
     vector<T> ret;
     for (int i = 0; i <= pos_; ++i) {
       auto t = data_[i];
-      for (int j = 0; j < bi_trait::bit_count; ++j)
+      for (int j = 0; j < 32; ++j)
         ret.push_back(t & 1), t >>= 1;
     }
     fixSize(ret);
@@ -914,7 +889,7 @@ class BigInteger {
   T toInt() const {
     T result = 0;
     for (int i = pos_; i >= 0; --i)
-      result = (result << bi_trait::bit_count) | data_[i];
+      result = (result << 32) | data_[i];
     if (std::is_signed<T>::value) {
       if (sign_ < 0) {
         result = -result;
@@ -924,16 +899,17 @@ class BigInteger {
   }
 
   int bitCount() const {
-    int ret = pos_ * bi_trait::bit_count;
+    int ret = pos_ << div32_bit;
     int hiCnt = 0;
-    for (unsigned int x = 1; x <= data_[pos_]; ++hiCnt, x <<= 1)
+    unsigned int v = data_[pos_];
+    for (unsigned int x = 1; v; ++hiCnt, x <<= 1, v >>= 1)
       ;
     return ret + hiCnt;
   }
 
   int bitAt(int t) const {
-    const int x = t / bi_trait::bit_count;
-    const int y = t % bi_trait::bit_count;
+    const int x = t >> div32_bit;
+    const int y = t & mod32_mask;
     return x > pos_ ? 0 : (data_[x] >> y) & 1;
   }
 
@@ -1232,8 +1208,8 @@ inline BigInteger operator<<(const BigInteger& l, T n) {
   const int bitCnt = l.bitCount();
   vector<unsigned int> v(n + bitCnt, 0);
   for (int i = 0, j = n; i < bitCnt; ++i, ++j) {
-    const int x = i / bi_trait::bit_count;
-    const int y = i % bi_trait::bit_count;
+    const int x = i >> BigInteger::div32_bit;
+    const int y = i & BigInteger::mod32_mask;
     v[j] = (l[x] >> y) & 1;
   }
   BigInteger ret(v);
@@ -1257,8 +1233,8 @@ inline BigInteger operator>>(const BigInteger& l, T n) {
 
   vector<unsigned int> v(bitCnt - n, 0);
   for (int i = n, j = 0; i < bitCnt; ++i, ++j) {
-    const int x = i / bi_trait::bit_count;
-    const int y = i % bi_trait::bit_count;
+    const int x = i >> BigInteger::div32_bit;
+    const int y = i & BigInteger::mod32_mask;
     v[j] = (l[x] >> y) & 1;
   }
 

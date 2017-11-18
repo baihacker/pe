@@ -6,7 +6,8 @@
 // Predefined trait
 struct bi_trait30 {
   static const int bit_count = 30;
-  static const unsigned int bit_value = 1u << 30;
+  static const unsigned int bit_value = 1u << bit_count;
+  static const uint64 bit_value2 = 1ull << bit_count * 2;
   static const unsigned int bit_mod_mask = bit_value - 1;
   static const unsigned int output_mod = 100000000;
   static const unsigned int output_mod_dig = 8;
@@ -14,7 +15,8 @@ struct bi_trait30 {
 
 struct bi_trait8 {
   static const int bit_count = 8;
-  static const unsigned int bit_value = 1u << 8;
+  static const unsigned int bit_value = 1u << bit_count;
+  static const uint64 bit_value2 = 1ull << bit_count * 2;
   static const unsigned int bit_mod_mask = bit_value - 1;
   static const unsigned int output_mod = 100000000;
   static const unsigned int output_mod_dig = 8;
@@ -123,9 +125,8 @@ class BigInteger {
     typedef typename std::make_unsigned<T>::type unsingedT;
     unsingedT absValue = value > 0 ? value : -value;
 
-    if (absValue < bi_trait::bit_value) {
-      reserve(1);
-      data_[0] = absValue;
+    if (absValue < bi_trait::bit_value2) {
+      resetAbs(absValue);
     } else {
       for (auto t = absValue; t > 0; ++need, t >>= bi_trait::bit_count)
         ;
@@ -242,6 +243,29 @@ class BigInteger {
       : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
   }
 
+ private:
+  void resetAbs(uint64 v) {
+    // v < bi_trait::bit_value * bi_trait::bit_value
+    if (v < bi_trait::bit_value) {
+      reserve(1);
+      data_[0] = v;
+      pos_ = 0;
+    }
+    else if (v < bi_trait::bit_value2) {
+      reserve(2);
+      data_[0] = v & bi_trait::bit_mod_mask;
+      data_[1] = v >> bi_trait::bit_count;
+      pos_ = 1;
+    } else {
+      reserve(3);
+      data_[0] = v & bi_trait::bit_mod_mask;
+      v >>= bi_trait::bit_count;
+      data_[1] = v & bi_trait::bit_mod_mask;
+      v >>= bi_trait::bit_count;
+      data_[2] = v & bi_trait::bit_mod_mask;
+      pos_ = 2;
+    }
+  }
  public:
   // compare operators
   friend inline int operator>(const BigInteger& l, const BigInteger& r);
@@ -249,6 +273,7 @@ class BigInteger {
   friend inline int operator==(const BigInteger& l, const BigInteger& r);
   friend inline int operator>=(const BigInteger& l, const BigInteger& r);
   friend inline int operator<=(const BigInteger& l, const BigInteger& r);
+  friend inline int operator!=(const BigInteger& l, const BigInteger& r);
 
   // binary operators
   friend inline BigInteger operator+(const BigInteger& l, const BigInteger& r);
@@ -308,6 +333,13 @@ class BigInteger {
 
  private:
   static int absCompare(const BigInteger& l, const BigInteger& r) {
+    if (l.size() <= 2 && r.size() <= 2) {
+      const uint64 a = l.toInt<uint64>();
+      const uint64 b = r.toInt<uint64>();
+      if (a == b) return 0;
+      return a > b ? 1 : -1;
+    }
+
     int posL = l.pos_;
     int posR = r.pos_;
 
@@ -328,6 +360,11 @@ class BigInteger {
   }
 
   static void absAddInplace(BigInteger& l, const BigInteger& r) {
+    if (l.size() <= 2 && r.size() <= 2) {
+      l.resetAbs(l.toInt<uint64>() + r.toInt<uint64>());
+      return;
+    }
+    
     l.reserve(l.size() + r.size() + 1);
 
     int maxPos = max(l.pos_, r.pos_);
@@ -366,6 +403,11 @@ class BigInteger {
   static void absSubInplace(BigInteger& l, const BigInteger& r) {
     PE_ASSERT(BigInteger::absCompare(l, r) >= 0);
 
+    if (l.size() <= 2 && r.size() <= 2) {
+      l.resetAbs(l.toInt<uint64>() - r.toInt<uint64>());
+      return;
+    }
+
     int maxPos = l.pos_;
     int minPos = r.pos_;
 
@@ -394,6 +436,10 @@ class BigInteger {
   }
 
   static BigInteger absMul(const BigInteger& l, const BigInteger& r) {
+    if (l.size() <= 1 && r.size() <= 1) {
+      return (uint64)l[0] * r[0];
+    }
+
     int posL = l.pos_;
     int posR = r.pos_;
 
@@ -429,6 +475,11 @@ class BigInteger {
 
   template <typename T>
   static void absMulInplace(BigInteger& l, T r) {
+    if (l.size() <= 1 && r < bi_trait::bit_value) {
+      l.resetAbs((uint64)l[0] * r);
+      return;
+    }
+
     l.reserve(l.size() + BigInteger(r).size() + 1);
 
     uint64 inc = 0;
@@ -450,6 +501,13 @@ class BigInteger {
 
   static BigInteger absDiv(const BigInteger& l, const BigInteger& r,
                            BigInteger& remain) {
+    if (l.size() <= 2 && r.size() <= 2) {
+      const uint64 a = l.toInt<uint64>();
+      const uint64 b = r.toInt<uint64>();
+      remain = a % b;
+      return a / b;
+    }
+
     int t = absCompare(l, r);
     if (t < 0) {
       remain = l;
@@ -468,6 +526,12 @@ class BigInteger {
   }
 
   static BigInteger absDiv(const BigInteger& l, const BigInteger& r) {
+    if (l.size() <= 2 && r.size() <= 2) {
+      const uint64 a = l.toInt<uint64>();
+      const uint64 b = r.toInt<uint64>();
+      return a / b;
+    }
+
     int t = absCompare(l, r);
     if (t < 0) {
       return 0;
@@ -553,6 +617,13 @@ class BigInteger {
 
   template <typename T>
   static BigInteger absDiv(const BigInteger& l, T r, T& remain) {
+    if (l.size() <= 2 && r < bi_trait::bit_value2) {
+      const uint64 a = l.toInt<uint64>();
+      const uint64 b = r;
+      remain = a % b;
+      return a / b;
+    }
+
     BigInteger t(l);
     absDivInplace(t, r, remain);
     return t;
@@ -561,6 +632,13 @@ class BigInteger {
   template <typename T>
   static void absDivInplace(BigInteger& l, T r, T& remain) {
     l.fixPos();
+    if (l.size() <= 2 && r < bi_trait::bit_value2) {
+      const uint64 a = l.toInt<uint64>();
+      const uint64 b = r;
+      remain = a % b;
+      l.resetAbs(a / b);
+      return;
+    }
 
     uint64 add = 0;
     for (int i = l.pos_; i > 0; --i) {
@@ -823,6 +901,11 @@ class BigInteger {
     T result = 0;
     for (int i = pos_; i >= 0; --i)
       result = (result << bi_trait::bit_count) | data_[i];
+    if (std::is_signed<T>::value) {
+      if (sign_ < 0) {
+        result = -result;
+      }
+    }
     return result;
   }
 
@@ -901,6 +984,10 @@ inline int operator<=(const BigInteger& l, const BigInteger& r) {
   } else {
     return s2 >= 0;
   }
+}
+
+inline int operator!=(const BigInteger& l, const BigInteger& r) {
+  return !(l == r);
 }
 
 inline BigInteger operator+(const BigInteger& l, const BigInteger& r) {
@@ -1060,17 +1147,26 @@ inline T operator%(const BigInteger& l, T r) {
 }
 
 inline BigInteger operator&(const BigInteger& l, const BigInteger& r) {
+  if (l.size() <= 2 && r.size() <= 2) {
+    return l.toInt<uint64>() & r.toInt<uint64>();
+  }
+
   const int minPos = min(l.pos_, r.pos_);
   BigInteger ret(minPos + 1, BigInteger::alloc_mem_tag);
   for (int i = 0; i <= minPos; ++i) {
     ret[i] = l[i] & r[i];
   }
   ret.pos_ = minPos;
+  ret.sign_ = 1;
   ret.fixPos();
   return ret;
 }
 
 inline BigInteger operator^(const BigInteger& l, const BigInteger& r) {
+  if (l.size() <= 2 && r.size() <= 2) {
+    return l.toInt<uint64>() ^ r.toInt<uint64>();
+  }
+
   const int maxPos = max(l.pos_, r.pos_);
   BigInteger ret(maxPos + 1, BigInteger::alloc_mem_tag);
   for (int i = 0; i <= maxPos; ++i) {
@@ -1080,11 +1176,16 @@ inline BigInteger operator^(const BigInteger& l, const BigInteger& r) {
     ret[i] = t;
   }
   ret.pos_ = maxPos;
+  ret.sign_ = 1;
   ret.fixPos();
   return ret;
 }
 
 inline BigInteger operator|(const BigInteger& l, const BigInteger& r) {
+  if (l.size() <= 2 && r.size() <= 2) {
+    return l.toInt<uint64>() | r.toInt<uint64>();
+  }
+
   const int maxPos = max(l.pos_, r.pos_);
   BigInteger ret(maxPos + 1, BigInteger::alloc_mem_tag);
   for (int i = 0; i <= maxPos; ++i) {
@@ -1094,6 +1195,7 @@ inline BigInteger operator|(const BigInteger& l, const BigInteger& r) {
     ret[i] = t;
   }
   ret.pos_ = maxPos;
+  ret.sign_ = 1;
   ret.fixPos();
   return ret;
 }

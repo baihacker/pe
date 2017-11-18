@@ -29,6 +29,8 @@ void run()
   cout << tr.elapsed().format() << endl;
   cout << f << endl;
 
+  cout << endl;
+
   bi g = 1;
   tr.record();
   for (unsigned i = 1; i <= 100000; ++i) g *= i;

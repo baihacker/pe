@@ -733,7 +733,7 @@ class BigInteger {
   template <typename T>
   BigInteger& operator/=(T other) {
     T r;
-    divInplace(*this, other, &r);
+    divInplace(*this, other, r);
     return *this;
   }
 
@@ -835,7 +835,9 @@ class BigInteger {
     BigInteger t(*this);
     std::vector<unsigned int> mods;
     t.fixPos();
-    string ret = t.sign_ == -1 ? "-" : "";
+    stringstream ss;
+    if (t.sign_ == -1) ss << "-";
+
     do {
       uint64 add = 0;
       for (int i = t.pos_; i > 0; --i) {
@@ -854,11 +856,13 @@ class BigInteger {
     int idx = (int)mods.size() - 1;
     char buff[32];
     sprintf(buff, "%u", mods[idx--]);
-    ret += buff;
+    ss << buff;
     for (; idx >= 0; --idx) {
       sprintf(buff, "%0*u", bi_trait::output_mod_dig, mods[idx]);
-      ret += buff;
+      ss << buff;
     }
+    string ret;
+    ss >> ret;
     return ret;
   }
 

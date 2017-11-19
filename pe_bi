@@ -249,13 +249,11 @@ class BigInteger {
 
  private:
   void resetAbs(uint64 v) {
-    // v < bi_trait::bit_value * bi_trait::bit_value
     if (v <= bi_trait::max_bit_value) {
       reserve(1);
       data_[0] = v;
       pos_ = 0;
-    }
-    else if (v <= bi_trait::max_bit_value2) {
+    } else if (v <= bi_trait::max_bit_value2) {
       reserve(2);
       data_[0] = v & bi_trait::bit_mod_mask;
       data_[1] = v >> bi_trait::bit_count;
@@ -371,8 +369,8 @@ class BigInteger {
     
     l.reserve(l.size() + r.size() + 1);
 
-    int maxPos = max(l.pos_, r.pos_);
-    int minPos = min(l.pos_, r.pos_);
+    const int maxPos = max(l.pos_, r.pos_);
+    const int minPos = min(l.pos_, r.pos_);
 
     int idx = 0;
     unsigned int inc = 0;
@@ -444,8 +442,8 @@ class BigInteger {
       return (uint64)l[0] * r[0];
     }
 
-    int posL = l.pos_;
-    int posR = r.pos_;
+    const int posL = l.pos_;
+    const int posR = r.pos_;
 
     const int newSize = l.size() + r.size() + 1;
 
@@ -514,7 +512,7 @@ class BigInteger {
       return a / b;
     }
 
-    int t = absCompare(l, r);
+    const int t = absCompare(l, r);
     if (t < 0) {
       remain = l;
       return 0;
@@ -538,7 +536,7 @@ class BigInteger {
       return a / b;
     }
 
-    int t = absCompare(l, r);
+    const int t = absCompare(l, r);
     if (t < 0) {
       return 0;
     }
@@ -558,7 +556,7 @@ class BigInteger {
     vector<T> result;
     remain = l;
 
-    int divR = r.size();
+    const int divR = (int)r.size();
     int pos = (int)l.size() - 1;
     int end = pos - divR + 1;
     for (; end >= 0;) {
@@ -639,6 +637,8 @@ class BigInteger {
   template <typename T>
   static void absDivInplace(BigInteger& l, T r, T& remain) {
     static_assert(is_unsigned<T>::value);
+    static_assert(sizeof(T) <= 8);
+
     l.fixPos();
     if (l.size() <= 2 && r <= bi_trait::max_bit_value2) {
       const uint64 a = l.toInt<uint64>();
@@ -648,17 +648,31 @@ class BigInteger {
       return;
     }
 
-    uint64 add = 0;
-    for (int i = l.pos_; i > 0; --i) {
-      const uint64 x = add + l.data_[i];
-      const uint64 next_add = (x % r) << bi_trait::bit_count;
-      l.data_[i] = x / r;
-      add = next_add;
+    if (sizeof(T) <= 4) {
+      uint64 add = 0;
+      for (int i = l.pos_; i > 0; --i) {
+        const uint64 x = add + l.data_[i];
+        const uint64 next_add = (x % r) << bi_trait::bit_count;
+        l.data_[i] = x / r;
+        add = next_add;
+      }
+      const uint64 x = add + l.data_[0];
+      l.data_[0] = x / r;
+      remain = x % r;
+      l.fixPos();
+    } else {
+      uint64 add = 0;
+      for (int i = l.pos_; i > 0; --i) {
+        const uint128 x = ((uint128)add << bi_trait::bit_count) + l.data_[i];
+        const uint64 next_add = x % r;
+        l.data_[i] = x / r;
+        add = next_add;
+      }
+      const uint128 x = ((uint128)add << bi_trait::bit_count) + l.data_[0];
+      l.data_[0] = x / r;
+      remain = x % r;
+      l.fixPos();
     }
-    uint64 x = add + l.data_[0];
-    l.data_[0] = x / r;
-    remain = x % r;
-    l.fixPos();
   }
 
  public:
@@ -1106,7 +1120,7 @@ inline tuple<BigInteger, T> div(const BigInteger& l, T r) {
     return make_tuple(0, 0);
   }
 
-  int signl = l.sign_;
+  const int signl = l.sign_;
   typedef typename std::make_unsigned<T>::type unsignedT;
   unsignedT absValue = r > 0 ? r : -r;
   unsignedT x;
@@ -1142,7 +1156,7 @@ inline void divInplace(BigInteger& l, T r, T& remain) {
   typedef typename std::make_unsigned<T>::type unsignedT;
   unsignedT absValue = r > 0 ? r : -r;
   unsignedT remainT;
-  int signl = l.sign_;
+  const int signl = l.sign_;
   BigInteger::absDivInplace(l, absValue, remainT);
   l.sign_ = signl * (r > 0 ? 1 : -1);
   l.fixPos();

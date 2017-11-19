@@ -49,13 +49,13 @@ struct bi_allocator_fixed_size {
 };
 
 // Configuration of BigInteger.
-typedef bi_allocator_std bi_allocator;
+typedef bi_allocator_fixed_size bi_allocator;
 
 class BigInteger {
   static const unsigned int max_32bit_value = 0xFFFFFFFF;
   static const uint64 bit32_value = 1ull << 32;
-  static const unsigned int output_mod = 100000000;
-  static const unsigned int output_mod_dig = 8;
+  static const unsigned int output_mod = 1000000000;
+  static const unsigned int output_mod_dig = 9;
 
   static const unsigned int div32_bit = 5;
   static const unsigned int mod32_mask = 31;
@@ -208,7 +208,7 @@ class BigInteger {
   // Internal constructor
   static const struct alloc_mem {
   } alloc_mem_tag;
-  
+
   static const struct zero_initialize {
   } zero_initialize_tag;
 
@@ -224,20 +224,18 @@ class BigInteger {
     pos_ = other.pos_;
     copy(other.data_, other.data_ + other.pos_ + 1, data_);
   }
-  
+
   BigInteger(zero_initialize)
       : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
   }
 
  private:
   void resetAbs(uint64 v) {
-    // v < bi_trait::bit_value * bi_trait::bit_value
     if (v <= max_32bit_value) {
       reserve(1);
       data_[0] = v;
       pos_ = 0;
-    }
-    else {
+    } else {
       reserve(2);
       data_[0] = v & max_32bit_value;
       data_[1] = v >> 32;
@@ -342,11 +340,11 @@ class BigInteger {
       l.resetAbs(l.toInt<uint64>() + r.toInt<uint64>());
       return;
     }
-    
+
     l.reserve(l.size() + r.size() + 1);
 
-    int maxPos = max(l.pos_, r.pos_);
-    int minPos = min(l.pos_, r.pos_);
+    const int maxPos = max(l.pos_, r.pos_);
+    const int minPos = min(l.pos_, r.pos_);
 
     int idx = 0;
     unsigned int inc = 0;
@@ -418,8 +416,8 @@ class BigInteger {
       return (uint64)l[0] * r[0];
     }
 
-    int posL = l.pos_;
-    int posR = r.pos_;
+    const int posL = l.pos_;
+    const int posR = r.pos_;
 
     const int newSize = l.size() + r.size() + 1;
 
@@ -488,7 +486,7 @@ class BigInteger {
       return a / b;
     }
 
-    int t = absCompare(l, r);
+    const int t = absCompare(l, r);
     if (t < 0) {
       remain = l;
       return 0;
@@ -512,7 +510,7 @@ class BigInteger {
       return a / b;
     }
 
-    int t = absCompare(l, r);
+    const int t = absCompare(l, r);
     if (t < 0) {
       return 0;
     }
@@ -532,7 +530,7 @@ class BigInteger {
     vector<T> result;
     remain = l;
 
-    int divR = r.size();
+    const int divR = (int)r.size();
     int pos = (int)l.size() - 1;
     int end = pos - divR + 1;
     for (; end >= 0;) {
@@ -615,6 +613,7 @@ class BigInteger {
   static void absDivInplace(BigInteger& l, T r, T& remain) {
     static_assert(is_unsigned<T>::value);
     static_assert(sizeof(T) <= 8);
+
     l.fixPos();
     if (l.size() <= 2) {
       const uint64 a = l.toInt<uint64>();
@@ -624,17 +623,38 @@ class BigInteger {
       return;
     }
 
-    uint64 add = 0;
-    for (int i = l.pos_; i > 0; --i) {
-      const uint64 x = add + l.data_[i];
-      const uint64 next_add = (x % r) << 32;
-      l.data_[i] = x / r;
-      add = next_add;
+    if (sizeof(T) > 4 && !PE_HAS_INT128) {
+      BigInteger tRemain;
+      l = absDiv(l, BigInteger(r), tRemain);
+      remain = tRemain.toInt<T>();
+      return;
     }
-    uint64 x = add + l.data_[0];
-    l.data_[0] = x / r;
-    remain = x % r;
-    l.fixPos();
+
+    if (r <= max_32bit_value) {
+      uint64 add = 0;
+      for (int i = l.pos_; i > 0; --i) {
+        const uint64 x = add + l.data_[i];
+        const uint64 next_add = (x % r) << 32;
+        l.data_[i] = x / r;
+        add = next_add;
+      }
+      const uint64 x = add + l.data_[0];
+      l.data_[0] = x / r;
+      remain = x % r;
+      l.fixPos();
+    } else {
+      uint64 add = 0;
+      for (int i = l.pos_; i > 0; --i) {
+        const uint128 x = ((uint128)add << 32) + l.data_[i];
+        const uint64 next_add = x % r;
+        l.data_[i] = x / r;
+        add = next_add;
+      }
+      const uint128 x = ((uint128)add << 32) + l.data_[0];
+      l.data_[0] = x / r;
+      remain = x % r;
+      l.fixPos();
+    }
   }
 
  public:
@@ -1082,7 +1102,7 @@ inline tuple<BigInteger, T> div(const BigInteger& l, T r) {
     return make_tuple(0, 0);
   }
 
-  int signl = l.sign_;
+  const int signl = l.sign_;
   typedef typename std::make_unsigned<T>::type unsignedT;
   unsignedT absValue = r > 0 ? r : -r;
   unsignedT x;
@@ -1118,7 +1138,7 @@ inline void divInplace(BigInteger& l, T r, T& remain) {
   typedef typename std::make_unsigned<T>::type unsignedT;
   unsignedT absValue = r > 0 ? r : -r;
   unsignedT remainT;
-  int signl = l.sign_;
+  const int signl = l.sign_;
   BigInteger::absDivInplace(l, absValue, remainT);
   l.sign_ = signl * (r > 0 ? 1 : -1);
   l.fixPos();
@@ -1308,7 +1328,7 @@ inline BigInteger exgcd(const BigInteger& a, const BigInteger& b, BigInteger& x,
 inline BigInteger gcd(BigInteger m, BigInteger n) {
   while (!n.isZero()) {
     BigInteger t = m % n;
-    m = n;
+    m = std::move(n);
     n = std::move(t);
   }
   return m;

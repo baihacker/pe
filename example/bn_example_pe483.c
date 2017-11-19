@@ -10,7 +10,7 @@
 #include <pe.hpp>
 const int N = 100;
 bn choose[505][505];
-bn fac[500];
+bn fac[501];
 void init()
 {
   for (int i = 0; i <= 500; ++i)

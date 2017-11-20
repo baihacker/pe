@@ -1277,6 +1277,124 @@ int64 nth_element(const Poly<P>& s, int64 n) {
   return -1;
 }
 
+// Mul two polynomials with the same length.
+// The return length is 2n (not 2n-1)
+template<typename T>
+SL void poly_mul_internal(const T* X, const T* Y, const int n, T* result, int64 mod) {
+  const int n2 = n << 1;
+  if (n <= 49) {
+    fill(result, result+n2, 0);
+    for (int i = 0; i < n; ++i)
+      for (int j = 0; j < n; ++j) {
+        result[i+j] = add_mod(result[i+j], (uint64)X[i] * Y[j] % mod, mod);
+      }
+    return;
+  }
+
+#if 0  
+  if (n > 100000) {
+    dbg(n);
+  }
+#endif
+
+  const int m1 = n + 1 >> 1;
+  const int m0 = n - m1;
+  const int dbm1 = m1 << 1;
+  const int dbm0 = m0 << 1;
+  //m1 >= m0
+  const T* x0 = X + m1;
+  const T* y0 = Y + m1;
+  const T* x1 = X;
+  const T* y1 = Y;
+
+  T* x0y0 = new T[dbm1];
+  T* x1y1 = new T[dbm1];
+  if (n > 5000) {
+    #pragma omp parallel for schedule(dynamic, 1)
+    for (int i = 0; i < 2; ++i) {
+      if (i&1) poly_mul_internal(x0, y0, m0, x0y0, mod);
+      else poly_mul_internal(x1, y1, m1, x1y1, mod);
+    }
+  } else {
+    poly_mul_internal(x0, y0, m0, x0y0, mod);
+    poly_mul_internal(x1, y1, m1, x1y1, mod);
+  }
+  if (m0 != m1) {
+    x0y0[dbm0] = 0;
+    x0y0[dbm0+1] = 0;
+  }
+  T* w = new T[dbm1];
+  {
+    T* u = new T[m1];
+    T* v = new T[m1];
+ 
+    for (int i = 0; i < m0; ++i)
+      u[i] = add_mod(x0[i], x1[i], mod),
+      v[i] = add_mod(y0[i], y1[i], mod);
+    if (m0 != m1) {
+      u[m1-1] = x1[m1-1];
+      v[m1-1] = y1[m1-1];
+    }
+    poly_mul_internal(u, v, m1, w, mod);
+    delete[] u;
+    delete[] v;
+    for (int i = 0; i < m1*2; ++i)
+      w[i] = sub_mod(w[i], add_mod(x0y0[i], x1y1[i], mod), mod);
+  }
+  fill(result, result + n2, 0);
+  for (int i = 0; i < dbm0; ++i)
+    result[dbm1+i] = add_mod(result[dbm1+i], x0y0[i], mod);
+  for (int i = 0; i < dbm1; ++i)
+    result[m1+i] = add_mod(result[m1+i], w[i], mod);
+  for (int i = 0; i < dbm1; ++i)
+    result[i] = add_mod(result[i], x1y1[i], mod);
+  delete[] x0y0;
+  delete[] x1y1;
+  delete[] w;
+}
+
+// Mul two polynomials with the same length.
+// The return length is 2n (not 2n-1)
+template<typename T>
+SL void poly_mul(const T* X, const T* Y, const int n, T* result, int64 mod) {
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  poly_mul_internal<unsignedT>((const unsignedT*)X, (const unsignedT*)Y, n, (unsignedT*)result, mod);
+}
+
+template<typename T>
+SL vector<T> poly_mul(const vector<T>& X, const vector<T>& Y, int64 mod) {
+  const int n = X.size();
+  const int m = Y.size();
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  if (n == m) {
+    vector<T> result(2*n);
+    poly_mul_internal<unsignedT>((const unsignedT*)&X[0], (const unsignedT*)&Y[0], n, (unsignedT*)&result[0], mod);
+    return result;
+  } else if (n > m) {
+    vector<T> YY;
+    vector<T> result(2*n);
+    YY.resize(n);
+    for (int i = 0; i < m; ++i)
+      YY[i] = Y[i];
+    poly_mul_internal<unsignedT>((const unsignedT*)&X[0], (const unsignedT*)&YY[0], n, (unsignedT*)&result[0], mod);
+    return result;
+  } else {
+    vector<T> XX;
+    vector<T> result(2*m);
+    XX.resize(m);
+    for (int i = 0; i < n; ++i)
+      XX[i] = X[i];
+    poly_mul_internal<unsignedT>((const unsignedT*)&XX[0], (const unsignedT*)&Y[0], m, (unsignedT*)&result[0], mod);
+    return result;
+  }
+}
+
+template<int64 P>
+SL Poly<P> poly_mul(const Poly<P>& X, const Poly<P>& Y) {
+  auto data = poly_mul(X.data, Y.data, P);
+  return Poly<P>{data};
+}
+
 #if 0
 template <int64 P>
 Poly<P> cal1(const Poly<P>& s) {

@@ -552,15 +552,16 @@ _EuclideanRingElement __gcd(_EuclideanRingElement __m,
 
 #define gcd __gcd
 
-int64 exgcd_impl(int64 a, int64 b, int64& x, int64& y) {
+template<typename T>
+SL T exgcd_impl(T a, T b, T& x, T& y) {
   if (b == 0) {
     x = 1;
     y = 0;
     return a;
   }
 
-  int64 x1 = 0, y1 = 0;
-  const int64 ret = exgcd_impl(b, a % b, x1, y1);
+  T x1 = 0, y1 = 0;
+  const T ret = exgcd_impl(b, a % b, x1, y1);
   // b * x1 + (a%b) * y1 = ret
   // b * x1 + (a - a / b * b) * y1 = ret
   // b * x1 + a * y1 - a / b * b * y1 = ret
@@ -570,25 +571,28 @@ int64 exgcd_impl(int64 a, int64 b, int64& x, int64& y) {
   return ret;
 }
 
-SL int64 exgcd(int64 a, int64 b, int64& x, int64& y) {
+template<typename T>
+SL T exgcd(T a, T b, T& x, T& y) {
   PE_ASSERT(a != 0 || b != 0);
-  const int64 r = exgcd_impl(a, b, x, y);
+  const T r = exgcd_impl(a, b, x, y);
   PE_ASSERT(a * x + b * y == r);
   return r;
 }
 
-SL tuple<int64, int64, int64> exgcd(int64 a, int64 b) {
+template<typename T>
+SL tuple<T, T, T> exgcd(T a, T b) {
   PE_ASSERT(a != 0 || b != 0);
-  int64 x = 0, y = 0;
-  const int64 r = exgcd_impl(a, b, x, y);
+  T x = 0, y = 0;
+  const T r = exgcd_impl(a, b, x, y);
   PE_ASSERT(a * x + b * y == r);
-  return tuple<int64, int64, int64>{r, x, y};
+  return tuple<T, T, T>{r, x, y};
 }
 
 // solve equation a x = b (mod m)
 // return 0 and set u = -1 and v = 0 if failed
 // return 1, x = v (mod u)
-SL int solve_linear_equation(int64 a, int64 b, int64 m, int64& v, int64& u) {
+template<typename T>
+SL int solve_linear_equation(T a, T b, T m, T& v, T& u) {
   v = 0;
   u = 0;
 
@@ -596,7 +600,9 @@ SL int solve_linear_equation(int64 a, int64 b, int64 m, int64& v, int64& u) {
 
   if (m < 0) m = -m;
 
-  PE_ASSERT(m <= PE_SOI63);
+  if (sizeof(T) <= 8) {
+    PE_ASSERT(m <= PE_SOI63);
+  }
 
   a %= m;
   b %= m;
@@ -604,7 +610,7 @@ SL int solve_linear_equation(int64 a, int64 b, int64 m, int64& v, int64& u) {
   if (a < 0) a += m;
   if (b < 0) b += m;
 
-  int64 xx = 0, yy = 0, d = exgcd(a, m, xx, yy);
+  T xx = 0, yy = 0, d = exgcd(a, m, xx, yy);
 
   if (b % d) return 0;
 
@@ -620,7 +626,8 @@ SL int solve_linear_equation(int64 a, int64 b, int64 m, int64& v, int64& u) {
 // solve equation x = a (mod m1) x = b (mod m2)
 // return 0 and set u = 0 and t = 0 if failed
 // return 1, x = v (mod u)
-SL int crt2(int64 a, int64 m1, int64 b, int64 m2, int64& v, int64& u) {
+template<typename T>
+SL int crt2(T a, T m1, T b, T m2, T& v, T& u) {
   v = 0;
   u = 0;
 
@@ -637,7 +644,7 @@ SL int crt2(int64 a, int64 m1, int64 b, int64 m2, int64& v, int64& u) {
   if (a < 0) a = -a;
   if (b < 0) b = -b;
 
-  int64 s = 0, t = 0;
+  T s = 0, t = 0;
   if (!solve_linear_equation(m1, b - a, m2, t, s)) return 0;
   // k0 = k1 * s + t
   // x = (k1 * s + t) * m1 + a
@@ -648,23 +655,25 @@ SL int crt2(int64 a, int64 m1, int64 b, int64 m2, int64& v, int64& u) {
   return 1;
 }
 
-SL tuple<int, int64, int64> crt2(int64 a, int64 m1, int64 b, int64 m2) {
-  int64 v = 0, u = 0;
+template<typename T>
+SL tuple<int, T, T> crt2(T a, T m1, T b, T m2) {
+  T v = 0, u = 0;
   int r = crt2(a, m1, b, m2, v, u);
-  return tuple<int, int64, int64>{r, v, u};
+  return tuple<int, T, T>{r, v, u};
 }
 
-SL tuple<int, int64, int64> crtn(int64* val, int64* mod, int n) {
+template<typename T>
+SL tuple<int, T, T> crtn(T* val, T* mod, int n) {
   PE_ASSERT(val != NULL && mod != NULL);
-  int64 v = 0, u = 1;
+  T v = 0, u = 1;
   int have = 1;
   for (int i = 0; i < n; ++i) {
     tie(have, v, u) = crt2(v, u, val[i], mod[i]);
     if (!have) {
-      return tuple<int, int64, int64>{0, 0, 0};
+      return tuple<int, T, T>{0, 0, 0};
     }
   }
-  return tuple<int, int64, int64>{have, v, u};
+  return tuple<int, T, T>{have, v, u};
 }
 
 // prime test for n <= 2^63 - 1
@@ -949,7 +958,7 @@ SL vector<int64> gf_first(const vector<int64>& A, const vector<int64>& B,
   PE_ASSERT(sb > 0);
 
   int64 v, u;
-  int has = solve_linear_equation(A[0], 1, mod, v, u);
+  int has = solve_linear_equation<int64>(A[0], 1, mod, v, u);
   if (!has) return vector<int64>();
 
   vector<int64> result(n + 1, 0);
@@ -980,7 +989,7 @@ SL int64 gf_at(const vector<int64>& A, const vector<int64>& B, const int64 n,
   PE_ASSERT(sb > 0);
 
   int64 v, u;
-  int has = solve_linear_equation(A[0], 1, mod, v, u);
+  int has = solve_linear_equation<int64>(A[0], 1, mod, v, u);
   if (!has) return -1;
 
   const int64 m = min((int64)max(sa - 1, sb - 1), n);
@@ -1277,6 +1286,40 @@ int64 nth_element(const Poly<P>& s, int64 n) {
   return -1;
 }
 
+#if 0
+template <int64 P>
+Poly<P> cal1(const Poly<P>& s) {
+  Poly<P> C{1};
+  Poly<P> B{1};
+  int L = 0;
+  int m = 1;
+  int64 b = 1;
+  const int N = s.data.size();
+  for (int n = 0; n < N; ++n) {
+    int64 d = s[n];
+    for (int i = 1; i <= L; ++i) {
+      d = add_mod(d, add_mod(C.at(i), s[n - i], P), P);
+    }
+    if (d == 0) {
+      ++m;
+    } else if (2 * L <= n) {
+      auto T = C;
+      int64 coe = d * inv_of(b, P) % P;
+      C = C - (B << m) * coe;
+      L = n + 1 - L;
+      B = std::move(T);
+      b = d;
+      m = 1;
+    } else {
+      int64 coe = d * inv_of(b, P) % P;
+      C = C - (B << m) * coe;
+      m = m + 1;
+    }
+  }
+  return C;
+}
+#endif
+
 // Mul two polynomials with the same length.
 // The return length is 2n (not 2n-1)
 template<typename T>
@@ -1395,39 +1438,125 @@ SL Poly<P> poly_mul(const Poly<P>& X, const Poly<P>& Y) {
   return Poly<P>{data};
 }
 
-#if 0
-template <int64 P>
-Poly<P> cal1(const Poly<P>& s) {
-  Poly<P> C{1};
-  Poly<P> B{1};
-  int L = 0;
-  int m = 1;
-  int64 b = 1;
-  const int N = s.data.size();
-  for (int n = 0; n < N; ++n) {
-    int64 d = s[n];
-    for (int i = 1; i <= L; ++i) {
-      d = add_mod(d, add_mod(C.at(i), s[n - i], P), P);
-    }
-    if (d == 0) {
-      ++m;
-    } else if (2 * L <= n) {
-      auto T = C;
-      int64 coe = d * inv_of(b, P) % P;
-      C = C - (B << m) * coe;
-      L = n + 1 - L;
-      B = std::move(T);
-      b = d;
-      m = 1;
-    } else {
-      int64 coe = d * inv_of(b, P) % P;
-      C = C - (B << m) * coe;
-      m = m + 1;
+struct NttMod {
+  // MOD = R * 2 ^ k + 1
+  const uint64 mod;
+  const uint64 r;
+  const int k;
+  const uint64 g;
+  
+  uint64 omg[32];
+  NttMod(uint64 mod, uint64 r, int k, uint64 g)
+    : mod(mod), r(r), k(k), g(g) {
+    for (int i = 0; i <= k; ++i) {
+      omg[i] = power_mod(g, (mod - 1) >> i, mod);
     }
   }
-  return C;
+};
+
+static NttMod nttMod1(2013265921ull, 15ull, 27, 31ull);
+static NttMod nttMod2(2281701377ull, 17ull, 27, 3ull);
+static NttMod nttMod3(3221225473ull, 3ull, 30, 5ull);
+
+template<typename T>
+void trans(T* data, const int n) {
+  int j = n >> 1;
+  for (int i = 1; i < n - 1; ++i) {
+    if (i < j) swap(data[i], data[j]);
+    int k = n >> 1;
+    while (j >= k) {
+      j -= k;
+      k >>= 1;
+    }
+    if (j < k) j += k;
+  }
+}
+
+template<typename T>
+void ntt(T* data, const int n, NttMod moder, bool inv = false) {
+  trans(data, n);
+  
+  const auto mod = moder.mod;
+  int id = 0;
+  for (int h = 2; h <= n; h <<= 1) {
+    ++id;
+    for (int j = 0; j < n; j += h) {
+      uint64 omgn = 1;
+      const int halfH = h >> 1;
+      const int limit = j + halfH;
+      for (int k = j; k < limit; ++k) {
+        const auto u = data[k] % mod;
+        const auto t = omgn * data[k + halfH] % mod;
+        data[k] = (u + t) % mod;
+        data[k+halfH] = (u + mod - t) % mod;
+        omgn = omgn * moder.omg[id] % mod;
+      }
+    }
+  }
+  if (inv) {
+    const int halfN = n >> 1;
+    for (int i = 1; i < halfN; ++i)
+      swap(data[i], data[n - i]);
+    const uint64 c = power_mod(n, mod - 2, mod);
+    for (int i = 0; i < n; ++i)
+      data[i] = c * data[i] % mod;
+  }
+}
+
+#if PE_HAS_INT128
+template<typename T>
+SL void poly_mul_ntt_internal(const T* X, int n, const T* Y, int m, T* result, int64 mod) {
+  int alignedSize = 1;
+  while (alignedSize < n + m) alignedSize <<= 1;
+
+  vector<uint64> XX(alignedSize);
+  vector<uint64> YY(alignedSize);
+  
+  // TODO(baihacker): decide the size automatically.
+  NttMod moder[3] = {nttMod1, nttMod2, nttMod3};
+  vector<uint64> tresult[3];
+  for (int id = 0; id < 3; ++id) {
+    for (int i = 0; i < n; ++i) XX[i] = X[i];
+    for (int i = n; i < alignedSize; ++i) XX[i] = 0;
+    for (int i = 0; i < m; ++i) YY[i] = Y[i];
+    for (int i = m; i < alignedSize; ++i) YY[i] = 0;
+    ntt(&XX[0], alignedSize, moder[id]);
+    ntt(&YY[0], alignedSize, moder[id]);
+    const uint64 mod = moder[id].mod;
+    tresult[id].resize(alignedSize);
+    for (int i = 0; i < alignedSize; ++i) {
+      tresult[id][i] = (uint64)XX[i] * YY[i] % mod;
+    }
+    ntt(&tresult[id][0], alignedSize, moder[id], true);
+  }
+  
+  int128 mods[3] = {nttMod1.mod, nttMod2.mod, nttMod3.mod};
+  for (int i = 0; i < n + m; ++i) {
+    int128 val[3] = {tresult[0][i], tresult[1][i], tresult[2][i]};
+    int128 have, v, u;
+    tie(have, v, u) = crtn<int128>(val, mods, 3);
+    result[i] = v % mod;
+  }
+}
+
+template<typename T>
+SL void poly_mul_ntt(const T* X, const int n, const T* Y, const int m, T* result, int64 mod) {
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  poly_mul_ntt_internal<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m, (unsignedT*)result, mod);
+}
+
+template<typename T>
+SL vector<T> poly_mul_ntt(const vector<T>& X, const vector<T>& Y, int64 mod) {
+  const int n = X.size();
+  const int m = Y.size();
+
+  vector<T> result(n + m);
+  poly_mul_ntt(&X[0], n, &Y[0], m, &result[0], mod);
+
+  return result;
 }
 #endif
+
 // 65701
 #endif
 /*

@@ -1334,7 +1334,7 @@ SL void poly_mul_internal(const T* X, const T* Y, const int n, T* result, int64 
     return;
   }
 
-#if 0  
+#if 0
   if (n > 100000) {
     dbg(n);
   }
@@ -1370,7 +1370,7 @@ SL void poly_mul_internal(const T* X, const T* Y, const int n, T* result, int64 
   {
     T* u = new T[m1];
     T* v = new T[m1];
- 
+
     for (int i = 0; i < m0; ++i)
       u[i] = add_mod(x0[i], x1[i], mod),
       v[i] = add_mod(y0[i], y1[i], mod);
@@ -1444,7 +1444,7 @@ struct NttMod {
   const uint64 r;
   const int k;
   const uint64 g;
-  
+
   uint64 omg[32];
   NttMod(uint64 mod, uint64 r, int k, uint64 g)
     : mod(mod), r(r), k(k), g(g) {
@@ -1475,7 +1475,7 @@ void trans(T* data, const int n) {
 template<typename T>
 void ntt(T* data, const int n, NttMod moder, bool inv = false) {
   trans(data, n);
-  
+
   const auto mod = moder.mod;
   int id = 0;
   for (int h = 2; h <= n; h <<= 1) {
@@ -1506,12 +1506,14 @@ void ntt(T* data, const int n, NttMod moder, bool inv = false) {
 #if PE_HAS_INT128
 template<typename T>
 SL void poly_mul_ntt_internal(const T* X, int n, const T* Y, int m, T* result, int64 mod) {
+  static_assert(std::is_unsigned<T>::value);
+
   int alignedSize = 1;
   while (alignedSize < n + m) alignedSize <<= 1;
 
   vector<uint64> XX(alignedSize);
   vector<uint64> YY(alignedSize);
-  
+
   // TODO(baihacker): decide the size automatically.
   NttMod moder[3] = {nttMod1, nttMod2, nttMod3};
   vector<uint64> tresult[3];
@@ -1529,7 +1531,7 @@ SL void poly_mul_ntt_internal(const T* X, int n, const T* Y, int m, T* result, i
     }
     ntt(&tresult[id][0], alignedSize, moder[id], true);
   }
-  
+
   int128 mods[3] = {nttMod1.mod, nttMod2.mod, nttMod3.mod};
   for (int i = 0; i < n + m; ++i) {
     int128 val[3] = {tresult[0][i], tresult[1][i], tresult[2][i]};
@@ -1537,6 +1539,8 @@ SL void poly_mul_ntt_internal(const T* X, int n, const T* Y, int m, T* result, i
     tie(have, v, u) = crtn<int128>(val, mods, 3);
     result[i] = v % mod;
   }
+
+  result[n+m-1] = 0;
 }
 
 template<typename T>
@@ -1554,6 +1558,12 @@ SL vector<T> poly_mul_ntt(const vector<T>& X, const vector<T>& Y, int64 mod) {
   poly_mul_ntt(&X[0], n, &Y[0], m, &result[0], mod);
 
   return result;
+}
+
+template<int64 P>
+SL Poly<P> poly_mul_ntt(const Poly<P>& X, const Poly<P>& Y) {
+  auto data = poly_mul_ntt(X.data, Y.data, P);
+  return Poly<P>{data};
 }
 #endif
 

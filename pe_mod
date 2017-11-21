@@ -3,8 +3,42 @@
 
 #include "pe_base"
 
+template<typename T1, typename T2, bool ge, bool same>
+struct BigTypeImpl {
+  typedef T1 type;
+};
+
+template<typename T1, typename T2>
+struct BigTypeImpl<T1, T2, false, false> {
+  typedef T2 type;
+};
+
+template<typename T1, typename T2>
+struct BigTypeImpl<T1, T2, true, true> {
+  typedef typename std::make_unsigned<T1>::type type;
+};
+
+
+template<typename T1, typename T2>
+struct BigType {
+  typedef typename std::make_unsigned<T1>::type U1;
+  typedef typename std::make_unsigned<T2>::type U2;
+  typedef typename BigTypeImpl<
+                      T1,
+                      T2,
+                      (sizeof(T1) >= sizeof(T2)),
+                      std::is_same<U1, U2>::value
+                    >::type type;
+};
+
+template<typename T>
+struct BigType<T, T> {
+  typedef T type;
+};
+
 // Modular arithmetic
-SL int64 regulate_mod(int64 a, int64 mod) {
+template<typename T, typename M>
+SL T regulate_mod(T a, M mod) {
   PE_ASSERT(mod >= 1);
   if (a >= 0) {
     if (a >= mod) a %= mod;
@@ -17,34 +51,65 @@ SL int64 regulate_mod(int64 a, int64 mod) {
   return a;
 }
 
-#if PE_HAS_INT128
-SL int128 regulate_mod(int128 a, int64 mod) {
-  PE_ASSERT(mod >= 1);
-  if (a >= 0) {
-    if (a >= mod) a %= mod;
-  } else {
-    if (-a >= mod)
-      a = a % mod + mod;
-    else
-      a += mod;
-  }
-  return a;
+template<typename T>
+SL T regulate_mod(T a, T mod) {
+  return regulate_mod<T, T>(a, mod);
 }
-#endif
 
-SL int64 add_mod(int64 a, int64 b, int64 mod) {
+template<typename T, typename M>
+SL T add_mod_impl(T a, T b, M mod) {
   a += b;
   if (a >= mod) a -= mod;
   return a;
 }
 
-SL int64 sub_mod(int64 a, int64 b, int64 mod) {
-  a -= b;
-  if (a < 0) a += mod;
-  return a;
+template<typename T1, typename T2, typename M>
+SL auto add_mod(T1 a, T2 b, M mod) -> typename BigType<T1, T2>::type {
+  typedef typename BigType<T1, T2>::type T;
+  return add_mod_impl<T, M>(a, b, mod);
 }
 
-SL int64 mul_mod(int64 a, int64 b, int64 mod) { return a * b % mod; }
+template<typename T, typename M>
+SL T sub_mod_impl(T a, T b, M mod) {
+  return a >= b ? a - b : mod - b + a;
+}
+
+template<typename T1, typename T2, typename M>
+SL auto sub_mod(T1 a, T2 b, M mod) -> typename BigType<T1, T2>::type {
+  typedef typename BigType<T1, T2>::type T;
+  return sub_mod_impl<T, M>(a, b, mod);
+}
+
+template<typename T, typename M>
+SL T mul_mod_impl(T a, T b, M mod) {
+  return a * b % mod;
+}
+
+template<typename T1, typename T2, typename M>
+SL auto mul_mod(T1 a, T2 b, M mod) -> typename BigType<T1, T2>::type {
+  typedef typename BigType<T1, T2>::type T;
+  return mul_mod_impl<T, M>(a, b, mod);
+}
+
+template<typename T, typename M>
+SL T power_mod_impl(T x, T n, M mod) {
+  if (mod == 1) return 0;
+
+  int64 ret = 1;
+  x %= mod;
+  if (x < 0) x += mod;
+  for (; n; n >>= 1) {
+    if (n & 1) ret = ret * x % mod;
+    x = x * x % mod;
+  }
+  return ret;
+}
+
+template<typename T1, typename T2, typename M>
+SL auto power_mod(T1 x, T2 n, M mod) -> typename BigType<T1, T2>::type {
+  typedef typename BigType<T1, T2>::type T;
+  return power_mod_impl<T, M>(x, n, mod);
+}
 
 SL int64 mul_mod_ex(int64 a, int64 b, int64 mod) {
 #if PE_HAS_INT128
@@ -60,31 +125,6 @@ SL int64 mul_mod_ex(int64 a, int64 b, int64 mod) {
   }
   return ret;
 #endif
-}
-
-SL int64 power_mod(int64 x, int64 n, int64 mod) {
-  if (mod == 1) return 0;
-
-  int64 ret = 1;
-  x %= mod;
-  if (x < 0) x += mod;
-  for (; n; n >>= 1) {
-    if (n & 1) ret = ret * x % mod;
-    x = x * x % mod;
-  }
-  return ret;
-}
-
-SL uint64 power_mod(uint64 x, uint64 n, uint64 mod) {
-  if (mod == 1) return 0;
-
-  uint64 ret = 1;
-  x %= mod;
-  for (; n; n >>= 1) {
-    if (n & 1) ret = ret * x % mod;
-    x = x * x % mod;
-  }
-  return ret;
 }
 
 SL int64 power_mod_ex(int64 x, int64 n, int64 mod) {

@@ -1352,14 +1352,11 @@ SL void poly_mul_internal(const T* X, const T* Y, const int n, T* result, int64 
 
   T* x0y0 = new T[dbm1];
   T* x1y1 = new T[dbm1];
-  if (n > 5000) {
-    #pragma omp parallel for schedule(dynamic, 1)
-    for (int i = 0; i < 2; ++i) {
-      if (i&1) poly_mul_internal(x0, y0, m0, x0y0, mod);
-      else poly_mul_internal(x1, y1, m1, x1y1, mod);
-    }
-  } else {
+  #pragma omp parallel sections if (n > 5000)
+  {
+    #pragma omp section
     poly_mul_internal(x0, y0, m0, x0y0, mod);
+    #pragma omp section
     poly_mul_internal(x1, y1, m1, x1y1, mod);
   }
   if (m0 != m1) {
@@ -1517,13 +1514,19 @@ SL void poly_mul_ntt_internal(const T* X, int n, const T* Y, int m, T* result, i
   // TODO(baihacker): decide the size automatically.
   NttMod moder[3] = {nttMod1, nttMod2, nttMod3};
   vector<uint64> tresult[3];
+  #pragma omp parallel for schedule(dynamic, 1) num_threads(3)
   for (int id = 0; id < 3; ++id) {
     for (int i = 0; i < n; ++i) XX[i] = X[i];
     for (int i = n; i < alignedSize; ++i) XX[i] = 0;
     for (int i = 0; i < m; ++i) YY[i] = Y[i];
     for (int i = m; i < alignedSize; ++i) YY[i] = 0;
-    ntt(&XX[0], alignedSize, moder[id]);
-    ntt(&YY[0], alignedSize, moder[id]);
+    #pragma omp parallel sections if (n + m >= 100000)
+    {
+      #pragma omp section
+      ntt(&XX[0], alignedSize, moder[id]);
+      #pragma omp section
+      ntt(&YY[0], alignedSize, moder[id]);
+    }
     const uint64 mod = moder[id].mod;
     tresult[id].resize(alignedSize);
     for (int i = 0; i < alignedSize; ++i) {
@@ -1533,6 +1536,7 @@ SL void poly_mul_ntt_internal(const T* X, int n, const T* Y, int m, T* result, i
   }
 
   int128 mods[3] = {nttMod1.mod, nttMod2.mod, nttMod3.mod};
+  #pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
   for (int i = 0; i < n + m; ++i) {
     int128 val[3] = {tresult[0][i], tresult[1][i], tresult[2][i]};
     int128 have, v, u;

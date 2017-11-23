@@ -1508,14 +1508,13 @@ SL void poly_mul_ntt_internal(const T* X, int n, const T* Y, int m, T* result, i
   int alignedSize = 1;
   while (alignedSize < n + m) alignedSize <<= 1;
 
-  vector<uint64> XX(alignedSize);
-  vector<uint64> YY(alignedSize);
-
   // TODO(baihacker): decide the size automatically.
   NttMod moder[3] = {nttMod1, nttMod2, nttMod3};
   vector<uint64> tresult[3];
   #pragma omp parallel for schedule(dynamic, 1) num_threads(3)
   for (int id = 0; id < 3; ++id) {
+    vector<uint64> XX(alignedSize);
+    vector<uint64> YY(alignedSize);
     for (int i = 0; i < n; ++i) XX[i] = X[i];
     for (int i = n; i < alignedSize; ++i) XX[i] = 0;
     for (int i = 0; i < m; ++i) YY[i] = Y[i];

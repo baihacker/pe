@@ -2,6 +2,7 @@
 #define __PE_POLY__
 
 #include "pe_base"
+#include "pe_mod"
 
 template <int64 P>
 struct PolyM {
@@ -88,6 +89,8 @@ struct PolyM {
     const int m = min(n, static_cast<int>(data.size()));
     return PolyM<P>(std::vector<int64>(data.begin(), data.begin() + m));
   }
+  
+  PolyM<P> inv(int n) const;
 };
 
 template <int64 P>
@@ -316,9 +319,10 @@ PolyM<P> cal1(const PolyM<P>& s) {
 #endif
 
 // Mul two polynomials with the same length.
+// Make sure the length of result is at least: n + n
 // The return length is 2n (not 2n-1)
 template<typename T>
-SL void poly_mul_internal(const T* X, const T* Y, const int n, T* result, int64 mod) {
+SL void poly_mul_normal_internal(const T* X, const T* Y, const int n, T* result, int64 mod) {
   const int n2 = n << 1;
   if (n <= 49) {
     fill(result, result+n2, 0);
@@ -350,9 +354,9 @@ SL void poly_mul_internal(const T* X, const T* Y, const int n, T* result, int64 
   #pragma omp parallel sections if (n > 5000)
   {
     #pragma omp section
-    poly_mul_internal(x0, y0, m0, x0y0, mod);
+    poly_mul_normal_internal(x0, y0, m0, x0y0, mod);
     #pragma omp section
-    poly_mul_internal(x1, y1, m1, x1y1, mod);
+    poly_mul_normal_internal(x1, y1, m1, x1y1, mod);
   }
   if (m0 != m1) {
     x0y0[dbm0] = 0;
@@ -388,23 +392,50 @@ SL void poly_mul_internal(const T* X, const T* Y, const int n, T* result, int64 
   delete[] w;
 }
 
-// Mul two polynomials with the same length.
-// Make sure the length of result is: n + n
+// Multiply two polynomials.
+// Make sure the length of result is at least: n + m - 1
 template<typename T>
-SL void poly_mul(const T* X, const T* Y, const int n, T* result, int64 mod) {
+SL void poly_mul_normal(const T* X, const int n, const T* Y, const int m, T* result, int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
-  poly_mul_internal<unsignedT>((const unsignedT*)X, (const unsignedT*)Y, n, (unsignedT*)result, mod);
+  // In case n == m, we still allocate tempory result space to meet the
+  // requirement of poly_mul_normal_internal.
+  // if (n == m) {
+  //  poly_mul_normal_internal<unsignedT>((const unsignedT*)X, (const unsignedT*)Y, n, (unsignedT*)result, mod);
+  //  return;
+  // }
+  const int v = max(n, m);
+  vector<T> tresult(v*2);
+  if (n < m) {
+    vector<T> XX(2*v);
+    for (int i = 0; i < n; ++i) {
+      XX[i] = X[i];
+    }
+    for (int i = n; i < m; ++i) {
+      XX[i] = 0;
+    }
+    poly_mul_normal_internal<unsignedT>((const unsignedT*)&XX[0], (const unsignedT*)Y, m, (unsignedT*)&tresult[0], mod);
+  } else {
+    vector<T> YY(2*v);
+    for (int i = 0; i < m; ++i) {
+      YY[i] = Y[i];
+    }
+    for (int i = m; i < n; ++i) {
+      YY[i] = 0;
+    }
+    poly_mul_normal_internal<unsignedT>((const unsignedT*)X, (const unsignedT*)&YY[0], n, (unsignedT*)&tresult[0], mod);
+  }
+  copy(tresult.begin(), tresult.begin() + n + m - 1, result);
 }
 
 template<typename T>
-SL vector<T> poly_mul(const vector<T>& X, const vector<T>& Y, int64 mod) {
+SL vector<T> poly_mul_normal(const vector<T>& X, const vector<T>& Y, int64 mod) {
   const int n = X.size();
   const int m = Y.size();
   const int resultSize = n + m - 1;
   typedef typename std::make_unsigned<T>::type unsignedT;
   if (n == m) {
     vector<T> result(2*n);
-    poly_mul_internal<unsignedT>((const unsignedT*)&X[0], (const unsignedT*)&Y[0], n, (unsignedT*)&result[0], mod);
+    poly_mul_normal_internal<unsignedT>((const unsignedT*)&X[0], (const unsignedT*)&Y[0], n, (unsignedT*)&result[0], mod);
     result.resize(resultSize);
     return result;
   } else if (n > m) {
@@ -413,7 +444,7 @@ SL vector<T> poly_mul(const vector<T>& X, const vector<T>& Y, int64 mod) {
     YY.resize(n);
     for (int i = 0; i < m; ++i)
       YY[i] = Y[i];
-    poly_mul_internal<unsignedT>((const unsignedT*)&X[0], (const unsignedT*)&YY[0], n, (unsignedT*)&result[0], mod);
+    poly_mul_normal_internal<unsignedT>((const unsignedT*)&X[0], (const unsignedT*)&YY[0], n, (unsignedT*)&result[0], mod);
     result.resize(resultSize);
     return result;
   } else {
@@ -422,14 +453,14 @@ SL vector<T> poly_mul(const vector<T>& X, const vector<T>& Y, int64 mod) {
     XX.resize(m);
     for (int i = 0; i < n; ++i)
       XX[i] = X[i];
-    poly_mul_internal<unsignedT>((const unsignedT*)&XX[0], (const unsignedT*)&Y[0], m, (unsignedT*)&result[0], mod);
+    poly_mul_normal_internal<unsignedT>((const unsignedT*)&XX[0], (const unsignedT*)&Y[0], m, (unsignedT*)&result[0], mod);
     result.resize(resultSize);
     return result;
   }
 }
 
 template<int64 P>
-SL PolyM<P> poly_mul(const PolyM<P>& X, const PolyM<P>& Y) {
+SL PolyM<P> poly_mul_normal(const PolyM<P>& X, const PolyM<P>& Y) {
   auto data = poly_mul(X.data, Y.data, P);
   return PolyM<P>{data};
 }
@@ -476,7 +507,7 @@ void ntt(T* data, const int n, NttMod moder, bool inv = false) {
   int id = 0;
   for (int h = 2; h <= n; h <<= 1) {
     ++id;
-    #pragma omp parallel for schedule(dynamic, 16)
+    //#pragma omp parallel for schedule(dynamic, 16)
     for (int j = 0; j < n; j += h) {
       uint64 omgn = 1;
       const int halfH = h >> 1;
@@ -502,6 +533,10 @@ void ntt(T* data, const int n, NttMod moder, bool inv = false) {
 
 // Need int128 to handle the big polynomial coefficient.
 #if PE_HAS_INT128
+#define HAS_POLY_MUL_NTT 1
+
+// Multiply two polynomials.
+// Make sure the length of result is at least: n + m - 1
 template<typename T>
 SL void poly_mul_ntt_internal(const T* X, int n, const T* Y, int m, T* result, int64 mod) {
   static_assert(std::is_unsigned<T>::value);
@@ -546,6 +581,7 @@ SL void poly_mul_ntt_internal(const T* X, int n, const T* Y, int m, T* result, i
   }
 }
 
+// Multiply two polynomials.
 // The length of result is at least n + m - 1.
 template<typename T>
 SL void poly_mul_ntt(const T* X, const int n, const T* Y, const int m, T* result, int64 mod) {
@@ -569,8 +605,67 @@ SL PolyM<P> poly_mul_ntt(const PolyM<P>& X, const PolyM<P>& Y) {
   auto data = poly_mul_ntt(X.data, Y.data, P);
   return PolyM<P>{data};
 }
+#else
+#define HAS_POLY_MUL_NTT 0
 #endif
 
+#if HAS_POLY_MUL_NTT
+#define poly_mul poly_mul_ntt
+#else
+#define poly_mul poly_mul_normal
+#endif
+
+void poly_inv_internal(int n, uint64* a, uint64* b, uint64* tmp[2], uint64 mod) {
+  if (n == 1) {
+    b[0] = power_mod(a[0], mod - 2, mod);
+  } else {
+    poly_inv_internal(n + 1 >> 1, a, b, tmp, mod);
+    
+    int p = 1;
+    while (p < n << 1) p <<= 1;
+    poly_mul_ntt(b, n, b, n, tmp[0], mod);
+    poly_mul_ntt(a, n, tmp[0], n, tmp[1], mod);
+    for (int i = 0; i < n; ++i) {
+      auto t = b[i] << 1;
+      if (t >= mod) t -= mod;
+      t = t + mod - tmp[1][i];
+      if (t >= mod) t -= mod;
+      b[i] = t;
+    }
+    fill(b + n, b + p, 0);
+  }
+}
+
+template<int64 P>
+PolyM<P> PolyM<P>::inv(int n) const {
+  int p = 1;
+  while (p < n << 1) p <<= 1;
+  
+  // a
+  vector<int64> a(p);
+  const int m = data.size();
+  for (int i = 0; i < m; ++i) {
+    a[i] = data[i];
+  }
+  for (int i = m; i < p; ++i) {
+    a[i] = 0;
+  }
+
+  // b
+  vector<int64> b(p);
+  
+  // tmp
+  vector<int64> tmpData[2];
+  uint64* tmp[2];
+  for (int i = 0; i < 2; ++i) {
+    tmpData[i].resize(p);
+    tmp[i] = (uint64*)&(tmpData[i][0]);
+  }
+
+  poly_inv_internal(n, (uint64*)&a[0], (uint64*)&b[0], tmp, P);
+  b.resize(n);
+  return b;
+}
 
 // Finds the coefficient of x^0..x^n of f such that: A*f = B
 // Returns empty vector if there is no integer solution.

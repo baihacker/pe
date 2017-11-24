@@ -52,6 +52,17 @@ struct PolyM {
 
   int deg() const { return static_cast<int>(data.size() - 1); }
   int size() const { return static_cast<int>(data.size());}
+  
+  PolyM<P>& resize(int n) {
+    const int m = (int)data.size();
+    data.resize(n);
+    for (int i = m; i < n; ++i) {
+      data[i] = 0;
+    }
+    return *this;
+  }
+
+  PolyM<P>& redeg(int n) { return resize(n+1);}
 
   int64& operator[](int idx) {
     PE_ASSERT(idx >= 0 && idx < data.size());
@@ -119,19 +130,6 @@ PolyM<P> operator*(const PolyM<P>& x, int64 v) {
   for (auto& iter : data) {
     iter = iter * v % P;
   }
-  return PolyM<P>(std::move(data));
-}
-
-template <int64 P>
-PolyM<P> operator*(const PolyM<P>& x, const PolyM<P>& y) {
-  const int n = x.deg();
-  const int m = y.deg();
-  std::vector<int64> data(n + m + 1, 0);
-  for (int i = 0; i <= n; ++i)
-    for (int j = 0; j <= m; ++j) {
-      int64 t = x[i] * y[j] % P;
-      data[i + j] = add_mod(data[i + j], t, P);
-    }
   return PolyM<P>(std::move(data));
 }
 
@@ -615,6 +613,26 @@ SL PolyM<P> poly_mul_ntt(const PolyM<P>& X, const PolyM<P>& Y) {
 #define poly_mul poly_mul_normal
 #endif
 
+#if 1
+template <int64 P>
+PolyM<P> operator*(const PolyM<P>& x, const PolyM<P>& y) {
+  return poly_mul(x, y);
+}
+#else
+template <int64 P>
+PolyM<P> operator*(const PolyM<P>& x, const PolyM<P>& y) {
+  const int n = x.deg();
+  const int m = y.deg();
+  std::vector<int64> data(n + m + 1, 0);
+  for (int i = 0; i <= n; ++i)
+    for (int j = 0; j <= m; ++j) {
+      int64 t = x[i] * y[j] % P;
+      data[i + j] = add_mod(data[i + j], t, P);
+    }
+  return PolyM<P>(std::move(data));
+}
+#endif
+
 void poly_inv_internal(int n, uint64* a, uint64* b, uint64* tmp[2], uint64 mod) {
   if (n == 1) {
     b[0] = power_mod(a[0], mod - 2, mod);
@@ -659,7 +677,7 @@ PolyM<P> PolyM<P>::inv(int n) const {
   uint64* tmp[2];
   for (int i = 0; i < 2; ++i) {
     tmpData[i].resize(p);
-    tmp[i] = (uint64*)&(tmpData[i][0]);
+    tmp[i] = (uint64*)&tmpData[i][0];
   }
 
   poly_inv_internal(n, (uint64*)&a[0], (uint64*)&b[0], tmp, P);

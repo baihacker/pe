@@ -50,6 +50,7 @@ struct PolyM {
   }
 
   int deg() const { return static_cast<int>(data.size() - 1); }
+  int size() const { return static_cast<int>(data.size());}
 
   int64& operator[](int idx) {
     PE_ASSERT(idx >= 0 && idx < data.size());
@@ -499,6 +500,7 @@ void ntt(T* data, const int n, NttMod moder, bool inv = false) {
   }
 }
 
+// Need int128 to handle the big polynomial coefficient.
 #if PE_HAS_INT128
 template<typename T>
 SL void poly_mul_ntt_internal(const T* X, int n, const T* Y, int m, T* result, int64 mod) {
@@ -568,5 +570,99 @@ SL PolyM<P> poly_mul_ntt(const PolyM<P>& X, const PolyM<P>& Y) {
   return PolyM<P>{data};
 }
 #endif
+
+
+// Finds the coefficient of x^0..x^n of f such that: A*f = B
+// Returns empty vector if there is no integer solution.
+template<int64 P>
+SL PolyM<P> gf_first(const PolyM<P>& A, const PolyM<P>& B, const int n) {
+  const int64 mod = P;
+  const int sa = sz(A);
+  const int sb = sz(B);
+  PE_ASSERT(sa > 0);
+  PE_ASSERT(sb > 0);
+
+  int64 v, u;
+  int has = solve_linear_equation<int64>(A[0], 1, mod, v, u);
+  if (!has) return vector<int64>();
+
+  vector<int64> result(n + 1, 0);
+
+  // if u < mod, we have more than one solution.
+  PE_ASSERT(u == mod);
+  const int64 invA0 = v;
+  result[0] = invA0 * B[0] % mod;
+
+  for (int i = 1; i <= n; ++i) {
+    int64 t = regulate_mod(i < sb ? B[i] : 0, mod);
+    for (int j = 1; j <= min(i, sa - 1); ++j) {
+      t = sub_mod(t, (j < sa ? A[j] : 0) * result[i - j] % mod, mod);
+    }
+    result[i] = invA0 * t % mod;
+  }
+
+  return result;
+}
+
+// Finds the coefficient of x^n of f such that: A*f = B
+// Returns -1 if there is no integer solution.
+template<int64 P>
+SL int64 gf_at(const PolyM<P>& A, const PolyM<P>& B, const int64 n) {
+  const int64 mod = P;
+  const int sa = sz(A);
+  const int sb = sz(B);
+  PE_ASSERT(sa > 0);
+  PE_ASSERT(sb > 0);
+
+  int64 v, u;
+  int has = solve_linear_equation<int64>(A[0], 1, mod, v, u);
+  if (!has) return -1;
+
+  const int64 m = min((int64)max(sa - 1, sb - 1), n);
+  vector<int64> result(m + 1, 0);
+
+  // if u < mod, we have more than one solution.
+  PE_ASSERT(u == mod);
+  const int64 invA0 = v;
+  result[0] = invA0 * B[0] % mod;
+
+  for (int i = 1; i <= m; ++i) {
+    int64 t = regulate_mod(i < sb ? B[i] : 0, mod);
+    for (int j = 1; j <= min(i, sa - 1); ++j) {
+      t = sub_mod(t, (j < sa ? A[j] : 0) * result[i - j] % mod, mod);
+    }
+    result[i] = invA0 * t % mod;
+  }
+
+  if (m == n) {
+    return result[m];
+  }
+
+  const int64 D = m + 1;
+  const int64 size = D * D;
+  string data(size * sizeof(int64) * 3, '\0');
+  int64* buffer = (int64*)data.c_str();
+
+  int64* mat = buffer;
+  int64* res = mat + size;
+  int64* tmp = res + size;
+
+  for (int i = 0; i < m; ++i) {
+    mat[i] = invA0 * regulate_mod(i + 1 < sa ? -A[i + 1] : 0, mod) % mod;
+  }
+  for (int i = 1; i <= m; ++i) {
+    (mat + i * D)[i - 1] = 1;
+  }
+  for (int i = 0; i <= m; ++i) {
+    res[i] = result[m - i];
+  }
+
+  for (int64 t = n - m; t > 0; t >>= 1) {
+    if (t & 1)
+      mat_mul_vec_mod(mat, res, tmp, mod, static_cast<int>(D)), swap(res, tmp);
+    mat_mul_mat_mod(mat, mat, tmp, mod, static_cast<int>(D)), swap(mat, tmp);
+  }
+  return res[0];
+}
 
 #endif

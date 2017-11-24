@@ -1,4 +1,4 @@
-#include <pe.hpp>
+#include <pe>
 
 const int64 mod = 1000000007;
 
@@ -7,11 +7,11 @@ int main()
   // Fibonacci sequence
   vector<int64> A{1, -1, -1};
   vector<int64> B{0, 1};
-  vector<int64> x1 = gf_first(A, B, 30, mod);
-  for (auto& iter: x1)
+  auto x1 = gf_first<mod>(A, B, 30);
+  for (auto& iter: x1.data)
     cerr << iter << endl;
 
-  cerr << gf_at(A, B, 1000000000, mod) << endl;
+  cerr << gf_at<mod>(A, B, 1000000000) << endl;
 
   // Dollar exchange.
   // Concret math
@@ -39,11 +39,11 @@ int main()
     if (bc & 1) --coe[s]; else ++coe[s];
   }
 
-  auto gfresult = gf_first(vector<int64>(coe, coe+92), {1}, 10000, mod);
+  auto gfresult = gf_first<mod>(vector<int64>(coe, coe+92), {1}, 10000);
   for (int i = 9980; i <= 10000; ++i)
     cerr << dp[i] << " " << gfresult[i] << " " << dp[i] - gfresult[i] << endl;
 
-  cerr << gf_at(vector<int64>(coe, coe+92), {1}, 100000000, mod) << endl;
-  cerr << from_string("66666793333412666685000001") % mod << endl;
+  cerr << gf_at<mod>(vector<int64>(coe, coe+92), {1}, 100000000) << endl;
+  cerr << "66666793333412666685000001"_bi % mod << endl;
   return 0;
 }

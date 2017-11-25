@@ -1,10 +1,10 @@
-#include <pe.hpp>
+#include "pe_test.h"
 
-const int K = 2817;
+#if ENABLE_EIGEN
+const int K = 500;
 const int64 mod = 1000000007;
 
-int main()
-{
+SL void mat_mul_test() {
   {
     srand(123);
     std::vector<int64> v(K, 0);
@@ -17,8 +17,9 @@ int main()
     v = power_mod(m, 4, v, mod);
     int64 s = 0;
     for (auto i: v) s += i;
-    cout << s << endl;
-    cout << tr.elapsed().format() << endl;
+    // cout << s << endl;
+    // cout << tr.elapsed().format() << endl;
+    assert(s == 253454003092LL);
     sort(all(v));
   }
   {
@@ -33,8 +34,9 @@ int main()
     v = power_mod(m, 4, v, mod);
     int128 s = 0;
     for (auto i: v) s += i;
-    cout << s << endl;
-    cout << tr.elapsed().format() << endl;
+    // cout << s << endl;
+    // cout << tr.elapsed().format() << endl;
+    assert(s == 246217069945LL);
     sort(all(v));
   }
   {
@@ -49,8 +51,9 @@ int main()
     v = power_mod(m, 4, v, mod);
     int64 s = 0;
     for (auto i: v) s += i.value();
-    cout << s << endl;
-    cout << tr.elapsed().format() << endl;
+    // cout << s << endl;
+    // cout << tr.elapsed().format() << endl;
+    assert(s == 246217069945LL);
     sort(all(v));
   }
   {
@@ -65,9 +68,12 @@ int main()
     v = power_mod(m, 4, v, mod);
     int64 s = 0;
     for (auto i: v) s += i.value();
-    cout << s << endl;
-    cout << tr.elapsed().format() << endl;
+    // cout << s << endl;
+    // cout << tr.elapsed().format() << endl;
+    assert(s == 246217069945LL);
     sort(all(v));
   }
-  return 0;
 }
+
+PE_REGISTER_TEST(&mat_mul_test, "mat_mul_test");
+#endif

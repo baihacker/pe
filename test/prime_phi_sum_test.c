@@ -1,4 +1,4 @@
-#include <pe.hpp>
+#include "pe_test.h"
 
 int64 ps[1000001];
 int64 pc[1000001];
@@ -23,7 +23,7 @@ SL void verify_sum(const int64 n, const DVA& result)
   }
 }
 
-void small_test()
+SL void small_test()
 {
   for (int i = 1; i <= 100000; ++i)
   {
@@ -33,9 +33,9 @@ void small_test()
   }
 }
 
-int main()
-{
+SL void prime_phi_sum_test() {
   init_primes();
+
   for (int i = 1; i <= 1000000; ++i)
   {
     pc[i] = pc[i-1] + (is_prime(i) ? 1 : 0);
@@ -50,6 +50,8 @@ int main()
   assert((prime_pi(10000000000))[10000000000] == pmpi[10]);
   assert((prime_pi(100000000000))[100000000000] == pmpi[11]);
   assert((prime_pi(1000000000000))[1000000000000] == pmpi[12]);
-
-  return 0;
+  
+  deinit_primes();
 }
+
+PE_REGISTER_TEST(&prime_phi_sum_test, "prime_phi_sum_test");

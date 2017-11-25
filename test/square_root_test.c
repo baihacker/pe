@@ -1,9 +1,9 @@
-#include <pe.hpp>
+#include "pe_test.h"
 
-void correctness_test()
+SL void square_root_correctness_test()
 {
   int f = 0;
-  for (int64 i = 1; i <= 100000000; ++i)
+  for (int64 i = 1; i <= 10000000; ++i)
   {
     const int64 num = i*i;
     for (int64 offset = -10; offset <= 10; ++offset)
@@ -26,9 +26,9 @@ void correctness_test()
   cerr << "Correctness tess failed!" << endl;
 }
 
-void performance_test()
+SL void square_root_performance_test()
 {
-  const int N = 100000000;
+  const int N = 10000000;
   TimeRecorder tr;
   int64 s = 0;
   for (int64 i = 10; i <= N; ++i)
@@ -70,9 +70,5 @@ void performance_test()
   cerr << "square_root : " << tr.elapsed().format() << " " << s << endl;
 }
 
-int main()
-{
-  performance_test();
-
-  return 0;
-}
+PE_REGISTER_TEST(&square_root_correctness_test, "square_root_correctness_test");
+PE_REGISTER_TEST(&square_root_performance_test, "square_root_performance_test");

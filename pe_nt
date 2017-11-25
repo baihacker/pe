@@ -17,13 +17,13 @@ static const int64 PE_SOI64 =
     4294967295LL;  // x * x > 2^64 - 1 for x > PE_SOI64
 
 // About primes
-int pcnt;
-int* pmask = NULL;
-int* plist = NULL;
-int* phi = NULL;
-int* miu = NULL;
-int64 maxp;
-int64 maxp2;
+static int pcnt;
+static int* pmask = NULL;
+static int* plist = NULL;
+static int* phi = NULL;
+static int* miu = NULL;
+static int64 maxp;
+static int64 maxp2;
 
 SL void INIT_MAXP(int64 v) {
   ::maxp = v;
@@ -87,6 +87,26 @@ SL int is_prime(int64 n) {
     if (n % p == 0) return 0;
   }
   return 1;
+}
+
+SL void deinit_primes() {
+  pcnt = maxp = maxp2 = 0;
+  if (pmask) {
+    delete[] pmask;
+    pmask = nullptr;
+  }
+  if (plist) {
+    delete[] plist;
+    plist = nullptr;
+  }
+  if (phi) {
+    delete[] phi;
+    phi = nullptr;
+  }
+  if (miu) {
+    delete[] miu;
+    miu = nullptr;
+  }
 }
 
 SL void init_primes() {
@@ -178,7 +198,7 @@ SL vector<pair<int64, int>> factorize(int64 n) {
   return ret;
 }
 
-void get_factors_impl(const int limit, const vector<pair<int64, int>>& f,
+SL void get_factors_impl(const int limit, const vector<pair<int64, int>>& f,
                       int64 value, vector<int64>& result) {
   result.push_back(value);
   for (int i = 0; i < limit; ++i) {
@@ -804,14 +824,14 @@ class RandomGenerator {
 };
 
 RandomGenerator<std::mt19937, uniform_int_distribution<int>>
-make_uniform_generator(int seed, int min, int max) {
+SL make_uniform_generator(int seed, int min, int max) {
   PE_ASSERT(min <= max);
   return RandomGenerator<std::mt19937, uniform_int_distribution<int>>(
       std::mt19937(seed), std::uniform_int_distribution<int>(min, max));
 }
 
 RandomGenerator<std::mt19937, uniform_int_distribution<int>>
-make_uniform_generator(int min, int max) {
+SL make_uniform_generator(int min, int max) {
   std::random_device rd;
   PE_ASSERT(min <= max);
   return RandomGenerator<std::mt19937, uniform_int_distribution<int>>(

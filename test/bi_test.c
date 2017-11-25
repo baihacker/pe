@@ -1,7 +1,6 @@
-#include <pe>
+#include "pe_test.h"
 
-int main()
-{
+SL void bi_test() {
   for (int i = -100; i <= 100; ++i)
     for (int j = -100; j <= 100; ++j) {
       bi a(i), b(j);
@@ -23,6 +22,6 @@ int main()
       assert((i >= j) == (bool)(a >= b));
       assert((i <= j) == (bool)(a <= b));
     }
-  return 0;
 }
 
+PE_REGISTER_TEST(&bi_test, "bi_test");

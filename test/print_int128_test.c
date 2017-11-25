@@ -1,7 +1,6 @@
-#include <pe.hpp>
+#include "pe_test.h"
 
-int main()
-{
+SL void print_int128_test() {
   int128 x = 1;
   //for (int i = 0; i < 100; ++i) cout << x << endl, x <<= 1;
   for (int i = 0; i < 130; ++i)
@@ -23,5 +22,6 @@ int main()
   print_int128(x); puts("");
   cout << bn(-x) << endl;
   cout << bn(x) << endl;
-  return 0;
 }
+
+PE_REGISTER_TEST(&print_int128_test, "print_int128_test");

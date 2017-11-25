@@ -256,24 +256,19 @@ class BigInteger {
   friend inline BigInteger operator-(const BigInteger& l, const BigInteger& r);
 
   friend inline BigInteger operator*(const BigInteger& l, const BigInteger& r);
-  // template <typename T>
-  // friend inline BigInteger operator*(const BigInteger& l, T r);
-  // template <typename T>
-  // friend inline BigInteger operator*(T l, const BigInteger& r);
 
   friend inline BigInteger operator/(const BigInteger& l, const BigInteger& r);
-  // template <typename T>
-  // friend inline BigInteger operator/(const BigInteger& l, T r);
+
   friend inline tuple<BigInteger, BigInteger> div(const BigInteger& l,
                                                   const BigInteger& r);
+
   template <typename T>
   friend inline tuple<BigInteger, T> div(const BigInteger& l, T r);
+
   template <typename T>
   friend inline void divInplace(BigInteger& l, T r, T& remain);
 
   friend inline BigInteger operator%(const BigInteger& l, const BigInteger& r);
-  // template <typename T>
-  // friend inline T operator%(const BigInteger& l, T r);
 
   friend inline BigInteger operator&(const BigInteger& l, const BigInteger& r);
   friend inline BigInteger operator^(const BigInteger& l, const BigInteger& r);
@@ -415,6 +410,12 @@ class BigInteger {
     if (l.size() <= 1 && r.size() <= 1) {
       return (uint64)l[0] * r[0];
     }
+    if (r.size() <= 2) {
+      return absMul(l, r.toInt<uint64>());
+    }
+    if (l.size() <= 2) {
+      return absMul(r, l.toInt<uint64>());
+    }
 
     const int posL = l.pos_;
     const int posR = r.pos_;
@@ -497,7 +498,7 @@ class BigInteger {
     }
 
     vector<unsigned int> rb;
-    vector<unsigned int> rr = absDiv<unsigned int>(
+    vector<unsigned int> rr = absDivInternal<unsigned int>(
         l.toBinVector<unsigned int>(), r.toBinVector<unsigned int>(), rb);
     remain = BigInteger(rb);
     return rr;
@@ -519,13 +520,13 @@ class BigInteger {
     }
 
     vector<unsigned int> rb;
-    vector<unsigned int> rr = absDiv<unsigned int>(
+    vector<unsigned int> rr = absDivInternal<unsigned int>(
         l.toBinVector<unsigned int>(), r.toBinVector<unsigned int>(), rb);
     return rr;
   }
 
   template <typename T>
-  static vector<T> absDiv(const vector<T>& l, const vector<T>& r,
+  static vector<T> absDivInternal(const vector<T>& l, const vector<T>& r,
                           vector<T>& remain) {
     vector<T> result;
     remain = l;
@@ -605,6 +606,22 @@ class BigInteger {
     }
 
     BigInteger t(l);
+    absDivInplace(t, r, remain);
+    return t;
+  }
+ 
+  template <typename T>
+  static BigInteger absDiv(const BigInteger& l, T r) {
+    static_assert(is_unsigned<T>::value);
+    static_assert(sizeof(T) <= 8);
+    if (l.size() <= 2) {
+      const uint64 a = l.toInt<uint64>();
+      const uint64 b = r;
+      return a / b;
+    }
+
+    BigInteger t(l);
+    T remain;
     absDivInplace(t, r, remain);
     return t;
   }
@@ -1042,42 +1059,11 @@ inline BigInteger operator*(const BigInteger& l, const BigInteger& r) {
   return ret;
 }
 
-/*
-template <typename T>
-inline BigInteger operator*(const BigInteger& l, T r) {
-  if (r == 0 || l.isZero()) return 0;
-
-  typedef typename std::make_unsigned<T>::type unsignedT;
-  unsignedT absValue = r > 0 ? r : -r;
-  const int s = l.getSign() * (r > 0 ? 1 : -1);
-  BigInteger ret(BigInteger::absMul(l, absValue));
-  ret.sign_ = s;
-
-  return ret;
-}*/
-
-/*
-template <typename T>
-inline BigInteger operator*(T l, const BigInteger& r) {
-  return r * l;
-}
-*/
-
 inline BigInteger operator/(const BigInteger& l, const BigInteger& r) {
   BigInteger u, v;
   tie(u, v) = div(l, r);
   return u;
 }
-
-/*
-template <typename T>
-inline BigInteger operator/(const BigInteger& l, T r) {
-  BigInteger u;
-  T v;
-  tie(u, v) = div(l, r);
-  return u;
-}
-*/
 
 inline tuple<BigInteger, BigInteger> div(const BigInteger& l,
                                          const BigInteger& r) {
@@ -1088,14 +1074,29 @@ inline tuple<BigInteger, BigInteger> div(const BigInteger& l,
     return make_tuple(0, 0);
   }
 
-  BigInteger x;
-  BigInteger ret(BigInteger::absDiv(l, r, x));
-  ret.sign_ = l.sign_ * r.sign_;
-  ret.fixPos();
-  x.sign_ = l.sign_;
-  x.fixPos();
+  if (r.size() > 2) {
+    BigInteger x;
+    BigInteger ret(BigInteger::absDiv(l, r, x));
+    ret.sign_ = l.sign_ * r.sign_;
+    ret.fixPos();
+    x.sign_ = l.sign_;
+    x.fixPos();
 
-  return make_tuple(std::move(ret), std::move(x));
+    return make_tuple(std::move(ret), std::move(x));
+  } else {
+    uint64 absValue = r.toInt<uint64>();
+    uint64 x;
+    BigInteger ret(l);
+    BigInteger::absDivInplace(ret, absValue, x);
+    ret.sign_ = l.getSign() * (r.getSign() > 0 ? 1 : -1);
+    ret.fixPos();
+    
+    BigInteger remain(x);
+    if (l.sign_ < 0) {
+      remain.sign_ = -remain.sign_;
+    }
+    return make_tuple(std::move(ret), std::move(remain));
+  }
 }
 
 template <typename T>
@@ -1159,15 +1160,6 @@ inline BigInteger operator%(const BigInteger& l, const BigInteger& r) {
   tie(u, v) = div(l, r);
   return v;
 }
-
-/*
-template <typename T>
-inline T operator%(const BigInteger& l, T r) {
-  BigInteger u;
-  T v;
-  tie(u, v) = div(l, r);
-  return v;
-}*/
 
 inline BigInteger operator&(const BigInteger& l, const BigInteger& r) {
   if (l.size() <= 2 && r.size() <= 2) {

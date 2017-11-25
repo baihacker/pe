@@ -1,8 +1,7 @@
 #include "pe_test.h"
 
+namespace dva_test {
 SL void dva_test() {
-  init_primes();
-
   auto orz = prime_pi(10000);
   assert(orz[10000] == 1229LL);
   //dbg(orz[10000]); // 5761455LL
@@ -28,8 +27,7 @@ SL void dva_test() {
   for (int i = 2; i <= 1000000; ++i) if (is_prime(i)) s += i;
   assert(s == 37550402023LL);
   // dbg(s);
-  
-  deinit_primes();
 }
 
 PE_REGISTER_TEST(&dva_test, "dva_test");
+}

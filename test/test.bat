@@ -1,1 +1,1 @@
-pe++.py pe_test.c bi_test.c dva_test.c gf_test.c init_inv_test.c mat_mul_test.c mp_test.c parallel_sort_test.c prime_phi_sum_test.c print_int128_test.c square_root_test.c -r
+pe++.py pe_test.c -r

@@ -1,5 +1,6 @@
 #include "pe_test.h"
 
+namespace bi_test {
 SL void bi_test() {
   for (int i = -100; i <= 100; ++i)
     for (int j = -100; j <= 100; ++j) {
@@ -25,3 +26,4 @@ SL void bi_test() {
 }
 
 PE_REGISTER_TEST(&bi_test, "bi_test");
+}

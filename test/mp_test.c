@@ -1,6 +1,6 @@
 #include "pe_test.h"
 
-
+namespace mp_test {
 SL void mp_test() {
   const int64 P = 1000000009;
   PolyM<P> s{0,1,1,2,3,5};
@@ -25,3 +25,4 @@ SL void mp_test() {
 }
 
 PE_REGISTER_TEST(&mp_test, "minimal_polynomial_test");
+}

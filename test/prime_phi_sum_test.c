@@ -1,5 +1,6 @@
 #include "pe_test.h"
 
+namespace prime_phi_sum_test {
 int64 ps[1000001];
 int64 pc[1000001];
 
@@ -34,8 +35,6 @@ SL void small_test()
 }
 
 SL void prime_phi_sum_test() {
-  init_primes();
-
   for (int i = 1; i <= 1000000; ++i)
   {
     pc[i] = pc[i-1] + (is_prime(i) ? 1 : 0);
@@ -50,8 +49,7 @@ SL void prime_phi_sum_test() {
   assert((prime_pi(10000000000))[10000000000] == pmpi[10]);
   assert((prime_pi(100000000000))[100000000000] == pmpi[11]);
   assert((prime_pi(1000000000000))[1000000000000] == pmpi[12]);
-  
-  deinit_primes();
 }
 
 PE_REGISTER_TEST(&prime_phi_sum_test, "prime_phi_sum_test");
+}

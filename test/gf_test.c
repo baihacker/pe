@@ -1,5 +1,6 @@
 #include "pe_test.h"
 
+namespace gf_test {
 const int64 mod = 1000000007;
 
 SL void gf_test() {
@@ -53,3 +54,4 @@ SL void gf_test() {
 }
 
 PE_REGISTER_TEST(&gf_test, "gf_test");
+}

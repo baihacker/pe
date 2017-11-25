@@ -1,5 +1,6 @@
 #include "pe_test.h"
 
+namespace parallel_sort_test {
 const int n = 10000000;
 int arr[n];
 
@@ -15,3 +16,4 @@ SL void parallel_sort_test() {
 }
 
 PE_REGISTER_TEST(&parallel_sort_test, "parallel_sort_test");
+}

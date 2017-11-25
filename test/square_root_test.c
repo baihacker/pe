@@ -1,5 +1,6 @@
 #include "pe_test.h"
 
+namespace square_root_test {
 SL void square_root_correctness_test()
 {
   int f = 0;
@@ -72,3 +73,4 @@ SL void square_root_performance_test()
 
 PE_REGISTER_TEST(&square_root_correctness_test, "square_root_correctness_test");
 PE_REGISTER_TEST(&square_root_performance_test, "square_root_performance_test");
+}

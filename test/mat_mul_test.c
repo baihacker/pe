@@ -1,5 +1,6 @@
 #include "pe_test.h"
 
+namespace mat_mul_test {
 #if ENABLE_EIGEN
 const int K = 500;
 const int64 mod = 1000000007;
@@ -77,3 +78,4 @@ SL void mat_mul_test() {
 
 PE_REGISTER_TEST(&mat_mul_test, "mat_mul_test");
 #endif
+}

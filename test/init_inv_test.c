@@ -1,5 +1,6 @@
 #include "pe_test.h"
 
+namespace init_inv_test {
 const int64 mod = 1000000007;
 
 const int n = 1000000;
@@ -17,3 +18,4 @@ SL void init_inv_test() {
 }
 
 PE_REGISTER_TEST(&init_inv_test, "init_inv_test");
+}

@@ -8,6 +8,8 @@
 #include <windows.h>
 #include <process.h>
 
+// The MultiThreadsTaskRunner focuses how to create thread pool,
+// send request to thread.
 template <typename Task>
 class MultiThreadsTaskRunner {
  public:
@@ -309,6 +311,12 @@ struct GetCacheFileNameHelper<CONTEXT, false> {
   const char* get(CONTEXT& context) { return NULL; }
 };
 
+// The implementation of task scheduler.
+// It uses an instance of MultiThreadsTaskRunner to implement task scheduler,
+// and provides the process of tasking handling, it allows to add code in
+// different process stage (based on callback in context).
+// MultiThreadsTaskRunner focuses on how to create thread and send request to
+// a thread.
 template <typename CONTEXT>
 class ParallelRunner {
   typedef MultiThreadsTaskRunner<typename CONTEXT::Task> runner_t;
@@ -378,8 +386,6 @@ class ParallelRunner {
     std::function<void(TaskItem)> worker(
         [=](TaskItem ti) { work_on_thread(ti); });
 
-    set_process_priority(PRIORITY_IDLE);
-
     if (threads_count > 0) {
       oml_.init(&worker, threads_count);
     } else {
@@ -412,6 +418,10 @@ class ParallelRunner {
   CONTEXT* context_ptr_;
 };
 
+// The parallel interface that used to support macro syntax.
+// It uses ParallelRunner to schedule taskes.
+// It inherits RangeBasedTaskGenerator, SupportCacheFileName to
+// generate tasks and support cache.
 class ParallelRange : public RangeBasedTaskGenerator<ParallelRange>,
                       public SupportCacheFileName<ParallelRange> {
  public:
@@ -521,6 +531,10 @@ class ParallelRange : public RangeBasedTaskGenerator<ParallelRange>,
 #define END_PARALLEL_WITH_RESULT      )).start().result()
 #define PARALLEL_RESULT(x) (x.result())
 
+// The parallel interface that used to be inherited by sub-class.
+// It uses ParallelRunner to schedule taskes.
+// It inherits RangeBasedTaskGenerator, SupportCacheFileName to
+// generate tasks and support cache.
 template <typename Derived>
 class ParallelRangeT : public RangeBasedTaskGenerator<ParallelRangeT<Derived>>,
                        public SupportCacheFileName<ParallelRangeT<Derived>> {
@@ -593,17 +607,23 @@ class ParallelRangeT : public RangeBasedTaskGenerator<ParallelRangeT<Derived>>,
 #endif // end PLATFORM_WIN
 
 #if ENABLE_OPENMP
-
 #include <omp.h>
+#endif
 
-class omp_initialize_t {
+class parallel_initialize_t {
  public:
-  omp_initialize_t() {
+  parallel_initialize_t() {
+#if ENABLE_OPENMP
     omp_set_nested(1);
+    omp_set_dynamic(1);
+#endif
+
+#if PLATFORM_WIN
+    set_process_priority(PRIORITY_IDLE);
+#endif
   }
 };
 
-static omp_initialize_t __omp_initializer;
+static parallel_initialize_t __parallel_initializer;
 
-#endif
 #endif

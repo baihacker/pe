@@ -16,12 +16,12 @@ struct PolyM {
   PolyM(std::vector<int64>&& data): data(std::move(data)) {
     adjust_leading_zeros().adjust_mod();
   }
-  
+
   PolyM& operator = (const vector<int64>& v) {
     data = v;
     return *this;
   }
-  
+
   PolyM& operator = (const vector<int64>&& v) {
     data = std::move(v);
     return *this;
@@ -52,7 +52,7 @@ struct PolyM {
 
   int deg() const { return static_cast<int>(data.size() - 1); }
   int size() const { return static_cast<int>(data.size());}
-  
+
   PolyM<P>& resize(int n) {
     const int m = (int)data.size();
     data.resize(n);
@@ -77,7 +77,7 @@ struct PolyM {
   int64 at(int idx) const {
     return idx >= 0 && idx < data.size() ? data[idx] : 0;
   }
-  
+
   bool isZero() const {
     return data.size() == 1 && data[0] == 0;
   }
@@ -100,12 +100,12 @@ struct PolyM {
     const int m = min(n, static_cast<int>(data.size()));
     return PolyM<P>(std::vector<int64>(data.begin(), data.begin() + m));
   }
-  
+
   PolyM<P> inv(int n) const;
 };
 
 template <int64 P>
-PolyM<P> operator-(const PolyM<P>& x, const PolyM<P>& y) {
+SL PolyM<P> operator-(const PolyM<P>& x, const PolyM<P>& y) {
   const int n = max(x.deg(), y.deg());
   std::vector<int64> data(n + 1);
   for (int i = 0; i <= n; ++i) {
@@ -115,7 +115,7 @@ PolyM<P> operator-(const PolyM<P>& x, const PolyM<P>& y) {
 }
 
 template <int64 P>
-PolyM<P> operator+(const PolyM<P>& x, const PolyM<P>& y) {
+SL PolyM<P> operator+(const PolyM<P>& x, const PolyM<P>& y) {
   const int n = max(x.deg(), y.deg());
   std::vector<int64> data(n + 1);
   for (int i = 0; i <= n; ++i) {
@@ -125,7 +125,7 @@ PolyM<P> operator+(const PolyM<P>& x, const PolyM<P>& y) {
 }
 
 template <int64 P>
-PolyM<P> operator*(const PolyM<P>& x, int64 v) {
+SL PolyM<P> operator*(const PolyM<P>& x, int64 v) {
   std::vector<int64> data(x.data);
   for (auto& iter : data) {
     iter = iter * v % P;
@@ -134,12 +134,12 @@ PolyM<P> operator*(const PolyM<P>& x, int64 v) {
 }
 
 template <int64 P>
-PolyM<P> operator*(int64 v, const PolyM<P>& x) {
+SL PolyM<P> operator*(int64 v, const PolyM<P>& x) {
   return x * v;
 }
 
 template <int64 P>
-tuple<PolyM<P>, PolyM<P>> div(const PolyM<P>& x, const PolyM<P>& y) {
+SL tuple<PolyM<P>, PolyM<P>> div(const PolyM<P>& x, const PolyM<P>& y) {
   const int d1 = x.deg();
   const int d2 = y.deg();
   if (d1 < d2) {
@@ -161,14 +161,14 @@ tuple<PolyM<P>, PolyM<P>> div(const PolyM<P>& x, const PolyM<P>& y) {
 }
 
 template <int64 P>
-PolyM<P> operator/(const PolyM<P>& x, const PolyM<P>& y) {
+SL PolyM<P> operator/(const PolyM<P>& x, const PolyM<P>& y) {
   PolyM<P> q, r;
   tie(q, r) = div(x, y);
   return r;
 }
 
 template <int64 P>
-PolyM<P> operator%(const PolyM<P>& x, const PolyM<P>& y) {
+SL PolyM<P> operator%(const PolyM<P>& x, const PolyM<P>& y) {
   PolyM<P> q, r;
   tie(q, r) = div(x, y);
   return q;
@@ -176,7 +176,7 @@ PolyM<P> operator%(const PolyM<P>& x, const PolyM<P>& y) {
 
 // x^n % mod
 template <int64 P>
-PolyM<P> operator%(int64 n, PolyM<P> mod) {
+SL PolyM<P> operator%(int64 n, PolyM<P> mod) {
   PolyM<P> x{0, 1};
   PolyM<P> ret{1};
   for (; n > 0; n >>= 1) {
@@ -197,124 +197,13 @@ PolyM<P> operator%(int64 n, PolyM<P> mod) {
 }
 
 template <int64 P>
-ostream& operator<<(ostream& o, const PolyM<P>& p) {
+SL ostream& operator<<(ostream& o, const PolyM<P>& p) {
   const int n = p.data.size();
   for (int i = 0; i < n - 1; ++i) {
     o << p.data[i] << ", ";
   }
   return o << p.data[n - 1];
 }
-
-// Berlekamp Massey
-template <int64 P>
-PolyM<P> find_minimal_poly(const PolyM<P>& s) {
-  const int m = s.data.size();
-  const int n = m >> 1;
-
-  PE_ASSERT(n * 2 == m);
-
-  PolyM<P> r0{1};
-  r0 = r0 << m;
-  PolyM<P> r1{s};
-  PolyM<P> v0{0};
-  PolyM<P> v1{1};
-
-  while (n + 1 <= r1.deg()) {
-    PolyM<P> q, r;
-    tie(q, r) = div(r0, r1);
-    PolyM<P> v(v0 - q * v1);
-    v0 = std::move(v1);
-    v1 = std::move(v);
-    r0 = std::move(r1);
-    r1 = std::move(r);
-  }
-  v1 = std::move(inv_of(v1[0], P) * v1);
-  reverse(v1.data.begin(), v1.data.end());
-  return v1;
-}
-
-template <int64 P>
-int64 nth_element(const PolyM<P>& s, int64 n, const PolyM<P>& min_poly) {
-  if (n <= s.deg()) {
-    return s[n];
-  }
-
-  auto r = n % min_poly;
-  const int m = r.deg();
-  int64 ans = 0;
-  for (int i = 0; i <= m; ++i) {
-    ans = add_mod(ans, s[i] * r[i] % P, P);
-  }
-  return ans;
-}
-
-template <int64 P>
-PolyM<P> find_linear_recurrence(const PolyM<P>& s) {
-  const int len = s.data.size();
-  for (int n = 2; n < len; n += 2) {
-    auto use = s.lower_terms(n);
-    auto min_poly = find_minimal_poly(use);
-    int ok = 1;
-    for (int i = n; i < len; ++i) {
-      auto value = nth_element(use, i, min_poly);
-      if (value != s[i]) {
-        ok = 0;
-        break;
-      }
-    }
-    if (ok) {
-      return min_poly;
-    }
-  }
-  return PolyM<P>();
-}
-
-template <int64 P>
-int64 nth_element(const PolyM<P>& s, int64 n) {
-  if (n <= s.deg()) {
-    return s[n];
-  }
-
-  auto min_poly = find_linear_recurrence(s);
-  if (min_poly.deg() >= 0) {
-    return nth_element(s, n, min_poly);
-  }
-  return -1;
-}
-
-#if 0
-template <int64 P>
-PolyM<P> cal1(const PolyM<P>& s) {
-  PolyM<P> C{1};
-  PolyM<P> B{1};
-  int L = 0;
-  int m = 1;
-  int64 b = 1;
-  const int N = s.data.size();
-  for (int n = 0; n < N; ++n) {
-    int64 d = s[n];
-    for (int i = 1; i <= L; ++i) {
-      d = add_mod(d, add_mod(C.at(i), s[n - i], P), P);
-    }
-    if (d == 0) {
-      ++m;
-    } else if (2 * L <= n) {
-      auto T = C;
-      int64 coe = d * inv_of(b, P) % P;
-      C = C - (B << m) * coe;
-      L = n + 1 - L;
-      B = std::move(T);
-      b = d;
-      m = 1;
-    } else {
-      int64 coe = d * inv_of(b, P) % P;
-      C = C - (B << m) * coe;
-      m = m + 1;
-    }
-  }
-  return C;
-}
-#endif
 
 // Mul two polynomials with the same length.
 // Make sure the length of result is at least: n + n
@@ -464,7 +353,8 @@ SL PolyM<P> poly_mul_normal(const PolyM<P>& X, const PolyM<P>& Y) {
 }
 
 struct NttMod {
-  // MOD = R * 2 ^ k + 1
+  // mod = r * 2 ^ k + 1
+  // mod is prime
   const uint64 mod;
   const uint64 r;
   const int k;
@@ -479,12 +369,12 @@ struct NttMod {
   }
 };
 
-static NttMod nttMod1(2013265921ull, 15ull, 27, 31ull);
-static NttMod nttMod2(2281701377ull, 17ull, 27, 3ull);
-static NttMod nttMod3(3221225473ull, 3ull, 30, 5ull);
+static const NttMod nttMod1(2013265921ull, 15ull, 27, 31ull);
+static const NttMod nttMod2(2281701377ull, 17ull, 27, 3ull);
+static const NttMod nttMod3(3221225473ull, 3ull, 30, 5ull);
 
 template<typename T>
-void trans(T* data, const int n) {
+SL void ntt_trans(T* data, const int n) {
   int j = n >> 1;
   for (int i = 1; i < n - 1; ++i) {
     if (i < j) swap(data[i], data[j]);
@@ -498,14 +388,14 @@ void trans(T* data, const int n) {
 }
 
 template<typename T>
-void ntt(T* data, const int n, NttMod moder, bool inv = false) {
-  trans(data, n);
+SL void ntt(T* data, const int n, const NttMod& moder, bool inv = false) {
+  ntt_trans(data, n);
 
   const auto mod = moder.mod;
   int id = 0;
   for (int h = 2; h <= n; h <<= 1) {
     ++id;
-    //#pragma omp parallel for schedule(dynamic, 16)
+    #pragma omp parallel for schedule(dynamic, 16) if (n / h > 100000)
     for (int j = 0; j < n; j += h) {
       uint64 omgn = 1;
       const int halfH = h >> 1;
@@ -568,7 +458,7 @@ SL void poly_mul_ntt_internal(const T* X, int n, const T* Y, int m, T* result, i
     ntt(&tresult[id][0], alignedSize, moder[id], true);
   }
 
-  const int resultSize = n + m - 1; 
+  const int resultSize = n + m - 1;
   int128 mods[3] = {nttMod1.mod, nttMod2.mod, nttMod3.mod};
   #pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
   for (int i = 0; i < resultSize; ++i) {
@@ -615,12 +505,12 @@ SL PolyM<P> poly_mul_ntt(const PolyM<P>& X, const PolyM<P>& Y) {
 
 #if 1
 template <int64 P>
-PolyM<P> operator*(const PolyM<P>& x, const PolyM<P>& y) {
+SL PolyM<P> operator*(const PolyM<P>& x, const PolyM<P>& y) {
   return poly_mul(x, y);
 }
 #else
 template <int64 P>
-PolyM<P> operator*(const PolyM<P>& x, const PolyM<P>& y) {
+SL PolyM<P> operator*(const PolyM<P>& x, const PolyM<P>& y) {
   const int n = x.deg();
   const int m = y.deg();
   std::vector<int64> data(n + m + 1, 0);
@@ -633,12 +523,12 @@ PolyM<P> operator*(const PolyM<P>& x, const PolyM<P>& y) {
 }
 #endif
 
-void poly_inv_internal(int n, uint64* a, uint64* b, uint64* tmp[2], uint64 mod) {
+SL void poly_inv_internal(int n, uint64* a, uint64* b, uint64* tmp[2], uint64 mod) {
   if (n == 1) {
     b[0] = power_mod(a[0], mod - 2, mod);
   } else {
     poly_inv_internal(n + 1 >> 1, a, b, tmp, mod);
-    
+
     int p = 1;
     while (p < n << 1) p <<= 1;
     poly_mul_ntt(b, n, b, n, tmp[0], mod);
@@ -655,10 +545,11 @@ void poly_inv_internal(int n, uint64* a, uint64* b, uint64* tmp[2], uint64 mod) 
 }
 
 template<int64 P>
-PolyM<P> PolyM<P>::inv(int n) const {
+inline PolyM<P> PolyM<P>::inv(int n) const {
+  // It is assumed that P is a prime
   int p = 1;
   while (p < n << 1) p <<= 1;
-  
+
   // a
   vector<int64> a(p);
   const int m = data.size();
@@ -671,7 +562,7 @@ PolyM<P> PolyM<P>::inv(int n) const {
 
   // b
   vector<int64> b(p);
-  
+
   // tmp
   vector<int64> tmpData[2];
   uint64* tmp[2];
@@ -684,6 +575,9 @@ PolyM<P> PolyM<P>::inv(int n) const {
   b.resize(n);
   return b;
 }
+
+// gf_first, gf_at is good for the case size(A) is small.
+// Otherwise, A.inv(n) * B is better.
 
 // Finds the coefficient of x^0..x^n of f such that: A*f = B
 // Returns empty vector if there is no integer solution.
@@ -783,6 +677,117 @@ SL int64 gf_at(const PolyM<P>& A, const PolyM<P>& B, const int64 n) {
     }
   }
   return res[0];
+}
+
+// Berlekamp Massey
+template <int64 P>
+SL PolyM<P> find_minimal_poly(const PolyM<P>& s) {
+  const int m = s.data.size();
+  const int n = m >> 1;
+
+  PE_ASSERT(n * 2 == m);
+
+  PolyM<P> r0{1};
+  r0 = r0 << m;
+  PolyM<P> r1{s};
+  PolyM<P> v0{0};
+  PolyM<P> v1{1};
+
+  while (n + 1 <= r1.deg()) {
+    PolyM<P> q, r;
+    tie(q, r) = div(r0, r1);
+    PolyM<P> v(v0 - q * v1);
+    v0 = std::move(v1);
+    v1 = std::move(v);
+    r0 = std::move(r1);
+    r1 = std::move(r);
+  }
+  v1 = std::move(inv_of(v1[0], P) * v1);
+  reverse(v1.data.begin(), v1.data.end());
+  return v1;
+}
+
+#if 0
+template <int64 P>
+PolyM<P> cal1(const PolyM<P>& s) {
+  PolyM<P> C{1};
+  PolyM<P> B{1};
+  int L = 0;
+  int m = 1;
+  int64 b = 1;
+  const int N = s.data.size();
+  for (int n = 0; n < N; ++n) {
+    int64 d = s[n];
+    for (int i = 1; i <= L; ++i) {
+      d = add_mod(d, add_mod(C.at(i), s[n - i], P), P);
+    }
+    if (d == 0) {
+      ++m;
+    } else if (2 * L <= n) {
+      auto T = C;
+      int64 coe = d * inv_of(b, P) % P;
+      C = C - (B << m) * coe;
+      L = n + 1 - L;
+      B = std::move(T);
+      b = d;
+      m = 1;
+    } else {
+      int64 coe = d * inv_of(b, P) % P;
+      C = C - (B << m) * coe;
+      m = m + 1;
+    }
+  }
+  return C;
+}
+#endif
+
+template <int64 P>
+SL int64 nth_element(const PolyM<P>& s, int64 n, const PolyM<P>& min_poly) {
+  if (n <= s.deg()) {
+    return s[n];
+  }
+
+  auto r = n % min_poly;
+  const int m = r.deg();
+  int64 ans = 0;
+  for (int i = 0; i <= m; ++i) {
+    ans = add_mod(ans, s[i] * r[i] % P, P);
+  }
+  return ans;
+}
+
+template <int64 P>
+SL PolyM<P> find_linear_recurrence(const PolyM<P>& s) {
+  const int len = s.data.size();
+  for (int n = 2; n < len; n += 2) {
+    auto use = s.lower_terms(n);
+    auto min_poly = find_minimal_poly(use);
+    int ok = 1;
+    for (int i = n; i < len; ++i) {
+      auto value = nth_element(use, i, min_poly);
+      if (value != s[i]) {
+        ok = 0;
+        break;
+      }
+    }
+    if (ok) {
+      return min_poly;
+    }
+  }
+  return PolyM<P>();
+}
+
+template <int64 P>
+SL int64 nth_element(const PolyM<P>& s, int64 n) {
+  if (n <= s.deg()) {
+    return s[n];
+  }
+
+  auto min_poly = find_linear_recurrence(s);
+  if (min_poly.deg() >= 0) {
+    return nth_element(s, n, min_poly);
+  }
+  return -1;
 }
 
 #endif

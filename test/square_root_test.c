@@ -71,6 +71,6 @@ SL void square_root_performance_test()
   cerr << "square_root : " << tr.elapsed().format() << " " << s << endl;
 }
 
-PE_REGISTER_TEST(&square_root_correctness_test, "square_root_correctness_test");
-PE_REGISTER_TEST(&square_root_performance_test, "square_root_performance_test");
+PE_REGISTER_TEST(&square_root_correctness_test, "square_root_correctness_test", MEDIUM);
+PE_REGISTER_TEST(&square_root_performance_test, "square_root_performance_test", MEDIUM);
 }

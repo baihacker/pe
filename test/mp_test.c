@@ -24,5 +24,5 @@ SL void mp_test() {
   assert(nth_element<1000000009>({0,1,1,2,3,5,8,13}, 38) == 39088169);
 }
 
-PE_REGISTER_TEST(&mp_test, "minimal_polynomial_test");
+PE_REGISTER_TEST(&mp_test, "minimal_polynomial_test", SMALL);
 }

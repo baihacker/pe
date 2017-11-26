@@ -53,5 +53,5 @@ SL void gf_test() {
   }
 }
 
-PE_REGISTER_TEST(&gf_test, "gf_test");
+PE_REGISTER_TEST(&gf_test, "gf_test", SMALL);
 }

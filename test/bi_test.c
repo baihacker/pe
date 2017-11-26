@@ -25,7 +25,7 @@ SL void bi_test_small() {
     }
 }
 
-PE_REGISTER_TEST(&bi_test_small, "bi_test_small");
+PE_REGISTER_TEST(&bi_test_small, "bi_test_small", SMALL);
 
 #if ENABLE_GMP
 SL void bi_mul_test_impl(int x, int y) {
@@ -67,13 +67,13 @@ SL void bi_mul_test_medium() {
   bi_mul_test_impl(1000, 500);
 }
 
-PE_REGISTER_TEST(&bi_mul_test_medium, "bi_mul_test_medium");
+PE_REGISTER_TEST(&bi_mul_test_medium, "bi_mul_test_medium", MEDIUM);
 
 SL void bi_mul_test_big() {
   bi_mul_test_impl(10, 10000);
 }
 
-PE_REGISTER_TEST(&bi_mul_test_big, "bi_mul_test_big");
+PE_REGISTER_TEST(&bi_mul_test_big, "bi_mul_test_big", BIG);
 
 SL void bi_div_test_medium_impl(int x, int y) {
   for (int strategy = 0; strategy < 2; ++ strategy)
@@ -136,12 +136,12 @@ SL void bi_div_test_medium() {
   bi_div_test_medium_impl(100, 500);
 }
 
-PE_REGISTER_TEST(&bi_div_test_medium, "bi_div_test_medium");
+PE_REGISTER_TEST(&bi_div_test_medium, "bi_div_test_medium", MEDIUM);
 
 SL void bi_div_test_big() {
   bi_div_test_medium_impl(10, 2000);
 }
 
-PE_REGISTER_TEST(&bi_div_test_big, "bi_div_test_big");
+PE_REGISTER_TEST(&bi_div_test_big, "bi_div_test_big", BIG);
 #endif
 }

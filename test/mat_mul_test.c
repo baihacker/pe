@@ -76,6 +76,6 @@ SL void mat_mul_test() {
   }
 }
 
-PE_REGISTER_TEST(&mat_mul_test, "mat_mul_test");
+PE_REGISTER_TEST(&mat_mul_test, "mat_mul_test", SMALL);
 #endif
 }

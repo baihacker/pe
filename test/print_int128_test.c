@@ -14,5 +14,5 @@ SL void print_int128_test() {
   assert(to_string(-x) == bi(-x).toString());
 }
 
-PE_REGISTER_TEST(&print_int128_test, "print_int128_test");
+PE_REGISTER_TEST(&print_int128_test, "print_int128_test", SMALL);
 }

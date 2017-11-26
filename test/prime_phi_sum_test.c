@@ -51,5 +51,5 @@ SL void prime_phi_sum_test() {
   assert((prime_pi(1000000000000))[1000000000000] == pmpi[12]);
 }
 
-PE_REGISTER_TEST(&prime_phi_sum_test, "prime_phi_sum_test");
+PE_REGISTER_TEST(&prime_phi_sum_test, "prime_phi_sum_test", BIG);
 }

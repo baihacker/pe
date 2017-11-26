@@ -7,7 +7,7 @@
 #include "mat_mul_test.c"
 #include "mp_test.c"
 #include "parallel_sort_test.c"
-//#include "prime_phi_sum_test.c"
+#include "prime_phi_sum_test.c"
 #include "print_int128_test.c"
 #include "square_root_test.c"
 
@@ -19,6 +19,21 @@ PeTest& getTester() {
   return tester;
 }
 
+TestSize enabledTestSize[]{
+  SMALL,
+  MEDIUM,
+  BIG,
+};
+
+SL bool isEnabledTestSize(TestSize size) {
+  for (auto& iter: enabledTestSize) {
+    if (iter == size) {
+      return true;
+    }
+  }
+  return false;
+}
+
 int main() {
   init_primes();
 
@@ -28,16 +43,21 @@ int main() {
   auto& tester = getTester();
   const int size = tester.tests.size();
   
+  bool isFirstTest = true;
   for (int i = 0; i < size; ++i) {
     auto& item = tester.tests[i];
+    if (!isEnabledTestSize(item.testSize)) {
+      continue;
+    }
+    if (!isFirstTest) {
+      cout << endl;
+    }
     cout << "Begin " << item.description << endl;
     TimeRecorder tr;
     item.test();
     cout << "End " << item.description << endl;
     cout << "Time usage " << tr.elapsed().format() << endl;
-    if (i < size - 1) {
-      cout << endl;
-    }
+    isFirstTest = false;
   }
   return 0;
 }

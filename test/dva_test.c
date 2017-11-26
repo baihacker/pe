@@ -29,5 +29,5 @@ SL void dva_test() {
   // dbg(s);
 }
 
-PE_REGISTER_TEST(&dva_test, "dva_test");
+PE_REGISTER_TEST(&dva_test, "dva_test", SMALL);
 }

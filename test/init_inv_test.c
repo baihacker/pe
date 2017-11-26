@@ -17,5 +17,5 @@ SL void init_inv_test() {
   }
 }
 
-PE_REGISTER_TEST(&init_inv_test, "init_inv_test");
+PE_REGISTER_TEST(&init_inv_test, "init_inv_test", SMALL);
 }

@@ -15,5 +15,5 @@ SL void parallel_sort_test() {
   }
 }
 
-PE_REGISTER_TEST(&parallel_sort_test, "parallel_sort_test");
+PE_REGISTER_TEST(&parallel_sort_test, "parallel_sort_test", SMALL);
 }

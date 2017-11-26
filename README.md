@@ -9,7 +9,7 @@ Installation:
 -------------
 * Put all the files in a folder (directory). For example, we put them in the directory D:\usr\include.
 * Make sure CPLUS_INCLUDE_PATH contain D:\usr\include.
-* In pe, configure this library. 
+* In [pe](https://github.com/baihacker/pe/blob/master/pe), configure this library. 
   > ENABLE_EIGEN should be zero if you don't have the library Eigen.
   
   > ENABLE_OPENMP should be 0 if you don't want to use openmp.

@@ -9,7 +9,13 @@ Installation:
 -------------
 * Put all the files in a folder (directory). For example, we put them in the directory D:\usr\include.
 * Make sure CPLUS_INCLUDE_PATH contain D:\usr\include.
-* In pe, configure this library. Especially, ENABLE_EIGEN should be zero if you don't have the library Eigen.
+* In pe, configure this library. 
+  > ENABLE_EIGEN should be zero if you don't have the library Eigen.
+  
+  > ENABLE_OPENMP should be 0 if you don't want to use openmp.
+  
+  > ENABLE_GMP should be 0 if you don't want to use gmp.
+  
 * [optional, recommended] Run "g++ -xc++-header "pe.hpp" --std=c++11 -O3 -march=native -fopenmp" in D:\usr\include to generate precompile header "pe.hpp.gch". The compile options are the same as the options you will compile your target files.
 
 Use:
@@ -25,7 +31,9 @@ File list:
 * pe: Including all the files.
 * pe.hpp: The file for generating precompile header.
 * pe_base: Some pre-including headers. Some macros and typedef.
-* pe_bn: Big integer.
+* pe_bi: Big integer whose base is 1 << 30.
+* pe_bi32: Big integer whose base is 1 << 32.
+* pe_bn: Old big integer implementation.
 * pe_geometry: Support Point2D and Point3D.
 * pe_mat: Matrix operations.
 * pe_memory: Memory manipulation such as allocating large memory. (windows only)
@@ -33,6 +41,7 @@ File list:
 * pe_nt: Basic code of number theory.
 * pe_parallel: A simple framework to solve problem with multi-threads. (windows only)
 * pe_parallel_algo: Parallel algorithms.
+* pe_poly: Polynomial.
 * pe_util: Utilities such as TimeDelta, KVPersistance. (it may support linux but we need change the generated cmdline and check the other codes)
 
 Design principle:

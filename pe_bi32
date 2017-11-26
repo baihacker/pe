@@ -2,6 +2,7 @@
 #define __PE_BI_H__
 
 #include "pe_base"
+#include "pe_ntt"
 
 // Predefined allocator
 struct bi_allocator_std {
@@ -406,6 +407,84 @@ class BigInteger {
     l.fixPos();
   }
 
+  static BigInteger absMulNtt(const BigInteger& l, const BigInteger& r) {
+    const int n = l.size() << 1;
+    const int m = r.size() << 1;
+
+    int alignedSize = 1;
+    while (alignedSize < n + m) alignedSize <<= 1;
+
+    std::vector<uint64> tresult[2];
+    NttMod moder[2] = {nttMod1, nttMod2};
+    #pragma omp parallel for schedule(dynamic, 1) num_threads(2)
+    for (int id = 0; id < 2; ++id) {
+      std::vector<uint64> X(alignedSize);
+      std::vector<uint64> Y(alignedSize);
+      for (int i = 0; i <= l.pos_; ++i) {
+        X[i<<1] = l[i] & 65535u;
+        X[(i<<1)+1] = l[i] >> 16;
+      }
+      for (int i = 0; i <= r.pos_; ++i) {
+        Y[i<<1] = r[i] & 65535;
+        Y[(i<<1)+1] = r[i] >> 16;
+      }
+      for (int i = n; i < alignedSize; ++i) {
+        X[i] = 0;
+      }
+      for (int i = m; i < alignedSize; ++i) {
+        Y[i] = 0;
+      }
+      #pragma omp parallel sections if (n + m >= 100000)
+      {
+        #pragma omp section
+        ntt(&X[0], alignedSize, moder[id]);
+        #pragma omp section
+        ntt(&Y[0], alignedSize, moder[id]);
+      }
+      const uint64 mod = moder[id].mod;
+      for (int i = 0; i < alignedSize; ++i) {
+        X[i] = (uint64)X[i] * Y[i] % mod;
+      }
+      ntt(&X[0], alignedSize, moder[id], true);
+      tresult[id] = std::move(X);
+    }
+    const int allocateSize = n + m + 8;
+    const int resultSize = n + m - 1;
+    std::vector<uint64> result;
+    result.resize(allocateSize);
+
+    int64 mods[2] = {nttMod1.mod, nttMod2.mod};
+    #pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
+    for (int i = 0; i < resultSize; ++i) {
+      int64 have, v, u;
+      tie(have, v, u) = crt2<int64>(tresult[0][i], mods[0], tresult[1][i], mods[1]);
+      result[i] = v;
+    }
+    uint64 inc = 0;
+    for (int i = 0; i < resultSize; ++i) {
+      uint64 t = inc + result[i];
+      result[i] = t & 65535u;
+      inc = t >> 16;
+    }
+    int now = resultSize;
+    while (inc > 0) {
+      result[now++] = inc & 65535u;
+      inc >>= 16;
+    }
+    if (now&1) {
+      result[now++] = 0;
+    }
+
+    BigInteger ret(now >> 1, alloc_mem_tag);
+    for (int i = 0; i < now; i += 2) {
+      ret[i>>1] = (result[i+1] << 16) | result[i];
+    }
+    ret.pos_ = (now >> 1) - 1;
+    ret.sign_ = 1;
+    ret.fixPos();
+    return ret;
+  }
+
   static BigInteger absMul(const BigInteger& l, const BigInteger& r) {
     if (l.size() <= 1 && r.size() <= 1) {
       return (uint64)l[0] * r[0];
@@ -415,6 +494,20 @@ class BigInteger {
     }
     if (l.size() <= 1) {
       return absMul(r, l.toInt<uint64>());
+    }
+
+    {
+      // If the cost of ntt is less than normal multiplication, then use ntt.
+      const uint64 cost1 = (uint64)l.size() * r.size();
+      const uint64 len = (l.size() + r.size()) << 1;
+      int64 alignedLen = 1;
+      int bit = 1;
+      while (alignedLen < len) alignedLen <<= 1, ++bit;
+      const uint64 cost2 = alignedLen * bit * 3;
+      
+      if (cost2 * 2 < cost1) {
+        return absMulNtt(l, r);
+      }
     }
 
     const int posL = l.pos_;
@@ -617,7 +710,7 @@ class BigInteger {
     absDivInplace(t, r, remain);
     return t;
   }
- 
+
   template <typename T>
   static BigInteger absDiv(const BigInteger& l, T r) {
     static_assert(is_unsigned<T>::value);
@@ -1098,7 +1191,7 @@ inline tuple<BigInteger, BigInteger> div(const BigInteger& l,
     BigInteger::absDivInplace(ret, absValue, x);
     ret.sign_ = l.getSign() * (r.getSign() > 0 ? 1 : -1);
     ret.fixPos();
-    
+
     BigInteger remain(x);
     if (l.sign_ < 0) {
       remain.sign_ = -remain.sign_;

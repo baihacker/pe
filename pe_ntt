@@ -1,0 +1,74 @@
+#ifndef __PE_NTT__
+#define __PE_NTT__
+
+#include "pe_base"
+#include "pe_mod"
+
+struct NttMod {
+  // mod = r * 2 ^ k + 1
+  // mod is prime
+  const uint64 mod;
+  const uint64 r;
+  const int k;
+  const uint64 g;
+
+  uint64 omg[32];
+  NttMod(uint64 mod, uint64 r, int k, uint64 g)
+    : mod(mod), r(r), k(k), g(g) {
+    for (int i = 0; i <= k; ++i) {
+      omg[i] = power_mod(g, (mod - 1) >> i, mod);
+    }
+  }
+};
+
+static const NttMod nttMod1(2013265921ull, 15ull, 27, 31ull);
+static const NttMod nttMod2(2281701377ull, 17ull, 27, 3ull);
+static const NttMod nttMod3(3221225473ull, 3ull, 30, 5ull);
+
+template<typename T>
+SL void ntt_trans(T* data, const int n) {
+  int j = n >> 1;
+  for (int i = 1; i < n - 1; ++i) {
+    if (i < j) swap(data[i], data[j]);
+    int k = n >> 1;
+    while (j >= k) {
+      j -= k;
+      k >>= 1;
+    }
+    if (j < k) j += k;
+  }
+}
+
+template<typename T>
+SL void ntt(T* data, const int n, const NttMod& moder, bool inv = false) {
+  ntt_trans(data, n);
+
+  const auto mod = moder.mod;
+  int id = 0;
+  for (int h = 2; h <= n; h <<= 1) {
+    ++id;
+    #pragma omp parallel for schedule(dynamic, 16) if (n / h > 100000)
+    for (int j = 0; j < n; j += h) {
+      uint64 omgn = 1;
+      const int halfH = h >> 1;
+      const int limit = j + halfH;
+      for (int k = j; k < limit; ++k) {
+        const auto u = data[k] % mod;
+        const auto t = omgn * data[k + halfH] % mod;
+        data[k] = (u + t) % mod;
+        data[k+halfH] = (u + mod - t) % mod;
+        omgn = omgn * moder.omg[id] % mod;
+      }
+    }
+  }
+  if (inv) {
+    const int halfN = n >> 1;
+    for (int i = 1; i < halfN; ++i)
+      swap(data[i], data[n - i]);
+    const uint64 c = power_mod<uint64>(n, mod - 2, mod);
+    for (int i = 0; i < n; ++i)
+      data[i] = c * data[i] % mod;
+  }
+}
+
+#endif

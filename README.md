@@ -8,7 +8,7 @@ The developing version is 2.0. It will be more interesting.
 Installation:
 -------------
 * Put all the files in a folder (directory). For example, we put them in the directory D:\usr\include.
-* Make sure CPLUS_INCLUDE_PATH contain D:\usr\include.
+* Make sure the environment variable CPLUS_INCLUDE_PATH contain D:\usr\include.
 * In [pe](https://github.com/baihacker/pe/blob/master/pe), configure this library. 
   > ENABLE_EIGEN should be zero if you don't have the library Eigen.
   

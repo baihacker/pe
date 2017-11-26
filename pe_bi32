@@ -410,10 +410,10 @@ class BigInteger {
     if (l.size() <= 1 && r.size() <= 1) {
       return (uint64)l[0] * r[0];
     }
-    if (r.size() <= 2) {
+    if (r.size() <= 1) {
       return absMul(l, r.toInt<uint64>());
     }
-    if (l.size() <= 2) {
+    if (l.size() <= 1) {
       return absMul(r, l.toInt<uint64>());
     }
 
@@ -446,6 +446,9 @@ class BigInteger {
   template <typename T>
   static BigInteger absMul(const BigInteger& l, T r) {
     static_assert(is_unsigned<T>::value);
+    if (r > max_32bit_value) {
+      return absMul(l, BigInteger(r));
+    }
     BigInteger ret(l, l.size() + BigInteger(r).size() + 1);
     absMulInplace(ret, r);
     return ret;
@@ -454,7 +457,12 @@ class BigInteger {
   template <typename T>
   static void absMulInplace(BigInteger& l, T r) {
     static_assert(is_unsigned<T>::value);
-    if (l.size() <= 1 && r <= max_32bit_value) {
+    if (r > max_32bit_value) {
+      l = absMul(l, BigInteger(r));
+      return;
+    }
+
+    if (l.size() <= 1) {
       l.resetAbs((uint64)l[0] * r);
       return;
     }

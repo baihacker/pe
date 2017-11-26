@@ -1,7 +1,7 @@
-#include <pe>
+#include <pe.hpp>
 
 const int64 mod = 1000000000 + 7;
-const int n = 10000000;
+const int n = 100000;
 
 int64 P[2*n+5];
 int64 Q[2*n+5];

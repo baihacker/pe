@@ -6,9 +6,9 @@ int main()
   for (int i = 1; i <= 20; ++i) N *= i;
 
   bn v = 0;
-  for (bn n = N; !n.IsZero(); v += n, n = n / 2);
-  
-  bn mod = bn(2) ^ 48;
+  for (bn n = N; !n.isZero(); n = n / 2, v += n);
+
+  bn mod = power(bn(2), 48);
   bn ans = 1;
   FacModer moder(2, 48);
   int i = 0;
@@ -18,10 +18,10 @@ int main()
   }
   v = v % 4;
   
-  ans = ans * (bn(2) ^ v[0]) % mod;
+  ans = ans * (power(bn(2), v[0])) % mod;
 
   cout << ans << endl;
-  cout << ans.ToInt() << endl;
-  printf("%I64x\n", (int64)ans.ToInt());
+  cout << ans.toInt<int64>() << endl;
+  printf("%I64x\n", (int64)ans.toInt<int64>());
   return 0;
 }

@@ -9,18 +9,18 @@ struct mtype_policy<S, bn>
   {
     intb c = (intb)a + b;
     if (c >= mod) c -= mod;
-    return c.ToInt();
+    return c.toInt<ints>();
   }
   static ints sub(ints a, ints b, ints mod)
   {
     intb c = (intb)a - b;
     if (c < 0) c += mod;
-    return c.ToInt();
+    return c.toInt<ints>();
   }
   static ints mul(ints a, ints b, ints mod)
   {
     intb c = (intb)a * b % mod;
-    return c.ToInt();
+    return c.toInt<ints>();
   }
 };
 
@@ -33,18 +33,18 @@ struct mtype_policy<bn, bn>
   {
     intb c = (intb)a + b;
     if (c >= mod) c -= mod;
-    return c.ToInt();
+    return c.toInt<int64>();
   }
   static ints sub(ints a, ints b, ints mod)
   {
     intb c = (intb)a - b;
     if (c < 0) c += mod;
-    return c.ToInt();
+    return c.toInt<int64>();
   }
   static ints mul(ints a, ints b, ints mod)
   {
     intb c = (intb)a * b % mod;
-    return c.ToInt();
+    return c.toInt<int64>();
   }
 };
 

@@ -11,11 +11,11 @@ Installation:
 * Make sure the environment variable CPLUS_INCLUDE_PATH contain D:\usr\include.
 * In [pe](https://github.com/baihacker/pe/blob/master/pe), configure this library. 
   > ENABLE_EIGEN should be 0 if you don't have the [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page) library.
+
+  > ENABLE_OPENMP should be 0 if you don't want to use [openmp](http://www.openmp.org).
   
-  > ENABLE_OPENMP should be 0 if you don't want to use [openmp](http://www.openmp.org/).
-  
-  > ENABLE_GMP should be 0 if you don't want to use [gmp](https://gmplib.org/).
-  
+  > ENABLE_GMP should be 0 if you don't want to use [gmp](https://gmplib.org).
+
 * [optional, recommended] Run "g++ -xc++-header "pe.hpp" --std=c++11 -O3 -march=native -fopenmp" in D:\usr\include to generate precompile header "pe.hpp.gch". The compile options are the same as the options you will compile your target files.
 
 Use:

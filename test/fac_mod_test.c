@@ -1,6 +1,7 @@
-#include <pe>
+#include "pe_test.h"
 
-int main()
+namespace fac_mod_test {
+SL void fac_mod_test()
 {
   bn N = 1;
   for (int i = 1; i <= 20; ++i) N *= i;
@@ -20,8 +21,8 @@ int main()
   
   ans = ans * (power(bn(2), v[0])) % mod;
 
-  cout << ans << endl;
-  cout << ans.toInt<int64>() << endl;
-  printf("%I64x\n", (int64)ans.toInt<int64>());
-  return 0;
+  assert(ans == 21171469991580LL);
+}
+
+PE_REGISTER_TEST(&fac_mod_test, "fac_mod_test", MEDIUM);
 }

@@ -7,7 +7,7 @@ SL void fac_mod_test()
   for (int i = 1; i <= 20; ++i) N *= i;
 
   bn v = 0;
-  for (bn n = N; !n.isZero(); n = n / 2, v += n);
+  for (bn n = N; !n.isZero(); n >>= 1, v += n);
 
   bn mod = power(bn(2), 48);
   bn ans = 1;
@@ -15,11 +15,10 @@ SL void fac_mod_test()
   int i = 0;
   while (N > 1) {
     ans = ans * moder.cal(N) % mod;
-    N = N / 2;
+    N >>= 1;
   }
-  v = v % 4;
   
-  ans = ans * (power(bn(2), v[0])) % mod;
+  ans = ans * (power(bn(2), v[0]&3)) % mod;
 
   assert(ans == 21171469991580LL);
 }

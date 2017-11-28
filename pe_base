@@ -2,28 +2,34 @@
 #define __PE_BASE_H__
 
 
-// Compiler checking
+// Compiler and cpp version check
 #if defined(__GNUC__)
-#define COMPILER_GNU
-#if __cplusplus < 201103L
-#define PE_HAS_CPP11 0
-#else
-#define PE_HAS_CPP11 1
-#endif
-#if __cplusplus < 201703L
-#define PE_HAS_CPP17 0
-#else
-#define PE_HAS_CPP17 1
-#endif
+  #define COMPILER_GNU
+
+  #if __cplusplus < 201103L
+  #define PE_HAS_CPP11 0
+  #else
+  #define PE_HAS_CPP11 1
+  #endif
+
+  #if __cplusplus < 201703L
+  #define PE_HAS_CPP17 0
+  #else
+  #define PE_HAS_CPP17 1
+  #endif
 #elif defined(_MSC_VER)
-#define COMPILER_MSVC
-#if _MSC_VER < 1800
-#define PE_HAS_CPP11 0
+  #define COMPILER_MSVC
+
+  #if _MSC_VER < 1800
+  #define PE_HAS_CPP11 0
+  #else
+  #define PE_HAS_CPP11 1
+  #endif
+
+  #define PE_HAS_CPP17 0
 #else
-#define PE_HAS_CPP11 1
-#endif
-#else
-#define PE_HAS_CPP11 0
+  #define PE_HAS_CPP11 0
+  #define PE_HAS_CPP17 0
 #endif
 
 #if _WIN32 || _WIN64
@@ -73,7 +79,7 @@ typedef unsigned __int128 uint128;
 #include <cstring>
 #include <ctgmath>
 #include <ctime>
-//#include <cuchar>
+// #include <cuchar>
 #include <cwchar>
 #include <cwctype>
 
@@ -107,7 +113,7 @@ typedef unsigned __int128 uint128;
 #include <unordered_set>
 
 #include <atomic>
-//#include <codecvt>
+// #include <codecvt>
 #include <complex>
 #include <condition_variable>
 #include <exception>
@@ -255,7 +261,34 @@ namespace std {
   struct is_signed<uint128> {
     enum {value = false};
   };
+  
+  // if < c++20
+  template<typename T>
+  struct remove_cvref {
+    typedef typename remove_cv<T>::type T1;
+    typedef typename remove_reference<T1>::type type;
+  };
 }
+
+// A simple concept implementation, e.g.
+/**
+  template<typename T, typename U>
+  REQUIRES(is_integral<T>::value && is_unsigned<U>::value)
+  RETURN(void)  foo(T x, U y)  {}
+*/
+template<int ok>
+struct CheckConditionThen{};
+
+template<>
+struct CheckConditionThen<true>{
+  template<typename U>
+  struct IdenticalType {
+    typedef U type;
+  };
+};
+
+#define REQUIRES(...) typename CheckConditionThen<__VA_ARGS__>::
+#define RETURN(...) template IdenticalType<__VA_ARGS__>::type
 
 #endif
 

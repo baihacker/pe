@@ -283,28 +283,80 @@ class BigInteger {
 
   friend inline BigInteger operator*(const BigInteger& l, const BigInteger& r);
 
+  template <typename T>
+  friend inline 
+  REQUIRES((
+    is_integral<T>::value &&
+    !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+  RETURN(BigInteger)
+  operator*(const BigInteger& l, T r);
+
+  template <typename T>
+  friend inline 
+  REQUIRES((
+    is_integral<T>::value &&
+    !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+  RETURN(BigInteger)
+  operator*(T l, const BigInteger& r);
+
   friend inline BigInteger operator/(const BigInteger& l, const BigInteger& r);
+
+  template <typename T>
+  friend inline
+  REQUIRES((
+    is_integral<T>::value &&
+    !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+  RETURN(BigInteger)
+  operator/(const BigInteger& l, T r);
 
   friend inline tuple<BigInteger, BigInteger> div(const BigInteger& l,
                                                   const BigInteger& r);
 
   template <typename T>
-  friend inline tuple<BigInteger, T> div(const BigInteger& l, T r);
+  friend inline
+  REQUIRES((
+    is_integral<T>::value &&
+    !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+  RETURN(tuple<BigInteger, T>)
+  div(const BigInteger& l, T r);
 
   template <typename T>
-  friend inline void divInplace(BigInteger& l, T r, T& remain);
+  friend inline
+  REQUIRES((
+    is_integral<T>::value &&
+    !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+  RETURN(void)
+  divInplace(BigInteger& l, T r, T& remain);
 
   friend inline BigInteger operator%(const BigInteger& l, const BigInteger& r);
+
+  template <typename T>
+  friend inline
+  REQUIRES((
+    is_integral<T>::value &&
+    !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+  RETURN(T)
+  operator%(const BigInteger& l, T r);
 
   friend inline BigInteger operator&(const BigInteger& l, const BigInteger& r);
   friend inline BigInteger operator^(const BigInteger& l, const BigInteger& r);
   friend inline BigInteger operator|(const BigInteger& l, const BigInteger& r);
 
   template <typename T>
-  friend inline BigInteger operator<<(const BigInteger& l, T n);
+  friend inline
+  REQUIRES((
+    is_integral<T>::value &&
+    !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+  RETURN(BigInteger)
+  operator<<(const BigInteger& l, T n);
 
   template <typename T>
-  friend inline BigInteger operator>>(const BigInteger& l, T n);
+  friend inline
+  REQUIRES((
+    is_integral<T>::value &&
+    !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+  RETURN(BigInteger)
+  operator>>(const BigInteger& l, T n);
 
  public:
   // unary operations
@@ -808,13 +860,21 @@ class BigInteger {
   }
 
   template <typename T>
-  BigInteger& operator>>=(T other) {
+  REQUIRES((
+    is_integral<T>::value &&
+    !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+  RETURN(BigInteger&)
+  operator>>=(T other) {
     *this = *this >> other;
     return *this;
   }
 
   template <typename T>
-  BigInteger& operator<<=(T other) {
+  REQUIRES((
+    is_integral<T>::value &&
+    !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+  RETURN(BigInteger&)
+  operator<<=(T other) {
     *this = *this << other;
     return *this;
   }
@@ -1084,8 +1144,49 @@ inline BigInteger operator*(const BigInteger& l, const BigInteger& r) {
   return ret;
 }
 
+template <typename T>
+inline
+REQUIRES((
+   is_integral<T>::value &&
+   !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+RETURN(BigInteger)
+operator*(const BigInteger& l, T r) {
+  if (r == 0 || l.isZero()) return 0;
+
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  unsignedT absValue = r > 0 ? r : -r;
+  const int s = l.getSign() * (r > 0 ? 1 : -1);
+  BigInteger ret(BigInteger::absMul(l, absValue));
+  ret.sign_ = s;
+
+  return ret;
+}
+
+template <typename T>
+inline
+REQUIRES((
+   is_integral<T>::value &&
+   !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+RETURN(BigInteger)
+operator*(T l, const BigInteger& r) {
+  return r * l;
+}
+
 inline BigInteger operator/(const BigInteger& l, const BigInteger& r) {
   BigInteger u, v;
+  tie(u, v) = div(l, r);
+  return u;
+}
+
+template <typename T>
+inline
+REQUIRES((
+  is_integral<T>::value &&
+  !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+RETURN(BigInteger)
+operator/(const BigInteger& l, T r) {
+  BigInteger u;
+  T v;
   tie(u, v) = div(l, r);
   return u;
 }
@@ -1110,7 +1211,12 @@ inline tuple<BigInteger, BigInteger> div(const BigInteger& l,
 }
 
 template <typename T>
-inline tuple<BigInteger, T> div(const BigInteger& l, T r) {
+inline
+REQUIRES((
+  is_integral<T>::value &&
+  !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+RETURN(tuple<BigInteger, T>)
+div(const BigInteger& l, T r) {
   if (l.isZero() && r == 0) {
     return make_tuple(1, 0);
   }
@@ -1135,7 +1241,12 @@ inline tuple<BigInteger, T> div(const BigInteger& l, T r) {
 }
 
 template <typename T>
-inline void divInplace(BigInteger& l, T r, T& remain) {
+inline
+REQUIRES((
+  is_integral<T>::value &&
+  !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+RETURN(void)
+divInplace(BigInteger& l, T r, T& remain) {
   if (l.isZero() && r == 0) {
     l = 1;
     remain = 0;
@@ -1167,6 +1278,19 @@ inline void divInplace(BigInteger& l, T r, T& remain) {
 
 inline BigInteger operator%(const BigInteger& l, const BigInteger& r) {
   BigInteger u, v;
+  tie(u, v) = div(l, r);
+  return v;
+}
+
+template <typename T>
+inline
+REQUIRES((
+  is_integral<T>::value &&
+  !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+RETURN(T)
+operator%(const BigInteger& l, T r) {
+  BigInteger u;
+  T v;
   tie(u, v) = div(l, r);
   return v;
 }
@@ -1226,7 +1350,12 @@ inline BigInteger operator|(const BigInteger& l, const BigInteger& r) {
 }
 
 template <typename T>
-inline BigInteger operator<<(const BigInteger& l, T n) {
+inline
+REQUIRES((
+  is_integral<T>::value &&
+  !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+RETURN(BigInteger)
+operator<<(const BigInteger& l, T n) {
   if (l.getSign() == 0) {
     return 0;
   }
@@ -1247,7 +1376,12 @@ inline BigInteger operator<<(const BigInteger& l, T n) {
 }
 
 template <typename T>
-inline BigInteger operator>>(const BigInteger& l, T n) {
+inline
+REQUIRES((
+  is_integral<T>::value &&
+  !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+RETURN(BigInteger)
+operator>>(const BigInteger& l, T n) {
   if (l.getSign() == 0) {
     return 0;
   }
@@ -1274,7 +1408,12 @@ inline BigInteger operator>>(const BigInteger& l, T n) {
 }
 
 template <typename T>
-inline BigInteger power(const BigInteger& l, T n) {
+inline
+REQUIRES((
+  is_integral<T>::value &&
+  !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+RETURN(BigInteger)
+power(const BigInteger& l, T n) {
   BigInteger ret(1);
   BigInteger x(l);
   for (; n > 0; n >>= 1) {
@@ -1285,7 +1424,12 @@ inline BigInteger power(const BigInteger& l, T n) {
 }
 
 template <typename T>
-inline BigInteger power_mod(const BigInteger& l, T n, const BigInteger& mod) {
+inline
+REQUIRES((
+  is_integral<T>::value &&
+  !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+RETURN(BigInteger)
+power_mod(const BigInteger& l, T n, const BigInteger& mod) {
   if (mod == 1) {
     return 0;
   }
@@ -1336,7 +1480,7 @@ inline BigInteger exgcd(const BigInteger& a, const BigInteger& b, BigInteger& x,
 inline BigInteger gcd(BigInteger m, BigInteger n) {
   while (!n.isZero()) {
     BigInteger t = m % n;
-    m = n;
+    m = std::move(n);
     n = std::move(t);
   }
   return m;

@@ -48,7 +48,7 @@ SL void gf_test() {
       assert(dp[i] == gfresult[i]);
 
     string mine = to_string(gf_at<mod>(vector<int64>(coe, coe+92), {1}, 100000000));
-    string expected = ("66666793333412666685000001"_bi % mod).toString();
+    string expected = to_string("66666793333412666685000001"_bi % mod);
     assert(mine == expected);
   }
 }

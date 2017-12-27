@@ -2,8 +2,8 @@ pe
 ==
 
 It is my basic code for solving problem on project euler.
-The old code has been treated as release 1.0.
-The developing version is 2.0. It will be more interesting.
+
+Latest release: [Pe2.0](https://github.com/baihacker/pe/releases)
 
 Installation:
 -------------

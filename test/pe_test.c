@@ -8,6 +8,7 @@
 #include "mat_mul_test.c"
 #include "mp_test.c"
 #include "parallel_sort_test.c"
+#include "poly_test.c"
 #include "prime_phi_sum_test.c"
 #include "print_int128_test.c"
 #include "square_root_test.c"
@@ -22,8 +23,8 @@ PeTest& getTester() {
 
 TestSize enabledTestSize[]{
   SMALL,
-  MEDIUM,
-  BIG,
+//  MEDIUM,
+//  BIG,
 };
 
 SL bool isEnabledTestSize(TestSize size) {

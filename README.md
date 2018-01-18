@@ -35,6 +35,7 @@ File list:
 * pe_bi32: Big integer whose base is 1 << 32.
 * pe_bn: Old big integer implementation.
 * pe_geometry: Support Point2D and Point3D.
+* pe_integer_util: integer utils.
 * pe_mat: Matrix operations.
 * pe_memory: Memory manipulation such as allocating large memory. (windows only)
 * pe_mod: Modular arithmetic.

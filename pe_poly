@@ -2,6 +2,7 @@
 #define __PE_POLY__
 
 #include "pe_base"
+#include "pe_integer_util"
 #include "pe_mod"
 #include "pe_ntt"
 
@@ -210,13 +211,16 @@ SL ostream& operator<<(ostream& o, const PolyM<P>& p) {
 // Make sure the length of result is at least: n + n
 // The return length is 2n (not 2n-1)
 template<typename T>
-SL void poly_mul_normal_internal(const T* X, const T* Y, const int n, T* result, int64 mod) {
+SL
+REQUIRES((is_native_integer<T>::value))
+RETURN(void)
+poly_mul_normal_internal(const T* X, const T* Y, const int n, T* result, int64 mod) {
   const int n2 = n << 1;
   if (n <= 49) {
     fill(result, result+n2, 0);
     for (int i = 0; i < n; ++i)
       for (int j = 0; j < n; ++j) {
-        result[i+j] = add_mod(result[i+j], (uint64)X[i] * Y[j] % mod, mod);
+        result[i+j] = add_mod(result[i+j], (typename AtLeastUint64<T>::type)X[i] * Y[j] % mod, mod);
       }
     return;
   }
@@ -283,7 +287,10 @@ SL void poly_mul_normal_internal(const T* X, const T* Y, const int n, T* result,
 // Multiply two polynomials.
 // Make sure the length of result is at least: n + m - 1
 template<typename T>
-SL void poly_mul_normal(const T* X, const int n, const T* Y, const int m, T* result, int64 mod) {
+SL
+REQUIRES((is_native_integer<T>::value))
+RETURN(void)
+poly_mul_normal(const T* X, const int n, const T* Y, const int m, T* result, int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
   // In case n == m, we still allocate tempory result space to meet the
   // requirement of poly_mul_normal_internal.
@@ -316,7 +323,10 @@ SL void poly_mul_normal(const T* X, const int n, const T* Y, const int m, T* res
 }
 
 template<typename T>
-SL vector<T> poly_mul_normal(const vector<T>& X, const vector<T>& Y, int64 mod) {
+SL
+REQUIRES((is_native_integer<T>::value))
+RETURN(vector<T>)
+poly_mul_normal(const vector<T>& X, const vector<T>& Y, int64 mod) {
   const int n = X.size();
   const int m = Y.size();
   const int resultSize = n + m - 1;
@@ -350,7 +360,7 @@ SL vector<T> poly_mul_normal(const vector<T>& X, const vector<T>& Y, int64 mod) 
 template<int64 P>
 SL PolyM<P> poly_mul_normal(const PolyM<P>& X, const PolyM<P>& Y) {
   auto data = poly_mul(X.data, Y.data, P);
-  return PolyM<P>{data};
+  return PolyM<P>{std::move(data)};
 }
 
 // Need int128 to handle the big polynomial coefficient.
@@ -360,7 +370,10 @@ SL PolyM<P> poly_mul_normal(const PolyM<P>& X, const PolyM<P>& Y) {
 // Multiply two polynomials.
 // Make sure the length of result is at least: n + m - 1
 template<typename T>
-SL void poly_mul_ntt_internal(const T* X, int n, const T* Y, int m, T* result, int64 mod) {
+SL
+REQUIRES((is_native_integer<T>::value))
+RETURN(void)
+poly_mul_ntt_internal(const T* X, int n, const T* Y, int m, T* result, int64 mod) {
   static_assert(std::is_unsigned<T>::value, "T must be unsigned");
 
   int alignedSize = 1;
@@ -406,13 +419,19 @@ SL void poly_mul_ntt_internal(const T* X, int n, const T* Y, int m, T* result, i
 // Multiply two polynomials.
 // The length of result is at least n + m - 1.
 template<typename T>
-SL void poly_mul_ntt(const T* X, const int n, const T* Y, const int m, T* result, int64 mod) {
+SL
+REQUIRES((is_native_integer<T>::value))
+RETURN(void)
+poly_mul_ntt(const T* X, const int n, const T* Y, const int m, T* result, int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
   poly_mul_ntt_internal<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m, (unsignedT*)result, mod);
 }
 
 template<typename T>
-SL vector<T> poly_mul_ntt(const vector<T>& X, const vector<T>& Y, int64 mod) {
+SL
+REQUIRES((is_native_integer<T>::value))
+RETURN(vector<T>)
+poly_mul_ntt(const vector<T>& X, const vector<T>& Y, int64 mod) {
   const int n = (int)X.size() - 1;
   const int m = (int)Y.size() - 1;
 
@@ -425,7 +444,7 @@ SL vector<T> poly_mul_ntt(const vector<T>& X, const vector<T>& Y, int64 mod) {
 template<int64 P>
 SL PolyM<P> poly_mul_ntt(const PolyM<P>& X, const PolyM<P>& Y) {
   auto data = poly_mul_ntt(X.data, Y.data, P);
-  return PolyM<P>{data};
+  return PolyM<P>{std::move(data)};
 }
 #else
 #define HAS_POLY_MUL_NTT 0

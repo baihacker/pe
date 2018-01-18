@@ -1,0 +1,160 @@
+#ifndef __PE_INTEGER_UTIL_H__
+#define __PE_INTEGER_UTIL_H__
+
+#include "pe_base"
+
+#if PE_HAS_INT128
+SL void print_int128(int128 x) {
+  char buff[64];
+  int top = 0;
+  if (x != 0) {
+    uint128 y = (uint128&)x;
+    uint128 z = (~y) + 1;
+    if (x < 0 || y == z) buff[top++] = '-', y = z;
+    int last = top;
+    while (y > 0) buff[top++] = y % 10 + '0', y /= 10;
+    reverse(buff + last, buff + top);
+  } else {
+    buff[top++] = '0';
+  }
+  buff[top] = 0;
+  printf(buff);
+}
+
+SL ostream& operator<<(ostream& o, int128 x) {
+  char buff[64];
+  int top = 0;
+  if (x != 0) {
+    uint128 y = (uint128&)x;
+    uint128 z = (~y) + 1;
+    if (x < 0 || y == z) buff[top++] = '-', y = z;
+    int last = top;
+    while (y > 0) buff[top++] = y % 10 + '0', y /= 10;
+    reverse(buff + last, buff + top);
+  } else {
+    buff[top++] = '0';
+  }
+  buff[top] = 0;
+  return o << buff;
+}
+
+SL string to_string(int128 x) {
+  stringstream ss;
+  ss << x;
+  string result;
+  ss >> result;
+  return result;
+}
+
+namespace std {
+  template<>
+  struct make_unsigned<int128> {
+    typedef uint128 type;
+  };
+
+  template<>
+  struct make_unsigned<uint128> {
+    typedef uint128 type;
+  };
+
+  template<>
+  struct make_signed<int128> {
+    typedef int128 type;
+  };
+
+  template<>
+  struct make_signed<uint128> {
+    typedef int128 type;
+  };
+
+  template<>
+  struct is_unsigned<int128> {
+    enum {value = false};
+  };
+
+  template<>
+  struct is_unsigned<uint128> {
+    enum {value = true};
+  };
+
+  template<>
+  struct is_signed<int128> {
+    enum {value = true};
+  };
+
+  template<>
+  struct is_signed<uint128> {
+    enum {value = false};
+  };
+  
+  template<>
+  struct is_integral<int128> {
+    typedef bool value_type;
+    enum {value = true};
+    typedef std::integral_constant<bool, value> type;
+  };
+
+  template<>
+  struct is_integral<uint128> {
+    typedef bool value_type;
+    enum {value = true};
+    typedef std::integral_constant<bool, value> type;
+  };
+}
+
+#endif
+
+template<typename T>
+struct is_native_integer {
+  enum {value = is_integral<T>::value};
+};
+
+// Integer type promotion
+template<typename T1, typename T2, bool ge, bool same>
+struct BigIntegerTypeImpl {
+  typedef T1 type;
+};
+
+template<typename T1, typename T2>
+struct BigIntegerTypeImpl<T1, T2, false, false> {
+  typedef T2 type;
+};
+
+template<typename T1, typename T2>
+struct BigIntegerTypeImpl<T1, T2, true, true> {
+  typedef typename std::make_unsigned<T1>::type type;
+};
+
+
+template<typename T1, typename T2>
+struct BigIntegerType {
+  typedef typename std::make_unsigned<T1>::type U1;
+  typedef typename std::make_unsigned<T2>::type U2;
+  typedef typename BigIntegerTypeImpl<
+                      T1,
+                      T2,
+                      (sizeof(T1) >= sizeof(T2)),
+                      std::is_same<U1, U2>::value
+                    >::type type;
+};
+
+template<typename T>
+struct BigIntegerType<T, T> {
+  typedef T type;
+};
+
+template<typename T1, typename T2>
+SL T1 power_impl(T1 x, T2 n) {
+  T1 ret = 1;
+  for (; n; n >>= 1) {
+    if (n & 1) ret = ret * x;
+    x = x * x;
+  }
+  return ret;
+}
+
+template<typename T1, typename T2>
+SL T1 power(T1 x, T2 n) {
+  return power_impl<T1, T2>(x, n);
+}
+#endif

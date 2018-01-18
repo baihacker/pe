@@ -133,6 +133,7 @@ typedef unsigned __int128 uint128;
 #include <streambuf>
 #include <system_error>
 #include <thread>
+#include <type_traits>
 
 using namespace std;
 
@@ -206,107 +207,5 @@ namespace std {
     typedef typename remove_reference<T1>::type type;
   };
 }
-
-template<typename T>
-struct pe_is_integeral {
-  enum {value = is_integral<T>::value};
-};
-
-#if PE_HAS_INT128
-SL void print_int128(int128 x) {
-  char buff[64];
-  int top = 0;
-  if (x != 0) {
-    uint128 y = (uint128&)x;
-    uint128 z = (~y) + 1;
-    if (x < 0 || y == z) buff[top++] = '-', y = z;
-    int last = top;
-    while (y > 0) buff[top++] = y % 10 + '0', y /= 10;
-    reverse(buff + last, buff + top);
-  } else {
-    buff[top++] = '0';
-  }
-  buff[top] = 0;
-  printf(buff);
-}
-
-SL ostream& operator<<(ostream& o, int128 x) {
-  char buff[64];
-  int top = 0;
-  if (x != 0) {
-    uint128 y = (uint128&)x;
-    uint128 z = (~y) + 1;
-    if (x < 0 || y == z) buff[top++] = '-', y = z;
-    int last = top;
-    while (y > 0) buff[top++] = y % 10 + '0', y /= 10;
-    reverse(buff + last, buff + top);
-  } else {
-    buff[top++] = '0';
-  }
-  buff[top] = 0;
-  return o << buff;
-}
-
-SL string to_string(int128 x) {
-  stringstream ss;
-  ss << x;
-  string result;
-  ss >> result;
-  return result;
-}
-
-namespace std {
-  template<>
-  struct make_unsigned<int128> {
-    typedef uint128 type;
-  };
-
-  template<>
-  struct make_unsigned<uint128> {
-    typedef uint128 type;
-  };
-
-  template<>
-  struct make_signed<int128> {
-    typedef int128 type;
-  };
-
-  template<>
-  struct make_signed<uint128> {
-    typedef int128 type;
-  };
-
-  template<>
-  struct is_unsigned<int128> {
-    enum {value = false};
-  };
-
-  template<>
-  struct is_unsigned<uint128> {
-    enum {value = true};
-  };
-
-  template<>
-  struct is_signed<int128> {
-    enum {value = true};
-  };
-
-  template<>
-  struct is_signed<uint128> {
-    enum {value = false};
-  };
-}
-
-template<>
-struct pe_is_integeral<int128> {
-  enum {value = true};
-};
-
-template<>
-struct pe_is_integeral<uint128> {
-  enum {value = true};
-};
-
-#endif
 
 #endif

@@ -104,9 +104,36 @@ namespace std {
 
 #endif
 
+class BigInteger;
+
 template<typename T>
 struct is_native_integer {
   enum {value = is_integral<T>::value};
+};
+
+template<typename T>
+struct is_native_integer<T&> {
+  enum {value = is_native_integer<T>::value};
+};
+
+template<typename T>
+struct is_general_integer {
+  enum {value = is_integral<T>::value};
+};
+
+template<typename T>
+struct is_general_integer<T&> {
+  enum {value = is_general_integer<T>::value};
+};
+
+template<>
+struct is_native_integer<BigInteger> {
+  enum {value = false};
+};
+
+template<>
+struct is_general_integer<BigInteger> {
+  enum {value = true};
 };
 
 // Integer type promotion
@@ -144,17 +171,27 @@ struct BigIntegerType<T, T> {
 };
 
 template<typename T1, typename T2>
-SL T1 power_impl(T1 x, T2 n) {
+SL
+REQUIRES((
+  is_general_integer<T1>::value &&
+  is_general_integer<T2>::value))
+RETURN(T1)
+power_impl(T1 x, T2 n) {
   T1 ret = 1;
   for (; n; n >>= 1) {
     if (n & 1) ret = ret * x;
-    x = x * x;
+    if (n > 1) x = x * x;
   }
   return ret;
 }
 
 template<typename T1, typename T2>
-SL T1 power(T1 x, T2 n) {
+SL
+REQUIRES((
+  is_general_integer<T1>::value &&
+  is_general_integer<T2>::value))
+RETURN(T1)
+power(T1 x, T2 n) {
   return power_impl<T1, T2>(x, n);
 }
 #endif

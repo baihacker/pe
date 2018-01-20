@@ -242,6 +242,7 @@ SL int64 cal_phi(int64 n) {
   return phi_n;
 }
 
+template<typename T>
 class DVA {
  public:
   int64 n;
@@ -249,8 +250,8 @@ class DVA {
   int isPerfectSquare;
   // Keys from large to small.
   std::vector<int64> keys;
-  std::vector<int64> sv;
-  std::vector<int64> lv;
+  std::vector<T> sv;
+  std::vector<T> lv;
 
   DVA(int64 n)
       : n(n), m(static_cast<int64>(sqrt(n))), isPerfectSquare(m * m == n) {
@@ -272,20 +273,21 @@ class DVA {
   DVA& operator=(const DVA& other) = default;
   DVA& operator=(DVA&& other) = default;
 
-  int64& operator[](int64 v) { return v <= m ? sv[v] : lv[n / v]; }
+  T& operator[](int64 v) { return v <= m ? sv[v] : lv[n / v]; }
 
-  int64 operator[](int64 v) const { return v <= m ? sv[v] : lv[n / v]; }
+  T operator[](int64 v) const { return v <= m ? sv[v] : lv[n / v]; }
 };
 
-SL DVA prime_s0(const int64 n) {
+template<typename T>
+SL DVA<T> prime_s0(const int64 n) {
   PE_ASSERT(n >= 1);
-  DVA dva(n);
+  DVA<T> dva(n);
 
   for (auto& key : dva.keys) dva[key] = key - 1;
 
   for (int64 p = 2; p <= dva.m; ++p)
     if (dva[p] != dva[p - 1]) {
-      const int64 pcnt = dva[p - 1];
+      const auto pcnt = dva[p - 1];
       const int64 p2 = p * p;
       for (auto& key : dva.keys) {
         if (key < p2) break;
@@ -297,14 +299,23 @@ SL DVA prime_s0(const int64 n) {
 
 #define prime_pi prime_s0
 
-SL DVA prime_s1(const int64 n) {
+template<typename T>
+SL DVA<T> prime_s1(const int64 n) {
   PE_ASSERT(n >= 1);
-  DVA dva(n);
-  for (auto& key : dva.keys) dva[key] = key * (key + 1) / 2 - 1;
+  DVA<T> dva(n);
+  for (auto& key : dva.keys) {
+    if (key & 1) {
+      T v((key + 1) >> 1);
+      dva[key] = v * key - 1;
+    } else {
+      T v(key >> 1);
+      dva[key] = v * (key + 1) - 1;
+    }
+  }
 
   for (int64 p = 2; p <= dva.m; ++p)
     if (dva[p] != dva[p - 1]) {
-      const int64 psum = dva[p - 1];
+      const auto psum = dva[p - 1];
       const int64 p2 = p * p;
       for (auto& key : dva.keys) {
         if (key < p2) break;
@@ -316,127 +327,169 @@ SL DVA prime_s1(const int64 n) {
 
 #define prime_sum prime_s1
 
-#if 0
-SL tuple<vector<int64>, vector<int64>> prime_pi(const int64 n) {
-  PE_ASSERT(n >= 1);
-  const int64 v = static_cast<int64>(sqrt(n));
+template<typename T>
+SL vector<DVA<T>> prime_s0_pmod_even(int64 n, int mod) {
+  vector<DVA<T>> result;
+  for (int i = 0; i < mod; ++i)
+    result.emplace_back(n);
 
-  vector<int64> scnt(v + 1);
-  vector<int64> lcnt(v + 1);
-
-  for (int i = 1; i <= v; ++i) {
-    scnt[i] = i - 1;
-    lcnt[i] = n / i - 1;
-  }
-
-  for (int64 p = 2; p <= v; ++p) {
-    if (scnt[p] == scnt[p - 1]) {
-      continue;
+  for (int i = 1; i < mod; i += 2) {
+    if (i != 1) {
+      for (auto key: result[0].keys)
+        result[i][key] = (key + mod - i) / mod;
+    } else {
+      for (auto key: result[0].keys)
+        result[i][key] = (key - i) / mod;
     }
-    const int64 pcnt = scnt[p - 1];
-    const int64 q = p * p;
-    const int64 end = min(v, n / q);
-    for (int i = 1; i <= end; ++i) {
-      const int64 d = i * p;
-      if (d <= v) {
-        lcnt[i] -= lcnt[d] - pcnt;
-      } else {
-        const int64 t = n / d;
-        lcnt[i] -= scnt[t] - pcnt;
+  }
+  for (int i = 1; ; ++i) {
+    const int64 p = plist[i];
+    const int64 p2 = p * p;
+    if (p2 > n) break;
+    for (auto key: result[0].keys) {
+      if (key < p2) break;
+      const int rp = p % mod;
+      for (int j = 1; j < mod; j += 2) {
+        const int next = rp * j % mod;
+        result[next][key] -= result[j][key/p] - result[j][p-1];
       }
     }
-    for (int64 i = v; i >= q; --i) {
-      const int64 t = i / p;
-      scnt[i] -= scnt[t] - pcnt;
-    }
   }
-  return make_tuple(std::move(scnt), std::move(lcnt));
+
+  const int id = 2 % mod;
+  for (auto key: result[0].keys) {
+    result[id][key] += key >= 2 ? 1 : 0;
+  }
+  return result;
 }
 
-SL tuple<vector<int64>, vector<int64>> prime_sum(const int64 n) {
-  PE_ASSERT(n >= 1);
-  const int64 v = static_cast<int64>(sqrt(n));
+template<typename T>
+SL vector<DVA<T>> prime_s0_pmod_odd(int64 n, int mod) {
+  vector<DVA<T>> result;
+  for (int i = 0; i < mod; ++i)
+    result.emplace_back(n);
 
-  vector<int64> ssum(v + 1);
-  vector<int64> lsum(v + 1);
-
-  for (int i = 1; i <= v; ++i) {
-    ssum[i] = (int64)i * (i + 1) / 2 - 1;
-    const int64 t = n / i;
-    lsum[i] = t * (t + 1) / 2 - 1;
-  }
-
-  for (int64 p = 2; p <= v; ++p) {
-    if (ssum[p] == ssum[p - 1]) {
-      continue;
+  for (int i = 0; i < mod; ++i) {
+    if (i > 1) {
+      for (auto key: result[0].keys)
+        result[i][key] = (key + mod - i) / mod;
+    } else if (i == 1) {
+      for (auto key: result[0].keys)
+        result[i][key] = (key - i) / mod;
+    } else {
+      const int dec = mod == 1;
+      for (auto key: result[0].keys)
+        result[i][key] = key / mod - dec;
     }
-    const int64 psum = ssum[p - 1];
-    const int64 q = p * p;
-    const int64 end = min(v, n / q);
-    for (int i = 1; i <= end; ++i) {
-      const int64 d = i * p;
-      if (d <= v) {
-        lsum[i] -= (lsum[d] - psum) * p;
-      } else {
-        const int64 t = n / d;
-        lsum[i] -= (ssum[t] - psum) * p;
+  }
+  for (int i = 0; ; ++i) {
+    const int64 p = plist[i];
+    const int64 p2 = p * p;
+    if (p2 > n) break;
+    for (auto key: result[0].keys) {
+      if (key < p2) break;
+      const int rp = p % mod;
+      for (int j = 0; j < mod; ++j) {
+        const int next = rp * j % mod;
+        result[next][key] -= result[j][key/p] - result[j][p-1];
       }
     }
-    for (int64 i = v; i >= q; --i) {
-      const int64 t = i / p;
-      ssum[i] -= (ssum[t] - psum) * p;
-    }
   }
-  return make_tuple(std::move(ssum), std::move(lsum));
+  return result;
 }
 
-SL tuple<vector<int64>, vector<int64>, vector<int64>, vector<int64>>
-prime_pi_sum(const int64 n) {
-  PE_ASSERT(n >= 1);
-  const int64 v = static_cast<int64>(sqrt(n));
+template<typename T>
+SL vector<DVA<T>> prime_s0_pmod(int64 n, int mod) {
+  return mod & 1 ? prime_s0_pmod_odd<T>(n, mod) : prime_s0_pmod_even<T>(n, mod);
+}
 
-  vector<int64> scnt(v + 1);
-  vector<int64> lcnt(v + 1);
-  vector<int64> ssum(v + 1);
-  vector<int64> lsum(v + 1);
+template<typename T>
+SL vector<DVA<T>> prime_s1_pmod_even(int64 n, int mod) {
+  vector<DVA<T>> result;
+  for (int i = 0; i < mod; ++i)
+    result.emplace_back(n);
 
-  for (int i = 1; i <= v; ++i) {
-    scnt[i] = i - 1;
-    lcnt[i] = n / i - 1;
-    ssum[i] = (int64)i * (i + 1) / 2 - 1;
-    const int64 t = n / i;
-    lsum[i] = t * (t + 1) / 2 - 1;
-  }
-
-  for (int64 p = 2; p <= v; ++p) {
-    if (scnt[p] == scnt[p - 1]) {
-      continue;
-    }
-    const int64 pcnt = scnt[p - 1];
-    const int64 psum = ssum[p - 1];
-    const int64 q = p * p;
-    const int64 end = min(v, n / q);
-    for (int i = 1; i <= end; ++i) {
-      const int64 d = i * p;
-      if (d <= v) {
-        lcnt[i] -= lcnt[d] - pcnt;
-        lsum[i] -= (lsum[d] - psum) * p;
-      } else {
-        const int64 t = n / d;
-        lcnt[i] -= scnt[t] - pcnt;
-        lsum[i] -= (ssum[t] - psum) * p;
+  for (int i = 1; i < mod; i += 2) {
+    if (i != 1) {
+      for (auto key: result[0].keys) {
+        const int64 c = (key + mod - i) / mod;
+        result[i][key] = c * (c - 1) / 2 * mod + c * i;
+      }
+    } else {
+      for (auto key: result[0].keys) {
+        const int64 c = (key + mod - i) / mod;
+        result[i][key] = c * (c - 1) / 2 * mod + c * i - 1;
       }
     }
-    for (int64 i = v; i >= q; --i) {
-      const int64 t = i / p;
-      scnt[i] -= scnt[t] - pcnt;
-      ssum[i] -= (ssum[t] - psum) * p;
+  }
+  for (int i = 1; ; ++i) {
+    const int64 p = plist[i];
+    const int64 p2 = p * p;
+    if (p2 > n) break;
+    for (auto key: result[0].keys) {
+      if (key < p2) break;
+      const int rp = p % mod;
+      for (int j = 1; j < mod; j += 2) {
+        const int next = rp * j % mod;
+        result[next][key] -= (result[j][key/p] - result[j][p-1]) * p;
+      }
     }
   }
-  return make_tuple(std::move(scnt), std::move(lcnt), std::move(ssum),
-                    std::move(lsum));
+
+  const int id = 2 % mod;
+  for (auto key: result[0].keys) {
+    result[id][key] += key >= 2 ? 2 : 0;
+  }
+  return result;
 }
-#endif
+
+template<typename T>
+SL vector<DVA<T>> prime_s1_pmod_odd(int64 n, int mod) {
+  vector<DVA<T>> result;
+  for (int i = 0; i < mod; ++i)
+    result.emplace_back(n);
+
+  for (int i = 0; i < mod; ++i) {
+    if (i > 1) {
+      for (auto key: result[0].keys) {
+        const int64 c = (key + mod - i) / mod;
+        result[i][key] = c * (c - 1) / 2 * mod + c * i;
+      }
+    } else if (i == 1) {
+      for (auto key: result[0].keys) {
+        const int64 c = (key + mod - i) / mod;
+        result[i][key] = c * (c - 1) / 2 * mod + c * i - 1;
+      }
+    } else {
+      for (auto key: result[0].keys) {
+        const int64 c = key / mod;
+        const int dec = mod == 1;
+        result[i][key] = c * (c + 1) / 2 * mod - dec;
+      }
+    }
+  }
+
+  for (int i = 0; ; ++i) {
+    const int64 p = plist[i];
+    const int64 p2 = p * p;
+    if (p2 > n) break;
+    for (auto key: result[0].keys) {
+      if (key < p2) break;
+      const int rp = p % mod;
+      for (int j = 0; j < mod; ++j) {
+        const int next = rp * j % mod;
+        result[next][key] -= (result[j][key/p] - result[j][p-1]) * p;
+      }
+    }
+  }
+
+  return result;
+}
+
+template<typename T>
+SL vector<DVA<T>> prime_s1_pmod(int64 n, int mod) {
+  return mod & 1 ? prime_s1_pmod_odd<T>(n, mod) : prime_s1_pmod_even<T>(n, mod);
+}
 
 SL void init_inv(int64* dest, int64 n, int64 mod) {
   PE_ASSERT(n <= mod && n >= 2);

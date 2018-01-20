@@ -287,8 +287,7 @@ struct mint {
 
 template <typename S, typename B, S MOD>
 ostream& operator<<(ostream& o, const mint<S, B, MOD>& m) {
-  o << m.value_;
-  return o;
+  return o << m.value_;
 }
 
 template <int32_t mod>
@@ -301,18 +300,17 @@ template <int32_t mod>
 using mint6464 = mint<int64_t, int64_t, mod>;
 
 #if PE_HAS_INT128
-template <int32_t mod>
+template <int128 mod>
 using mint128128 = mint<int128, int128, mod>;
-template <int32_t mod>
+template <int64_t mod>
 using mint64128 = mint<int64_t, int128, mod>;
 #endif
 
-#if PE_HAS_INT128
 template <typename T, int64 MOD>
 struct mintl {
   static_assert(MOD > 0, "MOD > 0");
 
-  mintl(int128 val = 0) : value_(val) {}
+  mintl(T val = 0) : value_(val) {}
 
   mintl operator+(const mintl& y) const { return mintl(value_ + y.value_); }
 
@@ -351,7 +349,6 @@ template <typename T, int64 mod>
 ostream& operator<<(ostream& o, const mintl<T, mod>& m) {
   return o << m.value();
 }
-#endif
 
 template <int v>
 struct mint_indicator {
@@ -365,10 +362,8 @@ struct is_mint {
   template <typename S, typename B, S mod>
   static constexpr mint_indicator<1> mint_match(mint<S, B, mod>);
 
-#if PE_HAS_INT128
   template <typename T, int64 mod>
   static constexpr mint_indicator<1> mint_match(const mintl<T, mod>&);
-#endif
 
   static X makeX();
 
@@ -461,8 +456,7 @@ struct mintd {
 
 template <typename S, typename B>
 ostream& operator<<(ostream& o, const mintd<S, B>& m) {
-  o << m.value_;
-  return o;
+  return o << m.value_;
 }
 
 using mintd3232 = mintd<int32_t, int32_t>;
@@ -475,5 +469,82 @@ using mintd6464 = mintd<int64_t, int64_t>;
 using mintd128128 = mintd<int128, int128>;
 using mintd64128 = mintd<int64_t, int128>;
 #endif
+
+template <typename T>
+struct mintdl {
+  explicit mintdl(T val = 0, int64 mod = 1) : MOD(mod) {}
+
+  mintdl& operator=(T v) {
+    value_ = v;
+    return *this;
+  }
+
+  mintdl& operator=(const mintdl& other) {
+    value_ = other.value_;
+    PE_ASSERT(other.MOD == MOD);
+    return *this;
+  }
+
+  mintdl operator+(const mintdl& y) const {
+    PE_ASSERT(y.MOD == MOD);
+    return mintdl(value_ + y.value, MOD);
+  }
+
+  mintdl operator+(const T y) const { return *this + mintdl(y, MOD); }
+
+  mintdl& operator+=(const mintdl& y) {
+    PE_ASSERT(y.MOD == MOD);
+    value_ += y.value_;
+    return *this;
+  }
+
+  mintdl& operator+=(const T y) { return *this += mintdl(y, MOD); }
+
+  mintdl operator-(const mintdl& y) const {
+    PE_ASSERT(y.MOD == MOD);
+    return mintdl(value_ - y.value, MOD);
+  }
+
+  mintdl operator-(const T y) const { return *this - mintdl(y, MOD); }
+
+  mintdl& operator-=(const mintdl& y) {
+    PE_ASSERT(y.MOD == MOD);
+    value_ -= y.value_;
+    return *this;
+  }
+
+  mintdl& operator-=(const T y) { return *this -= mintdl(y, MOD); }
+
+  mintdl operator*(const mintdl& y) const {
+    PE_ASSERT(y.MOD == MOD);
+    return mintdl(value_ - y.value_, MOD);
+  }
+
+  mintdl operator*(const T y) const { return *this * mintdl(y, MOD); }
+
+  mintdl& operator*=(const mintdl& y) {
+    PE_ASSERT(y.MOD == MOD);
+    value_ *= value_;
+    return *this;
+  }
+
+  mintdl& operator*=(const T y) { return *this *= mintdl(y, MOD); }
+
+  // operator ints () const {return value_;}
+  T value() const { return value_; }
+  mintdl& fix_value() {
+    value_ = regulate_mod(value_, MOD);
+    return *this;
+  }
+  friend ostream& operator<<<T>(ostream& o, const mintdl& m);
+
+  T value_;
+  int64 MOD;
+};
+
+template <typename T>
+ostream& operator<<(ostream& o, const mintdl<T>& m) {
+  return o << m.value_;
+}
 
 #endif

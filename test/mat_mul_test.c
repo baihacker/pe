@@ -6,6 +6,7 @@ const int K = 500;
 const int64 mod = 1000000007;
 
 SL void mat_mul_test() {
+  GMOD = mod;
   vector<int> data;
   for (int i = 0; i < K; ++i)
   for (int j = 0; j < K; ++j)
@@ -62,8 +63,40 @@ SL void mat_mul_test() {
     sort(all(v));
   }
   {
-    std::vector<mintl<int128, mod>> v(K, 0);
+    std::vector<mintd6464> v(K, 0);
+    MatMD m = MatMD::Zero(K, K);
+
+    for (int i = 0; i < K; ++i) v[i] = V[i];
+    rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j*K+i];
+
+    TimeRecorder tr;
+    v = power_mod(m, 4, v, mod);
+    int64 s = 0;
+    for (auto i: v) s += i.value();
+    // cout << s << endl;
+    // cout << tr.elapsed().format() << endl;
+    assert(s == 247446585411LL);
+    sort(all(v));
+  }
+  {
+    std::vector<mintl128<mod>> v(K, 0);
     MatML<mod> m = MatML<mod>::Zero(K, K);
+
+    for (int i = 0; i < K; ++i) v[i] = V[i];
+    rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j*K+i];
+
+    TimeRecorder tr;
+    v = power_mod(m, 4, v, mod);
+    int64 s = 0;
+    for (auto i: v) s += i.value();
+    // cout << s << endl;
+    // cout << tr.elapsed().format() << endl;
+    assert(s == 247446585411LL);
+    sort(all(v));
+  }
+  {
+    std::vector<mintdl128> v(K, 0);
+    MatMDL m = MatMDL::Zero(K, K);
 
     for (int i = 0; i < K; ++i) v[i] = V[i];
     rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j*K+i];

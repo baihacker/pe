@@ -334,13 +334,10 @@ SL vector<DVA<T>> prime_s0_pmod_even(int64 n, int mod) {
     result.emplace_back(n);
 
   for (int i = 1; i < mod; i += 2) {
-    if (i != 1) {
-      for (auto key: result[0].keys)
-        result[i][key] = (key + mod - i) / mod;
-    } else {
-      for (auto key: result[0].keys)
-        result[i][key] = (key - i) / mod;
-    }
+    auto& target = result[i];
+    const int dec = i == 1;
+    for (auto key: result[0].keys)
+      target[key] = (key + mod - i) / mod - dec;
   }
   for (int i = 1; ; ++i) {
     const int64 p = plist[i];
@@ -356,9 +353,9 @@ SL vector<DVA<T>> prime_s0_pmod_even(int64 n, int mod) {
     }
   }
 
-  const int id = 2 % mod;
+  auto& target = result[2 % mod];
   for (auto key: result[0].keys) {
-    result[id][key] += key >= 2 ? 1 : 0;
+    target[key] += key >= 2 ? 1 : 0;
   }
   return result;
 }
@@ -370,17 +367,9 @@ SL vector<DVA<T>> prime_s0_pmod_odd(int64 n, int mod) {
     result.emplace_back(n);
 
   for (int i = 0; i < mod; ++i) {
-    if (i > 1) {
-      for (auto key: result[0].keys)
-        result[i][key] = (key + mod - i) / mod;
-    } else if (i == 1) {
-      for (auto key: result[0].keys)
-        result[i][key] = (key - i) / mod;
-    } else {
-      const int dec = mod == 1;
-      for (auto key: result[0].keys)
-        result[i][key] = key / mod - dec;
-    }
+    const int dec = (i == 1 % mod) + (i == 0);
+    for (auto key: result[0].keys)
+      result[i][key] = (key + mod - i) / mod - dec;
   }
   for (int i = 0; ; ++i) {
     const int64 p = plist[i];
@@ -410,16 +399,11 @@ SL vector<DVA<T>> prime_s1_pmod_even(int64 n, int mod) {
     result.emplace_back(n);
 
   for (int i = 1; i < mod; i += 2) {
-    if (i != 1) {
-      for (auto key: result[0].keys) {
-        const int64 c = (key + mod - i) / mod;
-        result[i][key] = c * (c - 1) / 2 * mod + c * i;
-      }
-    } else {
-      for (auto key: result[0].keys) {
-        const int64 c = (key + mod - i) / mod;
-        result[i][key] = c * (c - 1) / 2 * mod + c * i - 1;
-      }
+    auto& target = result[i];
+    const int dec = i == 1;
+    for (auto key: result[0].keys) {
+      const int64 c = (key + mod - i) / mod;
+      target[key] = c * (c - 1) / 2 * mod + c * i - dec;
     }
   }
   for (int i = 1; ; ++i) {
@@ -436,9 +420,9 @@ SL vector<DVA<T>> prime_s1_pmod_even(int64 n, int mod) {
     }
   }
 
-  const int id = 2 % mod;
+  auto& target = result[2 % mod];
   for (auto key: result[0].keys) {
-    result[id][key] += key >= 2 ? 2 : 0;
+    target[key] += key >= 2 ? 2 : 0;
   }
   return result;
 }
@@ -450,22 +434,11 @@ SL vector<DVA<T>> prime_s1_pmod_odd(int64 n, int mod) {
     result.emplace_back(n);
 
   for (int i = 0; i < mod; ++i) {
-    if (i > 1) {
-      for (auto key: result[0].keys) {
-        const int64 c = (key + mod - i) / mod;
-        result[i][key] = c * (c - 1) / 2 * mod + c * i;
-      }
-    } else if (i == 1) {
-      for (auto key: result[0].keys) {
-        const int64 c = (key + mod - i) / mod;
-        result[i][key] = c * (c - 1) / 2 * mod + c * i - 1;
-      }
-    } else {
-      for (auto key: result[0].keys) {
-        const int64 c = key / mod;
-        const int dec = mod == 1;
-        result[i][key] = c * (c + 1) / 2 * mod - dec;
-      }
+    auto& target = result[i];
+    const int dec = i == 1 % mod;
+    for (auto key: result[0].keys) {
+      const int64 c = (key + mod - i) / mod;
+      target[key] = c * (c - 1) / 2 * mod + c * i - dec;
     }
   }
 

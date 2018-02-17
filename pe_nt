@@ -245,27 +245,40 @@ SL int64 cal_phi(int64 n) {
 template<typename T>
 class DVA {
  public:
+ template<typename IT>
+ struct DVARange {
+   IT first;
+   IT last;
+   DVARange(IT first, IT last): first(first), last(last) {}
+   IT begin() {return first;}
+   IT end() {return last;}
+ };
+ template<typename IT>
+ DVARange<IT> makeRange(IT first, IT last) const {
+   return DVARange<IT>(first, last);
+ }
+ public:
   int64 n;
   int64 m;
   int isPerfectSquare;
-  // Keys from large to small.
+
   std::vector<int64> keys;
-  std::vector<T> sv;
-  std::vector<T> lv;
+  std::vector<T> values;
+  int keySize;
 
   DVA(int64 n)
       : n(n), m(static_cast<int64>(sqrt(n))), isPerfectSquare(m * m == n) {
+    keys.push_back(0);
+
     for (int64 i = 1; i <= m; ++i) {
       keys.push_back(i);
     }
     for (int64 i = n / m > m ? m : m - 1; i >= 1; --i) {
       keys.push_back(n / i);
     }
-    reverse(keys.begin(), keys.end());
-    sv.resize(m + 1);
-    lv.resize(m + 1);
-    fill(sv.begin(), sv.end(), 0);
-    fill(lv.begin(), lv.end(), 0);
+    keySize = keys.size();
+    values.resize(keys.size());
+    fill(values.begin(), values.end(), 0);
   }
 
   DVA(const DVA& other) = default;
@@ -273,9 +286,19 @@ class DVA {
   DVA& operator=(const DVA& other) = default;
   DVA& operator=(DVA&& other) = default;
 
-  T& operator[](int64 v) { return v <= m ? sv[v] : lv[n / v]; }
+  int idxOfValue(int64 v) const {return v <= m ? v : keySize - n / v;}
+  
+  T& operator[](int64 v) { return values[idxOfValue(v)]; }
 
-  T operator[](int64 v) const { return v <= m ? sv[v] : lv[n / v]; }
+  T operator[](int64 v) const { return values[idxOfValue(v)]; }
+  
+  DVARange<std::vector<int64>::const_iterator> fKeys() const {
+    return makeRange(keys.begin() + 1, keys.end());
+  }
+
+  DVARange<std::vector<int64>::const_reverse_iterator> bKeys() const {
+    return makeRange(keys.rbegin(), keys.rend() - 1);
+  }
 };
 
 template<typename T>
@@ -283,13 +306,13 @@ SL DVA<T> prime_s0(const int64 n) {
   PE_ASSERT(n >= 1);
   DVA<T> dva(n);
 
-  for (auto& key : dva.keys) dva[key] = key - 1;
+  for (auto& key : dva.fKeys()) dva[key] = key - 1;
 
   for (int64 p = 2; p <= dva.m; ++p)
     if (dva[p] != dva[p - 1]) {
       const auto pcnt = dva[p - 1];
       const int64 p2 = p * p;
-      for (auto& key : dva.keys) {
+      for (auto& key : dva.bKeys()) {
         if (key < p2) break;
         dva[key] -= dva[key / p] - pcnt;
       }
@@ -303,7 +326,7 @@ template<typename T>
 SL DVA<T> prime_s1(const int64 n) {
   PE_ASSERT(n >= 1);
   DVA<T> dva(n);
-  for (auto& key : dva.keys) {
+  for (auto& key : dva.fKeys()) {
     if (key & 1) {
       T v((key + 1) >> 1);
       dva[key] = v * key - 1;
@@ -317,7 +340,7 @@ SL DVA<T> prime_s1(const int64 n) {
     if (dva[p] != dva[p - 1]) {
       const auto psum = dva[p - 1];
       const int64 p2 = p * p;
-      for (auto& key : dva.keys) {
+      for (auto& key : dva.bKeys()) {
         if (key < p2) break;
         dva[key] -= (dva[key / p] - psum) * p;
       }
@@ -336,14 +359,14 @@ SL vector<DVA<T>> prime_s0_pmod_even(int64 n, int mod) {
   for (int i = 1; i < mod; i += 2) {
     auto& target = result[i];
     const int dec = i == 1;
-    for (auto key: result[0].keys)
+    for (auto key: result[0].fKeys())
       target[key] = (key + mod - i) / mod - dec;
   }
   for (int i = 1; ; ++i) {
     const int64 p = plist[i];
     const int64 p2 = p * p;
     if (p2 > n) break;
-    for (auto key: result[0].keys) {
+    for (auto key: result[0].bKeys()) {
       if (key < p2) break;
       const int rp = p % mod;
       for (int j = 1; j < mod; j += 2) {
@@ -354,7 +377,7 @@ SL vector<DVA<T>> prime_s0_pmod_even(int64 n, int mod) {
   }
 
   auto& target = result[2 % mod];
-  for (auto key: result[0].keys) {
+  for (auto key: result[0].fKeys()) {
     target[key] += key >= 2 ? 1 : 0;
   }
   return result;
@@ -368,14 +391,14 @@ SL vector<DVA<T>> prime_s0_pmod_odd(int64 n, int mod) {
 
   for (int i = 0; i < mod; ++i) {
     const int dec = (i == 1 % mod) + (i == 0);
-    for (auto key: result[0].keys)
+    for (auto key: result[0].fKeys())
       result[i][key] = (key + mod - i) / mod - dec;
   }
   for (int i = 0; ; ++i) {
     const int64 p = plist[i];
     const int64 p2 = p * p;
     if (p2 > n) break;
-    for (auto key: result[0].keys) {
+    for (auto key: result[0].bKeys()) {
       if (key < p2) break;
       const int rp = p % mod;
       for (int j = 0; j < mod; ++j) {
@@ -401,7 +424,7 @@ SL vector<DVA<T>> prime_s1_pmod_even(int64 n, int mod) {
   for (int i = 1; i < mod; i += 2) {
     auto& target = result[i];
     const int dec = i == 1;
-    for (auto key: result[0].keys) {
+    for (auto key: result[0].fKeys()) {
       const int64 c = (key + mod - i) / mod;
       target[key] = c * (c - 1) / 2 * mod + c * i - dec;
     }
@@ -410,7 +433,7 @@ SL vector<DVA<T>> prime_s1_pmod_even(int64 n, int mod) {
     const int64 p = plist[i];
     const int64 p2 = p * p;
     if (p2 > n) break;
-    for (auto key: result[0].keys) {
+    for (auto key: result[0].bKeys()) {
       if (key < p2) break;
       const int rp = p % mod;
       for (int j = 1; j < mod; j += 2) {
@@ -421,7 +444,7 @@ SL vector<DVA<T>> prime_s1_pmod_even(int64 n, int mod) {
   }
 
   auto& target = result[2 % mod];
-  for (auto key: result[0].keys) {
+  for (auto key: result[0].fKeys()) {
     target[key] += key >= 2 ? 2 : 0;
   }
   return result;
@@ -436,7 +459,7 @@ SL vector<DVA<T>> prime_s1_pmod_odd(int64 n, int mod) {
   for (int i = 0; i < mod; ++i) {
     auto& target = result[i];
     const int dec = i == 1 % mod;
-    for (auto key: result[0].keys) {
+    for (auto key: result[0].fKeys()) {
       const int64 c = (key + mod - i) / mod;
       target[key] = c * (c - 1) / 2 * mod + c * i - dec;
     }
@@ -446,7 +469,7 @@ SL vector<DVA<T>> prime_s1_pmod_odd(int64 n, int mod) {
     const int64 p = plist[i];
     const int64 p2 = p * p;
     if (p2 > n) break;
-    for (auto key: result[0].keys) {
+    for (auto key: result[0].bKeys()) {
       if (key < p2) break;
       const int rp = p % mod;
       for (int j = 0; j < mod; ++j) {

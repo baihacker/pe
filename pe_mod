@@ -98,6 +98,41 @@ RETURN(typename BigIntegerType<T1, T2>::type) {
   return mul_mod_impl<atLeastInt64T, M>(a, b, mod);
 }
 
+// It's expected that all elements in b are prime.
+// The behavior is undefined if it's not satisified.
+template<typename T, typename M>
+SL
+REQUIRES((
+  is_native_integer<T>::value &&
+  is_native_integer<M>::value))
+RETURN(T)
+frac_mod_impl(std::vector<T> a, std::vector<T> b, M mod) {
+  T ret = 1;
+  const int size = b.size();
+  int remain = size;
+  for (auto iter: a) {
+    for (int i = 0; remain > 0 && i < size; ++i) if (b[i] != 1 && (iter % b[i] == 0)) {
+      iter /= b[i];
+      b[i] = 1;
+      --remain;
+    }
+    ret = mul_mod(ret, iter%mod, mod);
+  }
+  return ret;
+}
+
+template<typename T1, typename T2 = T1, typename M>
+SL auto frac_mod(std::vector<T1> a, std::vector<T2> b, M mod) ->
+REQUIRES((
+  is_native_integer<T1>::value &&
+  is_native_integer<T2>::value &&
+  is_native_integer<M>::value))
+RETURN(typename BigIntegerType<T1, T2>::type) {
+  typedef typename BigIntegerType<T1, T2>::type T;
+  typedef typename BigIntegerType<int64, T>::type atLeastInt64T;
+  return frac_mod_impl<atLeastInt64T, M>(a, b, mod);
+}
+
 template<typename T1, typename T2, typename M>
 SL T1 power_mod_impl(T1 x, T2 n, M mod) {
   if (mod == 1) return 0;

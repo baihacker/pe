@@ -7,6 +7,7 @@
 #include "init_inv_test.c"
 #include "mat_mul_test.c"
 #include "mp_test.c"
+#include "mod_test.c"
 #include "parallel_sort_test.c"
 #include "poly_test.c"
 #include "prime_phi_sum_test.c"

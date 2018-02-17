@@ -348,6 +348,51 @@ SL DVA<T> prime_s1(const int64 n) {
   return dva;
 }
 
+template<typename T>
+SL DVA<T> prime_s0_ex(const int64 n) {
+  PE_ASSERT(n >= 1);
+  DVA<T> dva(n);
+
+  const int keySize = dva.keySize;
+  std::vector<T> tree(dva.keySize, 0);
+  auto update = [&](int x, T v) {
+    for (; x < keySize; x += x & -x) {
+      tree[x] += v;
+    }
+  };
+  auto query = [&](int x) {
+    T ret = 0;
+    for (; x > 0; x -= x&-x) {
+      ret += tree[x];
+    }
+    return ret;
+  };
+
+  for (auto& key : dva.fKeys()) {
+    const int id = dva.idxOfValue(key);
+    update(id, key-1);
+    update(id+1, 1-key);
+  }
+
+  for (int64 p = 2; p <= dva.m; ++p)
+    if (is_prime(p)) {
+      const auto pcnt = query(p - 1);
+      const int64 p2 = p * p;
+      const int a = keySize - 1;
+      const int b = dva.idxOfValue(p2);
+      for (int i = a; i >= b;) {
+        const int64 delta = query(dva.idxOfValue(dva.keys[i]/p)) - pcnt;
+        const int mini = max(dva.idxOfValue(dva.keys[i]/p*p), b);
+        update(mini, -delta);
+        update(i+1, delta);
+        i = mini - 1;
+      }
+    }
+  for (int i = 1; i < keySize; ++i)
+    dva[dva.keys[i]] = query(i);
+  return dva;
+}
+
 #define prime_sum prime_s1
 
 template<typename T>

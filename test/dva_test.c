@@ -4,9 +4,15 @@ namespace dva_test {
 SL void dva_test() {
   auto orz = prime_pi<int64>(10000);
   assert(orz[10000] == 1229LL);
+  
+  orz = prime_s0_ex<int64>(10000);
+  assert(orz[10000] == 1229LL);
   //dbg(orz[10000]); // 5761455LL
   
   orz = prime_pi<int64>(100000000);
+  assert(orz[100000000] == 5761455LL);
+  
+  orz = prime_s0_ex<int64>(100000000);
   assert(orz[100000000] == 5761455LL);
   //dbg(orz[100000000]); // 455052511LL
   

@@ -3,6 +3,7 @@
 
 #include "pe_base"
 #include "pe_integer_util"
+#include "pe_tree"
 #include "pe_mod"
 
 // About numbers
@@ -287,11 +288,11 @@ class DVA {
   DVA& operator=(DVA&& other) = default;
 
   int idxOfValue(int64 v) const {return v <= m ? v : keySize - n / v;}
-  
+
   T& operator[](int64 v) { return values[idxOfValue(v)]; }
 
   T operator[](int64 v) const { return values[idxOfValue(v)]; }
-  
+
   DVARange<std::vector<int64>::const_iterator> fKeys() const {
     return makeRange(keys.begin() + 1, keys.end());
   }
@@ -348,52 +349,77 @@ SL DVA<T> prime_s1(const int64 n) {
   return dva;
 }
 
+#define prime_sum prime_s1
+
 template<typename T>
 SL DVA<T> prime_s0_ex(const int64 n) {
   PE_ASSERT(n >= 1);
   DVA<T> dva(n);
 
   const int keySize = dva.keySize;
-  std::vector<T> tree(dva.keySize, 0);
-  auto update = [&](int x, T v) {
-    for (; x < keySize; x += x & -x) {
-      tree[x] += v;
-    }
-  };
-  auto query = [&](int x) {
-    T ret = 0;
-    for (; x > 0; x -= x&-x) {
-      ret += tree[x];
-    }
-    return ret;
-  };
+  RUBit<T> tree(keySize);
 
   for (auto& key : dva.fKeys()) {
     const int id = dva.idxOfValue(key);
-    update(id, key-1);
-    update(id+1, 1-key);
+    tree.update(id, id, key-1);
   }
 
   for (int64 p = 2; p <= dva.m; ++p)
     if (is_prime(p)) {
-      const auto pcnt = query(p - 1);
+      const auto pcnt = tree.query(p - 1);
       const int64 p2 = p * p;
       const int a = keySize - 1;
       const int b = dva.idxOfValue(p2);
       for (int i = a; i >= b;) {
-        const int64 delta = query(dva.idxOfValue(dva.keys[i]/p)) - pcnt;
+        const int64 delta = tree.query(dva.idxOfValue(dva.keys[i]/p)) - pcnt;
         const int mini = max(dva.idxOfValue(dva.keys[i]/p*p), b);
-        update(mini, -delta);
-        update(i+1, delta);
+        tree.update(mini, i, -delta);
         i = mini - 1;
       }
     }
   for (int i = 1; i < keySize; ++i)
-    dva[dva.keys[i]] = query(i);
+    dva[dva.keys[i]] = tree.query(i);
   return dva;
 }
 
-#define prime_sum prime_s1
+template<typename T>
+SL DVA<T> prime_s1_ex(const int64 n) {
+  PE_ASSERT(n >= 1);
+  DVA<T> dva(n);
+
+  const int keySize = dva.keySize;
+  RUBit<T> tree(keySize);
+
+  for (auto& key : dva.fKeys()) {
+    const int id = dva.idxOfValue(key);
+
+    if (key & 1) {
+      T v((key + 1) >> 1);
+      tree.update(id, id, v * key - 1);
+    } else {
+      T v(key >> 1);
+      tree.update(id, id, v * (key + 1) - 1);
+    }
+  }
+
+  for (int64 p = 2; p <= dva.m; ++p)
+    if (is_prime(p)) {
+      const auto psum = tree.query(p - 1);
+      const int64 p2 = p * p;
+      const int a = keySize - 1;
+      const int b = dva.idxOfValue(p2);
+      for (int i = a; i >= b;) {
+        const int64 delta = tree.query(dva.idxOfValue(dva.keys[i]/p)) - psum;
+        const int mini = max(dva.idxOfValue(dva.keys[i]/p*p), b);
+        tree.update(mini, i, -delta*p);
+        i = mini - 1;
+      }
+    }
+
+  for (int i = 1; i < keySize; ++i)
+    dva[dva.keys[i]] = tree.query(i);
+  return dva;
+}
 
 template<typename T>
 SL vector<DVA<T>> prime_s0_pmod_even(int64 n, int mod) {

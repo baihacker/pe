@@ -1,0 +1,48 @@
+#ifndef __PE_TREE__
+#define __PE_TREE__
+
+#include "pe_base"
+
+// Range update bit indexed tree
+// Support range based update and query the value of a specified index.
+template<typename T>
+class RUBit {
+public:
+  RUBit(int size = 0) {
+    reset(size);
+  }
+
+  RUBit& reset(int newSize) {
+    size = newSize;
+    data.resize(size + 1);
+    fill(data.begin(), data.end(), 0);
+    return *this;
+  }
+
+  RUBit& update(int x, T v) {
+    if (x == 0) {
+      return *this;
+    }
+    for (; x <= size; x += x & -x) {
+      data[x] += v;
+    }
+    return *this;
+  }
+
+  RUBit& update(int x, int y, T v) {
+    return update(x, v).update(y+1, -v);
+  }
+
+  T query(int x) const {
+    T ret = 0;
+    for (; x > 0; x -= x&-x) {
+      ret += data[x];
+    }
+    return ret;
+  }
+private:
+  vector<T> data;
+  int size;
+};
+
+#endif

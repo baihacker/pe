@@ -13,6 +13,7 @@
 #include "prime_phi_sum_test.c"
 #include "print_int128_test.c"
 #include "square_root_test.c"
+#include "tree_test.c"
 
 static parallel_initialize_t __parallel_initializer;
 static time_usage __time_usage;

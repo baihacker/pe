@@ -107,6 +107,16 @@ struct PolyM {
 };
 
 template <int64 P>
+SL int64 evaluate(const PolyM<P>& x, int64 v) {
+  int64 ret = 0;
+  for (int i = x.deg(); i >= 0; --i) {
+    ret = ret * v % P + x[i];
+    if (ret >= P) ret -= P;
+  }
+  return ret;
+}
+
+template <int64 P>
 SL PolyM<P> operator-(const PolyM<P>& x, const PolyM<P>& y) {
   const int n = max(x.deg(), y.deg());
   std::vector<int64> data(n + 1);
@@ -173,7 +183,7 @@ template <int64 P>
 SL PolyM<P> operator%(const PolyM<P>& x, const PolyM<P>& y) {
   PolyM<P> q, r;
   tie(q, r) = div(x, y);
-  return q;
+  return r;
 }
 
 // x^n % mod
@@ -499,8 +509,9 @@ SL void poly_inv_internal(int n, uint64* a, uint64* b, uint64* tmp[2], uint64 mo
 
 SL vector<uint64> poly_inv_mod(uint64* x, int m, int n, uint64 mod) {
   // It is assumed that mod is a prime
+  const int t = max(n, m);
   int p = 1;
-  while (p < n << 1) p <<= 1;
+  while (p < t << 1) p <<= 1;
 
   // a
   vector<uint64> a(p);
@@ -534,6 +545,174 @@ inline PolyM<P> PolyM<P>::inv(int n) const {
   return PolyM<P>(std::vector<int64>((int64*)&t[0], (int64*)&t[0] + t.size()));
 }
 
+template<typename T>
+SL
+REQUIRES((is_native_integer<T>::value))
+RETURN(void)
+poly_mod_internal(const T* X, int n, const T* Y, int m, T* result, int64 mod) {
+  static_assert(std::is_unsigned<T>::value, "T must be unsigned");
+  vector<T> YR(m);
+  for (int i = 0; i < m; ++i) YR[i] = Y[m-1-i];
+  vector<T> IYR = poly_inv_mod(&YR[0], m, n - m + 1, mod);
+  vector<T> XR(n);
+  for (int i = 0; i < n; ++i) XR[i] = X[n-1-i];
+  vector<T> Z = poly_mul_ntt(XR, IYR, mod);
+  Z.resize(n - m + 1);
+  reverse(Z.begin(), Z.end());
+  vector<T> tmp(n);
+  poly_mul_ntt(&Y[0], m, &Z[0], n-m+1, &tmp[0], mod);
+  for (int i = 0; i < m; ++i)
+    result[i] = X[i] >= tmp[i] ? X[i] - tmp[i] : X[i] + mod - tmp[i];
+}
+
+template<typename T>
+SL
+REQUIRES((is_native_integer<T>::value))
+RETURN(void)
+poly_mod(const T* X, const int n, const T* Y, const int m, T* result, int64 mod) {
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  poly_mod_internal<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m, (unsignedT*)result, mod);
+}
+
+template<typename T>
+SL
+REQUIRES((is_native_integer<T>::value))
+RETURN(vector<T>)
+poly_mod(const vector<T>& X, const vector<T>& Y, int64 mod) {
+  const int n = (int)X.size() - 1;
+  const int m = (int)Y.size() - 1;
+
+  vector<T> result(m+1);
+  poly_mod(&X[0], n + 1, &Y[0], m + 1, &result[0], mod);
+
+  int t = m;
+  result[m] = 0;
+  while (t >= 0 && result[t] == 0) --t;
+  result.resize(t+1);
+  return result;
+}
+
+template<int64 P>
+SL PolyM<P> poly_mod(const PolyM<P>& X, const PolyM<P>& Y) {
+  auto data = poly_mod(X.data, Y.data, P);
+  return PolyM<P>{std::move(data)};
+}
+
+struct PSPTree {
+  int64 mod;
+  vector<int64> p;
+  int64* v;
+  int n;
+  
+  PSPTree* L;
+  PSPTree* R;
+  
+  ~PSPTree() {
+    if (L) delete L;
+    if (R) delete R;
+  }
+  
+  static PSPTree* build_minus(int64* values, int n, int64 mod) {
+    PSPTree* ptree = new PSPTree();
+    auto& tree = *ptree;
+    tree.mod = mod;
+    tree.v = values;
+    tree.n = n;
+    tree.L = tree.R = NULL;
+    if (n == 1) {
+      // -x0 + x
+      int64 t = values[0];
+      tree.p.emplace_back(t == 0 ? 0 : mod - t);
+      tree.p.emplace_back(1);
+      return ptree;
+    }
+    int c1 = n >> 1, c2 = n - c1;
+    tree.L = build_minus(values, c1, mod);
+    tree.R = build_minus(values+c1, c2, mod);
+    tree.p = poly_mul_ntt(tree.L->p, tree.R->p, mod);
+    return ptree;
+  }
+
+  static PSPTree* build_plus(int64* values, int n, int64 mod) {
+    PSPTree* ptree = new PSPTree();
+    auto& tree = *ptree;
+    tree.mod = mod;
+    tree.v = values;
+    tree.n = n;
+    tree.L = tree.R = NULL;
+    if (n == 1) {
+      // x0 + x
+      int64 t = values[0];
+      tree.p.emplace_back(t);
+      tree.p.emplace_back(1);
+      return ptree;
+    }
+    int c1 = n >> 1, c2 = n - c1;
+    tree.L = build_plus(values, c1, mod);
+    tree.R = build_plus(values+c1, c2, mod);
+    tree.p = poly_mul_ntt(tree.L->p, tree.R->p, mod);
+    return ptree;
+  }
+};
+
+template<typename T>
+SL
+REQUIRES((is_native_integer<T>::value))
+RETURN(void)
+poly_evaluate_mod_internal_impl(const T* X, int n, PSPTree* psp, T* result, int64 mod) {
+  if (psp->n == 1) {
+    result[0] = (X[0] + psp->v[0] * X[1]) % mod;
+    return;
+  }
+  int c1 = psp->n >> 1;
+  int c2 = psp->n - c1;
+
+  vector<T> m(max(psp->L->p.size(), psp->R->p.size()));
+  poly_mod(X, n, (const T*)&psp->L->p[0], psp->L->p.size(), &m[0], mod);
+  poly_evaluate_mod_internal_impl(&m[0], (int)psp->L->p.size()-1, psp->L, result, mod);
+  poly_mod(X, n, (const T*)&psp->R->p[0], psp->R->p.size(), &m[0], mod);
+  poly_evaluate_mod_internal_impl(&m[0], (int)psp->R->p.size()-1, psp->R, result+c1, mod);
+}
+
+template<typename T>
+SL
+REQUIRES((is_native_integer<T>::value))
+RETURN(void)
+poly_evaluate_mod_internal(const T* X, int n, const T* V, T* result, int64 mod) {
+  static_assert(std::is_unsigned<T>::value, "T must be unsigned");
+  PSPTree* psp = PSPTree::build_minus((int64*)V, n - 1, mod);
+  poly_evaluate_mod_internal_impl(X, n, psp, result, mod);
+  delete psp;
+}
+
+// size(V) = n - 1
+template<typename T>
+SL
+REQUIRES((is_native_integer<T>::value))
+RETURN(void)
+poly_evaluate_mod(const T* X, const int n, const T* V, T* result, int64 mod) {
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  poly_evaluate_mod_internal<unsignedT>((const unsignedT*)X, n, (const unsignedT*)V, (unsignedT*)result, mod);
+}
+
+template<typename T>
+SL
+REQUIRES((is_native_integer<T>::value))
+RETURN(vector<int64>)
+poly_evaluate_mod(const vector<T>& X, const vector<int64>& V, int64 mod) {
+  const int n = (int)X.size();
+
+  vector<int64> result(n-1);
+  poly_evaluate_mod(&X[0], n, &V[0], &result[0], mod);
+  return result;
+}
+
+template<int64 P>
+SL vector<int64> poly_evaluate_mod(const PolyM<P>& X, const vector<int64>& V) {
+  return poly_evaluate_mod(X.data, V, P);
+}
+
+// Applications
 SL void init_bernoulli_number(int64* dest, int n, int64* invs, int64 mod) {
   vector<uint64> t(n);
   uint64 v = 1;

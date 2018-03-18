@@ -13,10 +13,10 @@ struct PolyM {
   PolyM() {}
 
   PolyM(const std::vector<int64>& data): data(data) {
-    adjust_leading_zeros().adjust_mod();
+    adjust_mod().adjust_leading_zeros();
   }
   PolyM(std::vector<int64>&& data): data(std::move(data)) {
-    adjust_leading_zeros().adjust_mod();
+    adjust_mod().adjust_leading_zeros();
   }
 
   PolyM& operator = (const vector<int64>& v) {
@@ -545,12 +545,21 @@ inline PolyM<P> PolyM<P>::inv(int n) const {
   return PolyM<P>(std::vector<int64>((int64*)&t[0], (int64*)&t[0] + t.size()));
 }
 
+// size result >= m
 template<typename T>
 SL
 REQUIRES((is_native_integer<T>::value))
 RETURN(void)
 poly_mod_internal(const T* X, int n, const T* Y, int m, T* result, int64 mod) {
   static_assert(std::is_unsigned<T>::value, "T must be unsigned");
+  if (m > n) {
+    copy(X, X+n, result);
+    fill(result+m, result+n, 0);
+    return;
+  } else {
+    copy(X, X+m, result);
+    //return;
+  }
   vector<T> YR(m);
   for (int i = 0; i < m; ++i) YR[i] = Y[m-1-i];
   vector<T> IYR = poly_inv_mod(&YR[0], m, n - m + 1, mod);
@@ -565,6 +574,7 @@ poly_mod_internal(const T* X, int n, const T* Y, int m, T* result, int64 mod) {
     result[i] = X[i] >= tmp[i] ? X[i] - tmp[i] : X[i] + mod - tmp[i];
 }
 
+// size result >= m
 template<typename T>
 SL
 REQUIRES((is_native_integer<T>::value))
@@ -574,6 +584,7 @@ poly_mod(const T* X, const int n, const T* Y, const int m, T* result, int64 mod)
   poly_mod_internal<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m, (unsignedT*)result, mod);
 }
 
+// deg ret <= deg x - deg y
 template<typename T>
 SL
 REQUIRES((is_native_integer<T>::value))
@@ -592,6 +603,7 @@ poly_mod(const vector<T>& X, const vector<T>& Y, int64 mod) {
   return result;
 }
 
+// deg ret <= deg x - deg y
 template<int64 P>
 SL PolyM<P> poly_mod(const PolyM<P>& X, const PolyM<P>& Y) {
   auto data = poly_mod(X.data, Y.data, P);
@@ -623,7 +635,7 @@ struct PSPTree {
       // -x0 + x
       int64 t = values[0];
       tree.p.emplace_back(t == 0 ? 0 : mod - t);
-      tree.p.emplace_back(1);
+      tree.p.emplace_back(1%mod);
       return ptree;
     }
     int c1 = n >> 1, c2 = n - c1;
@@ -655,6 +667,7 @@ struct PSPTree {
   }
 };
 
+// size(V) = n - 1
 template<typename T>
 SL
 REQUIRES((is_native_integer<T>::value))
@@ -674,13 +687,16 @@ poly_evaluate_mod_internal_impl(const T* X, int n, PSPTree* psp, T* result, int6
   poly_evaluate_mod_internal_impl(&m[0], (int)psp->R->p.size()-1, psp->R, result+c1, mod);
 }
 
+// size(V) = n - 1
 template<typename T>
 SL
 REQUIRES((is_native_integer<T>::value))
 RETURN(void)
 poly_evaluate_mod_internal(const T* X, int n, const T* V, T* result, int64 mod) {
   static_assert(std::is_unsigned<T>::value, "T must be unsigned");
+  int last = clock();
   PSPTree* psp = PSPTree::build_minus((int64*)V, n - 1, mod);
+  cerr << "bt time: " << clock() - last << endl;
   poly_evaluate_mod_internal_impl(X, n, psp, result, mod);
   delete psp;
 }
@@ -695,18 +711,19 @@ poly_evaluate_mod(const T* X, const int n, const T* V, T* result, int64 mod) {
   poly_evaluate_mod_internal<unsignedT>((const unsignedT*)X, n, (const unsignedT*)V, (unsignedT*)result, mod);
 }
 
+// deg x = size v
 template<typename T>
 SL
 REQUIRES((is_native_integer<T>::value))
-RETURN(vector<int64>)
-poly_evaluate_mod(const vector<T>& X, const vector<int64>& V, int64 mod) {
+RETURN(vector<T>)
+poly_evaluate_mod(const vector<T>& X, const vector<T>& V, int64 mod) {
   const int n = (int)X.size();
-
-  vector<int64> result(n-1);
+  vector<T> result(n-1);
   poly_evaluate_mod(&X[0], n, &V[0], &result[0], mod);
   return result;
 }
 
+// deg x = size v
 template<int64 P>
 SL vector<int64> poly_evaluate_mod(const PolyM<P>& X, const vector<int64>& V) {
   return poly_evaluate_mod(X.data, V, P);

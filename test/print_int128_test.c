@@ -1,6 +1,7 @@
 #include "pe_test.h"
 
 namespace print_int128_test {
+#if PE_HAS_INT128
 SL void print_int128_test() {
   int128 x = 1;
   for (int i = 0; i < 127; ++i)
@@ -15,4 +16,5 @@ SL void print_int128_test() {
 }
 
 PE_REGISTER_TEST(&print_int128_test, "print_int128_test", SMALL);
+#endif
 }

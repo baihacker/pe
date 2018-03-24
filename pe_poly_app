@@ -1,0 +1,285 @@
+#ifndef __PE_POLY_APP__
+#define __PE_POLY_APP__
+
+// Applications
+SL void init_bernoulli_number(int64* dest, int n, int64* invs, int64 mod) {
+  vector<uint64> t(n);
+  uint64 v = 1;
+  for (int i = 0; i < n; ++i) {
+    v = v * invs[i + 1] % mod;
+    t[i] = v;
+  }
+
+  auto result = poly_inv_mod<uint64>(t, n, mod);
+
+  uint64 c = 1;
+  dest[0] = result[0];
+  for (int i = 1; i < n; ++i) {
+    c = c * i % mod;
+    dest[i] = result[i] * c % mod;
+  }
+}
+
+SL void init_bernoulli_number(int64* dest, int n, int64 mod) {
+  vector<uint64> invs(n + 1);
+  // See init_inv
+  {
+    invs[0] = 0;
+    invs[1] = 1;
+    for (int i = 2; i <= n; ++i) {
+      const uint64 t = mod / i;
+      const uint64 k = mod % i;
+      const uint64 v = t * t % mod;
+      const uint64 u = invs[k] * invs[k] % mod;
+      invs[i] = i * v % mod * u % mod;
+    }
+  }
+  init_bernoulli_number(dest, n, (int64*)&invs[0], mod);
+}
+
+SL int64 power_sum(int64 n, int64 k, int64 mod) {
+  const int64 n1 = (n + 1) % mod;
+  const int64 k1 = k + 1;
+  int64 ret = 0;
+  vector<uint64> invs(k1+1);
+  // See init_inv
+  {
+    invs[0] = 0;
+    invs[1] = 1;
+    for (int i = 2; i <= k1; ++i) {
+      const uint64 t = mod / i;
+      const uint64 k = mod % i;
+      const uint64 v = t * t % mod;
+      const uint64 u = invs[k] * invs[k] % mod;
+      invs[i] = i * v % mod * u % mod;
+    }
+  }
+  vector<int64> b(k1);
+  init_bernoulli_number(&b[0], k1, mod);
+  int64 c = 1 % mod;
+  int64 d = 1;
+  for (int64 i = 1; i <= k1; ++i) {
+    c = c * (k1 - i + 1) % mod;
+    c = c * invs[i] % mod;
+    d = d * n1 % mod;
+    ret += c * b[k1-i] % mod * d % mod;
+    if (ret >= mod) ret -= mod;
+  }
+  ret = ret * invs[k1] % mod;
+  return ret;
+}
+
+// gf_first, gf_at is good for the case size(A) is small.
+// Otherwise, A.inv(n) * B is better.
+
+// Finds the coefficient of x^0..x^n of f such that: A*f = B
+// Returns empty vector if there is no integer solution.
+// O(size(A) * n)
+template<int64 P>
+SL PolyM<P> gf_first(const PolyM<P>& A, const PolyM<P>& B, const int n) {
+  const int64 mod = P;
+  const int sa = sz(A);
+  const int sb = sz(B);
+  PE_ASSERT(sa > 0);
+  PE_ASSERT(sb > 0);
+
+  int64 v, u;
+  int has = solve_linear_equation<int64>(A[0], 1, mod, v, u);
+  if (!has) return vector<int64>();
+
+  vector<int64> result(n + 1, 0);
+
+  // if u < mod, we have more than one solution.
+  PE_ASSERT(u == mod);
+  const int64 invA0 = v;
+  result[0] = invA0 * B[0] % mod;
+
+  for (int i = 1; i <= n; ++i) {
+    int64 t = regulate_mod(i < sb ? B[i] : 0, mod);
+    for (int j = 1; j <= min(i, sa - 1); ++j) {
+      t = sub_mod(t, (j < sa ? A[j] : 0) * result[i - j] % mod, mod);
+    }
+    result[i] = invA0 * t % mod;
+  }
+
+  return result;
+}
+
+// Finds the coefficient of x^n of f such that: A*f = B
+// Returns -1 if there is no integer solution.
+// O(size(A)^3 * log n) for big n
+template<int64 P>
+SL int64 gf_at(const PolyM<P>& A, const PolyM<P>& B, const int64 n) {
+  const int64 mod = P;
+  const int sa = sz(A);
+  const int sb = sz(B);
+  PE_ASSERT(sa > 0);
+  PE_ASSERT(sb > 0);
+
+  int64 v, u;
+  int has = solve_linear_equation<int64>(A[0], 1, mod, v, u);
+  if (!has) return -1;
+
+  const int64 m = min((int64)max(sa - 1, sb - 1), n);
+  vector<int64> result(m + 1, 0);
+
+  // if u < mod, we have more than one solution.
+  PE_ASSERT(u == mod);
+  const int64 invA0 = v;
+  result[0] = invA0 * B[0] % mod;
+
+  for (int i = 1; i <= m; ++i) {
+    int64 t = regulate_mod(i < sb ? B[i] : 0, mod);
+    for (int j = 1; j <= min(i, sa - 1); ++j) {
+      t = sub_mod(t, (j < sa ? A[j] : 0) * result[i - j] % mod, mod);
+    }
+    result[i] = invA0 * t % mod;
+  }
+
+  if (m == n) {
+    return result[m];
+  }
+
+  const int64 D = sa - 1;
+  const int64 size = D * D;
+  string data(size * sizeof(int64) * 3, '\0');
+  int64* buffer = (int64*)data.c_str();
+
+  int64* mat = buffer;
+  int64* res = mat + size;
+  int64* tmp = res + size;
+
+  for (int i = 0; i < D; ++i) {
+    mat[i] = invA0 * regulate_mod(i + 1 < sa ? -A[i + 1] : 0, mod) % mod;
+  }
+  for (int i = 1; i < D; ++i) {
+    (mat + i * D)[i - 1] = 1;
+  }
+  for (int i = 0; i < D; ++i) {
+    res[i] = result[m - i];
+  }
+
+  for (int64 t = n - m; t > 0; t >>= 1) {
+    if (t & 1) {
+      mat_mul_vec_mod(mat, res, tmp, mod, static_cast<int>(D));
+      swap(res, tmp);
+    }
+    if (t > 1) {
+      mat_mul_mat_mod(mat, mat, tmp, mod, static_cast<int>(D));
+      swap(mat, tmp);
+    }
+  }
+  return res[0];
+}
+
+// Berlekamp Massey
+template <int64 P>
+SL PolyM<P> find_minimal_poly(const PolyM<P>& s) {
+  const int m = s.data.size();
+  const int n = m >> 1;
+
+  PE_ASSERT(n * 2 == m);
+
+  PolyM<P> r0{1};
+  r0 = r0 << m;
+  PolyM<P> r1{s};
+  PolyM<P> v0{0};
+  PolyM<P> v1{1};
+
+  while (n + 1 <= r1.deg()) {
+    PolyM<P> q, r;
+    tie(q, r) = div(r0, r1);
+    PolyM<P> v(v0 - q * v1);
+    v0 = std::move(v1);
+    v1 = std::move(v);
+    r0 = std::move(r1);
+    r1 = std::move(r);
+  }
+  v1 = std::move(inv_of(v1[0], P) * v1);
+  reverse(v1.data.begin(), v1.data.end());
+  return v1;
+}
+
+#if 0
+template <int64 P>
+PolyM<P> cal1(const PolyM<P>& s) {
+  PolyM<P> C{1};
+  PolyM<P> B{1};
+  int L = 0;
+  int m = 1;
+  int64 b = 1;
+  const int N = s.data.size();
+  for (int n = 0; n < N; ++n) {
+    int64 d = s[n];
+    for (int i = 1; i <= L; ++i) {
+      d = add_mod(d, add_mod(C.at(i), s[n - i], P), P);
+    }
+    if (d == 0) {
+      ++m;
+    } else if (2 * L <= n) {
+      auto T = C;
+      int64 coe = d * inv_of(b, P) % P;
+      C = C - (B << m) * coe;
+      L = n + 1 - L;
+      B = std::move(T);
+      b = d;
+      m = 1;
+    } else {
+      int64 coe = d * inv_of(b, P) % P;
+      C = C - (B << m) * coe;
+      m = m + 1;
+    }
+  }
+  return C;
+}
+#endif
+
+template <int64 P>
+SL int64 nth_element(const PolyM<P>& s, int64 n, const PolyM<P>& min_poly) {
+  if (n <= s.deg()) {
+    return s[n];
+  }
+
+  auto r = n % min_poly;
+  const int m = r.deg();
+  int64 ans = 0;
+  for (int i = 0; i <= m; ++i) {
+    ans = add_mod(ans, s[i] * r[i] % P, P);
+  }
+  return ans;
+}
+
+template <int64 P>
+SL PolyM<P> find_linear_recurrence(const PolyM<P>& s) {
+  const int len = s.data.size();
+  for (int n = 2; n < len; n += 2) {
+    auto use = s.lower_terms(n);
+    auto min_poly = find_minimal_poly(use);
+    int ok = 1;
+    for (int i = n; i < len; ++i) {
+      auto value = nth_element(use, i, min_poly);
+      if (value != s[i]) {
+        ok = 0;
+        break;
+      }
+    }
+    if (ok) {
+      return min_poly;
+    }
+  }
+  return PolyM<P>();
+}
+
+template <int64 P>
+SL int64 nth_element(const PolyM<P>& s, int64 n) {
+  if (n <= s.deg()) {
+    return s[n];
+  }
+
+  auto min_poly = find_linear_recurrence(s);
+  if (min_poly.deg() >= 0) {
+    return nth_element(s, n, min_poly);
+  }
+  return -1;
+}
+#endif

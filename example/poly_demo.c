@@ -3,13 +3,13 @@
 const int64 mod = 1000000007;
 int main() {
   {
-    PolyM<97> x{1LL, 96LL};
+    Poly x{{1LL, 96LL}, 97};
     cout << x.inv(20) << endl;
     cout << x.inv(20) * x << endl;
   }
 
   {
-    PolyM<97> x;
+    Poly x{{}, 97};
     for (int i = 1; i < 100; ++i)
       x.data.push_back(i%97);
     cout << x.inv(100) * x << endl;
@@ -17,7 +17,7 @@ int main() {
 
   {
     // Fibonacci sequence
-    PolyM<mod> x{1, mod-1, mod-1};
+    Poly x{{1, mod-1, mod-1}, mod};
 
     TimeRecorder tr;
     cout << x.inv(100000)[99999] << endl;
@@ -30,7 +30,7 @@ int main() {
     vector<int64> B{1};
 
     TimeRecorder tr;
-    cerr << gf_at<mod>(A, B, 99999) << endl;
+    cerr << gf_at({A, mod}, {B, mod}, 99999) << endl;
     cout << tr.elapsed().format() << endl;
   }
   return 0;

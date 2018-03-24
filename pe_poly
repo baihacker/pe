@@ -6,48 +6,46 @@
 #include "pe_mod"
 #include "pe_ntt"
 
-template <int64 P>
-struct PolyM {
+int64 POLY_DEFAULT_MOD = 1;
+
+struct Poly {
+  int64 mod;
   std::vector<int64> data;
 
-  PolyM() {}
+  Poly(int64 mod = 0): mod(mod == 0 ? POLY_DEFAULT_MOD : mod) {}
 
-  PolyM(const std::vector<int64>& data): data(data) {
+  Poly(const std::vector<int64>& data, int64 mod = 0): data(data), mod(mod == 0 ? POLY_DEFAULT_MOD : mod) {
     adjust_mod().adjust_leading_zeros();
   }
-  PolyM(std::vector<int64>&& data): data(std::move(data)) {
+  Poly(std::vector<int64>&& data, int64 mod = 0): data(std::move(data)), mod(mod == 0 ? POLY_DEFAULT_MOD : mod) {
     adjust_mod().adjust_leading_zeros();
   }
 
-  PolyM& operator = (const vector<int64>& v) {
+  Poly& operator = (const vector<int64>& v) {
     data = v;
     return *this;
   }
 
-  PolyM& operator = (const vector<int64>&& v) {
+  Poly& operator = (const vector<int64>&& v) {
     data = std::move(v);
     return *this;
   }
 
-  PolyM(std::initializer_list<int64> l) : data(l) {
-    adjust_leading_zeros().adjust_mod();
-  }
+  Poly(const Poly& p) = default;
+  Poly(Poly&& p) = default;
+  Poly& operator=(const Poly& other) = default;
+  Poly& operator=(Poly&& other) = default;
 
-  PolyM(const PolyM& p) = default;
-  PolyM(PolyM&& p) = default;
-  PolyM<P>& operator=(const PolyM& other) = default;
-  PolyM<P>& operator=(PolyM&& other) = default;
-
-  PolyM<P>& adjust_leading_zeros() {
+  Poly& adjust_leading_zeros() {
     int n = (int)data.size() - 1;
     while (n > 0 && data[n] == 0) --n;
     data.resize(max(n + 1, 1));
     return *this;
   }
 
-  PolyM<P>& adjust_mod() {
+  Poly& adjust_mod() {
     for (auto& iter : data) {
-      iter = regulate_mod(iter, P);
+      iter = regulate_mod(iter, mod);
     }
     return *this;
   }
@@ -55,7 +53,7 @@ struct PolyM {
   int deg() const { return static_cast<int>(data.size() - 1); }
   int size() const { return static_cast<int>(data.size());}
 
-  PolyM<P>& resize(int n) {
+  Poly& resize(int n) {
     const int m = (int)data.size();
     data.resize(n);
     for (int i = m; i < n; ++i) {
@@ -64,7 +62,7 @@ struct PolyM {
     return *this;
   }
 
-  PolyM<P>& redeg(int n) { return resize(n+1);}
+  Poly& redeg(int n) { return resize(n+1);}
 
   int64& operator[](int idx) {
     PE_ASSERT(idx >= 0 && idx < data.size());
@@ -84,21 +82,21 @@ struct PolyM {
     return data.size() == 1 && data[0] == 0;
   }
   
-  int64 valueAt(int64 v) {
+  int64 valueAt(int64 v) const {
     int64 ret = 0;
     for (int i = deg(); i >= 0; --i) {
-      ret = ret * v % P + data[i];
-      if (ret >= P) ret -= P;
+      ret = ret * v % mod + data[i];
+      if (ret >= mod) ret -= mod;
     }
     return ret;
   }
 
-  PolyM<P> lower_terms(int n) const {
+  Poly lower_terms(int n) const {
     const int m = min(n, static_cast<int>(data.size()));
-    return PolyM<P>(std::vector<int64>(data.begin(), data.begin() + m));
+    return Poly(std::vector<int64>(data.begin(), data.begin() + m), mod);
   }
 
-  PolyM<P> inv(int n) const;
+  Poly inv(int n) const;
 };
 
 // Mul two polynomials with the same length.
@@ -241,10 +239,9 @@ poly_mul_normal(const vector<T>& X, const vector<T>& Y, int64 mod) {
   }
 }
 
-template<int64 P>
-SL PolyM<P> poly_mul_normal(const PolyM<P>& X, const PolyM<P>& Y) {
-  auto data = poly_mul(X.data, Y.data, P);
-  return PolyM<P>{std::move(data)};
+SL Poly poly_mul_normal(const Poly& X, const Poly& Y) {
+  auto data = poly_mul_normal(X.data, Y.data, X.mod);
+  return Poly{std::move(data)};
 }
 
 // Need int128 to handle the big polynomial coefficient.
@@ -325,10 +322,9 @@ poly_mul_ntt(const vector<T>& X, const vector<T>& Y, int64 mod) {
   return result;
 }
 
-template<int64 P>
-SL PolyM<P> poly_mul_ntt(const PolyM<P>& X, const PolyM<P>& Y) {
-  auto data = poly_mul_ntt(X.data, Y.data, P);
-  return PolyM<P>{std::move(data)};
+SL Poly poly_mul_ntt(const Poly& X, const Poly& Y) {
+  auto data = poly_mul_ntt(X.data, Y.data, X.mod);
+  return Poly{std::move(data)};
 }
 #else
 #define HAS_POLY_MUL_NTT 0
@@ -362,6 +358,11 @@ poly_mul(const vector<T>& X, const vector<T>& Y, int64 mod) {
   return result;
 }
 
+SL Poly poly_mul(const Poly& X, const Poly& Y) {
+  auto data = poly_mul(X.data, Y.data, X.mod);
+  return Poly{std::move(data), X.mod};
+}
+
 template<typename T>
 SL
 REQUIRES((is_native_integer<T>::value))
@@ -392,7 +393,7 @@ template<typename T>
 SL
 REQUIRES((is_native_integer<T>::value))
 RETURN(void)
-poly_inv_mod(const T* x, int m, int n, T* result, int64 mod) {
+poly_inv_mod_internal(const T* x, int m, int n, T* result, int64 mod) {
   // It is assumed that mod is a prime
   const int t = max(n, m);
   int p = 1;
@@ -425,6 +426,15 @@ poly_inv_mod(const T* x, int m, int n, T* result, int64 mod) {
 template<typename T>
 SL
 REQUIRES((is_native_integer<T>::value))
+RETURN(void)
+poly_inv_mod(const T* x, int m, int n, T* result, int64 mod) {
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  poly_inv_mod_internal<unsignedT>((const unsignedT*)x, m, n, (unsignedT*)result, mod);
+}
+
+template<typename T>
+SL
+REQUIRES((is_native_integer<T>::value))
 RETURN(vector<T>)
 poly_inv_mod(const vector<T>& x, int n, int64 mod) {
   // It is assumed that mod is a prime
@@ -451,7 +461,7 @@ poly_div_dc_internal(const T* X, int n, const T* Y, int m, T* q, T* r, int64 mod
   static_assert(std::is_unsigned<T>::value, "T must be unsigned");
   if (m > n) {
     copy(X, X+n, r);
-    fill(r+m, r+n, 0);
+    fill(r+n, r+m, 0);
     q[0] = 0;
     return;
   }
@@ -482,6 +492,15 @@ poly_div_dc(const T* X, const int n, const T* Y, const int m, T* q, T* r, int64 
   poly_div_dc_internal<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m, (unsignedT*)q, (unsignedT*)r, mod);
 }
 
+template<typename T>
+SL
+REQUIRES((is_native_integer<T>::value))
+RETURN(void)
+poly_div_dc(const T* X, const int n, const T* Y, const int m, T* r, int64 mod) {
+  vector<T> q(max(n - m + 1, 1));
+  poly_div_dc(X, n, Y, m, &q[0], r, mod);
+}
+
 // deg q = max(deg X - degY + 1, 1)
 // deg r <= deg x - deg y
 template<typename T>
@@ -503,13 +522,28 @@ poly_div_dc(const vector<T>& X, const vector<T>& Y, int64 mod) {
   return make_tuple(std::move(q), std::move(r));
 }
 
+template<typename T>
+SL
+REQUIRES((is_native_integer<T>::value))
+RETURN(vector<T>)
+poly_mod_dc(const vector<T>& X, const vector<T>& Y, int64 mod) {
+  vector<T> q, r;
+  tie(q, r) = poly_div_dc(X, Y, mod);
+  return std::move(r);
+}
+
 // deg q = max(deg X - degY + 1, 1)
 // deg r <= deg x - deg y
-template<int64 P>
-SL tuple<PolyM<P>, PolyM<P>> poly_div_dc(const PolyM<P>& X, const PolyM<P>& Y) {
+SL tuple<Poly, Poly> poly_div_dc(const Poly& X, const Poly& Y) {
   vector<int64> q, r;
-  tie(q, r) = poly_mod_dc(X.data, Y.data, P);
-  return make_tuple(std::move(PolyM<P>(q)), PolyM<P>(std::move(r)));
+  tie(q, r) = poly_div_dc(X.data, Y.data, X.mod);
+  return make_tuple(std::move(Poly(q, X.mod)), Poly(std::move(r), X.mod));
+}
+
+SL Poly poly_mod_dc(const Poly& X, const Poly& Y) {
+  vector<int64> q, r;
+  tie(q, r) = poly_div_dc(X.data, Y.data, X.mod);
+  return std::move(Poly(q, X.mod));
 }
 
 // size r >= m
@@ -568,11 +602,35 @@ poly_div_normal(const vector<T>& X, const vector<T>& Y, int64 mod) {
   return make_tuple(std::move(q), std::move(r));
 }
 
-template <int64 P>
-SL tuple<PolyM<P>, PolyM<P>> poly_div_normal(const PolyM<P>& x, const PolyM<P>& y) {
+template<typename T>
+SL
+REQUIRES((is_native_integer<T>::value))
+RETURN(void)
+poly_mod_normal(const T* X, const int n, const T* Y, const int m, T* r, int64 mod) {
+  vector<T> q(max(n - m + 1, 1));
+  poly_mod_normal(X, n, Y, m, &q[0], r, mod);
+}
+
+template<typename T>
+SL
+REQUIRES((is_native_integer<T>::value))
+RETURN(vector<T>)
+poly_mod_normal(const vector<T>& X, const vector<T>& Y, int64 mod) {
+  vector<T> q, r;
+  tie(q, r) = poly_div_normal(X, Y, mod);
+  return std::move(r);
+}
+
+SL tuple<Poly, Poly> poly_div_normal(const Poly& x, const Poly& y) {
   vector<int64> q, r;
-  tie(q, r) = poly_mod_dc(x.data, y.data, P);
-  return poly_div_normal(std::move(PolyM<P>(q)), PolyM<P>(std::move(r)));
+  tie(q, r) = poly_div_normal(x.data, y.data, x.mod);
+  return make_tuple(std::move(Poly(std::move(q), x.mod)), std::move(Poly(std::move(r), x.mod)));
+}
+
+SL Poly poly_mod_normal(const Poly& X, const Poly& Y) {
+  vector<int64> q, r;
+  tie(q, r) = poly_div_normal(X.data, Y.data, X.mod);
+  return std::move(Poly(q, X.mod));
 }
 
 template<typename T>
@@ -583,6 +641,15 @@ poly_div(const T* X, const int n, const T* Y, const int m, T* q, T* r, int64 mod
   typedef typename std::make_unsigned<T>::type unsignedT;
   // choose algorithm
   poly_div_dc_internal<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m, (unsignedT*)q, (unsignedT*)r, mod);
+}
+
+template<typename T>
+SL
+REQUIRES((is_native_integer<T>::value))
+RETURN(void)
+poly_mod(const T* X, const int n, const T* Y, const int m, T* r, int64 mod) {
+  vector<T> q(max(n - m + 1, 1));
+  poly_div(X, n, Y, m, &q[0], r, mod);
 }
 
 template<typename T>
@@ -604,235 +671,35 @@ poly_div(const vector<T>& X, const vector<T>& Y, int64 mod) {
   return make_tuple(std::move(q), std::move(r));
 }
 
-template <int64 P>
-SL tuple<PolyM<P>, PolyM<P>> poly_div(const PolyM<P>& x, const PolyM<P>& y) {
-  vector<int64> q, r;
-  tie(q, r) = poly_mod_dc(x.data, y.data, P);
-  return poly_div(std::move(PolyM<P>(q)), PolyM<P>(std::move(r)));
-}
-
-struct PSPTree {
-  int64 mod;
-  
-  int64* v;
-  int n;
-  
-  vector<int64> p;
-
-  PSPTree* L;
-  PSPTree* R;
-  
-  ~PSPTree() {
-    if (L) delete L;
-    if (R) delete R;
-  }
-  
-  static PSPTree* build_minus(int64* values, int n, int64 mod) {
-    PSPTree* ptree = new PSPTree();
-    auto& tree = *ptree;
-    tree.mod = mod;
-    tree.v = values;
-    tree.n = n;
-    tree.L = tree.R = NULL;
-    if (n == 1) {
-      // -x0 + x
-      int64 t = values[0];
-      tree.p.emplace_back(t == 0 ? 0 : mod - t);
-      tree.p.emplace_back(1%mod);
-      return ptree;
-    }
-    int c1 = n >> 1, c2 = n - c1;
-    tree.L = build_minus(values, c1, mod);
-    tree.R = build_minus(values+c1, c2, mod);
-    tree.p = poly_mul_ntt(tree.L->p, tree.R->p, mod);
-    return ptree;
-  }
-
-  static PSPTree* build_plus(int64* values, int n, int64 mod) {
-    PSPTree* ptree = new PSPTree();
-    auto& tree = *ptree;
-    tree.mod = mod;
-    tree.v = values;
-    tree.n = n;
-    tree.L = tree.R = NULL;
-    if (n == 1) {
-      // x0 + x
-      int64 t = values[0];
-      tree.p.emplace_back(t);
-      tree.p.emplace_back(1);
-      return ptree;
-    }
-    int c1 = n >> 1, c2 = n - c1;
-    tree.L = build_plus(values, c1, mod);
-    tree.R = build_plus(values+c1, c2, mod);
-    tree.p = poly_mul_ntt(tree.L->p, tree.R->p, mod);
-    return ptree;
-  }
-};
-
-// size(V) = n
-template<typename T>
-SL
-REQUIRES((is_native_integer<T>::value))
-RETURN(void)
-poly_evaluate_mod_internal_impl(const T* X, int n, PSPTree* psp, T* result, int64 mod) {
-  if (psp->n == 1) {
-    result[0] = (X[0] + psp->v[0] * X[1]) % mod;
-    return;
-  }
-  int c1 = psp->n >> 1;
-  int c2 = psp->n - c1;
-
-  vector<T> m(max(psp->L->p.size(), psp->R->p.size()));
-  poly_mod(X, n, (const T*)&psp->L->p[0], psp->L->p.size(), &m[0], mod);
-  poly_evaluate_mod_internal_impl(&m[0], (int)psp->L->p.size()-1, psp->L, result, mod);
-  poly_mod(X, n, (const T*)&psp->R->p[0], psp->R->p.size(), &m[0], mod);
-  poly_evaluate_mod_internal_impl(&m[0], (int)psp->R->p.size()-1, psp->R, result+c1, mod);
-}
-
-// size(V) = n
-template<typename T>
-SL
-REQUIRES((is_native_integer<T>::value))
-RETURN(void)
-poly_evaluate_mod_internal(const T* X, int n, const T* V, T* result, int64 mod) {
-  static_assert(std::is_unsigned<T>::value, "T must be unsigned");
-  PSPTree* psp = PSPTree::build_minus((int64*)V, n, mod);
-  poly_evaluate_mod_internal_impl(X, n, psp, result, mod);
-  delete psp;
-}
-
-// size(V) = n
-template<typename T>
-SL
-REQUIRES((is_native_integer<T>::value))
-RETURN(void)
-poly_evaluate_mod_internal_ex(const T* X, int n, const T* V, T* result, int64 mod) {
-  static_assert(std::is_unsigned<T>::value, "T must be unsigned");
-  vector<vector<vector<T>>> tree;
-  {
-    vector<vector<T>> from;
-    for (int i = 0; i < n; ++i) {
-      vector<T> tmp{(V[i] == 0 ? 0 : mod - V[i])%mod, 1};
-      from.push_back(tmp);
-    }
-
-    tree.push_back(from);
-    int lastSize = n;
-    while (lastSize != 1) {
-      vector<vector<T>> to;
-      for (int i = 0; i < lastSize / 2; ++i) {
-        to.push_back(poly_mul_auto(from[i*2], from[i*2+1], mod));
-      }
-      if (lastSize&1) {
-        to.push_back(from[lastSize-1]);
-      }
-      lastSize = lastSize + 1 >> 1;
-      from.swap(to);
-      tree.push_back(from);
-    }
-  }
-  
-  const int d = (int)tree.size() - 1;
-  {
-    auto alpha = tree[d][0];
-    reverse(alpha.begin(), alpha.end());
-    alpha = poly_inv_mod(&alpha[0], alpha.size(), n, mod);
-    // size alpha = n
-    reverse(alpha.begin(), alpha.end());
-    vector<uint64> b(X, X+n);
-    int degb = sz(b) - 1;
-    auto t = poly_mul_auto(alpha, b, mod);
-    // deg t = (n - 1) + degb
-    assert(sz(t) - 1 == n - 1 + degb);
-    for (int i = n - 1, j = 0; i <= (n-1) + degb; ++i, ++j) {
-      t[j] = t[i];
-    }
-    assert(degb + 1 >= n);
-    t.resize(n);
-    reverse(t.begin(), t.end());
-    vector<vector<T>> c(n);
-    c[0] = t;
-    //c[0] = vector<uint64>(X, X+n);
-    for (int i = d; i > 0; --i) {
-      int hi = tree[i].size();
-      for (int j = hi - 1; j >= 0; --j) {
-        int u = j * 2;
-        int v = u + 1;
-        if (v >= tree[i-1].size()) {
-          c[u] = c[j];
-          continue;
-        }
-        int nn = tree[i][j].size() - 1;
-        vector<T> x;
-        {
-          const int os = sz(tree[i-1][2*j]);
-          reverse(tree[i-1][2*j].begin(), tree[i-1][2*j].end());
-          x = poly_mul_auto(tree[i-1][2*j], c[j], mod);
-          int s = 0;
-          for (int i = os - 1, j = 0; i < x.size() && j < nn; ++i, ++j) {
-            x[j] = x[i];
-            ++s;
-          }
-          x.resize(s);
-        }
-        vector<T> y;
-        {
-          const int os = sz(tree[i-1][2*j+1]);
-          reverse(tree[i-1][2*j+1].begin(), tree[i-1][2*j+1].end());
-          y = poly_mul_auto(tree[i-1][2*j+1], c[j], mod);
-          int s = 0;
-          for (int i = os - 1, j = 0; i < y.size() && j < nn; ++i, ++j) {
-            y[j] = y[i];
-            ++s;
-          }
-          y.resize(s);
-        }
-        c[2*j+1] = std::move(x);
-        c[2*j] = std::move(y);
-      }
-    }
-    for (int i = 0; i < n; ++i) result[i] = c[i][0];
-  }
-}
-
-// size(V) = n
-template<typename T>
-SL
-REQUIRES((is_native_integer<T>::value))
-RETURN(void)
-poly_evaluate_mod(const T* X, const int n, const T* V, T* result, int64 mod) {
-  typedef typename std::make_unsigned<T>::type unsignedT;
-  poly_evaluate_mod_internal_ex<unsignedT>((const unsignedT*)X, n, (const unsignedT*)V, (unsignedT*)result, mod);
-}
-
-// size x = size v
 template<typename T>
 SL
 REQUIRES((is_native_integer<T>::value))
 RETURN(vector<T>)
-poly_evaluate_mod(const vector<T>& X, const vector<T>& V, int64 mod) {
-  const int n = (int)X.size();
-  vector<T> result(n);
-  poly_evaluate_mod(&X[0], n, &V[0], &result[0], mod);
-  return result;
+poly_mod(const vector<T>& X, const vector<T>& Y, int64 mod) {
+  vector<T> q, r;
+  tie(q, r) = poly_div(X, Y, mod);
+  return std::move(r);
 }
 
-// size x = size v
-template<int64 P>
-SL vector<int64> poly_evaluate_mod(const PolyM<P>& X, const vector<int64>& V) {
-  return poly_evaluate_mod(X.data, V, P);
+SL tuple<Poly, Poly> poly_div(const Poly& x, const Poly& y) {
+  vector<int64> q, r;
+  tie(q, r) = poly_div(x.data, y.data, x.mod);
+  return make_tuple(std::move(Poly(std::move(q), x.mod)), std::move(Poly(std::move(r), x.mod)));
 }
 
-template<int64 P>
-inline PolyM<P> PolyM<P>::inv(int n) const {
+SL Poly poly_mod(const Poly& x, const Poly& y) {
+  vector<int64> q, r;
+  tie(q, r) = poly_div(x.data, y.data, x.mod);
+  return std::move(Poly(std::move(r), x.mod));
+}
+
+inline Poly Poly::inv(int n) const {
   // It is assumed that mod is a prime
-  auto t = poly_inv_mod(data, n, P);
-  return PolyM<P>(std::vector<int64>((int64*)&t[0], (int64*)&t[0] + t.size()));
+  auto t = poly_inv_mod(data, n, mod);
+  return Poly(std::vector<int64>((int64*)&t[0], (int64*)&t[0] + t.size()), mod);
 }
 
-template <int64 P>
-PolyM<P> operator<<(const PolyM<P>& p, int m) {
+Poly operator<<(const Poly& p, int m) {
   if (m == 0) {
     return p;
   }
@@ -843,109 +710,83 @@ PolyM<P> operator<<(const PolyM<P>& p, int m) {
   for (int i = 0; i < m; ++i) {
     new_data[i] = 0;
   }
-  return PolyM<P>(std::move(new_data));
+  return Poly(std::move(new_data), p.mod);
 }
 
-template <int64 P>
-SL PolyM<P> operator-(const PolyM<P>& x, const PolyM<P>& y) {
+SL Poly operator-(const Poly& x, const Poly& y) {
   const int n = max(x.deg(), y.deg());
   std::vector<int64> data(n + 1);
   for (int i = 0; i <= n; ++i) {
-    data[i] = sub_mod(x.at(i), y.at(i), P);
+    data[i] = sub_mod(x.at(i), y.at(i), x.mod);
   }
-  return PolyM<P>(std::move(data)).adjust_leading_zeros();
+  return Poly(std::move(data), x.mod).adjust_leading_zeros();
 }
 
-template <int64 P>
-SL PolyM<P> operator+(const PolyM<P>& x, const PolyM<P>& y) {
+SL Poly operator+(const Poly& x, const Poly& y) {
   const int n = max(x.deg(), y.deg());
   std::vector<int64> data(n + 1);
   for (int i = 0; i <= n; ++i) {
-    data[i] = add_mod(x.at(i), y.at(i), P);
+    data[i] = add_mod(x.at(i), y.at(i), x.mod);
   }
-  return PolyM<P>(std::move(data)).adjust_leading_zeros();
+  return Poly(std::move(data), x.mod).adjust_leading_zeros();
 }
 
-template <int64 P>
-SL PolyM<P> operator*(const PolyM<P>& x, int64 v) {
+SL Poly operator*(const Poly& x, int64 v) {
   std::vector<int64> data(x.data);
   for (auto& iter : data) {
-    iter = iter * v % P;
+    iter = iter * v % x.mod;
   }
-  return PolyM<P>(std::move(data));
+  return Poly(std::move(data), x.mod);
 }
 
-template <int64 P>
-SL PolyM<P> operator*(int64 v, const PolyM<P>& x) {
+SL Poly operator*(int64 v, const Poly& x) {
   return x * v;
 }
 
-template <int64 P>
-SL PolyM<P> operator/(const PolyM<P>& x, const PolyM<P>& y) {
-  PolyM<P> q, r;
+SL Poly operator*(const Poly& x, const Poly& y) {
+  return poly_mul(x, y);
+}
+
+SL Poly operator/(const Poly& x, const Poly& y) {
+  Poly q, r;
   tie(q, r) = poly_div(x, y);
   return r;
 }
 
-template <int64 P>
-SL PolyM<P> operator%(const PolyM<P>& x, const PolyM<P>& y) {
-  PolyM<P> q, r;
+SL Poly operator%(const Poly& x, const Poly& y) {
+  Poly q, r;
   tie(q, r) = poly_div(x, y);
   return r;
 }
 
 // x^n % mod
-template <int64 P>
-SL PolyM<P> operator%(int64 n, PolyM<P> mod) {
-  PolyM<P> x{0, 1};
-  PolyM<P> ret{1};
+SL Poly operator%(int64 n, const Poly& mod) {
+  Poly x{{0, 1}, mod.mod};
+  Poly ret{{1}, mod.mod};
   for (; n > 0; n >>= 1) {
     if (n & 1) {
       auto t = x * ret;
-      PolyM<P> q, r;
-      tie(q, r) = div(t, mod);
+      Poly q, r;
+      tie(q, r) = poly_div(t, mod);
       ret = std::move(r);
     }
     if (n > 1) {
       auto t = x * x;
-      PolyM<P> q, r;
-      tie(q, r) = div(t, mod);
+      Poly q, r;
+      tie(q, r) = poly_div(t, mod);
       x = r;
     }
   }
   return ret;
 }
 
-template <int64 P>
-SL ostream& operator<<(ostream& o, const PolyM<P>& p) {
+SL ostream& operator<<(ostream& o, const Poly& p) {
   const int n = p.data.size();
   for (int i = 0; i < n - 1; ++i) {
     o << p.data[i] << ", ";
   }
   return o << p.data[n - 1];
 }
-
-#if 1
-template <int64 P>
-SL PolyM<P> operator*(const PolyM<P>& x, const PolyM<P>& y) {
-  return poly_mul(x, y);
-}
-#else
-template <int64 P>
-SL PolyM<P> operator*(const PolyM<P>& x, const PolyM<P>& y) {
-  const int n = x.deg();
-  const int m = y.deg();
-  std::vector<int64> data(n + m + 1, 0);
-  for (int i = 0; i <= n; ++i)
-    for (int j = 0; j <= m; ++j) {
-      int64 t = x[i] * y[j] % P;
-      data[i + j] = add_mod(data[i + j], t, P);
-    }
-  return PolyM<P>(std::move(data));
-}
-#endif
-
-
 
 #endif
 

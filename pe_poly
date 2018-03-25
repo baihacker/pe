@@ -116,12 +116,12 @@ struct PolyM: public Poly {
 
   PolyM(std::vector<int64>&& data): Poly(std::move(data), M) {}
 
-  PolyM(std::initializer_list<int64> l) : PolyM(std::vector<int64>(l)) {}
+  PolyM(std::initializer_list<int64> l): PolyM(std::vector<int64>(l)) {}
 };
 
 // Multiply two polynomials of the same length.
-// Make sure the length of result is at least: n + n
-// The return length is 2n (not 2n-1)
+// size result >= 2 * n
+// size return = 2 * n (deg return = 2 * n - 1)
 template<typename T>
 SL
 REQUIRES((is_native_integer<T>::value))
@@ -193,7 +193,7 @@ poly_mul_normal_internal(const T* X, const T* Y, const int n, T* result, int64 m
 }
 
 // Multiply two polynomials.
-// Make sure the length of result is at least: n + m - 1
+// size result >= n + m - 1
 template<typename T>
 SL
 REQUIRES((is_native_integer<T>::value))
@@ -409,6 +409,7 @@ poly_inv_mod_internal(int n, const T* a, T* b, T* tmp[2], int64 mod) {
   }
 }
 
+// size result >= n
 template<typename T>
 SL
 REQUIRES((is_native_integer<T>::value))
@@ -443,6 +444,7 @@ poly_inv_mod_internal(const T* x, int m, int n, T* result, int64 mod) {
   copy(b.begin(), b.begin() + n, result);
 }
 
+// size result >= n
 template<typename T>
 SL
 REQUIRES((is_native_integer<T>::value))
@@ -484,6 +486,7 @@ REQUIRES((is_native_integer<T>::value))
 RETURN(void)
 poly_div_and_mod_dc_internal(const T* X, int n, const T* Y, int m, T* q, T* r, int64 mod) {
   static_assert(std::is_unsigned<T>::value, "T must be unsigned");
+
   if (m > n) {
     if (r) {
       copy(X, X+n, r);
@@ -514,13 +517,15 @@ poly_div_and_mod_dc_internal(const T* X, int n, const T* Y, int m, T* q, T* r, i
   }
 }
 
-// size r >= m
 // size q >= n - m + 1
+// size r >= m
 template<typename T>
 SL
 REQUIRES((is_native_integer<T>::value))
 RETURN(void)
 poly_div_and_mod_normal_internal(const T* X, int n, const T* Y, int m, T* q, T* r, int64 mod) {
+  static_assert(std::is_unsigned<T>::value, "T must be unsigned");
+
   if (m > n) {
     if (r) {
       copy(X, X+n, r);
@@ -552,9 +557,13 @@ poly_div_and_mod_normal_internal(const T* X, int n, const T* Y, int m, T* q, T* 
   }
 }
 
-// size r >= m size q >= n - m + 1
-// deg q = max(deg X - degY + 1, 1) deg r <= deg x - deg y
-// deg q = max(deg X - degY + 1, 1) deg r <= deg x - deg y
+// For input:
+// size q >= max(deg X - deg Y + 1, 1)
+// size r >= m
+// For output:
+// deg q = max(deg X - deg Y + 1, 1)
+// For C-style method: deg r = deg Y (with possible leading zeros)
+// For C++ style method: deg r <= deg Y (the leading zeros are ignored)
 #define POLY_DIV_AND_MOD_IMPL(poly_div_and_mod, poly_div_and_mod_internal) \
 template<typename T> \
 SL \
@@ -599,6 +608,7 @@ poly_div(const T* X, const int n, const T* Y, const int m, T* q, int64 mod) { \
   poly_div_and_mod(X, n, Y, m, q, (T*)NULL, mod); \
 } \
 \
+\
 template<typename T> \
 SL \
 REQUIRES((is_native_integer<T>::value)) \
@@ -608,6 +618,7 @@ poly_div(const vector<T>& X, const vector<T>& Y, int64 mod) { \
   poly_div(&X[0], X.size(), &Y[0], Y.size(), &q[0], mod); \
   return std::move(q); \
 } \
+\
 \
 SL Poly poly_div(const Poly& X, const Poly& Y) { \
   return Poly(poly_div(X.data, Y.data, X.mod), X.mod); \
@@ -622,6 +633,7 @@ poly_mod(const T* X, const int n, const T* Y, const int m, T* r, int64 mod) { \
   poly_div_and_mod(X, n, Y, m, (T*)NULL, r, mod); \
 } \
 \
+\
 template<typename T> \
 SL \
 REQUIRES((is_native_integer<T>::value)) \
@@ -633,6 +645,7 @@ poly_mod(const vector<T>& X, const vector<T>& Y, int64 mod) { \
   return std::move(r); \
 } \
 \
+\
 SL Poly poly_mod(const Poly& X, const Poly& Y) { \
   return Poly(poly_mod(X.data, Y.data, X.mod), X.mod); \
 }
@@ -643,8 +656,7 @@ REQUIRES((is_native_integer<T>::value))
 RETURN(void)
 poly_div_and_mod(const T* X, const int n, const T* Y, const int m, T* q, T* r, int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
-  // choose algorithm
-  // It also includes the case n < m;
+  // This condition also includes the case n < m;
   if ((n - m) * m <= 1000) {
     poly_div_and_mod_normal_internal<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m, (unsignedT*)q, (unsignedT*)r, mod);
   } else {

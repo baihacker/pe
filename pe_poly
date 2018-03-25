@@ -41,7 +41,7 @@ struct Poly {
 
   Poly& adjust_leading_zeros() {
     int n = (int)data.size() - 1;
-    while (n > 0 && data[n] == 0) --n;
+    while (n >= 0 && data[n] == 0) --n;
     data.resize(max(n + 1, 1));
     return *this;
   }
@@ -114,7 +114,7 @@ struct PolyM: public Poly {
   }
 };
 
-// Mul two polynomials with the same length.
+// Multiply two polynomials of the same length.
 // Make sure the length of result is at least: n + n
 // The return length is 2n (not 2n-1)
 template<typename T>
@@ -255,8 +255,7 @@ poly_mul_normal(const vector<T>& X, const vector<T>& Y, int64 mod) {
 }
 
 SL Poly poly_mul_normal(const Poly& X, const Poly& Y) {
-  auto data = poly_mul_normal(X.data, Y.data, X.mod);
-  return Poly{std::move(data)};
+  return Poly{poly_mul_normal(X.data, Y.data, X.mod), X.mod};
 }
 
 // Need int128 to handle the big polynomial coefficient.
@@ -338,8 +337,7 @@ poly_mul_ntt(const vector<T>& X, const vector<T>& Y, int64 mod) {
 }
 
 SL Poly poly_mul_ntt(const Poly& X, const Poly& Y) {
-  auto data = poly_mul_ntt(X.data, Y.data, X.mod);
-  return Poly{std::move(data)};
+  return Poly{poly_mul_ntt(X.data, Y.data, X.mod), X.mod};
 }
 #else
 #define HAS_POLY_MUL_NTT 0
@@ -374,8 +372,7 @@ poly_mul(const vector<T>& X, const vector<T>& Y, int64 mod) {
 }
 
 SL Poly poly_mul(const Poly& X, const Poly& Y) {
-  auto data = poly_mul(X.data, Y.data, X.mod);
-  return Poly{std::move(data), X.mod};
+  return Poly{poly_mul(X.data, Y.data, X.mod), X.mod};
 }
 
 template<typename T>
@@ -472,12 +469,16 @@ template<typename T>
 SL
 REQUIRES((is_native_integer<T>::value))
 RETURN(void)
-poly_div_dc_internal(const T* X, int n, const T* Y, int m, T* q, T* r, int64 mod) {
+poly_div_and_mod_dc_internal(const T* X, int n, const T* Y, int m, T* q, T* r, int64 mod) {
   static_assert(std::is_unsigned<T>::value, "T must be unsigned");
   if (m > n) {
-    copy(X, X+n, r);
-    fill(r+n, r+m, 0);
-    q[0] = 0;
+    if (r) {
+      copy(X, X+n, r);
+      fill(r+n, r+m, 0);
+    }
+    if (q) {
+      q[0] = 0;
+    }
     return;
   }
   vector<T> YR(m);
@@ -488,11 +489,15 @@ poly_div_dc_internal(const T* X, int n, const T* Y, int m, T* q, T* r, int64 mod
   vector<T> Z = poly_mul(XR, IYR, mod);
   Z.resize(n - m + 1);
   reverse(Z.begin(), Z.end());
-  copy(Z.begin(), Z.end(), q);
-  vector<T> tmp(n);
-  poly_mul(&Y[0], m, &Z[0], n-m+1, &tmp[0], mod);
-  for (int i = 0; i < m; ++i) {
-    r[i] = X[i] >= tmp[i] ? X[i] - tmp[i] : X[i] + mod - tmp[i];
+  if (q) {
+    copy(Z.begin(), Z.end(), q);
+  }
+  if (r) {
+    vector<T> tmp(n);
+    poly_mul(&Y[0], m, &Z[0], n-m+1, &tmp[0], mod);
+    for (int i = 0; i < m; ++i) {
+      r[i] = X[i] >= tmp[i] ? X[i] - tmp[i] : X[i] + mod - tmp[i];
+    }
   }
 }
 
@@ -502,18 +507,9 @@ template<typename T>
 SL
 REQUIRES((is_native_integer<T>::value))
 RETURN(void)
-poly_div_dc(const T* X, const int n, const T* Y, const int m, T* q, T* r, int64 mod) {
+poly_div_and_mod_dc(const T* X, const int n, const T* Y, const int m, T* q, T* r, int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
-  poly_div_dc_internal<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m, (unsignedT*)q, (unsignedT*)r, mod);
-}
-
-template<typename T>
-SL
-REQUIRES((is_native_integer<T>::value))
-RETURN(void)
-poly_div_dc(const T* X, const int n, const T* Y, const int m, T* r, int64 mod) {
-  vector<T> q(max(n - m + 1, 1));
-  poly_div_dc(X, n, Y, m, &q[0], r, mod);
+  poly_div_and_mod_dc_internal<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m, (unsignedT*)q, (unsignedT*)r, mod);
 }
 
 // deg q = max(deg X - degY + 1, 1)
@@ -522,13 +518,13 @@ template<typename T>
 SL
 REQUIRES((is_native_integer<T>::value))
 RETURN(tuple<vector<T>, vector<T>>)
-poly_div_dc(const vector<T>& X, const vector<T>& Y, int64 mod) {
+poly_div_and_mod_dc(const vector<T>& X, const vector<T>& Y, int64 mod) {
   const int n = (int)X.size() - 1;
   const int m = (int)Y.size() - 1;
 
   vector<T> q(max(n - m + 1, 1));
   vector<T> r(m+1);
-  poly_div_dc(&X[0], n + 1, &Y[0], m + 1, &q[0], &r[0], mod);
+  poly_div_and_mod_dc(&X[0], n + 1, &Y[0], m + 1, &q[0], &r[0], mod);
 
   int t = m;
   r[m] = 0;
@@ -537,28 +533,59 @@ poly_div_dc(const vector<T>& X, const vector<T>& Y, int64 mod) {
   return make_tuple(std::move(q), std::move(r));
 }
 
+// deg q = max(deg X - degY + 1, 1)
+// deg r <= deg x - deg y
+SL tuple<Poly, Poly> poly_div_and_mod_dc(const Poly& X, const Poly& Y) {
+  vector<int64> q, r;
+  tie(q, r) = poly_div_and_mod_dc(X.data, Y.data, X.mod);
+  return make_tuple(Poly(std::move(q), X.mod), Poly(std::move(r), X.mod));
+}
+
+template<typename T>
+SL
+REQUIRES((is_native_integer<T>::value))
+RETURN(void)
+poly_div_dc(const T* X, const int n, const T* Y, const int m, T* q, int64 mod) {
+  poly_div_and_mod_dc(X, n, Y, m, q, NULL, mod);
+}
+
+template<typename T>
+SL
+REQUIRES((is_native_integer<T>::value))
+RETURN(vector<T>)
+poly_div_dc(const vector<T>& X, const vector<T>& Y, int64 mod) {
+  vector<T> q(max((int)X.size() - (int)Y.size() + 1, 1));
+  poly_div_and_mod_dc(&X[0], X.size(), &Y[0], Y.size(), &q[0], (T*)NULL, mod);
+  return std::move(q);
+}
+
+SL Poly poly_div_dc(const Poly& X, const Poly& Y) {
+  return Poly(poly_div_dc(X.data, Y.data, X.mod), X.mod);
+}
+
+template<typename T>
+SL
+REQUIRES((is_native_integer<T>::value))
+RETURN(void)
+poly_mod_dc(const T* X, const int n, const T* Y, const int m, T* r, int64 mod) {
+  poly_div_and_mod_dc(X, n, Y, m, (T*)NULL, r, mod);
+}
+
 template<typename T>
 SL
 REQUIRES((is_native_integer<T>::value))
 RETURN(vector<T>)
 poly_mod_dc(const vector<T>& X, const vector<T>& Y, int64 mod) {
-  vector<T> q, r;
-  tie(q, r) = poly_div_dc(X, Y, mod);
+  vector<T> r(Y.size());
+  poly_mod_dc(&X[0], X.size(), &Y[0], Y.size(), &r[0], mod);
+  int now = (int)r.size() - 1;
+  while (now >= 0 && r[now] == 0) --now;
+  r.resize(now+1);
   return std::move(r);
 }
 
-// deg q = max(deg X - degY + 1, 1)
-// deg r <= deg x - deg y
-SL tuple<Poly, Poly> poly_div_dc(const Poly& X, const Poly& Y) {
-  vector<int64> q, r;
-  tie(q, r) = poly_div_dc(X.data, Y.data, X.mod);
-  return make_tuple(std::move(Poly(q, X.mod)), Poly(std::move(r), X.mod));
-}
-
 SL Poly poly_mod_dc(const Poly& X, const Poly& Y) {
-  vector<int64> q, r;
-  tie(q, r) = poly_div_dc(X.data, Y.data, X.mod);
-  return std::move(Poly(q, X.mod));
+  return Poly(poly_mod_dc(X.data, Y.data, X.mod), X.mod);
 }
 
 // size r >= m
@@ -567,11 +594,15 @@ template<typename T>
 SL
 REQUIRES((is_native_integer<T>::value))
 RETURN(void)
-poly_div_normal_internal(const T* X, int n, const T* Y, int m, T* q, T* r, int64 mod) {
+poly_div_and_mod_normal_internal(const T* X, int n, const T* Y, int m, T* q, T* r, int64 mod) {
   if (m > n) {
-    copy(X, X+n, r);
-    fill(r+m, r+n, 0);
-    q[0] = 0;
+    if (r) {
+      copy(X, X+n, r);
+      fill(r+n, r+m, 0);
+    }
+    if (q) {
+      q[0] = 0;
+    }
     return;
   }
 
@@ -583,38 +614,72 @@ poly_div_normal_internal(const T* X, int n, const T* Y, int m, T* q, T* r, int64
     for (int j = i, k = m - 1; k >= 0; --j, --k) {
       tmp[j] = sub_mod(tmp[j], u * Y[k] % mod, mod);
     }
-    q[top++] = u;
+    if (q) {
+      q[top++] = u;
+    }
   }
-  reverse(q, q + top);
-  copy(tmp.begin(), tmp.begin() + m, r);
+  if (q) {
+    reverse(q, q + top);
+  }
+  if (r) {
+    copy(tmp.begin(), tmp.begin() + m, r);
+  }
 }
 
 template<typename T>
 SL
 REQUIRES((is_native_integer<T>::value))
 RETURN(void)
-poly_div_normal(const T* X, const int n, const T* Y, const int m, T* q, T* r, int64 mod) {
+poly_div_and_mod_normal(const T* X, const int n, const T* Y, const int m, T* q, T* r, int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
-  poly_div_normal_internal<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m, (unsignedT*)q, (unsignedT*)r, mod);
+  poly_div_and_mod_normal_internal<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m, (unsignedT*)q, (unsignedT*)r, mod);
 }
 
 template<typename T>
 SL
 REQUIRES((is_native_integer<T>::value))
 RETURN(tuple<vector<T>, vector<T>>)
-poly_div_normal(const vector<T>& X, const vector<T>& Y, int64 mod) {
+poly_div_and_mod_normal(const vector<T>& X, const vector<T>& Y, int64 mod) {
   const int n = (int)X.size() - 1;
   const int m = (int)Y.size() - 1;
 
   vector<T> q(max(n - m + 1, 1));
   vector<T> r(m+1);
-  poly_div_normal(&X[0], n + 1, &Y[0], m + 1, &q[0], &r[0], mod);
+  poly_div_and_mod_normal(&X[0], n + 1, &Y[0], m + 1, &q[0], &r[0], mod);
 
   int t = m;
   r[m] = 0;
   while (t >= 0 && r[t] == 0) --t;
   r.resize(t+1);
   return make_tuple(std::move(q), std::move(r));
+}
+
+SL tuple<Poly, Poly> poly_div_and_mod_normal(const Poly& x, const Poly& y) {
+  vector<int64> q, r;
+  tie(q, r) = poly_div_and_mod_normal(x.data, y.data, x.mod);
+  return make_tuple(Poly(std::move(q), x.mod), Poly(std::move(r), x.mod));
+}
+
+template<typename T>
+SL
+REQUIRES((is_native_integer<T>::value))
+RETURN(void)
+poly_div_normal(const T* X, const int n, const T* Y, const int m, T* q, int64 mod) {
+  poly_div_and_mod_normal(X, n, Y, m, q, (T*)NULL, mod);
+}
+
+template<typename T>
+SL
+REQUIRES((is_native_integer<T>::value))
+RETURN(vector<T>)
+poly_div_normal(const vector<T>& X, const vector<T>& Y, int64 mod) {
+  vector<T> q(max((int)X.size() - (int)Y.size() + 1, 1));
+  poly_div_and_mod_normal(&X[0], X.size(), &Y[0], Y.size(), &q[0], (T*)NULL, mod);
+  return std::move(q);
+}
+
+SL Poly poly_div_normal(const Poly& X, const Poly& Y) {
+  return Poly(poly_div_normal(X.data, Y.data, X.mod), X.mod);
 }
 
 template<typename T>
@@ -622,8 +687,7 @@ SL
 REQUIRES((is_native_integer<T>::value))
 RETURN(void)
 poly_mod_normal(const T* X, const int n, const T* Y, const int m, T* r, int64 mod) {
-  vector<T> q(max(n - m + 1, 1));
-  poly_mod_normal(X, n, Y, m, &q[0], r, mod);
+  poly_div_and_mod_normal(X, n, Y, m, (T*)NULL, r, mod);
 }
 
 template<typename T>
@@ -631,53 +695,44 @@ SL
 REQUIRES((is_native_integer<T>::value))
 RETURN(vector<T>)
 poly_mod_normal(const vector<T>& X, const vector<T>& Y, int64 mod) {
-  vector<T> q, r;
-  tie(q, r) = poly_div_normal(X, Y, mod);
+  vector<T> r(Y.size());
+  poly_mod_normal(&X[0], X.size(), &Y[0], Y.size(), &r[0], mod);
+  int now = (int)r.size() - 1;
+  while (now >= 0 && r[now] == 0) --now;
+  r.resize(now+1);
   return std::move(r);
 }
 
-SL tuple<Poly, Poly> poly_div_normal(const Poly& x, const Poly& y) {
-  vector<int64> q, r;
-  tie(q, r) = poly_div_normal(x.data, y.data, x.mod);
-  return make_tuple(std::move(Poly(std::move(q), x.mod)), std::move(Poly(std::move(r), x.mod)));
-}
-
 SL Poly poly_mod_normal(const Poly& X, const Poly& Y) {
-  vector<int64> q, r;
-  tie(q, r) = poly_div_normal(X.data, Y.data, X.mod);
-  return std::move(Poly(q, X.mod));
+  return Poly(poly_mod_normal(X.data, Y.data, X.mod), X.mod);
 }
 
 template<typename T>
 SL
 REQUIRES((is_native_integer<T>::value))
 RETURN(void)
-poly_div(const T* X, const int n, const T* Y, const int m, T* q, T* r, int64 mod) {
+poly_div_and_mod(const T* X, const int n, const T* Y, const int m, T* q, T* r, int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
   // choose algorithm
-  poly_div_dc_internal<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m, (unsignedT*)q, (unsignedT*)r, mod);
-}
-
-template<typename T>
-SL
-REQUIRES((is_native_integer<T>::value))
-RETURN(void)
-poly_mod(const T* X, const int n, const T* Y, const int m, T* r, int64 mod) {
-  vector<T> q(max(n - m + 1, 1));
-  poly_div(X, n, Y, m, &q[0], r, mod);
+  // It also includes the case n < m;
+  if ((n - m) * m <= 1000) {
+    poly_div_and_mod_normal_internal<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m, (unsignedT*)q, (unsignedT*)r, mod);
+  } else {
+    poly_div_and_mod_dc_internal<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m, (unsignedT*)q, (unsignedT*)r, mod);
+  }
 }
 
 template<typename T>
 SL
 REQUIRES((is_native_integer<T>::value))
 RETURN(tuple<vector<T>, vector<T>>)
-poly_div(const vector<T>& X, const vector<T>& Y, int64 mod) {
+poly_div_and_mod(const vector<T>& X, const vector<T>& Y, int64 mod) {
   const int n = (int)X.size() - 1;
   const int m = (int)Y.size() - 1;
 
   vector<T> q(max(n - m + 1, 1));
   vector<T> r(m+1);
-  poly_div(&X[0], n + 1, &Y[0], m + 1, &q[0], &r[0], mod);
+  poly_div_and_mod(&X[0], n + 1, &Y[0], m + 1, &q[0], &r[0], mod);
 
   int t = m;
   r[m] = 0;
@@ -686,26 +741,57 @@ poly_div(const vector<T>& X, const vector<T>& Y, int64 mod) {
   return make_tuple(std::move(q), std::move(r));
 }
 
+SL tuple<Poly, Poly> poly_div_and_mod(const Poly& x, const Poly& y) {
+  vector<int64> q, r;
+  tie(q, r) = poly_div_and_mod(x.data, y.data, x.mod);
+  return make_tuple(Poly(std::move(q), x.mod), Poly(std::move(r), x.mod));
+}
+
+template<typename T>
+SL
+REQUIRES((is_native_integer<T>::value))
+RETURN(void)
+poly_div(const T* X, const int n, const T* Y, const int m, T* q, int64 mod) {
+  poly_div_and_mod(X, n, Y, m, q, (T*)NULL, mod);
+}
+
+template<typename T>
+SL
+REQUIRES((is_native_integer<T>::value))
+RETURN(vector<T>)
+poly_div(const vector<T>& X, const vector<T>& Y, int64 mod) {
+  vector<T> q(max((int)X.size() - (int)Y.size() + 1, 1));
+  poly_div_and_mod(&X[0], X.size(), &Y[0], Y.size(), &q[0], (T*)NULL, mod);
+  return std::move(q);
+}
+
+SL Poly poly_div(const Poly& X, const Poly& Y) {
+  return Poly(poly_div(X.data, Y.data, X.mod), X.mod);
+}
+
+template<typename T>
+SL
+REQUIRES((is_native_integer<T>::value))
+RETURN(void)
+poly_mod(const T* X, const int n, const T* Y, const int m, T* r, int64 mod) {
+  poly_div_and_mod(X, n, Y, m, (T*)NULL, r, mod);
+}
+
 template<typename T>
 SL
 REQUIRES((is_native_integer<T>::value))
 RETURN(vector<T>)
 poly_mod(const vector<T>& X, const vector<T>& Y, int64 mod) {
-  vector<T> q, r;
-  tie(q, r) = poly_div(X, Y, mod);
+  vector<T> r(Y.size());
+  poly_mod(&X[0], X.size(), &Y[0], Y.size(), &r[0], mod);
+  int now = (int)r.size() - 1;
+  while (now >= 0 && r[now] == 0) --now;
+  r.resize(now + 1);
   return std::move(r);
 }
 
-SL tuple<Poly, Poly> poly_div(const Poly& x, const Poly& y) {
-  vector<int64> q, r;
-  tie(q, r) = poly_div(x.data, y.data, x.mod);
-  return make_tuple(std::move(Poly(std::move(q), x.mod)), std::move(Poly(std::move(r), x.mod)));
-}
-
 SL Poly poly_mod(const Poly& x, const Poly& y) {
-  vector<int64> q, r;
-  tie(q, r) = poly_div(x.data, y.data, x.mod);
-  return std::move(Poly(std::move(r), x.mod));
+  return Poly(poly_mod(x.data, y.data, x.mod), x.mod);
 }
 
 inline Poly Poly::inv(int n) const {
@@ -763,15 +849,15 @@ SL Poly operator*(const Poly& x, const Poly& y) {
 }
 
 SL Poly operator/(const Poly& x, const Poly& y) {
-  Poly q, r;
-  tie(q, r) = poly_div(x, y);
-  return q;
+  return poly_div(x, y);
 }
 
 SL Poly operator%(const Poly& x, const Poly& y) {
-  Poly q, r;
-  tie(q, r) = poly_div(x, y);
-  return r;
+  return poly_mod(x, y);
+}
+
+SL int operator==(const Poly& x, const Poly& y) {
+  return x.mod == y.mod && x.data == y.data;
 }
 
 // x^n % mod
@@ -780,16 +866,10 @@ SL Poly operator%(int64 n, const Poly& mod) {
   Poly ret{{1}, mod.mod};
   for (; n > 0; n >>= 1) {
     if (n & 1) {
-      auto t = x * ret;
-      Poly q, r;
-      tie(q, r) = poly_div(t, mod);
-      ret = std::move(r);
+      ret = poly_mod(x * ret, mod);
     }
     if (n > 1) {
-      auto t = x * x;
-      Poly q, r;
-      tie(q, r) = poly_div(t, mod);
-      x = r;
+      x = poly_mod(x * x, mod);
     }
   }
   return ret;

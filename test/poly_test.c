@@ -26,6 +26,14 @@ SL void poly_general_test() {
   assert(r.deg() == 1);
   assert(r[0] == 2);
   assert(r[1] == 2);
+  
+  assert((q * Poly({0}, 31)).isZero());
+  assert(q * Poly({1}, 31) == q);
+  
+  assert(Poly({0, 0, 0}, 31).isZero());
+  assert(Poly({0, 1, 0}, 31).deg() == 1);
+  
+  assert(q / Poly({1}, 31) == q);
 }
 PE_REGISTER_TEST(&poly_general_test, "poly_general_test", SMALL);
 
@@ -36,7 +44,7 @@ SL void poly_mod_test() {
   auto m1 = poly_mod_normal(a, b);
   auto m2 = poly_mod_dc(a, b);
 
-  assert(m1.data == m2.data);
+  assert(m1 == m2);
 }
 PE_REGISTER_TEST(&poly_mod_test, "poly_mod_test", SMALL);
 }

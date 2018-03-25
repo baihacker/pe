@@ -44,6 +44,8 @@ File list:
 * pe_parallel: A simple framework to solve problem with multi-threads. (windows only)
 * pe_parallel_algo: Parallel algorithms.
 * pe_poly: Polynomial.
+* pe_poly_app: Polynomial applications, e.g. generating function.
+* pe_tree: Some tree based data structures.
 * pe_util: Utilities such as TimeDelta, KVPersistance. (it may support linux but we need change the generated cmdline and check the other codes)
 
 Design principle:

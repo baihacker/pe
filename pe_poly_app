@@ -3,20 +3,20 @@
 
 struct PSPTree {
   int64 mod;
-  
+
   int64* v;
   int n;
-  
+
   vector<int64> p;
 
   PSPTree* L;
   PSPTree* R;
-  
+
   ~PSPTree() {
     if (L) delete L;
     if (R) delete R;
   }
-  
+
   static PSPTree* build_minus(int64* values, int n, int64 mod) {
     PSPTree* ptree = new PSPTree();
     auto& tree = *ptree;
@@ -28,12 +28,12 @@ struct PSPTree {
       // -x0 + x
       int64 t = values[0];
       tree.p.emplace_back(t == 0 ? 0 : mod - t);
-      tree.p.emplace_back(1%mod);
+      tree.p.emplace_back(1 % mod);
       return ptree;
     }
     int c1 = n >> 1, c2 = n - c1;
     tree.L = build_minus(values, c1, mod);
-    tree.R = build_minus(values+c1, c2, mod);
+    tree.R = build_minus(values + c1, c2, mod);
     tree.p = poly_mul(tree.L->p, tree.R->p, mod);
     return ptree;
   }
@@ -54,18 +54,17 @@ struct PSPTree {
     }
     int c1 = n >> 1, c2 = n - c1;
     tree.L = build_plus(values, c1, mod);
-    tree.R = build_plus(values+c1, c2, mod);
+    tree.R = build_plus(values + c1, c2, mod);
     tree.p = poly_mul(tree.L->p, tree.R->p, mod);
     return ptree;
   }
 };
 
 // size(V) = n
-template<typename T>
-SL
-REQUIRES((is_native_integer<T>::value))
-RETURN(void)
-poly_evaluate_mod_internal_impl(const T* X, int n, PSPTree* psp, T* result, int64 mod) {
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_evaluate_mod_internal_impl(const T* X, int n, PSPTree* psp, T* result,
+                                    int64 mod) {
   if (psp->n == 1) {
     result[0] = (X[0] + psp->v[0] * X[1]) % mod;
     return;
@@ -75,17 +74,18 @@ poly_evaluate_mod_internal_impl(const T* X, int n, PSPTree* psp, T* result, int6
 
   vector<T> m(max(psp->L->p.size(), psp->R->p.size()));
   poly_mod(X, n, (const T*)&psp->L->p[0], psp->L->p.size(), &m[0], mod);
-  poly_evaluate_mod_internal_impl(&m[0], (int)psp->L->p.size()-1, psp->L, result, mod);
+  poly_evaluate_mod_internal_impl(&m[0], (int)psp->L->p.size() - 1, psp->L,
+                                  result, mod);
   poly_mod(X, n, (const T*)&psp->R->p[0], psp->R->p.size(), &m[0], mod);
-  poly_evaluate_mod_internal_impl(&m[0], (int)psp->R->p.size()-1, psp->R, result+c1, mod);
+  poly_evaluate_mod_internal_impl(&m[0], (int)psp->R->p.size() - 1, psp->R,
+                                  result + c1, mod);
 }
 
 // size(V) = n
-template<typename T>
-SL
-REQUIRES((is_native_integer<T>::value))
-RETURN(void)
-poly_evaluate_mod_internal(const T* X, int n, const T* V, T* result, int64 mod) {
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_evaluate_mod_internal(const T* X, int n, const T* V, T* result,
+                               int64 mod) {
   static_assert(std::is_unsigned<T>::value, "T must be unsigned");
   PSPTree* psp = PSPTree::build_minus((int64*)V, n, mod);
   poly_evaluate_mod_internal_impl(X, n, psp, result, mod);
@@ -93,17 +93,16 @@ poly_evaluate_mod_internal(const T* X, int n, const T* V, T* result, int64 mod) 
 }
 
 // size(V) = n
-template<typename T>
-SL
-REQUIRES((is_native_integer<T>::value))
-RETURN(void)
-poly_evaluate_mod_internal_ex(const T* X, int n, const T* V, T* result, int64 mod) {
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_evaluate_mod_internal_ex(const T* X, int n, const T* V, T* result,
+                                  int64 mod) {
   static_assert(std::is_unsigned<T>::value, "T must be unsigned");
   vector<vector<vector<T>>> tree;
   {
     vector<vector<T>> from;
     for (int i = 0; i < n; ++i) {
-      vector<T> tmp{(V[i] == 0 ? 0 : mod - V[i])%mod, 1};
+      vector<T> tmp{(V[i] == 0 ? 0 : mod - V[i]) % mod, 1};
       from.push_back(tmp);
     }
 
@@ -112,17 +111,17 @@ poly_evaluate_mod_internal_ex(const T* X, int n, const T* V, T* result, int64 mo
     while (lastSize != 1) {
       vector<vector<T>> to;
       for (int i = 0; i < lastSize / 2; ++i) {
-        to.push_back(poly_mul(from[i*2], from[i*2+1], mod));
+        to.push_back(poly_mul(from[i * 2], from[i * 2 + 1], mod));
       }
-      if (lastSize&1) {
-        to.push_back(from[lastSize-1]);
+      if (lastSize & 1) {
+        to.push_back(from[lastSize - 1]);
       }
       lastSize = lastSize + 1 >> 1;
       from.swap(to);
       tree.push_back(from);
     }
   }
-  
+
   const int d = (int)tree.size() - 1;
   {
     auto alpha = tree[d][0];
@@ -130,12 +129,12 @@ poly_evaluate_mod_internal_ex(const T* X, int n, const T* V, T* result, int64 mo
     alpha = poly_inv_mod(alpha, n, mod);
     // size alpha = n
     reverse(alpha.begin(), alpha.end());
-    vector<uint64> b(X, X+n);
+    vector<uint64> b(X, X + n);
     int degb = sz(b) - 1;
     auto t = poly_mul(alpha, b, mod);
     // deg t = (n - 1) + degb
     assert(sz(t) - 1 == n - 1 + degb);
-    for (int i = n - 1, j = 0; i <= (n-1) + degb; ++i, ++j) {
+    for (int i = n - 1, j = 0; i <= (n - 1) + degb; ++i, ++j) {
       t[j] = t[i];
     }
     assert(degb + 1 >= n);
@@ -143,22 +142,22 @@ poly_evaluate_mod_internal_ex(const T* X, int n, const T* V, T* result, int64 mo
     reverse(t.begin(), t.end());
     vector<vector<T>> c(n);
     c[0] = t;
-    //c[0] = vector<uint64>(X, X+n);
+    // c[0] = vector<uint64>(X, X+n);
     for (int i = d; i > 0; --i) {
       int hi = tree[i].size();
       for (int j = hi - 1; j >= 0; --j) {
         int u = j * 2;
         int v = u + 1;
-        if (v >= tree[i-1].size()) {
+        if (v >= tree[i - 1].size()) {
           c[u] = c[j];
           continue;
         }
         int nn = tree[i][j].size() - 1;
         vector<T> x;
         {
-          const int os = sz(tree[i-1][2*j]);
-          reverse(tree[i-1][2*j].begin(), tree[i-1][2*j].end());
-          x = poly_mul(tree[i-1][2*j], c[j], mod);
+          const int os = sz(tree[i - 1][2 * j]);
+          reverse(tree[i - 1][2 * j].begin(), tree[i - 1][2 * j].end());
+          x = poly_mul(tree[i - 1][2 * j], c[j], mod);
           int s = 0;
           for (int i = os - 1, j = 0; i < x.size() && j < nn; ++i, ++j) {
             x[j] = x[i];
@@ -168,9 +167,9 @@ poly_evaluate_mod_internal_ex(const T* X, int n, const T* V, T* result, int64 mo
         }
         vector<T> y;
         {
-          const int os = sz(tree[i-1][2*j+1]);
-          reverse(tree[i-1][2*j+1].begin(), tree[i-1][2*j+1].end());
-          y = poly_mul(tree[i-1][2*j+1], c[j], mod);
+          const int os = sz(tree[i - 1][2 * j + 1]);
+          reverse(tree[i - 1][2 * j + 1].begin(), tree[i - 1][2 * j + 1].end());
+          y = poly_mul(tree[i - 1][2 * j + 1], c[j], mod);
           int s = 0;
           for (int i = os - 1, j = 0; i < y.size() && j < nn; ++i, ++j) {
             y[j] = y[i];
@@ -178,8 +177,8 @@ poly_evaluate_mod_internal_ex(const T* X, int n, const T* V, T* result, int64 mo
           }
           y.resize(s);
         }
-        c[2*j+1] = std::move(x);
-        c[2*j] = std::move(y);
+        c[2 * j + 1] = std::move(x);
+        c[2 * j] = std::move(y);
       }
     }
     for (int i = 0; i < n; ++i) result[i] = c[i][0];
@@ -187,21 +186,19 @@ poly_evaluate_mod_internal_ex(const T* X, int n, const T* V, T* result, int64 mo
 }
 
 // size(V) = n
-template<typename T>
-SL
-REQUIRES((is_native_integer<T>::value))
-RETURN(void)
-poly_evaluate_mod(const T* X, const int n, const T* V, T* result, int64 mod) {
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_evaluate_mod(const T* X, const int n, const T* V, T* result,
+                      int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
-  poly_evaluate_mod_internal_ex<unsignedT>((const unsignedT*)X, n, (const unsignedT*)V, (unsignedT*)result, mod);
+  poly_evaluate_mod_internal_ex<unsignedT>(
+      (const unsignedT*)X, n, (const unsignedT*)V, (unsignedT*)result, mod);
 }
 
 // size x = size v
-template<typename T>
-SL
-REQUIRES((is_native_integer<T>::value))
-RETURN(vector<T>)
-poly_evaluate_mod(const vector<T>& X, const vector<T>& V, int64 mod) {
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
+    poly_evaluate_mod(const vector<T>& X, const vector<T>& V, int64 mod) {
   const int n = (int)X.size();
   vector<T> result(n);
   poly_evaluate_mod(&X[0], n, &V[0], &result[0], mod);
@@ -254,7 +251,7 @@ SL int64 power_sum(int64 n, int64 k, int64 mod) {
   const int64 n1 = (n + 1) % mod;
   const int64 k1 = k + 1;
   int64 ret = 0;
-  vector<uint64> invs(k1+1);
+  vector<uint64> invs(k1 + 1);
   // See init_inv
   {
     invs[0] = 0;
@@ -275,7 +272,7 @@ SL int64 power_sum(int64 n, int64 k, int64 mod) {
     c = c * (k1 - i + 1) % mod;
     c = c * invs[i] % mod;
     d = d * n1 % mod;
-    ret += c * b[k1-i] % mod * d % mod;
+    ret += c * b[k1 - i] % mod * d % mod;
     if (ret >= mod) ret -= mod;
   }
   ret = ret * invs[k1] % mod;

@@ -3,8 +3,8 @@
 
 #include "pe_base"
 #include "pe_integer_util"
-#include "pe_tree"
 #include "pe_mod"
+#include "pe_tree"
 
 // About numbers
 
@@ -185,7 +185,7 @@ SL vector<pair<int64, int>> factorize(int64 n) {
       if (c) ret.emplace_back((int64)now, c);
     }
   } else {
-    //PE_ASSERT(n <= maxp2);
+    // PE_ASSERT(n <= maxp2);
     for (int i = 0; i < pcnt; ++i) {
       const int64 p = plist[i];
       const int64 test = p * p;
@@ -200,7 +200,7 @@ SL vector<pair<int64, int>> factorize(int64 n) {
 }
 
 SL void get_factors_impl(const int limit, const vector<pair<int64, int>>& f,
-                      int64 value, vector<int64>& result) {
+                         int64 value, vector<int64>& result) {
   result.push_back(value);
   for (int i = 0; i < limit; ++i) {
     int64 tvalue = value;
@@ -243,21 +243,22 @@ SL int64 cal_phi(int64 n) {
   return phi_n;
 }
 
-template<typename T>
+template <typename T>
 class DVA {
  public:
- template<typename IT>
- struct DVARange {
-   IT first;
-   IT last;
-   DVARange(IT first, IT last): first(first), last(last) {}
-   IT begin() {return first;}
-   IT end() {return last;}
- };
- template<typename IT>
- DVARange<IT> makeRange(IT first, IT last) const {
-   return DVARange<IT>(first, last);
- }
+  template <typename IT>
+  struct DVARange {
+    IT first;
+    IT last;
+    DVARange(IT first, IT last) : first(first), last(last) {}
+    IT begin() { return first; }
+    IT end() { return last; }
+  };
+  template <typename IT>
+  DVARange<IT> makeRange(IT first, IT last) const {
+    return DVARange<IT>(first, last);
+  }
+
  public:
   int64 n;
   int64 m;
@@ -287,7 +288,7 @@ class DVA {
   DVA& operator=(const DVA& other) = default;
   DVA& operator=(DVA&& other) = default;
 
-  int idxOfValue(int64 v) const {return v <= m ? v : keySize - n / v;}
+  int idxOfValue(int64 v) const { return v <= m ? v : keySize - n / v; }
 
   T& operator[](int64 v) { return values[idxOfValue(v)]; }
 
@@ -302,7 +303,7 @@ class DVA {
   }
 };
 
-template<typename T>
+template <typename T>
 SL DVA<T> prime_s0(const int64 n) {
   PE_ASSERT(n >= 1);
   DVA<T> dva(n);
@@ -323,7 +324,7 @@ SL DVA<T> prime_s0(const int64 n) {
 
 #define prime_pi prime_s0
 
-template<typename T>
+template <typename T>
 SL DVA<T> prime_s1(const int64 n) {
   PE_ASSERT(n >= 1);
   DVA<T> dva(n);
@@ -351,7 +352,7 @@ SL DVA<T> prime_s1(const int64 n) {
 
 #define prime_sum prime_s1
 
-template<typename T>
+template <typename T>
 SL DVA<T> prime_s0_ex(const int64 n) {
   PE_ASSERT(n >= 1);
   DVA<T> dva(n);
@@ -361,7 +362,7 @@ SL DVA<T> prime_s0_ex(const int64 n) {
 
   for (auto& key : dva.fKeys()) {
     const int id = dva.idxOfValue(key);
-    tree.update(id, id, key-1);
+    tree.update(id, id, key - 1);
   }
 
   for (int64 p = 2; p <= dva.m; ++p)
@@ -371,18 +372,17 @@ SL DVA<T> prime_s0_ex(const int64 n) {
       const int a = keySize - 1;
       const int b = dva.idxOfValue(p2);
       for (int i = a; i >= b;) {
-        const auto delta = tree.query(dva.idxOfValue(dva.keys[i]/p)) - pcnt;
-        const int mini = max(dva.idxOfValue(dva.keys[i]/p*p), b);
+        const auto delta = tree.query(dva.idxOfValue(dva.keys[i] / p)) - pcnt;
+        const int mini = max(dva.idxOfValue(dva.keys[i] / p * p), b);
         tree.update(mini, i, -delta);
         i = mini - 1;
       }
     }
-  for (int i = 1; i < keySize; ++i)
-    dva[dva.keys[i]] = tree.query(i);
+  for (int i = 1; i < keySize; ++i) dva[dva.keys[i]] = tree.query(i);
   return dva;
 }
 
-template<typename T>
+template <typename T>
 SL DVA<T> prime_s1_ex(const int64 n) {
   PE_ASSERT(n >= 1);
   DVA<T> dva(n);
@@ -409,143 +409,138 @@ SL DVA<T> prime_s1_ex(const int64 n) {
       const int a = keySize - 1;
       const int b = dva.idxOfValue(p2);
       for (int i = a; i >= b;) {
-        const auto delta = tree.query(dva.idxOfValue(dva.keys[i]/p)) - psum;
-        const int mini = max(dva.idxOfValue(dva.keys[i]/p*p), b);
-        tree.update(mini, i, -delta*p);
+        const auto delta = tree.query(dva.idxOfValue(dva.keys[i] / p)) - psum;
+        const int mini = max(dva.idxOfValue(dva.keys[i] / p * p), b);
+        tree.update(mini, i, -delta * p);
         i = mini - 1;
       }
     }
 
-  for (int i = 1; i < keySize; ++i)
-    dva[dva.keys[i]] = tree.query(i);
+  for (int i = 1; i < keySize; ++i) dva[dva.keys[i]] = tree.query(i);
   return dva;
 }
 
-template<typename T>
+template <typename T>
 SL vector<DVA<T>> prime_s0_pmod_even(int64 n, int mod) {
   vector<DVA<T>> result;
-  for (int i = 0; i < mod; ++i)
-    result.emplace_back(n);
+  for (int i = 0; i < mod; ++i) result.emplace_back(n);
 
   for (int i = 1; i < mod; i += 2) {
     auto& target = result[i];
     const int dec = i == 1;
-    for (auto key: result[0].fKeys())
+    for (auto key : result[0].fKeys())
       target[key] = (key + mod - i) / mod - dec;
   }
-  for (int i = 1; ; ++i) {
+  for (int i = 1;; ++i) {
     const int64 p = plist[i];
     const int64 p2 = p * p;
     if (p2 > n) break;
-    for (auto key: result[0].bKeys()) {
+    for (auto key : result[0].bKeys()) {
       if (key < p2) break;
       const int rp = p % mod;
       for (int j = 1; j < mod; j += 2) {
         const int next = rp * j % mod;
-        result[next][key] -= result[j][key/p] - result[j][p-1];
+        result[next][key] -= result[j][key / p] - result[j][p - 1];
       }
     }
   }
 
   auto& target = result[2 % mod];
-  for (auto key: result[0].fKeys()) {
+  for (auto key : result[0].fKeys()) {
     target[key] += key >= 2 ? 1 : 0;
   }
   return result;
 }
 
-template<typename T>
+template <typename T>
 SL vector<DVA<T>> prime_s0_pmod_odd(int64 n, int mod) {
   vector<DVA<T>> result;
-  for (int i = 0; i < mod; ++i)
-    result.emplace_back(n);
+  for (int i = 0; i < mod; ++i) result.emplace_back(n);
 
   for (int i = 0; i < mod; ++i) {
     const int dec = (i == 1 % mod) + (i == 0);
-    for (auto key: result[0].fKeys())
+    for (auto key : result[0].fKeys())
       result[i][key] = (key + mod - i) / mod - dec;
   }
-  for (int i = 0; ; ++i) {
+  for (int i = 0;; ++i) {
     const int64 p = plist[i];
     const int64 p2 = p * p;
     if (p2 > n) break;
-    for (auto key: result[0].bKeys()) {
+    for (auto key : result[0].bKeys()) {
       if (key < p2) break;
       const int rp = p % mod;
       for (int j = 0; j < mod; ++j) {
         const int next = rp * j % mod;
-        result[next][key] -= result[j][key/p] - result[j][p-1];
+        result[next][key] -= result[j][key / p] - result[j][p - 1];
       }
     }
   }
   return result;
 }
 
-template<typename T>
+template <typename T>
 SL vector<DVA<T>> prime_s0_pmod(int64 n, int mod) {
   return mod & 1 ? prime_s0_pmod_odd<T>(n, mod) : prime_s0_pmod_even<T>(n, mod);
 }
 
-template<typename T>
+template <typename T>
 SL vector<DVA<T>> prime_s1_pmod_even(int64 n, int mod) {
   vector<DVA<T>> result;
-  for (int i = 0; i < mod; ++i)
-    result.emplace_back(n);
+  for (int i = 0; i < mod; ++i) result.emplace_back(n);
 
   for (int i = 1; i < mod; i += 2) {
     auto& target = result[i];
     const int dec = i == 1;
-    for (auto key: result[0].fKeys()) {
+    for (auto key : result[0].fKeys()) {
       const int64 c = (key + mod - i) / mod;
       target[key] = c * (c - 1) / 2 * mod + c * i - dec;
     }
   }
-  for (int i = 1; ; ++i) {
+  for (int i = 1;; ++i) {
     const int64 p = plist[i];
     const int64 p2 = p * p;
     if (p2 > n) break;
-    for (auto key: result[0].bKeys()) {
+    for (auto key : result[0].bKeys()) {
       if (key < p2) break;
       const int rp = p % mod;
       for (int j = 1; j < mod; j += 2) {
         const int next = rp * j % mod;
-        result[next][key] -= (result[j][key/p] - result[j][p-1]) * p;
+        result[next][key] -= (result[j][key / p] - result[j][p - 1]) * p;
       }
     }
   }
 
   auto& target = result[2 % mod];
-  for (auto key: result[0].fKeys()) {
+  for (auto key : result[0].fKeys()) {
     target[key] += key >= 2 ? 2 : 0;
   }
   return result;
 }
 
-template<typename T>
+template <typename T>
 SL vector<DVA<T>> prime_s1_pmod_odd(int64 n, int mod) {
   vector<DVA<T>> result;
-  for (int i = 0; i < mod; ++i)
-    result.emplace_back(n);
+  for (int i = 0; i < mod; ++i) result.emplace_back(n);
 
   for (int i = 0; i < mod; ++i) {
     auto& target = result[i];
     const int dec = i == 1 % mod;
-    for (auto key: result[0].fKeys()) {
+    for (auto key : result[0].fKeys()) {
       const int64 c = (key + mod - i) / mod;
       target[key] = c * (c - 1) / 2 * mod + c * i - dec;
     }
   }
 
-  for (int i = 0; ; ++i) {
+  for (int i = 0;; ++i) {
     const int64 p = plist[i];
     const int64 p2 = p * p;
     if (p2 > n) break;
-    for (auto key: result[0].bKeys()) {
+    for (auto key : result[0].bKeys()) {
       if (key < p2) break;
       const int rp = p % mod;
       for (int j = 0; j < mod; ++j) {
         const int next = rp * j % mod;
-        result[next][key] -= (result[j][key/p] - result[j][p-1]) * p;
+        result[next][key] -= (result[j][key / p] - result[j][p - 1]) * p;
       }
     }
   }
@@ -553,7 +548,7 @@ SL vector<DVA<T>> prime_s1_pmod_odd(int64 n, int mod) {
   return result;
 }
 
-template<typename T>
+template <typename T>
 SL vector<DVA<T>> prime_s1_pmod(int64 n, int mod) {
   return mod & 1 ? prime_s1_pmod_odd<T>(n, mod) : prime_s1_pmod_even<T>(n, mod);
 }
@@ -692,7 +687,7 @@ _EuclideanRingElement __gcd(_EuclideanRingElement __m,
 
 #define gcd __gcd
 
-template<typename T>
+template <typename T>
 SL T exgcd_impl(T a, T b, T& x, T& y) {
   if (b == 0) {
     x = 1;
@@ -711,7 +706,7 @@ SL T exgcd_impl(T a, T b, T& x, T& y) {
   return ret;
 }
 
-template<typename T>
+template <typename T>
 SL T exgcd(T a, T b, T& x, T& y) {
   PE_ASSERT(a != 0 || b != 0);
   const T r = exgcd_impl(a, b, x, y);
@@ -719,7 +714,7 @@ SL T exgcd(T a, T b, T& x, T& y) {
   return r;
 }
 
-template<typename T>
+template <typename T>
 SL tuple<T, T, T> exgcd(T a, T b) {
   PE_ASSERT(a != 0 || b != 0);
   T x = 0, y = 0;
@@ -731,7 +726,7 @@ SL tuple<T, T, T> exgcd(T a, T b) {
 // solve equation a x = b (mod m)
 // return 0 and set u = -1 and v = 0 if failed
 // return 1, x = v (mod u)
-template<typename T>
+template <typename T>
 SL int solve_linear_equation(T a, T b, T m, T& v, T& u) {
   v = 0;
   u = 0;
@@ -766,7 +761,7 @@ SL int solve_linear_equation(T a, T b, T m, T& v, T& u) {
 // solve equation x = a (mod m1) x = b (mod m2)
 // return 0 and set u = 0 and t = 0 if failed
 // return 1, x = v (mod u)
-template<typename T>
+template <typename T>
 SL int crt2(T a, T m1, T b, T m2, T& v, T& u) {
   v = 0;
   u = 0;
@@ -795,14 +790,14 @@ SL int crt2(T a, T m1, T b, T m2, T& v, T& u) {
   return 1;
 }
 
-template<typename T>
+template <typename T>
 SL tuple<int, T, T> crt2(T a, T m1, T b, T m2) {
   T v = 0, u = 0;
   int r = crt2(a, m1, b, m2, v, u);
   return tuple<int, T, T>{r, v, u};
 }
 
-template<typename T>
+template <typename T>
 SL tuple<int, T, T> crtn(T* val, T* mod, int n) {
   PE_ASSERT(val != NULL && mod != NULL);
   T v = 0, u = 1;
@@ -943,15 +938,15 @@ class RandomGenerator {
   DS distribution_;
 };
 
-RandomGenerator<std::mt19937, uniform_int_distribution<int>>
-SL make_uniform_generator(int seed, int min, int max) {
+RandomGenerator<std::mt19937, uniform_int_distribution<int>> SL
+make_uniform_generator(int seed, int min, int max) {
   PE_ASSERT(min <= max);
   return RandomGenerator<std::mt19937, uniform_int_distribution<int>>(
       std::mt19937(seed), std::uniform_int_distribution<int>(min, max));
 }
 
-RandomGenerator<std::mt19937, uniform_int_distribution<int>>
-SL make_uniform_generator(int min, int max) {
+RandomGenerator<std::mt19937, uniform_int_distribution<int>> SL
+make_uniform_generator(int min, int max) {
   std::random_device rd;
   PE_ASSERT(min <= max);
   return RandomGenerator<std::mt19937, uniform_int_distribution<int>>(
@@ -1087,7 +1082,6 @@ struct Fraction {
   double ToFloat() { return 1. * a / b; }
   T a, b;
 };
-
 
 // 65701
 #endif

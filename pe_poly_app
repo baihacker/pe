@@ -63,7 +63,7 @@ struct PSPTree {
 // size(V) = n
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_evaluate_mod_internal_impl(const T* X, int n, PSPTree* psp, T* result,
+    poly_evaluate_mod_normal_internal(const T* X, int n, PSPTree* psp, T* result,
                                     int64 mod) {
   if (psp->n == 1) {
     result[0] = (X[0] + psp->v[0] * X[1]) % mod;
@@ -74,28 +74,30 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
   vector<T> m(max(psp->L->p.size(), psp->R->p.size()));
   poly_mod(X, n, (const T*)&psp->L->p[0], psp->L->p.size(), &m[0], mod);
-  poly_evaluate_mod_internal_impl(&m[0], (int)psp->L->p.size() - 1, psp->L,
+  poly_evaluate_mod_normal_internal(&m[0], (int)psp->L->p.size() - 1, psp->L,
                                   result, mod);
   poly_mod(X, n, (const T*)&psp->R->p[0], psp->R->p.size(), &m[0], mod);
-  poly_evaluate_mod_internal_impl(&m[0], (int)psp->R->p.size() - 1, psp->R,
+  poly_evaluate_mod_normal_internal(&m[0], (int)psp->R->p.size() - 1, psp->R,
                                   result + c1, mod);
 }
 
 // size(V) = n
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_evaluate_mod_internal(const T* X, int n, const T* V, T* result,
+    poly_evaluate_mod_normal_internal(const T* X, int n, const T* V, T* result,
                                int64 mod) {
   static_assert(std::is_unsigned<T>::value, "T must be unsigned");
   PSPTree* psp = PSPTree::build_minus((int64*)V, n, mod);
-  poly_evaluate_mod_internal_impl(X, n, psp, result, mod);
+  poly_evaluate_mod_normal_internal(X, n, psp, result, mod);
   delete psp;
 }
 
+// Tellegen's Principle into Pratice
+// A. Bostan, G. Lecerf, E. Schost
 // size(V) = n
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_evaluate_mod_internal_ex(const T* X, int n, const T* V, T* result,
+    poly_evaluate_mod_bls_internal(const T* X, int n, const T* V, T* result,
                                   int64 mod) {
   static_assert(std::is_unsigned<T>::value, "T must be unsigned");
   vector<vector<vector<T>>> tree;
@@ -188,26 +190,51 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 // size(V) = n
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_evaluate_mod(const T* X, const int n, const T* V, T* result,
+    poly_evaluate_mod_normal(const T* X, const int n, const T* V, T* result,
                       int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
-  poly_evaluate_mod_internal_ex<unsignedT>(
+  poly_evaluate_mod_normal_internal<unsignedT>(
       (const unsignedT*)X, n, (const unsignedT*)V, (unsignedT*)result, mod);
 }
 
 // size x = size v
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
-    poly_evaluate_mod(const vector<T>& X, const vector<T>& V, int64 mod) {
+    poly_evaluate_mod_normal(const vector<T>& X, const vector<T>& V, int64 mod) {
   const int n = (int)X.size();
   vector<T> result(n);
-  poly_evaluate_mod(&X[0], n, &V[0], &result[0], mod);
+  poly_evaluate_mod_normal(&X[0], n, &V[0], &result[0], mod);
   return result;
 }
 
 // size x = size v
-SL vector<int64> poly_evaluate_mod(const Poly& X, const vector<int64>& V) {
-  return poly_evaluate_mod(X.data, V, X.mod);
+SL vector<int64> poly_evaluate_mod_normal(const Poly& X, const vector<int64>& V) {
+  return poly_evaluate_mod_normal(X.data, V, X.mod);
+}
+
+// size(V) = n
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_evaluate_mod_bls(const T* X, const int n, const T* V, T* result,
+                      int64 mod) {
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  poly_evaluate_mod_bls_internal<unsignedT>(
+      (const unsignedT*)X, n, (const unsignedT*)V, (unsignedT*)result, mod);
+}
+
+// size x = size v
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
+    poly_evaluate_mod_bls(const vector<T>& X, const vector<T>& V, int64 mod) {
+  const int n = (int)X.size();
+  vector<T> result(n);
+  poly_evaluate_mod_bls(&X[0], n, &V[0], &result[0], mod);
+  return result;
+}
+
+// size x = size v
+SL vector<int64> poly_evaluate_mod_bls(const Poly& X, const vector<int64>& V) {
+  return poly_evaluate_mod_bls(X.data, V, X.mod);
 }
 
 // Initialize the bernoulli numbers.

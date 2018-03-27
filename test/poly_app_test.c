@@ -52,7 +52,6 @@ SL void gf_test() {
     assert(mine == expected);
   }
 }
-
 PE_REGISTER_TEST(&gf_test, "gf_test", SMALL);
 
 SL void power_sum_test() {
@@ -85,21 +84,29 @@ SL void minimal_polynomial_test() {
   assert(t[2] == 1);
   assert(nth_element({{0,1,1,2,3,5,8,13}, P}, 38) == 39088169);
 }
-
 PE_REGISTER_TEST(&minimal_polynomial_test, "minimal_polynomial_test", SMALL);
+
 SL void poly_multipoint_evaluation_test() {
   srand(123456789);
   vector<int64> data;
-  int n = 2000;
+  int n = 5000;
   const int64 mod = 10007;
   for (int i = 1; i <= n; ++i) data.push_back(i);
   Poly p(data, mod);
   vector<int64> v;
   for (int i = 1; i <= n; ++i)
     v.push_back(i%10007);
-  auto result = poly_evaluate_mod(p, v);
-  for (int i = 1; i <= n; ++i) {
-    assert(p.valueAt(i%10007) == result[i-1]);
+  {
+    auto result = poly_evaluate_mod_normal(p, v);
+    for (int i = 1; i <= n; ++i) {
+      assert(p.valueAt(i%10007) == result[i-1]);
+    }
+  }
+  {
+    auto result = poly_evaluate_mod_bls(p, v);
+    for (int i = 1; i <= n; ++i) {
+      assert(p.valueAt(i%10007) == result[i-1]);
+    }
   }
 }
 PE_REGISTER_TEST(&poly_multipoint_evaluation_test, "poly_multipoint_evaluation_test", SMALL);

@@ -283,7 +283,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   while (alignedSize < n + m) alignedSize <<= 1;
 
   // TODO(baihacker): decide the size automatically.
-  NttMod moder[3] = {nttMod1, nttMod2, nttMod3};
+  ntt::NttMod moder[3] = {ntt::nttMod1, ntt::nttMod2, ntt::nttMod3};
   vector<uint64> tresult[3];
 #pragma omp parallel for schedule(dynamic, 1) num_threads(3)
   for (int id = 0; id < 3; ++id) {
@@ -296,26 +296,26 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 #pragma omp parallel sections if (n + m >= 100000)
     {
 #pragma omp section
-      ntt(&XX[0], alignedSize, moder[id]);
+      ntt::ntt(&XX[0], alignedSize, moder[id]);
 #pragma omp section
-      ntt(&YY[0], alignedSize, moder[id]);
+      ntt::ntt(&YY[0], alignedSize, moder[id]);
     }
     const uint64 mod = moder[id].mod;
     for (int i = 0; i < alignedSize; ++i) {
       XX[i] = (uint64)XX[i] * YY[i] % mod;
     }
-    ntt(&XX[0], alignedSize, moder[id], true);
+    ntt::ntt(&XX[0], alignedSize, moder[id], true);
     tresult[id] = std::move(XX);
   }
 
   const int resultSize = n + m - 1;
-  int128 mods[3] = {nttMod1.mod, nttMod2.mod, nttMod3.mod};
 #pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
   for (int i = 0; i < resultSize; ++i) {
-    int128 val[3] = {tresult[0][i], tresult[1][i], tresult[2][i]};
-    int128 have, v, u;
-    tie(have, v, u) = crtn<int128>(val, mods, 3);
-    result[i] = v % mod;
+    const uint128 a = tresult[0][i] * ntt::M23M;
+    const uint128 b = tresult[1][i] * ntt::M13M;
+    const uint128 c = tresult[2][i] * ntt::M12M;
+    const uint128 t = a + b + c;
+    result[i] = t < ntt::MMM ? t % mod : t % ntt::MMM % mod;
   }
 }
 
@@ -385,11 +385,13 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   if (n == 1) {
     b[0] = power_mod(a[0], mod - 2, mod);
   } else {
-    poly_inv_mod_internal(n + 1 >> 1, a, b, tmp, mod);
-
-    int p = 1;
-    while (p < n << 1) p <<= 1;
-    poly_mul(b, n, b, n, tmp[0], mod);
+    const int m = n + 1 >> 1;
+    poly_inv_mod_internal(m, a, b, tmp, mod);
+    fill(b+m, b+n, 0);
+    poly_mul(b, m, b, m, tmp[0], mod);
+    if (m + m - 2 < n - 1) {
+      tmp[0][n-1] = 0;
+    }
     poly_mul(a, n, tmp[0], n, tmp[1], mod);
     for (int i = 0; i < n; ++i) {
       auto t = b[i] << 1;
@@ -398,7 +400,6 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
       if (t >= mod) t -= mod;
       b[i] = t;
     }
-    fill(b + n, b + p, 0);
   }
 }
 
@@ -421,7 +422,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   }
 
   // b
-  vector<T> b(p);
+  vector<T> b(n);
 
   // tmp
   vector<T> tmpData[2];

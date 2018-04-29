@@ -89,7 +89,7 @@ PE_REGISTER_TEST(&minimal_polynomial_test, "minimal_polynomial_test", SMALL);
 SL void poly_multipoint_evaluation_test() {
   srand(123456789);
   vector<int64> data;
-  int n = 10000;
+  int n = 5000;
   const int64 mod = 10007;
   for (int i = 1; i <= n; ++i) data.push_back(i);
   Poly p(data, mod);

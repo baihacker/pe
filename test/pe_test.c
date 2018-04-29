@@ -9,6 +9,7 @@
 #include "parallel_sort_test.c"
 #include "poly_test.c"
 #include "poly_app_test.c"
+#include "fft_test.c"
 #include "prime_phi_sum_test.c"
 #include "print_int128_test.c"
 #include "square_root_test.c"

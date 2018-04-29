@@ -671,6 +671,57 @@ struct comb_moder {
 template <int64 P, int64 F>
 int64* comb_moder<P, F>::fac;
 
+int64 short_comb_mod(int64 n, int64 m, int64 mod) {
+  if (m > n || m < 0) return 0;
+  if (n - m < m) m = n - m;
+  vector<int64> data;
+  for (int64 i = n; i >= n - m + 1; --i)
+    data.push_back(i);
+  const int size = data.size();
+  for (int i = 2; i <= m; ++i) {
+    int64 a = i;
+    for (int j = 0; j < size && a > 1; ++j) {
+      for (;;) {
+        int t = __gcd(a, data[j]);
+        if (t == 1) break;
+        a /= t;
+        data[j] /= t;
+      }
+    }
+  }
+  int64 ret = 1;
+  for (int i = 0; i < size; ++i) ret = ret * data[i] % mod;
+  return ret;
+}
+
+struct PowerSumModer {
+  PowerSumModer(int64 mod): mod(mod) {init();}
+  void init() {
+    memset(P, 0, sizeof P);
+    for (int i = 0; i < 64; ++i)
+      P[i][1] = 1;
+    for (int i = 1; i < 64; ++i) {
+      for (int j = 1; j < i; ++j) {
+        int64 t = P[i-1][j-1] + P[i-1][j];
+        if (t >= mod) t -= mod;
+        P[i][j] = j * t % mod;
+      }
+      P[i][i] = 1;
+      for (int j = 1; j <= i; ++j)
+        P[i][i] = P[i][i] * j % mod;
+    }
+  }
+  int64 cal(int64 n, int64 k) {
+    int64 ret = 0;
+    for (int i = 1; i <= k; ++i) {
+      ret += P[k][i] * short_comb_mod(n+1, i+1, mod) % mod;
+    }
+    return ret % mod;
+  }
+  int64 mod;
+  int64 P[64][64]; // k < 64;
+};
+
 // greatest common divisor and extend greatest common divisor
 #ifndef COMPILER_GNU
 template <typename _EuclideanRingElement>

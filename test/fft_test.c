@@ -1,9 +1,9 @@
 #include "pe_test.h"
 
 namespace fft_test {
-SL void fft_test() {
-  fft::init_fft();
+SL void random_test() {
   {
+    // 8e13
     // 1e5+19
     const int64 mod = 100019;
     vector<uint64> x, y;
@@ -24,6 +24,7 @@ SL void fft_test() {
     assert(ans0 == ans2);
   }
   {
+    // 1e15
     // 1e9+7
     const int64 mod = 1000000007;
     vector<uint64> x, y;
@@ -41,6 +42,7 @@ SL void fft_test() {
     assert(ans0 == ans1);
   }
   {
+    // 1e15
     // 1e10+19
     const int64 mod = 10000000019;
     vector<uint64> x, y;
@@ -58,5 +60,69 @@ SL void fft_test() {
     assert(ans0 == ans1);
   }
 }
-PE_REGISTER_TEST(&fft_test, "fft_test", SMALL);
+
+SL void limit_test() {
+  {
+    // 10018*10018*2214=22147971117336 2.21e12
+    // 1e5+19
+    const int64 mod = 100019;
+    vector<uint64> x, y;
+    for (int i = 0; i < 2214; ++i)
+      x.push_back(mod-1),
+      y.push_back(mod-1);
+
+    int t0 = clock();
+    auto ans0 = poly_mul(x, y, mod);
+    int t1 = clock();
+    auto ans1 = fft::fft_mul_mod(x, y, mod);
+    int t2 = clock();
+    auto ans2 = fft::fft_mul_mod_small(x, y, mod);
+    int t3 = clock();
+    // cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << " " << (t3-t1)*1e-3 << endl;
+
+    assert(ans0 == ans1);
+    assert(ans0 == ans2);
+  }
+  {
+    // 1000000007*339750=339750002378250=3.39e14
+    // 1e9+7
+    const int64 mod = 1000000007;
+    vector<uint64> x, y;
+    for (int i = 0; i < 339750; ++i)
+      x.push_back(mod-1),
+      y.push_back(mod-1);
+
+    int t0 = clock();
+    auto ans0 = poly_mul(x, y, mod);
+    int t1 = clock();
+    auto ans1 = fft::fft_mul_mod(x, y, mod);
+    int t2 = clock();
+    // cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << endl;
+    assert(ans0 == ans1);
+  }
+  {
+    // 10000000019*44064=440640000837216=4.4e14
+    // 1e10+19
+    const int64 mod = 10000000019;
+    vector<uint64> x, y;
+    for (int i = 0; i < 44064; ++i)
+      x.push_back(mod-1),
+      y.push_back(mod-1);
+
+    int t0 = clock();
+    auto ans0 = poly_mul(x, y, mod);
+    int t1 = clock();
+    auto ans1 = fft::fft_mul_mod(x, y, mod);
+    int t2 = clock();
+    // cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << endl;
+    assert(ans0 == ans1);
+  }
+}
+
+SL void fft_test() {
+  fft::init_fft();
+  random_test();
+  limit_test();
+}
+PE_REGISTER_TEST(&fft_test, "fft_test", MEDIUM);
 }

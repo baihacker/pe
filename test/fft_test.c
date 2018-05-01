@@ -2,14 +2,15 @@
 
 namespace fft_test {
 SL void random_test() {
+  srand(123456789);
   {
     // 8e13
     // 1e5+19
     const int64 mod = 100019;
     vector<uint64> x, y;
-    for (int i = 0; i < 8000; ++i)
-      x.push_back((uint64)rand()*rand()*rand()%mod),
-      y.push_back((uint64)rand()*rand()*rand()%mod);
+    for (int i = 0; i < 7000; ++i)
+      x.push_back((uint64)crand63()%mod),
+      y.push_back((uint64)crand63()%mod);
 
     int t0 = clock();
     auto ans0 = poly_mul(x, y, mod);
@@ -29,8 +30,8 @@ SL void random_test() {
     const int64 mod = 1000000007;
     vector<uint64> x, y;
     for (int i = 0; i < 1020000; ++i)
-      x.push_back((uint64)rand()*rand()*rand()%mod),
-      y.push_back((uint64)rand()*rand()*rand()%mod);
+      x.push_back((uint64)crand63()%mod),
+      y.push_back((uint64)crand63()%mod);
 
     int t0 = clock();
     auto ans0 = poly_mul(x, y, mod);
@@ -42,13 +43,13 @@ SL void random_test() {
     assert(ans0 == ans1);
   }
   {
-    // 1e15
+    // 8e14
     // 1e10+19
     const int64 mod = 10000000019;
     vector<uint64> x, y;
-    for (int i = 0; i < 120000; ++i)
-      x.push_back((uint64)rand()*rand()*rand()%mod),
-      y.push_back((uint64)rand()*rand()*rand()%mod);
+    for (int i = 0; i < 80000; ++i)
+      x.push_back((uint64)crand63()%mod),
+      y.push_back((uint64)crand63()%mod);
 
     int t0 = clock();
     auto ans0 = poly_mul(x, y, mod);
@@ -124,5 +125,5 @@ SL void fft_test() {
   random_test();
   limit_test();
 }
-PE_REGISTER_TEST(&fft_test, "fft_test", MEDIUM);
+PE_REGISTER_TEST(&fft_test, "fft_test", SMALL);
 }

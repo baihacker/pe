@@ -237,6 +237,162 @@ SL vector<int64> poly_evaluate_mod_bls(const Poly& X, const vector<int64>& V) {
   return poly_evaluate_mod_bls(X.data, V, X.mod);
 }
 
+// Known f[0],f[1],f[2],...,f[d]
+// Calcupate f[0+offset],f[1+offset],f[2+offset],...,f[d+offset]
+// offset > d
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value))
+RETURN(void)
+poly_offset_evaluate_internal(int d, const T* h, T* result, int64 offset, T* preFactInv,
+                        T mod) {
+  static_assert(std::is_unsigned<T>::value, "T must be unsigned");
+
+  vector<T> A(d + 1);
+  vector<T> B(2*d + 2);
+  vector<T> C(3*d + 1);
+  vector<T> T0(2*d + 2);
+  vector<T> T1(2*d + 2);
+  for (int i = 0; i <= d; ++i) {
+    auto t = mul_mod(h[i], preFactInv[i], mod);
+    t = mul_mod(t, preFactInv[d - i], mod);
+    if ((d - i) & 1) {
+      A[i] = t == 0 ? 0 : mod - t;
+    } else {
+      A[i] = t;
+    }
+  }
+
+  T0[0] = T1[0] = 1;
+  for (int i = -d, j = 1; i <= d; ++i, ++j) {
+    T0[j] = mul_mod(T0[j - 1], offset + i, mod);
+  }
+
+  T1[2 * d + 1] = power_mod(T0[2 * d + 1], mod - 2, mod);
+  for (int i = d - 1, j = 2 * d; i >= -d; --i, --j) {
+    T1[j] = mul_mod(T1[j + 1], offset + i + 1, mod);
+  }
+
+  for (int i = -d, j = 1; i <= d; ++i, ++j) {
+    B[j - 1] = mul_mod(T1[j], T0[j - 1], mod);
+  }
+
+  poly_mul(&A[0], d + 1, &B[0], 2 * d + 1, &C[0], mod);
+  copy(&C[0] + d, &C[0] + 2 * d + 1, result);
+
+  for (int i = 0, j = d + 1; i <= d; ++i, ++j) {
+    result[i] = mul_mod(result[i], T0[j], mod);
+    result[i] = mul_mod(result[i], T1[j - d - 1], mod);
+  }
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value))
+RETURN(void)
+poly_offset_evaluate(int d, const T* h, T* result, int64 offset, T* preFactInv,
+                        T mod) {
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  poly_offset_evaluate_internal<unsignedT>(
+      d, (const unsignedT*)h, (unsignedT*)result, offset, preFactInv, mod);
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value))
+RETURN(vector<T>)
+poly_offset_evaluate(const vector<T>& values, int64 offset, T* preFactInv,
+                T mod) {
+  const int d = (int)values.size() - 1;
+  vector<T> result(d+1);
+  poly_offset_evaluate(
+      d, &values[0], &result[0], offset, preFactInv, mod);
+  return std::move(result);
+}
+
+struct FactModer {
+  FactModer(uint64 p) : p(p) {
+    init();
+  }
+
+  // Evaluate (x+v*0+1)*(x+v*1+1)*(x+v*2+1)*...*(x+v*(d-1)+1) at 0, 1, 2, ..., d
+  void evaluate(int d, uint64* result, uint64 v) {
+    if (d == 1) {
+      result[0] = 1;
+      result[1] = 2;
+      return;
+    }
+
+    const int halfD = d >> 1;
+    evaluate(halfD, result, v);
+    copy(result, result + halfD + 1, &G0[0]);
+    poly_offset_evaluate<uint64>(halfD, result, &G1[0], halfD + 1, &preFactInv[0], p);
+    poly_offset_evaluate<uint64>(halfD, result, &G2[0], v * halfD, &preFactInv[0], p);
+    poly_offset_evaluate<uint64>(halfD, result, &G3[0], v * halfD + halfD, &preFactInv[0], p);
+
+    for (int i = 0; i <= halfD; ++i) {
+      result[i] = mul_mod(G0[i], G2[i], p);
+    }
+    for (int i = halfD + 1, j = 0; i <= halfD * 2; ++i, ++j) {
+      result[i] = mul_mod(G1[j], G3[j + 1], p);
+    }
+
+    if (d & 1) {
+      uint64 tmp = (v * (d - 1) + 1) % p;
+      for (int i = 0; i <= 2 * halfD; ++i) {
+        result[i] = mul_mod(result[i], tmp++, p);
+        if (tmp >= p) tmp -= p;
+      }
+      uint64 t = 1;
+      uint64 c = d + 1;
+      for (int i = 0; i < d; ++i) {
+        t = mul_mod(t, c, p);
+        c += v;
+        if (c >= p) c -= p;
+      }
+      result[d] = t;
+    }
+  }
+
+  int64 cal(int64 n) {
+    if (n >= p) return 0;
+    if (n < q) return preFact[n];
+
+    int64 m = sqrt(n);
+    uint64 ret = 1;
+
+    for (int64 i = m * m + 1; i <= n; ++i) {
+      ret = mul_mod(ret, i, p);
+    }
+
+    evaluate(m, (uint64*)&V[0], m);
+
+    for (int i = 0; i < m; ++i) {
+      ret = mul_mod(ret, V[i], p);
+    }
+    return (int64)ret;
+  }
+  
+  void init() {
+    q = sqrt(p);
+    while (q * q < p) ++q;
+    q <<= 1;
+    q += 1;
+    preFact.resize(q);
+    preFactInv.resize(q);
+    init_seq_prod<uint64>(&preFact[0], 1, q - 1, p);
+    init_seq_prod_inv<uint64>(&preFactInv[0], 1, q - 1, p, inv_of(preFact[q-1], p));
+    G0.resize(q);
+    G1.resize(q);
+    G2.resize(q);
+    G3.resize(q);
+    V.resize(q);
+  }
+
+  vector<uint64> preFact, preFactInv;
+  vector<uint64> G0, G1, G2, G3;
+  vector<uint64> V;
+  uint64 p;
+  uint64 q;
+};
+
 // Initialize the bernoulli numbers.
 SL void init_bernoulli_number(int64* dest, int n, int64* invs, int64 mod) {
   vector<uint64> t(n);

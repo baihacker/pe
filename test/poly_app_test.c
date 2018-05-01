@@ -110,4 +110,35 @@ SL void poly_multipoint_evaluation_test() {
   }
 }
 PE_REGISTER_TEST(&poly_multipoint_evaluation_test, "poly_multipoint_evaluation_test", SMALL);
+
+SL void poly_fact_mod_test() {
+  {
+    const int64 mod = 10007;
+    FactModer moder(mod);
+    int64 last = 1;
+    for (int i = 1; i <= mod; ++i) {
+      last = last * i % mod;
+      assert(moder.cal(i) == last);
+    }
+  }
+  {
+    const int64 mod = 1000000007;
+    FactModer moder(mod);
+    int64 last = moder.cal(500000000);
+    for (int i = 500000001, j = 0; j < 10; ++i, ++j) {
+      last = last * i % mod;
+      assert(moder.cal(i) == last);
+    }
+  }
+  {
+    const int64 mod = 4000000007;
+    FactModer moder(mod);
+    int64 last = moder.cal(2000000000);
+    for (int i = 2000000001, j = 0; j < 10; ++i, ++j) {
+      last = last * i % mod;
+      assert(moder.cal(i) == last);
+    }
+  }
+}
+PE_REGISTER_TEST(&poly_fact_mod_test, "poly_fact_mod_test", BIG);
 }

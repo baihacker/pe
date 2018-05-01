@@ -124,19 +124,25 @@ SL void poly_fact_mod_test() {
   {
     const int64 mod = 1000000007;
     FactModer moder(mod);
-    int64 last = moder.cal(500000000);
-    for (int i = 500000001, j = 0; j < 10; ++i, ++j) {
-      last = last * i % mod;
-      assert(moder.cal(i) == last);
+    int64 step = sqrt(mod);
+    int64 n = 500000000;
+    int64 last = moder.cal(n);
+    for (int i = n, j = 0; j < 10; ++i, ++j) {
+      i += step;
+      while (n != i) last = last * ++n % mod;
+      assert(moder.cal(n) == last);
     }
   }
   {
     const int64 mod = 4000000007;
     FactModer moder(mod);
-    int64 last = moder.cal(2000000000);
-    for (int i = 2000000001, j = 0; j < 10; ++i, ++j) {
-      last = last * i % mod;
-      assert(moder.cal(i) == last);
+    int64 step = sqrt(mod);
+    int64 n = 2000000000;
+    int64 last = moder.cal(n);
+    for (int64 i = n, j = 0; j < 10; ++j) {
+      i += step;
+      while (n != i) last = (uint64)last * ++n % mod;
+      assert(moder.cal(n) == last);
     }
   }
 }

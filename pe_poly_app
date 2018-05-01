@@ -248,7 +248,7 @@ poly_offset_evaluate_internal(int d, const T* h, T* result, int64 offset, T* pre
   static_assert(std::is_unsigned<T>::value, "T must be unsigned");
 
   vector<T> A(d + 1);
-  vector<T> B(2*d + 2);
+  vector<T> B(2*d + 1);
   vector<T> C(3*d + 1);
   vector<T> T0(2*d + 2);
   vector<T> T1(2*d + 2);
@@ -307,6 +307,8 @@ poly_offset_evaluate(const vector<T>& values, int64 offset, T* preFactInv,
   return std::move(result);
 }
 
+// Compuate n! % p (2 <= p < 2^32)
+// Algorithm source: // https://min-25.hatenablog.com/entry/2017/04/10/215046
 struct FactModer {
   FactModer(uint64 p) : p(p) {
     init();
@@ -316,7 +318,7 @@ struct FactModer {
   void evaluate(int d, uint64* result, uint64 v) {
     if (d == 1) {
       result[0] = 1;
-      result[1] = 2;
+      result[1] = p == 2 ? 0 : 2;
       return;
     }
 
@@ -378,7 +380,7 @@ struct FactModer {
     preFact.resize(q);
     preFactInv.resize(q);
     init_seq_prod<uint64>(&preFact[0], 1, q - 1, p);
-    init_seq_prod_inv<uint64>(&preFactInv[0], 1, q - 1, p, inv_of(preFact[q-1], p));
+    init_seq_prod_inv<uint64>(&preFactInv[0], 1, q - 1, p, power_mod<uint64>(preFact[q-1], p-2, p));
     G0.resize(q);
     G1.resize(q);
     G2.resize(q);

@@ -94,4 +94,85 @@ ntt(T* data, const int n, const NttMod& moder, bool inv = false) {
   }
 }
 }
+
+
+// Need int128 to handle the big polynomial coefficient.
+#if PE_HAS_INT128
+#define HAS_POLY_MUL_NTT 1
+
+// Multiply two polynomials.
+// Make sure the length of result is at least: n + m - 1
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_mul_ntt_internal(const T* X, int n, const T* Y, int m, T* result,
+                          int64 mod) {
+  static_assert(std::is_unsigned<T>::value, "T must be unsigned");
+
+  int alignedSize = 1;
+  while (alignedSize < n + m) alignedSize <<= 1;
+
+  // TODO(baihacker): decide the size automatically.
+  ntt::NttMod moder[3] = {ntt::nttMod1, ntt::nttMod2, ntt::nttMod3};
+  vector<uint64> tresult[3];
+#pragma omp parallel for schedule(dynamic, 1) num_threads(3)
+  for (int id = 0; id < 3; ++id) {
+    vector<uint64> XX(alignedSize);
+    vector<uint64> YY(alignedSize);
+    for (int i = 0; i < n; ++i) XX[i] = X[i];
+    for (int i = n; i < alignedSize; ++i) XX[i] = 0;
+    for (int i = 0; i < m; ++i) YY[i] = Y[i];
+    for (int i = m; i < alignedSize; ++i) YY[i] = 0;
+#pragma omp parallel sections if (n + m >= 100000)
+    {
+#pragma omp section
+      ntt::ntt(&XX[0], alignedSize, moder[id]);
+#pragma omp section
+      ntt::ntt(&YY[0], alignedSize, moder[id]);
+    }
+    const uint64 mod = moder[id].mod;
+    for (int i = 0; i < alignedSize; ++i) {
+      XX[i] = (uint64)XX[i] * YY[i] % mod;
+    }
+    ntt::ntt(&XX[0], alignedSize, moder[id], true);
+    tresult[id] = std::move(XX);
+  }
+
+  const int resultSize = n + m - 1;
+#pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
+  for (int i = 0; i < resultSize; ++i) {
+    const uint128 a = tresult[0][i] * ntt::M23M;
+    const uint128 b = tresult[1][i] * ntt::M13M;
+    const uint128 c = tresult[2][i] * ntt::M12M;
+    const uint128 t = a + b + c;
+    result[i] = t < ntt::MMM ? t % mod : t % ntt::MMM % mod;
+  }
+}
+
+// Multiply two polynomials.
+// The length of result is at least n + m - 1.
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_mul_ntt(const T* X, const int n, const T* Y, const int m, T* result,
+                 int64 mod) {
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  poly_mul_ntt_internal<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y,
+                                   m, (unsignedT*)result, mod);
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
+    poly_mul_ntt(const vector<T>& X, const vector<T>& Y, int64 mod) {
+  const int n = (int)X.size() - 1;
+  const int m = (int)Y.size() - 1;
+
+  vector<T> result(n + m + 1);
+  poly_mul_ntt(&X[0], n + 1, &Y[0], m + 1, &result[0], mod);
+
+  return result;
+}
+
+#else
+#define HAS_POLY_MUL_NTT 0
+#endif
+
 #endif

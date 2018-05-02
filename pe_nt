@@ -637,8 +637,9 @@ SL int64 square_root(int64 n) {
 }
 
 // p is prime
-SL int64 inv_of(int64 x, int64 p) { return power_mod(x, p - 2, p); }
+SL int64 inv_of(int64 x, int64 p) { return power_mod_ex(x, p - 2, p); }
 
+// Deprecated
 // calculate C(n, m) % P where P is prime
 template <int64 P, int64 F = P>
 struct comb_moder {
@@ -700,6 +701,53 @@ struct comb_moder {
 };
 template <int64 P, int64 F>
 int64* comb_moder<P, F>::fac;
+
+// calculate C(n, m) % P where P is prime
+struct CombModer {
+  CombModer(uint64 P, uint64 F = 0): P(P), F(F == 0 ? P : F), fac(NULL) { init(); }
+  ~CombModer() {delete[] fac; fac = NULL;}
+  void init() {
+    if (fac == NULL) {
+      fac = new uint64[F];
+      fac[0] = 1;
+      for (int i = 1; i < F; ++i) {
+        fac[i] = mul_mod_ex(fac[i - 1], i, P);
+      }
+    }
+  }
+  uint64 s(int64 x) { return x & 1 ? P-1 : 1; }
+  uint64 comb(int64 m, int64 n) {
+    if (m < 0 || n > m) return 0;
+    if (n == m || n == 0) return 1;
+    if (n == 1 || n == m - 1) return m % P;
+
+    int64 pp = 0;
+    int64 dist = m - n;
+
+    for (uint64 mm = m / P, nn = n / P, dd = dist / P; mm;
+         mm /= P, nn /= P, dd /= P) {
+      pp += mm - nn - dd;
+    }
+    if (pp) return 0;
+    uint64 l = 1, r = 1;
+    for (uint64 x = m; x; x /= P) {
+      l = mul_mod_ex(l, s(x / P), P);
+      l = mul_mod_ex(l, fac[x % P], P);
+    }
+    for (uint64 x = n; x; x /= P) {
+      r = mul_mod_ex(r, s(x / P), P);
+      r = mul_mod_ex(r, fac[x % P], P);
+    }
+    for (uint64 x = dist; x; x /= P) {
+      r = mul_mod_ex(r, s(x / P), P);
+      r = mul_mod_ex(r, fac[x % P], P);
+    }
+    return mul_mod_ex(inv_of(r, P), l, P);
+  }
+
+  uint64 P, F;
+  uint64* fac;
+};
 
 int64 short_comb_mod(int64 n, int64 m, int64 mod) {
   if (m > n || m < 0) return 0;
@@ -1043,7 +1091,7 @@ namespace pr {
 SL bool is_pr(int64 x, int64 p, const vector<pair<int64, int>>& f) {
   return std::none_of(std::begin(f), std::end(f),
                       [=](const pair<int64, int>& it) {
-                        return power_mod(x, (p - 1) / it.first, p) == 1;
+                        return power_mod_ex(x, (p - 1) / it.first, p) == 1;
                       });
 }
 
@@ -1078,7 +1126,7 @@ SL int64 ind(int64 a, int64 pr, int64 p) {
     mem[t2] = i;
     t2 = t2 * inv_pr % p;
   }
-  int64 temp = power_mod(pr, mx, p);
+  int64 temp = power_mod_ex(pr, mx, p);
   for (unsigned int i = 0; i <= mx - 1; ++i) {
     auto where = mem.find(t1);
     if (where != mem.end()) {
@@ -1113,7 +1161,7 @@ class ind_solver {
     PE_ASSERT(a > 0);
     a %= p_;
 
-    const int64 temp = power_mod(pr_, mx_, p_);
+    const int64 temp = power_mod_ex(pr_, mx_, p_);
     const int64 inv_a = inv_of(a, p_);
     int64 t = 1;
 

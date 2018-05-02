@@ -1,6 +1,7 @@
 #include "pe_test.h"
 
 #include "bi_test.c"
+#include "comb_moder_test.c"
 #include "dva_test.c"
 #include "fac_mod_test.c"
 #include "init_inv_test.c"

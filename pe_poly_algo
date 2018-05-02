@@ -846,6 +846,43 @@ struct FactModer {
   uint64 q;
 };
 
+struct CombModerEx {
+  CombModerEx(uint64 P): P(P), fmoder(P) { }
+  int64 s(int64 x) { return x & 1 ? P-1 : 1; }
+  int64 comb(int64 m, int64 n) {
+    if (m < 0 || n > m) return 0;
+    if (n == m || n == 0) return 1;
+    if (n == 1 || n == m - 1) return m % P;
+
+    int64 pp = 0;
+    int64 dist = m - n;
+
+    for (int64 mm = m / P, nn = n / P, dd = dist / P; mm;
+         mm /= P, nn /= P, dd /= P) {
+      pp += mm - nn - dd;
+    }
+    if (pp) return 0;
+    int64 l = 1, r = 1;
+    for (int64 x = m; x; x /= P) {
+      l = mul_mod_ex(l, s(x / P), P);
+      l = mul_mod_ex(l, fmoder.cal(x % P), P);
+    }
+    for (int64 x = n; x; x /= P) {
+      r = mul_mod_ex(r, s(x / P), P);
+      r = mul_mod_ex(r, fmoder.cal(x % P), P);
+    }
+    for (int64 x = dist; x; x /= P) {
+      r = mul_mod_ex(r, s(x / P), P);
+      r = mul_mod_ex(r, fmoder.cal(x % P), P);
+    }
+
+    return mul_mod_ex(inv_of(r, P), l, P);
+  }
+  
+  uint64 P;
+  FactModer fmoder;
+};
+
 // Initialize the bernoulli numbers.
 SL void init_bernoulli_number(int64* dest, int n, int64* invs, int64 mod) {
   vector<uint64> t(n);

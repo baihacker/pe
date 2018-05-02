@@ -15,8 +15,7 @@ struct NttMod {
   const uint64 g;
 
   uint64 omg[32];
-  NttMod(uint64 mod, uint64 r, int k, uint64 g)
-    : mod(mod), r(r), k(k), g(g) {
+  NttMod(uint64 mod, uint64 r, int k, uint64 g) : mod(mod), r(r), k(k), g(g) {
     for (int i = 0; i <= k; ++i) {
       omg[i] = power_mod(g, (mod - 1) >> i, mod);
     }
@@ -42,11 +41,9 @@ uint128 M23M = (uint128)IM23 * M23;
 uint128 M12M = (uint128)IM12 * M12;
 uint128 MMM = (uint128)M1 * M2 * M3;
 
-template<typename T>
-SL
-REQUIRES((is_native_integer<T>::value))
-RETURN(void)
-ntt_trans(T* data, const int n) {
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    ntt_trans(T* data, const int n) {
   int j = n >> 1;
   for (int i = 1; i < n - 1; ++i) {
     if (i < j) swap(data[i], data[j]);
@@ -59,18 +56,16 @@ ntt_trans(T* data, const int n) {
   }
 }
 
-template<typename T>
-SL
-REQUIRES((is_native_integer<T>::value))
-RETURN(void)
-ntt(T* data, const int n, const NttMod& moder, bool inv = false) {
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    ntt(T* data, const int n, const NttMod& moder, bool inv = false) {
   ntt_trans(data, n);
 
   const auto mod = moder.mod;
   int id = 0;
   for (int h = 2; h <= n; h <<= 1) {
     ++id;
-    #pragma omp parallel for schedule(dynamic, 16) if (n / h > 100000)
+#pragma omp parallel for schedule(dynamic, 16) if (n / h > 100000)
     for (int j = 0; j < n; j += h) {
       uint64 omgn = 1;
       const int halfH = h >> 1;
@@ -79,18 +74,16 @@ ntt(T* data, const int n, const NttMod& moder, bool inv = false) {
         const auto u = data[k] % mod;
         const auto t = omgn * data[k + halfH] % mod;
         data[k] = (u + t) % mod;
-        data[k+halfH] = (u + mod - t) % mod;
+        data[k + halfH] = (u + mod - t) % mod;
         omgn = omgn * moder.omg[id] % mod;
       }
     }
   }
   if (inv) {
     const int halfN = n >> 1;
-    for (int i = 1; i < halfN; ++i)
-      swap(data[i], data[n - i]);
+    for (int i = 1; i < halfN; ++i) swap(data[i], data[n - i]);
     const uint64 c = power_mod<uint64>(n, mod - 2, mod);
-    for (int i = 0; i < n; ++i)
-      data[i] = c * data[i] % mod;
+    for (int i = 0; i < n; ++i) data[i] = c * data[i] % mod;
   }
 }
 
@@ -172,6 +165,6 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 #else
 #define HAS_POLY_MUL_NTT 0
 #endif
-}
+}  // namespace ntt
 
 #endif

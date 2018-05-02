@@ -34,17 +34,18 @@ File list:
 * pe_bi: Big integer whose base is 1 << 30.
 * pe_bi32: Big integer whose base is 1 << 32.
 * pe_bn: Old big integer implementation.
+* pe_fft: Fast fourier transform and polynomial multiplication.
 * pe_geometry: Support Point2D and Point3D.
 * pe_integer_util: integer utils.
 * pe_mat: Matrix operations.
 * pe_memory: Memory manipulation such as allocating large memory. (windows only)
 * pe_mod: Modular arithmetic.
 * pe_nt: Basic code of number theory.
-* pe_ntt: Number theoretic transform.
+* pe_ntt: Number theoretic transform and polynomial multiplication.
 * pe_parallel: A simple framework to solve problem with multi-threads. (windows only)
 * pe_parallel_algo: Parallel algorithms.
 * pe_poly: Polynomial.
-* pe_poly_app: Polynomial applications, e.g. generating function.
+* pe_poly_algo: Polynomial algorithms.
 * pe_tree: Some tree based data structures.
 * pe_util: Utilities such as TimeDelta, KVPersistance. (it may support linux but we need change the generated cmdline and check the other codes)
 

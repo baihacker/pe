@@ -70,7 +70,7 @@ SL void fft(comp *a, const int n, int f = 0) {
   }
 }
 
-SL void fft_mul_mod_internal(uint64* x, uint64* y, uint64* z, const int n, uint64 mod) {
+SL void poly_mul_fft_internal(uint64* x, uint64* y, uint64* z, const int n, uint64 mod) {
   int64 m = sqrt(mod);
   while (m*m<mod)++m;
   vector<comp> a(n), b(n);
@@ -119,7 +119,7 @@ SL void fft_mul_mod_internal(uint64* x, uint64* y, uint64* z, const int n, uint6
   }
 }
 
-SL void fft_mul_mod_small_internal(uint64* x, uint64* y, uint64* z, const int n, uint64 mod) {
+SL void poly_mul_fft_small_internal(uint64* x, uint64* y, uint64* z, const int n, uint64 mod) {
   vector<comp> a(n), b(n);
   for (int i = 0; i < n; ++i)
     a[i] = comp(x[i], 0);
@@ -145,48 +145,45 @@ SL void fft_mul_mod_small_internal(uint64* x, uint64* y, uint64* z, const int n,
   }
 }
 
-// Multiply two polynomials.
-SL vector<uint64> fft_mul_mod(const vector<uint64>& x, const vector<uint64>& y, uint64 mod) {
-  const int n = x.size();
-  const int m = y.size();
-  int p = 1;
-  while (p < n + m - 1) p <<= 1;
-  vector<uint64> xx(p), yy(p), zz(p);
-  copy(x.begin(), x.end(), xx.begin());
-  fill(xx.begin() + n, xx.end(), 0);
-  copy(y.begin(), y.end(), yy.begin());
-  fill(yy.begin() + m, yy.end(), 0);
-  
-  fft_mul_mod_internal(&xx[0], &yy[0], &zz[0], p, mod);
-  
-  zz.resize(n+m-1);
-  return std::move(zz);
+#define POLY_MULL_FFT_IMPL(poly_mul_fft, poly_mul_fft_internal)     \
+template<typename T>  \
+SL void poly_mul_fft(const T* x, const int n, const T* y, const int m, T* result, int64 mod) {  \
+  int p = 1;  \
+  while (p < n + m - 1) p <<= 1;  \
+\
+  vector<uint64> xx(p), yy(p), zz(p); \
+\
+  copy(x, x + n, &xx[0]); \
+  fill(xx.begin() + n, xx.end(), 0);  \
+\
+  copy(y, y + m, &yy[0]); \
+  fill(yy.begin() + m, yy.end(), 0);  \
+\
+  poly_mul_fft_internal(&xx[0], &yy[0], &zz[0], p, mod);  \
+\
+  copy(zz.begin(), zz.begin() + n + m - 1, result); \
+}\
+\
+template<typename T>  \
+SL vector<T> poly_mul_fft(const vector<T>& x, const vector<T>& y, int64 mod) {  \
+  const int n = x.size(); \
+  const int m = y.size(); \
+  vector<T> z(n+m-1); \
+\
+  poly_mul_fft(&x[0], n, &y[0], m, &z[0], mod); \
+\
+  return std::move(z);  \
 }
 
-// Multiply two polynomials.
-SL vector<uint64> fft_mul_mod_small(const vector<uint64>& x, const vector<uint64>& y, uint64 mod) {
-  const int n = x.size();
-  const int m = y.size();
-  int p = 1;
-  while (p < n + m - 1) p <<= 1;
-  vector<uint64> xx(p), yy(p), zz(p);
-  copy(x.begin(), x.end(), xx.begin());
-  fill(xx.begin() + n, xx.end(), 0);
-  copy(y.begin(), y.end(), yy.begin());
-  fill(yy.begin() + m, yy.end(), 0);
-
-  fft_mul_mod_small_internal(&xx[0], &yy[0], &zz[0], p, mod);
-
-  zz.resize(n+m-1);
-  return std::move(zz);
-}
+POLY_MULL_FFT_IMPL(poly_mul_fft, poly_mul_fft_internal)
+POLY_MULL_FFT_IMPL(poly_mul_fft_small, poly_mul_fft_small_internal)
 
 /**
  * Test result about the limitation of each method:
  *                      expr         random       limit
- * fft_mul_mod          mod^2*n      1e15         3.39e14
+ * poly_mul_fft          mod^2*n      1e15         3.39e14
  *                                   8e14         4.40e14
- * fft_mul_mod_small    mod*n        7e13         2.21e12
+ * poly_mul_fft_small    mod*n        7e13         2.21e12
  */
 }
 #endif

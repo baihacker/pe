@@ -15,9 +15,9 @@ SL void random_test() {
     int t0 = clock();
     auto ans0 = poly_mul(x, y, mod);
     int t1 = clock();
-    auto ans1 = fft::fft_mul_mod(x, y, mod);
+    auto ans1 = fft::poly_mul_fft(x, y, mod);
     int t2 = clock();
-    auto ans2 = fft::fft_mul_mod_small(x, y, mod);
+    auto ans2 = fft::poly_mul_fft_small(x, y, mod);
     int t3 = clock();
     // cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << " " << (t3-t1)*1e-3 << endl;
 
@@ -36,7 +36,7 @@ SL void random_test() {
     int t0 = clock();
     auto ans0 = poly_mul(x, y, mod);
     int t1 = clock();
-    auto ans1 = fft::fft_mul_mod(x, y, mod);
+    auto ans1 = fft::poly_mul_fft(x, y, mod);
     int t2 = clock();
     // cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << endl;
 
@@ -54,7 +54,7 @@ SL void random_test() {
     int t0 = clock();
     auto ans0 = poly_mul(x, y, mod);
     int t1 = clock();
-    auto ans1 = fft::fft_mul_mod(x, y, mod);
+    auto ans1 = fft::poly_mul_fft(x, y, mod);
     int t2 = clock();
     // cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << endl;
 
@@ -75,9 +75,9 @@ SL void limit_test() {
     int t0 = clock();
     auto ans0 = poly_mul(x, y, mod);
     int t1 = clock();
-    auto ans1 = fft::fft_mul_mod(x, y, mod);
+    auto ans1 = fft::poly_mul_fft(x, y, mod);
     int t2 = clock();
-    auto ans2 = fft::fft_mul_mod_small(x, y, mod);
+    auto ans2 = fft::poly_mul_fft_small(x, y, mod);
     int t3 = clock();
     // cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << " " << (t3-t1)*1e-3 << endl;
 
@@ -96,7 +96,7 @@ SL void limit_test() {
     int t0 = clock();
     auto ans0 = poly_mul(x, y, mod);
     int t1 = clock();
-    auto ans1 = fft::fft_mul_mod(x, y, mod);
+    auto ans1 = fft::poly_mul_fft(x, y, mod);
     int t2 = clock();
     // cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << endl;
     assert(ans0 == ans1);
@@ -113,7 +113,7 @@ SL void limit_test() {
     int t0 = clock();
     auto ans0 = poly_mul(x, y, mod);
     int t1 = clock();
-    auto ans1 = fft::fft_mul_mod(x, y, mod);
+    auto ans1 = fft::poly_mul_fft(x, y, mod);
     int t2 = clock();
     // cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << endl;
     assert(ans0 == ans1);

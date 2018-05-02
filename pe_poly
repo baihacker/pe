@@ -116,7 +116,7 @@ SL Poly poly_mul_normal(const Poly& X, const Poly& Y) {
 
 #if HAS_POLY_MUL_NTT
 SL Poly poly_mul_ntt(const Poly& X, const Poly& Y) {
-  return Poly{poly_mul_ntt(X.data, Y.data, X.mod), X.mod};
+  return Poly{ntt::poly_mul_ntt(X.data, Y.data, X.mod), X.mod};
 }
 #endif
 
@@ -261,98 +261,14 @@ SL vector<int64> poly_evaluate_mod_bls(const Poly& X, const vector<int64>& V) {
 // Returns empty vector if there is no integer solution.
 // O(size(A) * n)
 SL vector<int64> gf_first(const Poly& A, const Poly& B, const int n) {
-  const int64 mod = A.mod;
-  const int sa = sz(A);
-  const int sb = sz(B);
-  PE_ASSERT(sa > 0);
-  PE_ASSERT(sb > 0);
-
-  int64 v, u;
-  int has = solve_linear_equation<int64>(A[0], 1, mod, v, u);
-  if (!has) return vector<int64>();
-
-  vector<int64> result(n + 1, 0);
-
-  // if u < mod, we have more than one solution.
-  PE_ASSERT(u == mod);
-  const int64 invA0 = v;
-  result[0] = invA0 * B[0] % mod;
-
-  for (int i = 1; i <= n; ++i) {
-    int64 t = regulate_mod(i < sb ? B[i] : 0, mod);
-    for (int j = 1; j <= min(i, sa - 1); ++j) {
-      t = sub_mod(t, (j < sa ? A[j] : 0) * result[i - j] % mod, mod);
-    }
-    result[i] = invA0 * t % mod;
-  }
-
-  return result;
+  return gf_first(A.data, B.data, n, A.mod);
 }
 
 // Finds the coefficient of x^n of f such that: A*f = B
 // Returns -1 if there is no integer solution.
 // O(size(A)^3 * log n) for big n
 SL int64 gf_at(const Poly& A, const Poly& B, const int64 n) {
-  const int64 mod = A.mod;
-  const int sa = sz(A);
-  const int sb = sz(B);
-  PE_ASSERT(sa > 0);
-  PE_ASSERT(sb > 0);
-
-  int64 v, u;
-  int has = solve_linear_equation<int64>(A[0], 1, mod, v, u);
-  if (!has) return -1;
-
-  const int64 m = min((int64)max(sa - 1, sb - 1), n);
-  vector<int64> result(m + 1, 0);
-
-  // if u < mod, we have more than one solution.
-  PE_ASSERT(u == mod);
-  const int64 invA0 = v;
-  result[0] = invA0 * B[0] % mod;
-
-  for (int i = 1; i <= m; ++i) {
-    int64 t = regulate_mod(i < sb ? B[i] : 0, mod);
-    for (int j = 1; j <= min(i, sa - 1); ++j) {
-      t = sub_mod(t, (j < sa ? A[j] : 0) * result[i - j] % mod, mod);
-    }
-    result[i] = invA0 * t % mod;
-  }
-
-  if (m == n) {
-    return result[m];
-  }
-
-  const int64 D = sa - 1;
-  const int64 size = D * D;
-  string data(size * sizeof(int64) * 3, '\0');
-  int64* buffer = (int64*)data.c_str();
-
-  int64* mat = buffer;
-  int64* res = mat + size;
-  int64* tmp = res + size;
-
-  for (int i = 0; i < D; ++i) {
-    mat[i] = invA0 * regulate_mod(i + 1 < sa ? -A[i + 1] : 0, mod) % mod;
-  }
-  for (int i = 1; i < D; ++i) {
-    (mat + i * D)[i - 1] = 1;
-  }
-  for (int i = 0; i < D; ++i) {
-    res[i] = result[m - i];
-  }
-
-  for (int64 t = n - m; t > 0; t >>= 1) {
-    if (t & 1) {
-      mat_mul_vec_mod(mat, res, tmp, mod, static_cast<int>(D));
-      swap(res, tmp);
-    }
-    if (t > 1) {
-      mat_mul_mat_mod(mat, mat, tmp, mod, static_cast<int>(D));
-      swap(mat, tmp);
-    }
-  }
-  return res[0];
+  return gf_at(A.data, B.data, n, A.mod);
 }
 
 // Berlekamp Massey
@@ -381,40 +297,6 @@ SL Poly find_minimal_poly(const Poly& s) {
   reverse(v1.data.begin(), v1.data.end());
   return v1;
 }
-
-#if 0
-template <int64 P>
-Poly<P> cal1(const Poly<P>& s) {
-  Poly<P> C{1};
-  Poly<P> B{1};
-  int L = 0;
-  int m = 1;
-  int64 b = 1;
-  const int N = s.data.size();
-  for (int n = 0; n < N; ++n) {
-    int64 d = s[n];
-    for (int i = 1; i <= L; ++i) {
-      d = add_mod(d, add_mod(C.at(i), s[n - i], P), P);
-    }
-    if (d == 0) {
-      ++m;
-    } else if (2 * L <= n) {
-      auto T = C;
-      int64 coe = d * inv_of(b, P) % P;
-      C = C - (B << m) * coe;
-      L = n + 1 - L;
-      B = std::move(T);
-      b = d;
-      m = 1;
-    } else {
-      int64 coe = d * inv_of(b, P) % P;
-      C = C - (B << m) * coe;
-      m = m + 1;
-    }
-  }
-  return C;
-}
-#endif
 
 SL int64 nth_element(const Poly& s, int64 n, const Poly& min_poly) {
   if (n <= s.deg()) {

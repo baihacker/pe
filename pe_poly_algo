@@ -2,10 +2,10 @@
 #define __PE_POLY_ALGO__
 
 #include "pe_base"
+#include "pe_fft"
 #include "pe_integer_util"
 #include "pe_mod"
 #include "pe_ntt"
-#include "pe_fft"
 
 template <typename T>
 SL void adjust_poly_leading_zero(vector<T>& v) {
@@ -186,7 +186,6 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
   return result;
 }
 
-
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_inv_mod_internal(int n, const T* a, T* b, T* tmp[2], int64 mod) {
@@ -196,10 +195,10 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   } else {
     const int m = n + 1 >> 1;
     poly_inv_mod_internal(m, a, b, tmp, mod);
-    fill(b+m, b+n, 0);
+    fill(b + m, b + n, 0);
     poly_mul(b, m, b, m, tmp[0], mod);
     if (m + m - 2 < n - 1) {
-      tmp[0][n-1] = 0;
+      tmp[0][n - 1] = 0;
     }
     poly_mul(a, n, tmp[0], n, tmp[1], mod);
     for (int i = 0; i < n; ++i) {
@@ -413,7 +412,6 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     return std::move(r);                                                   \
   }
 
-
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_div_and_mod(const T* X, const int n, const T* Y, const int m, T* q,
@@ -519,8 +517,8 @@ struct PSPTree {
 // size(V) = n
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_evaluate_mod_normal_internal(const T* X, int n, PSPTree* psp, T* result,
-                                    int64 mod) {
+    poly_evaluate_mod_normal_internal(const T* X, int n, PSPTree* psp,
+                                      T* result, int64 mod) {
   if (psp->n == 1) {
     result[0] = (X[0] + psp->v[0] * X[1]) % mod;
     return;
@@ -531,17 +529,17 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   vector<T> m(max(psp->L->p.size(), psp->R->p.size()));
   poly_mod(X, n, (const T*)&psp->L->p[0], psp->L->p.size(), &m[0], mod);
   poly_evaluate_mod_normal_internal(&m[0], (int)psp->L->p.size() - 1, psp->L,
-                                  result, mod);
+                                    result, mod);
   poly_mod(X, n, (const T*)&psp->R->p[0], psp->R->p.size(), &m[0], mod);
   poly_evaluate_mod_normal_internal(&m[0], (int)psp->R->p.size() - 1, psp->R,
-                                  result + c1, mod);
+                                    result + c1, mod);
 }
 
 // size(V) = n
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_evaluate_mod_normal_internal(const T* X, int n, const T* V, T* result,
-                               int64 mod) {
+                                      int64 mod) {
   static_assert(std::is_unsigned<T>::value, "T must be unsigned");
   PSPTree* psp = PSPTree::build_minus((int64*)V, n, mod);
   poly_evaluate_mod_normal_internal(X, n, psp, result, mod);
@@ -554,7 +552,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_evaluate_mod_bls_internal(const T* X, int n, const T* V, T* result,
-                                  int64 mod) {
+                                   int64 mod) {
   static_assert(std::is_unsigned<T>::value, "T must be unsigned");
   vector<vector<vector<T>>> tree;
   {
@@ -647,7 +645,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_evaluate_mod_normal(const T* X, const int n, const T* V, T* result,
-                      int64 mod) {
+                             int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
   poly_evaluate_mod_normal_internal<unsignedT>(
       (const unsignedT*)X, n, (const unsignedT*)V, (unsignedT*)result, mod);
@@ -656,7 +654,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 // size x = size v
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
-    poly_evaluate_mod_normal(const vector<T>& X, const vector<T>& V, int64 mod) {
+    poly_evaluate_mod_normal(const vector<T>& X, const vector<T>& V,
+                             int64 mod) {
   const int n = (int)X.size();
   vector<T> result(n);
   poly_evaluate_mod_normal(&X[0], n, &V[0], &result[0], mod);
@@ -667,7 +666,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_evaluate_mod_bls(const T* X, const int n, const T* V, T* result,
-                      int64 mod) {
+                          int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
   poly_evaluate_mod_bls_internal<unsignedT>(
       (const unsignedT*)X, n, (const unsignedT*)V, (unsignedT*)result, mod);
@@ -687,17 +686,16 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 // Calcupate f[0+offset],f[1+offset],f[2+offset],...,f[d+offset]
 // offset > d
 template <typename T>
-SL REQUIRES((is_native_integer<T>::value))
-RETURN(void)
-poly_offset_evaluate_internal(int d, const T* h, T* result, int64 offset, T* preFactInv,
-                        T mod) {
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_offset_evaluate_internal(int d, const T* h, T* result, int64 offset,
+                                  T* preFactInv, T mod) {
   static_assert(std::is_unsigned<T>::value, "T must be unsigned");
 
   vector<T> A(d + 1);
-  vector<T> B(2*d + 1);
-  vector<T> C(3*d + 1);
-  vector<T> T0(2*d + 2);
-  vector<T> T1(2*d + 2);
+  vector<T> B(2 * d + 1);
+  vector<T> C(3 * d + 1);
+  vector<T> T0(2 * d + 2);
+  vector<T> T1(2 * d + 2);
   for (int i = 0; i <= d; ++i) {
     auto t = mul_mod(h[i], preFactInv[i], mod);
     t = mul_mod(t, preFactInv[d - i], mod);
@@ -732,33 +730,28 @@ poly_offset_evaluate_internal(int d, const T* h, T* result, int64 offset, T* pre
 }
 
 template <typename T>
-SL REQUIRES((is_native_integer<T>::value))
-RETURN(void)
-poly_offset_evaluate(int d, const T* h, T* result, int64 offset, T* preFactInv,
-                        T mod) {
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_offset_evaluate(int d, const T* h, T* result, int64 offset,
+                         T* preFactInv, T mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
   poly_offset_evaluate_internal<unsignedT>(
       d, (const unsignedT*)h, (unsignedT*)result, offset, preFactInv, mod);
 }
 
 template <typename T>
-SL REQUIRES((is_native_integer<T>::value))
-RETURN(vector<T>)
-poly_offset_evaluate(const vector<T>& values, int64 offset, T* preFactInv,
-                T mod) {
+SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
+    poly_offset_evaluate(const vector<T>& values, int64 offset, T* preFactInv,
+                         T mod) {
   const int d = (int)values.size() - 1;
-  vector<T> result(d+1);
-  poly_offset_evaluate(
-      d, &values[0], &result[0], offset, preFactInv, mod);
+  vector<T> result(d + 1);
+  poly_offset_evaluate(d, &values[0], &result[0], offset, preFactInv, mod);
   return std::move(result);
 }
 
 // Compuate n! % p (2 <= p < 2^32)
 // Algorithm source: // https://min-25.hatenablog.com/entry/2017/04/10/215046
 struct FactModer {
-  FactModer(uint64 p) : p(p) {
-    init();
-  }
+  FactModer(uint64 p) : p(p) { init(); }
 
   // Evaluate (x+v*0+1)*(x+v*1+1)*(x+v*2+1)*...*(x+v*(d-1)+1) at 0, 1, 2, ..., d
   void evaluate(int d, uint64* result, uint64 v) {
@@ -774,13 +767,16 @@ struct FactModer {
     // #pragma omp parallel sections if (d >= 10000)
     {
       // #pragma omp section
-      poly_offset_evaluate<uint64>(halfD, result, &G1[0], halfD + 1, &preFactInv[0], p);
+      poly_offset_evaluate<uint64>(halfD, result, &G1[0], halfD + 1,
+                                   &preFactInv[0], p);
 
       // #pragma omp section
-      poly_offset_evaluate<uint64>(halfD, result, &G2[0], v * halfD, &preFactInv[0], p);
+      poly_offset_evaluate<uint64>(halfD, result, &G2[0], v * halfD,
+                                   &preFactInv[0], p);
 
       // #pragma omp section
-      poly_offset_evaluate<uint64>(halfD, result, &G3[0], v * halfD + halfD, &preFactInv[0], p);
+      poly_offset_evaluate<uint64>(halfD, result, &G3[0], v * halfD + halfD,
+                                   &preFactInv[0], p);
     }
 
     for (int i = 0; i <= halfD; ++i) {
@@ -834,7 +830,8 @@ struct FactModer {
     preFact.resize(q);
     preFactInv.resize(q);
     init_seq_prod<uint64>(&preFact[0], 1, q - 1, p);
-    init_seq_prod_inv<uint64>(&preFactInv[0], 1, q - 1, p, power_mod<uint64>(preFact[q-1], p-2, p));
+    init_seq_prod_inv<uint64>(&preFactInv[0], 1, q - 1, p,
+                              power_mod<uint64>(preFact[q - 1], p - 2, p));
     G0.resize(q);
     G1.resize(q);
     G2.resize(q);
@@ -924,7 +921,8 @@ SL int64 power_sum(int64 n, int64 k, int64 mod) {
 // Finds the coefficient of x^0..x^n of f such that: A*f = B
 // Returns empty vector if there is no integer solution.
 // O(size(A) * n)
-SL vector<int64> gf_first(const vector<int64>& A, const vector<int64>& B, const int n, const int64 mod) {
+SL vector<int64> gf_first(const vector<int64>& A, const vector<int64>& B,
+                          const int n, const int64 mod) {
   const int sa = sz(A);
   const int sb = sz(B);
   PE_ASSERT(sa > 0);
@@ -955,7 +953,8 @@ SL vector<int64> gf_first(const vector<int64>& A, const vector<int64>& B, const 
 // Finds the coefficient of x^n of f such that: A*f = B
 // Returns -1 if there is no integer solution.
 // O(size(A)^3 * log n) for big n
-SL int64 gf_at(const vector<int64>& A, const vector<int64>& B, const int64 n, const int64 mod) {
+SL int64 gf_at(const vector<int64>& A, const vector<int64>& B, const int64 n,
+               const int64 mod) {
   const int sa = sz(A);
   const int sb = sz(B);
   PE_ASSERT(sa > 0);

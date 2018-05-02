@@ -112,6 +112,36 @@ RETURN(typename BigIntegerType<T1, T2>::type) {
   return mul_mod_impl<atLeastInt64T, M>(a, b, mod);
 }
 
+#if PE_HAS_INT128
+template<typename T1, typename T2, typename M>
+SL auto mul_mod_ex(T1 a, T2 b, M mod) ->
+REQUIRES((
+  is_native_integer<T1>::value &&
+  is_native_integer<T2>::value &&
+  is_native_integer<M>::value))
+RETURN(typename BigIntegerType<T1, T2>::type) {
+  static const int64 PE_SOI63 = 3037000499LL;  // x * x > 2^63 - 1 for x > PE_SOI63
+
+  typedef typename BigIntegerType<T1, T2>::type T;
+  typedef typename BigIntegerType<int64, T>::type atLeastInt64T;
+
+  return mod > PE_SOI63 ? mul_mod_impl<int128, M>(a, b, mod)
+      : mul_mod_impl<atLeastInt64T, M>(a, b, mod);
+}
+#else
+SL int64 mul_mod_ex(int64 a, int64 b, int64 mod) {
+  int64 ret = 0;
+  int64 flag = b;
+  for (int64 d = 1; d <= a; d <<= 1) {
+    if (d & a) {
+      ret = (ret + flag) % mod;
+    }
+    flag = (flag << 1) % mod;
+  }
+  return ret;
+}
+#endif
+
 // It's expected that all elements in b are prime.
 // The behavior is undefined if it's not satisified.
 template<typename T, typename M>
@@ -167,35 +197,18 @@ SL T1 power_mod(T1 x, T2 n, M mod) {
   return power_mod_impl<atLeastInt64T1, T2, M>(x, n, mod);
 }
 
-SL int64 mul_mod_ex(int64 a, int64 b, int64 mod) {
 #if PE_HAS_INT128
-  return (int128)a * b % mod;
-#else
-  int64 ret = 0;
-  int64 flag = b;
-  for (int64 d = 1; d <= a; d <<= 1) {
-    if (d & a) {
-      ret = (ret + flag) % mod;
-    }
-    flag = (flag << 1) % mod;
-  }
-  return ret;
-#endif
+template<typename T1, typename T2, typename M>
+SL T1 power_mod_ex(T1 x, T2 n, M mod) {
+  static const int64 PE_SOI63 = 3037000499LL;  // x * x > 2^63 - 1 for x > PE_SOI63
+
+  typedef typename BigIntegerType<int64, T1>::type atLeastInt64T1;
+
+  return mod > PE_SOI63 ? power_mod_impl<int128, int128, M>(x, n, mod) :
+    power_mod_impl<atLeastInt64T1, T2, M>(x, n, mod);
 }
-
-SL int64 power_mod_ex(int64 x, int64 n, int64 mod) {
-  if (mod == 1) return 0;
-
-#if PE_HAS_INT128
-  int64 ret = 1;
-  x %= mod;
-  if (x < 0) x += mod;
-  for (; n; n >>= 1) {
-    if (n & 1) ret = (int128)ret * x % mod;
-    x = (int128)x * x % mod;
-  }
-  return ret;
 #else
+SL it64 power_mod_ex(int64 x, int64 n, int64 mod) {
   int64 ret = 1;
   x %= mod;
   if (x < 0) x += mod;
@@ -204,8 +217,8 @@ SL int64 power_mod_ex(int64 x, int64 n, int64 mod) {
     x = mul_mod_ex(x, x, mod);
   }
   return ret;
-#endif
 }
+#endif
 
 struct init_direct_t {};
 static const init_direct_t __init_direct{};

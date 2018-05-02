@@ -30,7 +30,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
       for (int j = 0; j < n; ++j) {
         result[i + j] =
             add_mod(result[i + j],
-                    (typename AtLeastUint64<T>::type)X[i] * Y[j] % mod, mod);
+                   mul_mod_ex(X[i], Y[j], mod), mod);
       }
     return;
   }
@@ -191,7 +191,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_inv_mod_internal(int n, const T* a, T* b, T* tmp[2], int64 mod) {
   static_assert(std::is_unsigned<T>::value, "T must be unsigned");
   if (n == 1) {
-    b[0] = power_mod(a[0], mod - 2, mod);
+    b[0] = power_mod_ex(a[0], mod - 2, mod);
   } else {
     const int m = n + 1 >> 1;
     poly_inv_mod_internal(m, a, b, tmp, mod);
@@ -688,7 +688,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_offset_evaluate_internal(int d, const T* h, T* result, int64 offset,
-                                  T* preFactInv, T mod) {
+                                  const T* preFactInv, T mod) {
   static_assert(std::is_unsigned<T>::value, "T must be unsigned");
 
   vector<T> A(d + 1);
@@ -697,8 +697,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   vector<T> T0(2 * d + 2);
   vector<T> T1(2 * d + 2);
   for (int i = 0; i <= d; ++i) {
-    auto t = mul_mod(h[i], preFactInv[i], mod);
-    t = mul_mod(t, preFactInv[d - i], mod);
+    auto t = mul_mod_ex(h[i], preFactInv[i], mod);
+    t = mul_mod_ex(t, preFactInv[d - i], mod);
     if ((d - i) & 1) {
       A[i] = t == 0 ? 0 : mod - t;
     } else {
@@ -708,31 +708,31 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
   T0[0] = T1[0] = 1;
   for (int i = -d, j = 1; i <= d; ++i, ++j) {
-    T0[j] = mul_mod(T0[j - 1], offset + i, mod);
+    T0[j] = mul_mod_ex(T0[j - 1], offset + i, mod);
   }
 
-  T1[2 * d + 1] = power_mod(T0[2 * d + 1], mod - 2, mod);
+  T1[2 * d + 1] = power_mod_ex(T0[2 * d + 1], mod - 2, mod);
   for (int i = d - 1, j = 2 * d; i >= -d; --i, --j) {
-    T1[j] = mul_mod(T1[j + 1], offset + i + 1, mod);
+    T1[j] = mul_mod_ex(T1[j + 1], offset + i + 1, mod);
   }
 
   for (int i = -d, j = 1; i <= d; ++i, ++j) {
-    B[j - 1] = mul_mod(T1[j], T0[j - 1], mod);
+    B[j - 1] = mul_mod_ex(T1[j], T0[j - 1], mod);
   }
 
   poly_mul(&A[0], d + 1, &B[0], 2 * d + 1, &C[0], mod);
   copy(&C[0] + d, &C[0] + 2 * d + 1, result);
 
   for (int i = 0, j = d + 1; i <= d; ++i, ++j) {
-    result[i] = mul_mod(result[i], T0[j], mod);
-    result[i] = mul_mod(result[i], T1[j - d - 1], mod);
+    result[i] = mul_mod_ex(result[i], T0[j], mod);
+    result[i] = mul_mod_ex(result[i], T1[j - d - 1], mod);
   }
 }
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_offset_evaluate(int d, const T* h, T* result, int64 offset,
-                         T* preFactInv, T mod) {
+                         const T* preFactInv, T mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
   poly_offset_evaluate_internal<unsignedT>(
       d, (const unsignedT*)h, (unsignedT*)result, offset, preFactInv, mod);
@@ -740,7 +740,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
-    poly_offset_evaluate(const vector<T>& values, int64 offset, T* preFactInv,
+    poly_offset_evaluate(const vector<T>& values, int64 offset, const T* preFactInv,
                          T mod) {
   const int d = (int)values.size() - 1;
   vector<T> result(d + 1);
@@ -780,22 +780,22 @@ struct FactModer {
     }
 
     for (int i = 0; i <= halfD; ++i) {
-      result[i] = mul_mod(G0[i], G2[i], p);
+      result[i] = mul_mod_ex(G0[i], G2[i], p);
     }
     for (int i = halfD + 1, j = 0; i <= halfD * 2; ++i, ++j) {
-      result[i] = mul_mod(G1[j], G3[j + 1], p);
+      result[i] = mul_mod_ex(G1[j], G3[j + 1], p);
     }
 
     if (d & 1) {
       uint64 tmp = (v * (d - 1) + 1) % p;
       for (int i = 0; i <= 2 * halfD; ++i) {
-        result[i] = mul_mod(result[i], tmp++, p);
+        result[i] = mul_mod_ex(result[i], tmp++, p);
         if (tmp >= p) tmp -= p;
       }
       uint64 t = 1;
       uint64 c = d + 1;
       for (int i = 0; i < d; ++i) {
-        t = mul_mod(t, c, p);
+        t = mul_mod_ex(t, c, p);
         c += v;
         if (c >= p) c -= p;
       }
@@ -811,13 +811,13 @@ struct FactModer {
     uint64 ret = 1;
 
     for (int64 i = m * m + 1; i <= n; ++i) {
-      ret = mul_mod(ret, i, p);
+      ret = mul_mod_ex(ret, i, p);
     }
 
     evaluate(m, (uint64*)&V[0], m);
 
     for (int i = 0; i < m; ++i) {
-      ret = mul_mod(ret, V[i], p);
+      ret = mul_mod_ex(ret, V[i], p);
     }
     return (int64)ret;
   }
@@ -831,7 +831,7 @@ struct FactModer {
     preFactInv.resize(q);
     init_seq_prod<uint64>(&preFact[0], 1, q - 1, p);
     init_seq_prod_inv<uint64>(&preFactInv[0], 1, q - 1, p,
-                              power_mod<uint64>(preFact[q - 1], p - 2, p));
+                              power_mod_ex<uint64>(preFact[q - 1], p - 2, p));
     G0.resize(q);
     G1.resize(q);
     G2.resize(q);

@@ -18,7 +18,7 @@ int main()
   }
   {
     //comb_solver sv(37);
-    comb_moder<37> sv1;
+    CombModer sv1(37);
     for (int i = 0; i < 100; ++i)
     for (int j = 0; j <= i; ++j)
     {

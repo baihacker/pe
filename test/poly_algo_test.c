@@ -121,6 +121,7 @@ SL void poly_fact_mod_test() {
       assert(moder.cal(i) == last);
     }
   }
+  #if PE_HAS_INT128
   {
     const int64 mod = 1000000007;
     FactModer moder(mod);
@@ -150,6 +151,7 @@ SL void poly_fact_mod_test() {
     FactModer moder(mod);
     assert(moder.cal(10000000000LL) == 40583077821);
   }
+  #endif
 }
 PE_REGISTER_TEST(&poly_fact_mod_test, "poly_fact_mod_test", BIG);
 }

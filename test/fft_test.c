@@ -24,6 +24,7 @@ SL void random_test() {
     assert(ans0 == ans1);
     assert(ans0 == ans2);
   }
+  #if PE_HAS_INT128
   {
     // 1e15
     // 1e9+7
@@ -42,6 +43,7 @@ SL void random_test() {
 
     assert(ans0 == ans1);
   }
+  #endif
   {
     // 8e14
     // 1e10+19
@@ -84,6 +86,7 @@ SL void limit_test() {
     assert(ans0 == ans1);
     assert(ans0 == ans2);
   }
+  #if PE_HAS_INT128
   {
     // 1000000007*339750=339750002378250=3.39e14
     // 1e9+7
@@ -101,6 +104,7 @@ SL void limit_test() {
     // cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << endl;
     assert(ans0 == ans1);
   }
+  #endif
   {
     // 10000000019*44064=440640000837216=4.4e14
     // 1e10+19

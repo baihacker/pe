@@ -125,7 +125,6 @@ SL void limit_test() {
 }
 
 SL void fft_test() {
-  fft::init_fft();
   random_test();
   limit_test();
 }

@@ -49,6 +49,8 @@ int main() {
   const int size = tester.tests.size();
   
   bool isFirstTest = true;
+  ntt::init_ntt();
+  fft::init_fft();
   for (int i = 0; i < size; ++i) {
     auto& item = tester.tests[i];
     if (!isEnabledTestSize(item.testSize)) {

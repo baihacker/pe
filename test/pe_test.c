@@ -7,6 +7,7 @@
 #include "init_inv_test.c"
 #include "mat_mul_test.c"
 #include "mod_test.c"
+#include "nt_test.c"
 #include "parallel_sort_test.c"
 #include "poly_test.c"
 #include "poly_algo_test.c"
@@ -40,7 +41,7 @@ SL bool isEnabledTestSize(TestSize size) {
 }
 
 int main() {
-  init_primes();
+  init_primes(1, 1);
 
   dbg(maxp);
   dbg(maxp2);

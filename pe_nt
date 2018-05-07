@@ -6,17 +6,6 @@
 #include "pe_mod"
 #include "pe_tree"
 
-// About numbers
-
-// Integer limits check
-static_assert(sizeof(int) >= 4, "sizeof(int) >= 4");
-
-// square overflow integers
-static const int64 PE_SOI63 =
-    3037000499LL;  // x * x > 2^63 - 1 for x > PE_SOI63
-static const int64 PE_SOI64 =
-    4294967295LL;  // x * x > 2^64 - 1 for x > PE_SOI64
-
 // About primes
 static int64 maxp;
 static int64 maxp2;
@@ -75,19 +64,6 @@ SL void init_pmask_plist(int*& pmask, int*& plist) {
   int64 size = max(static_cast<int64>((estimate_pmpi(maxp + 1) + 1) * 1.1),
                    static_cast<int64>(100000LL));
   plist = new int[size];
-}
-
-SL int is_prime(int64 n) {
-  if (n <= 1) return 0;
-  if (n <= maxp) return pmask[n] == n;
-  PE_ASSERT(n <= maxp2);
-  for (int i = 0; i < pcnt; ++i) {
-    const int64 p = plist[i];
-    const int64 test = p * p;
-    if (test > n) break;
-    if (n % p == 0) return 0;
-  }
-  return 1;
 }
 
 SL void deinit_primes() {
@@ -199,35 +175,126 @@ SL vector<pair<int64, int>> factorize(int64 n) {
   return ret;
 }
 
+SL int is_prime(int64 n) {
+  if (n <= 1) return 0;
+  if (n <= maxp) return pmask[n] == n;
+  PE_ASSERT(n <= maxp2);
+  for (int i = 0; i < pcnt; ++i) {
+    const int64 p = plist[i];
+    const int64 test = p * p;
+    if (test > n) break;
+    if (n % p == 0) return 0;
+  }
+  return 1;
+}
+
+// prime test for n <= 2^63 - 1
+// http://oeis.org/A014233
+const int64 sopp[] = {
+    2047LL,                 // 2
+    1373653LL,              // 3
+    25326001LL,             // 5
+    3215031751LL,           // 7
+    2152302898747LL,        // 11
+    3474749660383LL,        // 13
+    341550071728321LL,      // 17
+    341550071728321LL,      // 19
+    3825123056546413051LL,  // 23
+    3825123056546413051LL,  // 29
+    3825123056546413051LL,  // 31
+                            // bigger than 2^64             // 37
+                            // 2^63 = 9223372036854775808   //
+};
+const int64 sopp_size = sizeof(sopp) / sizeof(sopp[0]);
+
+SL int MR_test_impl(int s, int64 t, int64 n, int x) {
+  // PE_ASSERT((n&1) == 0)
+
+  if (n <= PE_SOI63) {
+    t = power_mod<int64>(x, t, n);
+    if (t == 1 || t == n - 1) return 1;
+
+    for (int i = 1; i < s; ++i) {
+      t = mul_mod(t, t, n);
+      if (t == n - 1) return 1;
+    }
+  } else {
+    t = power_mod_ex(x, t, n);
+    if (t == 1 || t == n - 1) return 1;
+
+    for (int i = 1; i < s; ++i) {
+      t = mul_mod_ex(t, t, n);
+      if (t == n - 1) return 1;
+    }
+  }
+  return 0;
+}
+
+SL int MR_test(int64 n, int x) {
+  if (n <= 1) return 0;
+  if ((n & 1) == 0) return 0;
+
+  int s = 0;
+  int64 t = n - 1;
+  while ((t & 1) == 0) ++s, t >>= 1;
+
+  return MR_test_impl(s, t, n, x);
+}
+
+SL int is_prime_ex(int64 n) {
+  if (n <= 1) return 0;
+  if (n == 2) return 1;
+  if ((n & 1) == 0) return 0;
+  if (n <= maxp) return pmask[n] == n;
+
+  for (int i = 1; i < 20; ++i)
+    if (n % plist[i] == 0) return 0;
+
+  int s = 0;
+  int64 t = n - 1;
+  while ((t & 1) == 0) ++s, t >>= 1;
+
+  for (int i = 0; i < sopp_size; ++i) {
+    const int64 val = sopp[i];
+    if (n == val) return 0;
+    if (!MR_test_impl(s, t, n, plist[i])) return 0;
+    if (n < val) break;
+  }
+  return 1;
+}
+
 SL void get_factors_impl(const int limit, const vector<pair<int64, int>>& f,
-                         int64 value, vector<int64>& result) {
-  result.push_back(value);
+                         int64 value, int64 maxv, vector<int64>& result) {
+  if (maxv != -1 && value <= maxv) {
+    result.push_back(value);
+  }
   for (int i = 0; i < limit; ++i) {
     int64 tvalue = value;
     const int64 p = f[i].first;
     const int c = f[i].second;
     for (int j = 1; j <= c; ++j) {
       tvalue *= p;
-      get_factors_impl(i, f, tvalue, result);
+      if (maxv != -1 && tvalue > maxv) break;
+      get_factors_impl(i, f, tvalue, maxv, result);
     }
   }
 }
 
-SL vector<int64> get_factors(const vector<pair<int64, int>>& f) {
+SL vector<int64> get_factors(const vector<pair<int64, int>>& f, int64 maxv = -1) {
   vector<int64> result;
-  get_factors_impl(static_cast<int>(f.size()), f, 1, result);
+  get_factors_impl(static_cast<int>(f.size()), f, 1, maxv, result);
   return result;
 }
 
-SL vector<int64> get_factors(int64 value) {
+SL vector<int64> get_factors(int64 value, int64 maxv = -1) {
   vector<int64> result;
   auto f = factorize(value);
-  get_factors_impl(static_cast<int>(f.size()), f, 1, result);
+  get_factors_impl(static_cast<int>(f.size()), f, 1, maxv, result);
   return result;
 }
 
 SL int64 cal_phi(int64 n, const vector<pair<int64, int>>& fn) {
-  if (n <= 0) return -1;
+  if (n <= 0) return 0;
   if (phi && n <= maxp) return phi[n];
   int64 phi_n = n;
   for (auto& it : fn) phi_n -= phi_n / it.first;
@@ -235,7 +302,7 @@ SL int64 cal_phi(int64 n, const vector<pair<int64, int>>& fn) {
 }
 
 SL int64 cal_phi(int64 n) {
-  if (n <= 0) return -1;
+  if (n <= 0) return 0;
   if (phi && n <= maxp) return phi[n];
   auto fn = factorize(n);
   int64 phi_n = n;
@@ -553,29 +620,17 @@ SL vector<DVA<T>> prime_s1_pmod(int64 n, int mod) {
   return mod & 1 ? prime_s1_pmod_odd<T>(n, mod) : prime_s1_pmod_even<T>(n, mod);
 }
 
-SL void init_inv(int64* dest, int64 n, int64 mod) {
+template <typename T, typename M>
+SL void init_inv(T* dest, int64 n, M mod) {
   PE_ASSERT(n <= mod && n >= 2);
   dest[0] = 0;
   dest[1] = 1;
   for (int i = 2; i < n; ++i) {
-    const int64 t = mod / i;
-    const int64 k = mod % i;
-    const int64 v = t * t % mod;
-    const int64 u = dest[k] * dest[k] % mod;
-    dest[i] = i * v % mod * u % mod;
-  }
-}
-
-SL void init_inv(int* dest, int n, int mod) {
-  PE_ASSERT(n <= mod && n >= 2);
-  dest[0] = 0;
-  dest[1] = 1;
-  for (int i = 2; i < n; ++i) {
-    const int t = mod / i;
-    const int k = mod % i;
-    const int v = (int64)t * t % mod;
-    const int u = (int64)dest[k] * dest[k] % mod;
-    dest[i] = (int64)i * v % mod * (int64)u % mod;
+    const auto t = mod / i;
+    const auto k = mod % i;
+    const auto v = mul_mod_ex(t, t, mod);
+    const auto u = mul_mod_ex(dest[k], dest[k], mod);
+    dest[i] = mul_mod_ex(i, mul_mod_ex(v, u, mod), mod);
   }
 }
 
@@ -940,81 +995,6 @@ SL tuple<int, T, T> crtn(T* val, T* mod, int n) {
   return tuple<int, T, T>{have, v, u};
 }
 
-// prime test for n <= 2^63 - 1
-// http://oeis.org/A014233
-const int64 sopp[] = {
-    2047LL,                 // 2
-    1373653LL,              // 3
-    25326001LL,             // 5
-    3215031751LL,           // 7
-    2152302898747LL,        // 11
-    3474749660383LL,        // 13
-    341550071728321LL,      // 17
-    341550071728321LL,      // 19
-    3825123056546413051LL,  // 23
-    3825123056546413051LL,  // 29
-    3825123056546413051LL,  // 31
-                            // bigger than 2^64             // 37
-                            // 2^63 = 9223372036854775808   //
-};
-const int64 sopp_size = sizeof(sopp) / sizeof(sopp[0]);
-
-SL int MR_test_impl(int s, int64 t, int64 n, int x) {
-  // PE_ASSERT((n&1) == 0)
-
-  if (n <= PE_SOI63) {
-    t = power_mod<int64>(x, t, n);
-    if (t == 1 || t == n - 1) return 1;
-
-    for (int i = 1; i < s; ++i) {
-      t = mul_mod(t, t, n);
-      if (t == n - 1) return 1;
-    }
-  } else {
-    t = power_mod_ex(x, t, n);
-    if (t == 1 || t == n - 1) return 1;
-
-    for (int i = 1; i < s; ++i) {
-      t = mul_mod_ex(t, t, n);
-      if (t == n - 1) return 1;
-    }
-  }
-  return 0;
-}
-
-SL int MR_test(int64 n, int x) {
-  if (n <= 1) return 0;
-  if ((n & 1) == 0) return 0;
-
-  int s = 0;
-  int64 t = n - 1;
-  while ((t & 1) == 0) ++s, t >>= 1;
-
-  return MR_test_impl(s, t, n, x);
-}
-
-SL int is_prime_ex(int64 n) {
-  if (n <= 1) return 0;
-  if (n == 2) return 1;
-  if ((n & 1) == 0) return 0;
-  if (n <= maxp) return pmask[n] == n;
-
-  for (int i = 1; i < 20; ++i)
-    if (n % plist[i] == 0) return 0;
-
-  int s = 0;
-  int64 t = n - 1;
-  while ((t & 1) == 0) ++s, t >>= 1;
-
-  for (int i = 0; i < sopp_size; ++i) {
-    const int64 val = sopp[i];
-    if (n == val) return 0;
-    if (!MR_test_impl(s, t, n, plist[i])) return 0;
-    if (n < val) break;
-  }
-  return 1;
-}
-
 // C-style random number generator
 // ANSI_ISO_9899-1999: The value of the RAND_MAX macro shall be at least 32767.
 // We assume RAND_MAX is either 32767 or 2147483647
@@ -1212,6 +1192,82 @@ struct Fraction {
   T a, b;
 };
 
+struct MiuPhiSumModer {
+  MiuPhiSumModer(int64 mod) : mod(mod) {
+    pre_sum_mu = pre_sum_phi = NULL;
+  }
+
+  ~MiuPhiSumModer() {
+    if (pre_sum_mu == NULL) {
+      delete[] pre_sum_mu;
+      pre_sum_mu = NULL;
+    }
+    if (pre_sum_phi == NULL) {
+      delete[] pre_sum_phi;
+      pre_sum_phi = NULL;
+    }
+  }
+
+  void init() {
+    pre_sum_mu = new int64[maxp+1];
+    pre_sum_phi = new int64[maxp+1];
+    pre_sum_mu[0] = pre_sum_phi[0] = 0;
+    for (int i = 1; i <= maxp; ++i) {
+      pre_sum_mu[i] = (::mu[i] + pre_sum_mu[i-1]) % mod;
+      pre_sum_phi[i] = (::phi[i] + pre_sum_phi[i-1]) % mod;
+    }
+  }
+
+  int64 get_sum_mu(const int64 n) {
+    if (n <= maxp) return pre_sum_mu[n];
+
+    auto where = mem_sum_mu.find(n);
+    if (where != mem_sum_mu.end()) return where->second;
+
+    int64 ret = 1;
+    for (int64 i = 2; i <= n;){
+      int64 v = n / i;
+      int64 maxi = n / v;
+      ret = sub_mod(ret, mul_mod_ex((maxi - i + 1)%mod, get_sum_mu(v), mod), mod);
+      i = maxi + 1;
+    }
+    return mem_sum_mu[n] = ret;
+  }
+
+  int64 get_sum_phi(int64 n) {
+    if (n <= maxp) return pre_sum_phi[n];
+
+    auto where = mem_sum_phi.find(n);
+    if (where != mem_sum_phi.end()) return where->second;
+
+    int64 ret = 0;
+    int64 last = 0;
+    for (int64 k = 1; k <= n;) {
+      int64 v = n / k;
+      int64 maxk = n / v;
+      int64 now = get_sum_mu(maxk);
+      int64 x = sub_mod(now, last, mod);
+      last = now;
+
+      int64 s = 0;
+      if (v&1) {
+        s = mul_mod_ex((v + 1) / 2 % mod, v % mod, mod);
+      } else {
+        s = mul_mod_ex(v / 2 % mod, (v + 1) % mod, mod);
+      }
+      ret = add_mod(ret, mul_mod_ex(s, x, mod), mod);
+      k = maxk + 1;
+    }
+    return mem_sum_phi[n] = ret;
+  }
+  int64 mod;
+
+  int64* pre_sum_mu;
+  unordered_map<int64, int64> mem_sum_mu;
+  
+  int64* pre_sum_phi;
+  unordered_map<int64, int64> mem_sum_phi;
+};
 // 65701
 #endif
 /*

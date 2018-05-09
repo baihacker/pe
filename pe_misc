@@ -1,0 +1,168 @@
+#ifndef __PE_MISC_H__
+#define __PE_MISC_H__
+
+#include "pe_base"
+
+class GaussianEliminationMod2 {
+public:
+  void init(int r, int c) {
+    row = r;
+    col = c;
+    data.resize(row);
+    colex = (col + 63) >> 6;
+    for (int i = 0; i < row; ++i) {
+      vector<uint64>(colex, 0).swap(data[i]);
+    }
+  }
+
+  void fillZero() {
+    for (auto& iter: data) {
+      fill(iter.begin(), iter.end(), 0);
+    }
+  }
+
+  int at(int i, int j) const {
+    const int idx = j >> 6;
+    const int offset = j & 63;
+    return (data[i][idx] >> offset) & 1;
+  }
+
+  void set(int i, int j, int v) {
+    const int idx = j >> 6;
+    const int offset = j & 63;
+    if (v) {
+      data[i][idx] |= 1LL << offset;
+    } else {
+      data[i][idx] &= ~(1LL << offset);
+    }
+  }
+
+  void change(int i, int j) {
+    set(i, j, at(i, j) ^ 1);
+  }
+
+  int reduce() {
+    x = y = 0;
+    while (x < row && y < col) {
+      int id = x;
+      while (id < row && at(id, y) == 0) ++id;
+      if (id == row) {
+        ++y;
+        continue;
+      }
+      if (id != x) {
+        data[id].swap(data[x]);
+      }
+      for (int i = x + 1; i < row; ++i) {
+        if (at(i, y) == 0) continue;
+        for (int j = y >> 6; j < colex; ++j)
+          data[i][j] ^= data[x][j];
+      }
+      ++x, ++y;
+    }
+    return rank();
+  }
+
+  int rank() const {
+    return x;
+  }
+
+  vector<vector<uint64>> data;
+  int row, col, colex;
+  int x, y;
+};
+
+class GaussianEliminationSolver {
+public:
+  void init(int r, int c) {
+    row = r;
+    col = c;
+    data.resize(row);
+    for (int i = 0; i < r; ++i) {
+      vector<double>(col + 1, 0).swap(data[i]);
+    }
+  }
+
+  void fillZero() {
+    fill(0);
+  }
+
+  void fill(double v) {
+    for (auto& iter: data) {
+      std::fill(iter.begin(), iter.end(), v);
+    }
+  }
+
+  double& at(int i, int j) {
+    return data[i][j];
+  }
+  
+  vector<double>& rowData(int i) {
+    return data[i];
+  }
+
+  static int dbsgn(double x) {
+    if (fabs(x) < 1e-10) {
+      return 0;
+    }
+    return x > 0 ? 1 : -1;
+  }
+
+  int reduce() {
+    x = y = 0;
+    while (x < row && y < col) {
+      int bestId = x;
+      double bestV = fabs(at(x, y));
+      for (int i = x + 1; i < row; ++i) {
+        auto now = fabs(at(i, y));
+        if (now > bestV) {
+          bestId = i;
+          bestV = now;
+        }
+      }
+      if (dbsgn(bestV) == 0) {
+        ++y;
+        continue;
+      }
+      if (bestId != x) {
+        data[bestId].swap(data[x]);
+      }
+      for (int i = x + 1; i < row; ++i) {
+        if (dbsgn(at(i, y)) == 0) continue;
+        const double coe = - at(i, y) / at(x, y);
+        for (int j = y; j <= col; ++j)
+          data[i][j] += data[x][j] * coe;
+      }
+      ++x, ++y;
+    }
+    return rank();
+  }
+
+  const vector<double>& solve() {
+    reduce();
+    PE_ASSERT(rank() == row);
+    ans.resize(row);
+    for (int i = row - 1; i >= 0; --i) {
+      data[i][col] /= data[i][i];
+      data[i][i] = 1;
+      const double v = data[i][col];
+      ans[i] = v;
+      for (int j = i - 1; j >= 0; --j) {
+        data[j][col] -= v * data[j][i];
+      }
+    }
+    return ans;
+  }
+
+  int rank() const {
+    return x;
+  }
+
+  vector<vector<double>> data;
+  vector<double> ans;
+
+  int row, col;
+  int x, y;
+};
+
+#endif

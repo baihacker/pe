@@ -691,6 +691,58 @@ SL int64 square_root(int64 n) {
   return ret * ret == n ? ret : 0;
 }
 
+// greatest common divisor and extend greatest common divisor
+#ifndef COMPILER_GNU
+template <typename _EuclideanRingElement>
+_EuclideanRingElement __gcd(_EuclideanRingElement __m,
+                            _EuclideanRingElement __n) {
+  while (__n != 0) {
+    _EuclideanRingElement __t = __m % __n;
+    __m = __n;
+    __n = __t;
+  }
+  return __m;
+}
+#endif
+
+#define gcd __gcd
+
+template <typename T>
+SL T exgcd_impl(T a, T b, T& x, T& y) {
+  if (b == 0) {
+    x = 1;
+    y = 0;
+    return a;
+  }
+
+  T x1 = 0, y1 = 0;
+  const T ret = exgcd_impl(b, a % b, x1, y1);
+  // b * x1 + (a%b) * y1 = ret
+  // b * x1 + (a - a / b * b) * y1 = ret
+  // b * x1 + a * y1 - a / b * b * y1 = ret
+  // y1 * a + (x1 - a / b * y1) b = ret
+  x = y1;
+  y = x1 - a / b * y1;
+  return ret;
+}
+
+template <typename T>
+SL T exgcd(T a, T b, T& x, T& y) {
+  PE_ASSERT(a != 0 || b != 0);
+  const T r = exgcd_impl(a, b, x, y);
+  PE_ASSERT(a * x + b * y == r);
+  return r;
+}
+
+template <typename T>
+SL tuple<T, T, T> exgcd(T a, T b) {
+  PE_ASSERT(a != 0 || b != 0);
+  T x = 0, y = 0;
+  const T r = exgcd_impl(a, b, x, y);
+  PE_ASSERT(a * x + b * y == r);
+  return tuple<T, T, T>{r, x, y};
+}
+
 // p is prime
 SL int64 inv_of(int64 x, int64 p) { return power_mod_ex(x, p - 2, p); }
 
@@ -854,58 +906,6 @@ struct PowerSumModer {
   int64 mod;
   int64 P[64][64]; // k < 64;
 };
-
-// greatest common divisor and extend greatest common divisor
-#ifndef COMPILER_GNU
-template <typename _EuclideanRingElement>
-_EuclideanRingElement __gcd(_EuclideanRingElement __m,
-                            _EuclideanRingElement __n) {
-  while (__n != 0) {
-    _EuclideanRingElement __t = __m % __n;
-    __m = __n;
-    __n = __t;
-  }
-  return __m;
-}
-#endif
-
-#define gcd __gcd
-
-template <typename T>
-SL T exgcd_impl(T a, T b, T& x, T& y) {
-  if (b == 0) {
-    x = 1;
-    y = 0;
-    return a;
-  }
-
-  T x1 = 0, y1 = 0;
-  const T ret = exgcd_impl(b, a % b, x1, y1);
-  // b * x1 + (a%b) * y1 = ret
-  // b * x1 + (a - a / b * b) * y1 = ret
-  // b * x1 + a * y1 - a / b * b * y1 = ret
-  // y1 * a + (x1 - a / b * y1) b = ret
-  x = y1;
-  y = x1 - a / b * y1;
-  return ret;
-}
-
-template <typename T>
-SL T exgcd(T a, T b, T& x, T& y) {
-  PE_ASSERT(a != 0 || b != 0);
-  const T r = exgcd_impl(a, b, x, y);
-  PE_ASSERT(a * x + b * y == r);
-  return r;
-}
-
-template <typename T>
-SL tuple<T, T, T> exgcd(T a, T b) {
-  PE_ASSERT(a != 0 || b != 0);
-  T x = 0, y = 0;
-  const T r = exgcd_impl(a, b, x, y);
-  PE_ASSERT(a * x + b * y == r);
-  return tuple<T, T, T>{r, x, y};
-}
 
 // solve equation a x = b (mod m)
 // return 0 and set u = -1 and v = 0 if failed

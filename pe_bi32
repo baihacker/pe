@@ -469,7 +469,7 @@ class BigInteger {
     while (alignedSize < n + m) alignedSize <<= 1;
 
     std::vector<uint64> tresult[2];
-    ntt::NttMod moder[2] = {ntt::nttMod1, ntt::nttMod2};
+    const ntt::NttMod* moder[2] = {&ntt::nttMod1, &ntt::nttMod2};
     #pragma omp parallel for schedule(dynamic, 1) num_threads(2)
     for (int id = 0; id < 2; ++id) {
       std::vector<uint64> X(alignedSize);
@@ -491,15 +491,15 @@ class BigInteger {
       #pragma omp parallel sections if (n + m >= 100000)
       {
         #pragma omp section
-        ntt::ntt(&X[0], alignedSize, moder[id]);
+        ntt::ntt(&X[0], alignedSize, *moder[id]);
         #pragma omp section
-        ntt::ntt(&Y[0], alignedSize, moder[id]);
+        ntt::ntt(&Y[0], alignedSize, *moder[id]);
       }
-      const uint64 mod = moder[id].mod;
+      const uint64 mod = moder[id]->mod;
       for (int i = 0; i < alignedSize; ++i) {
         X[i] = (uint64)X[i] * Y[i] % mod;
       }
-      ntt::ntt(&X[0], alignedSize, moder[id], true);
+      ntt::ntt(&X[0], alignedSize, *moder[id], true);
       tresult[id] = std::move(X);
     }
     const int allocateSize = n + m + 8;

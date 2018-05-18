@@ -66,11 +66,11 @@ SL void random_test() {
 
 SL void limit_test() {
   {
-    // 10018*10018*2214=22147971117336 2.21e12
+    // 10018*10018*2048=205537943552 2.06e11
     // 1e5+19
     const int64 mod = 100019;
     vector<uint64> x, y;
-    for (int i = 0; i < 2214; ++i)
+    for (int i = 0; i < 2048; ++i)
       x.push_back(mod-1),
       y.push_back(mod-1);
 

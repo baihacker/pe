@@ -16,7 +16,9 @@ Installation:
   
   > ENABLE_GMP should be 0 if you don't want to use [gmp](https://gmplib.org).
 
-* [optional, recommended] Run "g++ -xc++-header "pe.hpp" --std=c++11 -O3 -march=native -fopenmp" in D:\usr\include to generate precompile header "pe.hpp.gch". The compile options are the same as the options you will compile your target files.
+* [optional, recommended] Generate precompile header "pe.hpp.gch".
+  * Command: "g++ xc++-header pe.hpp". Run in D:\usr\include
+  * You can add more options, usually, they are the same as the options to compile your target. e.g. "g++ -xc++-header pe.hpp --std=c++11 -O3 -march=native -fopenmp".
 
 Use:
 ----

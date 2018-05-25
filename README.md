@@ -40,6 +40,7 @@ File list:
 * pe_geometry: Support Point2D and Point3D.
 * pe_integer_util: integer utils.
 * pe_mat: Matrix operations.
+* pe_misc：misc codes.
 * pe_memory: Memory manipulation such as allocating large memory. (windows only)
 * pe_mod: Modular arithmetic.
 * pe_nt: Basic code of number theory.

@@ -170,7 +170,7 @@ SL void poly_fact_sum_mod_test() {
   const int64 mod = 99999999907;
   FactSumModer moder(mod);
   
-  const int n = 100000000;
+  const int64 n = 100000000;
   auto ans = moder.cal(n);
   int64 now = 1;
   int64 s = 1;

@@ -908,9 +908,10 @@ struct FactModer {
 };
 
 #if 0
-// size X = 2 * n
-// size(result) = n + 1
-// multiply (X[1]*x+X[0])(X[3]x+X[2])...(X[2n-1]x+X[2n-2])
+// Y = X
+// s(i) = (Y[1]*x+Y[0])(Y[3]x+Y[2])...(Y[2i+1]x+Y[2i])
+// return s(n-1)
+// size s(n-1) = n + 1
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_batch_mul_mod_internal(const T* X, int n, T* result,
@@ -937,7 +938,24 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   PE_ASSERT(sz(t) == n + 1);
   copy(t.begin(), t.end(), result);
 }
+
+// n = e - s
+// Y = X[2s:2e]
+// s(i) = (Y[1]*x+Y[0])(Y[3]x+Y[2])...(Y[2i+1]x+Y[2i])
+// return s(n-1)
+// size s(n-1) = n + 1
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_batch_mul_mod_internal(const T* X, int s, int e, T* result,
+                                   int64 mod) {
+  poly_batch_mul_mod_internal(X + 2 * s, e - s, result, mod);
+}
 #else
+// n = e - s
+// Y = X[2s:2e]
+// s(i) = (Y[1]*x+Y[0])(Y[3]x+Y[2])...(Y[2i+1]x+Y[2i])
+// return s(n-1)
+// size s(n-1) = n + 1
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_batch_mul_mod_internal(const T* X, int s, int e, T* result,
@@ -957,9 +975,10 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 }
 #endif
 
-// size X = 2 * n
-// size(result) = n + 1
-// multiply (X[1]*x+X[0])(X[3]x+X[2])...(X[2n-1]x+X[2n-2])
+// Y = X
+// s(i) = (Y[1]*x+Y[0])(Y[3]x+Y[2])...(Y[2i+1]x+Y[2i])
+// return s(n-1)
+// size s(n-1) = n + 1
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_batch_mul_mod(const T* X, const int n, T* result,
@@ -969,9 +988,11 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
       (const unsignedT*)X, 0, n, (unsignedT*)result, mod);
 }
 
-// size result = size X / 2 + 1
-// every two element of X is a polynomial
-// multiply (X[1]*x+X[0])(X[3]x+X[2])...(X[2n-1]x+X[2n-2])
+// n = size X / 2
+// Y = X
+// s(i) = (Y[1]*x+Y[0])(Y[3]x+Y[2])...(Y[2i+1]x+Y[2i])
+// return s(n-1)
+// size s(n-1) = n + 1
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
     poly_batch_mul_mod(const vector<T>& X, int64 mod) {
@@ -982,42 +1003,80 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 }
 
 #if 0
-// Compute s(1) + s(2) + s(3) + ... + s(n)
-// s(i) = (X[1]*x+X[0])(X[3]x+X[2])...(X[2i-1]x+X[2i-2])
-vector<uint64> poly_batch_mul_acc_mod(const vector<uint64>& X, int start, int end, uint64 mod) {
-  const int n = end - start;
+// n = e - s
+// Y = X[2s:2e]
+// s(i) = (Y[1]*x+Y[0])(Y[3]x+Y[2])...(Y[2i+1]x+Y[2i])
+// return s(0) + s(2) + s(3) + ... + s(n-1)
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
+poly_batch_mul_acc_mod(const vector<T>& X, int s, int e, uint64 mod) {
+  const int n = e - s;
   if (n == 1) {
-    return vector<uint64>(X.begin() + start * 2, X.begin() + end * 2);
+    return vector<T>(X.begin() + s * 2, X.begin() + e * 2);
   }
 
   const int half = n / 2;
-  auto A = poly_batch_mul_acc_mod(X, start, start + half, mod);
-  auto B = poly_batch_mul_acc_mod(X, start + half, end, mod);
-  auto C = poly_batch_mul_mod(vector<uint64>(X.begin() + start * 2, X.begin() + (start + half)*2), mod);
+  auto A = poly_batch_mul_acc_mod(X, s, s + half, mod);
+  auto B = poly_batch_mul_acc_mod(X, s + half, e, mod);
+  auto C = poly_batch_mul_mod(vector<T>(X.begin() + s * 2, X.begin() + (s + half)*2), mod);
   B = poly_mul(B, C, mod);
   return poly_add(A, B, mod);
 }
+
+// n = X.size() / 2
+// Y = X
+// s(i) = (Y[1]*x+Y[0])(Y[3]x+Y[2])...(Y[2i+1]x+Y[2i])
+// return s(0) + s(2) + s(3) + ... + s(n-1)
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
+poly_batch_mul_acc_mod(const vector<T>& X, uint64 mod) {
+  return poly_batch_mul_acc_mod(X, 0, X.size() / 2, mod);
+}
+
+// n = e - s
+// Y = X[2s:2e]
+// s(i) = (Y[1]*x+Y[0])(Y[3]x+Y[2])...(Y[2i+1]x+Y[2i])
+// M = s(n-1)
+// return s(0) + s(2) + s(3) + ... + s(n-1)
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
+poly_batch_mul_acc_mod(const vector<T>& X, int s, int e, vector<T>& M, uint64 mod) {
+  vector<T> Y(X.begin() + s * 2, X.begin() + e * 2);
+  M = poly_batch_mul_mod(Y, mod);
+  return poly_batch_mul_acc_mod(Y, mod);
+}
 #else
-vector<uint64> poly_batch_mul_acc_mod(const vector<uint64>& X, int start, int end, vector<uint64>& M, uint64 mod) {
-  const int n = end - start;
+// n = e - s
+// Y = X[2s:2e]
+// s(i) = (Y[1]*x+Y[0])(Y[3]x+Y[2])...(Y[2i+1]x+Y[2i])
+// M = s(n-1)
+// return s(0) + s(2) + s(3) + ... + s(n-1)
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
+poly_batch_mul_acc_mod(const vector<T>& X, int s, int e, vector<T>& M, uint64 mod) {
+  const int n = e - s;
   if (n == 1) {
-    vector<uint64> t(X.begin() + start * 2, X.begin() + end * 2);
+    vector<T> t(X.begin() + s * 2, X.begin() + e * 2);
     M = t;
     return t;
   }
-  vector<uint64> C, D;
+  vector<T> C, D;
   const int half = n / 2;
-  auto A = poly_batch_mul_acc_mod(X, start, start + half, C, mod);
-  auto B = poly_batch_mul_acc_mod(X, start + half, end, D, mod);
+  auto A = poly_batch_mul_acc_mod(X, s, s + half, C, mod);
+  auto B = poly_batch_mul_acc_mod(X, s + half, e, D, mod);
   B = poly_mul(B, C, mod);
   M = poly_mul(C, D, mod);
   return poly_add(A, B, mod);
 }
 
-// Compute s(1) + s(2) + s(3) + ... + s(n)
-// s(i) = (X[1]*x+X[0])(X[3]x+X[2])...(X[2i-1]x+X[2i-2])
-vector<uint64> poly_batch_mul_acc_mod(const vector<uint64>& X, uint64 mod) {
-  vector<uint64> C;
+// n = X.size() / 2
+// Y = X
+// s(i) = (Y[1]*x+Y[0])(Y[3]x+Y[2])...(Y[2i+1]x+Y[2i])
+// return s(0) + s(2) + s(3) + ... + s(n-1)
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
+poly_batch_mul_acc_mod(const vector<T>& X, uint64 mod) {
+  vector<T> C;
   return poly_batch_mul_acc_mod(X, 0, X.size() / 2, C, mod);
 }
 #endif
@@ -1109,6 +1168,7 @@ struct FactSumModer {
   uint64 q;
 };
 
+// Binomial number moder for large P
 struct CombModerEx {
   CombModerEx(uint64 P): P(P), fmoder(P) { }
   int64 s(int64 x) { return x & 1 ? P-1 : 1; }

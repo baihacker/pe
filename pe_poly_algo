@@ -907,6 +907,7 @@ struct FactModer {
   uint64 q;
 };
 
+#if 0
 // size X = 2 * n
 // size(result) = n + 1
 // multiply (X[1]*x+X[0])(X[3]x+X[2])...(X[2n-1]x+X[2n-2])
@@ -936,6 +937,25 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   PE_ASSERT(sz(t) == n + 1);
   copy(t.begin(), t.end(), result);
 }
+#else
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_batch_mul_mod_internal(const T* X, int s, int e, T* result,
+                                   int64 mod) {
+  static_assert(std::is_unsigned<T>::value, "T must be unsigned");
+  const int n = e - s;
+  if (n == 1) {
+    copy(X+s*2, X+e*2, result);
+    return;
+  }
+  const int half = n >> 1;
+  vector<T> A(half + 1);
+  vector<T> B(n - half + 1);
+  poly_batch_mul_mod_internal(X, s, s + half, &A[0], mod);
+  poly_batch_mul_mod_internal(X, s + half, e, &B[0], mod);
+  poly_mul(&A[0], half + 1, &B[0], n - half + 1, result, mod);
+}
+#endif
 
 // size X = 2 * n
 // size(result) = n + 1
@@ -946,7 +966,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
                           int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
   poly_batch_mul_mod_internal<unsignedT>(
-      (const unsignedT*)X, n, (unsignedT*)result, mod);
+      (const unsignedT*)X, 0, n, (unsignedT*)result, mod);
 }
 
 // size result = size X / 2 + 1
@@ -961,6 +981,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
   return result;
 }
 
+#if 0
 // Compute s(1) + s(2) + s(3) + ... + s(n)
 // s(i) = (X[1]*x+X[0])(X[3]x+X[2])...(X[2i-1]x+X[2i-2])
 vector<uint64> poly_batch_mul_acc_mod(const vector<uint64>& X, int start, int end, uint64 mod) {
@@ -976,7 +997,32 @@ vector<uint64> poly_batch_mul_acc_mod(const vector<uint64>& X, int start, int en
   B = poly_mul(B, C, mod);
   return poly_add(A, B, mod);
 }
+#else
+vector<uint64> poly_batch_mul_acc_mod(const vector<uint64>& X, int start, int end, vector<uint64>& M, uint64 mod) {
+  const int n = end - start;
+  if (n == 1) {
+    vector<uint64> t(X.begin() + start * 2, X.begin() + end * 2);
+    M = t;
+    return t;
+  }
+  vector<uint64> C, D;
+  const int half = n / 2;
+  auto A = poly_batch_mul_acc_mod(X, start, start + half, C, mod);
+  auto B = poly_batch_mul_acc_mod(X, start + half, end, D, mod);
+  B = poly_mul(B, C, mod);
+  M = poly_mul(C, D, mod);
+  return poly_add(A, B, mod);
+}
 
+// Compute s(1) + s(2) + s(3) + ... + s(n)
+// s(i) = (X[1]*x+X[0])(X[3]x+X[2])...(X[2i-1]x+X[2i-2])
+vector<uint64> poly_batch_mul_acc_mod(const vector<uint64>& X, uint64 mod) {
+  vector<uint64> C;
+  return poly_batch_mul_acc_mod(X, 0, X.size() / 2, C, mod);
+}
+#endif
+
+// f(4e8)%99999999907 = 34123109351
 // Compute (0! + 1! + 2! + ... + n!) % p
 struct FactSumModer {
   FactSumModer(uint64 p) : p(p) { init(); }
@@ -988,22 +1034,37 @@ struct FactSumModer {
     int64 m = sqrt(n);
     uint64 ret = 1;
 
-    // Compute Q
-    vector<uint64> X(m*2);
-    for (int i = 0; i < m; ++i) {
+    // Prepare data for computing P
+    vector<uint64> X((m-1)*2);
+    for (int i = 0; i < m - 1; ++i) {
       X[i*2] = i + 1;
       X[i*2+1] = m;
     }
 
-    // deg Y = m
-    auto Y = poly_batch_mul_mod(X, p);
-
-    vector<uint64> V(m+1);
-    for (int i = 0; i <= m; ++i) {
+    vector<uint64> V(m);
+    for (int i = 0; i < m; ++i) {
       V[i] = i;
     }
 
-    auto Q = poly_evaluate_mod_bls(Y, V, p);
+    // Compute P
+    vector<uint64> YQ;
+    auto YP = poly_batch_mul_acc_mod(X, 0, m-1, YQ, p);
+    YP[0] = add_mod(YP[0], 1, p);
+    auto P = poly_evaluate_mod_bls(YP, V, p);
+
+    // Prepare data for computing Q
+    // YQ *= (m + xm)
+    YQ.resize(m+1);
+    YQ[m] = YQ[m-1];
+    for (int i = m-1; i >= 1; --i)
+      YQ[i] = add_mod(YQ[i], YQ[i-1], p);
+    for (auto& i: YQ) i = mul_mod_ex(i, m, p);
+
+    // V.extend(m)
+    V.push_back(m);
+    
+    // Compute Q
+    auto Q = poly_evaluate_mod_bls(YQ, V, p);
     for (int i = 1; i <= m; ++i) {
       Q[i] = mul_mod_ex(Q[i], Q[i-1], p);
     }
@@ -1012,9 +1073,7 @@ struct FactSumModer {
     X.resize((m-1)*2);
     V.resize(m);
     // deg y = m - 1
-    Y = poly_batch_mul_acc_mod(X, 0, m-1, p);
-    Y[0] = add_mod(Y[0], 1, p);
-    auto P = poly_evaluate_mod_bls(Y, V, p);
+
 
     // Compute result
     int64 result = P[0];

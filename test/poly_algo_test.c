@@ -169,15 +169,15 @@ PE_REGISTER_TEST(&poly_batch_mul_mod_test, "poly_batch_mul_mod_test", SMALL);
 SL void poly_fact_sum_mod_test() {
   const int64 mod = 99999999907;
   FactSumModer moder(mod);
-  auto ans = moder.cal(100000000);
   
+  const int n = 100000000;
+  auto ans = moder.cal(n);
   int64 now = 1;
   int64 s = 1;
-  for (int64 i = 1; i <= 100000000; ++i) {
+  for (int64 i = 1; i <= n; ++i) {
     now = mul_mod_ex(now, i, mod);
     s = add_mod(s, now, mod);
   }
-  
   assert(ans == s);
 }
 PE_REGISTER_TEST(&poly_fact_sum_mod_test, "poly_fact_sum_mod_test", MEDIUM);

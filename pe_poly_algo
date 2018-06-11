@@ -825,17 +825,17 @@ struct FactModer {
     const int halfD = d >> 1;
     evaluate(halfD, result, v);
     copy(result, result + halfD + 1, &G0[0]);
-    // #pragma omp parallel sections if (d >= 10000)
+    #pragma omp parallel sections if (d >= 10000)
     {
-      // #pragma omp section
+      #pragma omp section
       poly_offset_evaluate<uint64>(halfD, result, &G1[0], halfD + 1,
                                    &preFactInv[0], p);
 
-      // #pragma omp section
+      #pragma omp section
       poly_offset_evaluate<uint64>(halfD, result, &G2[0], v * halfD,
                                    &preFactInv[0], p);
 
-      // #pragma omp section
+      #pragma omp section
       poly_offset_evaluate<uint64>(halfD, result, &G3[0], v * halfD + halfD,
                                    &preFactInv[0], p);
     }
@@ -969,8 +969,13 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   const int half = n >> 1;
   vector<T> A(half + 1);
   vector<T> B(n - half + 1);
-  poly_batch_mul_mod_internal(X, s, s + half, &A[0], mod);
-  poly_batch_mul_mod_internal(X, s + half, e, &B[0], mod);
+  #pragma omp parallel sections if (n > 5000)
+  {
+    #pragma omp section
+    poly_batch_mul_mod_internal(X, s, s + half, &A[0], mod);
+    #pragma omp section
+    poly_batch_mul_mod_internal(X, s + half, e, &B[0], mod);
+  }
   poly_mul(&A[0], half + 1, &B[0], n - half + 1, result, mod);
 }
 #endif
@@ -1016,9 +1021,17 @@ poly_batch_mul_acc_mod(const vector<T>& X, int s, int e, uint64 mod) {
   }
 
   const int half = n / 2;
-  auto A = poly_batch_mul_acc_mod(X, s, s + half, mod);
-  auto B = poly_batch_mul_acc_mod(X, s + half, e, mod);
-  auto C = poly_batch_mul_mod(vector<T>(X.begin() + s * 2, X.begin() + (s + half)*2), mod);
+  vector<T> A, B, C;
+  #pragma omp parallel sections if (n > 5000)
+  {
+    #pragma omp section
+    A = poly_batch_mul_acc_mod(X, s, s + half, mod);
+    #pragma omp section
+    B = poly_batch_mul_acc_mod(X, s + half, e, mod);
+    #pragma omp section
+    C = poly_batch_mul_mod(vector<T>(X.begin() + s * 2, X.begin() + (s + half)*2), mod);
+  }
+
   B = poly_mul(B, C, mod);
   return poly_add(A, B, mod);
 }
@@ -1062,10 +1075,21 @@ poly_batch_mul_acc_mod(const vector<T>& X, int s, int e, vector<T>& M, uint64 mo
   }
   vector<T> C, D;
   const int half = n / 2;
-  auto A = poly_batch_mul_acc_mod(X, s, s + half, C, mod);
-  auto B = poly_batch_mul_acc_mod(X, s + half, e, D, mod);
-  B = poly_mul(B, C, mod);
-  M = poly_mul(C, D, mod);
+  vector<T> A, B;
+  #pragma omp parallel sections if (n > 5000)
+  {
+    #pragma omp section
+    A = poly_batch_mul_acc_mod(X, s, s + half, C, mod);
+    #pragma omp section
+    B = poly_batch_mul_acc_mod(X, s + half, e, D, mod);
+  }
+  #pragma omp parallel sections if (n > 5000)
+  {
+    #pragma omp section
+    B = poly_mul(B, C, mod);
+    #pragma omp section
+    M = poly_mul(C, D, mod);
+  }
   return poly_add(A, B, mod);
 }
 

@@ -154,4 +154,31 @@ SL void poly_fact_mod_test() {
   #endif
 }
 PE_REGISTER_TEST(&poly_fact_mod_test, "poly_fact_mod_test", BIG);
+
+SL void poly_batch_mul_mod_test() {
+  const int mod = 10007;
+  vector<int64> data{1,1,2,1,3,1};
+  auto result = poly_batch_mul_mod(data, mod);
+
+  vector<int64> expected{6, 11, 6, 1};
+  assert(expected == result);
+}
+PE_REGISTER_TEST(&poly_batch_mul_mod_test, "poly_batch_mul_mod_test", SMALL);
+
+
+SL void poly_fact_sum_mod_test() {
+  const int64 mod = 99999999907;
+  FactSumModer moder(mod);
+  auto ans = moder.cal(100000000);
+  
+  int64 now = 1;
+  int64 s = 1;
+  for (int64 i = 1; i <= 100000000; ++i) {
+    now = mul_mod_ex(now, i, mod);
+    s = add_mod(s, now, mod);
+  }
+  
+  assert(ans == s);
+}
+PE_REGISTER_TEST(&poly_fact_sum_mod_test, "poly_fact_sum_mod_test", MEDIUM);
 }

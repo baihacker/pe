@@ -14,6 +14,67 @@ SL void adjust_poly_leading_zero(vector<T>& v) {
   v.resize(now + 1);
 }
 
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_add(const T* X, const int n, const T* Y, const int m, T* result,
+             int64 mod) {
+  if (n <= m) {
+    for (int i = 0; i < n; ++i) {
+      result[i] = add_mod(X[i], Y[i], mod);
+    }
+    copy(Y + n, Y + m, result + n);
+  } else {
+    for (int i = 0; i < m; ++i) {
+      result[i] = add_mod(X[i], Y[i], mod);
+    }
+    copy(X + m, X + n, result + m);
+  }
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
+    poly_add(const vector<T>& X, const vector<T>& Y, int64 mod) {
+  const int n = (int)X.size();
+  const int m = (int)Y.size();
+
+  vector<T> result(max(n, m));
+  poly_add(&X[0], n, &Y[0], m, &result[0], mod);
+
+  return result;
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_sub(const T* X, const int n, const T* Y, const int m, T* result,
+             int64 mod) {
+  if (n <= m) {
+    for (int i = 0; i < n; ++i) {
+      result[i] = sub_mod(X[i], Y[i], mod);
+    }
+    for (int i = n; i < m; ++i) {
+      result[i] = Y[i] == 0 ? 0 : mod - Y[i];
+    }
+  } else {
+    for (int i = 0; i < m; ++i) {
+      result[i] = sub_mod(X[i], Y[i], mod);
+    }
+    copy(X + m, X + n, result + m);
+  }
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
+    poly_sub(const vector<T>& X, const vector<T>& Y, int64 mod) {
+  const int n = (int)X.size();
+  const int m = (int)Y.size();
+
+  vector<T> result(max(n, m));
+  poly_sub(&X[0], n, &Y[0], m, &result[0], mod);
+
+  return result;
+}
+
+
 // Multiply two polynomials of the same length.
 // size result >= 2 * n
 // size return = 2 * n (deg return = 2 * n - 1)
@@ -748,7 +809,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
   return std::move(result);
 }
 
-// Compuate n! % p (2 <= p < 2^32)
+// Compuate n! % p
 // Algorithm source: // https://min-25.hatenablog.com/entry/2017/04/10/215046
 struct FactModer {
   FactModer(uint64 p) : p(p) { init(); }
@@ -846,6 +907,149 @@ struct FactModer {
   uint64 q;
 };
 
+// size X = 2 * n
+// size(result) = n + 1
+// multiply (X[1]*x+X[0])(X[3]x+X[2])...(X[2n-1]x+X[2n-2])
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_batch_mul_mod_internal(const T* X, int n, T* result,
+                                   int64 mod) {
+  static_assert(std::is_unsigned<T>::value, "T must be unsigned");
+  vector<vector<T>> from;
+  for (int i = 0; i < n; ++i) {
+    vector<T> tmp{X[2*i] % mod, X[2*i+1]%mod};
+    from.push_back(tmp);
+  }
+  int lastSize = n;
+  while (lastSize != 1) {
+    vector<vector<T>> to;
+    for (int i = 0; i < lastSize / 2; ++i) {
+      to.push_back(poly_mul(from[i * 2], from[i * 2 + 1], mod));
+    }
+    if (lastSize & 1) {
+      to.push_back(from[lastSize - 1]);
+    }
+    lastSize = lastSize + 1 >> 1;
+    from.swap(to);
+  }
+  auto& t = from[0];
+  PE_ASSERT(sz(t) == n + 1);
+  copy(t.begin(), t.end(), result);
+}
+
+// size X = 2 * n
+// size(result) = n + 1
+// multiply (X[1]*x+X[0])(X[3]x+X[2])...(X[2n-1]x+X[2n-2])
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_batch_mul_mod(const T* X, const int n, T* result,
+                          int64 mod) {
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  poly_batch_mul_mod_internal<unsignedT>(
+      (const unsignedT*)X, n, (unsignedT*)result, mod);
+}
+
+// size result = size X / 2 + 1
+// every two element of X is a polynomial
+// multiply (X[1]*x+X[0])(X[3]x+X[2])...(X[2n-1]x+X[2n-2])
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
+    poly_batch_mul_mod(const vector<T>& X, int64 mod) {
+  const int n = (int)X.size();
+  vector<T> result(n/2 + 1);
+  poly_batch_mul_mod(&X[0], n/2, &result[0], mod);
+  return result;
+}
+
+// Compute s(1) + s(2) + s(3) + ... + s(n)
+// s(i) = (X[1]*x+X[0])(X[3]x+X[2])...(X[2i-1]x+X[2i-2])
+vector<uint64> poly_batch_mul_acc_mod(const vector<uint64>& X, int start, int end, uint64 mod) {
+  const int n = end - start;
+  if (n == 1) {
+    return vector<uint64>(X.begin() + start * 2, X.begin() + end * 2);
+  }
+
+  const int half = n / 2;
+  auto A = poly_batch_mul_acc_mod(X, start, start + half, mod);
+  auto B = poly_batch_mul_acc_mod(X, start + half, end, mod);
+  auto C = poly_batch_mul_mod(vector<uint64>(X.begin() + start * 2, X.begin() + (start + half)*2), mod);
+  B = poly_mul(B, C, mod);
+  return poly_add(A, B, mod);
+}
+
+// Compute (0! + 1! + 2! + ... + n!) % p
+struct FactSumModer {
+  FactSumModer(uint64 p) : p(p) { init(); }
+
+  int64 cal(int64 n) {
+    if (n >= p) n = p - 1;
+    if (n < q) return preFactSum[n];
+
+    int64 m = sqrt(n);
+    uint64 ret = 1;
+
+    // Compute Q
+    vector<uint64> X(m*2);
+    for (int i = 0; i < m; ++i) {
+      X[i*2] = i + 1;
+      X[i*2+1] = m;
+    }
+
+    // deg Y = m
+    auto Y = poly_batch_mul_mod(X, p);
+
+    vector<uint64> V(m+1);
+    for (int i = 0; i <= m; ++i) {
+      V[i] = i;
+    }
+
+    auto Q = poly_evaluate_mod_bls(Y, V, p);
+    for (int i = 1; i <= m; ++i) {
+      Q[i] = mul_mod_ex(Q[i], Q[i-1], p);
+    }
+
+    // Compute P
+    X.resize((m-1)*2);
+    V.resize(m);
+    // deg y = m - 1
+    Y = poly_batch_mul_acc_mod(X, 0, m-1, p);
+    Y[0] = add_mod(Y[0], 1, p);
+    auto P = poly_evaluate_mod_bls(Y, V, p);
+
+    // Compute result
+    int64 result = P[0];
+    for (int i = 1; i < m; ++i) {
+      uint64 t = mul_mod_ex(P[i], Q[i-1], p);
+      result = add_mod(result, t, p);
+    }
+
+    uint64 last = Q[m-1];
+    for (int64 i = m * m; i <= n; ++i) {
+      result = add_mod(result, last, p);
+      last = mul_mod_ex(last, i + 1, p);
+    }
+    return result;
+  }
+
+  void init() {
+    q = sqrt(p);
+    while (q * q < p) ++q;
+    q <<= 1;
+    q += 1;
+    preFact.resize(q);
+    preFactSum.resize(q);
+    init_seq_prod<uint64>(&preFact[0], 1, q - 1, p);
+    preFactSum[0] = preFact[0];
+    for (int i = 1; i < q; ++i) {
+      preFactSum[i] = add_mod(preFactSum[i-1], preFact[i], p);
+    }
+  }
+
+  vector<uint64> preFact, preFactSum;
+  uint64 p;
+  uint64 q;
+};
+
 struct CombModerEx {
   CombModerEx(uint64 P): P(P), fmoder(P) { }
   int64 s(int64 x) { return x & 1 ? P-1 : 1; }
@@ -878,7 +1082,7 @@ struct CombModerEx {
 
     return mul_mod_ex(inv_of(r, P), l, P);
   }
-  
+
   uint64 P;
   FactModer fmoder;
 };

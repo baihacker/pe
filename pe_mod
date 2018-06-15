@@ -5,14 +5,9 @@
 #include "pe_integer_util"
 
 // Modular arithmetic
-template<typename T, typename M>
-SL
-REQUIRES((
-  is_native_integer<T>::value &&
-  is_native_integer<M>::value &&
-  std::is_signed<T>::value))
-RETURN(T)
-regulate_mod(T a, M mod) {
+template <typename T, typename M>
+SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value &&
+             std::is_signed<T>::value)) RETURN(T) regulate_mod(T a, M mod) {
   PE_ASSERT(mod >= 1);
   if (a >= 0) {
     if (a >= mod) a %= mod;
@@ -25,100 +20,72 @@ regulate_mod(T a, M mod) {
   return a;
 }
 
-template<typename T, typename M>
-SL
-REQUIRES((
-  is_native_integer<T>::value &&
-  is_native_integer<M>::value &&
-  std::is_unsigned<T>::value))
-RETURN(T)
-regulate_mod(T a, M mod) {
+template <typename T, typename M>
+SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value &&
+             std::is_unsigned<T>::value)) RETURN(T) regulate_mod(T a, M mod) {
   PE_ASSERT(mod >= 1);
   if (a >= mod) a %= mod;
   return a;
 }
 
-template<typename T>
-SL
-REQUIRES((is_native_integer<T>::value))
-RETURN(T)
-regulate_mod(T a, T mod) {
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) regulate_mod(T a, T mod) {
   return regulate_mod<T, T>(a, mod);
 }
 
-template<typename T, typename M>
-SL
-REQUIRES((
-  is_native_integer<T>::value &&
-  is_native_integer<M>::value))
-RETURN(T)
-add_mod_impl(T a, T b, M mod) {
+template <typename T, typename M>
+SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
+    RETURN(T) add_mod_impl(T a, T b, M mod) {
   a += b;
   if (a >= mod) a -= mod;
   return a;
 }
 
-template<typename T1, typename T2, typename M>
-SL auto add_mod(T1 a, T2 b, M mod) ->
-REQUIRES((
-  is_native_integer<T1>::value &&
-  is_native_integer<T2>::value &&
-  is_native_integer<M>::value))
-RETURN(typename BigIntegerType<T1, T2>::type) {
+template <typename T1, typename T2, typename M>
+SL auto add_mod(T1 a, T2 b, M mod)
+    -> REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
+                 is_native_integer<M>::value))
+        RETURN(typename BigIntegerType<T1, T2>::type) {
   typedef typename BigIntegerType<T1, T2>::type T;
   return add_mod_impl<T, M>(a, b, mod);
 }
 
-template<typename T, typename M>
-SL
-REQUIRES((
-  is_native_integer<T>::value &&
-  is_native_integer<M>::value))
-RETURN(T)
-sub_mod_impl(T a, T b, M mod) {
+template <typename T, typename M>
+SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
+    RETURN(T) sub_mod_impl(T a, T b, M mod) {
   return a >= b ? a - b : mod - b + a;
 }
 
-template<typename T1, typename T2, typename M>
-SL auto sub_mod(T1 a, T2 b, M mod) -> 
-REQUIRES((
-  is_native_integer<T1>::value &&
-  is_native_integer<T2>::value &&
-  is_native_integer<M>::value))
-RETURN(typename BigIntegerType<T1, T2>::type) {
+template <typename T1, typename T2, typename M>
+SL auto sub_mod(T1 a, T2 b, M mod)
+    -> REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
+                 is_native_integer<M>::value))
+        RETURN(typename BigIntegerType<T1, T2>::type) {
   typedef typename BigIntegerType<T1, T2>::type T;
   return sub_mod_impl<T, M>(a, b, mod);
 }
 
-template<typename T, typename M>
-SL
-REQUIRES((
-  is_native_integer<T>::value &&
-  is_native_integer<M>::value))
-RETURN(T)
-mul_mod_impl(T a, T b, M mod) {
+template <typename T, typename M>
+SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
+    RETURN(T) mul_mod_impl(T a, T b, M mod) {
   return a * b % mod;
 }
 
-template<typename T1, typename T2, typename M>
-SL auto mul_mod(T1 a, T2 b, M mod) ->
-REQUIRES((
-  is_native_integer<T1>::value &&
-  is_native_integer<T2>::value &&
-  is_native_integer<M>::value))
-RETURN(typename BigIntegerType<T1, T2>::type) {
+template <typename T1, typename T2, typename M>
+SL auto mul_mod(T1 a, T2 b, M mod)
+    -> REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
+                 is_native_integer<M>::value))
+        RETURN(typename BigIntegerType<T1, T2>::type) {
   typedef typename BigIntegerType<T1, T2>::type T;
   typedef typename BigIntegerType<int64, T>::type atLeastInt64T;
   return mul_mod_impl<atLeastInt64T, M>(a, b, mod);
 }
 
-template<typename T1, typename T2, typename M>
-SL auto mul_mod_ex(T1 a, T2 b, M mod) ->
-REQUIRES((
-  is_native_integer<T1>::value &&
-  is_native_integer<T2>::value &&
-  is_native_integer<M>::value))
-RETURN(typename BigIntegerType<T1, T2>::type) {
+template <typename T1, typename T2, typename M>
+SL auto mul_mod_ex(T1 a, T2 b, M mod)
+    -> REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
+                 is_native_integer<M>::value))
+        RETURN(typename BigIntegerType<T1, T2>::type) {
   typedef typename BigIntegerType<T1, T2>::type T;
   typedef typename BigIntegerType<int64, T>::type atLeastInt64T;
 
@@ -142,40 +109,35 @@ RETURN(typename BigIntegerType<T1, T2>::type) {
 
 // It's expected that all elements in b are prime.
 // The behavior is undefined if it's not satisified.
-template<typename T, typename M>
-SL
-REQUIRES((
-  is_native_integer<T>::value &&
-  is_native_integer<M>::value))
-RETURN(T)
-frac_mod_impl(std::vector<T> a, std::vector<T> b, M mod) {
+template <typename T, typename M>
+SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
+    RETURN(T) frac_mod_impl(std::vector<T> a, std::vector<T> b, M mod) {
   T ret = 1;
   const int size = b.size();
   int remain = size;
-  for (auto iter: a) {
-    for (int i = 0; remain > 0 && i < size; ++i) if (b[i] != 1 && (iter % b[i] == 0)) {
-      iter /= b[i];
-      b[i] = 1;
-      --remain;
-    }
-    ret = mul_mod(ret, iter%mod, mod);
+  for (auto iter : a) {
+    for (int i = 0; remain > 0 && i < size; ++i)
+      if (b[i] != 1 && (iter % b[i] == 0)) {
+        iter /= b[i];
+        b[i] = 1;
+        --remain;
+      }
+    ret = mul_mod(ret, iter % mod, mod);
   }
   return ret;
 }
 
-template<typename T1, typename T2 = T1, typename M>
-SL auto frac_mod(std::vector<T1> a, std::vector<T2> b, M mod) ->
-REQUIRES((
-  is_native_integer<T1>::value &&
-  is_native_integer<T2>::value &&
-  is_native_integer<M>::value))
-RETURN(typename BigIntegerType<T1, T2>::type) {
+template <typename T1, typename T2 = T1, typename M>
+SL auto frac_mod(std::vector<T1> a, std::vector<T2> b, M mod)
+    -> REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
+                 is_native_integer<M>::value))
+        RETURN(typename BigIntegerType<T1, T2>::type) {
   typedef typename BigIntegerType<T1, T2>::type T;
   typedef typename BigIntegerType<int64, T>::type atLeastInt64T;
   return frac_mod_impl<atLeastInt64T, M>(a, b, mod);
 }
 
-template<typename T1, typename T2, typename M>
+template <typename T1, typename T2, typename M>
 SL T1 power_mod_impl(T1 x, T2 n, M mod) {
   if (mod == 1) return 0;
 
@@ -189,13 +151,13 @@ SL T1 power_mod_impl(T1 x, T2 n, M mod) {
   return ret;
 }
 
-template<typename T1, typename T2, typename M>
+template <typename T1, typename T2, typename M>
 SL T1 power_mod(T1 x, T2 n, M mod) {
   typedef typename BigIntegerType<int64, T1>::type atLeastInt64T1;
   return power_mod_impl<atLeastInt64T1, T2, M>(x, n, mod);
 }
 
-template<typename T1, typename T2, typename M>
+template <typename T1, typename T2, typename M>
 SL T1 power_mod_ex(T1 x, T2 n, M mod) {
   typedef typename BigIntegerType<int64, T1>::type atLeastInt64T1;
 
@@ -381,7 +343,7 @@ template <typename T, int64 MOD>
 struct mintl {
   static_assert(MOD > 0, "MOD > 0");
 
-  mintl(T val = 0): value_(val) {}
+  mintl(T val = 0) : value_(val) {}
 
   mintl operator+(const mintl& y) const { return mintl(value_ + y.value_); }
 
@@ -528,7 +490,7 @@ using mintd64128 = mintd<int64_t, int128>;
 
 template <typename T>
 struct mintdl {
-  mintdl(T val = 0): value_(val) {}
+  mintdl(T val = 0) : value_(val) {}
 
   mintdl& operator=(T v) {
     value_ = v;
@@ -540,9 +502,7 @@ struct mintdl {
     return *this;
   }
 
-  mintdl operator+(const mintdl& y) const {
-    return mintdl(value_ + y.value_);
-  }
+  mintdl operator+(const mintdl& y) const { return mintdl(value_ + y.value_); }
 
   mintdl operator+(const T y) const { return *this + mintdl(y); }
 
@@ -553,9 +513,7 @@ struct mintdl {
 
   mintdl& operator+=(const T y) { return *this += mintdl(y); }
 
-  mintdl operator-(const mintdl& y) const {
-    return mintdl(value_ - y.value_);
-  }
+  mintdl operator-(const mintdl& y) const { return mintdl(value_ - y.value_); }
 
   mintdl operator-(const T y) const { return *this - mintdl(y); }
 
@@ -566,9 +524,7 @@ struct mintdl {
 
   mintdl& operator-=(const T y) { return *this -= mintdl(y); }
 
-  mintdl operator*(const mintdl& y) const {
-    return mintdl(value_ * y.value_);
-  }
+  mintdl operator*(const mintdl& y) const { return mintdl(value_ * y.value_); }
 
   mintdl operator*(const T y) const { return *this * mintdl(y); }
 

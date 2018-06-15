@@ -10,11 +10,13 @@ Installation:
 * Put all the files in a folder (directory). For example, we put them in the directory D:\usr\include.
 * Make sure the environment variable CPLUS_INCLUDE_PATH contain D:\usr\include.
 * In [pe](https://github.com/baihacker/pe/blob/master/pe), configure this library. 
-  > ENABLE_EIGEN should be 0 if you don't have the [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page) library.
+  > ENABLE_EIGEN whether to use [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page) library.
 
-  > ENABLE_OPENMP should be 0 if you don't want to use [openmp](http://www.openmp.org).
+  > ENABLE_OPENMP swhether to use [openmp](http://www.openmp.org).
   
-  > ENABLE_GMP should be 0 if you don't want to use [gmp](https://gmplib.org).
+  > ENABLE_GMP whether to use [gmp](https://gmplib.org).
+  
+  > ENABLE_FLINT whether to use [FLINT](http://www.flintlib.org).
 
 * [optional, recommended] Generate precompile header "pe.hpp.gch".
   * Command: "g++ xc++-header pe.hpp". Run in D:\usr\include

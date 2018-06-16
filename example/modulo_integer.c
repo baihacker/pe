@@ -61,8 +61,8 @@ void basic()
 const int N = 10000000;
 NModNumber3264<1000000007> u[N+5];
 //mintd3264 v[N+5];
-//mint<int32_t, bn, 1000000007> v[N+5];
-NModNumber<int32_t, fake_int128, 1000000007> v[N+5];
+//mint<int, bn, 1000000007> v[N+5];
+NModNumber<int, fake_int128, 1000000007> v[N+5];
 void perf()
 {
   TimeRecorder tr;

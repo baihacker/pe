@@ -64,7 +64,7 @@ PE_REGISTER_TEST(&power_sum_test, "power_sum_test", SMALL);
 
 SL void minimal_polynomial_test() {
   const int64 P = 1000000009;
-  Poly s{{0,1,1,2,3,5}, P};
+  NModPoly s{{0,1,1,2,3,5}, P};
   auto v = find_minimal_poly(s);
   assert(v[0] == P - 1);
   assert(v[1] == P - 1);
@@ -92,7 +92,7 @@ SL void poly_multipoint_evaluation_test() {
   int n = 5000;
   const int64 mod = 10007;
   for (int i = 1; i <= n; ++i) data.push_back(i);
-  Poly p(data, mod);
+  NModPoly p(data, mod);
   vector<int64> v;
   for (int i = 1; i <= n; ++i)
     v.push_back(i%10007);

@@ -9,43 +9,43 @@
 
 int64 POLY_DEFAULT_MOD = 1;
 
-struct Poly {
+struct NModPoly {
   int64 mod;
   std::vector<int64> data;
 
-  Poly(int64 mod = 0) : mod(mod == 0 ? POLY_DEFAULT_MOD : mod) {}
+  NModPoly(int64 mod = 0) : mod(mod == 0 ? POLY_DEFAULT_MOD : mod) {}
 
-  Poly(const std::vector<int64>& data, int64 mod = 0)
+  NModPoly(const std::vector<int64>& data, int64 mod = 0)
       : data(data), mod(mod == 0 ? POLY_DEFAULT_MOD : mod) {
     adjust_mod().adjust_leading_zeros();
   }
 
-  Poly(std::vector<int64>&& data, int64 mod = 0)
+  NModPoly(std::vector<int64>&& data, int64 mod = 0)
       : data(std::move(data)), mod(mod == 0 ? POLY_DEFAULT_MOD : mod) {
     adjust_mod().adjust_leading_zeros();
   }
 
-  Poly& operator=(const vector<int64>& v) {
+  NModPoly& operator=(const vector<int64>& v) {
     data = v;
     return *this;
   }
 
-  Poly& operator=(const vector<int64>&& v) {
+  NModPoly& operator=(const vector<int64>&& v) {
     data = std::move(v);
     return *this;
   }
 
-  Poly(const Poly& p) = default;
-  Poly(Poly&& p) = default;
-  Poly& operator=(const Poly& other) = default;
-  Poly& operator=(Poly&& other) = default;
+  NModPoly(const NModPoly& p) = default;
+  NModPoly(NModPoly&& p) = default;
+  NModPoly& operator=(const NModPoly& other) = default;
+  NModPoly& operator=(NModPoly&& other) = default;
 
-  Poly& adjust_leading_zeros() {
+  NModPoly& adjust_leading_zeros() {
     adjust_poly_leading_zero(data);
     return *this;
   }
 
-  Poly& adjust_mod() {
+  NModPoly& adjust_mod() {
     for (auto& iter : data) {
       iter = regulate_mod(iter, mod);
     }
@@ -55,7 +55,7 @@ struct Poly {
   int deg() const { return static_cast<int>(data.size() - 1); }
   int size() const { return static_cast<int>(data.size()); }
 
-  Poly& resize(int n) {
+  NModPoly& resize(int n) {
     const int m = (int)data.size();
     data.resize(n);
     for (int i = m; i < n; ++i) {
@@ -64,7 +64,7 @@ struct Poly {
     return *this;
   }
 
-  Poly& redeg(int n) { return resize(n + 1); }
+  NModPoly& redeg(int n) { return resize(n + 1); }
 
   int64& operator[](int idx) {
     PE_ASSERT(idx >= 0 && idx < data.size());
@@ -91,65 +91,65 @@ struct Poly {
     return ret;
   }
 
-  Poly lowerTerms(int n) const {
+  NModPoly lowerTerms(int n) const {
     const int m = min(n, static_cast<int>(data.size()));
-    return Poly(std::vector<int64>(data.begin(), data.begin() + m), mod);
+    return NModPoly(std::vector<int64>(data.begin(), data.begin() + m), mod);
   }
 
-  Poly inv(int n) const;
+  NModPoly inv(int n) const;
 };
 
 template <int64 M>
-struct PolyM : public Poly {
-  PolyM() : Poly(M) {}
+struct NModPolyT : public NModPoly {
+  NModPolyT() : NModPoly(M) {}
 
-  PolyM(const std::vector<int64>& data) : Poly(data, M) {}
+  NModPolyT(const std::vector<int64>& data) : NModPoly(data, M) {}
 
-  PolyM(std::vector<int64>&& data) : Poly(std::move(data), M) {}
+  NModPolyT(std::vector<int64>&& data) : NModPoly(std::move(data), M) {}
 
-  PolyM(std::initializer_list<int64> l) : PolyM(std::vector<int64>(l)) {}
+  NModPolyT(std::initializer_list<int64> l) : NModPolyT(std::vector<int64>(l)) {}
 };
 
-SL Poly poly_mul_normal(const Poly& X, const Poly& Y) {
-  return Poly{poly_mul_normal(X.data, Y.data, X.mod), X.mod};
+SL NModPoly poly_mul_normal(const NModPoly& X, const NModPoly& Y) {
+  return NModPoly{poly_mul_normal(X.data, Y.data, X.mod), X.mod};
 }
 
 #if HAS_POLY_MUL_NTT
-SL Poly poly_mul_ntt(const Poly& X, const Poly& Y) {
-  return Poly{ntt::poly_mul_ntt(X.data, Y.data, X.mod), X.mod};
+SL NModPoly poly_mul_ntt(const NModPoly& X, const NModPoly& Y) {
+  return NModPoly{ntt::poly_mul_ntt(X.data, Y.data, X.mod), X.mod};
 }
 #endif
 
-SL Poly poly_mul(const Poly& X, const Poly& Y) {
-  return Poly{poly_mul(X.data, Y.data, X.mod), X.mod};
+SL NModPoly poly_mul(const NModPoly& X, const NModPoly& Y) {
+  return NModPoly{poly_mul(X.data, Y.data, X.mod), X.mod};
 }
 
-SL Poly poly_inv_mod(const Poly& x, int n) {
+SL NModPoly poly_inv_mod(const NModPoly& x, int n) {
   // It is assumed that mod is a prime
-  return Poly(poly_inv_mod(x.data, n, x.mod), x.mod);
+  return NModPoly(poly_inv_mod(x.data, n, x.mod), x.mod);
 }
 
-SL tuple<Poly, Poly> poly_div_and_mod(const Poly& x, const Poly& y) {
+SL tuple<NModPoly, NModPoly> poly_div_and_mod(const NModPoly& x, const NModPoly& y) {
   vector<int64> q, r;
   tie(q, r) = poly_div_and_mod(x.data, y.data, x.mod);
-  return make_tuple(Poly(std::move(q), x.mod), Poly(std::move(r), x.mod));
+  return make_tuple(NModPoly(std::move(q), x.mod), NModPoly(std::move(r), x.mod));
 }
 
 #define PPOLY_DIV_AND_MOD_IMPL(poly_div_and_mod, poly_div_and_mod_internal)  \
-  SL tuple<Poly, Poly> poly_div_and_mod(const Poly& X, const Poly& Y) {      \
+  SL tuple<NModPoly, NModPoly> poly_div_and_mod(const NModPoly& X, const NModPoly& Y) {      \
     vector<int64> q, r;                                                      \
     tie(q, r) = poly_div_and_mod(X.data, Y.data, X.mod);                     \
-    return make_tuple(Poly(std::move(q), X.mod), Poly(std::move(r), X.mod)); \
+    return make_tuple(NModPoly(std::move(q), X.mod), NModPoly(std::move(r), X.mod)); \
   }
 
 #define PPOLY_DIV_IMPL(poly_div, poly_div_and_mod)       \
-  SL Poly poly_div(const Poly& X, const Poly& Y) {       \
-    return Poly(poly_div(X.data, Y.data, X.mod), X.mod); \
+  SL NModPoly poly_div(const NModPoly& X, const NModPoly& Y) {       \
+    return NModPoly(poly_div(X.data, Y.data, X.mod), X.mod); \
   }
 
 #define PPOLY_MOD_IMPL(poly_mod, poly_div_and_mod)       \
-  SL Poly poly_mod(const Poly& X, const Poly& Y) {       \
-    return Poly(poly_mod(X.data, Y.data, X.mod), X.mod); \
+  SL NModPoly poly_mod(const NModPoly& X, const NModPoly& Y) {       \
+    return NModPoly(poly_mod(X.data, Y.data, X.mod), X.mod); \
   }
 
 PPOLY_DIV_AND_MOD_IMPL(poly_div_and_mod_dc, poly_div_and_mod_dc_internal)
@@ -164,13 +164,13 @@ PPOLY_MOD_IMPL(poly_mod_normal, poly_div_and_mod_normal)
 PPOLY_DIV_IMPL(poly_div, poly_div_and_mod)
 PPOLY_MOD_IMPL(poly_mod, poly_div_and_mod)
 
-inline Poly Poly::inv(int n) const {
+inline NModPoly NModPoly::inv(int n) const {
   // It is assumed that mod is a prime
   auto t = poly_inv_mod(data, n, mod);
-  return Poly(std::vector<int64>((int64*)&t[0], (int64*)&t[0] + t.size()), mod);
+  return NModPoly(std::vector<int64>((int64*)&t[0], (int64*)&t[0] + t.size()), mod);
 }
 
-Poly operator<<(const Poly& p, int m) {
+NModPoly operator<<(const NModPoly& p, int m) {
   if (m == 0) {
     return p;
   }
@@ -181,41 +181,41 @@ Poly operator<<(const Poly& p, int m) {
   for (int i = 0; i < m; ++i) {
     new_data[i] = 0;
   }
-  return Poly(std::move(new_data), p.mod);
+  return NModPoly(std::move(new_data), p.mod);
 }
 
-SL Poly operator-(const Poly& x, const Poly& y) {
-  return Poly(poly_sub(x.data, y.data, x.mod), x.mod).adjust_leading_zeros();
+SL NModPoly operator-(const NModPoly& x, const NModPoly& y) {
+  return NModPoly(poly_sub(x.data, y.data, x.mod), x.mod).adjust_leading_zeros();
 }
 
-SL Poly operator+(const Poly& x, const Poly& y) {
-  return Poly(poly_add(x.data, y.data, x.mod), x.mod).adjust_leading_zeros();
+SL NModPoly operator+(const NModPoly& x, const NModPoly& y) {
+  return NModPoly(poly_add(x.data, y.data, x.mod), x.mod).adjust_leading_zeros();
 }
 
-SL Poly operator*(const Poly& x, int64 v) {
+SL NModPoly operator*(const NModPoly& x, int64 v) {
   std::vector<int64> data(x.data);
   for (auto& iter : data) {
     iter = iter * v % x.mod;
   }
-  return Poly(std::move(data), x.mod);
+  return NModPoly(std::move(data), x.mod);
 }
 
-SL Poly operator*(int64 v, const Poly& x) { return x * v; }
+SL NModPoly operator*(int64 v, const NModPoly& x) { return x * v; }
 
-SL Poly operator*(const Poly& x, const Poly& y) { return poly_mul(x, y); }
+SL NModPoly operator*(const NModPoly& x, const NModPoly& y) { return poly_mul(x, y); }
 
-SL Poly operator/(const Poly& x, const Poly& y) { return poly_div(x, y); }
+SL NModPoly operator/(const NModPoly& x, const NModPoly& y) { return poly_div(x, y); }
 
-SL Poly operator%(const Poly& x, const Poly& y) { return poly_mod(x, y); }
+SL NModPoly operator%(const NModPoly& x, const NModPoly& y) { return poly_mod(x, y); }
 
-SL int operator==(const Poly& x, const Poly& y) {
+SL int operator==(const NModPoly& x, const NModPoly& y) {
   return x.mod == y.mod && x.data == y.data;
 }
 
 // x^n % mod
-SL Poly operator%(int64 n, const Poly& mod) {
-  Poly x{{0, 1}, mod.mod};
-  Poly ret{{1}, mod.mod};
+SL NModPoly operator%(int64 n, const NModPoly& mod) {
+  NModPoly x{{0, 1}, mod.mod};
+  NModPoly ret{{1}, mod.mod};
   for (; n > 0; n >>= 1) {
     if (n & 1) {
       ret = poly_mod(x * ret, mod);
@@ -227,7 +227,7 @@ SL Poly operator%(int64 n, const Poly& mod) {
   return ret;
 }
 
-SL ostream& operator<<(ostream& o, const Poly& p) {
+SL ostream& operator<<(ostream& o, const NModPoly& p) {
   const int n = p.data.size();
   for (int i = 0; i < n - 1; ++i) {
     o << p.data[i] << ", ";
@@ -236,13 +236,13 @@ SL ostream& operator<<(ostream& o, const Poly& p) {
 }
 
 // size x = size v
-SL vector<int64> poly_evaluate_mod_normal(const Poly& X,
+SL vector<int64> poly_evaluate_mod_normal(const NModPoly& X,
                                           const vector<int64>& V) {
   return poly_evaluate_mod_normal(X.data, V, X.mod);
 }
 
 // size x = size v
-SL vector<int64> poly_evaluate_mod_bls(const Poly& X, const vector<int64>& V) {
+SL vector<int64> poly_evaluate_mod_bls(const NModPoly& X, const vector<int64>& V) {
   return poly_evaluate_mod_bls(X.data, V, X.mod);
 }
 
@@ -252,34 +252,34 @@ SL vector<int64> poly_evaluate_mod_bls(const Poly& X, const vector<int64>& V) {
 // Finds the coefficient of x^0..x^n of f such that: A*f = B
 // Returns empty vector if there is no integer solution.
 // O(size(A) * n)
-SL vector<int64> gf_first(const Poly& A, const Poly& B, const int n) {
+SL vector<int64> gf_first(const NModPoly& A, const NModPoly& B, const int n) {
   return gf_first(A.data, B.data, n, A.mod);
 }
 
 // Finds the coefficient of x^n of f such that: A*f = B
 // Returns -1 if there is no integer solution.
 // O(size(A)^3 * log n) for big n
-SL int64 gf_at(const Poly& A, const Poly& B, const int64 n) {
+SL int64 gf_at(const NModPoly& A, const NModPoly& B, const int64 n) {
   return gf_at(A.data, B.data, n, A.mod);
 }
 
 // Berlekamp Massey
-SL Poly find_minimal_poly(const Poly& s) {
+SL NModPoly find_minimal_poly(const NModPoly& s) {
   const int m = s.data.size();
   const int n = m >> 1;
   const int64 mod = s.mod;
   PE_ASSERT(n * 2 == m);
 
-  Poly r0{{1}, mod};
+  NModPoly r0{{1}, mod};
   r0 = r0 << m;
-  Poly r1(s);
-  Poly v0{{0}, mod};
-  Poly v1{{1}, mod};
+  NModPoly r1(s);
+  NModPoly v0{{0}, mod};
+  NModPoly v1{{1}, mod};
 
   while (n + 1 <= r1.deg()) {
-    Poly q, r;
+    NModPoly q, r;
     tie(q, r) = poly_div_and_mod(r0, r1);
-    Poly v(v0 - q * v1);
+    NModPoly v(v0 - q * v1);
     v0 = std::move(v1);
     v1 = std::move(v);
     r0 = std::move(r1);
@@ -290,7 +290,7 @@ SL Poly find_minimal_poly(const Poly& s) {
   return v1;
 }
 
-SL int64 nth_element(const Poly& s, int64 n, const Poly& min_poly) {
+SL int64 nth_element(const NModPoly& s, int64 n, const NModPoly& min_poly) {
   if (n <= s.deg()) {
     return s[n];
   }
@@ -304,7 +304,7 @@ SL int64 nth_element(const Poly& s, int64 n, const Poly& min_poly) {
   return ans;
 }
 
-SL Poly find_linear_recurrence(const Poly& s) {
+SL NModPoly find_linear_recurrence(const NModPoly& s) {
   const int len = s.data.size();
   for (int n = 2; n < len; n += 2) {
     auto use = s.lowerTerms(n);
@@ -321,10 +321,10 @@ SL Poly find_linear_recurrence(const Poly& s) {
       return min_poly;
     }
   }
-  return Poly();
+  return NModPoly();
 }
 
-SL int64 nth_element(const Poly& s, int64 n) {
+SL int64 nth_element(const NModPoly& s, int64 n) {
   if (n <= s.deg()) {
     return s[n];
   }

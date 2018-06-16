@@ -3,13 +3,13 @@
 const int64 mod = 1000000007;
 int main() {
   {
-    Poly x{{1LL, 96LL}, 97};
+    NModPoly x{{1LL, 96LL}, 97};
     cout << x.inv(20) << endl;
     cout << x.inv(20) * x << endl;
   }
 
   {
-    Poly x{{}, 97};
+    NModPoly x{{}, 97};
     for (int i = 1; i < 100; ++i)
       x.data.push_back(i%97);
     cout << x.inv(100) * x << endl;
@@ -17,7 +17,7 @@ int main() {
 
   {
     // Fibonacci sequence
-    Poly x{{1, mod-1, mod-1}, mod};
+    NModPoly x{{1, mod-1, mod-1}, mod};
 
     TimeRecorder tr;
     cout << x.inv(100000)[99999] << endl;

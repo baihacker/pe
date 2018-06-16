@@ -6,7 +6,7 @@ const int K = 500;
 const int64 mod = 1000000007;
 
 SL void mat_mul_test() {
-  GMOD = mod;
+  DEFAULT_MOD = mod;
   vector<int> data;
   for (int i = 0; i < K; ++i)
   for (int j = 0; j < K; ++j)

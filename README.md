@@ -22,7 +22,7 @@ Installation:
   
   > ENABLE_MPIR whether to use [mpir](http://mpir.org).
 
-  * Note: The compiled flint, gmp, mpfr, mpir (all for win64) can be found [here]{https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA} (pwd:x7cg). All are in package flint.
+  * Note: The compiled flint, gmp, mpfr, mpir (all for win64) can be found [here](https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA)(pwd:x7cg). All are in package flint.
 
 * [optional, recommended] Generate precompile header "pe.hpp.gch".
   * Command: "g++ xc++-header pe.hpp". Run in D:\usr\include

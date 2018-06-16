@@ -17,6 +17,12 @@ Installation:
   > ENABLE_GMP whether to use [gmp](https://gmplib.org).
   
   > ENABLE_FLINT whether to use [FLINT](http://www.flintlib.org).
+  
+  > ENABLE_MPFR whether to use [mpfr](https://www.mpfr.org).
+  
+  > ENABLE_MPIR whether to use [mpir](http://mpir.org).
+
+  * Note: The compiled flint, gmp, mpfr, mpir (all for win64) can be found [here]{https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA} (pwd:x7cg). All are in package flint.
 
 * [optional, recommended] Generate precompile header "pe.hpp.gch".
   * Command: "g++ xc++-header pe.hpp". Run in D:\usr\include

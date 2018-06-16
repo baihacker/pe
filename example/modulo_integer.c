@@ -50,19 +50,19 @@ struct mtype_policy<bn, bn>
 
 void basic()
 {
-  mint3232<10005> orz;
+  NModNumber3232<10005> orz;
   cerr << orz << endl;
   orz = orz * 12312321;
-  cerr << mint3232<10005>(12312321) << " " << 12312321 % 10005 << endl;
+  cerr << NModNumber3232<10005>(12312321) << " " << 12312321 % 10005 << endl;
   cerr << orz << endl;
   cerr << 12312321%10005 << endl;
 }
 
 const int N = 10000000;
-mint3264<1000000007> u[N+5];
+NModNumber3264<1000000007> u[N+5];
 //mintd3264 v[N+5];
 //mint<int32_t, bn, 1000000007> v[N+5];
-mint<int32_t, fake_int128, 1000000007> v[N+5];
+NModNumber<int32_t, fake_int128, 1000000007> v[N+5];
 void perf()
 {
   TimeRecorder tr;

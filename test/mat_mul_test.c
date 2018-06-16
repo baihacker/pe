@@ -47,7 +47,7 @@ SL void mat_mul_test() {
     sort(all(v));
   }
   {
-    std::vector<mint6464<mod>> v(K, 0);
+    std::vector<NModNumber6464<mod>> v(K, 0);
     MatM<mod> m = MatM<mod>::Zero(K, K);
 
     for (int i = 0; i < K; ++i) v[i] = V[i];
@@ -63,7 +63,7 @@ SL void mat_mul_test() {
     sort(all(v));
   }
   {
-    std::vector<mintd6464> v(K, 0);
+    std::vector<NModNumberD6464> v(K, 0);
     MatMD m = MatMD::Zero(K, K);
 
     for (int i = 0; i < K; ++i) v[i] = V[i];
@@ -79,7 +79,7 @@ SL void mat_mul_test() {
     sort(all(v));
   }
   {
-    std::vector<mintl128<mod>> v(K, 0);
+    std::vector<NModNumberL128<mod>> v(K, 0);
     MatML<mod> m = MatML<mod>::Zero(K, K);
 
     for (int i = 0; i < K; ++i) v[i] = V[i];
@@ -95,7 +95,7 @@ SL void mat_mul_test() {
     sort(all(v));
   }
   {
-    std::vector<mintdl128> v(K, 0);
+    std::vector<NModNumberDL128> v(K, 0);
     MatMDL m = MatMDL::Zero(K, K);
 
     for (int i = 0; i < K; ++i) v[i] = V[i];

@@ -74,7 +74,7 @@ SL void prime_phi_sum_test() {
     int64 result[32] = {0};
     for (int i = 0; i < pcnt && plist[i] <= N; ++i)
       ++result[plist[i]%mod];
-    auto v = prime_s0_pmod<mint6464<M>>(N, mod);
+    auto v = prime_s0_pmod<NModNumber6464<M>>(N, mod);
     for (int j = 0; j < mod; ++j) {
       assert(result[j]%M == v[j][N].value());
     }
@@ -83,7 +83,7 @@ SL void prime_phi_sum_test() {
     int64 result[32] = {0};
     for (int i = 0; i < pcnt && plist[i] <= N; ++i)
       result[plist[i]%mod] += plist[i];
-    auto v = prime_s1_pmod<mint6464<M>>(N, mod);
+    auto v = prime_s1_pmod<NModNumber6464<M>>(N, mod);
     for (int j = 0; j < mod; ++j) {
       assert(result[j]%M == v[j][N].value());
     }

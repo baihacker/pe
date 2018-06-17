@@ -147,31 +147,34 @@ SL void init_primes(int cal_phi, int cal_mu) {
   }
 }
 
+SL void factorize_by_pmask(int64 n, vector<pair<int64, int>>& ret) {
+  while (n != 1) {
+    int now = pmask[n];
+    int c = 0;
+    while (n % now == 0) n /= now, ++c;
+    if (c) ret.emplace_back((int64)now, c);
+  }
+}
+
 SL vector<pair<int64, int>> factorize(int64 n) {
   vector<pair<int64, int>> ret;
   if (n <= 1) {
     return ret;
   }
 
-  if (n <= maxp) {
-    while (n != 1) {
-      int now = pmask[n];
-      int c = 0;
-      while (n % now == 0) n /= now, ++c;
-      if (c) ret.emplace_back((int64)now, c);
+  for (int i = 0; i < pcnt; ++i) {
+    if (n <= maxp) {
+      factorize_by_pmask(n, ret);
+      return ret;
     }
-  } else {
-    // PE_ASSERT(n <= maxp2);
-    for (int i = 0; i < pcnt; ++i) {
-      const int64 p = plist[i];
-      const int64 test = p * p;
-      if (test > n) break;
-      int c = 0;
-      while (n % p == 0) n /= p, ++c;
-      if (c) ret.emplace_back(p, c);
-    }
-    if (n != 1) ret.emplace_back(n, 1);
+    const int64 p = plist[i];
+    const int64 test = p * p;
+    if (test > n) break;
+    int c = 0;
+    while (n % p == 0) n /= p, ++c;
+    if (c) ret.emplace_back(p, c);
   }
+  if (n != 1) ret.emplace_back(n, 1);
   return ret;
 }
 

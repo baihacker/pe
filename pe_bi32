@@ -461,59 +461,25 @@ class BigInteger {
     l.fixPos();
   }
 
+#if HAS_POLY_MUL_NTT32_SMALL
   static BigInteger absMulNtt(const BigInteger& l, const BigInteger& r) {
     const int n = l.size() << 1;
     const int m = r.size() << 1;
 
-    int alignedSize = 1;
-    while (alignedSize < n + m) alignedSize <<= 1;
+    std::vector<uint64> X(n), Y(m);
 
-    std::vector<uint64> tresult[2];
-    const ntt::NttMod* moder[2] = {&ntt::nttMod1, &ntt::nttMod2};
-    #pragma omp parallel for schedule(dynamic, 1) num_threads(2)
-    for (int id = 0; id < 2; ++id) {
-      std::vector<uint64> X(alignedSize);
-      std::vector<uint64> Y(alignedSize);
-      for (int i = 0; i <= l.pos_; ++i) {
-        X[i<<1] = l[i] & 65535u;
-        X[(i<<1)+1] = l[i] >> 16;
-      }
-      for (int i = 0; i <= r.pos_; ++i) {
-        Y[i<<1] = r[i] & 65535;
-        Y[(i<<1)+1] = r[i] >> 16;
-      }
-      for (int i = n; i < alignedSize; ++i) {
-        X[i] = 0;
-      }
-      for (int i = m; i < alignedSize; ++i) {
-        Y[i] = 0;
-      }
-      #pragma omp parallel sections if (n + m >= 100000)
-      {
-        #pragma omp section
-        ntt::ntt(&X[0], alignedSize, *moder[id]);
-        #pragma omp section
-        ntt::ntt(&Y[0], alignedSize, *moder[id]);
-      }
-      const uint64 mod = moder[id]->mod;
-      for (int i = 0; i < alignedSize; ++i) {
-        X[i] = (uint64)X[i] * Y[i] % mod;
-      }
-      ntt::ntt(&X[0], alignedSize, *moder[id], true);
-      tresult[id] = std::move(X);
+    for (int i = 0; i <= l.pos_; ++i) {
+      X[i<<1] = l[i] & 65535u;
+      X[(i<<1)+1] = l[i] >> 16;
+    }
+    for (int i = 0; i <= r.pos_; ++i) {
+      Y[i<<1] = r[i] & 65535;
+      Y[(i<<1)+1] = r[i] >> 16;
     }
     const int allocateSize = n + m + 8;
     const int resultSize = n + m - 1;
-    std::vector<uint64> result;
+    auto result = ntt32::poly_mul_ntt_small(X, Y, 0);
     result.resize(allocateSize);
-
-    int64 mods[2] = {ntt::nttMod1.mod, ntt::nttMod2.mod};
-    #pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
-    for (int i = 0; i < resultSize; ++i) {
-      int64 have, v, u;
-      tie(have, v, u) = crt2<int64>(tresult[0][i], mods[0], tresult[1][i], mods[1]);
-      result[i] = v;
-    }
     uint64 inc = 0;
     for (int i = 0; i < resultSize; ++i) {
       uint64 t = inc + result[i];
@@ -538,6 +504,7 @@ class BigInteger {
     ret.fixPos();
     return ret;
   }
+#endif
 
   static BigInteger absMul(const BigInteger& l, const BigInteger& r) {
     if (l.size() <= 1 && r.size() <= 1) {
@@ -550,6 +517,7 @@ class BigInteger {
       return absMul(r, l.toInt<uint64>());
     }
 
+#if HAS_POLY_MUL_NTT32_SMALL
     {
       // If the cost of ntt is less than normal multiplication, then use ntt.
       const uint64 cost1 = (uint64)l.size() * r.size();
@@ -563,6 +531,7 @@ class BigInteger {
         return absMulNtt(l, r);
       }
     }
+#endif
 
     const int posL = l.pos_;
     const int posR = r.pos_;

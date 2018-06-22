@@ -5,8 +5,26 @@
 #include "pe_integer_util"
 #include "pe_mod"
 
-namespace ntt {
-struct NttMod {
+namespace ntt_base {
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    ntt_trans(T* data, const int n) {
+  int j = n >> 1;
+  for (int i = 1; i < n - 1; ++i) {
+    if (i < j) swap(data[i], data[j]);
+    int k = n >> 1;
+    while (j >= k) {
+      j -= k;
+      k >>= 1;
+    }
+    if (j < k) j += k;
+  }
+}
+}
+
+// mod is 32 bit
+namespace ntt32 {
+struct NttMod32 {
   // mod = r * 2 ^ k + 1
   // mod is prime
   const unsigned mod;
@@ -17,14 +35,14 @@ struct NttMod {
   unsigned omg[32];
   mutable unsigned* preOmg[32];
 
-  NttMod(uint64 mod, uint64 r, int k, uint64 g) : mod(mod), r(r), k(k), g(g) {
+  NttMod32(uint64 mod, uint64 r, int k, uint64 g) : mod(mod), r(r), k(k), g(g) {
     for (int i = 0; i <= k; ++i) {
       omg[i] = power_mod<uint64>(g, (mod - 1) >> i, mod);
     }
     fill(preOmg, preOmg + 32, (unsigned*)NULL);
   }
 
-  ~NttMod() {
+  ~NttMod32() {
     for (int i = 0; i <= k; ++i) {
       if (preOmg[i] != NULL) {
         delete[] preOmg[i];
@@ -53,53 +71,23 @@ struct NttMod {
   }
 };
 
-static const NttMod nttMod1(2013265921ull, 15ull, 27, 31ull);
-static const NttMod nttMod2(2281701377ull, 17ull, 27, 3ull);
-static const NttMod nttMod3(3221225473ull, 3ull, 30, 5ull);
-
-#if PE_HAS_INT128
-const uint64 M1 = 2013265921;
-const uint64 M2 = 2281701377;
-const uint64 M3 = 3221225473;
-const uint64 M12 = M1 * M2;
-const uint64 M13 = M1 * M3;
-const uint64 M23 = M2 * M3;
-const uint64 IM12 = 2300875347;
-const uint64 IM13 = 1792765347;
-const uint64 IM23 = 1006632973;
-
-const uint128 M13M = (uint128)IM13 * M13;
-const uint128 M23M = (uint128)IM23 * M23;
-const uint128 M12M = (uint128)IM12 * M12;
-const uint128 MMM = (uint128)M1 * M2 * M3;
-#endif
+static const NttMod32 nttMod1(2013265921ull, 15ull, 27, 31ull);
+static const NttMod32 nttMod2(2281701377ull, 17ull, 27, 3ull);
+static const NttMod32 nttMod3(3221225473ull, 3ull, 30, 5ull);
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    ntt_trans(T* data, const int n) {
-  int j = n >> 1;
-  for (int i = 1; i < n - 1; ++i) {
-    if (i < j) swap(data[i], data[j]);
-    int k = n >> 1;
-    while (j >= k) {
-      j -= k;
-      k >>= 1;
-    }
-    if (j < k) j += k;
-  }
-}
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    ntt(T* data, const int n, const NttMod& moder, bool inv = false) {
-  ntt_trans(data, n);
+    ntt(T* data, const int n, const NttMod32& moder, bool inv = false) {
+  ntt_base::ntt_trans(data, n);
 
   const auto mod = moder.mod;
   int id = 0;
   for (int h = 2; h <= n; h <<= 1) {
     const unsigned* preOmg = moder.preOmg[++id];
     if (preOmg) {
+#if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 16) if (n / h > 100000)
+#endif
       for (int j = 0; j < n; j += h) {
         const unsigned* omg = preOmg;
         const int halfH = h >> 1;
@@ -112,7 +100,9 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
         }
       }
     } else {
+#if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 16) if (n / h > 100000)
+#endif
       for (int j = 0; j < n; j += h) {
         uint64 omgn = 1;
         const int halfH = h >> 1;
@@ -144,7 +134,26 @@ void init_ntt(int k = 22) {
 
 // Need int128 to handle the big polynomial coefficient.
 #if PE_HAS_INT128
-#define HAS_POLY_MUL_NTT 1
+
+// (p-1)^2*n <= 14797252050511790781119856641
+#define HAS_POLY_MUL_NTT32 1
+
+struct ntt_constant {
+  static const uint64 M1 = 2013265921;
+  static const uint64 M2 = 2281701377;
+  static const uint64 M3 = 3221225473;
+  static const uint64 M12 = M1 * M2;
+  static const uint64 M13 = M1 * M3;
+  static const uint64 M23 = M2 * M3;
+  static const uint64 IM12 = 2300875347;
+  static const uint64 IM13 = 1792765347;
+  static const uint64 IM23 = 1006632973;
+
+  static const uint128 M13M = (uint128)IM13 * M13;
+  static const uint128 M23M = (uint128)IM23 * M23;
+  static const uint128 M12M = (uint128)IM12 * M12;
+  static const uint128 MMM = (uint128)M1 * M2 * M3;
+};
 
 // Multiply two polynomials.
 // Make sure the length of result is at least: n + m - 1
@@ -158,40 +167,50 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   while (alignedSize < n + m) alignedSize <<= 1;
 
   // TODO(baihacker): decide the size automatically.
-  const ntt::NttMod* moderList[3] = {&ntt::nttMod1, &ntt::nttMod2, &ntt::nttMod3};
+  const NttMod32* moderList[3] = {&nttMod1, &nttMod2, &nttMod3};
   vector<uint64> tresult[3];
+#if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 1) num_threads(3)
+#endif
   for (int id = 0; id < 3; ++id) {
-    const ntt::NttMod& moder = *moderList[id];
+    const NttMod32& moder = *moderList[id];
     vector<uint64> XX(alignedSize);
     vector<uint64> YY(alignedSize);
     for (int i = 0; i < n; ++i) XX[i] = X[i];
     for (int i = n; i < alignedSize; ++i) XX[i] = 0;
     for (int i = 0; i < m; ++i) YY[i] = Y[i];
     for (int i = m; i < alignedSize; ++i) YY[i] = 0;
+#if ENABLE_OPENMP
 #pragma omp parallel sections if (n + m >= 100000)
+#endif
     {
+#if ENABLE_OPENMP
 #pragma omp section
-      ntt::ntt(&XX[0], alignedSize, moder);
+#endif
+      ntt(&XX[0], alignedSize, moder);
+#if ENABLE_OPENMP
 #pragma omp section
-      ntt::ntt(&YY[0], alignedSize, moder);
+#endif
+      ntt(&YY[0], alignedSize, moder);
     }
     const uint64 mod = moder.mod;
     for (int i = 0; i < alignedSize; ++i) {
       XX[i] = (uint64)XX[i] * YY[i] % mod;
     }
-    ntt::ntt(&XX[0], alignedSize, moder, true);
+    ntt(&XX[0], alignedSize, moder, true);
     tresult[id] = std::move(XX);
   }
 
   const int resultSize = n + m - 1;
+#if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
+#endif
   for (int i = 0; i < resultSize; ++i) {
-    const uint128 a = tresult[0][i] * ntt::M23M;
-    const uint128 b = tresult[1][i] * ntt::M13M;
-    const uint128 c = tresult[2][i] * ntt::M12M;
+    const uint128 a = tresult[0][i] * ntt_constant::M23M;
+    const uint128 b = tresult[1][i] * ntt_constant::M13M;
+    const uint128 c = tresult[2][i] * ntt_constant::M12M;
     const uint128 t = a + b + c;
-    result[i] = t < ntt::MMM ? t % mod : t % ntt::MMM % mod;
+    result[i] = t < ntt_constant::MMM ? t % mod : t % ntt_constant::MMM % mod;
   }
 }
 
@@ -219,8 +238,99 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 }
 
 #else
-#define HAS_POLY_MUL_NTT 0
+#define HAS_POLY_MUL_NTT32 0
 #endif
+
+// (p-1)^2*n <= 4593671624212873217
+#define HAS_POLY_MUL_NTT32_SMALL 1
+struct ntt_small_constant {
+  static const uint64 M1 = 2013265921;
+  static const uint64 M2 = 2281701377;
+  static const uint64 INV_M1 = 1140850697;
+};
+
+// Multiply two polynomials.
+// Make sure the length of result is at least: n + m - 1
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_mul_ntt_small_internal(const T* X, int n, const T* Y, int m, T* result,
+                          int64 mod) {
+  static_assert(std::is_unsigned<T>::value, "T must be unsigned");
+
+  int alignedSize = 1;
+  while (alignedSize < n + m) alignedSize <<= 1;
+
+  // TODO(baihacker): decide the size automatically.
+  const NttMod32* moderList[2] = {&nttMod1, &nttMod2};
+  vector<uint64> tresult[2];
+#if ENABLE_OPENMP
+#pragma omp parallel for schedule(dynamic, 1) num_threads(2)
+#endif
+  for (int id = 0; id < 2; ++id) {
+    const NttMod32& moder = *moderList[id];
+    vector<uint64> XX(alignedSize);
+    vector<uint64> YY(alignedSize);
+    for (int i = 0; i < n; ++i) XX[i] = X[i];
+    for (int i = n; i < alignedSize; ++i) XX[i] = 0;
+    for (int i = 0; i < m; ++i) YY[i] = Y[i];
+    for (int i = m; i < alignedSize; ++i) YY[i] = 0;
+#if ENABLE_OPENMP
+#pragma omp parallel sections if (n + m >= 100000)
+#endif
+    {
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+      ntt(&XX[0], alignedSize, moder);
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+      ntt(&YY[0], alignedSize, moder);
+    }
+    const uint64 mod = moder.mod;
+    for (int i = 0; i < alignedSize; ++i) {
+      XX[i] = (uint64)XX[i] * YY[i] % mod;
+    }
+    ntt(&XX[0], alignedSize, moder, true);
+    tresult[id] = std::move(XX);
+  }
+
+  const int resultSize = n + m - 1;
+#if ENABLE_OPENMP
+#pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
+#endif
+  for (int i = 0; i < resultSize; ++i) {
+    const uint64 a = tresult[0][i];
+    const uint64 b = tresult[1][i];
+    const uint64 c = b >= a ? b - a : b + ntt_small_constant::M2 - a;
+    const uint64 d = c * ntt_small_constant::INV_M1 % ntt_small_constant::M2;
+    const uint64 t = d * ntt_small_constant::M1 + a;
+    result[i] = mod > 0 ? t % mod : t;
+  }
+}
+
+// Multiply two polynomials.
+// The length of result is at least n + m - 1.
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_mul_ntt_small(const T* X, const int n, const T* Y, const int m, T* result,
+                 int64 mod) {
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  poly_mul_ntt_small_internal<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y,
+                                   m, (unsignedT*)result, mod);
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
+    poly_mul_ntt_small(const vector<T>& X, const vector<T>& Y, int64 mod) {
+  const int n = (int)X.size() - 1;
+  const int m = (int)Y.size() - 1;
+
+  vector<T> result(n + m + 1);
+  poly_mul_ntt_small(&X[0], n + 1, &Y[0], m + 1, &result[0], mod);
+
+  return result;
+}
 }  // namespace ntt
 
 #endif

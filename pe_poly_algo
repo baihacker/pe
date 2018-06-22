@@ -106,11 +106,17 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
   T* x0y0 = new T[dbm1];
   T* x1y1 = new T[dbm1];
+#if ENABLE_OPENMP
 #pragma omp parallel sections if (n > 5000)
+#endif
   {
+#if ENABLE_OPENMP
 #pragma omp section
+#endif
     poly_mul_normal_internal(x0, y0, m0, x0y0, mod);
+#if ENABLE_OPENMP
 #pragma omp section
+#endif
     poly_mul_normal_internal(x1, y1, m1, x1y1, mod);
   }
   if (m0 != m1) {
@@ -227,7 +233,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   typedef typename std::make_unsigned<T>::type unsignedT;
 
   const int isBig = max(n, m) >= 50;
-  if (isBig && (ENABLE_FLINT || HAS_POLY_MUL_NTT)) {
+  if (isBig && (ENABLE_FLINT || HAS_POLY_MUL_NTT32)) {
 #if ENABLE_FLINT
     fmpz_t xmod;
     fmpz_init_set_ui(xmod, mod);
@@ -262,8 +268,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     fq_nmod_ctx_clear(ctx);
     fmpz_clear(xmod);
     fmpz_clear(c);
-#elif HAS_POLY_MUL_NTT
-    ntt::poly_mul_ntt(&X[0], n, &Y[0], m, result, mod);
+#elif HAS_POLY_MUL_NTT32
+    ntt32::poly_mul_ntt(&X[0], n, &Y[0], m, result, mod);
 #endif
   } else {
     poly_mul_normal(&X[0], n, &Y[0], m, result, mod);
@@ -860,17 +866,23 @@ struct FactModer {
     const int halfD = d >> 1;
     evaluate(halfD, result, v);
     copy(result, result + halfD + 1, &G0[0]);
+#if ENABLE_OPENMP
 #pragma omp parallel sections if (d >= 10000)
+#endif
     {
+#if ENABLE_OPENMP
 #pragma omp section
+#endif
       poly_offset_evaluate<uint64>(halfD, result, &G1[0], halfD + 1,
                                    &preFactInv[0], p);
-
+#if ENABLE_OPENMP
 #pragma omp section
+#endif
       poly_offset_evaluate<uint64>(halfD, result, &G2[0], v * halfD,
                                    &preFactInv[0], p);
-
+#if ENABLE_OPENMP
 #pragma omp section
+#endif
       poly_offset_evaluate<uint64>(halfD, result, &G3[0], v * halfD + halfD,
                                    &preFactInv[0], p);
     }
@@ -1004,11 +1016,17 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   const int half = n >> 1;
   vector<T> A(half + 1);
   vector<T> B(n - half + 1);
+#if ENABLE_OPENMP
 #pragma omp parallel sections if (n > 5000)
+#endif
   {
+#if ENABLE_OPENMP
 #pragma omp section
+#endif
     poly_batch_mul_mod_internal(X, s, s + half, &A[0], mod);
+#if ENABLE_OPENMP
 #pragma omp section
+#endif
     poly_batch_mul_mod_internal(X, s + half, e, &B[0], mod);
   }
   poly_mul(&A[0], half + 1, &B[0], n - half + 1, result, mod);
@@ -1056,13 +1074,21 @@ poly_batch_mul_acc_mod(const vector<T>& X, int s, int e, uint64 mod) {
 
   const int half = n / 2;
   vector<T> A, B, C;
+#if ENABLE_OPENMP
 #pragma omp parallel sections if (n > 5000)
+#endif
   {
+#if ENABLE_OPENMP
 #pragma omp section
+#endif
     A = poly_batch_mul_acc_mod(X, s, s + half, mod);
+#if ENABLE_OPENMP
 #pragma omp section
+#endif
     B = poly_batch_mul_acc_mod(X, s + half, e, mod);
+#if ENABLE_OPENMP
 #pragma omp section
+#endif
     C = poly_batch_mul_mod(vector<T>(X.begin() + s * 2, X.begin() + (s + half)*2), mod);
   }
 
@@ -1111,18 +1137,30 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
   vector<T> C, D;
   const int half = n / 2;
   vector<T> A, B;
+#if ENABLE_OPENMP
 #pragma omp parallel sections if (n > 5000)
+#endif
   {
+#if ENABLE_OPENMP
 #pragma omp section
+#endif
     A = poly_batch_mul_acc_mod(X, s, s + half, C, mod);
+#if ENABLE_OPENMP
 #pragma omp section
+#endif
     B = poly_batch_mul_acc_mod(X, s + half, e, D, mod);
   }
+#if ENABLE_OPENMP
 #pragma omp parallel sections if (n > 5000)
+#endif
   {
+#if ENABLE_OPENMP
 #pragma omp section
+#endif
     B = poly_mul(B, C, mod);
+#if ENABLE_OPENMP
 #pragma omp section
+#endif
     M = poly_mul(C, D, mod);
   }
   return poly_add(A, B, mod);
@@ -1140,7 +1178,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 }
 #endif
 
-// f(4e8)%99999999907 = 34123109351
+// f(4e8)%99999999907 = 16815920030
 // Compute (0! + 1! + 2! + ... + n!) % p
 struct FactSumModer {
   FactSumModer(uint64 p) : p(p) { init(); }

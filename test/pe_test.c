@@ -9,6 +9,7 @@
 #include "misc_test.c"
 #include "mod_test.c"
 #include "nt_test.c"
+#include "ntt_test.c"
 #include "parallel_sort_test.c"
 #include "poly_test.c"
 #include "poly_algo_test.c"
@@ -52,7 +53,7 @@ int main() {
   const int size = tester.tests.size();
   
   bool isFirstTest = true;
-  ntt::init_ntt();
+  ntt32::init_ntt();
   fft::init_fft();
   for (int i = 0; i < size; ++i) {
     auto& item = tester.tests[i];

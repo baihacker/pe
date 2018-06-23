@@ -191,7 +191,7 @@ SL int is_prime(int64 n) {
   return 1;
 }
 
-SL ostream& operator << (ostream& o, const vector<pair<int64, int>>& v) {
+SL ostream& operator<<(ostream& o, const vector<pair<int64, int>>& v) {
   const int n = v.size();
   for (int i = 0; i < n; ++i) {
     o << v[i].first;
@@ -293,7 +293,8 @@ SL void get_factors_impl(const int limit, const vector<pair<int64, int>>& f,
   }
 }
 
-SL vector<int64> get_factors(const vector<pair<int64, int>>& f, int64 maxv = -1) {
+SL vector<int64> get_factors(const vector<pair<int64, int>>& f,
+                             int64 maxv = -1) {
   vector<int64> result;
   get_factors_impl(static_cast<int>(f.size()), f, 1, maxv, result);
   return result;
@@ -647,25 +648,25 @@ SL void init_inv(T* dest, int64 n, M mod) {
   }
 }
 
-template<typename T>
+template <typename T>
 SL void init_seq_prod(T* target, T s, T e, int64 mod) {
   target[0] = 1;
-  
+
   const int cnt = e - s + 1;
   T i = s;
   for (int j = 1; j <= cnt; ++i, ++j) {
-    target[j] = mul_mod_ex(target[j-1], i, mod);
+    target[j] = mul_mod_ex(target[j - 1], i, mod);
   }
 }
 
-template<typename T>
+template <typename T>
 SL void init_seq_prod_inv(T* target, T s, T e, T mod, T lastv = 0) {
   if (lastv == 0) {
     lastv = 1;
     for (T i = s; i <= e; ++i) {
       lastv = mul_mod_ex(lastv, i, mod);
     }
-    lastv = power_mod_ex(lastv, mod-2, mod);
+    lastv = power_mod_ex(lastv, mod - 2, mod);
   }
   const int cnt = e - s + 1;
   target[0] = 1;
@@ -673,7 +674,7 @@ SL void init_seq_prod_inv(T* target, T s, T e, T mod, T lastv = 0) {
 
   T i = e;
   for (int j = cnt - 1; j > 0; --j) {
-    target[j] = mul_mod_ex(target[j+1], i--, mod);
+    target[j] = mul_mod_ex(target[j + 1], i--, mod);
   }
 }
 
@@ -707,7 +708,7 @@ SL int64 square_root(int64 n) {
 // greatest common divisor and extend greatest common divisor
 template <typename _EuclideanRingElement>
 _EuclideanRingElement gcd(_EuclideanRingElement __m,
-                            _EuclideanRingElement __n) {
+                          _EuclideanRingElement __n) {
   while (__n != 0) {
     _EuclideanRingElement __t = __m % __n;
     __m = __n;
@@ -752,7 +753,7 @@ SL tuple<T, T, T> exgcd(T a, T b) {
   return tuple<T, T, T>{r, x, y};
 }
 
-template<typename T>
+template <typename T>
 SL T mod_inv(T a, T mod) {
   static_assert(std::is_signed<T>::value, "T must be signed");
 
@@ -836,8 +837,13 @@ int64* comb_moder<P, F>::fac;
 
 // calculate C(n, m) % P where P is prime
 struct CombModer {
-  CombModer(uint64 P, uint64 F = 0): P(P), F(F == 0 ? P : F), fac(NULL) { init(); }
-  ~CombModer() {delete[] fac; fac = NULL;}
+  CombModer(uint64 P, uint64 F = 0) : P(P), F(F == 0 ? P : F), fac(NULL) {
+    init();
+  }
+  ~CombModer() {
+    delete[] fac;
+    fac = NULL;
+  }
   void init() {
     if (fac == NULL) {
       fac = new uint64[F];
@@ -847,7 +853,7 @@ struct CombModer {
       }
     }
   }
-  uint64 s(int64 x) { return x & 1 ? P-1 : 1; }
+  uint64 s(int64 x) { return x & 1 ? P - 1 : 1; }
   uint64 comb(int64 m, int64 n) {
     if (m < 0 || n > m) return 0;
     if (n == m || n == 0) return 1;
@@ -885,8 +891,7 @@ int64 short_comb_mod(int64 n, int64 m, int64 mod) {
   if (m > n || m < 0) return 0;
   if (n - m < m) m = n - m;
   vector<int64> data;
-  for (int64 i = n; i >= n - m + 1; --i)
-    data.push_back(i);
+  for (int64 i = n; i >= n - m + 1; --i) data.push_back(i);
   const int size = data.size();
   for (int i = 2; i <= m; ++i) {
     int64 a = i;
@@ -905,31 +910,29 @@ int64 short_comb_mod(int64 n, int64 m, int64 mod) {
 }
 
 struct PowerSumModer {
-  PowerSumModer(int64 mod): mod(mod) {init();}
+  PowerSumModer(int64 mod) : mod(mod) { init(); }
   void init() {
     memset(P, 0, sizeof P);
-    for (int i = 0; i < 64; ++i)
-      P[i][1] = 1;
+    for (int i = 0; i < 64; ++i) P[i][1] = 1;
     for (int i = 1; i < 64; ++i) {
       for (int j = 1; j < i; ++j) {
-        int64 t = P[i-1][j-1] + P[i-1][j];
+        int64 t = P[i - 1][j - 1] + P[i - 1][j];
         if (t >= mod) t -= mod;
         P[i][j] = j * t % mod;
       }
       P[i][i] = 1;
-      for (int j = 1; j <= i; ++j)
-        P[i][i] = P[i][i] * j % mod;
+      for (int j = 1; j <= i; ++j) P[i][i] = P[i][i] * j % mod;
     }
   }
   int64 cal(int64 n, int64 k) {
     int64 ret = 0;
     for (int i = 1; i <= k; ++i) {
-      ret += P[k][i] * short_comb_mod(n+1, i+1, mod) % mod;
+      ret += P[k][i] * short_comb_mod(n + 1, i + 1, mod) % mod;
     }
     return ret % mod;
   }
   int64 mod;
-  int64 P[64][64]; // k < 64;
+  int64 P[64][64];  // k < 64;
 };
 
 // solve equation a x = b (mod m)
@@ -1218,9 +1221,7 @@ struct Fraction {
 };
 
 struct MiuPhiSumModer {
-  MiuPhiSumModer(int64 mod) : mod(mod) {
-    pre_sum_mu = pre_sum_phi = NULL;
-  }
+  MiuPhiSumModer(int64 mod) : mod(mod) { pre_sum_mu = pre_sum_phi = NULL; }
 
   ~MiuPhiSumModer() {
     if (pre_sum_mu == NULL) {
@@ -1234,12 +1235,12 @@ struct MiuPhiSumModer {
   }
 
   void init() {
-    pre_sum_mu = new int64[maxp+1];
-    pre_sum_phi = new int64[maxp+1];
+    pre_sum_mu = new int64[maxp + 1];
+    pre_sum_phi = new int64[maxp + 1];
     pre_sum_mu[0] = pre_sum_phi[0] = 0;
     for (int i = 1; i <= maxp; ++i) {
-      pre_sum_mu[i] = (::mu[i] + pre_sum_mu[i-1]) % mod;
-      pre_sum_phi[i] = (::phi[i] + pre_sum_phi[i-1]) % mod;
+      pre_sum_mu[i] = (::mu[i] + pre_sum_mu[i - 1]) % mod;
+      pre_sum_phi[i] = (::phi[i] + pre_sum_phi[i - 1]) % mod;
     }
   }
 
@@ -1250,10 +1251,11 @@ struct MiuPhiSumModer {
     if (where != mem_sum_mu.end()) return where->second;
 
     int64 ret = 1;
-    for (int64 i = 2; i <= n;){
+    for (int64 i = 2; i <= n;) {
       int64 v = n / i;
       int64 maxi = n / v;
-      ret = sub_mod(ret, mul_mod_ex((maxi - i + 1)%mod, get_sum_mu(v), mod), mod);
+      ret = sub_mod(ret, mul_mod_ex((maxi - i + 1) % mod, get_sum_mu(v), mod),
+                    mod);
       i = maxi + 1;
     }
     return mem_sum_mu[n] = ret;
@@ -1275,7 +1277,7 @@ struct MiuPhiSumModer {
       last = now;
 
       int64 s = 0;
-      if (v&1) {
+      if (v & 1) {
         s = mul_mod_ex((v + 1) / 2 % mod, v % mod, mod);
       } else {
         s = mul_mod_ex(v / 2 % mod, (v + 1) % mod, mod);
@@ -1289,7 +1291,7 @@ struct MiuPhiSumModer {
 
   int64* pre_sum_mu;
   unordered_map<int64, int64> mem_sum_mu;
-  
+
   int64* pre_sum_phi;
   unordered_map<int64, int64> mem_sum_phi;
 };

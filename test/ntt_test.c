@@ -14,6 +14,7 @@ MulImpl mulImpl[] = {
   {&ntt32::poly_mul_ntt<uint64>, 0, "32 large"},
   {&ntt64::poly_mul_ntt_small<uint64>, 1, "64 small"},
   {&ntt64::poly_mul_ntt<uint64>, 0, "64 large"},
+  // {&ntt_min25::product_mod, 0, "min_25  "},
 };
 
 SL void test_impl(int isRandom, int largeOnly, int n, int64 mod) {
@@ -61,6 +62,6 @@ SL void ntt_test() {
   test_impl(0, 0, 999996, 1000003);
   test_impl(0, 1, 1479725, 100000000003);
 }
-PE_REGISTER_TEST(&ntt_test, "ntt_test", LARGE);
+PE_REGISTER_TEST(&ntt_test, "ntt_test", BIG);
 #endif
 }

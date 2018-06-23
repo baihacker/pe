@@ -80,11 +80,17 @@ SL void poly_mul_fft_internal(uint64* x, uint64* y, uint64* z, const int n,
   vector<comp> dfta(n), dftb(n), dftc(n), dftd(n);
   for (int i = 0; i < n; ++i) a[i] = comp(x[i] % m, x[i] / m);
   for (int i = 0; i < n; ++i) b[i] = comp(y[i] % m, y[i] / m);
+#if ENABLE_OPENMP
 #pragma omp parallel sections if (n > 5000)
+#endif
   {
+#if ENABLE_OPENMP
 #pragma omp section
+#endif
     fft(&a[0], n);
+#if ENABLE_OPENMP
 #pragma omp section
+#endif
     fft(&b[0], n);
   }
   for (int i = 0; i < n; ++i) {
@@ -101,11 +107,17 @@ SL void poly_mul_fft_internal(uint64* x, uint64* y, uint64* z, const int n,
   }
   for (int i = 0; i < n; ++i) a[i] = dfta[i] + dftb[i] * comp(0, 1);
   for (int i = 0; i < n; ++i) b[i] = dftc[i] + dftd[i] * comp(0, 1);
+#if ENABLE_OPENMP
 #pragma omp parallel sections if (n > 5000)
+#endif
   {
+#if ENABLE_OPENMP
 #pragma omp section
+#endif
     fft(&a[0], n);
+#if ENABLE_OPENMP
 #pragma omp section
+#endif
     fft(&b[0], n);
   }
   for (int i = 0; i < n; ++i) {
@@ -123,12 +135,17 @@ SL void poly_mul_fft_small_internal(uint64* x, uint64* y, uint64* z,
   vector<comp> a(n), b(n);
   for (int i = 0; i < n; ++i) a[i] = comp(x[i], 0);
   for (int i = 0; i < n; ++i) b[i] = comp(y[i], 0);
-
+#if ENABLE_OPENMP
 #pragma omp parallel sections if (n > 5000)
+#endif
   {
+#if ENABLE_OPENMP
 #pragma omp section
+#endif
     fft(&a[0], n);
+#if ENABLE_OPENMP
 #pragma omp section
+#endif
     fft(&b[0], n);
   }
 

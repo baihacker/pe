@@ -210,7 +210,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     const uint128 b = tresult[1][i] * ntt_constant::M13M;
     const uint128 c = tresult[2][i] * ntt_constant::M12M;
     const uint128 t = a + b + c;
-    result[i] = t < ntt_constant::MMM ? t % mod : t % ntt_constant::MMM % mod;
+    const auto tmp = t < ntt_constant::MMM ? t : t % ntt_constant::MMM;
+    result[i] = mod > 0 ? mod128_64(tmp, mod) : tmp;
   }
 }
 
@@ -335,24 +336,6 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 
 // mod is 64 bit
 namespace ntt64 {
-SL uint64 mod128_64_small(uint128 a, uint64 b) {
-#if defined(COMPILER_GNU)
-  uint64 q, r;
-  __asm__ (
-    "divq\t%4"
-    : "=a"(q), "=d"(r)
-    : "0"(uint64(a)), "1"(uint64(a >> 64)), "rm"(b)
-  );
-  return r;
-#else
-  return a % b;
-#endif
-}
-
-SL uint64 mul_mod_ex2(uint64 a, uint64 b, uint64 mod) {
-  // a * b % mod
-  return mod128_64_small(uint128(a) * b, mod);
-}
 
 struct NttMod64 {
   // mod = r * 2 ^ k + 1
@@ -394,7 +377,7 @@ struct NttMod64 {
       uint64 last = 1;
       target[0] = 1;
       for (int i = 1; i < cnt; ++i) {
-        last = mul_mod_ex2(last, m, mod);
+        last = mod128_64((uint128)last * m, mod);
         target[i] = last;
       }
     }
@@ -423,7 +406,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
         const int limit = j + halfH;
         for (int k = j; k < limit; ++k) {
           const auto u = data[k] % mod;
-          const auto t = mul_mod_ex2(*omg++, data[k + halfH], mod);
+          const auto t = mod128_64((uint128)*omg++ * data[k + halfH], mod);
           data[k] = (u + t) % mod;
           data[k + halfH] = (u + mod - t) % mod;
         }
@@ -438,10 +421,10 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
         const int limit = j + halfH;
         for (int k = j; k < limit; ++k) {
           const auto u = data[k] % mod;
-          const auto t = mul_mod_ex2(omgn, data[k + halfH], mod);
+          const auto t = mod128_64((uint128)omgn * data[k + halfH], mod);
           data[k] = (u + t) % mod;
           data[k + halfH] = (u + mod - t) % mod;
-          omgn = mul_mod_ex2(omgn, moder.omg[id], mod);
+          omgn = mod128_64((uint128)omgn * moder.omg[id], mod);
         }
       }
     }
@@ -450,7 +433,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     const int halfN = n >> 1;
     for (int i = 1; i < halfN; ++i) swap(data[i], data[n - i]);
     const uint64 c = power_mod_ex<uint64>(n, mod - 2, mod);
-    for (int i = 0; i < n; ++i) data[i] = mul_mod_ex2(c, data[i], mod);
+    for (int i = 0; i < n; ++i) data[i] = mod128_64((uint128)c * data[i], mod);
   }
 }
 
@@ -511,7 +494,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     }
     const uint64 mod = moder.mod;
     for (int i = 0; i < alignedSize; ++i) {
-      XX[i] = mul_mod_ex2(XX[i], YY[i], mod);
+      XX[i] = mod128_64((uint128)XX[i] * YY[i], mod);
     }
     ntt(&XX[0], alignedSize, moder, true);
     tresult[id] = std::move(XX);
@@ -525,9 +508,9 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     const uint64 a = tresult[0][i];
     const uint64 b = tresult[1][i];
     const uint64 c = b >= a ? b - a : b + ntt_constant::M2 - a;
-    const uint64 d = mul_mod_ex2(c, ntt_constant::INV_M1, ntt_constant::M2);
+    const uint64 d = mod128_64((uint128)c * ntt_constant::INV_M1, ntt_constant::M2);
     const uint128 t = (uint128)d * ntt_constant::M1 + a;
-    result[i] = mod > 0 ? mod128_64_small(t, mod): t;
+    result[i] = mod > 0 ? mod128_64(t, mod): t;
   }
 }
 
@@ -598,7 +581,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     }
     const uint64 mod = moder.mod;
     for (int i = 0; i < alignedSize; ++i) {
-      XX[i] = mul_mod_ex2(XX[i], YY[i], mod);
+      XX[i] = mod128_64((uint128)XX[i] * YY[i], mod);
     }
     ntt(&XX[0], alignedSize, moder, true);
     tresult[id] = std::move(XX);

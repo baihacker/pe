@@ -81,6 +81,20 @@ SL auto mul_mod(T1 a, T2 b, M mod)
   return mul_mod_impl<atLeastInt64T, M>(a, b, mod);
 }
 
+SL uint64 mod128_64_small(uint128 a, uint64 b) {
+#if defined(COMPILER_GNU)
+  uint64 q, r;
+  __asm__ (
+    "divq\t%4"
+    : "=a"(q), "=d"(r)
+    : "0"(uint64(a)), "1"(uint64(a >> 64)), "rm"(b)
+  );
+  return r;
+#else
+  return a % b;
+#endif
+}
+
 template <typename T1, typename T2, typename M>
 SL auto mul_mod_ex(T1 a, T2 b, M mod)
     -> REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
@@ -93,7 +107,8 @@ SL auto mul_mod_ex(T1 a, T2 b, M mod)
     return mul_mod_impl<atLeastInt64T, M>(a, b, mod);
   }
 #if PE_HAS_INT128
-  return mul_mod_impl<int128, M>(a, b, mod);
+  return mod128_64_small((uint128)a * b, mod);
+  // return mul_mod_impl<int128, M>(a, b, mod);
 #else
   atLeastInt64T ret = 0;
   atLeastInt64T flag = b;

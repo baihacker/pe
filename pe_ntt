@@ -20,7 +20,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     if (j < k) j += k;
   }
 }
-}
+}  // namespace ntt_base
 
 // mod is 32 bit
 namespace ntt32 {
@@ -227,9 +227,10 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     const uint64 y1 = x1 * ntt_constant::INV_M1__M2 % ntt_constant::M2;
     const uint64 modab = y1 * ntt_constant::M1 + a;
     const uint64 x2 = modab >= c ? modab - c : ntt_constant::M1M2 - c + modab;
-    const uint64 y2 = (uint128)x2 * ntt_constant::INV_M3__M1M2 % ntt_constant::M1M2;
+    const uint64 y2 =
+        (uint128)x2 * ntt_constant::INV_M3__M1M2 % ntt_constant::M1M2;
     const uint128 t = (uint128)y2 * ntt_constant::M3 + c;
-    result[i] = mod > 0 ? t % mod: t;
+    result[i] = mod > 0 ? t % mod : t;
 #endif
   }
 }
@@ -273,7 +274,7 @@ struct ntt_small_constant {
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_mul_ntt_small_internal(const T* X, int n, const T* Y, int m, T* result,
-                          int64 mod) {
+                                int64 mod) {
   static_assert(std::is_unsigned<T>::value, "T must be unsigned");
 
   int alignedSize = 1;
@@ -322,7 +323,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     const uint64 a = tresult[0][i];
     const uint64 b = tresult[1][i];
     const uint64 c = b >= a ? b - a : b + ntt_small_constant::M2 - a;
-    const uint64 d = c * ntt_small_constant::INV_M1__M2 % ntt_small_constant::M2;
+    const uint64 d =
+        c * ntt_small_constant::INV_M1__M2 % ntt_small_constant::M2;
     const uint64 t = d * ntt_small_constant::M1 + a;
     result[i] = mod > 0 ? t % mod : t;
   }
@@ -332,11 +334,11 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 // The length of result is at least n + m - 1.
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_ntt_small(const T* X, const int n, const T* Y, const int m, T* result,
-                 int64 mod) {
+    poly_mul_ntt_small(const T* X, const int n, const T* Y, const int m,
+                       T* result, int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
-  poly_mul_ntt_small_internal<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y,
-                                   m, (unsignedT*)result, mod);
+  poly_mul_ntt_small_internal<unsignedT>(
+      (const unsignedT*)X, n, (const unsignedT*)Y, m, (unsignedT*)result, mod);
 }
 
 template <typename T>
@@ -525,9 +527,10 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     const uint64 a = tresult[0][i];
     const uint64 b = tresult[1][i];
     const uint64 x = b >= a ? b - a : b + ntt_constant::M2 - a;
-    const uint64 y = mod128_64((uint128)x * ntt_constant::INV_M1__M2, ntt_constant::M2);
+    const uint64 y =
+        mod128_64((uint128)x * ntt_constant::INV_M1__M2, ntt_constant::M2);
     const uint128 t = (uint128)y * ntt_constant::M1 + a;
-    result[i] = mod > 0 ? t % mod: t;
+    result[i] = mod > 0 ? t % mod : t;
   }
 }
 
@@ -565,7 +568,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_mul_ntt_small_internal(const T* X, int n, const T* Y, int m, T* result,
-                          int64 mod) {
+                                int64 mod) {
   static_assert(std::is_unsigned<T>::value, "T must be unsigned");
 
   int alignedSize = 1;
@@ -617,11 +620,11 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 // The length of result is at least n + m - 1.
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_ntt_small(const T* X, const int n, const T* Y, const int m, T* result,
-                 int64 mod) {
+    poly_mul_ntt_small(const T* X, const int n, const T* Y, const int m,
+                       T* result, int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
-  poly_mul_ntt_small_internal<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y,
-                                   m, (unsignedT*)result, mod);
+  poly_mul_ntt_small_internal<unsignedT>(
+      (const unsignedT*)X, n, (const unsignedT*)Y, m, (unsignedT*)result, mod);
 }
 
 template <typename T>
@@ -679,17 +682,17 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
  *
  * ntt32 large
  * (p-1)^2*n < 14797252050511790781119856641          1.4e28
- * 
+ *
  * ntt64 small
  * (p-1)^2*n < 1945555039024054273                    1.9e18
  *
  * ntt64 large
  * (p-1)^2*n < 350480037951100867051507526341230593   3.5e35
- * 
+ *
  * min25 ntt small
  * (p-1)^2*n < 1128298388379402241                    1.1e18
  *
  * min25 ntt large
- * (p-1)^2*n <= 1265198875113262859862934516672757761 1.2e36
+ * (p-1)^2*n < 1265198875113262859862934516672757761 1.2e36
  */
 #endif

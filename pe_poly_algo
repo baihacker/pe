@@ -225,7 +225,60 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
     return result;
   }
 }
+#if ENABLE_FLINT
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_mul_flint(const T* X, const int n, const T* Y, const int m, T* result,
+             int64 mod) {
+  typedef typename std::make_unsigned<T>::type unsignedT;
 
+  fmpz_t xmod;
+  fmpz_init_set_ui(xmod, mod);
+
+  fq_nmod_ctx_t ctx;
+  fq_nmod_ctx_init(ctx, xmod, 1, "Z");
+
+  fq_nmod_poly_t a, b;
+  fq_nmod_poly_init2(a, n, ctx);
+  fq_nmod_poly_init2(b, n, ctx);
+
+  fmpz_t c;
+  fmpz_init(c);
+  for (int i = 0; i < n; ++i) {
+    fmpz_set_si(c, X[i]);
+    fq_nmod_poly_set_coeff_fmpz(a, i, c, ctx);
+  }
+  for (int i = 0; i < m; ++i) {
+    fmpz_set_si(c, Y[i]);
+    fq_nmod_poly_set_coeff_fmpz(b, i, c, ctx);
+  }
+  fq_nmod_poly_mul(a, a, b, ctx);
+
+  const int size = a[0].length;
+
+  for (int i = 0; i < size; ++i) {
+    auto v = nmod_poly_get_coeff_ui(a[0].coeffs + i, 0);
+    result[i] = v;
+  }
+  fq_nmod_poly_clear(a, ctx);
+  fq_nmod_poly_clear(b, ctx);
+  fq_nmod_ctx_clear(ctx);
+  fmpz_clear(xmod);
+  fmpz_clear(c);
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
+    poly_mul_flint(const vector<T>& X, const vector<T>& Y, int64 mod) {
+  const int n = (int)X.size() - 1;
+  const int m = (int)Y.size() - 1;
+
+  vector<T> result(n + m + 1);
+  poly_mul_flint(&X[0], n + 1, &Y[0], m + 1, &result[0], mod);
+
+  return result;
+}
+#endif
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_mul(const T* X, const int n, const T* Y, const int m, T* result,
@@ -235,39 +288,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   const int isBig = max(n, m) >= 50;
   if (isBig && (ENABLE_FLINT || HAS_POLY_MUL_NTT32)) {
 #if ENABLE_FLINT
-    fmpz_t xmod;
-    fmpz_init_set_ui(xmod, mod);
-
-    fq_nmod_ctx_t ctx;
-    fq_nmod_ctx_init(ctx, xmod, 1, "Z");
-
-    fq_nmod_poly_t a, b;
-    fq_nmod_poly_init2(a, n, ctx);
-    fq_nmod_poly_init2(b, n, ctx);
-
-    fmpz_t c;
-    fmpz_init(c);
-    for (int i = 0; i < n; ++i) {
-      fmpz_set_si(c, X[i]);
-      fq_nmod_poly_set_coeff_fmpz(a, i, c, ctx);
-    }
-    for (int i = 0; i < m; ++i) {
-      fmpz_set_si(c, Y[i]);
-      fq_nmod_poly_set_coeff_fmpz(b, i, c, ctx);
-    }
-    fq_nmod_poly_mul(a, a, b, ctx);
-
-    const int size = a[0].length;
-
-    for (int i = 0; i < size; ++i) {
-      auto v = nmod_poly_get_coeff_ui(a[0].coeffs + i, 0);
-      result[i] = v;
-    }
-    fq_nmod_poly_clear(a, ctx);
-    fq_nmod_poly_clear(b, ctx);
-    fq_nmod_ctx_clear(ctx);
-    fmpz_clear(xmod);
-    fmpz_clear(c);
+    poly_mul_flint(&X[0], n, &Y[0], m, result, mod);
 #elif HAS_POLY_MUL_NTT32
     ntt32::poly_mul_ntt(&X[0], n, &Y[0], m, result, mod);
 #endif

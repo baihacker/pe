@@ -54,6 +54,7 @@ int main() {
   
   bool isFirstTest = true;
   ntt32::init_ntt();
+  ntt64::init_ntt();
   fft::init_fft();
   for (int i = 0; i < size; ++i) {
     auto& item = tester.tests[i];

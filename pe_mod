@@ -85,6 +85,7 @@ SL auto mul_mod(T1 a, T2 b, M mod)
 
 SL uint64 mod128_64(uint128 a, uint64 b) {
 #if defined(COMPILER_GNU)
+  // Note: if a / b > uint64_max, an exception is thrown.
   uint64 q, r;
   __asm__ (
     "divq\t%4"
@@ -109,8 +110,7 @@ SL auto mul_mod_ex(T1 a, T2 b, M mod)
     return mul_mod_impl<atLeastInt64T, M>(a, b, mod);
   }
 #if PE_HAS_INT128
-  return mod128_64((uint128)a * b, mod);
-  // return mul_mod_impl<int128, M>(a, b, mod);
+  return mul_mod_impl<int128, M>(a, b, mod);
 #else
   atLeastInt64T ret = 0;
   atLeastInt64T flag = b;

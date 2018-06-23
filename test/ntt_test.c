@@ -57,6 +57,9 @@ SL void test_impl(int isRandom, int largeOnly, int n, int64 mod) {
 }
 
 SL void ntt_test() {
+  // uint128 target = 2655355665167707426;
+  // target = target * 100000000000000000 + 92721528518903091;
+  // cerr << mod128_64(target, 100000000003) << endl;
   test_impl(1, 0, 1000000, 100019);
   test_impl(1, 1, 1479725, 100000000003);
   test_impl(0, 0, 999996, 1000003);

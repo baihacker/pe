@@ -142,6 +142,7 @@ struct ntt_constant {
   static const uint64 M1 = 2013265921;
   static const uint64 M2 = 2281701377;
   static const uint64 M3 = 3221225473;
+#if 0
   static const uint64 M12 = M1 * M2;
   static const uint64 M13 = M1 * M3;
   static const uint64 M23 = M2 * M3;
@@ -153,6 +154,12 @@ struct ntt_constant {
   static const uint128 M23M = (uint128)IM23 * M23;
   static const uint128 M12M = (uint128)IM12 * M12;
   static const uint128 MMM = (uint128)M1 * M2 * M3;
+#else
+  static const uint64 INV_M1__M2 = 1140850697;
+  
+  static const uint64 M1M2 = M1 * M2;
+  static const uint64 INV_M3__M1M2 = 1312477593879670191ull;
+#endif
 };
 
 // Multiply two polynomials.
@@ -206,12 +213,25 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 #pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
 #endif
   for (int i = 0; i < resultSize; ++i) {
+#if 0
     const uint128 a = tresult[0][i] * ntt_constant::M23M;
     const uint128 b = tresult[1][i] * ntt_constant::M13M;
     const uint128 c = tresult[2][i] * ntt_constant::M12M;
     const uint128 t = a + b + c;
     const auto tmp = t < ntt_constant::MMM ? t : t % ntt_constant::MMM;
     result[i] = mod > 0 ? tmp % mod : tmp;
+#else
+    const uint64 a = tresult[0][i];
+    const uint64 b = tresult[1][i];
+    const uint64 c = tresult[2][i];
+    const uint64 x1 = b >= a ? b - a : ntt_constant::M2 - a + b;
+    const uint64 y1 = x1 * ntt_constant::INV_M1__M2 % ntt_constant::M2;
+    const uint64 modab = y1 * ntt_constant::M1 + a;
+    const uint64 x2 = modab >= c ? modab - c : ntt_constant::M1M2 - c + modab;
+    const uint64 y2 = (uint128)x2 * ntt_constant::INV_M3__M1M2 % ntt_constant::M1M2;
+    const uint128 t = (uint128)y2 * ntt_constant::M3 + c;
+    result[i] = mod > 0 ? t % mod: t;
+#endif
   }
 }
 
@@ -247,7 +267,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 struct ntt_small_constant {
   static const uint64 M1 = 2013265921;
   static const uint64 M2 = 2281701377;
-  static const uint64 INV_M1 = 1140850697;
+  static const uint64 INV_M1__M2 = 1140850697;
 };
 
 // Multiply two polynomials.
@@ -304,7 +324,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     const uint64 a = tresult[0][i];
     const uint64 b = tresult[1][i];
     const uint64 c = b >= a ? b - a : b + ntt_small_constant::M2 - a;
-    const uint64 d = c * ntt_small_constant::INV_M1 % ntt_small_constant::M2;
+    const uint64 d = c * ntt_small_constant::INV_M1__M2 % ntt_small_constant::M2;
     const uint64 t = d * ntt_small_constant::M1 + a;
     result[i] = mod > 0 ? t % mod : t;
   }
@@ -451,7 +471,7 @@ void init_ntt(int k = 22) {
 struct ntt_constant {
   static const uint64 M1 = 180143985094819841ull;
   static const uint64 M2 = 1945555039024054273ull;
-  static const uint64 INV_M1 = 714693687804754632ull;
+  static const uint64 INV_M1__M2 = 714693687804754632ull;
 };
 
 // Multiply two polynomials.
@@ -508,7 +528,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     const uint64 a = tresult[0][i];
     const uint64 b = tresult[1][i];
     const uint64 c = b >= a ? b - a : b + ntt_constant::M2 - a;
-    const uint64 d = mod128_64((uint128)c * ntt_constant::INV_M1, ntt_constant::M2);
+    const uint64 d = mod128_64((uint128)c * ntt_constant::INV_M1__M2, ntt_constant::M2);
     const uint128 t = (uint128)d * ntt_constant::M1 + a;
     result[i] = mod > 0 ? t % mod: t;
   }

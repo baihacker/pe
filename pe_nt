@@ -1239,8 +1239,10 @@ struct MiuPhiSumModer {
     pre_sum_phi = new int64[maxp + 1];
     pre_sum_mu[0] = pre_sum_phi[0] = 0;
     for (int i = 1; i <= maxp; ++i) {
-      pre_sum_mu[i] = (::mu[i] + pre_sum_mu[i - 1]) % mod;
+      pre_sum_mu[i] = ::mu[i] + pre_sum_mu[i - 1];
       pre_sum_phi[i] = (::phi[i] + pre_sum_phi[i - 1]) % mod;
+      if (pre_sum_mu[i] < 0) pre_sum_mu[i] += mod;
+      else if (pre_sum_mu[i] >= mod) pre_sum_mu[i] -= mod;
     }
   }
 
@@ -1273,6 +1275,7 @@ struct MiuPhiSumModer {
       int64 v = n / k;
       int64 maxk = n / v;
       int64 now = get_sum_mu(maxk);
+
       int64 x = sub_mod(now, last, mod);
       last = now;
 

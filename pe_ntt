@@ -354,9 +354,12 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 }
 }  // namespace ntt32
 
+#if PE_HAS_INT128
+#define HAS_POLY_MUL_NTT64 1
+#define HAS_POLY_MUL_NTT64_SMALL 0
+
 // mod is 64 bit
 namespace ntt64 {
-
 struct NttMod64 {
   // mod = r * 2 ^ k + 1
   // mod is prime
@@ -463,10 +466,6 @@ void init_ntt(int k = 22) {
   nttMod2.initPreOmg(k);
 }
 
-// Need int128 to handle the big polynomial coefficient.
-#if PE_HAS_INT128
-#define HAS_POLY_MUL_NTT64 1
-
 struct ntt_constant {
   static const uint64 M1 = 180143985094819841ull;
   static const uint64 M2 = 1945555039024054273ull;
@@ -557,11 +556,6 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
   return result;
 }
 
-#else
-#define HAS_POLY_MUL_NTT64 0
-#endif
-
-#if PE_HAS_INT128
 #define HAS_POLY_MUL_NTT64_SMALL 1
 // Multiply two polynomials.
 // Make sure the length of result is at least: n + m - 1
@@ -638,10 +632,11 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 
   return result;
 }
+}  // namespace ntt64
 #else
+#define HAS_POLY_MUL_NTT64 1
 #define HAS_POLY_MUL_NTT64_SMALL 0
 #endif
-}  // namespace ntt64
 
 // #include "pe_ntt_min_25"
 

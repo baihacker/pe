@@ -54,7 +54,9 @@ int main() {
   
   bool isFirstTest = true;
   ntt32::init_ntt();
+#if PE_HAS_INT128
   ntt64::init_ntt();
+#endif
   fft::init_fft();
   for (int i = 0; i < size; ++i) {
     auto& item = tester.tests[i];

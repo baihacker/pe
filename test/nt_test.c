@@ -6,11 +6,13 @@ SL void nt_test() {
   MiuPhiSumModer moder(mod);
   moder.init();
   
-  int64 s = 0;
+  int64 s0 = 0;
   for (int i = 1; i <= 10000000; ++i)
-    s += cal_phi(i) % mod;
-  s %= mod;
-  assert(s == moder.get_sum_phi(10000000));
+    s0 += cal_phi(i) % mod;
+  s0 %= mod;
+  
+  int64 s1 = moder.get_sum_phi(10000000);
+  assert(s0 == s1);
 }
 
 PE_REGISTER_TEST(&nt_test, "nt_test", MEDIUM);

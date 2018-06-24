@@ -59,7 +59,7 @@ int main()
   dbg(u.size());
   dbg(v.size());
   TimeRecorder tr;
-  auto w = ntt::poly_mul_ntt(u, v, mod);
+  auto w = ntt32::poly_mul_ntt(u, v, mod);
   cerr << tr.elapsed().format() << endl;
   dbg(w.size());
   dbg(w[100]);

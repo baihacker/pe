@@ -153,5 +153,4 @@ ntt32 l  : 2.390
 ntt64 l  : 3.383
 Min_25 l : 0.328
 libbf    : 1.376
-End ntt_test
 ```

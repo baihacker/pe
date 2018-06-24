@@ -43,6 +43,7 @@ File list:
 * pe_base: Some pre-including headers. Some macros and typedef.
 * pe_bi: Big integer whose base is 1 << 30.
 * pe_bi32: Big integer whose base is 1 << 32.
+* pe_bit: Bit operation tricks.
 * pe_bn: Old big integer implementation.
 * pe_fft: Fast fourier transform and polynomial multiplication.
 * pe_geometry: Support Point2D and Point3D.
@@ -53,6 +54,8 @@ File list:
 * pe_mod: Modular arithmetic.
 * pe_nt: Basic code of number theory.
 * pe_ntt: Number theoretic transform and polynomial multiplication.
+* pe_ntt_libbf: An adapter which makes use of libbf to implement ntt.
+* pe_ntt_min_25: Min_25's ntt implementation. The fastest one for mod polynomials integrated into pe.
 * pe_parallel: A simple framework to solve problem with multi-threads. (windows only)
 * pe_parallel_algo: Parallel algorithms.
 * pe_poly: Polynomial.

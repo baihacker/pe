@@ -1,0 +1,211 @@
+#ifndef __PE_BIT_H__
+#define __PE_BIT_H__
+
+#include "pe_base"
+#include "pe_integer_util"
+
+// https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html
+// https://gcc.gnu.org/onlinedocs/gcc-4.6.2/libstdc++/api/a01046_source.html
+
+SL int __pe_clz2(uint32 x) {
+  return x & 2 ? 0 : 1;
+}
+
+SL int __pe_clz4(uint32 x) {
+  return x >> 2 ? __pe_clz2(x >> 2) : 2 + __pe_clz2(x);
+}
+
+SL int __pe_clz8(uint32 x) {
+  return x >> 4 ? __pe_clz4(x >> 4) : 4 + __pe_clz4(x);
+}
+
+SL int __pe_clz16(uint32 x) {
+  return x >> 8 ? __pe_clz8(x >> 8) : 8 + __pe_clz8(x);
+}
+
+SL int __pe_clz32(uint32 x) {
+  return x >> 16 ? __pe_clz16(x >> 16) : 16 + __pe_clz16(x);
+}
+
+SL int __pe_clz64(uint64 x) {
+  return x >> 32 ? __pe_clz32(x >> 32) : 32 + __pe_clz32(x);
+}
+
+#if PE_HAS_INT128
+
+SL int __pe_clz128(uint128 x) {
+  return x >> 64 ? __pe_clz64(x >> 64) : 64 + __pe_clz64(x);
+}
+
+#endif
+
+SL int __pe_ctz2(uint32 x) {
+  return x & 1 ? 0 : 1;
+}
+
+SL int __pe_ctz4(uint32 x) {
+  return x & 3 ? __pe_ctz2(x) : 2 + __pe_ctz2(x >> 2);
+}
+
+SL int __pe_ctz8(uint32 x) {
+  return x & 15 ? __pe_ctz4(x) : 4 + __pe_ctz4( x >> 4);
+}
+
+SL int __pe_ctz16(uint32 x) {
+  return x & 255 ? __pe_ctz8(x) : 8 + __pe_ctz8(x >> 8);
+}
+
+SL int __pe_ctz32(uint32 x) {
+  return x & 65535 ? __pe_ctz16(x) : 16 + __pe_clz16(x >> 16);
+}
+
+SL int __pe_ctz64(uint64 x) {
+  return (uint32)x ? __pe_ctz32((uint32)x) : 32 + __pe_ctz32(x >> 32);
+}
+
+#if PE_HAS_INT128
+
+SL int __pe_ctz128(uint128 x) {
+  return (uint64)x ? __pe_ctz64((uint64)x) : 64 + __pe_ctz64(x >> 64);
+}
+
+#endif
+
+SL int __pe_bitcnt2(uint32 x) {
+  static const int tb[] {0, 1, 1, 2};
+  return tb[x&3];
+}
+
+SL int __pe_bitcnt4(uint32 x) {
+  int ret = 0;
+  if (x & 3) ret += __pe_bitcnt2(x);
+  if (x >> 2) ret += __pe_bitcnt2(x >> 2);
+  return ret;
+}
+
+SL int __pe_bitcnt8(uint32 x) {
+  int ret = 0;
+  if (x & 15) ret += __pe_bitcnt4(x);
+  if (x >> 4) ret += __pe_bitcnt4(x >> 4);
+  return ret;
+}
+
+SL int __pe_bitcnt16(uint32 x) {
+  int ret = 0;
+  if (x & 255) ret += __pe_bitcnt8(x);
+  if (x >> 8) ret += __pe_bitcnt8(x >> 8);
+  return ret;
+}
+
+SL int __pe_bitcnt32(uint32 x) {
+  int ret = 0;
+  if (x & 65535) ret += __pe_bitcnt16(x);
+  if (x >> 16) ret += __pe_bitcnt16(x >> 16);
+  return ret;
+}
+
+SL int __pe_bitcnt64(uint64 x) {
+  int ret = 0;
+  if ((uint32)x) ret += __pe_bitcnt32((uint32)x);
+  if (x >> 32) ret += __pe_bitcnt32(x >> 32);
+  return ret;
+}
+
+#if PE_HAS_INT128
+
+SL int __pe_bitcnt128(uint128 x) {
+  int ret = 0;
+  if ((uint64)x) ret += __pe_bitcnt64((uint64)x);
+  if (x >> 64) ret += __pe_bitcnt64(x >> 64);
+  return ret;
+}
+
+#endif
+
+SL int __pe_ffs32(uint32 x) {
+  return x == 0 ? 0 : 1 + __pe_ctz32(x);
+}
+
+SL int __pe_ffs64(uint64 x) {
+  return x == 0 ? 0 : 1 + __pe_ctz64(x);
+}
+
+SL int __pe_parity32(uint32 x) {
+  return __pe_bitcnt32(x) & 1;
+}
+
+SL int __pe_parity64(uint64 x) {
+  return __pe_bitcnt64(x) & 1;
+}
+
+SL int __pe_lg32(uint32 x) {
+  return 31 - __pe_clz32(x);
+}
+
+SL int __pe_lg64(uint64 x) {
+  return 63 - __pe_clz64(x);
+}
+
+#if PE_HAS_INT128
+
+SL int __pe_ffs128(uint128 x) {
+  return x == 0 ? 0 : 1 + __pe_ctz128(x);
+}
+
+SL int __pe_parity128(uint128 x) {
+  return __pe_bitcnt128(x) & 1;
+}
+
+SL int __pe_lg128(uint128 x) {
+  return 127 - __pe_clz128(x);
+}
+
+#endif
+
+#if defined(COMPILER_GNU)
+
+#define pe_clz __builtin_clz
+#define pe_clzll __builtin_clzll
+
+#define pe_ctz __builtin_ctz
+#define pe_ctzll __builtin_ctzll
+
+#define pe_popcount __builtin_popcount
+#define pe_popcountll __builtin_popcountll
+#define pe_bitcnt __builtin_popcount
+#define pe_bitcnt __builtin_popcountll
+
+#define pe_ffs __builtin_ffs
+#define pe_ffsll __builtin_ffsll
+
+#define pe_parity __builtin_parity
+#define pe_parityll __builtin_parityll
+
+#define pe_lg __lg
+#define pe_lgll __lg
+
+#else
+
+#define pe_clz __pe_clz32
+#define pe_clzll __pe_clz64
+
+#define pe_ctz __pe_ctz32
+#define pe_ctzll __pe_ctz64
+
+#define pe_popcount __pe_bitcnt32
+#define pe_popcountll __pe_bitcnt64
+#define pe_bitcnt __pe_bitcnt32
+#define pe_bitcnt __pe_bitcnt64
+
+#define pe_ffs __pe_ffs32
+#define pe_ffsll __pe_ffs64
+
+#define pe_parity __pe_parity32
+#define pe_parityll __pe_parity64
+
+#define pe_lg __pe_lg32
+#define pe_lgll __pe_lg64
+
+#endif
+
+#endif

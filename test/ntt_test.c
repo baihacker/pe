@@ -10,10 +10,10 @@ struct MulImpl {
 };
 MulImpl mulImpl[] = {
   {&poly_mul_flint<uint64>, 0, "flint"},
-  {&ntt32::poly_mul_ntt_small<uint64>, 1, "32 small"},
-  {&ntt32::poly_mul_ntt<uint64>, 0, "32 large"},
-  {&ntt64::poly_mul_ntt_small<uint64>, 1, "64 small"},
-  {&ntt64::poly_mul_ntt<uint64>, 0, "64 large"},
+  {&ntt32::poly_mul_ntt_small<uint64>, 1, "ntt32 s"},
+  {&ntt32::poly_mul_ntt<uint64>, 0, "ntt32 l"},
+  {&ntt64::poly_mul_ntt_small<uint64>, 1, "ntt64 s"},
+  {&ntt64::poly_mul_ntt<uint64>, 0, "ntt64 l"},
   {&ntt_min25::poly_mul_ntt_small<uint64>, 1, "Min_25 s"},
   {&ntt_min25::poly_mul_ntt<uint64>, 0, "Min_25 l"},
 #if ENABLE_LIBBF && HAS_POLY_MUL_LIBBF

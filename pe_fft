@@ -73,13 +73,13 @@ SL void fft(comp* a, const int n, int f = 0) {
 }
 
 SL void poly_mul_fft_internal(uint64* x, uint64* y, uint64* z, const int n,
-                              uint64 mod) {
-  int64 m = sqrt(mod);
+                              int64 mod) {
+  int64 m = (int64) sqrt(mod);
   while (m * m < mod) ++m;
   vector<comp> a(n), b(n);
   vector<comp> dfta(n), dftb(n), dftc(n), dftd(n);
-  for (int i = 0; i < n; ++i) a[i] = comp(x[i] % m, x[i] / m);
-  for (int i = 0; i < n; ++i) b[i] = comp(y[i] % m, y[i] / m);
+  for (int i = 0; i < n; ++i) a[i] = comp(double(x[i] % m), double(x[i] / m));
+  for (int i = 0; i < n; ++i) b[i] = comp(double(y[i] % m), double(y[i] / m));
 #if ENABLE_OPENMP
 #pragma omp parallel sections if (n > 5000)
 #endif
@@ -126,15 +126,15 @@ SL void poly_mul_fft_internal(uint64* x, uint64* y, uint64* z, const int n,
     const uint64 dc = (uint64)(b[i].x / n + 0.5) % mod;
     const uint64 dd = (uint64)(b[i].y / n + 0.5) % mod;
     uint64 c = da, d = (db + dc) * m % mod, e = dd * m % mod * m % mod;
-    z[i] = (c + d + e) % mod;
+    z[i] = mod > 0 ? (c + d + e) % mod : c + d + e;
   }
 }
 
 SL void poly_mul_fft_small_internal(uint64* x, uint64* y, uint64* z,
-                                    const int n, uint64 mod) {
+                                    const int n, int64 mod) {
   vector<comp> a(n), b(n);
-  for (int i = 0; i < n; ++i) a[i] = comp(x[i], 0);
-  for (int i = 0; i < n; ++i) b[i] = comp(y[i], 0);
+  for (int i = 0; i < n; ++i) a[i] = comp(double(x[i]), 0);
+  for (int i = 0; i < n; ++i) b[i] = comp(double(y[i]), 0);
 #if ENABLE_OPENMP
 #pragma omp parallel sections if (n > 5000)
 #endif

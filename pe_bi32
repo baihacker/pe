@@ -9,7 +9,7 @@
 // Predefined allocator
 struct bi_allocator_std {
   static unsigned int* allocate(int& length) {
-    length = (length + 3 >> 2) << 2;
+    length = ((length + 3) >> 2) << 2;
     return new unsigned int[length];
   }
   static void deallocate(unsigned int* data) { delete[] data; }
@@ -112,7 +112,7 @@ class BigInteger {
     }
 
     typedef typename std::make_unsigned<T>::type unsignedT;
-    unsignedT absValue = value > 0 ? value : -value;
+    unsignedT absValue = getAbsValue(value);
     if (sizeof(T) <= 8) {
       resetAbs(absValue);
     } else {
@@ -129,13 +129,25 @@ class BigInteger {
     sign_ = value > 0 ? 1 : -1;
   }
 
+  template<typename T>
+  SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(T)
+  getAbsValue(T x) {
+	return x >= 0 ? x : -x;
+  }
+
+  template<typename T>
+  SL REQUIRES((is_native_integer<T>::value && is_unsigned<T>::value)) RETURN(T)
+  getAbsValue(T x) {
+	return x;
+  }
+
   template <typename T, typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
   BigInteger& operator=(T value) {
     return *this = BigInteger(value);
   }
 
   BigInteger(const string& str) : BigInteger(zero_initialize_tag) {
-    const int n = str.size();
+    const int n = (int)str.size();
     if (n == 0) {
       reserve(1);
       data_[0] = 0;
@@ -165,7 +177,7 @@ class BigInteger {
       while (now > 0 && value[now] == 0) --now;
     } while (now > 0 || value[now] > 0);
 
-    reserve(result.size());
+    reserve((int)result.size());
 
     sign_ = 1;
     pos_ = max(0, (int)result.size() - 1);
@@ -182,13 +194,13 @@ class BigInteger {
       return;
     }
 
-    const unsigned int n = v.size();
+    const unsigned int n = (unsigned int)v.size();
     unsigned int need = (n + 31) >> 5;
     reserve(need);
 
     unsigned int value = 0;
     unsigned int flag = 1;
-    for (int i = 0; i < n; ++i) {
+    for (unsigned i = 0; i < n; ++i) {
       if (v[i]) {
         value |= flag;
       }
@@ -236,7 +248,7 @@ class BigInteger {
   void resetAbs(uint64 v) {
     if (v <= max_32bit_value) {
       reserve(1);
-      data_[0] = v;
+      data_[0] = (unsigned)v;
       pos_ = 0;
     } else {
       reserve(2);
@@ -445,7 +457,7 @@ class BigInteger {
         nextBorrow++;
         t += bit32_value;
       }
-      l[curr] = t - r[curr] - borrow;
+      l[curr] = (unsigned)(t - r[curr] - borrow);
       borrow = nextBorrow;
     }
     for (int curr = minPos + 1; curr <= maxPos; ++curr) {
@@ -455,7 +467,7 @@ class BigInteger {
         nextBorrow++;
         t += bit32_value;
       }
-      l[curr] = t - borrow;
+      l[curr] = (unsigned)(t - borrow);
       borrow = nextBorrow;
     }
     l.fixPos();
@@ -497,7 +509,7 @@ class BigInteger {
 
     BigInteger ret(now >> 1, alloc_mem_tag);
     for (int i = 0; i < now; i += 2) {
-      ret[i>>1] = (result[i+1] << 16) | result[i];
+      ret[i>>1] = (unsigned)((result[i+1] << 16) | result[i]);
     }
     ret.pos_ = (now >> 1) - 1;
     ret.sign_ = 1;
@@ -524,7 +536,7 @@ class BigInteger {
       const uint64 len = (l.size() + r.size()) << 1;
       int64 alignedLen = 1;
       int bit = 1;
-      while (alignedLen < len) alignedLen <<= 1, ++bit;
+      while (alignedLen < (int64)len) alignedLen <<= 1, ++bit;
       const uint64 cost2 = alignedLen * bit * 3;
       
       if (cost2 * 2 < cost1) {
@@ -689,7 +701,7 @@ class BigInteger {
       int i = end, j = 0;
       for (; j < divR; ++i, ++j) {
         int nextBorrow = 0;
-        int t = remain[i];
+        auto t = remain[i];
         while (t < r[j] + borrow) {
           t += 2;
           ++nextBorrow;
@@ -1005,11 +1017,11 @@ class BigInteger {
       for (int i = t.pos_; i > 0; --i) {
         const uint64 x = add + t.data_[i];
         const uint64 next_add = (x % output_mod) << 32;
-        t.data_[i] = x / output_mod;
+        t.data_[i] = (unsigned)(x / output_mod);
         add = next_add;
       }
       uint64 x = add + t.data_[0];
-      t.data_[0] = x / output_mod;
+      t.data_[0] = (unsigned)(x / output_mod);
       mods.push_back(x % output_mod);
       t.fixPos();
     } while (!t.isZero());
@@ -1064,7 +1076,7 @@ class BigInteger {
   }
 
   template <typename T>
-  REQUIRES(is_native_integer<T>::value)
+  REQUIRES(is_native_integer<T>::value && std::is_signed<T>::value)
   RETURN(T)
   toInt() const {
     T result = 0;
@@ -1074,6 +1086,19 @@ class BigInteger {
       if (sign_ < 0) {
         result = -result;
       }
+    }
+    return result;
+  }
+
+  template <typename T>
+  REQUIRES(is_native_integer<T>::value && std::is_unsigned<T>::value)
+  RETURN(T)
+  toInt() const {
+    T result = 0;
+    for (int i = pos_; i >= 0; --i)
+      result = (result << 32) | data_[i];
+    if (std::is_signed<T>::value) {
+      // Warning
     }
     return result;
   }
@@ -1307,7 +1332,7 @@ div(const BigInteger& l, T r) {
   ret.fixPos();
   if (l.sign_ < 0) {
     PE_ASSERT(x == 0 || !std::is_unsigned<T>::value);
-    x = -x;
+    x = BigInteger::getAbsValue(x);
   }
 
   return make_tuple(std::move(ret), (T)x);
@@ -1617,7 +1642,7 @@ struct FacModer {
     bi v;
     tie(u, v) = div(N, p);
     int64 vv = v.toInt<int64>();
-    int64 r = e + 1 >> 1;
+    int64 r = (e + 1) >> 1;
 
     bi ret = 1;
     // F(up, p)

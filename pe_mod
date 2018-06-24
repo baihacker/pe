@@ -38,7 +38,7 @@ template <typename T, typename M>
 SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
     RETURN(T) add_mod_impl(T a, T b, M mod) {
   a += b;
-  if (a >= mod) a -= mod;
+  if ((M)a >= mod) a -= mod;
   return a;
 }
 
@@ -113,7 +113,7 @@ SL auto mul_mod_ex(T1 a, T2 b, M mod)
 #else
   atLeastInt64T ret = 0;
   atLeastInt64T flag = b;
-  for (atLeastInt64T d = 1; d <= a; d <<= 1) {
+  for (atLeastInt64T d = 1; d <= (atLeastInt64T)a; d <<= 1) {
     if (d & a) {
       ret = (ret + flag) % mod;
     }
@@ -178,19 +178,20 @@ SL T1 power_mod_ex(T1 x, T2 n, M mod) {
   typedef typename BigIntegerType<int64, T1>::type atLeastInt64T1;
 
   if (mod <= PE_SOI63) {
-    return power_mod_impl<atLeastInt64T1, T2, M>(x, n, mod);
+    return (T1)power_mod_impl<atLeastInt64T1, T2, M>(x, n, mod);
   }
 #if PE_HAS_INT128
   return power_mod_impl<int128, int128, M>(x, n, mod);
 #else
   atLeastInt64T1 ret = 1;
-  x %= mod;
-  if (x < 0) x += mod;
+  atLeastInt64T1 y = x;
+  y %= mod;
+  if (y < 0) y += mod;
   for (; n; n >>= 1) {
-    if (n & 1) ret = mul_mod_ex(x, ret, mod);
-    x = mul_mod_ex(x, x, mod);
+    if (n & 1) ret = mul_mod_ex(y, ret, mod);
+    y = mul_mod_ex(y, y, mod);
   }
-  return ret;
+  return (T1)ret;
 #endif
 }
 

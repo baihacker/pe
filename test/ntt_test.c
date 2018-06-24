@@ -9,7 +9,7 @@ struct MulImpl {
   const char* name;
 };
 MulImpl mulImpl[] = {
-  {&poly_mul_flint<uint64>, 0, "flint   "},
+  {&poly_mul_flint<uint64>, 0, "flint"},
   {&ntt32::poly_mul_ntt_small<uint64>, 1, "32 small"},
   {&ntt32::poly_mul_ntt<uint64>, 0, "32 large"},
   {&ntt64::poly_mul_ntt_small<uint64>, 1, "64 small"},
@@ -50,7 +50,7 @@ SL void test_impl(int isRandom, int largeOnly, int n, int64 mod) {
     auto start = clock();
     auto result = who.impl(x, y, mod);
     auto end = clock();
-    fprintf(stderr, "%s : %.3f\n", who.name, (end-start)*1e-3);
+    fprintf(stderr, "%-8s : %.3f\n", who.name, (end-start)*1e-3);
     if (i == 0) {
       expected = result;
     } else {

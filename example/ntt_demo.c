@@ -62,7 +62,7 @@ int main()
   auto w = ntt32::poly_mul_ntt(u, v, mod);
   cerr << tr.elapsed().format() << endl;
   dbg(w.size());
-  dbg(w[100]);
+  dbg(w[100]); // 37076
   int64 ans = 0;
   for (int i = 1; i <= n; ++i)
     ans += w[i];

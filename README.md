@@ -113,7 +113,9 @@ Ntt benchmark:
 * Msys2: msys2-x86_64-20180531
 * Build libbf:
  > gcc -Wall -O3 -mavx -mavx2 -mfma -mbmi2 -c -o libbf.avx2.o libbf.c
+ 
  > gcc -Wall -O3 -mavx -mavx2 -mfma -mbmi2 -c -o cutils.avx2.o cutils.c
+ 
  > gcc-ar crv libbf.avx2.a cutils.avx2.o libbf.avx2.o
 * Run tests:
  > -o a.exe --std=c++11 -O3 -march=native -mtune=native -fopenmp -Wl,--stack,268435456 -lbf -lgmpxx -lflint -lgmp -lmpfr -lmpir

@@ -134,6 +134,41 @@ typedef unsigned __int128 uint128;
 // http://mpir.org/
 #define ENABLE_MPIR 1
 
+// https://bellard.org/libbf/
+// Please make sure libbf comes before other libs, e.g.
+// "-lbf -lgmpxx -lflint -lgmp -lmpfr -lmpir"
+// Note: the following makefile will generate libbf.avx2.a and libbf.generic.a
+// please choose one and rename it to libbf.a
+#if 0
+CC=$(CROSS_PREFIX)gcc
+CFLAGS=-Wall
+CFLAGS+=-O3
+LDFLAGS=
+
+PROGS+=libbf.generic.a libbf.avx2.a
+
+all: $(PROGS)
+
+libbf.generic.a : libbf.o  cutils.o
+	gcc-ar crv libbf.generic.a cutils.o libbf.o
+
+libbf.avx2.a : libbf.avx2.o  cutils.avx2.o
+	gcc-ar crv libbf.avx2.a cutils.avx2.o libbf.avx2.o
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+%.avx2.o: %.c
+	$(CC) $(CFLAGS) -mavx -mavx2 -mfma -mbmi2 -c -o $@ $<
+
+clean:
+	rm -f $(PROGS) *.o *.d *.a *.exe *~
+
+-include $(wildcard *.d)
+#endif
+
+#define ENABLE_LIBBF 1
+
 #if ENABLE_FLINT
 
 #if !ENABLE_GMP
@@ -150,7 +185,24 @@ typedef unsigned __int128 uint128;
 
 #endif
 
-// flint must come first
+#if ENABLE_LIBBF
+
+#include <cstdint>
+#include <cstdlib>
+
+extern "C" {
+
+#include "libbf.h"
+
+void *bf_realloc(void *ptr, size_t size) {
+  return realloc(ptr, size);
+}
+
+}
+
+#endif
+
+// flint must come before the following libs.
 #if ENABLE_FLINT
 #include <flint.h>
 #include <fmpz.h>

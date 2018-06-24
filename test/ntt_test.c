@@ -14,9 +14,10 @@ MulImpl mulImpl[] = {
   {&ntt32::poly_mul_ntt<uint64>, 0, "32 large"},
   {&ntt64::poly_mul_ntt_small<uint64>, 1, "64 small"},
   {&ntt64::poly_mul_ntt<uint64>, 0, "64 large"},
-#if defined(__PE_NTT_MIN_25__)
   {&ntt_min25::poly_mul_ntt_small<uint64>, 1, "Min_25 s"},
   {&ntt_min25::poly_mul_ntt<uint64>, 0, "Min_25 l"},
+#if ENABLE_LIBBF && HAS_POLY_MUL_LIBBF
+  {&ntt_libbf::poly_mul_ntt<uint64>, 0, "libbf"},
 #endif
 };
 

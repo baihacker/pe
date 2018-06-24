@@ -1,0 +1,85 @@
+#ifndef __PE_NTT_LIBBF__
+#define __PE_NTT_LIBBF__
+
+#if PE_HAS_INT128 && ENABLE_LIBBF && defined(COMPILER_GNU)
+
+#define HAS_POLY_MUL_LIBBF 1
+
+namespace ntt_libbf {
+template<typename T>
+SL void bf_ntt_init(const T* X, int n, bf_t* target) {
+  bf_init(target);
+
+  bf_set_ui(target, 1);
+
+  bf_resize(target, 2 * n);
+  target->expn = __builtin_clzll(X[n-1]);
+
+  const int len = target->len;
+  auto* data = target->tab;
+  for (int i = 0; i < n; ++i) {
+    data[i<<1] = (uint64)X[i];
+    data[(i<<1)|1] = 0;
+  }
+}
+
+SL void bf_ntt_deinit(bf_t* target) {
+  bf_delete(target);
+}
+
+template<typename T>
+SL void poly_mul_ntt(const T* X, int n, const T* Y, int m, T* result, int64 mod) {
+  bf_t x, y;
+
+  bf_ntt_init(X, n, &x);
+  bf_ntt_init(Y, m, &y);
+
+  bf_t z0, z1, toadd;
+  bf_init(&z0);
+  bf_init(&z1);
+  bf_init(&toadd);
+
+  int offset = x.expn + y.expn;
+  bf_set_ui(&toadd, 1);
+
+  toadd.expn = 128 + offset;
+
+  bf_mul(&z0, &x, &y, BF_PREC_MAX, 0);
+  bf_add(&z1, &z0, &toadd, BF_PREC_MAX, 0);
+
+  const int size = n + m - 1;
+  const auto* data = z1.tab;
+  for (int i = 0; i < size; ++i) {
+    const uint64 low = data[i<<1];
+    const uint64 hi = data[(i<<1)|1];
+    if (hi == 0) {
+      result[i] = mod > 0 ? low % mod : low;
+    } else {
+      const uint128 t = ((uint128)hi << 64) | low;
+      result[i] = mod > 0 ? t % mod : t;
+    }
+  }
+
+  bf_delete(&toadd);
+  bf_delete(&z1);
+  bf_delete(&z0);
+  bf_ntt_deinit(&y);
+  bf_ntt_deinit(&x);
+}
+
+template<typename T>
+SL vector<T> poly_mul_ntt(const vector<T>& X, const vector<T>& Y, int64 mod) {
+  const int n = (int)X.size();
+  const int m = (int)Y.size();
+  const int retSize = n + m - 1;
+  vector<T> result(retSize);
+  poly_mul_ntt(&X[0], n, &Y[0], m, &result[0], mod);
+  return result;
+}
+
+} // namespace ntt_libbf
+#else
+#define HAS_POLY_MUL_LIBBF 0
+#endif
+
+#endif

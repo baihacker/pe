@@ -5,24 +5,25 @@ namespace ntt_test {
 typedef vector<uint64> (*poly_mul_t)(const vector<uint64>& X, const vector<uint64>& Y, int64 mod);
 struct MulImpl {
   poly_mul_t impl;
-  int isSmall;
+  int size; // 0: coe < 1e18; 1: coe < 1e28; 2: coe < 1e35
   const char* name;
 };
 MulImpl mulImpl[] = {
-  {&poly_mul_flint<uint64>, 0, "flint"},
-  {&ntt32::poly_mul_ntt_small<uint64>, 1, "ntt32 s"},
-  {&ntt32::poly_mul_ntt<uint64>, 0, "ntt32 l"},
-  {&ntt64::poly_mul_ntt_small<uint64>, 1, "ntt64 s"},
-  {&ntt64::poly_mul_ntt<uint64>, 0, "ntt64 l"},
-  {&ntt_min25::poly_mul_ntt_small<uint64>, 1, "Min_25 s"},
-  {&ntt_min25::poly_mul_ntt<uint64>, 0, "Min_25 l"},
+  {&poly_mul_flint<uint64>, 2, "flint n"},
+  {&poly_mul_flint_prime<uint64>, 2, "flint p"},
+  {&ntt32::poly_mul_ntt_small<uint64>, 0, "ntt32 s"},
+  {&ntt32::poly_mul_ntt<uint64>, 1, "ntt32 l"},
+  {&ntt64::poly_mul_ntt_small<uint64>, 0, "ntt64 s"},
+  {&ntt64::poly_mul_ntt<uint64>, 2, "ntt64 l"},
+  {&ntt_min25::poly_mul_ntt_small<uint64>, 0, "Min_25 s"},
+  {&ntt_min25::poly_mul_ntt<uint64>, 2, "Min_25 l"},
 #if ENABLE_LIBBF && HAS_POLY_MUL_LIBBF
-  {&ntt_libbf::poly_mul_ntt<uint64>, 0, "libbf"},
+  {&ntt_libbf::poly_mul_ntt<uint64>, 2, "libbf"},
 #endif
 };
 
-SL void test_impl(int isRandom, int largeOnly, int n, int64 mod) {
-  fprintf(stderr, "ntt test: isRandom = %d, largeOnly = %d, n = %d, mod = %lld\n", isRandom, largeOnly, n, mod);
+SL void test_impl(int isRandom, int size, int n, int64 mod) {
+  fprintf(stderr, "%-8s : isRandom = %d, size = %d, n = %d, mod = %lld\n", "ntt test", isRandom, size, n, mod);
   
   vector<uint64> x, y;
   srand(123456789);
@@ -44,7 +45,7 @@ SL void test_impl(int isRandom, int largeOnly, int n, int64 mod) {
   for (int i = 0; i < M; ++i) {
     auto who = mulImpl[i];
     if (i > 0) {
-      if (largeOnly && who.isSmall) {
+      if (who.size < size) {
         continue;
       }
     }
@@ -66,8 +67,14 @@ SL void ntt_test() {
   // cerr << mod128_64(target, 100000000003) << endl;
   test_impl(1, 0, 1000000, 100019);
   test_impl(1, 1, 1479725, 100000000003);
+  test_impl(1, 2, 1479725, 316227766016779);
+
+  // 1e18
   test_impl(0, 0, 999996, 1000003);
+  // 1e28
   test_impl(0, 1, 1479725, 100000000003);
+  // 1e35
+  test_impl(0, 2, 1000000, 316227766016779);
 }
 PE_REGISTER_TEST(&ntt_test, "ntt_test", BIG);
 #endif

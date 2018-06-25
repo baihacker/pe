@@ -229,7 +229,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 #if ENABLE_FLINT
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_flint(const T* X, const int n, const T* Y, const int m, T* result,
+    poly_mul_flint_prime(const T* X, const int n, const T* Y, const int m, T* result,
                    int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
 
@@ -241,7 +241,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
   fq_nmod_poly_t a, b;
   fq_nmod_poly_init2(a, n, ctx);
-  fq_nmod_poly_init2(b, n, ctx);
+  fq_nmod_poly_init2(b, m, ctx);
 
   fmpz_t c;
   fmpz_init(c);
@@ -270,12 +270,57 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
-    poly_mul_flint(const vector<T>& X, const vector<T>& Y, int64 mod) {
-  const int n = (int)X.size() - 1;
-  const int m = (int)Y.size() - 1;
+    poly_mul_flint_prime(const vector<T>& X, const vector<T>& Y, int64 mod) {
+  const int n = (int)X.size();
+  const int m = (int)Y.size();
 
-  vector<T> result(n + m + 1);
-  poly_mul_flint(&X[0], n + 1, &Y[0], m + 1, &result[0], mod);
+  vector<T> result(n + m - 1);
+  poly_mul_flint_prime(&X[0], n, &Y[0], m, &result[0], mod);
+
+  return result;
+}
+
+template<typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_mul_flint(const T* X, const int n, const T* Y, const int m, T* result,
+                   int64 mod) {
+  typedef typename std::make_unsigned<T>::type unsignedT;
+
+  nmod_poly_t a, b;
+  nmod_poly_init2(a, mod, n);
+  nmod_poly_init2(b, mod, m);
+
+  for (int i = 0; i < n; ++i) {
+    nmod_poly_set_coeff_ui(a, i, X[i]);
+  }
+  for (int i = 0; i < m; ++i) {
+    nmod_poly_set_coeff_ui(b, i, Y[i]);
+  }
+  nmod_poly_mul(a, a, b);
+
+  const int size = a[0].length;
+
+  for (int i = 0; i < size; ++i) {
+    auto v = a[0].coeffs[i];
+    result[i] = v;
+  }
+
+  const int allSize = n + m - 1;
+  for (int i = size; i < allSize; ++i) {
+    result[i] = 0;
+  }
+  nmod_poly_clear(a);
+  nmod_poly_clear(b);
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
+    poly_mul_flint(const vector<T>& X, const vector<T>& Y, int64 mod) {
+  const int n = (int)X.size();
+  const int m = (int)Y.size();
+
+  vector<T> result(n + m - 1);
+  poly_mul_flint(&X[0], n, &Y[0], m, &result[0], mod);
 
   return result;
 }
@@ -304,11 +349,11 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
     poly_mul(const vector<T>& X, const vector<T>& Y, int64 mod) {
-  const int n = (int)X.size() - 1;
-  const int m = (int)Y.size() - 1;
+  const int n = (int)X.size();
+  const int m = (int)Y.size();
 
-  vector<T> result(n + m + 1);
-  poly_mul(&X[0], n + 1, &Y[0], m + 1, &result[0], mod);
+  vector<T> result(n + m - 1);
+  poly_mul(&X[0], n, &Y[0], m, &result[0], mod);
 
   return result;
 }
@@ -344,8 +389,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_inv_mod_internal(const T* x, int m, int n, T* result, int64 mod) {
   // It is assumed that mod is a prime
   const int t = max(n, m);
-  int p = 1;
-  while (p < t << 1) p <<= 1;
+  const int p = 1 << pe_lg(4*t-1);
 
   // a
   vector<T> a(p);
@@ -386,8 +430,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
   // It is assumed that mod is a prime
   const int m = (int)x.size();
   const int t = max(n, m);
-  int p = 1;
-  while (p < t << 1) p <<= 1;
+  const int p = 1 << pe_lg(4*t-1);
 
   // b
   vector<T> b(p);

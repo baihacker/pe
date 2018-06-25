@@ -1,7 +1,7 @@
 #ifndef __PE_NTT_MIN_25__
 #define __PE_NTT_MIN_25__
 
-#if PE_HAS_INT128 && defined(COMPILER_GNU)
+#if PE_HAS_INT128
 
 #define HAS_POLY_MUL_MIN25_NTT 1
 #define HAS_POLY_MUL_MIN25_NTT_SMALL 1
@@ -25,7 +25,7 @@ private:
 public:
   static constexpr word_t inv = mul_inv(mod);
   static constexpr word_t r2 = -dword_t(mod) % mod;
-  static constexpr int level = __builtin_ctzll(mod - 1);
+  static constexpr int level = pe_ctzll(mod - 1);
   static_assert(inv * mod == 1, "invalid 1/M modulo 2^@.");
 
   UnsafeMod() {}
@@ -57,7 +57,7 @@ public:
 
 template <typename mod_t>
 void transform(mod_t* A, int n, const mod_t* roots, const mod_t* iroots) {
-  const int logn = __builtin_ctz(n), nh = n >> 1, lv = mod_t::level;
+  const int logn = pe_ctz(n), nh = n >> 1, lv = mod_t::level;
   const mod_t one = mod_t(1), imag = roots[lv - 2];
 
   mod_t dw[lv - 1]; dw[0] = roots[lv - 3];
@@ -81,14 +81,14 @@ void transform(mod_t* A, int n, const mod_t* roots, const mod_t* iroots) {
         A[j + m4 * 0] = t02p + t13p; A[j + m4 * 1] = t02p - t13p;
         A[j + m4 * 2] = t02m + t13m; A[j + m4 * 3] = t02m - t13m;
       }
-      w2 *= dw[__builtin_ctz(~(i >> e))];
+      w2 *= dw[pe_ctz(~(i >> e))];
     }
   }
 }
 
 template <typename mod_t>
 void itransform(mod_t* A, int n, const mod_t* roots, const mod_t* iroots) {
-  const int logn = __builtin_ctz(n), nh = n >> 1, lv = mod_t::level;
+  const int logn = pe_ctz(n), nh = n >> 1, lv = mod_t::level;
   const mod_t one = mod_t(1), imag = iroots[lv - 2];
 
   mod_t dw[lv - 1]; dw[0] = iroots[lv - 3];
@@ -108,7 +108,7 @@ void itransform(mod_t* A, int n, const mod_t* roots, const mod_t* iroots) {
         A[j + m4 * 0] = (t01p + t23p) * one; A[j + m4 * 2] = (t01p - t23p) * w1;
         A[j + m4 * 1] = (t01m + t23m) * w2;  A[j + m4 * 3] = (t01m - t23m) * w3;
       }
-      w2 *= dw[__builtin_ctz(~(i >> e))];
+      w2 *= dw[pe_ctz(~(i >> e))];
     }
   }
   if (logn & 1) for (int i = 0; i < nh; ++i) {
@@ -120,7 +120,7 @@ void itransform(mod_t* A, int n, const mod_t* roots, const mod_t* iroots) {
 template <typename mod_t>
 void convolve(mod_t* A, int s1, mod_t* B, int s2, bool cyclic=false) {
   const int s = cyclic ? max(s1, s2) : s1 + s2 - 1;
-  const int size = 1 << (31 - __builtin_clz(2 * s - 1));
+  const int size = 1 << (31 - pe_clz(2 * s - 1));
   assert(size <= (int64(1) << mod_t::level));
 
   mod_t roots[mod_t::level], iroots[mod_t::level];
@@ -146,8 +146,7 @@ using m64_2 = UnsafeMod<1128298388379402241, 23>; // <= 1.14e18 (sub.D = 3)
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   poly_mul_ntt(const T* f, int n, const T* g, int m, T* result, int64 mod) {
-  int alignedSize = 1;
-  while (alignedSize < n + m - 1) alignedSize <<= 1;
+  const int alignedSize = 1 << pe_lg(2*(n+m-1)-1);
 
   const int ntt_size = alignedSize;
 
@@ -207,8 +206,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   poly_mul_ntt_small(const T* f, int n, const T* g, int m, T* result, int64 mod) {
-  int alignedSize = 1;
-  while (alignedSize < n + m - 1) alignedSize <<= 1;
+  const int alignedSize = 1 << pe_lg(2*(n+m-1)-1);
 
   const int ntt_size = alignedSize;
 
@@ -232,11 +230,11 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
   poly_mul_ntt_small(const vector<T>& X, const vector<T>& Y, int64 mod) {
-  const int n = (int)X.size() - 1;
-  const int m = (int)Y.size() - 1;
+  const int n = (int)X.size();
+  const int m = (int)Y.size();
 
-  vector<T> result(n + m + 1);
-  poly_mul_ntt_small(&X[0], n + 1, &Y[0], m + 1, &result[0], mod);
+  vector<T> result(n + m - 1);
+  poly_mul_ntt_small(&X[0], n, &Y[0], m, &result[0], mod);
 
   return result;
 }

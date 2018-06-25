@@ -31,4 +31,4 @@ SL void bit_test() {
 
 PE_REGISTER_TEST(&bit_test, "bit_test", SMALL);
 #endif
-}
+}  // namespace bit_test

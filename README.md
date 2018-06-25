@@ -124,6 +124,8 @@ Ntt benchmark:
 * Test code: [Ntt test](https://github.com/baihacker/pe/blob/master/test/ntt_test.c)
 
 ### Test result
+
+#### Openmp enabled
 ```cpp
 ntt test : isRandom = 1, size = 0, n = 1000000, mod = 100019
 flint n  : 0.391
@@ -171,4 +173,54 @@ flint p  : 2.063
 ntt64 l  : 1.689
 Min_25 l : 0.172
 libbf    : 0.851
+```
+
+#### Openmp disabled (option "-fopenmp" removed)
+```cpp
+ntt test : isRandom = 1, size = 0, n = 1000000, mod = 100019
+flint n  : 0.407
+flint p  : 1.156
+ntt32 s  : 3.076
+ntt32 l  : 4.656
+ntt64 s  : 2.454
+ntt64 l  : 4.938
+Min_25 s : 0.157
+Min_25 l : 0.343
+libbf    : 0.813
+ntt test : isRandom = 1, size = 1, n = 1479725, mod = 100000000003
+flint n  : 1.218
+flint p  : 2.859
+ntt32 l  : 9.813
+ntt64 l  : 10.375
+Min_25 l : 0.719
+libbf    : 1.344
+ntt test : isRandom = 1, size = 2, n = 1000000, mod = 316227766016779
+flint n  : 0.828
+flint p  : 2.046
+ntt64 l  : 5.002
+Min_25 l : 0.438
+libbf    : 0.859
+ntt test : isRandom = 0, size = 0, n = 999996, mod = 1000003
+flint n  : 0.421
+flint p  : 1.203
+ntt32 s  : 3.078
+ntt32 l  : 4.672
+ntt64 s  : 2.438
+ntt64 l  : 4.906
+Min_25 s : 0.156
+Min_25 l : 0.375
+libbf    : 0.813
+ntt test : isRandom = 0, size = 1, n = 1479725, mod = 100000000003
+flint n  : 1.219
+flint p  : 2.750
+ntt32 l  : 9.782
+ntt64 l  : 10.344
+Min_25 l : 0.719
+libbf    : 1.344
+ntt test : isRandom = 0, size = 2, n = 1000000, mod = 316227766016779
+flint n  : 0.829
+flint p  : 2.031
+ntt64 l  : 4.943
+Min_25 l : 0.407
+libbf    : 0.859
 ```

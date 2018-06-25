@@ -123,34 +123,50 @@ Ntt benchmark:
 
 ### Test result
 ```cpp
-ntt test: isRandom = 1, largeOnly = 0, n = 1000000, mod = 100019
-flint    : 1.141
-ntt32 s  : 1.016
-ntt32 l  : 1.167
-ntt64 s  : 1.532
-ntt64 l  : 1.666
-Min_25 s : 0.156
-Min_25 l : 0.156
-libbf    : 0.812
-ntt test: isRandom = 1, largeOnly = 1, n = 1479725, mod = 100000000003
-flint    : 2.891
-ntt32 l  : 2.375
-ntt64 l  : 3.375
-Min_25 l : 0.328
-libbf    : 1.344
-ntt test: isRandom = 0, largeOnly = 0, n = 999996, mod = 1000003
-flint    : 1.219
-ntt32 s  : 1.000
-ntt32 l  : 1.140
-ntt64 s  : 1.519
-ntt64 l  : 1.642
+ntt test : isRandom = 1, size = 0, n = 1000000, mod = 100019
+flint n  : 0.391
+flint p  : 1.151
+ntt32 s  : 1.011
+ntt32 l  : 1.158
+ntt64 s  : 1.548
+ntt64 l  : 1.698
 Min_25 s : 0.141
-Min_25 l : 0.156
-libbf    : 0.813
-ntt test: isRandom = 0, largeOnly = 1, n = 1479725, mod = 100000000003
-flint    : 2.750
-ntt32 l  : 2.390
-ntt64 l  : 3.383
-Min_25 l : 0.328
-libbf    : 1.376
+Min_25 l : 0.172
+libbf    : 0.833
+ntt test : isRandom = 1, size = 1, n = 1479725, mod = 100000000003
+flint n  : 1.233
+flint p  : 2.893
+ntt32 l  : 2.395
+ntt64 l  : 3.436
+Min_25 l : 0.345
+libbf    : 1.360
+ntt test : isRandom = 1, size = 2, n = 1000000, mod = 316227766016779
+flint n  : 0.842
+flint p  : 2.063
+ntt64 l  : 1.689
+Min_25 l : 0.172
+libbf    : 0.848
+ntt test : isRandom = 0, size = 0, n = 999996, mod = 1000003
+flint n  : 0.406
+flint p  : 1.213
+ntt32 s  : 1.018
+ntt32 l  : 1.165
+ntt64 s  : 1.516
+ntt64 l  : 1.654
+Min_25 s : 0.141
+Min_25 l : 0.172
+libbf    : 0.811
+ntt test : isRandom = 0, size = 1, n = 1479725, mod = 100000000003
+flint n  : 1.219
+flint p  : 2.751
+ntt32 l  : 2.381
+ntt64 l  : 3.401
+Min_25 l : 0.344
+libbf    : 1.380
+ntt test : isRandom = 0, size = 2, n = 1000000, mod = 316227766016779
+flint n  : 0.828
+flint p  : 2.063
+ntt64 l  : 1.689
+Min_25 l : 0.172
+libbf    : 0.851
 ```

@@ -6,29 +6,28 @@
 #define HAS_POLY_MUL_LIBBF 1
 
 namespace ntt_libbf {
-template<typename T>
+template <typename T>
 SL void bf_ntt_init(const T* X, int n, bf_t* target) {
   bf_init(target);
 
   bf_set_ui(target, 1);
 
   bf_resize(target, 2 * n);
-  target->expn = __builtin_clzll(X[n-1]);
+  target->expn = __builtin_clzll(X[n - 1]);
 
   const int len = target->len;
   auto* data = target->tab;
   for (int i = 0; i < n; ++i) {
-    data[i<<1] = (uint64)X[i];
-    data[(i<<1)|1] = 0;
+    data[i << 1] = (uint64)X[i];
+    data[(i << 1) | 1] = 0;
   }
 }
 
-SL void bf_ntt_deinit(bf_t* target) {
-  bf_delete(target);
-}
+SL void bf_ntt_deinit(bf_t* target) { bf_delete(target); }
 
-template<typename T>
-SL void poly_mul_ntt(const T* X, int n, const T* Y, int m, T* result, int64 mod) {
+template <typename T>
+SL void poly_mul_ntt(const T* X, int n, const T* Y, int m, T* result,
+                     int64 mod) {
   bf_t x, y;
 
   bf_ntt_init(X, n, &x);
@@ -50,8 +49,8 @@ SL void poly_mul_ntt(const T* X, int n, const T* Y, int m, T* result, int64 mod)
   const int size = n + m - 1;
   const auto* data = z1.tab;
   for (int i = 0; i < size; ++i) {
-    const uint64 low = data[i<<1];
-    const uint64 hi = data[(i<<1)|1];
+    const uint64 low = data[i << 1];
+    const uint64 hi = data[(i << 1) | 1];
     if (hi == 0) {
       result[i] = mod > 0 ? low % mod : low;
     } else {
@@ -67,7 +66,7 @@ SL void poly_mul_ntt(const T* X, int n, const T* Y, int m, T* result, int64 mod)
   bf_ntt_deinit(&x);
 }
 
-template<typename T>
+template <typename T>
 SL vector<T> poly_mul_ntt(const vector<T>& X, const vector<T>& Y, int64 mod) {
   const int n = (int)X.size();
   const int m = (int)Y.size();
@@ -77,7 +76,7 @@ SL vector<T> poly_mul_ntt(const vector<T>& X, const vector<T>& Y, int64 mod) {
   return result;
 }
 
-} // namespace ntt_libbf
+}  // namespace ntt_libbf
 #else
 #define HAS_POLY_MUL_LIBBF 0
 #endif

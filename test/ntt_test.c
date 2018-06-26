@@ -25,20 +25,26 @@ MulImpl mulImpl[] = {
 #endif
 };
 
-SL void test_impl(int isRandom, int size, int n, int64 mod) {
-  fprintf(stderr, "%-8s : isRandom = %d, size = %d, n = %d, mod = %lld\n",
-          "ntt test", isRandom, size, n, mod);
+const char* dataPolicy[3] = {
+  "random",
+  "min mod",
+  "max mod",
+};
+
+SL void test_impl(int dp, int size, int n, int64 mod) {
+  fprintf(stderr, "%-8s : data = %s, size = %d, n = %d, mod = %lld\n",
+          "ntt test", dataPolicy[dp], size, n, mod);
 
   vector<uint64> x, y;
   srand(123456789);
-  if (isRandom) {
+  if (dp == 0) {
     for (int i = 0; i < n; ++i) {
       x.push_back((uint64)crand63() % mod),
           y.push_back((uint64)crand63() % mod);
     }
   } else {
     for (int i = 0; i < n; ++i) {
-      x.push_back(mod - 1), y.push_back(mod - 1);
+      x.push_back(dp == 1 ? 0 : mod - 1), y.push_back(dp == 1 ? 0 : mod - 1);
     }
   }
 
@@ -68,16 +74,24 @@ SL void ntt_test() {
   // uint128 target = 2655355665167707426;
   // target = target * 100000000000000000 + 92721528518903091;
   // cerr << mod128_64(target, 100000000003) << endl;
-  test_impl(1, 0, 1000000, 100019);
-  test_impl(1, 1, 1479725, 100000000003);
-  test_impl(1, 2, 1000000, 316227766016779);
+  
+  test_impl(0, 0, 1000000, 100019);
+  test_impl(0, 1, 1479725, 100000000003);
+  test_impl(0, 2, 1000000, 316227766016779);
+
+  /*
+    Curent implementation cannot pass this test.
+    test_impl(1, 0, 1000000, 100019);
+    test_impl(1, 1, 1479725, 100000000003);
+    test_impl(1, 2, 1000000, 316227766016779);
+  */
 
   // 1e18
-  test_impl(0, 0, 999996, 1000003);
+  test_impl(2, 0, 999996, 1000003);
   // 1e28
-  test_impl(0, 1, 1479725, 100000000003);
+  test_impl(2, 1, 1479725, 100000000003);
   // 1e35
-  test_impl(0, 2, 1000000, 316227766016779);
+  test_impl(2, 2, 1000000, 316227766016779);
 }
 PE_REGISTER_TEST(&ntt_test, "ntt_test", BIG);
 #endif

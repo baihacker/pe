@@ -91,7 +91,7 @@ Please read the README or INSTALL doc of the target library before building it, 
  
    >* Use /MT (release) or /MTd (debug) to specify c-runtime.
    
-   >* Add libgcc_s.a;libgcc.a; in dependent library list. (They can be found from you MinGW directory)
+   >* Add libgcc_s.a;libgcc.a; in dependent library list. (They can be found in you MinGW directory)
    
    >* Sometimes legacy_stdio_definitions.lib; is also necessary to add to dependent library list.
    

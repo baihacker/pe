@@ -76,6 +76,12 @@ struct bi_allocator_fixed_size {
 typedef bi_trait30 bi_trait;
 typedef bi_allocator_std bi_allocator;
 
+static const struct alloc_mem {
+} alloc_mem_tag;
+
+static const struct zero_initialize {
+} zero_initialize_tag;
+
 class BigInteger {
  public:
   // constructors, destructors, value semantics.
@@ -225,12 +231,6 @@ class BigInteger {
 
  private:
   // Internal constructor
-  static const struct alloc_mem {
-  } alloc_mem_tag;
-  
-  static const struct zero_initialize {
-  } zero_initialize_tag;
-
   BigInteger(int size, alloc_mem) : BigInteger(zero_initialize_tag) {
     reserve(size);
     data_[0] = 0;
@@ -740,12 +740,20 @@ class BigInteger {
     } else {
       uint64 add = 0;
       for (int i = l.pos_; i > 0; --i) {
+#if PE_HAS_INT128
         const uint128 x = ((uint128)add << bi_trait::bit_count) + l.data_[i];
+#else
+		const uint64 x = ((uint64)add << bi_trait::bit_count) + l.data_[i];
+#endif
         const uint64 next_add = x % r;
         l.data_[i] = x / r;
         add = next_add;
       }
+#if PE_HAS_INT128
       const uint128 x = ((uint128)add << bi_trait::bit_count) + l.data_[0];
+#else
+	  const uint64 x = ((uint64)add << bi_trait::bit_count) + l.data_[0];
+#endif
       l.data_[0] = x / r;
       remain = x % r;
       l.fixPos();
@@ -1312,7 +1320,7 @@ inline BigInteger operator&(const BigInteger& l, const BigInteger& r) {
   }
 
   const int minPos = min(l.pos_, r.pos_);
-  BigInteger ret(minPos + 1, BigInteger::alloc_mem_tag);
+  BigInteger ret(minPos + 1, alloc_mem_tag);
   for (int i = 0; i <= minPos; ++i) {
     ret[i] = l[i] & r[i];
   }
@@ -1328,7 +1336,7 @@ inline BigInteger operator^(const BigInteger& l, const BigInteger& r) {
   }
 
   const int maxPos = max(l.pos_, r.pos_);
-  BigInteger ret(maxPos + 1, BigInteger::alloc_mem_tag);
+  BigInteger ret(maxPos + 1, alloc_mem_tag);
   for (int i = 0; i <= maxPos; ++i) {
     unsigned int t = 0;
     if (i <= l.pos_) t ^= l[i];
@@ -1347,7 +1355,7 @@ inline BigInteger operator|(const BigInteger& l, const BigInteger& r) {
   }
 
   const int maxPos = max(l.pos_, r.pos_);
-  BigInteger ret(maxPos + 1, BigInteger::alloc_mem_tag);
+  BigInteger ret(maxPos + 1, alloc_mem_tag);
   for (int i = 0; i <= maxPos; ++i) {
     unsigned int t = 0;
     if (i <= l.pos_) t |= l[i];

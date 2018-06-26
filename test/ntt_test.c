@@ -1,7 +1,7 @@
 #include "pe_test.h"
 
 namespace ntt_test {
-#if PE_HAS_INT128 && ENABLE_FLINT
+#if ENABLE_FLINT
 typedef vector<uint64> (*poly_mul_t)(const vector<uint64>& X,
                                      const vector<uint64>& Y, int64 mod);
 struct MulImpl {
@@ -13,11 +13,13 @@ MulImpl mulImpl[] = {
     {&poly_mul_flint<uint64>, 2, "flint n"},
     {&poly_mul_flint_prime<uint64>, 2, "flint p"},
     {&ntt32::poly_mul_ntt_small<uint64>, 0, "ntt32 s"},
+#if PE_HAS_INT128
     {&ntt32::poly_mul_ntt<uint64>, 1, "ntt32 l"},
     {&ntt64::poly_mul_ntt_small<uint64>, 0, "ntt64 s"},
     {&ntt64::poly_mul_ntt<uint64>, 2, "ntt64 l"},
     {&ntt_min25::poly_mul_ntt_small<uint64>, 0, "Min_25 s"},
     {&ntt_min25::poly_mul_ntt<uint64>, 2, "Min_25 l"},
+#endif
 #if ENABLE_LIBBF && HAS_POLY_MUL_LIBBF
     {&ntt_libbf::poly_mul_ntt<uint64>, 2, "libbf"},
 #endif

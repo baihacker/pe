@@ -106,11 +106,20 @@ SL auto mul_mod_ex(T1 a, T2 b, M mod)
   typedef typename BigIntegerType<int64, T>::type atLeastInt64T;
 
   if (mod <= PE_SOI63) {
-    return mul_mod_impl<atLeastInt64T, M>(a, b, mod);
+    return (typename BigIntegerType<T1, T2>::type)mul_mod_impl<atLeastInt64T, M>(a, b, mod);
   }
 #if PE_HAS_INT128
-  return mul_mod_impl<int128, M>(a, b, mod);
+  return (typename BigIntegerType<T1, T2>::type)mul_mod_impl<int128, M>(a, b, mod);
+#elif defined(COMPILER_MSVC)
+	const int64 x = a, y = b, m = mod;
+    int64 r = (x * y - (int64)(((long double)x * y) / m) * m);
+    if (r >= m) r -= r / m * m;
+    if (r < 0) r += m;
+	return (typename BigIntegerType<T1, T2>::type)r;
 #else
+
+#warning "mul_mod_ex may be very slow."
+
   atLeastInt64T ret = 0;
   atLeastInt64T flag = b;
   for (atLeastInt64T d = 1; d <= (atLeastInt64T)a; d <<= 1) {
@@ -119,7 +128,7 @@ SL auto mul_mod_ex(T1 a, T2 b, M mod)
     }
     flag = (flag << 1) % mod;
   }
-  return ret;
+  return (typename BigIntegerType<T1, T2>::type)ret;
 #endif
 }
 

@@ -40,7 +40,7 @@ SL void gf_test() {
       int s = 0;
       int bc = 0;
       for (int j = 0; j < 5; ++j)
-        if (i & (1<<j)) ++bc, s += can[j];
+        if (i & (1<<j)) ++bc, s += (int)can[j];
       if (bc & 1) --coe[s]; else ++coe[s];
     }
     auto gfresult = gf_first({vector<int64>(coe, coe+92), mod}, {{1}, mod}, 10000);
@@ -69,7 +69,7 @@ SL void minimal_polynomial_test() {
   assert(v[0] == P - 1);
   assert(v[1] == P - 1);
   assert(v[2] == 1);
-  const int n = v.data.size();
+  const int n = (int)v.data.size();
   int64 ans = 0;
   for (int i = 0; i < n; ++i)
     ans += v.at(i) * s.at(i);
@@ -172,6 +172,7 @@ SL void poly_fact_sum_mod_test() {
   
   const int64 n = 100000000;
   auto ans = moder.cal(n);
+
   int64 now = 1;
   int64 s = 1;
   for (int64 i = 1; i <= n; ++i) {
@@ -180,5 +181,5 @@ SL void poly_fact_sum_mod_test() {
   }
   assert(ans == s);
 }
-PE_REGISTER_TEST(&poly_fact_sum_mod_test, "poly_fact_sum_mod_test", MEDIUM);
+PE_REGISTER_TEST(&poly_fact_sum_mod_test, "poly_fact_sum_mod_test", BIG);
 }

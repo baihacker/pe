@@ -35,6 +35,6 @@ struct InitializeHelper {
 #define MAKE_INITIALIZER_NAME(LINE_NUMBER) MAKE_INITIALIZER_NAME_IMPL(LINE_NUMBER)
 
 #define PE_REGISTER_TEST(t, d, s) \
-static InitializeHelper MAKE_INITIALIZER_NAME(__LINE__)([](){getTester().tests.push_back((TestItem){t, d, s});})
+static InitializeHelper MAKE_INITIALIZER_NAME(__LINE__)([](){getTester().tests.push_back({t, d, s});})
 
 #endif

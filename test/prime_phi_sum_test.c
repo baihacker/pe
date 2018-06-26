@@ -6,7 +6,7 @@ int64 pc[1000001];
 
 SL void verify_cnt(const int64 n, const DVA<int64>& result)
 {
-  int64 v = sqrt(n);
+  int64 v = (int64)sqrt(n);
   for (int j = 1; j <= v; ++j)
   {
     assert(result[j] == pc[j]);
@@ -16,7 +16,7 @@ SL void verify_cnt(const int64 n, const DVA<int64>& result)
 
 SL void verify_sum(const int64 n, const DVA<int64>& result)
 {
-  int64 v = sqrt(n);
+  int64 v = (int64)sqrt(n);
   for (int j = 1; j <= v; ++j)
   {
     assert(result[j] == ps[j]);

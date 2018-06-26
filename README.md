@@ -127,100 +127,100 @@ Ntt benchmark:
 
 #### Openmp enabled
 ```cpp
-ntt test : isRandom = 1, size = 0, n = 1000000, mod = 100019
-flint n  : 0.391
-flint p  : 1.151
+ntt test : data = random, size = 0, n = 1000000, mod = 100019
+flint n  : 0.409
+flint p  : 1.145
+ntt32 s  : 1.002
+ntt32 l  : 1.170
+ntt64 s  : 1.581
+ntt64 l  : 1.683
+Min_25 s : 0.157
+Min_25 l : 0.178
+libbf    : 0.819
+ntt test : data = random, size = 1, n = 1479725, mod = 100000000003
+flint n  : 1.232
+flint p  : 2.923
+ntt32 l  : 2.378
+ntt64 l  : 3.467
+Min_25 l : 0.343
+libbf    : 1.362
+ntt test : data = random, size = 2, n = 1000000, mod = 316227766016779
+flint n  : 0.840
+flint p  : 2.081
+ntt64 l  : 1.709
+Min_25 l : 0.182
+libbf    : 0.866
+ntt test : data = max mod, size = 0, n = 999996, mod = 1000003
+flint n  : 0.418
+flint p  : 1.231
 ntt32 s  : 1.011
-ntt32 l  : 1.158
-ntt64 s  : 1.548
-ntt64 l  : 1.698
-Min_25 s : 0.141
-Min_25 l : 0.172
-libbf    : 0.833
-ntt test : isRandom = 1, size = 1, n = 1479725, mod = 100000000003
-flint n  : 1.233
-flint p  : 2.893
-ntt32 l  : 2.395
-ntt64 l  : 3.436
-Min_25 l : 0.345
+ntt32 l  : 1.160
+ntt64 s  : 1.568
+ntt64 l  : 1.670
+Min_25 s : 0.157
+Min_25 l : 0.185
+libbf    : 0.821
+ntt test : data = max mod, size = 1, n = 1479725, mod = 100000000003
+flint n  : 1.235
+flint p  : 2.778
+ntt32 l  : 2.373
+ntt64 l  : 3.375
+Min_25 l : 0.348
 libbf    : 1.360
-ntt test : isRandom = 1, size = 2, n = 1000000, mod = 316227766016779
-flint n  : 0.842
-flint p  : 2.063
-ntt64 l  : 1.689
-Min_25 l : 0.172
-libbf    : 0.848
-ntt test : isRandom = 0, size = 0, n = 999996, mod = 1000003
-flint n  : 0.406
-flint p  : 1.213
-ntt32 s  : 1.018
-ntt32 l  : 1.165
-ntt64 s  : 1.516
-ntt64 l  : 1.654
-Min_25 s : 0.141
-Min_25 l : 0.172
-libbf    : 0.811
-ntt test : isRandom = 0, size = 1, n = 1479725, mod = 100000000003
-flint n  : 1.219
-flint p  : 2.751
-ntt32 l  : 2.381
-ntt64 l  : 3.401
-Min_25 l : 0.344
-libbf    : 1.380
-ntt test : isRandom = 0, size = 2, n = 1000000, mod = 316227766016779
-flint n  : 0.828
-flint p  : 2.063
-ntt64 l  : 1.689
-Min_25 l : 0.172
-libbf    : 0.851
+ntt test : data = max mod, size = 2, n = 1000000, mod = 316227766016779
+flint n  : 0.843
+flint p  : 2.086
+ntt64 l  : 1.663
+Min_25 l : 0.184
+libbf    : 0.865
 ```
 
 #### Openmp disabled (option "-fopenmp" removed)
 ```cpp
-ntt test : isRandom = 1, size = 0, n = 1000000, mod = 100019
-flint n  : 0.407
-flint p  : 1.156
-ntt32 s  : 3.076
-ntt32 l  : 4.656
-ntt64 s  : 2.454
-ntt64 l  : 4.938
-Min_25 s : 0.157
-Min_25 l : 0.343
-libbf    : 0.813
-ntt test : isRandom = 1, size = 1, n = 1479725, mod = 100000000003
-flint n  : 1.218
-flint p  : 2.859
-ntt32 l  : 9.813
-ntt64 l  : 10.375
-Min_25 l : 0.719
-libbf    : 1.344
-ntt test : isRandom = 1, size = 2, n = 1000000, mod = 316227766016779
-flint n  : 0.828
-flint p  : 2.046
-ntt64 l  : 5.002
-Min_25 l : 0.438
-libbf    : 0.859
-ntt test : isRandom = 0, size = 0, n = 999996, mod = 1000003
+ntt test : data = random, size = 0, n = 1000000, mod = 100019
+flint n  : 0.405
+flint p  : 1.159
+ntt32 s  : 3.135
+ntt32 l  : 4.723
+ntt64 s  : 2.509
+ntt64 l  : 5.001
+Min_25 s : 0.168
+Min_25 l : 0.360
+libbf    : 0.818
+ntt test : data = random, size = 1, n = 1479725, mod = 100000000003
+flint n  : 1.236
+flint p  : 2.956
+ntt32 l  : 9.907
+ntt64 l  : 10.506
+Min_25 l : 0.744
+libbf    : 1.361
+ntt test : data = random, size = 2, n = 1000000, mod = 316227766016779
+flint n  : 0.831
+flint p  : 2.084
+ntt64 l  : 5.077
+Min_25 l : 0.422
+libbf    : 0.860
+ntt test : data = max mod, size = 0, n = 999996, mod = 1000003
 flint n  : 0.421
-flint p  : 1.203
-ntt32 s  : 3.078
-ntt32 l  : 4.672
-ntt64 s  : 2.438
-ntt64 l  : 4.906
-Min_25 s : 0.156
-Min_25 l : 0.375
-libbf    : 0.813
-ntt test : isRandom = 0, size = 1, n = 1479725, mod = 100000000003
-flint n  : 1.219
-flint p  : 2.750
-ntt32 l  : 9.782
-ntt64 l  : 10.344
-Min_25 l : 0.719
-libbf    : 1.344
-ntt test : isRandom = 0, size = 2, n = 1000000, mod = 316227766016779
-flint n  : 0.829
-flint p  : 2.031
-ntt64 l  : 4.943
-Min_25 l : 0.407
-libbf    : 0.859
+flint p  : 1.224
+ntt32 s  : 3.126
+ntt32 l  : 4.723
+ntt64 s  : 2.465
+ntt64 l  : 4.992
+Min_25 s : 0.174
+Min_25 l : 0.355
+libbf    : 0.825
+ntt test : data = max mod, size = 1, n = 1479725, mod = 100000000003
+flint n  : 1.229
+flint p  : 2.760
+ntt32 l  : 9.954
+ntt64 l  : 10.497
+Min_25 l : 0.728
+libbf    : 1.368
+ntt test : data = max mod, size = 2, n = 1000000, mod = 316227766016779
+flint n  : 0.839
+flint p  : 2.081
+ntt64 l  : 5.037
+Min_25 l : 0.428
+libbf    : 0.862
 ```

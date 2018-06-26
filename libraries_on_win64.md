@@ -75,7 +75,10 @@ Please read the README or INSTALL doc of the target library before building it, 
    
    >* some libraries don't have a ".a" file, so just include the header files. e.g. eigen.
    
- * Note: the include file order and the additional library order are important (it usually happens). If it cannot find a symbole, please try to adjust the library order.
+ * Note:
+   >* The order of included header files is also import. Please adjust them if necessaries.
+
+   >* The order of libraries (the order of additional library in compile command) is important (it usually happens). If the compiler says it cannot find a symbol, please try to adjust the library order. (Also try to adjust the order for other cases)
  
 ### MSVC
  * You can edit the include path and lib path in the solution property dialog.
@@ -84,8 +87,14 @@ Please read the README or INSTALL doc of the target library before building it, 
  
    >* #pragma comment(lib, "libzzz.lib") is another way to add dependent libraries.
    
- * If the library is built by MinGW, please use /MT (release) or /MTd (debug) to specify c-runtime.
+ * If the library is built by MinGW
  
+   >* Use /MT (release) or /MTd (debug) to specify c-runtime.
+   
+   >* Add libgcc_s.a;libgcc.a; in dependent library list.
+   
+   >* Sometimes legacy_stdio_definitions.lib; is also necessary to add to dependent library list.
+   
  * Enable other options if you want, e.g. openmp
  
  * Sample options to compile a code using pe.
@@ -126,4 +135,7 @@ clean:
 -include $(wildcard *.d)
  ```
    * Library order: "-lbf -lgmpxx -lflint -lgmp -lmpfr -lmpir"
+   
+   * The compiled binaries (flint (gmp, mpfr, mpir are in flint), libbf) on windows (x64) can be found [here](https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA) (pwd:x7cg)
+
 [To be continued]

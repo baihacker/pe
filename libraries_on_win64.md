@@ -53,4 +53,45 @@ Please read the README or INSTALL doc of the target library before building it, 
   
   > "make clean" cleans intermediate outputs generated in the build process
 
+## Use
+### MinGW
+#### General use
+ * Make sure the parent folder of "g++.exe" is in environment PATH.
+ 
+ * Use "g++ source_code.cpp" to compile your code.
+ 
+ * Usually, I add "--std=c++11 -O3 -march=native -mtune=native -Wl,--stack,268435456" to compile my code.
+ 
+ * Please add "-fopenmp" if you want to use openmp.
+ 
+#### Use a library
+ * CPLUS_INCLUDE_PATH contains the corresponding header files.
+ 
+   >* if "D:/X/Y/zzz.h" is your header file and CPLUS_INCLUDE_PATH contains "D:/X/Y" you can use #include <zzz.h> in your code. If "D:/X" is in it, you can use #include <Y/zzz.h> in your code.
+   
+ * LIBRARY_PATH contains the corresponding lib files.
+ 
+   >* if "D:/X/Y/libzzz.a" is in LIBRARY_PATH, you can use "-lzzz" to add that in your compile command.
+   
+   >* some libraries don't have a ".a" file, so just include the header files. e.g. eigen.
+   
+ * Note: the include file order and the additional library order are important (it usually happens). If it cannot find a symbole, please try to adjust the library order.
+ 
+### MSVC
+ * You can edit the include path and lib path in the solution property dialog.
+ 
+ * In the solution property dialog, you can also add dependent libraries (in linker option section). Unlike that in MinGW, you need to specify libzzz.a instead of zzz.
+ 
+   >* #pragma comment(lib, "libzzz.lib") is another way to add dependent libraries.
+   
+ * If the library is built by MinGW, please use /MT (release) or /MTd (debug) to specify c-runtime.
+ 
+ * Enable other optoins if you want, e.g. openmp
+ 
+ * Sample options to compile a code using pe.
+ 
+   >* Release: /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Fd"x64\Release\vc141.pdb" /Zc:inline /fp:precise /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /errorReport:prompt /WX- /Zc:forScope /Gd /Oi /MT /openmp /FC /Fa"x64\Release\" /EHsc /nologo /Fo"x64\Release\" /Fp"x64\Release\pe.pch" /diagnostics:classic
+   
+   >* Debug: /GS /W3 /Zc:wchar_t /ZI /Gm- /Od /Fd"x64\Debug\vc141.pdb" /Zc:inline /fp:precise /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /errorReport:prompt /WX- /Zc:forScope /RTC1 /Gd /MTd /openmp /FC /Fa"x64\Debug\" /EHsc /nologo /Fo"x64\Debug\" /Fp"x64\Debug\pe.pch" /diagnostics:classic
+   
 [To be continued]

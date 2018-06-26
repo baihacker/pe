@@ -86,12 +86,44 @@ Please read the README or INSTALL doc of the target library before building it, 
    
  * If the library is built by MinGW, please use /MT (release) or /MTd (debug) to specify c-runtime.
  
- * Enable other optoins if you want, e.g. openmp
+ * Enable other options if you want, e.g. openmp
  
  * Sample options to compile a code using pe.
  
    >* Release: /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Fd"x64\Release\vc141.pdb" /Zc:inline /fp:precise /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /errorReport:prompt /WX- /Zc:forScope /Gd /Oi /MT /openmp /FC /Fa"x64\Release\" /EHsc /nologo /Fo"x64\Release\" /Fp"x64\Release\pe.pch" /diagnostics:classic
    
    >* Debug: /GS /W3 /Zc:wchar_t /ZI /Gm- /Od /Fd"x64\Debug\vc141.pdb" /Zc:inline /fp:precise /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /errorReport:prompt /WX- /Zc:forScope /RTC1 /Gd /MTd /openmp /FC /Fa"x64\Debug\" /EHsc /nologo /Fo"x64\Debug\" /Fp"x64\Debug\pe.pch" /diagnostics:classic
-   
+
+## pe
+ * Build flint, mpfr, mpir (gmp also included)
+   >* see [here](https://blog.csdn.net/baihacker/article/details/80691977) TODO(baihacker): translate it to English and put it here
+ * Build libbf, use this makefile. It will generate libbf.avx2.a and libbf.generic.a, please choose one and rename it to libbf.a
+ ```cpp
+ CC=$(CROSS_PREFIX)gcc
+CFLAGS=-Wall
+CFLAGS+=-O3
+LDFLAGS=
+
+PROGS+=libbf.generic.a libbf.avx2.a
+
+all: $(PROGS)
+
+libbf.generic.a : libbf.o  cutils.o
+	gcc-ar crv libbf.generic.a cutils.o libbf.o
+
+libbf.avx2.a : libbf.avx2.o  cutils.avx2.o
+	gcc-ar crv libbf.avx2.a cutils.avx2.o libbf.avx2.o
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+%.avx2.o: %.c
+	$(CC) $(CFLAGS) -mavx -mavx2 -mfma -mbmi2 -c -o $@ $<
+
+clean:
+	rm -f $(PROGS) *.o *.d *.a *.exe *~
+
+-include $(wildcard *.d)
+ ```
+   * Library order: "-lbf -lgmpxx -lflint -lgmp -lmpfr -lmpir"
 [To be continued]

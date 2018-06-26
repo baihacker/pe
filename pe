@@ -1,30 +1,7 @@
 #ifndef __PE_H__
 #define __PE_H__
 
-/**
- * Instruction for how to use pe in MSVC.
- * 1. Set include path.
- * 2. Set lib path.
- * 3. If dependent libraries are built by MinGW, add the following lib to linker input (remove unused libraries):
- * libbf.a;libgmpxx.a;libflint.a;libgmp.a;libmpfr.a;libmpir.a;libgcc_s.a;libgcc.a;legacy_stdio_definitions.lib;
- * 4. Runtime: /MT or /MTd
- * 5. Final compile options (release):
- * /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Fd"x64\Release\vc141.pdb" /Zc:inline /fp:precise /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /errorReport:prompt /WX- /Zc:forScope /Gd /Oi /MT /openmp /FC /Fa"x64\Release\" /EHsc /nologo /Fo"x64\Release\" /Fp"x64\Release\pe.pch" /diagnostics:classic 
- * 6. Final compile options (debug):
- * /GS /W3 /Zc:wchar_t /ZI /Gm- /Od /Fd"x64\Debug\vc141.pdb" /Zc:inline /fp:precise /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /errorReport:prompt /WX- /Zc:forScope /RTC1 /Gd /MTd /openmp /FC /Fa"x64\Debug\" /EHsc /nologo /Fo"x64\Debug\" /Fp"x64\Debug\pe.pch" /diagnostics:classic
- *
- * Tested under Microsoft Visual Studio Community 2017 15.7.2
- */
-
-/**
- * Instructions for how to use pe in MinGW or gcc
- * 1. Set include path.
- * 2. Set lib path.
- * 3. Compile options:
- * -o a.exe --std=c++11 -O3 -march=native -mtune=native -fopenmp -Wl,--stack,268435456 -lbf -lgmpxx -lflint -lgmp -lmpfr -lmpir
- *
- * Tested under gcc version 8.1.0 (x86_64-win32-seh-rev0, Built by MinGW-W64 project)
- */
+// See https://github.com/baihacker/pe/blob/master/libraries_on_win64.md#use for how to use a library in MinGW or VC++
 
 
 // Compiler and cpp version check
@@ -121,87 +98,21 @@ typedef unsigned __int128 uint128;
 #error "c++11 or above only"
 #endif
 
+// See https://github.com/baihacker/pe/blob/master/libraries_on_win64.md for how to build and use a library.
+// The compiled binaries (flint (gmp, mpfr, mpir are in flint), libbf) on windows (x64) can be found here
+// https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA (pwd:x7cg)
 
-/**
-1. Build gmp
-  Commands:
-  
-  ./configure --prefix=/c/gmp-6.1.2 --enable-cxx
-  make
-  make check
-  make install
-  
-  Build note for windows 64-bit target:
-  For windows 64-bit target, use http://www.msys2.org/ and mingw64 to build.
-  Add --host=x86_64-w64-mingw32 to configure command.
-  Don't forget to rename mingw32-make.exe to make.exe in mingw64's binary folder.
-  
-2. Install gmp (MinGW)
-  Make sure the parent folder of gmp.h and gmpxx.h are in include path
-  e.g. Add that folder to environment variable CPLUS_INCLUDE_PATH
-  
-  Make sure the parent folder of libgmpxx.a and libgmp.a are in lib path
-  e.g. Add that folder to environment variable LIBRARY_PATH
-  
-  Add -lgmpxx -lgmp in compile command. Note: the order matters
-  
-3. Install gmp (VC++)
-  Similar to the previous section. You need to config the include path and
-  lib path and add dependent libs in solution property dialog.
-
-4. Use openmp
-  Add -fopenmp in gcc compile command of config it in vc solution property dialog.
-  
-5. Use Eigen
-  Please make sure #include <Eigen/Dense> work
-  
-6. Build flint, mpfr, mpir (gmp also included)
-  See https://blog.csdn.net/baihacker/article/details/80691977 (chinese) for how to build and install flint.
-
-7. Build libbf
-  Use the following makefile will generate libbf.avx2.a and libbf.generic.a please choose one and rename it to libbf.a
-  Note: be aware of the syntax of makefile. tab before commands.
-
-CC=$(CROSS_PREFIX)gcc
-CFLAGS=-Wall
-CFLAGS+=-O3
-LDFLAGS=
-
-PROGS+=libbf.generic.a libbf.avx2.a
-
-all: $(PROGS)
-
-libbf.generic.a : libbf.o  cutils.o
-	gcc-ar crv libbf.generic.a cutils.o libbf.o
-
-libbf.avx2.a : libbf.avx2.o  cutils.avx2.o
-	gcc-ar crv libbf.avx2.a cutils.avx2.o libbf.avx2.o
-
-%.o: %.c
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-%.avx2.o: %.c
-	$(CC) $(CFLAGS) -mavx -mavx2 -mfma -mbmi2 -c -o $@ $<
-
-clean:
-	rm -f $(PROGS) *.o *.d *.a *.exe *~
-
--include $(wildcard *.d)
-
-8. Compiled binary (flint (gmp, mpfr, mpir are in flint), libbf) on windows (x64)
-  https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA (pwd:x7cg)
-  
-9. The order of libs are important for MinGW:
-  Please use: -lbf -lgmpxx -lflint -lgmp -lmpfr -lmpir
- */
 
 // Configurations
 #define ENABLE_ASSERT 1
 
+// Add -fopenmp in gcc compile command of config it in vc solution property dialog.
+// Change 1 to 0, if you don't want pe to use OPENMP even if openmp is enabled by compiler.
 #define ENABLE_OPENMP ((1 && defined(_OPENMP)))
 
 // http://eigen.tuxfamily.org/index.php?title=Main_Page
 // Doc: http://eigen.tuxfamily.org/dox/
+// Please make sure #include <Eigen/Dense> work
 #define ENABLE_EIGEN 1
 
 // https://gmplib.org/

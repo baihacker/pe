@@ -11,12 +11,19 @@ Installation:
 * Make sure the environment variable CPLUS_INCLUDE_PATH contain D:\usr\include.
 * In [pe](https://github.com/baihacker/pe/blob/master/pe), configure this library. 
   * ENABLE_EIGEN whether to use [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page) library.
+  
   * ENABLE_OPENMP swhether to use [openmp](http://www.openmp.org).
+  
   * ENABLE_GMP whether to use [gmp](https://gmplib.org).
+  
   * ENABLE_FLINT whether to use [FLINT](http://www.flintlib.org).
+  
   * ENABLE_MPFR whether to use [mpfr](https://www.mpfr.org).
+  
   * ENABLE_MPIR whether to use [mpir](http://mpir.org).
+  
   * ENABLE_LIBBF wheter to use [libbf](https://bellard.org/libbf).
+  
   > Note: The compiled flint, gmp, mpfr, mpir, libbf (all for win64) can be found [here](https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA)(pwd:x7cg). flint, gmp, mpfr, mpi are in package flint.
 
 * [optional, recommended] Generate precompile header "pe.hpp.gch".

@@ -91,5 +91,51 @@ SL void ntt_test() {
   test_impl(2, 2, 1000000, 316227766016779);
 }
 PE_REGISTER_TEST(&ntt_test, "ntt_test", BIG);
+
+
+SL void ntt_performance_test() {
+  
+  uint64 mods[3] = {100019, 100000000003, 316227766016779};
+  
+  for (int level = 0; level <= 2; ++level) {
+    printf("mod = %lld\n", mods[level]);
+    const auto mod = mods[level];
+
+    printf("log2(n)  ", "");
+
+    for (int n = 10; n <= 20; ++n) {
+      printf("%-6d ", n); 
+    }
+    
+    puts("");
+
+    const int M = sizeof(mulImpl) / sizeof(mulImpl[0]);
+
+    vector<uint64> expected;
+    for (int i = 0; i < M; ++i) {
+      auto who = mulImpl[i];
+      if (who.size < level) continue;
+
+      printf("%-8s ", who.name);
+      srand(314159);
+      for (int n = 10; n <= 20; ++n) {
+        const int size = 1 << n;
+        vector<uint64> x, y;
+        for (int i = 0; i < size; ++i)
+        x.push_back((uint64)crand63() % mod),
+        y.push_back((uint64)crand63() % mod);
+
+        auto start = clock();
+        who.impl(x, y, mod);
+        auto end = clock();
+
+        printf("%-6.3f ", (end-start)*1e-3);
+      }
+      puts("");
+    }
+  }
+}
+
+PE_REGISTER_TEST(&ntt_performance_test, "ntt_performance_test", BIG);
 #endif
 }  // namespace ntt_test

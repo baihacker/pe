@@ -134,6 +134,21 @@ Please read the README or INSTALL doc of the target library before building it, 
      
      4. make install
      
+   * flint
+   
+     1. ./configure --disable-shared --enable-static --prefix=/usr --with-mpir=/usr --with-mpfr=/usr
+     
+     2. Fix error in make file
+     
+       * Replace BUILD_DIR=../build/$(dir); by BUILD_DIR=$(CURDIR)/build/$(dir); in the build command of target libflint.a.
+       
+     3. make
+     
+     4. The previous make may be failed: some object file can not be found because the corresponding module is not built. The corresponding fold has no object file. Please modify BUILD_DIRS to build those missing module only, and use make -B to build these modules.
+     
+     5. Revert the change in makefile in the previous step and try to make -B again. If the error specified in the previous step occurs again, use repeat the fix step.
+     
+     6. make install
  * Build libbf, use this makefile. It will generate libbf.avx2.a and libbf.generic.a, please choose one and rename it to libbf.a
  ```cpp
  CC=$(CROSS_PREFIX)gcc

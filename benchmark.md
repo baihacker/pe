@@ -8,15 +8,15 @@
 * CPU: i7-4790K (MMX, SSE, SSE2, SSE3, SSE4.1, SSE4.2, EM64T, VT-x, AES, AVX, AVX2, FMA3)
 * Compiler: MinGW-x86_64-8.1.0-win32-seh-rt_v6-rev0
 * Msys2: msys2-x86_64-20180531
-* Build libbf:
- > gcc -Wall -O3 -mavx -mavx2 -mfma -mbmi2 -c -o libbf.avx2.o libbf.c
- 
- > gcc -Wall -O3 -mavx -mavx2 -mfma -mbmi2 -c -o cutils.avx2.o cutils.c
- 
- > gcc-ar crv libbf.avx2.a cutils.avx2.o libbf.avx2.o
-* Run tests:
- > -o a.exe --std=c++11 -O3 -march=native -mtune=native -fopenmp -Wl,--stack,268435456 -lbf -lgmpxx -lflint -lgmp -lmpfr -lmpir
 * Test code: [Ntt test](https://github.com/baihacker/pe/blob/master/test/ntt_test.c)
+* Build libbf:
+  > gcc -Wall -O3 -mavx -mavx2 -mfma -mbmi2 -c -o libbf.avx2.o libbf.c
+ 
+  > gcc -Wall -O3 -mavx -mavx2 -mfma -mbmi2 -c -o cutils.avx2.o cutils.c
+ 
+  > gcc-ar crv libbf.avx2.a cutils.avx2.o libbf.avx2.o
+* Run tests:
+  > -o a.exe --std=c++11 -O3 -march=native -mtune=native -fopenmp -Wl,--stack,268435456 -lbf -lgmpxx -lflint -lgmp -lmpfr -lmpir
 
 ### Test result
 

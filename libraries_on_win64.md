@@ -75,8 +75,8 @@ Please read the README or INSTALL doc of the target library before building it, 
    
    * some libraries don't have a ".a" file, so just include the header files. e.g. eigen.
    
- * Note:
-   * The order of included header files is also import. Please adjust them if necessaries.
+ * Note for mutiple libraries:
+   * The order of included header files is important. Please adjust them if necessaries.
 
    * The order of libraries (the order of additional library in compile command) is important (it usually happens). If the compiler says it cannot find a symbol, please try to adjust the library order. (Also try to adjust the order for other cases)
  
@@ -85,7 +85,7 @@ Please read the README or INSTALL doc of the target library before building it, 
  
  * In the solution property dialog, you can also add dependent libraries (in linker option section). Unlike that in MinGW, you need to specify libzzz.a instead of zzz.
  
-   * #pragma comment(lib, "libzzz.lib") is another way to add dependent libraries.
+   * You can also use #pragma comment(lib, "libzzz.lib") in your code to add dependent libraries.
    
  * If the library is built by MinGW
  
@@ -104,7 +104,7 @@ Please read the README or INSTALL doc of the target library before building it, 
    * Debug: /GS /W3 /Zc:wchar_t /ZI /Gm- /Od /Fd"x64\Debug\vc141.pdb" /Zc:inline /fp:precise /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /errorReport:prompt /WX- /Zc:forScope /RTC1 /Gd /MTd /openmp /FC /Fa"x64\Debug\" /EHsc /nologo /Fo"x64\Debug\" /Fp"x64\Debug\pe.pch" /diagnostics:classic
 
 ## Build and use third party library in pe
- * Build flint, mpfr, mpir (gmp also included)
+ * Build gmp, mpir, mpfr and flint
  
    * gmp
    
@@ -150,7 +150,7 @@ Please read the README or INSTALL doc of the target library before building it, 
      
      6. make install
 
- * Build libbf, use this makefile. It will generate libbf.avx2.a and libbf.generic.a, please choose one and rename it to libbf.a
+ * Build libbf, use the following makefile. It will generate libbf.avx2.a and libbf.generic.a, please choose one and rename it to libbf.a
  ```cpp
  CC=$(CROSS_PREFIX)gcc
 CFLAGS=-Wall
@@ -181,5 +181,3 @@ clean:
    * Library order: "-lbf -lgmpxx -lflint -lgmp -lmpfr -lmpir"
    
    * The compiled binaries (flint, gmp, mpfr, mpir, libbf) on windows (x64) can be found [here](https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA) (pwd:x7cg)
-
-[To be continued]

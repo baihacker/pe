@@ -149,6 +149,7 @@ Please read the README or INSTALL doc of the target library before building it, 
      5. Revert the change in makefile in the previous step and try to make -B again. If the error specified in the previous step occurs again, use repeat the fix step.
      
      6. make install
+
  * Build libbf, use this makefile. It will generate libbf.avx2.a and libbf.generic.a, please choose one and rename it to libbf.a
  ```cpp
  CC=$(CROSS_PREFIX)gcc
@@ -179,6 +180,6 @@ clean:
  ```
    * Library order: "-lbf -lgmpxx -lflint -lgmp -lmpfr -lmpir"
    
-   * The compiled binaries (flint (gmp, mpfr, mpir are in flint), libbf) on windows (x64) can be found [here](https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA) (pwd:x7cg)
+   * The compiled binaries (flint, gmp, mpfr, mpir, libbf) on windows (x64) can be found [here](https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA) (pwd:x7cg)
 
 [To be continued]

@@ -128,8 +128,13 @@ SL void ntt_performance_test() {
         auto start = clock();
         who.impl(x, y, mod);
         auto end = clock();
-
+#if 1
         printf("%-6.3f ", (end-start)*1e-3);
+#else
+        uint64 a = n * (1 << n);
+        uint64 b = end - start;
+        printf("%-6.3f ", 1e5 * b / a);
+#endif
       }
       puts("");
     }

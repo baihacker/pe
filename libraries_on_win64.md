@@ -108,11 +108,31 @@ Please read the README or INSTALL doc of the target library before building it, 
  
    * gmp
    
-     * /configure --disable-shared --enable-static --prefix=/usr --enable-cxx --host=x86_64-w64-mingw32
+     1. /configure --disable-shared --enable-static --prefix=/usr --enable-cxx --host=x86_64-w64-mingw32
      
-     * make
+     2. make
      
-     * make install
+     3. make install
+     
+   * mpir
+   
+     1. ./configure --disable-shared --enable-static --prefix=/usr
+     
+     2. make
+     
+     3. make install
+     
+   * mpfr
+   
+     1. ./configure --with-gmp=/usr --enable-static --disable-shared --prefix=/usr
+     
+     2. Fix error in makefile
+     
+       * "rm: unknown option -- c": caused by argument passing when sh.exe is executing libtool. Please replace -DLT_OBJDIR=\".libs/\" in variable DEFS by -DLT_OBJDIR=.libs Meanwhile, -DMPFR_PRINTF_MAXLM=\"ll\" is replaced by -DMPFR_PRINTF_MAXLM=ll
+       
+     3. make
+     
+     4. make install
      
  * Build libbf, use this makefile. It will generate libbf.avx2.a and libbf.generic.a, please choose one and rename it to libbf.a
  ```cpp

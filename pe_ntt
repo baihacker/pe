@@ -5,6 +5,26 @@
 #include "pe_integer_util"
 #include "pe_mod"
 
+template <typename T>
+SL void poly_mul_wrapper(const T* X, int n, const T* Y, int m, T* result,
+                     int64 mod, void (*impl)(const T*, int, const T*, int, T*, int64)) {
+  int s1 = 0, s2 = 0;
+  int e1 = n, e2 = m;
+  while (s1 < e1 && X[s1] == 0) ++s1;
+  while (s1 < e1 && X[e1-1] == 0) --e1;
+  while (s2 < e2 && Y[s2] == 0) ++s2;
+  while (s2 < e2 && Y[e2-1] == 0) --e2;
+
+  if (s1 >= e1 || s2 >= e2) {
+    fill(result, result + n + m - 1, 0);
+    return;
+  }
+
+  impl(X + s1, e1 - s1, Y + s2, e2 - s2, result + s1 + s2, mod);
+  fill(result, result + s1 + s2, 0);
+  fill(result + e1 + e2 - 1, result + n + m - 1, 0);
+}
+
 namespace ntt_base {
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
@@ -241,8 +261,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_mul_ntt(const T* X, const int n, const T* Y, const int m, T* result,
                  int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
-  poly_mul_ntt_internal<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y,
-                                   m, (unsignedT*)result, mod);
+  poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y,
+                              m, (unsignedT*)result, mod, &poly_mul_ntt_internal<unsignedT>);
 }
 
 template <typename T>
@@ -335,8 +355,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_mul_ntt_small(const T* X, const int n, const T* Y, const int m,
                        T* result, int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
-  poly_mul_ntt_small_internal<unsignedT>(
-      (const unsignedT*)X, n, (const unsignedT*)Y, m, (unsignedT*)result, mod);
+  poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y,
+                              m, (unsignedT*)result, mod, &poly_mul_ntt_small_internal<unsignedT>);
 }
 
 template <typename T>
@@ -537,8 +557,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_mul_ntt(const T* X, const int n, const T* Y, const int m, T* result,
                  int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
-  poly_mul_ntt_internal<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y,
-                                   m, (unsignedT*)result, mod);
+  poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y,
+                              m, (unsignedT*)result, mod, &poly_mul_ntt_internal<unsignedT>);
 }
 
 template <typename T>
@@ -612,8 +632,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_mul_ntt_small(const T* X, const int n, const T* Y, const int m,
                        T* result, int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
-  poly_mul_ntt_small_internal<unsignedT>(
-      (const unsignedT*)X, n, (const unsignedT*)Y, m, (unsignedT*)result, mod);
+  poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y,
+                              m, (unsignedT*)result, mod, &poly_mul_ntt_small_internal<unsignedT>);
 }
 
 template <typename T>

@@ -229,10 +229,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 #if ENABLE_FLINT
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_flint_prime(const T* X, const int n, const T* Y, const int m, T* result,
+    poly_mul_flint_prime_internal(const T* X, const int n, const T* Y, const int m, T* result,
                    int64 mod) {
-  typedef typename std::make_unsigned<T>::type unsignedT;
-
   fmpz_t xmod;
   fmpz_init_set_ui(xmod, mod);
 
@@ -269,6 +267,15 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 }
 
 template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_mul_flint_prime(const T* X, const int n, const T* Y, const int m,
+                       T* result, int64 mod) {
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y,
+                              m, (unsignedT*)result, mod, &poly_mul_flint_prime_internal<unsignedT>);
+}
+
+template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
     poly_mul_flint_prime(const vector<T>& X, const vector<T>& Y, int64 mod) {
   const int n = (int)X.size();
@@ -282,10 +289,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 
 template<typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_flint(const T* X, const int n, const T* Y, const int m, T* result,
+    poly_mul_flint_internal(const T* X, const int n, const T* Y, const int m, T* result,
                    int64 mod) {
-  typedef typename std::make_unsigned<T>::type unsignedT;
-
   nmod_poly_t a, b;
   nmod_poly_init2(a, mod, n);
   nmod_poly_init2(b, mod, m);
@@ -311,6 +316,15 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   }
   nmod_poly_clear(a);
   nmod_poly_clear(b);
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_mul_flint(const T* X, const int n, const T* Y, const int m,
+                       T* result, int64 mod) {
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y,
+                              m, (unsignedT*)result, mod, &poly_mul_flint_internal<unsignedT>);
 }
 
 template <typename T>

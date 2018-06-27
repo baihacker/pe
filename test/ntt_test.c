@@ -79,12 +79,9 @@ SL void ntt_test() {
   test_impl(0, 1, 1479725, 100000000003);
   test_impl(0, 2, 1000000, 316227766016779);
 
-  /*
-    Curent implementation cannot pass this test.
-    test_impl(1, 0, 1000000, 100019);
-    test_impl(1, 1, 1479725, 100000000003);
-    test_impl(1, 2, 1000000, 316227766016779);
-  */
+  // test_impl(1, 0, 1000000, 100019);
+  // test_impl(1, 1, 1479725, 100000000003);
+  // test_impl(1, 2, 1000000, 316227766016779);
 
   // 1e18
   test_impl(2, 0, 999996, 1000003);

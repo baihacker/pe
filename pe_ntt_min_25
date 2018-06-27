@@ -145,7 +145,7 @@ using m64_2 = UnsafeMod<1128298388379402241, 23>; // <= 1.14e18 (sub.D = 3)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-  poly_mul_ntt(const T* f, int n, const T* g, int m, T* result, int64 mod) {
+  poly_mul_ntt_internal(const T* f, int n, const T* g, int m, T* result, int64 mod) {
   const int alignedSize = 1 << pe_lg(2*(n+m-1)-1);
 
   const int ntt_size = alignedSize;
@@ -192,6 +192,15 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 }
 
 template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_mul_ntt(const T* X, const int n, const T* Y, const int m,
+                       T* result, int64 mod) {
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y,
+                              m, (unsignedT*)result, mod, &poly_mul_ntt_internal<unsignedT>);
+}
+
+template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
   poly_mul_ntt(const vector<T>& X, const vector<T>& Y, int64 mod) {
   const int n = (int)X.size() - 1;
@@ -205,7 +214,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-  poly_mul_ntt_small(const T* f, int n, const T* g, int m, T* result, int64 mod) {
+  poly_mul_ntt_small_internal(const T* f, int n, const T* g, int m, T* result, int64 mod) {
   const int alignedSize = 1 << pe_lg(2*(n+m-1)-1);
 
   const int ntt_size = alignedSize;
@@ -225,6 +234,15 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     const uint64 a = f1[i].get();
     result[i] = mod > 0 ? a % mod : a;
   }
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_mul_ntt_small(const T* X, const int n, const T* Y, const int m,
+                       T* result, int64 mod) {
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y,
+                              m, (unsignedT*)result, mod, &poly_mul_ntt_small_internal<unsignedT>);
 }
 
 template <typename T>

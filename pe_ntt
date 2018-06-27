@@ -7,13 +7,15 @@
 
 template <typename T>
 SL void poly_mul_wrapper(const T* X, int n, const T* Y, int m, T* result,
-                     int64 mod, void (*impl)(const T*, int, const T*, int, T*, int64)) {
+                         int64 mod,
+                         void (*impl)(const T*, int, const T*, int, T*,
+                                      int64)) {
   int s1 = 0, s2 = 0;
   int e1 = n, e2 = m;
   while (s1 < e1 && X[s1] == 0) ++s1;
-  while (s1 < e1 && X[e1-1] == 0) --e1;
+  while (s1 < e1 && X[e1 - 1] == 0) --e1;
   while (s2 < e2 && Y[s2] == 0) ++s2;
-  while (s2 < e2 && Y[e2-1] == 0) --e2;
+  while (s2 < e2 && Y[e2 - 1] == 0) --e2;
 
   if (s1 >= e1 || s2 >= e2) {
     fill(result, result + n + m - 1, 0);
@@ -55,9 +57,10 @@ struct NttMod32 {
   unsigned omg[32];
   mutable unsigned* preOmg[32];
 
-  NttMod32(unsigned mod, unsigned r, int k, unsigned g) : mod(mod), r(r), k(k), g(g) {
+  NttMod32(unsigned mod, unsigned r, int k, unsigned g)
+      : mod(mod), r(r), k(k), g(g) {
     for (int i = 0; i <= k; ++i) {
-      omg[i] = (unsigned) power_mod<uint64>(g, (mod - 1) >> i, mod);
+      omg[i] = (unsigned)power_mod<uint64>(g, (mod - 1) >> i, mod);
     }
     fill(preOmg, preOmg + 32, (unsigned*)NULL);
   }
@@ -189,7 +192,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
                           int64 mod) {
   static_assert(std::is_unsigned<T>::value, "T must be unsigned");
 
-  const int alignedSize = 1 << pe_lg(2*(n+m-1)-1);
+  const int alignedSize = 1 << pe_lg(2 * (n + m - 1) - 1);
 
   // TODO(baihacker): decide the size automatically.
   const NttMod32* moderList[3] = {&nttMod1, &nttMod2, &nttMod3};
@@ -261,8 +264,9 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_mul_ntt(const T* X, const int n, const T* Y, const int m, T* result,
                  int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
-  poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y,
-                              m, (unsignedT*)result, mod, &poly_mul_ntt_internal<unsignedT>);
+  poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m,
+                              (unsignedT*)result, mod,
+                              &poly_mul_ntt_internal<unsignedT>);
 }
 
 template <typename T>
@@ -296,7 +300,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
                                 int64 mod) {
   static_assert(std::is_unsigned<T>::value, "T must be unsigned");
 
-  const int alignedSize = 1 << pe_lg(2*(n+m-1)-1);
+  const int alignedSize = 1 << pe_lg(2 * (n + m - 1) - 1);
 
   // TODO(baihacker): decide the size automatically.
   const NttMod32* moderList[2] = {&nttMod1, &nttMod2};
@@ -355,8 +359,9 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_mul_ntt_small(const T* X, const int n, const T* Y, const int m,
                        T* result, int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
-  poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y,
-                              m, (unsignedT*)result, mod, &poly_mul_ntt_small_internal<unsignedT>);
+  poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m,
+                              (unsignedT*)result, mod,
+                              &poly_mul_ntt_small_internal<unsignedT>);
 }
 
 template <typename T>
@@ -498,7 +503,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
                           int64 mod) {
   static_assert(std::is_unsigned<T>::value, "T must be unsigned");
 
-  const int alignedSize = 1 << pe_lg(2*(n+m-1)-1);
+  const int alignedSize = 1 << pe_lg(2 * (n + m - 1) - 1);
 
   // TODO(baihacker): decide the size automatically.
   const NttMod64* moderList[2] = {&nttMod1, &nttMod2};
@@ -557,8 +562,9 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_mul_ntt(const T* X, const int n, const T* Y, const int m, T* result,
                  int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
-  poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y,
-                              m, (unsignedT*)result, mod, &poly_mul_ntt_internal<unsignedT>);
+  poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m,
+                              (unsignedT*)result, mod,
+                              &poly_mul_ntt_internal<unsignedT>);
 }
 
 template <typename T>
@@ -581,7 +587,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
                                 int64 mod) {
   static_assert(std::is_unsigned<T>::value, "T must be unsigned");
 
-  const int alignedSize = 1 << pe_lg(2*(n+m-1)-1);
+  const int alignedSize = 1 << pe_lg(2 * (n + m - 1) - 1);
 
   // TODO(baihacker): decide the size automatically.
   const NttMod64* moderList[1] = {&nttMod2};
@@ -632,8 +638,9 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_mul_ntt_small(const T* X, const int n, const T* Y, const int m,
                        T* result, int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
-  poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y,
-                              m, (unsignedT*)result, mod, &poly_mul_ntt_small_internal<unsignedT>);
+  poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m,
+                              (unsignedT*)result, mod,
+                              &poly_mul_ntt_small_internal<unsignedT>);
 }
 
 template <typename T>

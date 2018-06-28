@@ -6,27 +6,42 @@
 
 // Modular arithmetic
 template <typename T, typename M>
-SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value &&
-             std::is_signed<T>::value)) RETURN(T) regulate_mod(T a, M mod) {
+SL REQUIRES((is_native_integer<T>::value &&
+             is_native_integer<M>::value &&
+             std::is_signed<T>::value &&
+             std::is_signed<M>::value)) RETURN_T(IntPromotionT(T, M)) regulate_mod(T a, M mod) {
   PE_ASSERT(mod >= 1);
   if (a >= 0) {
-    if (a >= mod) a %= mod;
+    return a >= mod ? a % mod : a;
   } else {
-    if (-a >= mod)
-      a = a % mod + mod;
-    else
-      a += mod;
+    return -a >= mod ? a % mod + mod : a + mod;
   }
-  return a;
 }
 
 template <typename T, typename M>
-SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value &&
-             std::is_unsigned<T>::value)) RETURN(T) regulate_mod(T a, M mod) {
+SL REQUIRES((is_native_integer<T>::value &&
+             is_native_integer<M>::value &&
+             std::is_signed<T>::value &&
+             std::is_unsigned<M>::value)) RETURN_T(IntPromotionT(T, M)) regulate_mod(T a, M mod) {
   PE_ASSERT(mod >= 1);
-  typedef typename std::make_unsigned<M>::type unsignedM;
-  if (a >= mod) a %= (unsignedM)mod;
-  return a;
+  if (a >= 0) {
+    return a >= mod ? a % mod : a;
+  } else {
+    auto t = -a;
+    if (t >= mod) t %= mod;
+    return mod - t;
+  }
+}
+
+template <typename T, typename M>
+SL REQUIRES((is_native_integer<T>::value &&
+             is_native_integer<M>::value &&
+             std::is_unsigned<T>::value)) RETURN_T(IntPromotionT(T, M)) regulate_mod(T a, M mod) {
+  PE_ASSERT(mod >= 1);
+  typedef IntPromotion(T, M) ResultType;
+  ResultType b = a, m = mod;
+  if (b >= m) b %= m;
+  return b;
 }
 
 template <typename T>
@@ -35,50 +50,59 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T) regulate_mod(T a, T mod) {
 }
 
 template <typename T, typename M>
-SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
-    RETURN(T) add_mod_impl(T a, T b, M mod) {
-  a += b;
-  if ((M)a >= mod) a -= mod;
-  return a;
+SL REQUIRES((is_native_integer<T>::value &&
+             is_native_integer<M>::value))
+    RETURN_T(IntPromotionT(T, M)) add_mod_impl(T a, T b, M mod) {
+  typedef IntPromotion(T, M) ResultType;
+  auto t0 = a;
+  t0 += b;
+  ResultType t1 = t0, m = mod;
+  if (t1 >= m) t1 -= m;
+  return t1;
 }
 
 template <typename T1, typename T2, typename M>
 SL auto add_mod(T1 a, T2 b, M mod)
-    -> REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
+    -> REQUIRES((is_native_integer<T1>::value &&
+                 is_native_integer<T2>::value &&
                  is_native_integer<M>::value))
-        RETURN(typename BigIntegerType<T1, T2>::type) {
-  typedef typename BigIntegerType<T1, T2>::type T;
+        RETURN_T(IntPromotionT(T1, T2, M)) {
+  typedef IntPromotion(T1, T2) T;
   return add_mod_impl<T, M>(a, b, mod);
 }
 
 template <typename T, typename M>
-SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
-    RETURN(T) sub_mod_impl(T a, T b, M mod) {
+SL REQUIRES((is_native_integer<T>::value &&
+             is_native_integer<M>::value))
+    RETURN(IntPromotion(T, M)) sub_mod_impl(T a, T b, M mod) {
   return a >= b ? a - b : mod - b + a;
 }
 
 template <typename T1, typename T2, typename M>
 SL auto sub_mod(T1 a, T2 b, M mod)
-    -> REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
+    -> REQUIRES((is_native_integer<T1>::value &&
+                 is_native_integer<T2>::value &&
                  is_native_integer<M>::value))
-        RETURN(typename BigIntegerType<T1, T2>::type) {
-  typedef typename BigIntegerType<T1, T2>::type T;
+        RETURN_T(IntPromotionT(T1, T2, M)) {
+  typedef IntPromotion(T1, T2) T;
   return sub_mod_impl<T, M>(a, b, mod);
 }
 
 template <typename T, typename M>
-SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
-    RETURN(T) mul_mod_impl(T a, T b, M mod) {
+SL REQUIRES((is_native_integer<T>::value &&
+             is_native_integer<M>::value))
+    RETURN_T(IntPromotionT(T, M)) mul_mod_impl(T a, T b, M mod) {
   return a * b % mod;
 }
 
 template <typename T1, typename T2, typename M>
 SL auto mul_mod(T1 a, T2 b, M mod)
-    -> REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
+    -> REQUIRES((is_native_integer<T1>::value &&
+                 is_native_integer<T2>::value &&
                  is_native_integer<M>::value))
-        RETURN(typename BigIntegerType<T1, T2>::type) {
-  typedef typename BigIntegerType<T1, T2>::type T;
-  typedef typename BigIntegerType<int64, T>::type atLeastInt64T;
+        RETURN_T(IntPromotionT(T1, T2, int64, M)) {
+  typedef IntPromotion(T1, T2) T;
+  typedef typename AtLeastInt64<T>::type atLeastInt64T;
   return mul_mod_impl<atLeastInt64T, M>(a, b, mod);
 }
 
@@ -99,23 +123,25 @@ SL uint64 mod128_64(uint128 a, uint64 b) {
 
 template <typename T1, typename T2, typename M>
 SL auto mul_mod_ex(T1 a, T2 b, M mod)
-    -> REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
+    -> REQUIRES((is_native_integer<T1>::value &&
+                 is_native_integer<T2>::value &&
                  is_native_integer<M>::value))
-        RETURN(typename BigIntegerType<T1, T2>::type) {
-  typedef typename BigIntegerType<T1, T2>::type T;
-  typedef typename BigIntegerType<int64, T>::type atLeastInt64T;
+        RETURN_T(IntPromotionT(T1, T2, int64, M)) {
+  typedef IntPromotion(T1, T2) T;
+  typedef typename AtLeastInt64<T>::type atLeastInt64T;
+  typedef IntPromotion(atLeastInt64T, T) ResultType;
 
   if (mod <= PE_SOI63) {
-    return (typename BigIntegerType<T1, T2>::type)mul_mod_impl<atLeastInt64T, M>(a, b, mod);
+    return mul_mod_impl<atLeastInt64T, M>(a, b, mod);
   }
 #if PE_HAS_INT128
-  return (typename BigIntegerType<T1, T2>::type)mul_mod_impl<int128, M>(a, b, mod);
+  return (ResultType)mul_mod_impl<int128, M>(a, b, mod);
 #else
   const int64 x = a, y = b, m = mod;
   int64 r = (x * y - (int64)(((long double)x * y) / m) * m);
   if (r >= m) r -= r / m * m;
   if (r < 0) r += m;
-  return (typename BigIntegerType<T1, T2>::type)r;
+  return (ResultType)r;
 #endif
 
 #if 0
@@ -129,7 +155,7 @@ SL auto mul_mod_ex(T1 a, T2 b, M mod)
     }
     flag = (flag << 1) % mod;
   }
-  return (typename BigIntegerType<T1, T2>::type)ret;
+  return (ResultType)ret;
 #endif
 }
 
@@ -137,8 +163,9 @@ SL auto mul_mod_ex(T1 a, T2 b, M mod)
 // The behavior is undefined if it's not satisified.
 template <typename T, typename M>
 SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
-    RETURN(T) frac_mod_impl(std::vector<T> a, std::vector<T> b, M mod) {
-  T ret = 1;
+    RETURN_T(IntPromotionT(T, M)) frac_mod_impl(std::vector<T> a, std::vector<T> b, M mod) {
+  typedef IntPromotion(T, M) ResultType;
+  ResultType ret = 1;
   const int size = b.size();
   int remain = size;
   for (auto iter : a) {
@@ -155,54 +182,70 @@ SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
 
 template <typename T1, typename T2 = T1, typename M>
 SL auto frac_mod(std::vector<T1> a, std::vector<T2> b, M mod)
-    -> REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
+    -> REQUIRES((is_native_integer<T1>::value &&
+                 is_native_integer<T2>::value &&
                  is_native_integer<M>::value))
-        RETURN(typename BigIntegerType<T1, T2>::type) {
-  typedef typename BigIntegerType<T1, T2>::type T;
-  typedef typename BigIntegerType<int64, T>::type atLeastInt64T;
+        RETURN_T(IntPromotionT(T1, T2, int64, M)) {
+  typedef IntPromotion(T1, T2) T;
+  typedef typename AtLeastInt64<T>::type atLeastInt64T;
   return frac_mod_impl<atLeastInt64T, M>(a, b, mod);
 }
 
 template <typename T1, typename T2, typename M>
-SL T1 power_mod_impl(T1 x, T2 n, M mod) {
+SL REQUIRES((is_native_integer<T1>::value &&
+             is_native_integer<T2>::value &&
+             is_native_integer<M>::value))
+    RETURN_T(IntPromotionT(T1, M))  power_mod_impl(T1 x, T2 n, M mod) {
   if (mod == 1) return 0;
+  typedef IntPromotion(T1, M) ResultType;
 
-  T1 ret = 1;
+  ResultType ret = 1;
   x %= mod;
   if (x < 0) x += mod;
   for (; n; n >>= 1) {
-    if (n & 1) ret = ret * x % mod;
-    x = x * x % mod;
+    if (n & 1) ret = mul_mod(ret, x, mod);
+    x = mul_mod(x, x, mod);
   }
   return ret;
 }
 
 template <typename T1, typename T2, typename M>
-SL T1 power_mod(T1 x, T2 n, M mod) {
-  typedef typename BigIntegerType<int64, T1>::type atLeastInt64T1;
+SL REQUIRES((is_native_integer<T1>::value &&
+             is_native_integer<T2>::value &&
+             is_native_integer<M>::value))
+    RETURN_T(IntPromotionT(T1, int64, M))
+    power_mod(T1 x, T2 n, M mod) {
+  typedef typename AtLeastInt64<T1>::type atLeastInt64T1;
   return power_mod_impl<atLeastInt64T1, T2, M>(x, n, mod);
 }
 
 template <typename T1, typename T2, typename M>
-SL T1 power_mod_ex(T1 x, T2 n, M mod) {
-  typedef typename BigIntegerType<int64, T1>::type atLeastInt64T1;
+SL REQUIRES((is_native_integer<T1>::value &&
+             is_native_integer<T2>::value &&
+             is_native_integer<M>::value))
+    RETURN_T(IntPromotionT(T1, M))
+    power_mod_ex_impl(T1 x, T2 n, M mod) {
+  if (mod == 1) return 0;
+  typedef IntPromotion(T1, M) ResultType;
 
-  if (mod <= PE_SOI63) {
-    return (T1)power_mod_impl<atLeastInt64T1, T2, M>(x, n, mod);
-  }
-#if PE_HAS_INT128
-  return power_mod_impl<int128, int128, M>(x, n, mod);
-#else
-  atLeastInt64T1 ret = 1;
-  atLeastInt64T1 y = x;
-  y %= mod;
-  if (y < 0) y += mod;
+  ResultType ret = 1;
+  x %= mod;
+  if (x < 0) x += mod;
   for (; n; n >>= 1) {
-    if (n & 1) ret = mul_mod_ex(y, ret, mod);
-    y = mul_mod_ex(y, y, mod);
+    if (n & 1) ret = mul_mod_ex(ret, x, mod);
+    x = mul_mod_ex(x, x, mod);
   }
-  return (T1)ret;
-#endif
+  return ret;
+}
+
+template <typename T1, typename T2, typename M>
+SL REQUIRES((is_native_integer<T1>::value &&
+             is_native_integer<T2>::value &&
+             is_native_integer<M>::value))
+    RETURN_T(IntPromotionT(T1, int64, M))
+    power_mod_ex(T1 x, T2 n, M mod) {
+  typedef typename AtLeastInt64<T1>::type atLeastInt64T1;
+  return power_mod_ex_impl<atLeastInt64T1, T2, M>(x, n, mod);
 }
 
 struct init_direct_t {};

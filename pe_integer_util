@@ -132,32 +132,41 @@ struct is_native_integer<BigInteger> {
 };
 
 template<>
+struct is_native_integer<BigInteger&> {
+  enum {value = false};
+};
+
+template<>
+struct is_native_integer<const BigInteger&> {
+  enum {value = false};
+};
+
+template<>
 struct is_general_integer<BigInteger> {
   enum {value = true};
 };
 
 // Integer type promotion
 template<typename T1, typename T2, bool ge, bool same>
-struct BigIntegerTypeImpl {
+struct BiggerIntegralImpl {
   typedef T1 type;
 };
 
 template<typename T1, typename T2>
-struct BigIntegerTypeImpl<T1, T2, false, false> {
+struct BiggerIntegralImpl<T1, T2, false, false> {
   typedef T2 type;
 };
 
 template<typename T1, typename T2>
-struct BigIntegerTypeImpl<T1, T2, true, true> {
+struct BiggerIntegralImpl<T1, T2, true, true> {
   typedef typename std::make_unsigned<T1>::type type;
 };
 
-
 template<typename T1, typename T2>
-struct BigIntegerType {
+struct BiggerIntegral {
   typedef typename std::make_unsigned<T1>::type U1;
   typedef typename std::make_unsigned<T2>::type U2;
-  typedef typename BigIntegerTypeImpl<
+  typedef typename BiggerIntegralImpl<
                       T1,
                       T2,
                       (sizeof(T1) >= sizeof(T2)),
@@ -166,14 +175,33 @@ struct BigIntegerType {
 };
 
 template<typename T>
-struct BigIntegerType<T, T> {
+struct BiggerIntegral<T, T> {
   typedef T type;
+};
+
+template<typename T1, typename ...T>
+struct BiggerIntegralN : private BiggerIntegralN<T...> {
+  typedef typename BiggerIntegralN<T...>::type A;
+  typedef typename BiggerIntegral<T1, A>::type type;
+};
+
+template<typename T1>
+struct BiggerIntegralN<T1> {
+  typedef T1 type;
 };
 
 template<typename T>
 struct AtLeastUint64 {
-  typedef typename BigIntegerType<T, uint64>::type type;
+  typedef typename BiggerIntegral<T, uint64>::type type;
 };
+
+template<typename T>
+struct AtLeastInt64 {
+  typedef typename BiggerIntegral<T, int64>::type type;
+};
+
+#define IntPromotion(...) typename BiggerIntegralN<__VA_ARGS__>::type
+#define IntPromotionT(...) BiggerIntegralN<__VA_ARGS__>
 
 template<typename T1, typename T2>
 SL

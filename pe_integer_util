@@ -47,155 +47,151 @@ SL string to_string(int128 x) {
 }
 
 namespace std {
-  template<>
-  struct make_unsigned<int128> {
-    typedef uint128 type;
-  };
+template <>
+struct make_unsigned<int128> {
+  typedef uint128 type;
+};
 
-  template<>
-  struct make_unsigned<uint128> {
-    typedef uint128 type;
-  };
+template <>
+struct make_unsigned<uint128> {
+  typedef uint128 type;
+};
 
-  template<>
-  struct make_signed<int128> {
-    typedef int128 type;
-  };
+template <>
+struct make_signed<int128> {
+  typedef int128 type;
+};
 
-  template<>
-  struct make_signed<uint128> {
-    typedef int128 type;
-  };
+template <>
+struct make_signed<uint128> {
+  typedef int128 type;
+};
 
-  template<>
-  struct is_unsigned<int128> {
-    enum {value = false};
-  };
+template <>
+struct is_unsigned<int128> {
+  enum { value = false };
+};
 
-  template<>
-  struct is_unsigned<uint128> {
-    enum {value = true};
-  };
+template <>
+struct is_unsigned<uint128> {
+  enum { value = true };
+};
 
-  template<>
-  struct is_signed<int128> {
-    enum {value = true};
-  };
+template <>
+struct is_signed<int128> {
+  enum { value = true };
+};
 
-  template<>
-  struct is_signed<uint128> {
-    enum {value = false};
-  };
-  
-  template<>
-  struct is_integral<int128> {
-    typedef bool value_type;
-    enum {value = true};
-    typedef std::integral_constant<bool, value> type;
-  };
+template <>
+struct is_signed<uint128> {
+  enum { value = false };
+};
 
-  template<>
-  struct is_integral<uint128> {
-    typedef bool value_type;
-    enum {value = true};
-    typedef std::integral_constant<bool, value> type;
-  };
-}
+template <>
+struct is_integral<int128> {
+  typedef bool value_type;
+  enum { value = true };
+  typedef std::integral_constant<bool, value> type;
+};
+
+template <>
+struct is_integral<uint128> {
+  typedef bool value_type;
+  enum { value = true };
+  typedef std::integral_constant<bool, value> type;
+};
+}  // namespace std
 
 #endif
 
 class BigInteger;
 
-template<typename T>
+template <typename T>
 struct is_native_integer {
-  enum {value = is_integral<T>::value};
+  enum { value = is_integral<T>::value };
 };
 
-template<typename T>
+template <typename T>
 struct is_native_integer<T&> {
-  enum {value = is_native_integer<T>::value};
+  enum { value = is_native_integer<T>::value };
 };
 
-template<typename T>
+template <typename T>
 struct is_general_integer {
-  enum {value = is_integral<T>::value};
+  enum { value = is_integral<T>::value };
 };
 
-template<typename T>
+template <typename T>
 struct is_general_integer<T&> {
-  enum {value = is_general_integer<T>::value};
+  enum { value = is_general_integer<T>::value };
 };
 
-template<>
+template <>
 struct is_native_integer<BigInteger> {
-  enum {value = false};
+  enum { value = false };
 };
 
-template<>
+template <>
 struct is_native_integer<BigInteger&> {
-  enum {value = false};
+  enum { value = false };
 };
 
-template<>
+template <>
 struct is_native_integer<const BigInteger&> {
-  enum {value = false};
+  enum { value = false };
 };
 
-template<>
+template <>
 struct is_general_integer<BigInteger> {
-  enum {value = true};
+  enum { value = true };
 };
 
 // Integer type promotion
-template<typename T1, typename T2, bool ge, bool same>
+template <typename T1, typename T2, bool ge, bool same>
 struct BiggerIntegralImpl {
   typedef T1 type;
 };
 
-template<typename T1, typename T2>
+template <typename T1, typename T2>
 struct BiggerIntegralImpl<T1, T2, false, false> {
   typedef T2 type;
 };
 
-template<typename T1, typename T2>
+template <typename T1, typename T2>
 struct BiggerIntegralImpl<T1, T2, true, true> {
   typedef typename std::make_unsigned<T1>::type type;
 };
 
-template<typename T1, typename T2>
+template <typename T1, typename T2>
 struct BiggerIntegral {
   typedef typename std::make_unsigned<T1>::type U1;
   typedef typename std::make_unsigned<T2>::type U2;
-  typedef typename BiggerIntegralImpl<
-                      T1,
-                      T2,
-                      (sizeof(T1) >= sizeof(T2)),
-                      std::is_same<U1, U2>::value
-                    >::type type;
+  typedef typename BiggerIntegralImpl<T1, T2, (sizeof(T1) >= sizeof(T2)),
+                                      std::is_same<U1, U2>::value>::type type;
 };
 
-template<typename T>
+template <typename T>
 struct BiggerIntegral<T, T> {
   typedef T type;
 };
 
-template<typename T1, typename ...T>
+template <typename T1, typename... T>
 struct BiggerIntegralN : private BiggerIntegralN<T...> {
   typedef typename BiggerIntegralN<T...>::type A;
   typedef typename BiggerIntegral<T1, A>::type type;
 };
 
-template<typename T1>
+template <typename T1>
 struct BiggerIntegralN<T1> {
   typedef T1 type;
 };
 
-template<typename T>
+template <typename T>
 struct AtLeastUint64 {
   typedef typename BiggerIntegral<T, uint64>::type type;
 };
 
-template<typename T>
+template <typename T>
 struct AtLeastInt64 {
   typedef typename BiggerIntegral<T, int64>::type type;
 };
@@ -203,13 +199,9 @@ struct AtLeastInt64 {
 #define IntPromotion(...) typename BiggerIntegralN<__VA_ARGS__>::type
 #define IntPromotionT(...) BiggerIntegralN<__VA_ARGS__>
 
-template<typename T1, typename T2>
-SL
-REQUIRES((
-  is_general_integer<T1>::value &&
-  is_general_integer<T2>::value))
-RETURN(T1)
-power_impl(T1 x, T2 n) {
+template <typename T1, typename T2>
+SL REQUIRES((is_general_integer<T1>::value && is_general_integer<T2>::value))
+    RETURN(T1) power_impl(T1 x, T2 n) {
   T1 ret = 1;
   for (; n; n >>= 1) {
     if (n & 1) ret = ret * x;
@@ -218,13 +210,9 @@ power_impl(T1 x, T2 n) {
   return ret;
 }
 
-template<typename T1, typename T2>
-SL
-REQUIRES((
-  is_general_integer<T1>::value &&
-  is_general_integer<T2>::value))
-RETURN(T1)
-power(T1 x, T2 n) {
+template <typename T1, typename T2>
+SL REQUIRES((is_general_integer<T1>::value && is_general_integer<T2>::value))
+    RETURN(T1) power(T1 x, T2 n) {
   return power_impl<T1, T2>(x, n);
 }
 #endif

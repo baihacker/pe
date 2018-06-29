@@ -111,46 +111,50 @@ SL uint64 mod128_64(uint128 a, uint64 b) {
 #endif
 
 #if defined(COMPILER_GNU) && PE_X86_64
-template<typename T>
+template <typename T>
 SL REQUIRES((is_native_integer<T>::value && is_unsigned<T>::value))
-  RETURN(uint64) mul_mod_ex_dis(uint64 a, uint64 b, uint64 mod) {
+    RETURN(uint64) mul_mod_ex_dis(uint64 a, uint64 b, uint64 mod) {
   if (mod >> 32) {
     uint64 q, r;
-    __asm__("movq %2,%%rax\n\t"
-            "mulq %3\n\t"
-            "divq %4\n\t"
-            : "=a"(q), "=d"(r)
-            : "0"(uint64(a)), "1"(uint64(b)), "rm"(uint64(mod)));
+    __asm__(
+        "movq %2,%%rax\n\t"
+        "mulq %3\n\t"
+        "divq %4\n\t"
+        : "=a"(q), "=d"(r)
+        : "0"(uint64(a)), "1"(uint64(b)), "rm"(uint64(mod)));
     return r;
   } else {
     uint32 q, r;
-    __asm__("movl %2,%%eax\n\t"
-            "mull %3\n\t"
-            "divl %4\n\t"
-            : "=a"(q), "=d"(r)
-            : "0"(uint32(a)), "1"(uint32(b)), "rm"(uint32(mod)));
+    __asm__(
+        "movl %2,%%eax\n\t"
+        "mull %3\n\t"
+        "divl %4\n\t"
+        : "=a"(q), "=d"(r)
+        : "0"(uint32(a)), "1"(uint32(b)), "rm"(uint32(mod)));
     return r;
   }
 }
 
-template<typename T>
-SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value))
-  RETURN(int64) mul_mod_ex_dis(int64 a, int64 b, int64 mod) {
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(int64)
+    mul_mod_ex_dis(int64 a, int64 b, int64 mod) {
   if ((uint64)mod >> 31) {
     int64 q, r;
-    __asm__("movq %2,%%rax\n\t"
-            "imulq %3\n\t"
-            "idivq %4\n\t"
-            : "=a"(q), "=d"(r)
-            : "0"(a), "1"(b), "rm"(mod));
+    __asm__(
+        "movq %2,%%rax\n\t"
+        "imulq %3\n\t"
+        "idivq %4\n\t"
+        : "=a"(q), "=d"(r)
+        : "0"(a), "1"(b), "rm"(mod));
     return r;
   } else {
     int32 q, r;
-    __asm__("movl %2,%%eax\n\t"
-            "imull %3\n\t"
-            "idivl %4\n\t"
-            : "=a"(q), "=d"(r)
-            : "0"(int32(a)), "1"(int32(b)), "rm"(int32(mod)));
+    __asm__(
+        "movl %2,%%eax\n\t"
+        "imull %3\n\t"
+        "idivl %4\n\t"
+        : "=a"(q), "=d"(r)
+        : "0"(int32(a)), "1"(int32(b)), "rm"(int32(mod)));
     return r;
   }
 }
@@ -163,7 +167,7 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
   typedef IntPromotion(T1, T2) T;
   typedef typename AtLeastInt64<T>::type atLeastInt64T;
   typedef IntPromotion(atLeastInt64T, T) ResultType;
-  
+
 #if defined(COMPILER_GNU) && PE_X86_64
   // We have a disassembly version
   return (ResultType)mul_mod_ex_dis<ResultType>(a, b, mod);
@@ -182,7 +186,7 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
   if (r < 0) r += m;
   return r;
 #else
-  #warning "mul_mod_ex may be very slow."
+#warning "mul_mod_ex may be very slow."
 
   atLeastInt64T ret = 0;
   atLeastInt64T flag = b;

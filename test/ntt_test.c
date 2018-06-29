@@ -101,7 +101,7 @@ SL void ntt_performance_test() {
     printf("mod = %lld\n", mods[level]);
     const auto mod = mods[level];
 
-    printf("log2(n)  ", "");
+    printf("log2(n)  ");
 
     for (int n = 10; n <= 20; ++n) {
       printf("%-6d ", n); 

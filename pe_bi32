@@ -3,8 +3,8 @@
 
 #include "pe_base"
 #include "pe_integer_util"
-#include "pe_ntt"
 #include "pe_nt"
+#include "pe_ntt"
 
 static const struct alloc_mem {
 } alloc_mem_tag;
@@ -68,6 +68,7 @@ class BigInteger {
 
   static const unsigned int div32_bit = 5;
   static const unsigned int mod32_mask = 31;
+
  public:
   // constructors, destructors, value semantics.
   BigInteger() : BigInteger(zero_initialize_tag) {
@@ -108,7 +109,8 @@ class BigInteger {
     return *this;
   }
 
-  template <typename T, typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
+  template <typename T,
+            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
   BigInteger(T value) : BigInteger(zero_initialize_tag) {
     if (value == 0) {
       reserve(1);
@@ -128,26 +130,27 @@ class BigInteger {
       reserve(need);
 
       pos_ = -1;
-      for (auto t = absValue; t > 0; data_[++pos_] = t & max_32bit_value,
-                t >>= 32)
+      for (auto t = absValue; t > 0;
+           data_[++pos_] = t & max_32bit_value, t >>= 32)
         ;
     }
     sign_ = value > 0 ? 1 : -1;
   }
 
-  template<typename T>
+  template <typename T>
   SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(T)
-  getAbsValue(T x) {
+      getAbsValue(T x) {
     return x >= 0 ? x : -x;
   }
 
-  template<typename T>
+  template <typename T>
   SL REQUIRES((is_native_integer<T>::value && is_unsigned<T>::value)) RETURN(T)
-  getAbsValue(T x) {
+      getAbsValue(T x) {
     return x;
   }
 
-  template <typename T, typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
+  template <typename T,
+            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
   BigInteger& operator=(T value) {
     return *this = BigInteger(value);
   }
@@ -191,7 +194,8 @@ class BigInteger {
     fixPos();
   }
 
-  template <typename T, typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
+  template <typename T,
+            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
   BigInteger(const vector<T>& v) : BigInteger(zero_initialize_tag) {
     if (v.empty()) {
       reserve(1);
@@ -233,7 +237,8 @@ class BigInteger {
     sign_ = 0;
   }
 
-  BigInteger(const BigInteger& other, int minBuffer) : BigInteger(zero_initialize_tag) {
+  BigInteger(const BigInteger& other, int minBuffer)
+      : BigInteger(zero_initialize_tag) {
     reserve(max(other.bufferLength_, minBuffer));
     sign_ = other.sign_;
     pos_ = other.pos_;
@@ -241,8 +246,7 @@ class BigInteger {
   }
 
   BigInteger(zero_initialize)
-      : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {
-  }
+      : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {}
 
  private:
   void resetAbs(uint64 v) {
@@ -257,6 +261,7 @@ class BigInteger {
       pos_ = 1;
     }
   }
+
  public:
   // compare operators
   friend inline int operator>(const BigInteger& l, const BigInteger& r);
@@ -271,60 +276,51 @@ class BigInteger {
   friend inline BigInteger operator-(const BigInteger& l, const BigInteger& r);
 
   friend inline BigInteger operator*(const BigInteger& l, const BigInteger& r);
-  
-  template <typename T>
-  friend inline 
-  REQUIRES((
-    is_native_integer<T>::value &&
-    !is_same<typename remove_cvref<T>::type, BigInteger>::value))
-  RETURN(BigInteger)
-  operator*(const BigInteger& l, T r);
 
   template <typename T>
-  friend inline 
-  REQUIRES((
-    is_native_integer<T>::value &&
-    !is_same<typename remove_cvref<T>::type, BigInteger>::value))
-  RETURN(BigInteger)
-  operator*(T l, const BigInteger& r);
+  friend inline REQUIRES(
+      (is_native_integer<T>::value &&
+       !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+      RETURN(BigInteger)
+      operator*(const BigInteger& l, T r);
+
+  template <typename T>
+  friend inline REQUIRES(
+      (is_native_integer<T>::value &&
+       !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+      RETURN(BigInteger)
+      operator*(T l, const BigInteger& r);
 
   friend inline BigInteger operator/(const BigInteger& l, const BigInteger& r);
 
   template <typename T>
-  friend inline
-  REQUIRES((
-    is_native_integer<T>::value &&
-    !is_same<typename remove_cvref<T>::type, BigInteger>::value))
-  RETURN(BigInteger)
-  operator/(const BigInteger& l, T r);
+  friend inline REQUIRES(
+      (is_native_integer<T>::value &&
+       !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+      RETURN(BigInteger)
+      operator/(const BigInteger& l, T r);
 
   friend inline tuple<BigInteger, BigInteger> div(const BigInteger& l,
                                                   const BigInteger& r);
 
   template <typename T>
-  friend inline
-  REQUIRES((
-    is_native_integer<T>::value &&
-    !is_same<typename remove_cvref<T>::type, BigInteger>::value))
-  RETURN(tuple<BigInteger, T>)
-  div(const BigInteger& l, T r);
+  friend inline REQUIRES(
+      (is_native_integer<T>::value &&
+       !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+      RETURN(tuple<BigInteger, T>) div(const BigInteger& l, T r);
 
   template <typename T>
-  friend inline
-  REQUIRES((
-    is_native_integer<T>::value &&
-    !is_same<typename remove_cvref<T>::type, BigInteger>::value))
-  RETURN(void)
-  divInplace(BigInteger& l, T r, T& remain);
+  friend inline REQUIRES(
+      (is_native_integer<T>::value &&
+       !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+      RETURN(void) divInplace(BigInteger& l, T r, T& remain);
 
   friend inline BigInteger operator%(const BigInteger& l, const BigInteger& r);
 
   template <typename T>
-  friend inline
-  REQUIRES((
-    is_native_integer<T>::value &&
-    !is_same<typename remove_cvref<T>::type, BigInteger>::value))
-  RETURN(T)
+  friend inline REQUIRES(
+      (is_native_integer<T>::value &&
+       !is_same<typename remove_cvref<T>::type, BigInteger>::value)) RETURN(T)
   operator%(const BigInteger& l, T r);
 
   friend inline BigInteger operator&(const BigInteger& l, const BigInteger& r);
@@ -332,20 +328,18 @@ class BigInteger {
   friend inline BigInteger operator|(const BigInteger& l, const BigInteger& r);
 
   template <typename T>
-  friend inline
-  REQUIRES((
-    is_native_integer<T>::value &&
-    !is_same<typename remove_cvref<T>::type, BigInteger>::value))
-  RETURN(BigInteger)
-  operator<<(const BigInteger& l, T n);
+  friend inline REQUIRES(
+      (is_native_integer<T>::value &&
+       !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+      RETURN(BigInteger)
+      operator<<(const BigInteger& l, T n);
 
   template <typename T>
-  friend inline
-  REQUIRES((
-    is_native_integer<T>::value &&
-    !is_same<typename remove_cvref<T>::type, BigInteger>::value))
-  RETURN(BigInteger)
-  operator>>(const BigInteger& l, T n);
+  friend inline REQUIRES(
+      (is_native_integer<T>::value &&
+       !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+      RETURN(BigInteger)
+      operator>>(const BigInteger& l, T n);
 
  public:
   // unary operations
@@ -481,12 +475,12 @@ class BigInteger {
     std::vector<uint64> X(n), Y(m);
 
     for (int i = 0; i <= l.pos_; ++i) {
-      X[i<<1] = l[i] & 65535u;
-      X[(i<<1)+1] = l[i] >> 16;
+      X[i << 1] = l[i] & 65535u;
+      X[(i << 1) + 1] = l[i] >> 16;
     }
     for (int i = 0; i <= r.pos_; ++i) {
-      Y[i<<1] = r[i] & 65535;
-      Y[(i<<1)+1] = r[i] >> 16;
+      Y[i << 1] = r[i] & 65535;
+      Y[(i << 1) + 1] = r[i] >> 16;
     }
     const int allocateSize = n + m + 8;
     const int resultSize = n + m - 1;
@@ -503,13 +497,13 @@ class BigInteger {
       result[now++] = inc & 65535u;
       inc >>= 16;
     }
-    if (now&1) {
+    if (now & 1) {
       result[now++] = 0;
     }
 
     BigInteger ret(now >> 1, alloc_mem_tag);
     for (int i = 0; i < now; i += 2) {
-      ret[i>>1] = (unsigned)((result[i+1] << 16) | result[i]);
+      ret[i >> 1] = (unsigned)((result[i + 1] << 16) | result[i]);
     }
     ret.pos_ = (now >> 1) - 1;
     ret.sign_ = 1;
@@ -538,7 +532,7 @@ class BigInteger {
       int bit = 1;
       while (alignedLen < (int64)len) alignedLen <<= 1, ++bit;
       const uint64 cost2 = alignedLen * bit * 3;
-      
+
       if (cost2 * 2 < cost1) {
         return absMulNtt(l, r);
       }
@@ -663,7 +657,7 @@ class BigInteger {
 
   template <typename T>
   static vector<T> absDivInternal(const vector<T>& l, const vector<T>& r,
-                          vector<T>& remain) {
+                                  vector<T>& remain) {
     vector<T> result;
     remain = l;
 
@@ -869,8 +863,7 @@ class BigInteger {
 
   template <typename T>
   REQUIRES(is_native_integer<T>::value)
-  RETURN(BigInteger&)
-  operator*=(T other) {
+  RETURN(BigInteger&) operator*=(T other) {
     if (isZero()) {
       return *this;
     }
@@ -894,8 +887,7 @@ class BigInteger {
 
   template <typename T>
   REQUIRES(is_native_integer<T>::value)
-  RETURN(BigInteger&)
-  operator/=(T other) {
+  RETURN(BigInteger&) operator/=(T other) {
     T r;
     divInplace(*this, other, r);
     return *this;
@@ -908,8 +900,7 @@ class BigInteger {
 
   template <typename T>
   REQUIRES(is_native_integer<T>::value)
-  RETURN(BigInteger&)
-  operator%=(T other) {
+  RETURN(BigInteger&) operator%=(T other) {
     T r;
     divInplace(*this, other, r);
     return *this = r;
@@ -926,9 +917,8 @@ class BigInteger {
   }
 
   template <typename T>
-  REQUIRES((
-    is_native_integer<T>::value &&
-    !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+  REQUIRES((is_native_integer<T>::value &&
+            !is_same<typename remove_cvref<T>::type, BigInteger>::value))
   RETURN(BigInteger&)
   operator>>=(T other) {
     *this = *this >> other;
@@ -936,9 +926,8 @@ class BigInteger {
   }
 
   template <typename T>
-  REQUIRES((
-    is_native_integer<T>::value &&
-    !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+  REQUIRES((is_native_integer<T>::value &&
+            !is_same<typename remove_cvref<T>::type, BigInteger>::value))
   RETURN(BigInteger&)
   operator<<=(T other) {
     *this = *this << other;
@@ -1063,25 +1052,21 @@ class BigInteger {
 
   template <typename T>
   REQUIRES(is_native_integer<T>::value)
-  RETURN(vector<T>)
-  toBinVector() const {
+  RETURN(vector<T>) toBinVector() const {
     vector<T> ret;
     for (int i = 0; i <= pos_; ++i) {
       auto t = data_[i];
-      for (int j = 0; j < 32; ++j)
-        ret.push_back(t & 1), t >>= 1;
+      for (int j = 0; j < 32; ++j) ret.push_back(t & 1), t >>= 1;
     }
     fixSize(ret);
     return ret;
   }
 
   template <typename T>
-  REQUIRES(is_native_integer<T>::value && std::is_signed<T>::value)
-  RETURN(T)
-  toInt() const {
+  REQUIRES(is_native_integer<T>::value&& std::is_signed<T>::value)
+  RETURN(T) toInt() const {
     T result = 0;
-    for (int i = pos_; i >= 0; --i)
-      result = (result << 32) | data_[i];
+    for (int i = pos_; i >= 0; --i) result = (result << 32) | data_[i];
     if (std::is_signed<T>::value) {
       if (sign_ < 0) {
         result = -result;
@@ -1091,12 +1076,10 @@ class BigInteger {
   }
 
   template <typename T>
-  REQUIRES(is_native_integer<T>::value && std::is_unsigned<T>::value)
-  RETURN(T)
-  toInt() const {
+  REQUIRES(is_native_integer<T>::value&& std::is_unsigned<T>::value)
+  RETURN(T) toInt() const {
     T result = 0;
-    for (int i = pos_; i >= 0; --i)
-      result = (result << 32) | data_[i];
+    for (int i = pos_; i >= 0; --i) result = (result << 32) | data_[i];
     if (std::is_signed<T>::value) {
       // Warning
     }
@@ -1228,12 +1211,10 @@ inline BigInteger operator*(const BigInteger& l, const BigInteger& r) {
 }
 
 template <typename T>
-inline
-REQUIRES((
-   is_native_integer<T>::value &&
-   !is_same<typename remove_cvref<T>::type, BigInteger>::value))
-RETURN(BigInteger)
-operator*(const BigInteger& l, T r) {
+inline REQUIRES((is_native_integer<T>::value &&
+                 !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+    RETURN(BigInteger)
+    operator*(const BigInteger& l, T r) {
   if (r == 0 || l.isZero()) return 0;
 
   typedef typename std::make_unsigned<T>::type unsignedT;
@@ -1246,12 +1227,10 @@ operator*(const BigInteger& l, T r) {
 }
 
 template <typename T>
-inline
-REQUIRES((
-   is_native_integer<T>::value &&
-   !is_same<typename remove_cvref<T>::type, BigInteger>::value))
-RETURN(BigInteger)
-operator*(T l, const BigInteger& r) {
+inline REQUIRES((is_native_integer<T>::value &&
+                 !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+    RETURN(BigInteger)
+    operator*(T l, const BigInteger& r) {
   return r * l;
 }
 
@@ -1262,12 +1241,10 @@ inline BigInteger operator/(const BigInteger& l, const BigInteger& r) {
 }
 
 template <typename T>
-inline
-REQUIRES((
-  is_native_integer<T>::value &&
-  !is_same<typename remove_cvref<T>::type, BigInteger>::value))
-RETURN(BigInteger)
-operator/(const BigInteger& l, T r) {
+inline REQUIRES((is_native_integer<T>::value &&
+                 !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+    RETURN(BigInteger)
+    operator/(const BigInteger& l, T r) {
   BigInteger u;
   T v;
   tie(u, v) = div(l, r);
@@ -1309,12 +1286,9 @@ inline tuple<BigInteger, BigInteger> div(const BigInteger& l,
 }
 
 template <typename T>
-inline
-REQUIRES((
-  is_native_integer<T>::value &&
-  !is_same<typename remove_cvref<T>::type, BigInteger>::value))
-RETURN(tuple<BigInteger, T>)
-div(const BigInteger& l, T r) {
+inline REQUIRES((is_native_integer<T>::value &&
+                 !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+    RETURN(tuple<BigInteger, T>) div(const BigInteger& l, T r) {
   if (l.isZero() && r == 0) {
     return make_tuple(1, 0);
   }
@@ -1339,12 +1313,9 @@ div(const BigInteger& l, T r) {
 }
 
 template <typename T>
-inline
-REQUIRES((
-  is_native_integer<T>::value &&
-  !is_same<typename remove_cvref<T>::type, BigInteger>::value))
-RETURN(void)
-divInplace(BigInteger& l, T r, T& remain) {
+inline REQUIRES((is_native_integer<T>::value &&
+                 !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+    RETURN(void) divInplace(BigInteger& l, T r, T& remain) {
   if (l.isZero() && r == 0) {
     l = 1;
     remain = 0;
@@ -1381,12 +1352,10 @@ inline BigInteger operator%(const BigInteger& l, const BigInteger& r) {
 }
 
 template <typename T>
-inline
-REQUIRES((
-  is_native_integer<T>::value &&
-  !is_same<typename remove_cvref<T>::type, BigInteger>::value))
-RETURN(T)
-operator%(const BigInteger& l, T r) {
+inline REQUIRES((is_native_integer<T>::value &&
+                 !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+    RETURN(T)
+    operator%(const BigInteger& l, T r) {
   BigInteger u;
   T v;
   tie(u, v) = div(l, r);
@@ -1448,12 +1417,10 @@ inline BigInteger operator|(const BigInteger& l, const BigInteger& r) {
 }
 
 template <typename T>
-inline
-REQUIRES((
-  is_native_integer<T>::value &&
-  !is_same<typename remove_cvref<T>::type, BigInteger>::value))
-RETURN(BigInteger)
-operator<<(const BigInteger& l, T n) {
+inline REQUIRES((is_native_integer<T>::value &&
+                 !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+    RETURN(BigInteger)
+    operator<<(const BigInteger& l, T n) {
   if (l.getSign() == 0) {
     return 0;
   }
@@ -1474,12 +1441,10 @@ operator<<(const BigInteger& l, T n) {
 }
 
 template <typename T>
-inline
-REQUIRES((
-  is_native_integer<T>::value &&
-  !is_same<typename remove_cvref<T>::type, BigInteger>::value))
-RETURN(BigInteger)
-operator>>(const BigInteger& l, T n) {
+inline REQUIRES((is_native_integer<T>::value &&
+                 !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+    RETURN(BigInteger)
+    operator>>(const BigInteger& l, T n) {
   if (l.getSign() == 0) {
     return 0;
   }
@@ -1506,12 +1471,9 @@ operator>>(const BigInteger& l, T n) {
 }
 
 template <typename T>
-inline
-REQUIRES((
-  is_native_integer<T>::value &&
-  !is_same<typename remove_cvref<T>::type, BigInteger>::value))
-RETURN(BigInteger)
-power(const BigInteger& l, T n) {
+inline REQUIRES((is_native_integer<T>::value &&
+                 !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+    RETURN(BigInteger) power(const BigInteger& l, T n) {
   BigInteger ret(1);
   BigInteger x(l);
   for (; n > 0; n >>= 1) {
@@ -1522,12 +1484,10 @@ power(const BigInteger& l, T n) {
 }
 
 template <typename T>
-inline
-REQUIRES((
-  is_native_integer<T>::value &&
-  !is_same<typename remove_cvref<T>::type, BigInteger>::value))
-RETURN(BigInteger)
-power_mod(const BigInteger& l, T n, const BigInteger& mod) {
+inline REQUIRES((is_native_integer<T>::value &&
+                 !is_same<typename remove_cvref<T>::type, BigInteger>::value))
+    RETURN(BigInteger)
+        power_mod(const BigInteger& l, T n, const BigInteger& mod) {
   if (mod == 1) {
     return 0;
   }
@@ -1604,9 +1564,7 @@ inline ostream& operator<<(ostream& o, const BigInteger& bi) {
   return o << bi.toString();
 }
 
-SL string to_string(const BigInteger& x) {
-  return x.toString();
-}
+SL string to_string(const BigInteger& x) { return x.toString(); }
 
 inline BigInteger operator"" _bi(const char* sv, size_t sc) {
   return BigInteger(string(sv));

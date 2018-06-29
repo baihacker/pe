@@ -16,7 +16,9 @@ SL void comb_moder_test() {
     CombModerEx moder(mod);
     const int64 n = 66666666604;
     const int64 m = 33333333302;
-    assert(moder.comb(n, m) == 99999410307);
+    auto result = moder.comb(n, m);
+
+    assert(result == 99999410307);
   }
   #endif
 }

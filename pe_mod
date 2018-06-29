@@ -110,6 +110,52 @@ SL uint64 mod128_64(uint128 a, uint64 b) {
 }
 #endif
 
+#if defined(COMPILER_GNU) && PE_X86_64
+template<typename T>
+SL REQUIRES((is_native_integer<T>::value && is_unsigned<T>::value))
+  RETURN(uint64) mul_mod_ex_dis(uint64 a, uint64 b, uint64 mod) {
+  if (mod >> 32) {
+    uint64 q, r;
+    __asm__("movq %2,%%rax\n\t"
+            "mulq %3\n\t"
+            "divq %4\n\t"
+            : "=a"(q), "=d"(r)
+            : "0"(uint64(a)), "1"(uint64(b)), "rm"(uint64(mod)));
+    return r;
+  } else {
+    uint32 q, r;
+    __asm__("movl %2,%%eax\n\t"
+            "mull %3\n\t"
+            "divl %4\n\t"
+            : "=a"(q), "=d"(r)
+            : "0"(uint32(a)), "1"(uint32(b)), "rm"(uint32(mod)));
+    return r;
+  }
+}
+
+template<typename T>
+SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value))
+  RETURN(int64) mul_mod_ex_dis(int64 a, int64 b, int64 mod) {
+  if ((uint64)mod >> 31) {
+    int64 q, r;
+    __asm__("movq %2,%%rax\n\t"
+            "imulq %3\n\t"
+            "idivq %4\n\t"
+            : "=a"(q), "=d"(r)
+            : "0"(a), "1"(b), "rm"(mod));
+    return r;
+  } else {
+    int32 q, r;
+    __asm__("movl %2,%%eax\n\t"
+            "imull %3\n\t"
+            "idivl %4\n\t"
+            : "=a"(q), "=d"(r)
+            : "0"(int32(a)), "1"(int32(b)), "rm"(int32(mod)));
+    return r;
+  }
+}
+#endif
+
 template <typename T1, typename T2, typename M>
 SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
              is_native_integer<M>::value))
@@ -117,22 +163,26 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
   typedef IntPromotion(T1, T2) T;
   typedef typename AtLeastInt64<T>::type atLeastInt64T;
   typedef IntPromotion(atLeastInt64T, T) ResultType;
-
+  
+#if defined(COMPILER_GNU) && PE_X86_64
+  // We have a disassembly version
+  return (ResultType)mul_mod_ex_dis<ResultType>(a, b, mod);
+#else
   if (mod <= PE_SOI63) {
     return mul_mod_impl<atLeastInt64T, M>(a, b, mod);
   }
 #if PE_HAS_INT128
   return (ResultType)mul_mod_impl<int128, M>(a, b, mod);
-#else
+#elif !PLATFORM_WIN || !ENABLE_OPENMP
+  // The openmp has issue about long double on windows.
+  // Seems caused by thread library.
   const int64 x = a, y = b, m = mod;
   int64 r = (x * y - (int64)(((long double)x * y) / m) * m);
   if (r >= m) r -= r / m * m;
   if (r < 0) r += m;
-  return (ResultType)r;
-#endif
-
-#if 0
-#warning "mul_mod_ex may be very slow."
+  return r;
+#else
+  #warning "mul_mod_ex may be very slow."
 
   atLeastInt64T ret = 0;
   atLeastInt64T flag = b;
@@ -143,6 +193,8 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
     flag = (flag << 1) % mod;
   }
   return (ResultType)ret;
+#endif
+
 #endif
 }
 
@@ -186,11 +238,10 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
   typedef IntPromotion(T1, M) ResultType;
 
   ResultType ret = 1;
-  x %= mod;
-  if (x < 0) x += mod;
+  auto y = regulate_mod(x, mod);
   for (; n; n >>= 1) {
-    if (n & 1) ret = mul_mod(ret, x, mod);
-    x = mul_mod(x, x, mod);
+    if (n & 1) ret = mul_mod(ret, y, mod);
+    y = mul_mod(y, y, mod);
   }
   return ret;
 }
@@ -211,11 +262,10 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
   typedef IntPromotion(T1, M) ResultType;
 
   ResultType ret = 1;
-  x %= mod;
-  if (x < 0) x += mod;
+  auto y = regulate_mod(x, mod);
   for (; n; n >>= 1) {
-    if (n & 1) ret = mul_mod_ex(ret, x, mod);
-    x = mul_mod_ex(x, x, mod);
+    if (n & 1) ret = mul_mod_ex(ret, y, mod);
+    y = mul_mod_ex(y, y, mod);
   }
   return ret;
 }

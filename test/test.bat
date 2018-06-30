@@ -1,2 +1,2 @@
-pe++.py pe_test.c -r
+pe++.py pe_test.c -r -DENABLE_ASSERT=1 -DTRY_TO_USE_INT128=1 -DENABLE_OPENMP=1
 pause

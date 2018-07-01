@@ -3,7 +3,7 @@ pe
 
 [![Build Status](https://travis-ci.org/baihacker/pe.svg?branch=master)](https://travis-ci.org/baihacker/pe)
 [![Build status](https://ci.appveyor.com/api/projects/status/scaji00tde2gb7uy?svg=true)](https://ci.appveyor.com/project/baihacker/pe)
-[![Github Releases](https://img.shields.io/github/release/baihacker/pe.svg)](https://github.com/kimwalisch/pe/releases)
+[![Github Releases](https://img.shields.io/github/release/baihacker/pe.svg)](https://github.com/baihacker/pe/releases)
 
 It is my basic code for solving problem on project euler.
 

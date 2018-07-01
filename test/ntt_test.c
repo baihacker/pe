@@ -1,7 +1,7 @@
 #include "pe_test.h"
 
 namespace ntt_test {
-#if ENABLE_FLINT
+#if ENABLE_FLINT || HAS_POLY_MUL_NTT64
 typedef vector<uint64> (*poly_mul_t)(const vector<uint64>& X,
                                      const vector<uint64>& Y, int64 mod);
 struct MulImpl {
@@ -10,14 +10,28 @@ struct MulImpl {
   const char* name;
 };
 MulImpl mulImpl[] = {
+#if ENABLE_FLINT
     {&poly_mul_flint<uint64>, 2, "flint n"},
     {&poly_mul_flint_prime<uint64>, 2, "flint p"},
-    {&ntt32::poly_mul_ntt_small<uint64>, 0, "ntt32 s"},
-#if PE_HAS_INT128
-    {&ntt32::poly_mul_ntt<uint64>, 1, "ntt32 l"},
-    {&ntt64::poly_mul_ntt_small<uint64>, 0, "ntt64 s"},
+#else
     {&ntt64::poly_mul_ntt<uint64>, 2, "ntt64 l"},
+#endif
+#if HAS_POLY_MUL_NTT32_SMALL
+    {&ntt32::poly_mul_ntt_small<uint64>, 0, "ntt32 s"},
+#endif
+#if HAS_POLY_MUL_NTT32
+    {&ntt32::poly_mul_ntt<uint64>, 1, "ntt32 l"},
+#endif
+#if HAS_POLY_MUL_NTT64_SMALL
+    {&ntt64::poly_mul_ntt_small<uint64>, 0, "ntt64 s"},
+#endif
+#if ENABLE_FLINT && HAS_POLY_MUL_NTT64
+    {&ntt64::poly_mul_ntt<uint64>, 2, "ntt64 l"},
+#endif
+#if HAS_POLY_MUL_MIN25_NTT_SMALL
     {&ntt_min25::poly_mul_ntt_small<uint64>, 0, "Min_25 s"},
+#endif
+#if HAS_POLY_MUL_MIN25_NTT
     {&ntt_min25::poly_mul_ntt<uint64>, 2, "Min_25 l"},
 #endif
 #if ENABLE_LIBBF && HAS_POLY_MUL_LIBBF
@@ -33,7 +47,7 @@ const char* dataPolicy[3] = {
 
 SL void test_impl(int dp, int size, int n, int64 mod) {
   fprintf(stderr, "%-8s : data = %s, size = %d, n = %d, mod = %lld\n",
-          "ntt test", dataPolicy[dp], size, n, mod);
+          "ntt test", dataPolicy[dp], size, n, (long long)mod);
 
   vector<uint64> x, y;
   srand(123456789);
@@ -98,7 +112,7 @@ SL void ntt_performance_test() {
   uint64 mods[3] = {100019, 100000000003, 316227766016779};
   
   for (int level = 0; level <= 2; ++level) {
-    printf("mod = %lld\n", mods[level]);
+    printf("mod = %llu\n", (unsigned long long)mods[level]);
     const auto mod = mods[level];
 
     printf("log2(n)  ");

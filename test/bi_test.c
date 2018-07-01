@@ -73,7 +73,9 @@ SL void bi_mul_test_big() {
   bi_mul_test_impl(10, 10000);
 }
 
+#if !defined(TEST_ON_TRAVIS)
 PE_REGISTER_TEST(&bi_mul_test_big, "bi_mul_test_big", BIG);
+#endif
 
 SL void bi_div_test_medium_impl(int x, int y) {
   for (int strategy = 0; strategy < 2; ++ strategy)
@@ -136,12 +138,17 @@ SL void bi_div_test_medium() {
   bi_div_test_medium_impl(100, 500);
 }
 
+#if !defined(TEST_ON_TRAVIS)
 PE_REGISTER_TEST(&bi_div_test_medium, "bi_div_test_medium", MEDIUM);
+#endif
 
 SL void bi_div_test_big() {
   bi_div_test_medium_impl(10, 2000);
 }
 
+#if !defined(TEST_ON_TRAVIS)
 PE_REGISTER_TEST(&bi_div_test_big, "bi_div_test_big", BIG);
+#endif
+
 #endif
 }

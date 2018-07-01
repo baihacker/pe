@@ -1,6 +1,8 @@
 pe
 ==
 
+[![Build Status](https://travis-ci.org/baihacker/pe.svg?branch=master)](https://travis-ci.org/baihacker/pe)
+
 It is my basic code for solving problem on project euler.
 
 Latest release: [Pe2.0](https://github.com/baihacker/pe/releases)

@@ -29,10 +29,14 @@ PeTest& getTester() {
 }
 
 TestSize enabledTestSize[]{
-//  SMALL,
-//  MEDIUM,
-//  BIG,
-SPECIFIED,
+#if defined(TEST_ALL)
+  SMALL,
+  MEDIUM,
+  BIG,
+  SPECIFIED,
+#else
+  SPECIFIED,
+#endif
 };
 
 SL bool isEnabledTestSize(TestSize size) {

@@ -13,3 +13,4 @@ pe++.py pe_demo_0.c
 pe++.py pe_demo_1.c
 pe++.py poly_demo.c
 pe++.py show_primes.c
+pause

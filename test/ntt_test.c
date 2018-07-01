@@ -47,7 +47,7 @@ const char* dataPolicy[3] = {
 
 SL void test_impl(int dp, int size, int n, int64 mod) {
   fprintf(stderr, "%-8s : data = %s, size = %d, n = %d, mod = %lld\n",
-          "ntt test", dataPolicy[dp], size, n, mod);
+          "ntt test", dataPolicy[dp], size, n, (long long)mod);
 
   vector<uint64> x, y;
   srand(123456789);
@@ -112,7 +112,7 @@ SL void ntt_performance_test() {
   uint64 mods[3] = {100019, 100000000003, 316227766016779};
   
   for (int level = 0; level <= 2; ++level) {
-    printf("mod = %lld\n", mods[level]);
+    printf("mod = %llu\n", (unsigned long long)mods[level]);
     const auto mod = mods[level];
 
     printf("log2(n)  ");

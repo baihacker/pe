@@ -156,15 +156,13 @@ void init_ntt(int k = 22) {
 }
 
 // Need int128 to handle the big polynomial coefficient.
-#if PE_HAS_INT128
-
 #define HAS_POLY_MUL_NTT32 1
 
 struct ntt_constant {
   static const uint64 M1 = 2013265921;
   static const uint64 M2 = 2281701377;
   static const uint64 M3 = 3221225473;
-#if 0
+#if 0 && PE_HAS_INT128
   static const uint64 M12 = M1 * M2;
   static const uint64 M13 = M1 * M3;
   static const uint64 M23 = M2 * M3;
@@ -234,7 +232,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 #pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
 #endif
   for (int i = 0; i < resultSize; ++i) {
-#if 0
+#if 0 && PE_HAS_INT128
     const uint128 a = tresult[0][i] * ntt_constant::M23M;
     const uint128 b = tresult[1][i] * ntt_constant::M13M;
     const uint128 c = tresult[2][i] * ntt_constant::M12M;
@@ -249,10 +247,18 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     const uint64 y1 = x1 * ntt_constant::INV_M1__M2 % ntt_constant::M2;
     const uint64 modab = y1 * ntt_constant::M1 + a;
     const uint64 x2 = modab >= c ? modab - c : ntt_constant::M1M2 - c + modab;
+#if PE_HAS_INT128
     const uint64 y2 =
         (uint128)x2 * ntt_constant::INV_M3__M1M2 % ntt_constant::M1M2;
     const uint128 t = (uint128)y2 * ntt_constant::M3 + c;
     result[i] = mod > 0 ? t % mod : t;
+#else
+    PE_ASSERT(mod > 0);
+    const uint64 y2 =
+        mul_mod_ex(x2, ntt_constant::INV_M3__M1M2, ntt_constant::M1M2);
+    const uint64 t = mul_mod_ex(y2%mod, ntt_constant::M3%mod, mod);
+    result[i] = add_mod(t, c%mod, mod);
+#endif
 #endif
   }
 }
@@ -280,10 +286,6 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 
   return result;
 }
-
-#else
-#define HAS_POLY_MUL_NTT32 0
-#endif
 
 #define HAS_POLY_MUL_NTT32_SMALL 1
 struct ntt_small_constant {
@@ -377,7 +379,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 }
 }  // namespace ntt32
 
-#if PE_HAS_INT128
+
 #define HAS_POLY_MUL_NTT64 1
 #define HAS_POLY_MUL_NTT64_SMALL 1
 
@@ -394,7 +396,7 @@ struct NttMod64 {
   uint64 omg[64];
   mutable uint64* preOmg[64];
 
-  NttMod64(uint64 mod, uint64 r, int k, uint64 g) : mod(mod), r(r), k(k), g(g) {
+  NttMod64(uint64 mod, unsigned r, int k, unsigned g) : mod(mod), r(r), k(k), g(g) {
     for (int i = 0; i <= k; ++i) {
       omg[i] = power_mod_ex<uint64>(g, (mod - 1) >> i, mod);
     }
@@ -423,7 +425,11 @@ struct NttMod64 {
       uint64 last = 1;
       target[0] = 1;
       for (int i = 1; i < cnt; ++i) {
+        #if PE_HAS_INT128
         last = mod128_64((uint128)last * m, mod);
+        #else
+        last = mul_mod_ex(last, m, mod);
+        #endif
         target[i] = last;
       }
     }
@@ -452,7 +458,11 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
         const int limit = j + halfH;
         for (int k = j; k < limit; ++k) {
           const auto u = data[k] % mod;
+          #if PE_HAS_INT128
           const auto t = mod128_64((uint128)*omg++ * data[k + halfH], mod);
+          #else
+          const auto t = mul_mod_ex(*omg++, data[k + halfH], mod);
+          #endif
           data[k] = (u + t) % mod;
           data[k + halfH] = (u + mod - t) % mod;
         }
@@ -467,10 +477,18 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
         const int limit = j + halfH;
         for (int k = j; k < limit; ++k) {
           const auto u = data[k] % mod;
+          #if PE_HAS_INT128
           const auto t = mod128_64((uint128)omgn * data[k + halfH], mod);
+          #else
+          const auto t = mul_mod_ex(omgn, data[k + halfH], mod);
+          #endif
           data[k] = (u + t) % mod;
           data[k + halfH] = (u + mod - t) % mod;
+          #if PE_HAS_INT128
           omgn = mod128_64((uint128)omgn * moder.omg[id], mod);
+          #else
+          omgn = mul_mod_ex(omgn, moder.omg[id], mod);
+          #endif
         }
       }
     }
@@ -479,7 +497,13 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     const int halfN = n >> 1;
     for (int i = 1; i < halfN; ++i) swap(data[i], data[n - i]);
     const uint64 c = power_mod_ex<uint64>(n, mod - 2, mod);
-    for (int i = 0; i < n; ++i) data[i] = mod128_64((uint128)c * data[i], mod);
+    for (int i = 0; i < n; ++i) {
+      #if PE_HAS_INT128
+      data[i] = mod128_64((uint128)c * data[i], mod);
+      #else
+      data[i] = mul_mod_ex(c, data[i], mod);
+      #endif
+    }
   }
 }
 
@@ -534,7 +558,11 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     }
     const uint64 mod = moder.mod;
     for (int i = 0; i < alignedSize; ++i) {
+      #if PE_HAS_INT128
       XX[i] = mod128_64((uint128)XX[i] * YY[i], mod);
+      #else
+      XX[i] = mul_mod_ex(XX[i], YY[i], mod);
+      #endif
     }
     ntt(&XX[0], alignedSize, moder, true);
     tresult[id] = std::move(XX);
@@ -548,10 +576,18 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     const uint64 a = tresult[0][i];
     const uint64 b = tresult[1][i];
     const uint64 x = b >= a ? b - a : b + ntt_constant::M2 - a;
+    #if PE_HAS_INT128
     const uint64 y =
         mod128_64((uint128)x * ntt_constant::INV_M1__M2, ntt_constant::M2);
     const uint128 t = (uint128)y * ntt_constant::M1 + a;
     result[i] = mod > 0 ? t % mod : t;
+    #else
+    PE_ASSERT(mod > 0);
+    const uint64 y =
+        mul_mod_ex(x, ntt_constant::INV_M1__M2, ntt_constant::M2);
+    const uint64 t = mul_mod_ex(y%mod, ntt_constant::M1%mod, mod);
+    result[i] = add_mod(t, a%mod, mod);
+    #endif
   }
 }
 
@@ -615,7 +651,11 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     }
     const uint64 mod = moder.mod;
     for (int i = 0; i < alignedSize; ++i) {
+      #if PE_HAS_INT128
       XX[i] = mod128_64((uint128)XX[i] * YY[i], mod);
+      #else
+      XX[i] = mul_mod_ex(XX[i], YY[i], mod);
+      #endif
     }
     ntt(&XX[0], alignedSize, moder, true);
     tresult[id] = std::move(XX);
@@ -655,10 +695,6 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
   return result;
 }
 }  // namespace ntt64
-#else
-#define HAS_POLY_MUL_NTT64 0
-#define HAS_POLY_MUL_NTT64_SMALL 0
-#endif
 
 #include "pe_ntt_min_25"
 

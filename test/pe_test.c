@@ -55,7 +55,7 @@ int main() {
   dbg(maxp2);
 
   auto& tester = getTester();
-  const int size = tester.tests.size();
+  const int size = (int)tester.tests.size();
   
   bool isFirstTest = true;
   ntt32::init_ntt();

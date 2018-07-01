@@ -1,6 +1,7 @@
 #include "pe_test.h"
 
 namespace mod_test {
+#if PE_HAS_INT128
 template<typename T>
 struct ValueHolder {};
 
@@ -91,7 +92,8 @@ REGULATE_MOD_TEST(uint64, uint64)
 }
 
 PE_REGISTER_TEST(&mod_test, "mod_test", SMALL);
-
+#endif
+  
 #if PE_HAS_INT128
 SL void frac_mod_test() {
   const int mod = 1000000007;

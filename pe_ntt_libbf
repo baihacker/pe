@@ -1,7 +1,7 @@
 #ifndef __PE_NTT_LIBBF__
 #define __PE_NTT_LIBBF__
 
-#if PE_HAS_INT128 && ENABLE_LIBBF
+#if ENABLE_LIBBF
 
 #define HAS_POLY_MUL_LIBBF 1
 
@@ -48,14 +48,24 @@ SL void poly_mul_ntt_internal(const T* X, int n, const T* Y, int m, T* result,
 
   const int size = n + m - 1;
   const auto* data = z1.tab;
+#if !PE_HAS_INT128
+  const auto magic1 = (1LL << 32) % mod;
+  const auto magic2 = mul_mod_ex(magic1, magic1, mod);
+#endif
   for (int i = 0; i < size; ++i) {
     const uint64 low = data[i << 1];
     const uint64 hi = data[(i << 1) | 1];
     if (hi == 0) {
       result[i] = mod > 0 ? low % mod : low;
     } else {
+#if PE_HAS_INT128
       const uint128 t = ((uint128)hi << 64) | low;
       result[i] = mod > 0 ? t % mod : t;
+#else
+      PE_ASSERT(mod > 0);
+      const auto A = mul_mod_ex(hi % mod, magic2, mod);
+      result[i] = add_mod(A, low % mod, mod);
+#endif
     }
   }
 

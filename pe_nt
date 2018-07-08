@@ -688,10 +688,23 @@ SL void init_seq_prod_inv(T* target, T s, T e, T mod, T lastv = 0) {
   }
 }
 
+// 90000000599999991
+SL int64 sqrti(int64 d) {
+  const int64 result = sqrt(d);
+  return result * result > d ? result - 1 : result;
+}
+
+#if PE_HAS_INT128
+SL int64 sqrti(int128 d) {
+  const int64 result = sqrt((long double)d);
+  return (int128)result * result > d ? result - 1 : result;
+}
+#endif
+
 SL int64 square_root_safe(int64 n) {
   if (n <= 0) return 0;
   if (n == 1) return 1;
-  for (int64 test = static_cast<int64>(sqrt(n));; ++test) {
+  for (int64 test = sqrti(n);; ++test) {
     const int64 t = test * test;
     if (t == n) return test;
     if (t > n) return 0;
@@ -702,7 +715,7 @@ SL int64 square_root_safe(int64 n) {
 SL int64 square_root_unsafe(int64 n) {
   if (n <= 0) return 0;
   if (n == 1) return 1;
-  int64 ret = static_cast<int64>(sqrt(n));
+  int64 ret = sqrti(n);
   return ret * ret == n ? ret : 0;
 }
 
@@ -711,7 +724,8 @@ SL int64 square_root(int64 n) {
   if (n == 1) return 1;
   // see Donald L. Graham, Donald E. Knuth, Oren Patashnik, CONCRETE
   // MATHEMATICS, pp 70-72
-  int64 ret = static_cast<int64>(sqrt(n + 0.5));
+  // int64 ret = static_cast<int64>(sqrt(n + 0.5));
+  int64 ret = sqrti(n);
   return ret * ret == n ? ret : 0;
 }
 

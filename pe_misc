@@ -151,4 +151,91 @@ class GaussianEliminationSolver {
   int x, y;
 };
 
+// Returns the number of (x, y) where
+// x^2+y^2<=n and x >= 0 and y >= 0
+SL int64 count_pt_in_circle_q1(int64 n) {
+  struct Pt {int64 x, y;};
+  const int64 m = sqrti(n);
+  stack<Pt> stk;
+  stk.push({0, 1});
+  int64 vx = 1, vy = 0;
+  int64 A = 0, B = 0;
+  int64 x = 0, y = m;
+  while (!stk.empty()) {
+    while (x + vx <= m && y - vy >= 0 && sq(x+vx) + sq(y-vy) <= n) {
+      x += vx;
+      y -= vy;
+      A += vx * (2 * y + vy);
+      ++B;
+    }
+    if (x >= m) break;
+    int64 cx, cy;
+    cx = stk.top().x;
+    cy = stk.top().y;
+    stk.pop();
+    int fnd = 0;
+    while (!fnd) {
+      while (x + cx <= m && y - cy >= 0 && sq(x+cx) + sq(y-cy) <= n) {
+        stk.push({cx, cy});
+        cx += vx, cy += vy;
+      }
+      vx = cx, vy = cy;
+      if (stk.empty()) {
+        fnd = 1;
+        break;
+      }
+      
+      cx = stk.top().x;
+      cy = stk.top().y;
+      stk.pop();
+      int64 lastV = -1;
+      for (;;) {
+        if (x + vx + cx <= m && y-vy-cy>=0&&sq(x+vx+cx)+sq(y-vy-cy) <= n) {
+          stk.push({cx, cy});
+          cx += vx, cy += vy;
+          break;
+        }
+        int64 currV = sq(x+vx+2*cx) + sq(y-vy-2*cy);
+        //if (x + vx + 2 * cx > m || y - vy - 2*cy < 0 || lastV != -1 && currV > lastV) {
+        if (cx*(x+vx+cx)>=cy*(y-vy-cy)) {
+          vx = cx, vy = cy;
+          fnd = 1;
+          break;
+        }
+        lastV = currV;
+        vx += cx;
+        vy += cy;
+      }
+    }
+  }
+
+  const int64 BD = B + m + x + (y - 1) + 1;
+  const int64 I = (A - BD + 2) / 2;
+  int64 ret = I + BD;
+  for (int64 i = x + 1; i <= m; ++i) {
+    ret += sqrti(n-sq(i)) + 1;
+  }
+  return ret;
+}
+
+SL int64 count_pt_in_circle(int64 n) {
+  const int64 m = sqrti(n);
+  const int64 t = count_pt_in_circle_q1(n);
+  return (t - m) * 4 + 1;
+}
+
+SL int64 count_pt_in_circle_q1_bf(int64 n) {
+  const int64 m = sqrti(n);
+  int64 ret = 0;
+  for (int64 i = 0; i <= m; ++i) {
+    ret += sqrti(n-sq(i)) + 1;
+  }
+  return ret;
+}
+
+SL int64 count_pt_in_circle_bf(int64 n) {
+  const int64 m = sqrti(n);
+  const int64 t = count_pt_in_circle_q1_bf(n);
+  return (t - m) * 4 + 1;
+}
 #endif

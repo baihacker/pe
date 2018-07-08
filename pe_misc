@@ -161,12 +161,14 @@ SL int64 count_pt_in_circle_q1(int64 n) {
   int64 vx = 1, vy = 0;
   int64 A = 0, B = 0;
   int64 x = 0, y = m;
+  int64 iter = 0;
   while (!stk.empty()) {
     while (x + vx <= m && y - vy >= 0 && sq(x+vx) + sq(y-vy) <= n) {
       x += vx;
       y -= vy;
       A += vx * (2 * y + vy);
       ++B;
+      ++iter;
     }
     if (x >= m) break;
     int64 cx, cy;
@@ -178,6 +180,7 @@ SL int64 count_pt_in_circle_q1(int64 n) {
       while (x + cx <= m && y - cy >= 0 && sq(x+cx) + sq(y-cy) <= n) {
         stk.push({cx, cy});
         cx += vx, cy += vy;
+        ++iter;
       }
       vx = cx, vy = cy;
       if (stk.empty()) {
@@ -189,15 +192,18 @@ SL int64 count_pt_in_circle_q1(int64 n) {
       cy = stk.top().y;
       stk.pop();
       int64 lastV = -1;
-      for (;;) {
+      for (;;++iter) {
         if (x + vx + cx <= m && y-vy-cy>=0&&sq(x+vx+cx)+sq(y-vy-cy) <= n) {
           stk.push({cx, cy});
           cx += vx, cy += vy;
           break;
         }
         int64 currV = sq(x+vx+2*cx) + sq(y-vy-2*cy);
-        //if (x + vx + 2 * cx > m || y - vy - 2*cy < 0 || lastV != -1 && currV > lastV) {
-        if (cx*(x+vx+cx)>=cy*(y-vy-cy)) {
+        // auto f0 = abs((y-vy)*cx + (x+vx)*cy) > (m + 1) * sqrt((sq(cx)+sq(cy)));
+        auto f1 = cx*(x+vx+cx)>=cy*(y-vy-cy);
+        // auto f2 = x + vx + 2 * cx > m || y - vy - 2*cy < 0 || lastV != -1 && currV > lastV;
+        if (f1) {
+        // if (f2) {
           vx = cx, vy = cy;
           fnd = 1;
           break;
@@ -208,7 +214,7 @@ SL int64 count_pt_in_circle_q1(int64 n) {
       }
     }
   }
-
+  dbg(iter);
   const int64 BD = B + m + x + (y - 1) + 1;
   const int64 I = (A - BD + 2) / 2;
   int64 ret = I + BD;

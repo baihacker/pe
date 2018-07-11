@@ -16,4 +16,34 @@ SL void nt_test() {
 }
 
 PE_REGISTER_TEST(&nt_test, "nt_test", MEDIUM);
+
+SL void get_factors_test() {
+  auto result = get_factors(1);
+  assert(result == vector<int64>{1});
+
+  result = get_factors(2);
+  assert(result == vector<int64>({1,2}));
+
+  result = get_factors(3);
+  assert(result == vector<int64>({1,3}));
+
+  result = get_factors(4);
+  assert(result == vector<int64>({1,2,4}));
+
+  result = get_factors(12);
+  sort(all(result));
+  assert(result == vector<int64>({1,2,3,4,6,12}));
+
+  for (int64 limit = -1; limit <= 20; ++limit) {
+    auto result = get_factors(12, limit);
+    sort(all(result));
+    vector<int64> expected;
+    for (auto iter: {1,2,3,4,6,12}) if (limit < 0 || iter <= limit) {
+      expected.push_back(iter);
+    }
+    assert(result == expected);
+  }
+}
+
+PE_REGISTER_TEST(&get_factors_test, "get_factors_test", SMALL);
 }

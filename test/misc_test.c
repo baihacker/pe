@@ -14,6 +14,24 @@ SL void misc_test() {
   for (int i = 0; i < 10; ++i) {
     assert(fabs(v[i]-1) < 1e-10);
   }
+
+  auto vtos = [=](const vector<int64>& vec) {
+    stringstream ss;
+    ss << vec;
+    return ss.str();
+  };
+
+  vector<int64> vec;
+  assert(vtos(vec) == "{}");
+
+  vec.push_back(1);
+  assert(vtos(vec) == "{1}");
+
+  vec.push_back(2);
+  assert(vtos(vec) == "{1, 2}");
+
+  vec.push_back(3);
+  assert(vtos(vec) == "{1, 2, 3}");
 }
 
 PE_REGISTER_TEST(&misc_test, "misc_test", SMALL);

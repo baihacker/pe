@@ -286,35 +286,45 @@ SL int is_prime_ex(int64 n) {
   return 1;
 }
 
-SL void get_factors_impl(const int limit, const vector<pair<int64, int>>& f,
-                         int64 value, int64 maxv, vector<int64>& result) {
-  if (maxv == -1 || value <= maxv) {
-    result.push_back(value);
+SL vector<int64> get_factors_impl(const vector<pair<int64, int>>& f, const int64 maxv) {
+  if (maxv == 0) {
+    return vector<int64>();
   }
-  for (int i = 0; i < limit; ++i) {
-    int64 tvalue = value;
-    const int64 p = f[i].first;
-    const int c = f[i].second;
-    for (int j = 1; j <= c; ++j) {
-      tvalue *= p;
-      if (maxv != -1 && tvalue > maxv) break;
-      get_factors_impl(i, f, tvalue, maxv, result);
+
+  int maxsize = 1;
+  for (auto& iter: f) maxsize *= iter.second + 1;
+
+  vector<int64> result(maxsize);
+  result[0] = 1;
+
+  int top = 1;
+  for (auto& iter: f) {
+    const int last = top;
+    const int64 p = iter.first;
+    int64 v = 1;
+    for (int i = 0; i < iter.second; ++i) {
+      v *= p;
+      if (maxv > 0 && v > maxv) break;
+      for (int j = 0; j < last; ++j) {
+        auto tmp = result[j] * v;
+        if (maxv < 0 || tmp <= maxv) {
+          result[top++] = tmp;
+        }
+      }
     }
   }
+
+  result.resize(top);
+  return std::move(result);
 }
 
 SL vector<int64> get_factors(const vector<pair<int64, int>>& f,
                              int64 maxv = -1) {
-  vector<int64> result;
-  get_factors_impl(static_cast<int>(f.size()), f, 1, maxv, result);
-  return result;
+  return get_factors_impl(f, maxv);
 }
 
 SL vector<int64> get_factors(int64 value, int64 maxv = -1) {
-  vector<int64> result;
-  auto f = factorize(value);
-  get_factors_impl(static_cast<int>(f.size()), f, 1, maxv, result);
-  return result;
+  return get_factors_impl(factorize(value), maxv);
 }
 
 SL int64 cal_phi(int64 n, const vector<pair<int64, int>>& fn) {

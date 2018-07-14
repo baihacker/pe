@@ -5,6 +5,7 @@
 #include "pe_integer_util"
 #include "pe_nt"
 #include "pe_ntt"
+#include "pe_fraction"
 
 static const struct alloc_mem {
 } alloc_mem_tag;
@@ -1086,6 +1087,24 @@ class BigInteger {
     return result;
   }
 
+  double toDouble() const {
+    double result = 0;
+    for (int i = pos_; i >= 0; --i) result = result * 4294967296 + data_[i];
+    if (sign_ < 0) {
+      result = -result;
+    }
+    return result;
+  }
+
+  long double toLongDouble() const {
+    long double result = 0;
+    for (int i = pos_; i >= 0; --i) result = result * 4294967296 + data_[i];
+    if (sign_ < 0) {
+      result = -result;
+    }
+    return result;
+  }
+
   int bitCount() const {
     int ret = pos_ << div32_bit;
     int hiCnt = 0;
@@ -1574,6 +1593,86 @@ inline BigInteger operator"" _bi(unsigned long long v) { return BigInteger(v); }
 
 typedef BigInteger bi;
 typedef BigInteger bn;
+
+template <>
+struct Fraction<bi> {
+  Fraction(const bi& u = 0, const bi& v = 1) : a(u), b(v) {
+    auto d = gcd(abs(a), abs(b));
+    if (d > 1) a /= d, b /= d;
+    if (b < 0) b = -b, a = -a;
+  }
+  int operator<(const Fraction& o) const { return a * o.b < b * o.a; }
+  int operator>(const Fraction& o) const { return a * o.b > b * o.a; }
+  int operator==(const Fraction& o) const { return a * o.b == b * o.a; }
+  Fraction operator+(const Fraction& o) const {
+    return Fraction(a * o.b + o.a * b, b * o.b);
+  }
+  Fraction operator-(const Fraction& o) const {
+    return Fraction(a * o.b - o.a * b, b * o.b);
+  }
+  Fraction operator*(const Fraction& o) const {
+    return Fraction(a * o.a, b * o.b);
+  }
+  Fraction operator/(const Fraction& o) const {
+    return Fraction(a * o.b, b * o.a);
+  }
+  double toDouble() { return 1. * a.toDouble() / b.toDouble(); }
+  long double toLongDouble() { return (long double)1. * a.toLongDouble() / b.toLongDouble(); }
+  bi a, b;
+};
+
+template<typename T>
+Fraction<bi> from_continued_fraction(const vector<T>& data) {
+  const int n = (int)data.size();
+  Fraction<bi> now(data[n-1], 1);
+  for (int i = n - 2; i >= 0; --i) {
+    now = Fraction<bi>(data[i] * now.a + now.b, now.a);
+  }
+  return now;
+}
+
+bi find_integer_part(const bi& a, const bi& q, const bi& b, const bi& c) {
+  // a q^(1/2) + b >= c x
+  long double test = (a.toLongDouble() * sqrt(q.toLongDouble()) + b.toLongDouble()) / c.toLongDouble();
+  bi now = (int64)test;
+  const bi target = a * a * q;
+  for (;;) {
+    bi next = now + 1;
+    bi t = sq(c * next - b);
+    if (t <= target) {
+      now = next;
+    } else {
+      break;
+    }
+  }
+  return now;
+}
+
+// convert p sqrt(q) to continued fraction
+// q is square free
+vector<bi> to_continued_fraction(int64 p, int64 q, int n) {
+  vector<bi> result;
+  bi a = p, f = q, b = 0, c = 1;
+  // (a f^(1/2) + b) / c
+  bi val = find_integer_part(a, f, b, c);
+  result.pb(val);
+  b = b - val * c;
+  
+  while (result.size() < n) {
+    // (a f^(1/2) + b) / c
+    // c * (aq^(1/2) - b)
+    auto cc = a * a * f - b * b;
+    auto aa = c * a;
+    auto bb = -c*b;
+    bi val = find_integer_part(aa, f, bb, c);
+    result.pb(val);
+    a = aa;
+    b = bb - val * cc;
+    c = cc;
+  }
+
+  return result;
+}
 
 struct FacModer {
   std::vector<bi> F;

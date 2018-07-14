@@ -1,0 +1,50 @@
+#ifndef __PE_FRACTION_H__
+#define __PE_FRACTION_H__
+
+#include "pe_base"
+#include "pe_integer_util"
+#include "pe_mod"
+#include "pe_nt"
+
+template <typename T>
+struct Fraction {
+  Fraction(T u = 0, T v = 1) : a(u), b(v) {
+    T d = gcd(abs(a), abs(b));
+    if (d > 1) a /= d, b /= d;
+    if (b < 0) b = -b, a = -a;
+  }
+  int operator<(const Fraction& o) const { return a * o.b < b * o.a; }
+  int operator>(const Fraction& o) const { return a * o.b > b * o.a; }
+  int operator==(const Fraction& o) const { return a * o.b == b * o.a; }
+  Fraction operator+(const Fraction& o) const {
+    return Fraction(a * o.b + o.a * b, b * o.b);
+  }
+  Fraction operator-(const Fraction& o) const {
+    return Fraction(a * o.b - o.a * b, b * o.b);
+  }
+  Fraction operator*(const Fraction& o) const {
+    return Fraction(a * o.a, b * o.b);
+  }
+  Fraction operator/(const Fraction& o) const {
+    return Fraction(a * o.b, b * o.a);
+  }
+  double toDouble() { return 1. * a / b; }
+  long double toLongDouble() { return (long double)1. * a / b; }
+  T a, b;
+};
+
+template<typename T>
+Fraction<T> operator + (const Fraction<T>& f) {
+  return f;
+}
+
+template<typename T>
+Fraction<T> operator - (const Fraction<T>& f) {
+  return Fraction<T>(-f.a, f.b);
+}
+
+template<typename T>
+ostream& operator << (ostream& o, const Fraction<T>& f) {
+  return o << f.a << "/" << f.b;
+}
+#endif

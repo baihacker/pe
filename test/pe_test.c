@@ -15,6 +15,7 @@
 #include "poly_test.c"
 #include "poly_algo_test.c"
 #include "fft_test.c"
+#include "fraction_test.c"
 #include "prime_phi_sum_test.c"
 #include "print_int128_test.c"
 #include "square_root_test.c"

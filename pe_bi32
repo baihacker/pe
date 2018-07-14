@@ -1622,8 +1622,9 @@ struct Fraction<bi> {
 };
 
 template<typename T>
-Fraction<bi> from_continued_fraction(const vector<T>& data) {
-  const int n = (int)data.size();
+Fraction<bi> from_continued_fraction(const vector<T>& data, int pos = -1) {
+  const int size = (int)data.size();
+  const int n = pos <= 0 ? 1 : min(size, pos + 1);
   Fraction<bi> now(data[n-1], 1);
   for (int i = n - 2; i >= 0; --i) {
     now = Fraction<bi>(data[i] * now.a + now.b, now.a);
@@ -1664,11 +1665,17 @@ vector<bi> to_continued_fraction(int64 p, int64 q, int n) {
     auto cc = a * a * f - b * b;
     auto aa = c * a;
     auto bb = -c*b;
-    bi val = find_integer_part(aa, f, bb, c);
+    bi val = find_integer_part(aa, f, bb, cc);
     result.pb(val);
     a = aa;
     b = bb - val * cc;
     c = cc;
+    auto d = abs(gcd(gcd(a, b), c));
+    if (d > 1) {
+      a /= d;
+      b /= d;
+      c /= d;
+    }
   }
 
   return result;

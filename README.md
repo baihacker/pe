@@ -52,6 +52,7 @@ File list:
 * pe_bit: Bit operation tricks.
 * pe_bn: Old big integer implementation.
 * pe_fft: Fast fourier transform and polynomial multiplication.
+* pe_fraction: Fraction arithmetic.
 * pe_geometry: Support Point2D and Point3D.
 * pe_integer_util: integer utils.
 * pe_mat: Matrix operations.

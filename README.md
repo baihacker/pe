@@ -46,7 +46,7 @@ File list:
 -----------
 * pe: Including all the files.
 * pe.hpp: The file for generating precompile header.
-* pe_base: Some pre-including headers. Some macros and typedef.
+* pe_base: Some pre-including headers. Some macros and typedef. Some basice inline functions.
 * pe_bi: Big integer whose base is 1 << 30.
 * pe_bi32: Big integer whose base is 1 << 32.
 * pe_bit: Bit operation tricks.
@@ -54,21 +54,25 @@ File list:
 * pe_fft: Fast fourier transform and polynomial multiplication.
 * pe_fraction: Fraction arithmetic.
 * pe_geometry: Support Point2D and Point3D.
-* pe_integer_util: integer utils.
+* pe_int128: Support to output int128 and the corresponding type traits.
 * pe_mat: Matrix operations.
-* pe_misc：misc codes.
 * pe_memory: Memory manipulation such as allocating large memory. (windows only)
+* pe_misc：misc codes.
 * pe_mod: Modular arithmetic.
 * pe_nt: Basic code of number theory.
+* pe_nt_base: Generate prime list, factorize integer, prime test, compute phi and mu.
 * pe_ntt: Number theoretic transform and polynomial multiplication.
 * pe_ntt_libbf: An adapter which makes use of libbf to implement ntt.
 * pe_ntt_min_25: Min_25's ntt implementation. The fastest one for mod polynomials integrated into pe.
 * pe_parallel: A simple framework to solve problem with multi-threads. (windows only)
 * pe_parallel_algo: Parallel algorithms.
+* pe_persistance: KVPersistance. (it may support linux but we need change the generated cmdline and check the other codes)
 * pe_poly: Polynomial.
 * pe_poly_algo: Polynomial algorithms.
+* pe_rand: Randome number.
+* pe_time: Support TimeDelta, TimeRecorder
 * pe_tree: Some tree based data structures.
-* pe_util: Utilities such as TimeDelta, KVPersistance. (it may support linux but we need change the generated cmdline and check the other codes)
+* pe_type_traits: Type traits.
 
 Design principle:
 --------------------

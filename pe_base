@@ -104,19 +104,6 @@ typedef si::iterator isi;
 
 #define foreach(itr, c) for (auto& itr : c)
 
-template <typename T>
-static inline void cmax(T& a, const T& b) {
-  if (b > a) a = b;
-}
-template <typename T>
-static inline void cmin(T& a, const T& b) {
-  if (b < a) a = b;
-}
-template <typename T>
-static inline T sq(T x) {
-  return x * x;
-}
-
 #define SL static inline
 
 #define dbg(x) cerr << (#x) << " = " << (x) << endl
@@ -127,45 +114,23 @@ static inline T sq(T x) {
 #define PE_ASSERT(x)
 #endif
 
-// A simple concept implementation, e.g.
-/**
-  template<typename T, typename U>
-  REQUIRES(is_integral<T>::value && is_unsigned<U>::value)
-  RETURN(void)  foo(T x, U y)  {}
-*/
-template <int ok>
-struct CheckConditionThen {};
-
-template <>
-struct CheckConditionThen<true> {
-  template <typename U>
-  struct IdenticalType {
-    typedef U type;
-  };
-  template <typename U>
-  struct IdenticalTypeT {
-    typedef typename U::type type;
-  };
-};
-
-#define REQUIRES(...) typename CheckConditionThen<__VA_ARGS__>::
-#define RETURN(...) template IdenticalType<__VA_ARGS__>::type
-
-// If the return type depends on the condition and the return type
-// is invalid if the condition is false, please use this one.
-#define RETURN_T(...) template IdenticalTypeT<__VA_ARGS__>::type
-
-namespace std {
-// TODO(baihacker): add this template only if it is older than c++20
 template <typename T>
-struct remove_cvref {
-  typedef typename remove_cv<T>::type T1;
-  typedef typename remove_reference<T1>::type type;
-};
-}  // namespace std
+SL void cmax(T& a, const T& b) {
+  if (b > a) a = b;
+}
+
+template <typename T>
+SL void cmin(T& a, const T& b) {
+  if (b < a) a = b;
+}
+
+template <typename T>
+SL T sq(T x) {
+  return x * x;
+}
 
 template<typename T>
-ostream& operator << (ostream& o, const vector<T>& v) {
+SL ostream& operator << (ostream& o, const vector<T>& v) {
   const int size = (int)v.size();
   o << "{";
   for (int i = 0; i < size; ++i) {
@@ -176,4 +141,17 @@ ostream& operator << (ostream& o, const vector<T>& v) {
   }
   return o << "}";
 }
+
+// About numbers
+
+// Integer limits check
+static_assert(sizeof(int) >= 4, "sizeof(int) >= 4");
+
+// Square overflow integers
+// x * x > 2^63 - 1 for x > PE_SOI63
+static const int64 PE_SOI63 = 3037000499LL;
+
+// x * x > 2^64 - 1 for x > PE_SOI64
+static const int64 PE_SOI64 = 4294967295LL;  
+
 #endif

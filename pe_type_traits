@@ -1,0 +1,139 @@
+#ifndef __PE_TYPE_TRAITS_H__
+#define __PE_TYPE_TRAITS_H__
+
+#include "pe_base"
+#include "pe_int128"
+
+// A simple concept implementation, e.g.
+/**
+  template<typename T, typename U>
+  REQUIRES(is_integral<T>::value && is_unsigned<U>::value)
+  RETURN(void)  foo(T x, U y)  {}
+*/
+template <int ok>
+struct CheckConditionThen {};
+
+template <>
+struct CheckConditionThen<true> {
+  template <typename U>
+  struct IdenticalType {
+    typedef U type;
+  };
+  template <typename U>
+  struct IdenticalTypeT {
+    typedef typename U::type type;
+  };
+};
+
+#define REQUIRES(...) typename CheckConditionThen<__VA_ARGS__>::
+#define RETURN(...) template IdenticalType<__VA_ARGS__>::type
+
+// If the return type depends on the condition and the return type
+// is invalid if the condition is false, please use this one.
+#define RETURN_T(...) template IdenticalTypeT<__VA_ARGS__>::type
+
+namespace std {
+// TODO(baihacker): add this template only if it is older than c++20
+template <typename T>
+struct remove_cvref {
+  typedef typename remove_cv<T>::type T1;
+  typedef typename remove_reference<T1>::type type;
+};
+}  // namespace std
+
+class BigInteger;
+
+template <typename T>
+struct is_native_integer {
+  enum { value = is_integral<T>::value };
+};
+
+template <typename T>
+struct is_native_integer<T&> {
+  enum { value = is_native_integer<T>::value };
+};
+
+template <typename T>
+struct is_general_integer {
+  enum { value = is_integral<T>::value };
+};
+
+template <typename T>
+struct is_general_integer<T&> {
+  enum { value = is_general_integer<T>::value };
+};
+
+template <>
+struct is_native_integer<BigInteger> {
+  enum { value = false };
+};
+
+template <>
+struct is_native_integer<BigInteger&> {
+  enum { value = false };
+};
+
+template <>
+struct is_native_integer<const BigInteger&> {
+  enum { value = false };
+};
+
+template <>
+struct is_general_integer<BigInteger> {
+  enum { value = true };
+};
+
+// Integer type promotion
+template <typename T1, typename T2, bool ge, bool same>
+struct BiggerIntegralImpl {
+  typedef T1 type;
+};
+
+template <typename T1, typename T2>
+struct BiggerIntegralImpl<T1, T2, false, false> {
+  typedef T2 type;
+};
+
+template <typename T1, typename T2>
+struct BiggerIntegralImpl<T1, T2, true, true> {
+  typedef typename std::make_unsigned<T1>::type type;
+};
+
+template <typename T1, typename T2>
+struct BiggerIntegral {
+  typedef typename std::make_unsigned<T1>::type U1;
+  typedef typename std::make_unsigned<T2>::type U2;
+  typedef typename BiggerIntegralImpl<T1, T2, (sizeof(T1) >= sizeof(T2)),
+                                      std::is_same<U1, U2>::value>::type type;
+};
+
+template <typename T>
+struct BiggerIntegral<T, T> {
+  typedef T type;
+};
+
+template <typename T1, typename... T>
+struct BiggerIntegralN : private BiggerIntegralN<T...> {
+  typedef typename BiggerIntegralN<T...>::type A;
+  typedef typename BiggerIntegral<T1, A>::type type;
+};
+
+template <typename T1>
+struct BiggerIntegralN<T1> {
+  typedef T1 type;
+};
+
+template <typename T>
+struct AtLeastUint64 {
+  typedef typename BiggerIntegral<T, uint64>::type type;
+};
+
+template <typename T>
+struct AtLeastInt64 {
+  typedef typename BiggerIntegral<T, int64>::type type;
+};
+
+#define IntPromotion(...) typename BiggerIntegralN<__VA_ARGS__>::type
+#define IntPromotionT(...) BiggerIntegralN<__VA_ARGS__>
+
+#endif

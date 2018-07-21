@@ -2,7 +2,8 @@
 #define __PE_NT_H__
 
 #include "pe_base"
-#include "pe_integer_util"
+#include "pe_int128"
+#include "pe_type_traits"
 #include "pe_mod"
 #include "pe_tree"
 
@@ -737,6 +738,17 @@ SL int64 square_root(int64 n) {
   // int64 ret = static_cast<int64>(sqrt(n + 0.5));
   int64 ret = sqrti(n);
   return ret * ret == n ? ret : 0;
+}
+
+template <typename T1, typename T2>
+SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value))
+    RETURN(T1) power(T1 x, T2 n) {
+  T1 ret = 1;
+  for (; n; n >>= 1) {
+    if (n & 1) ret = ret * x;
+    if (n > 1) x = x * x;
+  }
+  return ret;
 }
 
 // greatest common divisor and extend greatest common divisor

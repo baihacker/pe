@@ -154,7 +154,9 @@ class GaussianEliminationSolver {
 // Returns the number of (x, y) where
 // x^2+y^2<=n and x >= 0 and y >= 0
 SL int64 count_pt_in_circle_q1(int64 n) {
-  struct Pt {int64 x, y;};
+  struct Pt {
+    int64 x, y;
+  };
   const int64 m = sqrti(n);
   stack<Pt> stk;
   stk.push({0, 1});
@@ -163,7 +165,7 @@ SL int64 count_pt_in_circle_q1(int64 n) {
   int64 x = 0, y = m;
   int64 iter = 0;
   while (!stk.empty()) {
-    while (x + vx <= m && y - vy >= 0 && sq(x+vx) + sq(y-vy) <= n) {
+    while (x + vx <= m && y - vy >= 0 && sq(x + vx) + sq(y - vy) <= n) {
       x += vx;
       y -= vy;
       A += vx * (2 * y + vy);
@@ -177,7 +179,7 @@ SL int64 count_pt_in_circle_q1(int64 n) {
     stk.pop();
     int fnd = 0;
     while (!fnd) {
-      while (x + cx <= m && y - cy >= 0 && sq(x+cx) + sq(y-cy) <= n) {
+      while (x + cx <= m && y - cy >= 0 && sq(x + cx) + sq(y - cy) <= n) {
         stk.push({cx, cy});
         cx += vx, cy += vy;
         ++iter;
@@ -187,30 +189,33 @@ SL int64 count_pt_in_circle_q1(int64 n) {
         fnd = 1;
         break;
       }
-      
+
       cx = stk.top().x;
       cy = stk.top().y;
       stk.pop();
       int64 lastV = -1;
-      for (;;++iter) {
-        if (x + vx + cx <= m && y-vy-cy>=0&&sq(x+vx+cx)+sq(y-vy-cy) <= n) {
+      for (;; ++iter) {
+        if (x + vx + cx <= m && y - vy - cy >= 0 &&
+            sq(x + vx + cx) + sq(y - vy - cy) <= n) {
           stk.push({cx, cy});
           cx += vx, cy += vy;
           break;
         }
-        int64 currV = sq(x+vx+2*cx) + sq(y-vy-2*cy);
-        // auto f0 = abs((y-vy)*cx + (x+vx)*cy) > (m + 1) * sqrt((sq(cx)+sq(cy)));
-        auto f1 = cx*(x+vx+cx)>=cy*(y-vy-cy);
-        // auto f2 = x + vx + 2 * cx > m || y - vy - 2*cy < 0 || lastV != -1 && currV > lastV;
+        int64 currV = sq(x + vx + 2 * cx) + sq(y - vy - 2 * cy);
+        // auto f0 = abs((y-vy)*cx + (x+vx)*cy) > (m + 1) *
+        // sqrt((sq(cx)+sq(cy)));
+        auto f1 = cx * (x + vx + cx) >= cy * (y - vy - cy);
+        // auto f2 = x + vx + 2 * cx > m || y - vy - 2*cy < 0 || lastV != -1 &&
+        // currV > lastV;
         if (f1) {
-        // if (f2) {
+          // if (f2) {
           vx = cx, vy = cy;
           fnd = 1;
           break;
         }
         lastV = currV;
         int64 delta = 1;
-        #if 0
+#if 0
         {
           double A = x + vx, B = y - vy, C = cx, D = cy;
           double E = sq(B) + sq(D);
@@ -222,7 +227,7 @@ SL int64 count_pt_in_circle_q1(int64 n) {
             if (delta <= 0) delta = 1;
           }
         }
-        #endif
+#endif
         vx += delta * cx;
         vy += delta * cy;
       }
@@ -233,7 +238,7 @@ SL int64 count_pt_in_circle_q1(int64 n) {
   const int64 I = (A - BD + 2) / 2;
   int64 ret = I + BD;
   for (int64 i = x + 1; i <= m; ++i) {
-    ret += sqrti(n-sq(i)) + 1;
+    ret += sqrti(n - sq(i)) + 1;
   }
   return ret;
 }
@@ -248,7 +253,7 @@ SL int64 count_pt_in_circle_q1_bf(int64 n) {
   const int64 m = sqrti(n);
   int64 ret = 0;
   for (int64 i = 0; i <= m; ++i) {
-    ret += sqrti(n-sq(i)) + 1;
+    ret += sqrti(n - sq(i)) + 1;
   }
   return ret;
 }
@@ -262,7 +267,9 @@ SL int64 count_pt_in_circle_bf(int64 n) {
 #if PE_HAS_INT128
 // Returns sum(sigma0(i), i=1..n)
 SL int128 sum_sigma0(int64 n) {
-  struct Pt {int64 x, y;};
+  struct Pt {
+    int64 x, y;
+  };
 
   const int64 PIVOT = n > 1e15 ? 10000000 : 1000000;
   const int64 m = sqrti(n);
@@ -274,12 +281,12 @@ SL int128 sum_sigma0(int64 n) {
   int64 x = m, y = n / m;
   int64 lx = x, ly = y;
   while (!stk.empty()) {
-    while (x > vx && y + vy >= n / (x-vx)) {
+    while (x > vx && y + vy >= n / (x - vx)) {
       x -= vx;
       y += vy;
       lx = x;
       ly = y;
-      A += (int128)vx * ((n-y)*2+2+vy);
+      A += (int128)vx * ((n - y) * 2 + 2 + vy);
       ++B;
     }
     if (lx < PIVOT || x <= vx) break;
@@ -288,7 +295,7 @@ SL int128 sum_sigma0(int64 n) {
     stk.pop();
 
     while (!fnd) {
-      while (x > cx && y + cy >= n / (x-cx)) {
+      while (x > cx && y + cy >= n / (x - cx)) {
         stk.push({cx, cy});
         cx += vx;
         cy += vy;
@@ -302,14 +309,15 @@ SL int128 sum_sigma0(int64 n) {
       stk.pop();
       int128 lastV = -0x123456789;
       for (;;) {
-        if (x > vx+cx && y+vy+cy >= n / (x-vx-cx)) {
+        if (x > vx + cx && y + vy + cy >= n / (x - vx - cx)) {
           stk.push({cx, cy});
           cx += vx;
           cy += vy;
           break;
         }
-        int128 currV = (int128)(y+2*cy+vy)*(x-2*cx-vx);
-        if (x < 2*cx+vx || currV > n || lastV != -0x123456789 && currV < lastV) {
+        int128 currV = (int128)(y + 2 * cy + vy) * (x - 2 * cx - vx);
+        if (x < 2 * cx + vx || currV > n ||
+            lastV != -0x123456789 && currV < lastV) {
           vx = cx, vy = cy;
           fnd = 1;
           break;
@@ -317,12 +325,14 @@ SL int128 sum_sigma0(int64 n) {
         lastV = currV;
         int64 delta = 1;
         if (cx == 0) {
-          delta = n / (x-vx) - vy - y - 1;
+          delta = n / (x - vx) - vy - y - 1;
         } else if (cx > 0 && cy > 0) {
           int128 TA = y + vy + 1, TB = x - vx;
-          int128 test = (cy*TB-cx*TA)*(cy*TB-cx*TA)+4*cx*cy*(TA*TB-n);
+          int128 test = (cy * TB - cx * TA) * (cy * TB - cx * TA) +
+                        4 * cx * cy * (TA * TB - n);
           if (test > 0) {
-            delta = (floor)(((1.*cy*TB-1.*cx*TA)-sqrt(1.*test))/cx/cy/2);
+            delta = (floor)(((1. * cy * TB - 1. * cx * TA) - sqrt(1. * test)) /
+                            cx / cy / 2);
           }
         }
         if (delta < 1) {
@@ -338,7 +348,7 @@ SL int128 sum_sigma0(int64 n) {
   const auto ycnt = n - ly;
   const auto BD = B + xcnt + ycnt + side;
   const auto I = (A - BD + 2) / 2;
-  int128 tmp = (int128)xcnt * n - (side-1) - I + (xcnt - 1 - B) - ycnt;
+  int128 tmp = (int128)xcnt * n - (side - 1) - I + (xcnt - 1 - B) - ycnt;
   for (int64 i = 1; i < lx; ++i) tmp += n / i;
   return 2 * tmp - m * m;
 }

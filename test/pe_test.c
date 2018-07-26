@@ -6,6 +6,7 @@
 #include "dva_test.c"
 #include "fac_mod_test.c"
 #include "init_inv_test.c"
+#include "int128_test.c"
 #include "mat_mul_test.c"
 #include "misc_test.c"
 #include "mod_test.c"
@@ -17,7 +18,6 @@
 #include "fft_test.c"
 #include "fraction_test.c"
 #include "prime_phi_sum_test.c"
-#include "print_int128_test.c"
 #include "square_root_test.c"
 #include "tree_test.c"
 

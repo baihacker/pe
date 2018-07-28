@@ -960,6 +960,49 @@ struct MiuPhiSumModer {
   int64* pre_sum_phi;
   unordered_map<int64, int64> mem_sum_phi;
 };
+
+struct SFCounter {
+  SFCounter(int64 PIVOT = ::maxp) : pre(NULL), PIVOT(PIVOT) {
+    init(PIVOT);
+  }
+  ~SFCounter() {
+    reset();
+  }
+
+  void reset() {
+    if (pre) {
+      delete[] pre;
+      pre = NULL;
+    }
+  }
+
+  void init(int64 PIVOT) {
+    reset();
+
+    this->PIVOT = PIVOT;
+    pre = new int64[PIVOT+1];
+    pre[0] = 0;
+    for (int64 i = 1; i <= PIVOT; ++i) {
+      pre[i] = pre[i-1] + is_square_free(i);
+    }
+  }
+
+  int64 get(int64 n) {
+    if (n <= PIVOT) return pre[n];
+    auto where = mem.find(n);
+    if (where != mem.end()) return where->second;
+    int64 ret = n;
+    for (int64 i = 2; ; ++i) {
+      int64 i2 = i * i;
+      if (i2 > n) break;
+      ret -= get(n / i2);
+    }
+    return mem[n] = ret;
+  }
+  int64* pre;
+  int64 PIVOT;
+  unordered_map<int64, int64> mem;
+};
 // 65701
 #endif
 /*

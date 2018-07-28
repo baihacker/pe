@@ -5,12 +5,12 @@ SL void nt_test() {
   const int mod = 1000000007;
   MiuPhiSumModer moder(mod);
   moder.init();
-  
+
   int64 s0 = 0;
   for (int i = 1; i <= 10000000; ++i)
     s0 += cal_phi(i) % mod;
   s0 %= mod;
-  
+
   int64 s1 = moder.get_sum_phi(10000000);
   assert(s0 == s1);
 }
@@ -48,11 +48,11 @@ SL void get_factors_test() {
 PE_REGISTER_TEST(&get_factors_test, "get_factors_test", SMALL);
 
 SL void is_square_free_test() {
+  const int64 n = maxp*2;
   int64 ans1 = 0;
-  const int n = maxp*2;
   {
     TimeRecorder tr;
-    for (int i = 1; i <=n; ++i)
+    for (int i = 1; i <= n; ++i)
       ans1 += is_square_free(i);
     // cerr << tr.elapsed().format() << endl;
   }
@@ -67,4 +67,16 @@ SL void is_square_free_test() {
 }
 
 PE_REGISTER_TEST(&is_square_free_test, "is_square_free_test", SMALL);
+
+SL void square_free_counter_test() {
+  const int64 n = maxp*2;
+  int64 ans1 = 0;
+  for (int i = 1; i <= n; ++i)
+    ans1 += is_square_free(i);
+
+  int64 ans2 = SFCounter(maxp).get(n);
+  assert(ans1 == ans2);
+}
+
+PE_REGISTER_TEST(&square_free_counter_test, "square_free_counter_test", SMALL);
 }

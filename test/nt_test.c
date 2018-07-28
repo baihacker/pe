@@ -46,4 +46,25 @@ SL void get_factors_test() {
 }
 
 PE_REGISTER_TEST(&get_factors_test, "get_factors_test", SMALL);
+
+SL void is_square_free_test() {
+  int64 ans1 = 0;
+  const int n = maxp*2;
+  {
+    TimeRecorder tr;
+    for (int i = 1; i <=n; ++i)
+      ans1 += is_square_free(i);
+    // cerr << tr.elapsed().format() << endl;
+  }
+  int64 ans2 = 0;
+  {
+    TimeRecorder tr;
+    for (int i = 1; i <= n; ++i)
+      ans2 += is_square_free_normal(i);
+    // cerr << tr.elapsed().format() << endl;
+  }
+  assert(ans1 == ans2);
+}
+
+PE_REGISTER_TEST(&is_square_free_test, "is_square_free_test", SMALL);
 }

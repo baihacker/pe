@@ -10,6 +10,7 @@
 #include "mat_mul_test.c"
 #include "misc_test.c"
 #include "mod_test.c"
+#include "mpf_test.c"
 #include "nt_test.c"
 #include "ntt_test.c"
 #include "parallel_sort_test.c"

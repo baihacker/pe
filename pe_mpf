@@ -4,82 +4,67 @@
 #if ENABLE_GMP || ENABLE_MPIR
 #define HAS_MPF 1
 class Mpf {
-public:
-  static void setDefaultPrec(int n) {
-    mpf_set_default_prec(n);
-  }
-  static int getDefaultPrec() {
-    return mpf_get_default_prec();
-  }
+ public:
+  static void setDefaultPrec(int n) { mpf_set_default_prec(n); }
+  static int getDefaultPrec() { return mpf_get_default_prec(); }
 
-  Mpf() {
-    mpf_init_set_si(f, 0);
-  }
+  Mpf() { mpf_init_set_si(f, 0); }
 
-  explicit Mpf(int t) {
-    mpf_init_set_si(f, t);
-  }
+  explicit Mpf(int t) { mpf_init_set_si(f, t); }
 
   explicit Mpf(const string& s) {
     mpf_init(f);
     mpf_set_str(f, s.c_str(), 10);
   }
 
-  Mpf(mpf_t o) {
-    mpf_init_set(f, o);
-  }
+  Mpf(mpf_t o) { mpf_init_set(f, o); }
 
-  ~Mpf() {
-    mpf_clear(f);
-  }
+  ~Mpf() { mpf_clear(f); }
 
-  Mpf(const Mpf& o) {
-    mpf_set(f, o.f);
-  }
-  
-  Mpf(Mpf& o) {
-    mpf_swap(f, o.f);
-  }
+  Mpf(const Mpf& o) { mpf_set(f, o.f); }
 
-  Mpf& operator = (const Mpf& o) {
+  Mpf(Mpf& o) { mpf_swap(f, o.f); }
+
+  Mpf& operator=(const Mpf& o) {
     mpf_set(f, o.f);
     return *this;
   }
-  
-  Mpf& operator = (Mpf&& o) {
+
+  Mpf& operator=(Mpf&& o) {
     mpf_swap(f, o.f);
     return *this;
   }
-public:
-  Mpf& operator += (const Mpf& a) {
+
+ public:
+  Mpf& operator+=(const Mpf& a) {
     mpf_add(f, f, a.f);
     return *this;
   }
-  Mpf& operator += (unsigned int a) {
+  Mpf& operator+=(unsigned int a) {
     mpf_add_ui(f, f, a);
     return *this;
   }
-  Mpf& operator -= (const Mpf& a) {
+  Mpf& operator-=(const Mpf& a) {
     mpf_sub(f, f, a.f);
     return *this;
   }
-  Mpf& operator -= (unsigned int a) {
+  Mpf& operator-=(unsigned int a) {
     mpf_sub_ui(f, f, a);
     return *this;
   }
-  Mpf& operator *= (const Mpf& a) {
+  Mpf& operator*=(const Mpf& a) {
     mpf_mul(f, f, a.f);
     return *this;
   }
-  Mpf& operator *= (unsigned int a) {
+  Mpf& operator*=(unsigned int a) {
     mpf_mul_ui(f, f, a);
     return *this;
   }
-  Mpf& operator /= (const Mpf& a) {
+  Mpf& operator/=(const Mpf& a) {
     mpf_div(f, f, a.f);
     return *this;
   }
-  Mpf& operator /= (unsigned int a) {
+  Mpf& operator/=(unsigned int a) {
     mpf_div_ui(f, f, a);
     return *this;
   }
@@ -103,19 +88,12 @@ public:
     mpf_abs(t.f, f);
     return t;
   }
-  int sgn() const {
-    return mpf_sgn(f);
-  }
-  void setPrec(int n) {
-    mpf_set_prec(f, n);
-  }
-  int getPrec() const {
-    return mpf_get_prec(f);
-  }
-public:
-  double toDouble() const {
-    return mpf_get_d(f);
-  }
+  int sgn() const { return mpf_sgn(f); }
+  void setPrec(int n) { mpf_set_prec(f, n); }
+  int getPrec() const { return mpf_get_prec(f); }
+
+ public:
+  double toDouble() const { return mpf_get_d(f); }
   string toString(int dig = 20) const {
     const int s = sgn();
     if (s == 0) {
@@ -128,10 +106,10 @@ public:
     const int offset = buff[0] == '-' ? 2 : 1;
     string temp(buff);
     string t = temp.substr(0, offset) + string(".") + temp.substr(offset);
-    if (e-1!=0) t = t + "e" + to_string(e-1);
-    return  t;
+    if (e - 1 != 0) t = t + "e" + to_string(e - 1);
+    return t;
   }
-  
+
   long double toLongDouble() const {
     string t = toString(50);
     long double result;
@@ -140,93 +118,75 @@ public:
   }
   mpf_t f;
 };
-SL Mpf operator + (const Mpf& a) {
-  return a;
-}
-SL Mpf operator + (const Mpf& a, const Mpf& b) {
+SL Mpf operator+(const Mpf& a) { return a; }
+SL Mpf operator+(const Mpf& a, const Mpf& b) {
   Mpf t;
   mpf_add(t.f, a.f, b.f);
   return t;
 }
-SL Mpf operator + (const Mpf& a, unsigned int b) {
+SL Mpf operator+(const Mpf& a, unsigned int b) {
   Mpf t;
   mpf_add_ui(t.f, a.f, b);
   return t;
 }
-SL Mpf operator + (unsigned int a, const Mpf& b) {
+SL Mpf operator+(unsigned int a, const Mpf& b) {
   Mpf t;
   mpf_add_ui(t.f, b.f, a);
   return t;
 }
-SL Mpf operator - (const Mpf& a) {
-  return a.neg();
-}
-SL Mpf operator - (const Mpf& a, const Mpf& b) {
+SL Mpf operator-(const Mpf& a) { return a.neg(); }
+SL Mpf operator-(const Mpf& a, const Mpf& b) {
   Mpf t;
   mpf_add(t.f, a.f, b.f);
   return t;
 }
-SL Mpf operator - (const Mpf& a, unsigned int b) {
+SL Mpf operator-(const Mpf& a, unsigned int b) {
   Mpf t;
   mpf_sub_ui(t.f, a.f, b);
   return t;
 }
-SL Mpf operator - (unsigned int a, const Mpf& b) {
+SL Mpf operator-(unsigned int a, const Mpf& b) {
   Mpf t;
   mpf_ui_sub(t.f, a, b.f);
   return t;
 }
-SL Mpf operator * (const Mpf& a, const Mpf& b) {
+SL Mpf operator*(const Mpf& a, const Mpf& b) {
   Mpf t;
   mpf_mul(t.f, a.f, b.f);
   return t;
 }
-SL Mpf operator * (const Mpf& a, unsigned int b) {
+SL Mpf operator*(const Mpf& a, unsigned int b) {
   Mpf t;
   mpf_mul_ui(t.f, a.f, b);
   return t;
 }
-SL Mpf operator * (unsigned int a, const Mpf& b) {
+SL Mpf operator*(unsigned int a, const Mpf& b) {
   Mpf t;
   mpf_mul_ui(t.f, b.f, a);
   return t;
 }
-SL Mpf operator / (const Mpf& a, const Mpf& b) {
+SL Mpf operator/(const Mpf& a, const Mpf& b) {
   Mpf t;
   mpf_div(t.f, a.f, b.f);
   return t;
 }
-SL Mpf operator / (const Mpf& a, unsigned int b) {
+SL Mpf operator/(const Mpf& a, unsigned int b) {
   Mpf t;
   mpf_div_ui(t.f, a.f, b);
   return t;
 }
-SL Mpf operator / (unsigned int a, const Mpf& b) {
+SL Mpf operator/(unsigned int a, const Mpf& b) {
   Mpf t;
   mpf_div_ui(t.f, b.f, a);
   return t;
 }
-SL int compare(const Mpf& a, const Mpf& b) {
-  return mpf_cmp(a.f, b.f);
-}
-SL int operator < (const Mpf& a, const Mpf& b) {
-  return compare(a, b) < 0;
-}
-SL int operator <= (const Mpf& a, const Mpf& b) {
-  return compare(a, b) <= 0;
-}
-SL int operator > (const Mpf& a, const Mpf& b) {
-  return compare(a, b) > 0;
-}
-SL int operator >= (const Mpf& a, const Mpf& b) {
-  return compare(a, b) >= 0;
-}
-SL int operator == (const Mpf& a, const Mpf& b) {
-  return compare(a, b) == 0;
-}
-SL int operator != (const Mpf& a, const Mpf& b) {
-  return compare(a, b) != 0;
-}
+SL int compare(const Mpf& a, const Mpf& b) { return mpf_cmp(a.f, b.f); }
+SL int operator<(const Mpf& a, const Mpf& b) { return compare(a, b) < 0; }
+SL int operator<=(const Mpf& a, const Mpf& b) { return compare(a, b) <= 0; }
+SL int operator>(const Mpf& a, const Mpf& b) { return compare(a, b) > 0; }
+SL int operator>=(const Mpf& a, const Mpf& b) { return compare(a, b) >= 0; }
+SL int operator==(const Mpf& a, const Mpf& b) { return compare(a, b) == 0; }
+SL int operator!=(const Mpf& a, const Mpf& b) { return compare(a, b) != 0; }
 #else
 #define HAS_MPF 0
 #endif

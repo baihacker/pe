@@ -4,7 +4,6 @@ namespace nt_test {
 SL void nt_test() {
   const int mod = 1000000007;
   MiuPhiSumModer moder(mod);
-  moder.init();
 
   int64 s0 = 0;
   for (int i = 1; i <= 10000000; ++i)

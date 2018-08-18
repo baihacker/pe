@@ -251,9 +251,12 @@ SL tuple<int, T, T> crtn(T* val, T* mod, int n) {
   return tuple<int, T, T>{have, v, u};
 }
 
+/**
+ * dest[i] * i = 1 or 0
+ */
 template <typename T, typename M>
 SL void init_inv(T* dest, int64 n, M mod) {
-  PE_ASSERT(n <= mod && n >= 2);
+  PE_ASSERT(n >= 2);
   dest[0] = 0;
   dest[1] = 1;
   for (int i = 2; i < n; ++i) {
@@ -262,6 +265,9 @@ SL void init_inv(T* dest, int64 n, M mod) {
     const auto v = mul_mod_ex(t, t, mod);
     const auto u = mul_mod_ex(dest[k], dest[k], mod);
     dest[i] = (T)mul_mod_ex(i, mul_mod_ex(v, u, mod), mod);
+  }
+  for (auto i = mod; i < n; ++i) {
+    dest[i] = dest[i-mod];
   }
 }
 
@@ -855,35 +861,123 @@ int64 short_comb_mod(int64 n, int64 m, int64 mod) {
 }
 
 struct PowerSumModer {
-  PowerSumModer(int64 mod) : mod(mod) { init(); }
-  void init() {
-    memset(P, 0, sizeof P);
-    for (int i = 0; i < 64; ++i) P[i][1] = 1;
-    for (int i = 1; i < 64; ++i) {
+  PowerSumModer(int64 mod, int maxk = 128) : mod(mod), maxk(maxk), P(NULL), invs(NULL) {
+    init(maxk);
+  }
+
+  ~PowerSumModer() {
+    reset();
+  }
+
+  void reset() {
+    if (P) {
+      for (int i = 0; i <= maxk; ++i) {
+        delete[] P[i];
+      }
+      delete[] P;
+      P = NULL;
+    }
+    if (invs) {
+      delete[] invs;
+      invs = NULL;
+    }
+  }
+
+  void init(int maxk) {
+    reset();
+
+    P = new int64*[maxk+1];
+    for (int i = 0; i <= maxk; ++i) {
+      P[i] = new int64[maxk+1];
+    }
+
+    invs = new int64[maxk+2];
+    init_inv(invs, maxk+2, mod);
+    for (int i = 0; i <= maxk; ++i)
+      for (int j = 0; j <= maxk; ++j) {
+        P[i][j] = 0;
+      }
+    for (int i = 0; i <= maxk; ++i) P[i][1] = 1;
+    for (int i = 1; i <= maxk; ++i) {
       for (int j = 1; j < i; ++j) {
         int64 t = P[i - 1][j - 1] + P[i - 1][j];
         if (t >= mod) t -= mod;
-        P[i][j] = j * t % mod;
+        P[i][j] = mul_mod_ex(j, t, mod);
       }
       P[i][i] = 1;
-      for (int j = 1; j <= i; ++j) P[i][i] = P[i][i] * j % mod;
+      for (int j = 1; j <= i; ++j) {
+        P[i][i] = mul_mod_ex(P[i][i], j, mod);
+      }
     }
   }
+
+  // n + 1, n, ..., n-k+1 is not divisible by mod
+  // 2,3,...k+1 is not divisible by mod
   int64 cal(int64 n, int64 k) {
+    PE_ASSERT(k <= maxk);
+
     int64 ret = 0;
+    int64 c = (n + 1) % mod;
     for (int i = 1; i <= k; ++i) {
-      ret += P[k][i] * short_comb_mod(n + 1, i + 1, mod) % mod;
+      // ret += P[k][i] * short_comb_mod(n + 1, i + 1, mod) % mod;
+      c = mul_mod_ex(c, regulate_mod(n + 1 - i, mod), mod);
+      c = mul_mod_ex(c, invs[i + 1], mod);
+      ret += mul_mod_ex(P[k][i], c, mod);
     }
     return ret % mod;
   }
+
+  int64 cal_safe(int64 n, int64 k) {
+    PE_ASSERT(k <= maxk);
+
+    auto reduce = [&](int64 n, int64 mod) -> tuple<int64, int64> {
+      int64 c = 0;
+      while (n > 0 && n % mod == 0) n /= mod, ++c;
+      return tuple<int64, int64>{n % mod, c};
+    };
+    int64 A, B;
+    tie(A, B) = reduce(n+1, mod);
+    
+    int64 ret = 0;
+    int64 c = A;
+    int64 d = B;
+    for (int i = 1; i <= k; ++i) {
+      // ret += P[k][i] * short_comb_mod(n + 1, i + 1, mod) % mod;
+      tie(A, B) = reduce(n+1-i, mod);
+      d += B;
+      c = mul_mod_ex(c, A, mod);
+
+      tie(A, B) = reduce(i+1, mod);
+      d -= B;
+      c = mul_mod_ex(c, invs[A], mod);
+      if (d == 0) {
+        ret += mul_mod_ex(P[k][i], c, mod);
+      }
+    }
+    return ret % mod;
+  }
+
   int64 mod;
-  int64 P[64][64];  // k < 64;
+  int maxk;
+  int64** P;
+  int64* invs;
 };
 
+/**
+ * Computes (the sum of mu[x] or phi[x]) % mod where x is no more than n.
+ * If n is no more than PIVOT, use a pre-computed table.
+ */
 struct MiuPhiSumModer {
-  MiuPhiSumModer(int64 mod) : mod(mod) { pre_sum_mu = pre_sum_phi = NULL; }
+  MiuPhiSumModer(int64 mod, int64 PIVOT = ::maxp) : mod(mod), PIVOT(PIVOT) {
+    pre_sum_mu = pre_sum_phi = NULL;
+    init(PIVOT);
+  }
 
   ~MiuPhiSumModer() {
+    reset();
+  }
+
+  void reset() {
     if (pre_sum_mu == NULL) {
       delete[] pre_sum_mu;
       pre_sum_mu = NULL;
@@ -894,11 +988,14 @@ struct MiuPhiSumModer {
     }
   }
 
-  void init() {
-    pre_sum_mu = new int64[maxp + 1];
-    pre_sum_phi = new int64[maxp + 1];
+  void init(int64 PIVOT) {
+    reset();
+    this->PIVOT = PIVOT;
+
+    pre_sum_mu = new int64[PIVOT + 1];
+    pre_sum_phi = new int64[PIVOT + 1];
     pre_sum_mu[0] = pre_sum_phi[0] = 0;
-    for (int i = 1; i <= maxp; ++i) {
+    for (int i = 1; i <= PIVOT; ++i) {
       pre_sum_mu[i] = ::mu[i] + pre_sum_mu[i - 1];
       pre_sum_phi[i] = (::phi[i] + pre_sum_phi[i - 1]) % mod;
       if (pre_sum_mu[i] < 0)
@@ -909,7 +1006,7 @@ struct MiuPhiSumModer {
   }
 
   int64 get_sum_mu(const int64 n) {
-    if (n <= maxp) return pre_sum_mu[n];
+    if (n <= PIVOT) return pre_sum_mu[n];
 
     auto where = mem_sum_mu.find(n);
     if (where != mem_sum_mu.end()) return where->second;
@@ -953,6 +1050,7 @@ struct MiuPhiSumModer {
     return mem_sum_phi[n] = ret;
   }
   int64 mod;
+  int64 PIVOT;
 
   int64* pre_sum_mu;
   unordered_map<int64, int64> mem_sum_mu;
@@ -961,6 +1059,10 @@ struct MiuPhiSumModer {
   unordered_map<int64, int64> mem_sum_phi;
 };
 
+/**
+ * Counts the number of square free number no more than n.
+ * If n is no more than PIVOT, use a pre-computed table.
+ */
 struct SFCounter {
   SFCounter(int64 PIVOT = ::maxp) : pre(NULL), PIVOT(PIVOT) {
     init(PIVOT);

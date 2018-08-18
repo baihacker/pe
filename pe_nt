@@ -96,6 +96,13 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value))
   return ret;
 }
 
+template <typename T1, typename T2>
+SL tuple<T1, int64> extract_factor(T1 A, T2 B) {
+  int64 c = 0;
+  while (A && A % B == 0) A /= B, ++c;
+  return {A, c};
+}
+
 // greatest common divisor and extend greatest common divisor
 template <typename _EuclideanRingElement>
 _EuclideanRingElement gcd(_EuclideanRingElement __m,
@@ -256,10 +263,13 @@ SL tuple<int, T, T> crtn(T* val, T* mod, int n) {
  */
 template <typename T, typename M>
 SL void init_inv(T* dest, int64 n, M mod) {
-  PE_ASSERT(n >= 2);
+  PE_ASSERT(n >= 1);
   dest[0] = 0;
-  dest[1] = 1;
-  for (int i = 2; i < n; ++i) {
+  if (n > 1) {
+    dest[1] = 1;
+  }
+  auto maxi = min(n, (int64)mod);
+  for (int i = 2; i < maxi; ++i) {
     const auto t = mod / i;
     const auto k = mod % i;
     const auto v = mul_mod_ex(t, t, mod);
@@ -922,6 +932,9 @@ struct PowerSumModer {
       // ret += P[k][i] * short_comb_mod(n + 1, i + 1, mod) % mod;
       c = mul_mod_ex(c, regulate_mod(n + 1 - i, mod), mod);
       c = mul_mod_ex(c, invs[i + 1], mod);
+      if (c == 0) {
+        break;
+      }
       ret += mul_mod_ex(P[k][i], c, mod);
     }
     return ret % mod;
@@ -930,26 +943,26 @@ struct PowerSumModer {
   int64 cal_safe(int64 n, int64 k) {
     PE_ASSERT(k <= maxk);
 
-    auto reduce = [&](int64 n, int64 mod) -> tuple<int64, int64> {
-      int64 c = 0;
-      while (n > 0 && n % mod == 0) n /= mod, ++c;
-      return tuple<int64, int64>{n % mod, c};
-    };
     int64 A, B;
-    tie(A, B) = reduce(n+1, mod);
+    tie(A, B) = extract_factor(n+1, mod);
     
     int64 ret = 0;
     int64 c = A;
     int64 d = B;
     for (int i = 1; i <= k; ++i) {
       // ret += P[k][i] * short_comb_mod(n + 1, i + 1, mod) % mod;
-      tie(A, B) = reduce(n+1-i, mod);
+      tie(A, B) = extract_factor(n+1-i, mod);
       d += B;
-      c = mul_mod_ex(c, A, mod);
+      c = mul_mod_ex(c, regulate_mod(A, mod), mod);
 
-      tie(A, B) = reduce(i+1, mod);
+      tie(A, B) = extract_factor(i+1, mod);
       d -= B;
       c = mul_mod_ex(c, invs[A], mod);
+
+      if (c == 0) {
+        break;
+      }
+
       if (d == 0) {
         ret += mul_mod_ex(P[k][i], c, mod);
       }
@@ -1023,7 +1036,7 @@ struct MiuPhiSumModer {
   }
 
   int64 get_sum_phi(int64 n) {
-    if (n <= maxp) return pre_sum_phi[n];
+    if (n <= PIVOT) return pre_sum_phi[n];
 
     auto where = mem_sum_phi.find(n);
     if (where != mem_sum_phi.end()) return where->second;

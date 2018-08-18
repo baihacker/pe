@@ -32,6 +32,6 @@ SL void mpf_test() {
   cout << y.toString() << endl;*/
 }
 
-PE_REGISTER_TEST(&mpf_test, "mpf_test", SPECIFIED);
+PE_REGISTER_TEST(&mpf_test, "mpf_test", SMALL);
 #endif
 }

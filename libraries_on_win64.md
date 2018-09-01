@@ -158,6 +158,7 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
  CC=$(CROSS_PREFIX)gcc
 CFLAGS=-Wall
 CFLAGS+=-O3
+CFLAGS+=-D__MSVCRT_VERSION__=0x1400
 LDFLAGS=
 
 PROGS+=libbf.generic.a libbf.avx2.a

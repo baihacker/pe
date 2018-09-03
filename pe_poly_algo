@@ -1,657 +1,7 @@
 #ifndef __PE_POLY_ALGO__
 #define __PE_POLY_ALGO__
 
-#include "pe_base"
-#include "pe_fft"
-#include "pe_int128"
-#include "pe_mod"
-#include "pe_ntt"
-#include "pe_type_traits"
-
-template <typename T>
-SL void adjust_poly_leading_zero(vector<T>& v) {
-  int now = (int)v.size() - 1;
-  while (now > 0 && v[now] == 0) --now;
-  v.resize(now + 1);
-}
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_add(const T* X, const int n, const T* Y, const int m, T* result,
-             int64 mod) {
-  if (n <= m) {
-    for (int i = 0; i < n; ++i) {
-      result[i] = add_mod(X[i], Y[i], mod);
-    }
-    copy(Y + n, Y + m, result + n);
-  } else {
-    for (int i = 0; i < m; ++i) {
-      result[i] = add_mod(X[i], Y[i], mod);
-    }
-    copy(X + m, X + n, result + m);
-  }
-}
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
-    poly_add(const vector<T>& X, const vector<T>& Y, int64 mod) {
-  const int n = (int)X.size();
-  const int m = (int)Y.size();
-
-  vector<T> result(max(n, m));
-  poly_add(&X[0], n, &Y[0], m, &result[0], mod);
-
-  return result;
-}
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_sub(const T* X, const int n, const T* Y, const int m, T* result,
-             int64 mod) {
-  if (n <= m) {
-    for (int i = 0; i < n; ++i) {
-      result[i] = sub_mod(X[i], Y[i], mod);
-    }
-    for (int i = n; i < m; ++i) {
-      result[i] = Y[i] == 0 ? 0 : mod - Y[i];
-    }
-  } else {
-    for (int i = 0; i < m; ++i) {
-      result[i] = sub_mod(X[i], Y[i], mod);
-    }
-    copy(X + m, X + n, result + m);
-  }
-}
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
-    poly_sub(const vector<T>& X, const vector<T>& Y, int64 mod) {
-  const int n = (int)X.size();
-  const int m = (int)Y.size();
-
-  vector<T> result(max(n, m));
-  poly_sub(&X[0], n, &Y[0], m, &result[0], mod);
-
-  return result;
-}
-
-// Multiply two polynomials of the same length.
-// size result >= 2 * n
-// size return = 2 * n (deg return = 2 * n - 1)
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_normal_internal(const T* X, const T* Y, const int n, T* result,
-                             int64 mod) {
-  static_assert(std::is_unsigned<T>::value, "T must be unsigned");
-
-  const int n2 = n << 1;
-  if (n <= 49) {
-    fill(result, result + n2, 0);
-    for (int i = 0; i < n; ++i)
-      for (int j = 0; j < n; ++j) {
-        result[i + j] =
-            add_mod(result[i + j], mul_mod_ex(X[i], Y[j], mod), mod);
-      }
-    return;
-  }
-
-  const int m1 = (n + 1) >> 1;
-  const int m0 = n - m1;
-  const int dbm1 = m1 << 1;
-  const int dbm0 = m0 << 1;
-  // m1 >= m0
-  const T* x0 = X + m1;
-  const T* y0 = Y + m1;
-  const T* x1 = X;
-  const T* y1 = Y;
-
-  T* x0y0 = new T[dbm1];
-  T* x1y1 = new T[dbm1];
-#if ENABLE_OPENMP
-#pragma omp parallel sections if (n > 5000)
-#endif
-  {
-#if ENABLE_OPENMP
-#pragma omp section
-#endif
-    poly_mul_normal_internal(x0, y0, m0, x0y0, mod);
-#if ENABLE_OPENMP
-#pragma omp section
-#endif
-    poly_mul_normal_internal(x1, y1, m1, x1y1, mod);
-  }
-  if (m0 != m1) {
-    x0y0[dbm0] = 0;
-    x0y0[dbm0 + 1] = 0;
-  }
-  T* w = new T[dbm1];
-  {
-    T* u = new T[m1];
-    T* v = new T[m1];
-
-    for (int i = 0; i < m0; ++i)
-      u[i] = add_mod(x0[i], x1[i], mod), v[i] = add_mod(y0[i], y1[i], mod);
-    if (m0 != m1) {
-      u[m1 - 1] = x1[m1 - 1];
-      v[m1 - 1] = y1[m1 - 1];
-    }
-    poly_mul_normal_internal(u, v, m1, w, mod);
-    delete[] u;
-    delete[] v;
-    for (int i = 0; i < m1 * 2; ++i)
-      w[i] = sub_mod(w[i], add_mod(x0y0[i], x1y1[i], mod), mod);
-  }
-  fill(result, result + n2, 0);
-  for (int i = 0; i < dbm0; ++i)
-    result[dbm1 + i] = add_mod(result[dbm1 + i], x0y0[i], mod);
-  for (int i = 0; i < dbm1; ++i)
-    result[m1 + i] = add_mod(result[m1 + i], w[i], mod);
-  for (int i = 0; i < dbm1; ++i) result[i] = add_mod(result[i], x1y1[i], mod);
-  delete[] x0y0;
-  delete[] x1y1;
-  delete[] w;
-}
-
-// Multiply two polynomials.
-// size result >= n + m - 1
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_normal(const T* X, const int n, const T* Y, const int m, T* result,
-                    int64 mod) {
-  typedef typename std::make_unsigned<T>::type unsignedT;
-  // In case n == m, we still allocate tempory result space to meet the
-  // requirement of poly_mul_normal_internal.
-  const int v = max(n, m);
-  vector<T> tresult(v * 2);
-  if (n < m) {
-    vector<T> XX(2 * v);
-    for (int i = 0; i < n; ++i) {
-      XX[i] = X[i];
-    }
-    for (int i = n; i < m; ++i) {
-      XX[i] = 0;
-    }
-    poly_mul_normal_internal<unsignedT>((const unsignedT*)&XX[0],
-                                        (const unsignedT*)Y, m,
-                                        (unsignedT*)&tresult[0], mod);
-  } else {
-    vector<T> YY(2 * v);
-    for (int i = 0; i < m; ++i) {
-      YY[i] = Y[i];
-    }
-    for (int i = m; i < n; ++i) {
-      YY[i] = 0;
-    }
-    poly_mul_normal_internal<unsignedT>((const unsignedT*)X,
-                                        (const unsignedT*)&YY[0], n,
-                                        (unsignedT*)&tresult[0], mod);
-  }
-  copy(tresult.begin(), tresult.begin() + n + m - 1, result);
-}
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
-    poly_mul_normal(const vector<T>& X, const vector<T>& Y, int64 mod) {
-  typedef typename std::make_unsigned<T>::type unsignedT;
-
-  const int n = (int)X.size();
-  const int m = (int)Y.size();
-  const int resultSize = n + m - 1;
-  if (n == m) {
-    vector<T> result(2 * n);
-    poly_mul_normal_internal<unsignedT>((const unsignedT*)&X[0],
-                                        (const unsignedT*)&Y[0], n,
-                                        (unsignedT*)&result[0], mod);
-    result.resize(resultSize);
-    return result;
-  } else if (n > m) {
-    vector<T> YY;
-    vector<T> result(2 * n);
-    YY.resize(n);
-    for (int i = 0; i < m; ++i) YY[i] = Y[i];
-    poly_mul_normal_internal<unsignedT>((const unsignedT*)&X[0],
-                                        (const unsignedT*)&YY[0], n,
-                                        (unsignedT*)&result[0], mod);
-    result.resize(resultSize);
-    return result;
-  } else {
-    vector<T> XX;
-    vector<T> result(2 * m);
-    XX.resize(m);
-    for (int i = 0; i < n; ++i) XX[i] = X[i];
-    poly_mul_normal_internal<unsignedT>((const unsignedT*)&XX[0],
-                                        (const unsignedT*)&Y[0], m,
-                                        (unsignedT*)&result[0], mod);
-    result.resize(resultSize);
-    return result;
-  }
-}
-
-#if ENABLE_FLINT
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_flint_prime_internal(const T* X, const int n, const T* Y,
-                                  const int m, T* result, int64 mod) {
-  fmpz_t xmod;
-  fmpz_init_set_ui(xmod, mod);
-
-  fq_nmod_ctx_t ctx;
-  fq_nmod_ctx_init(ctx, xmod, 1, "Z");
-
-  fq_nmod_poly_t a, b;
-  fq_nmod_poly_init2(a, n, ctx);
-  fq_nmod_poly_init2(b, m, ctx);
-
-  fmpz_t c;
-  fmpz_init(c);
-  for (int i = 0; i < n; ++i) {
-    fmpz_set_si(c, X[i]);
-    fq_nmod_poly_set_coeff_fmpz(a, i, c, ctx);
-  }
-  for (int i = 0; i < m; ++i) {
-    fmpz_set_si(c, Y[i]);
-    fq_nmod_poly_set_coeff_fmpz(b, i, c, ctx);
-  }
-  fq_nmod_poly_mul(a, a, b, ctx);
-
-  const int size = (int)a[0].length;
-
-  for (int i = 0; i < size; ++i) {
-    auto v = nmod_poly_get_coeff_ui(a[0].coeffs + i, 0);
-    result[i] = v;
-  }
-  fq_nmod_poly_clear(a, ctx);
-  fq_nmod_poly_clear(b, ctx);
-  fq_nmod_ctx_clear(ctx);
-  fmpz_clear(xmod);
-  fmpz_clear(c);
-}
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_flint_prime(const T* X, const int n, const T* Y, const int m,
-                         T* result, int64 mod) {
-  typedef typename std::make_unsigned<T>::type unsignedT;
-  poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m,
-                              (unsignedT*)result, mod,
-                              &poly_mul_flint_prime_internal<unsignedT>);
-}
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
-    poly_mul_flint_prime(const vector<T>& X, const vector<T>& Y, int64 mod) {
-  const int n = (int)X.size();
-  const int m = (int)Y.size();
-
-  vector<T> result(n + m - 1);
-  poly_mul_flint_prime(&X[0], n, &Y[0], m, &result[0], mod);
-
-  return result;
-}
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_flint_internal(const T* X, const int n, const T* Y, const int m,
-                            T* result, int64 mod) {
-  nmod_poly_t a, b;
-  nmod_poly_init2(a, mod, n);
-  nmod_poly_init2(b, mod, m);
-
-  for (int i = 0; i < n; ++i) {
-    nmod_poly_set_coeff_ui(a, i, X[i]);
-  }
-  for (int i = 0; i < m; ++i) {
-    nmod_poly_set_coeff_ui(b, i, Y[i]);
-  }
-  nmod_poly_mul(a, a, b);
-
-  const int size = (int)a[0].length;
-
-  for (int i = 0; i < size; ++i) {
-    auto v = a[0].coeffs[i];
-    result[i] = v;
-  }
-
-  const int allSize = n + m - 1;
-  for (int i = size; i < allSize; ++i) {
-    result[i] = 0;
-  }
-  nmod_poly_clear(a);
-  nmod_poly_clear(b);
-}
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_flint(const T* X, const int n, const T* Y, const int m, T* result,
-                   int64 mod) {
-  typedef typename std::make_unsigned<T>::type unsignedT;
-  poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m,
-                              (unsignedT*)result, mod,
-                              &poly_mul_flint_internal<unsignedT>);
-}
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
-    poly_mul_flint(const vector<T>& X, const vector<T>& Y, int64 mod) {
-  const int n = (int)X.size();
-  const int m = (int)Y.size();
-
-  vector<T> result(n + m - 1);
-  poly_mul_flint(&X[0], n, &Y[0], m, &result[0], mod);
-
-  return result;
-}
-#endif
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul(const T* X, const int n, const T* Y, const int m, T* result,
-             int64 mod) {
-  typedef typename std::make_unsigned<T>::type unsignedT;
-
-  const int isBig = max(n, m) >= 50;
-  if (isBig) {
-#if HAS_POLY_MUL_MIN25_NTT
-    ntt_min25::poly_mul_ntt(&X[0], n, &Y[0], m, result, mod);
-#elif ENABLE_FLINT
-    poly_mul_flint(&X[0], n, &Y[0], m, result, mod);
-#elif HAS_POLY_MUL_NTT32
-    ntt32::poly_mul_ntt(&X[0], n, &Y[0], m, result, mod);
-#elif HAS_POLY_MUL_NTT64
-    ntt64::poly_mul_ntt(&X[0], n, &Y[0], m, result, mod);
-#else
-
-#if defined(COMPILER_GNU)
-#warning "poly_mul may be very slow."
-#else
-#pragma message("poly_mul may be very slow.")
-#endif
-
-    poly_mul_normal(&X[0], n, &Y[0], m, result, mod);
-#endif
-  } else {
-    poly_mul_normal(&X[0], n, &Y[0], m, result, mod);
-  }
-}
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
-    poly_mul(const vector<T>& X, const vector<T>& Y, int64 mod) {
-  const int n = (int)X.size();
-  const int m = (int)Y.size();
-
-  vector<T> result(n + m - 1);
-  poly_mul(&X[0], n, &Y[0], m, &result[0], mod);
-
-  return result;
-}
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_inv_mod_internal(int n, const T* a, T* b, T* tmp[2], int64 mod) {
-  static_assert(std::is_unsigned<T>::value, "T must be unsigned");
-  if (n == 1) {
-    b[0] = power_mod_ex(a[0], mod - 2, mod);
-  } else {
-    const int m = (n + 1) >> 1;
-    poly_inv_mod_internal(m, a, b, tmp, mod);
-    fill(b + m, b + n, 0);
-    poly_mul(b, m, b, m, tmp[0], mod);
-    if (m + m - 2 < n - 1) {
-      tmp[0][n - 1] = 0;
-    }
-    poly_mul(a, n, tmp[0], n, tmp[1], mod);
-    for (int i = 0; i < n; ++i) {
-      auto t = b[i] << 1;
-      if (t >= (uint64)mod) t -= mod;
-      t = t + mod - tmp[1][i];
-      if (t >= (uint64)mod) t -= mod;
-      b[i] = t;
-    }
-  }
-}
-
-// size result >= n
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_inv_mod_internal(const T* x, int m, int n, T* result, int64 mod) {
-  // It is assumed that mod is a prime
-  const int t = max(n, m);
-  const int p = 1 << pe_lg(4 * t - 1);
-
-  // a
-  vector<T> a(p);
-  for (int i = 0; i < m; ++i) {
-    a[i] = x[i];
-  }
-  for (int i = m; i < p; ++i) {
-    a[i] = 0;
-  }
-
-  // b
-  vector<T> b(n);
-
-  // tmp
-  vector<T> tmpData[2];
-  T* tmp[2];
-  for (int i = 0; i < 2; ++i) {
-    tmpData[i].resize(p);
-    tmp[i] = &tmpData[i][0];
-  }
-
-  poly_inv_mod_internal(n, &a[0], &b[0], tmp, mod);
-  copy(b.begin(), b.begin() + n, result);
-}
-
-// size result >= n
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_inv_mod(const T* x, int m, int n, T* result, int64 mod) {
-  typedef typename std::make_unsigned<T>::type unsignedT;
-  poly_inv_mod_internal<unsignedT>((const unsignedT*)x, m, n,
-                                   (unsignedT*)result, mod);
-}
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
-    poly_inv_mod(const vector<T>& x, int n, int64 mod) {
-  // It is assumed that mod is a prime
-  const int m = (int)x.size();
-  const int t = max(n, m);
-  const int p = 1 << pe_lg(4 * t - 1);
-
-  // b
-  vector<T> b(p);
-
-  poly_inv_mod(&x[0], m, n, &b[0], mod);
-  b.resize(n);
-  return b;
-}
-
-// size r >= m
-// size q >= n - m + 1
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_div_and_mod_dc_internal(const T* X, int n, const T* Y, int m, T* q,
-                                 T* r, int64 mod) {
-  static_assert(std::is_unsigned<T>::value, "T must be unsigned");
-
-  if (m > n) {
-    if (r) {
-      copy(X, X + n, r);
-      fill(r + n, r + m, 0);
-    }
-    if (q) {
-      q[0] = 0;
-    }
-    return;
-  }
-  vector<T> YR(m);
-  for (int i = 0; i < m; ++i) YR[i] = Y[m - 1 - i];
-  vector<T> IYR = poly_inv_mod(YR, n - m + 1, mod);
-  vector<T> XR(n);
-  for (int i = 0; i < n; ++i) XR[i] = X[n - 1 - i];
-  vector<T> Z = poly_mul(XR, IYR, mod);
-  Z.resize(n - m + 1);
-  reverse(Z.begin(), Z.end());
-  if (q) {
-    copy(Z.begin(), Z.end(), q);
-  }
-  if (r) {
-    vector<T> tmp(n);
-    poly_mul(&Y[0], m, &Z[0], n - m + 1, &tmp[0], mod);
-    for (int i = 0; i < m; ++i) {
-      r[i] = X[i] >= tmp[i] ? X[i] - tmp[i] : X[i] + mod - tmp[i];
-    }
-  }
-}
-
-// size q >= n - m + 1
-// size r >= m
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_div_and_mod_normal_internal(const T* X, int n, const T* Y, int m, T* q,
-                                     T* r, int64 mod) {
-  static_assert(std::is_unsigned<T>::value, "T must be unsigned");
-
-  if (m > n) {
-    if (r) {
-      copy(X, X + n, r);
-      fill(r + n, r + m, 0);
-    }
-    if (q) {
-      q[0] = 0;
-    }
-    return;
-  }
-
-  int top = 0;
-  vector<T> tmp(X, X + n);
-  int64 t = inv_of(Y[m - 1], mod);
-  for (int i = n - 1; i >= m - 1; --i) {
-    int64 u = tmp[i] * t % mod;
-    for (int j = i, k = m - 1; k >= 0; --j, --k) {
-      tmp[j] = sub_mod(tmp[j], u * Y[k] % mod, mod);
-    }
-    if (q) {
-      q[top++] = u;
-    }
-  }
-  if (q) {
-    reverse(q, q + top);
-  }
-  if (r) {
-    copy(tmp.begin(), tmp.begin() + m, r);
-  }
-}
-
-// For input:
-// size q >= max(deg X - deg Y + 1, 1)
-// size r >= m
-// For output:
-// deg q = max(deg X - deg Y + 1, 1)
-// For C-style method: deg r = deg Y (with possible leading zeros)
-// For C++ style method: deg r <= deg Y (the leading zeros are ignored)
-#define POLY_DIV_AND_MOD_IMPL(poly_div_and_mod, poly_div_and_mod_internal)     \
-  template <typename T>                                                        \
-  SL REQUIRES((is_native_integer<T>::value)) RETURN(void)                      \
-      poly_div_and_mod(const T* X, const int n, const T* Y, const int m, T* q, \
-                       T* r, int64 mod) {                                      \
-    typedef typename std::make_unsigned<T>::type unsignedT;                    \
-    poly_div_and_mod_internal<unsignedT>((const unsignedT*)X, n,               \
-                                         (const unsignedT*)Y, m,               \
-                                         (unsignedT*)q, (unsignedT*)r, mod);   \
-  }                                                                            \
-                                                                               \
-  template <typename T>                                                        \
-  SL REQUIRES((is_native_integer<T>::value))                                   \
-      RETURN(tuple<vector<T>, vector<T>>) poly_div_and_mod(                    \
-          const vector<T>& X, const vector<T>& Y, int64 mod) {                 \
-    const int n = (int)X.size() - 1;                                           \
-    const int m = (int)Y.size() - 1;                                           \
-                                                                               \
-    vector<T> q(max(n - m + 1, 1));                                            \
-    vector<T> r(m + 1);                                                        \
-    poly_div_and_mod(&X[0], n + 1, &Y[0], m + 1, &q[0], &r[0], mod);           \
-                                                                               \
-    r[m] = 0;                                                                  \
-    adjust_poly_leading_zero(r);                                               \
-    return make_tuple(std::move(q), std::move(r));                             \
-  }
-
-#define POLY_DIV_IMPL(poly_div, poly_div_and_mod)                          \
-  template <typename T>                                                    \
-  SL REQUIRES((is_native_integer<T>::value)) RETURN(void) poly_div(        \
-      const T* X, const int n, const T* Y, const int m, T* q, int64 mod) { \
-    poly_div_and_mod(X, n, Y, m, q, (T*)NULL, mod);                        \
-  }                                                                        \
-                                                                           \
-  template <typename T>                                                    \
-  SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)             \
-      poly_div(const vector<T>& X, const vector<T>& Y, int64 mod) {        \
-    vector<T> q(max((int)X.size() - (int)Y.size() + 1, 1));                \
-    poly_div(&X[0], (int)X.size(), &Y[0], (int)Y.size(), &q[0], mod);      \
-    return std::move(q);                                                   \
-  }
-
-#define POLY_MOD_IMPL(poly_mod, poly_div_and_mod)                          \
-  template <typename T>                                                    \
-  SL REQUIRES((is_native_integer<T>::value)) RETURN(void) poly_mod(        \
-      const T* X, const int n, const T* Y, const int m, T* r, int64 mod) { \
-    poly_div_and_mod(X, n, Y, m, (T*)NULL, r, mod);                        \
-  }                                                                        \
-                                                                           \
-  template <typename T>                                                    \
-  SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)             \
-      poly_mod(const vector<T>& X, const vector<T>& Y, int64 mod) {        \
-    vector<T> r(Y.size());                                                 \
-    poly_mod(&X[0], (int)X.size(), &Y[0], (int)Y.size(), &r[0], mod);      \
-    adjust_poly_leading_zero(r);                                           \
-    return std::move(r);                                                   \
-  }
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_div_and_mod(const T* X, const int n, const T* Y, const int m, T* q,
-                     T* r, int64 mod) {
-  typedef typename std::make_unsigned<T>::type unsignedT;
-  // This condition also includes the case n < m;
-  if ((n - m) * m <= 1000) {
-    poly_div_and_mod_normal_internal<unsignedT>(
-        (const unsignedT*)X, n, (const unsignedT*)Y, m, (unsignedT*)q,
-        (unsignedT*)r, mod);
-  } else {
-    poly_div_and_mod_dc_internal<unsignedT>((const unsignedT*)X, n,
-                                            (const unsignedT*)Y, m,
-                                            (unsignedT*)q, (unsignedT*)r, mod);
-  }
-}
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(tuple<vector<T>, vector<T>>)
-    poly_div_and_mod(const vector<T>& X, const vector<T>& Y, int64 mod) {
-  const int n = (int)X.size() - 1;
-  const int m = (int)Y.size() - 1;
-
-  vector<T> q(max(n - m + 1, 1));
-  vector<T> r(m + 1);
-  poly_div_and_mod(&X[0], n + 1, &Y[0], m + 1, &q[0], &r[0], mod);
-
-  r[m] = 0;
-  adjust_poly_leading_zero(r);
-  return make_tuple(std::move(q), std::move(r));
-}
-
-POLY_DIV_AND_MOD_IMPL(poly_div_and_mod_dc, poly_div_and_mod_dc_internal)
-POLY_DIV_IMPL(poly_div_dc, poly_div_and_mod_dc)
-POLY_MOD_IMPL(poly_mod_dc, poly_div_and_mod_dc)
-
-POLY_DIV_AND_MOD_IMPL(poly_div_and_mod_normal, poly_div_and_mod_normal_internal)
-POLY_DIV_IMPL(poly_div_normal, poly_div_and_mod_normal)
-POLY_MOD_IMPL(poly_mod_normal, poly_div_and_mod_normal)
-
-POLY_DIV_IMPL(poly_div, poly_div_and_mod)
-POLY_MOD_IMPL(poly_mod, poly_div_and_mod)
+#include "pe_poly"
 
 struct PSPTree {
   int64 mod;
@@ -860,6 +210,12 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
   return result;
 }
 
+// size x = size v
+SL vector<int64> poly_evaluate_mod_normal(const NModPoly& X,
+                                          const vector<int64>& V) {
+  return poly_evaluate_mod_normal(X.data, V, X.mod);
+}
+
 // size(V) = n
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
@@ -878,6 +234,12 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
   vector<T> result(n);
   poly_evaluate_mod_bls(&X[0], n, &V[0], &result[0], mod);
   return result;
+}
+
+// size x = size v
+SL vector<int64> poly_evaluate_mod_bls(const NModPoly& X,
+                                       const vector<int64>& V) {
+  return poly_evaluate_mod_bls(X.data, V, X.mod);
 }
 
 // Known f[0],f[1],f[2],...,f[d]
@@ -1457,7 +819,7 @@ struct PowerSumModerB {
     invs = new int64[maxk+2];
     init_inv(invs, maxk+2, mod);
     init_bernoulli_number(BNL, maxk+1, invs, mod);
-    
+
     BNL[1] = mod - BNL[1];
   }
 
@@ -1493,7 +855,7 @@ struct PowerSumModerB {
     PE_ASSERT(k <= maxk);
 
     int64 ret = 0;
-    
+
     int64 invn = power_mod_ex(n%mod, mod-2, mod);
     int64 c = power_mod_ex(n%mod, k+1, mod);
 
@@ -1505,7 +867,7 @@ struct PowerSumModerB {
         tie(A, B) = extract_factor(k + 2 - i, mod);
         d += B;
         c = mul_mod_ex(c, regulate_mod(A, mod), mod);
-        
+
         tie(A, B) = extract_factor(i, mod);
         d -= B;
         c = mul_mod_ex(c, invs[A], mod);
@@ -1603,7 +965,7 @@ struct PowerSumModerB1 {
       tie(A, B) = extract_factor(k1 - i + 1, mod);
       d += B;
       c = mul_mod_ex(c, regulate_mod(A, mod), mod);
-      
+
       tie(A, B) = extract_factor(i, mod);
       d -= B;
       c = mul_mod_ex(c, invs[A], mod);
@@ -1671,6 +1033,16 @@ SL vector<int64> gf_first(const vector<int64>& A, const vector<int64>& B,
   return result;
 }
 
+// gf_first, gf_at is good for the case size(A) is small.
+// Otherwise, A.inv(n) * B is better.
+
+// Finds the coefficient of x^0..x^n of f such that: A*f = B
+// Returns empty vector if there is no integer solution.
+// O(size(A) * n)
+SL vector<int64> gf_first(const NModPoly& A, const NModPoly& B, const int n) {
+  return gf_first(A.data, B.data, n, A.mod);
+}
+
 // Finds the coefficient of x^n of f such that: A*f = B
 // Returns -1 if there is no integer solution.
 // O(size(A)^3 * log n) for big n
@@ -1735,5 +1107,85 @@ SL int64 gf_at(const vector<int64>& A, const vector<int64>& B, const int64 n,
     }
   }
   return res[0];
+}
+
+// Finds the coefficient of x^n of f such that: A*f = B
+// Returns -1 if there is no integer solution.
+// O(size(A)^3 * log n) for big n
+SL int64 gf_at(const NModPoly& A, const NModPoly& B, const int64 n) {
+  return gf_at(A.data, B.data, n, A.mod);
+}
+
+// Berlekamp Massey
+SL NModPoly find_minimal_poly(const NModPoly& s) {
+  const int m = (int)s.data.size();
+  const int n = m >> 1;
+  const int64 mod = s.mod;
+  PE_ASSERT(n * 2 == m);
+
+  NModPoly r0{{1}, mod};
+  r0 = r0 << m;
+  NModPoly r1(s);
+  NModPoly v0{{0}, mod};
+  NModPoly v1{{1}, mod};
+
+  while (n + 1 <= r1.deg()) {
+    NModPoly q, r;
+    tie(q, r) = poly_div_and_mod(r0, r1);
+    NModPoly v(v0 - q * v1);
+    v0 = std::move(v1);
+    v1 = std::move(v);
+    r0 = std::move(r1);
+    r1 = std::move(r);
+  }
+  v1 = std::move(inv_of(v1[0], mod) * v1);
+  reverse(v1.data.begin(), v1.data.end());
+  return v1;
+}
+
+SL int64 nth_element(const NModPoly& s, int64 n, const NModPoly& min_poly) {
+  if (n <= s.deg()) {
+    return s[(int)n];
+  }
+
+  auto r = n % min_poly;
+  const int m = r.deg();
+  int64 ans = 0;
+  for (int i = 0; i <= m; ++i) {
+    ans = add_mod(ans, s[i] * r[i] % s.mod, s.mod);
+  }
+  return ans;
+}
+
+SL NModPoly find_linear_recurrence(const NModPoly& s) {
+  const int len = (int)s.data.size();
+  for (int n = 2; n < len; n += 2) {
+    auto use = s.lowerTerms(n);
+    auto min_poly = find_minimal_poly(use);
+    int ok = 1;
+    for (int i = n; i < len; ++i) {
+      auto value = nth_element(use, i, min_poly);
+      if (value != s[i]) {
+        ok = 0;
+        break;
+      }
+    }
+    if (ok) {
+      return min_poly;
+    }
+  }
+  return NModPoly();
+}
+
+SL int64 nth_element(const NModPoly& s, int64 n) {
+  if (n <= s.deg()) {
+    return s[(int)n];
+  }
+
+  auto min_poly = find_linear_recurrence(s);
+  if (min_poly.deg() > 0) {
+    return nth_element(s, n, min_poly);
+  }
+  return -1;
 }
 #endif

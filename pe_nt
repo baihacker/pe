@@ -50,9 +50,10 @@ SL int64 square_root(int64 n) {
 }
 
 SL int is_square_free_normal(int64 n) {
-  for (auto& iter: factorize(n)) if (iter.second > 1) {
-    return 0;
-  }
+  for (auto& iter : factorize(n))
+    if (iter.second > 1) {
+      return 0;
+    }
   return 1;
 }
 
@@ -296,7 +297,7 @@ SL void init_inv(T* dest, int64 n, M mod) {
     dest[i] = (T)mul_mod_ex(i, mul_mod_ex(v, u, mod), mod);
   }
   for (auto i = mod; i < n; ++i) {
-    dest[i] = dest[i-mod];
+    dest[i] = dest[i - mod];
   }
 }
 
@@ -902,15 +903,15 @@ int64 short_comb_mod(int64 n, int64 m, int64 mod) {
 }
 
 // Computes 1^k + 2^k + ... n^k based on bernoulli number
-// It is recommended to use PowerSumModerB or PowerSumModerB1 to support larger k.
+// It is recommended to use PowerSumModerB or PowerSumModerB1 to support larger
+// k.
 struct PowerSumModer {
-  PowerSumModer(int64 mod, int maxk = 128) : mod(mod), maxk(maxk), P(NULL), invs(NULL) {
+  PowerSumModer(int64 mod, int maxk = 128)
+      : mod(mod), maxk(maxk), P(NULL), invs(NULL) {
     init(maxk);
   }
 
-  ~PowerSumModer() {
-    reset();
-  }
+  ~PowerSumModer() { reset(); }
 
   void reset() {
     if (P) {
@@ -929,13 +930,13 @@ struct PowerSumModer {
   void init(int maxk) {
     reset();
 
-    P = new int64*[maxk+1];
+    P = new int64*[maxk + 1];
     for (int i = 0; i <= maxk; ++i) {
-      P[i] = new int64[maxk+1];
+      P[i] = new int64[maxk + 1];
     }
 
-    invs = new int64[maxk+2];
-    init_inv(invs, maxk+2, mod);
+    invs = new int64[maxk + 2];
+    init_inv(invs, maxk + 2, mod);
     for (int i = 0; i <= maxk; ++i)
       for (int j = 0; j <= maxk; ++j) {
         P[i][j] = 0;
@@ -977,18 +978,18 @@ struct PowerSumModer {
     PE_ASSERT(k <= maxk);
 
     int64 A, B;
-    tie(A, B) = extract_factor(n+1, mod);
+    tie(A, B) = extract_factor(n + 1, mod);
 
     int64 ret = 0;
     int64 c = A;
     int64 d = B;
     for (int i = 1; i <= k; ++i) {
       // ret += P[k][i] * short_comb_mod(n + 1, i + 1, mod) % mod;
-      tie(A, B) = extract_factor(n+1-i, mod);
+      tie(A, B) = extract_factor(n + 1 - i, mod);
       d += B;
       c = mul_mod_ex(c, regulate_mod(A, mod), mod);
 
-      tie(A, B) = extract_factor(i+1, mod);
+      tie(A, B) = extract_factor(i + 1, mod);
       d -= B;
       c = mul_mod_ex(c, invs[A], mod);
 
@@ -1019,9 +1020,7 @@ struct MiuPhiSumModer {
     init(PIVOT);
   }
 
-  ~MiuPhiSumModer() {
-    reset();
-  }
+  ~MiuPhiSumModer() { reset(); }
 
   void reset() {
     if (pre_sum_mu == NULL) {
@@ -1110,12 +1109,8 @@ struct MiuPhiSumModer {
  * If n is no more than PIVOT, use a pre-computed table.
  */
 struct SFCounter {
-  SFCounter(int64 PIVOT = ::maxp) : pre(NULL), PIVOT(PIVOT) {
-    init(PIVOT);
-  }
-  ~SFCounter() {
-    reset();
-  }
+  SFCounter(int64 PIVOT = ::maxp) : pre(NULL), PIVOT(PIVOT) { init(PIVOT); }
+  ~SFCounter() { reset(); }
 
   void reset() {
     if (pre) {
@@ -1128,10 +1123,10 @@ struct SFCounter {
     reset();
 
     this->PIVOT = PIVOT;
-    pre = new int64[PIVOT+1];
+    pre = new int64[PIVOT + 1];
     pre[0] = 0;
     for (int64 i = 1; i <= PIVOT; ++i) {
-      pre[i] = pre[i-1] + is_square_free(i);
+      pre[i] = pre[i - 1] + is_square_free(i);
     }
   }
 
@@ -1140,7 +1135,7 @@ struct SFCounter {
     auto where = mem.find(n);
     if (where != mem.end()) return where->second;
     int64 ret = n;
-    for (int64 i = 2; ; ++i) {
+    for (int64 i = 2;; ++i) {
       int64 i2 = i * i;
       if (i2 > n) break;
       ret -= get(n / i2);

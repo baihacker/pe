@@ -1538,7 +1538,7 @@ inline BigInteger power_mod(const BigInteger& l, const BigInteger& m,
 
 inline BigInteger exgcd(const BigInteger& a, const BigInteger& b, BigInteger& x,
                         BigInteger& y) {
-  if (b == 0) {
+  if (b.isZero()) {
     x = 1;
     y = 0;
     return a;
@@ -1553,6 +1553,14 @@ inline BigInteger exgcd(const BigInteger& a, const BigInteger& b, BigInteger& x,
   y = x1 - a / b * y1;
   x = std::move(y1);
   return ret;
+}
+
+SL tuple<BigInteger, BigInteger, BigInteger> exgcd(const BigInteger& a, const BigInteger& b) {
+  PE_ASSERT(a != 0 || b != 0);
+  BigInteger x = 0, y = 0;
+  const BigInteger r = exgcd(a, b, x, y);
+  PE_ASSERT(a * x + b * y == r);
+  return tuple<BigInteger, BigInteger, BigInteger>{r, x, y};
 }
 
 inline BigInteger gcd(BigInteger m, BigInteger n) {
@@ -1594,6 +1602,83 @@ inline BigInteger operator"" _bi(unsigned long long v) { return BigInteger(v); }
 
 typedef BigInteger bi;
 typedef BigInteger bn;
+
+// solve equation a x = b (mod m)
+// return 0 and set u = -1 and v = 0 if failed
+// return 1, x = v (mod u)
+SL int solve_linear_equation(bn a, bn b, bn m, bn& v, bn& u) {
+  v = 0;
+  u = 0;
+
+  if (m < 0) m = -m;
+
+  a %= m;
+  b %= m;
+
+  if (a < 0) a += m;
+  if (b < 0) b += m;
+
+  bn xx = 0, yy = 0, d = exgcd(a, m, xx, yy);
+
+  if (!(b % d).isZero()) return 0;
+
+  xx = (xx % m + m) % m;
+  xx = xx * (b / d) % m;
+
+  u = m / d;
+  v = xx % u;
+
+  return 1;
+}
+
+// solve equation x = a (mod m1) x = b (mod m2)
+// return 0 and set u = 0 and t = 0 if failed
+// return 1, x = v (mod u)
+SL int crt2(bn a, bn m1, bn b, bn m2, bn& v, bn& u) {
+  v = 0;
+  u = 0;
+
+  PE_ASSERT(m1 != 0 && m2 != 0);
+  if (m1 < 0) m1 = -m1;
+  if (m2 < 0) m2 = -m2;
+  // x = a (mod m1)
+  // x = b (mod m2)
+  // x = k0 m1 + a
+  // k0 m1 + a = b (mod m2)
+  // k0 m1 = b - a (mod m2)
+  a %= m1;
+  b %= m2;
+  if (a < 0) a = -a;
+  if (b < 0) b = -b;
+
+  bn s = 0, t = 0;
+  if (!solve_linear_equation(m1, b - a, m2, t, s)) return 0;
+  // k0 = k1 * s + t
+  // x = (k1 * s + t) * m1 + a
+  // x = k1 * s * m1 + (a + t * m1)
+
+  u = s * m1;
+  v = ((a + t * m1) % u + u) % u;
+  return 1;
+}
+
+SL tuple<int, bn, bn> crt2(bn a, bn m1, bn b, bn m2) {
+  bn v = 0, u = 0;
+  int r = crt2(a, m1, b, m2, v, u);
+  return tuple<int, bn, bn>{r, v, u};
+}
+
+SL tuple<int, bn, bn> crtn(bn* val, bn* mod, int n) {
+  bn v = 0, u = 1;
+  int have = 1;
+  for (int i = 0; i < n; ++i) {
+    tie(have, v, u) = crt2(v, u, val[i], mod[i]);
+    if (!have) {
+      return tuple<int, bn, bn>{0, 0, 0};
+    }
+  }
+  return tuple<int, bn, bn>{have, v, u};
+}
 
 template <>
 struct Fraction<bi> {

@@ -363,4 +363,74 @@ SL int128 sum_sigma0_bf(int64 n) {
 }
 #endif
 
+// Generate set partitions.
+// The number of partitions of n elements is Bell number
+// See: http://oeis.org/A000110
+struct Partition {
+  // e.g. {0, 0, 1, 1, 0, 2, 2}
+  vi colors;
+
+  // 2, 2, 3
+  vi parts;
+
+  // compressed parts
+  // e.g. {2:2, 3:1}
+  vector<pair<int, int> > partsC;
+
+  void genParts() {
+    map<int, int> mem, mem1;
+    parts.resize(0);
+    for (auto& iter: colors) ++mem[iter];
+    for (auto& iter: mem) ++mem1[iter.second], parts.push_back(iter.second);
+    sort(parts.begin(), parts.end());
+
+    partsC.resize(0);
+    for (auto& iter: mem1)
+      partsC.push_back({iter.first, iter.second});
+  }
+
+  int operator < (const Partition& o) const {
+    return colors < o.colors;
+  }
+
+  int operator > (const Partition& o) const {
+    return colors > o.colors;
+  }
+
+  int operator == (const Partition& o) const {
+    return colors == o.colors;
+  }
+
+  static void genPartitionsImpl(int now, int n, int maxv, int* his, vector<Partition>& result) {
+    if (now == n) {
+      Partition t;
+      t.colors = vi(his, his+n);
+      t.genParts();
+      result.push_back(std::move(t));
+    } else {
+      for (int i = 0; i <= maxv + 1; ++i) {
+        his[now] = i;
+        genPartitionsImpl(now + 1, n, max(maxv, i), his, result);
+      }
+    }
+  }
+
+  static vector<Partition> genPartitions(int n) {
+    vector<Partition> result;
+    int his[64];
+    genPartitionsImpl(0, n, -1, his, result);
+    return result;
+  }
+
+/**
+  int mobius(const Partition& partition) {
+    int ret = partition.colors.size() + partition.parts.size() & 1 ? mod - 1 : 1;
+    for (auto& iter: partition.parts)
+      ret = ret * fact[iter - 1] % mod;
+    return ret;
+  }
+ */
+
+};
+
 #endif

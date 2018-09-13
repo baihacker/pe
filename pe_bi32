@@ -1606,11 +1606,11 @@ typedef BigInteger bn;
 // solve equation a x = b (mod m)
 // return 0 and set u = -1 and v = 0 if failed
 // return 1, x = v (mod u)
-SL int solve_linear_equation(bn a, bn b, bn m, bn& v, bn& u) {
+SL int solve_linear_equation(bn a, bn b, const bn& m, bn& v, bn& u) {
   v = 0;
   u = 0;
 
-  if (m < 0) m = -m;
+  PE_ASSERT(!m.isZero());
 
   a %= m;
   b %= m;
@@ -1634,13 +1634,11 @@ SL int solve_linear_equation(bn a, bn b, bn m, bn& v, bn& u) {
 // solve equation x = a (mod m1) x = b (mod m2)
 // return 0 and set u = 0 and t = 0 if failed
 // return 1, x = v (mod u)
-SL int crt2(bn a, bn m1, bn b, bn m2, bn& v, bn& u) {
+SL int crt2(bn a, const bn& m1, bn b, const bn& m2, bn& v, bn& u) {
   v = 0;
   u = 0;
 
-  PE_ASSERT(m1 != 0 && m2 != 0);
-  if (m1 < 0) m1 = -m1;
-  if (m2 < 0) m2 = -m2;
+  PE_ASSERT(!m1.isZero() && !m2.isZero());
   // x = a (mod m1)
   // x = b (mod m2)
   // x = k0 m1 + a
@@ -1662,7 +1660,7 @@ SL int crt2(bn a, bn m1, bn b, bn m2, bn& v, bn& u) {
   return 1;
 }
 
-SL tuple<int, bn, bn> crt2(bn a, bn m1, bn b, bn m2) {
+SL tuple<int, bn, bn> crt2(const bn& a, const bn& m1, const bn& b, const bn& m2) {
   bn v = 0, u = 0;
   int r = crt2(a, m1, b, m2, v, u);
   return tuple<int, bn, bn>{r, v, u};
@@ -1771,14 +1769,16 @@ vector<bi> to_continued_fraction(int64 p, int64 q, int n) {
   return result;
 }
 
-struct FacModer {
+// Compute n! mod p^e
+// The complexity is at least max(e*e, p*e)
+struct FactPPowerModer {
   std::vector<bi> F;
   int64 p;
   int64 e;
   bi mod;
   bi phi;
 
-  FacModer(const int64 p, const int64 e) : p(p), e(e) {
+  FactPPowerModer(const int64 p, const int64 e) : p(p), e(e) {
     int64 pe = p * e;
     mod = power(bi(p), e);
     phi = power(bi(p), (e - 1)) * (p - 1);

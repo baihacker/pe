@@ -1,7 +1,7 @@
 #include "pe_test.h"
 
-namespace fac_mod_test {
-SL void fac_mod_test()
+namespace fact_ppower_mod_test {
+SL void fact_ppower_mod_test()
 {
   bn N = 1;
   for (int i = 1; i <= 20; ++i) N *= i;
@@ -11,7 +11,7 @@ SL void fac_mod_test()
 
   bn mod = power(bn(2), 48);
   bn ans = 1;
-  FacModer moder(2, 48);
+  FactPPowerModer moder(2, 48);
   int i = 0;
   while (N > 1) {
     ans = ans * moder.cal(N) % mod;
@@ -23,5 +23,5 @@ SL void fac_mod_test()
   assert(ans == 21171469991580LL);
 }
 
-PE_REGISTER_TEST(&fac_mod_test, "fac_mod_test", MEDIUM);
+PE_REGISTER_TEST(&fact_ppower_mod_test, "fact_ppower_mod_test", MEDIUM);
 }

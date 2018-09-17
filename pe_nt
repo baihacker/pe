@@ -50,9 +50,10 @@ SL int64 square_root(int64 n) {
 }
 
 SL int is_square_free_normal(int64 n) {
-  for (auto& iter: factorize(n)) if (iter.second > 1) {
-    return 0;
-  }
+  for (auto& iter : factorize(n))
+    if (iter.second > 1) {
+      return 0;
+    }
   return 1;
 }
 
@@ -96,6 +97,13 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value))
   return ret;
 }
 
+template <typename T1, typename T2>
+SL tuple<T1, int64> extract_factor(T1 A, T2 B) {
+  int64 c = 0;
+  while (A && A % B == 0) A = (T1)(A / B), ++c;
+  return tuple<T1, int64>{A, c};
+}
+
 // greatest common divisor and extend greatest common divisor
 template <typename _EuclideanRingElement>
 _EuclideanRingElement gcd(_EuclideanRingElement __m,
@@ -109,7 +117,9 @@ _EuclideanRingElement gcd(_EuclideanRingElement __m,
 }
 
 template <typename T>
-SL T exgcd_impl(T a, T b, T& x, T& y) {
+SL
+REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(T)
+exgcd_impl(T a, T b, T& x, T& y) {
   if (b == 0) {
     x = 1;
     y = 0;
@@ -128,7 +138,9 @@ SL T exgcd_impl(T a, T b, T& x, T& y) {
 }
 
 template <typename T>
-SL T exgcd(T a, T b, T& x, T& y) {
+SL
+REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(T)
+exgcd(T a, T b, T& x, T& y) {
   PE_ASSERT(a != 0 || b != 0);
   const T r = exgcd_impl(a, b, x, y);
   PE_ASSERT(a * x + b * y == r);
@@ -136,7 +148,9 @@ SL T exgcd(T a, T b, T& x, T& y) {
 }
 
 template <typename T>
-SL tuple<T, T, T> exgcd(T a, T b) {
+SL
+REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(tuple<T, T, T>)
+exgcd(T a, T b) {
   PE_ASSERT(a != 0 || b != 0);
   T x = 0, y = 0;
   const T r = exgcd_impl(a, b, x, y);
@@ -145,18 +159,18 @@ SL tuple<T, T, T> exgcd(T a, T b) {
 }
 
 template <typename T>
-SL T mod_inv(T a, T mod) {
-  static_assert(std::is_signed<T>::value, "T must be signed");
-
+SL
+REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(T)
+mod_inv(T a, T mod) {
   T b = mod, s = 1, t = 0, old_a = a;
   while (b > 0) {
     swap(s -= t * (a / b), t);
     swap(a %= b, b);
   }
   if (a > 1) {
-    cerr << "mod inv error: " << a << " " << mod << endl;
+    cerr << "mod inv error: " << old_a << " " << mod << endl;
     exit(1);
-  };
+  }
   return T(s) < 0 ? s + mod : s;
 }
 
@@ -167,7 +181,9 @@ SL int64 inv_of(int64 x, int64 p) { return power_mod_ex(x, p - 2, p); }
 // return 0 and set u = -1 and v = 0 if failed
 // return 1, x = v (mod u)
 template <typename T>
-SL int solve_linear_equation(T a, T b, T m, T& v, T& u) {
+SL
+REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(int)
+solve_linear_equation(T a, T b, T m, T& v, T& u) {
   v = 0;
   u = 0;
 
@@ -202,7 +218,9 @@ SL int solve_linear_equation(T a, T b, T m, T& v, T& u) {
 // return 0 and set u = 0 and t = 0 if failed
 // return 1, x = v (mod u)
 template <typename T>
-SL int crt2(T a, T m1, T b, T m2, T& v, T& u) {
+SL
+REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(int)
+crt2(T a, T m1, T b, T m2, T& v, T& u) {
   v = 0;
   u = 0;
 
@@ -231,14 +249,18 @@ SL int crt2(T a, T m1, T b, T m2, T& v, T& u) {
 }
 
 template <typename T>
-SL tuple<int, T, T> crt2(T a, T m1, T b, T m2) {
+SL
+REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(tuple<int, T, T>)
+crt2(T a, T m1, T b, T m2) {
   T v = 0, u = 0;
   int r = crt2(a, m1, b, m2, v, u);
   return tuple<int, T, T>{r, v, u};
 }
 
 template <typename T>
-SL tuple<int, T, T> crtn(T* val, T* mod, int n) {
+SL
+REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(tuple<int, T, T>)
+crtn(T* val, T* mod, int n) {
   PE_ASSERT(val != NULL && mod != NULL);
   T v = 0, u = 1;
   int have = 1;
@@ -251,33 +273,59 @@ SL tuple<int, T, T> crtn(T* val, T* mod, int n) {
   return tuple<int, T, T>{have, v, u};
 }
 
+/**
+ * dest[0] = 0
+ * dest[1] = 1
+ * dest[2] = 1 / 2
+ * dest[n-1] = 1 / (n-1)
+ *
+ * n can be greater than mod
+ */
 template <typename T, typename M>
 SL void init_inv(T* dest, int64 n, M mod) {
-  PE_ASSERT(n <= mod && n >= 2);
+  PE_ASSERT(n >= 1);
   dest[0] = 0;
-  dest[1] = 1;
-  for (int i = 2; i < n; ++i) {
+  if (n > 1) {
+    dest[1] = 1;
+  }
+  auto maxi = min(n, (int64)mod);
+  for (int i = 2; i < maxi; ++i) {
     const auto t = mod / i;
     const auto k = mod % i;
     const auto v = mul_mod_ex(t, t, mod);
     const auto u = mul_mod_ex(dest[k], dest[k], mod);
     dest[i] = (T)mul_mod_ex(i, mul_mod_ex(v, u, mod), mod);
   }
+  for (auto i = mod; i < n; ++i) {
+    dest[i] = dest[i - mod];
+  }
 }
 
+/**
+ * dest[0] = 1
+ * dest[1] = s
+ * dest[2] = s(s+1)
+ * dest[e-s+1]=s(s+1)...e
+ */
 template <typename T>
-SL void init_seq_prod(T* target, T s, T e, int64 mod) {
-  target[0] = 1;
+SL void init_seq_prod(T* dest, T s, T e, int64 mod) {
+  dest[0] = 1;
 
   const int cnt = (int)(e - s + 1);
   T i = s;
   for (int j = 1; j <= cnt; ++i, ++j) {
-    target[j] = mul_mod_ex(target[j - 1], i, mod);
+    dest[j] = mul_mod_ex(dest[j - 1], i, mod);
   }
 }
 
+/**
+ * dest[0] = 1
+ * dest[1] = 1/s
+ * dest[2] = 1/(s(s+1))
+ * dest[e-s+1]=1/(s(s+1)...e))
+ */
 template <typename T>
-SL void init_seq_prod_inv(T* target, T s, T e, T mod, T lastv = 0) {
+SL void init_seq_prod_inv(T* dest, T s, T e, T mod, T lastv = 0) {
   if (lastv == 0) {
     lastv = 1;
     for (T i = s; i <= e; ++i) {
@@ -286,12 +334,12 @@ SL void init_seq_prod_inv(T* target, T s, T e, T mod, T lastv = 0) {
     lastv = power_mod_ex(lastv, mod - 2, mod);
   }
   const int cnt = (int)(e - s + 1);
-  target[0] = 1;
-  target[cnt] = lastv;
+  dest[0] = 1;
+  dest[cnt] = lastv;
 
   T i = e;
   for (int j = cnt - 1; j > 0; --j) {
-    target[j] = mul_mod_ex(target[j + 1], i--, mod);
+    dest[j] = mul_mod_ex(dest[j + 1], i--, mod);
   }
 }
 
@@ -854,36 +902,127 @@ int64 short_comb_mod(int64 n, int64 m, int64 mod) {
   return ret;
 }
 
+// Computes 1^k + 2^k + ... n^k based on bernoulli number
+// It is recommended to use PowerSumModerB or PowerSumModerB1 to support larger
+// k.
 struct PowerSumModer {
-  PowerSumModer(int64 mod) : mod(mod) { init(); }
-  void init() {
-    memset(P, 0, sizeof P);
-    for (int i = 0; i < 64; ++i) P[i][1] = 1;
-    for (int i = 1; i < 64; ++i) {
+  PowerSumModer(int64 mod, int maxk = 128)
+      : mod(mod), maxk(maxk), P(NULL), invs(NULL) {
+    init(maxk);
+  }
+
+  ~PowerSumModer() { reset(); }
+
+  void reset() {
+    if (P) {
+      for (int i = 0; i <= maxk; ++i) {
+        delete[] P[i];
+      }
+      delete[] P;
+      P = NULL;
+    }
+    if (invs) {
+      delete[] invs;
+      invs = NULL;
+    }
+  }
+
+  void init(int maxk) {
+    reset();
+
+    P = new int64*[maxk + 1];
+    for (int i = 0; i <= maxk; ++i) {
+      P[i] = new int64[maxk + 1];
+    }
+
+    invs = new int64[maxk + 2];
+    init_inv(invs, maxk + 2, mod);
+    for (int i = 0; i <= maxk; ++i)
+      for (int j = 0; j <= maxk; ++j) {
+        P[i][j] = 0;
+      }
+    for (int i = 0; i <= maxk; ++i) P[i][1] = 1;
+    for (int i = 1; i <= maxk; ++i) {
       for (int j = 1; j < i; ++j) {
         int64 t = P[i - 1][j - 1] + P[i - 1][j];
         if (t >= mod) t -= mod;
-        P[i][j] = j * t % mod;
+        P[i][j] = mul_mod_ex(j, t, mod);
       }
       P[i][i] = 1;
-      for (int j = 1; j <= i; ++j) P[i][i] = P[i][i] * j % mod;
+      for (int j = 1; j <= i; ++j) {
+        P[i][i] = mul_mod_ex(P[i][i], j, mod);
+      }
     }
   }
+
+  // n + 1, n, ..., n-k+1 is not divisible by mod
+  // 2,3,...k+1 is not divisible by mod
   int64 cal(int64 n, int64 k) {
+    PE_ASSERT(k <= maxk);
+
     int64 ret = 0;
+    int64 c = (n + 1) % mod;
     for (int i = 1; i <= k; ++i) {
-      ret += P[k][i] * short_comb_mod(n + 1, i + 1, mod) % mod;
+      // ret += P[k][i] * short_comb_mod(n + 1, i + 1, mod) % mod;
+      c = mul_mod_ex(c, regulate_mod(n + 1 - i, mod), mod);
+      c = mul_mod_ex(c, invs[i + 1], mod);
+      if (c == 0) {
+        break;
+      }
+      ret += mul_mod_ex(P[k][i], c, mod);
     }
     return ret % mod;
   }
+
+  int64 cal_safe(int64 n, int64 k) {
+    PE_ASSERT(k <= maxk);
+
+    int64 A, B;
+    tie(A, B) = extract_factor(n + 1, mod);
+
+    int64 ret = 0;
+    int64 c = A;
+    int64 d = B;
+    for (int i = 1; i <= k; ++i) {
+      // ret += P[k][i] * short_comb_mod(n + 1, i + 1, mod) % mod;
+      tie(A, B) = extract_factor(n + 1 - i, mod);
+      d += B;
+      c = mul_mod_ex(c, regulate_mod(A, mod), mod);
+
+      tie(A, B) = extract_factor(i + 1, mod);
+      d -= B;
+      c = mul_mod_ex(c, invs[A], mod);
+
+      if (c == 0) {
+        break;
+      }
+
+      if (d == 0) {
+        ret += mul_mod_ex(P[k][i], c, mod);
+      }
+    }
+    return ret % mod;
+  }
+
   int64 mod;
-  int64 P[64][64];  // k < 64;
+  int maxk;
+  int64** P;
+  int64* invs;
 };
 
+/**
+ * Computes (the sum of mu[x] or phi[x]) % mod where x is no more than n.
+ * If n is no more than PIVOT, use a pre-computed table.
+ */
 struct MiuPhiSumModer {
-  MiuPhiSumModer(int64 mod) : mod(mod) { pre_sum_mu = pre_sum_phi = NULL; }
+  MiuPhiSumModer(int64 mod, int64 PIVOT = ::maxp) : mod(mod), PIVOT(PIVOT) {
+    pre_sum_mu = pre_sum_phi = NULL;
+    init(PIVOT);
+  }
 
-  ~MiuPhiSumModer() {
+  ~MiuPhiSumModer() { reset(); }
+
+  void reset() {
     if (pre_sum_mu == NULL) {
       delete[] pre_sum_mu;
       pre_sum_mu = NULL;
@@ -894,11 +1033,14 @@ struct MiuPhiSumModer {
     }
   }
 
-  void init() {
-    pre_sum_mu = new int64[maxp + 1];
-    pre_sum_phi = new int64[maxp + 1];
+  void init(int64 PIVOT) {
+    reset();
+    this->PIVOT = PIVOT;
+
+    pre_sum_mu = new int64[PIVOT + 1];
+    pre_sum_phi = new int64[PIVOT + 1];
     pre_sum_mu[0] = pre_sum_phi[0] = 0;
-    for (int i = 1; i <= maxp; ++i) {
+    for (int i = 1; i <= PIVOT; ++i) {
       pre_sum_mu[i] = ::mu[i] + pre_sum_mu[i - 1];
       pre_sum_phi[i] = (::phi[i] + pre_sum_phi[i - 1]) % mod;
       if (pre_sum_mu[i] < 0)
@@ -909,7 +1051,7 @@ struct MiuPhiSumModer {
   }
 
   int64 get_sum_mu(const int64 n) {
-    if (n <= maxp) return pre_sum_mu[n];
+    if (n <= PIVOT) return pre_sum_mu[n];
 
     auto where = mem_sum_mu.find(n);
     if (where != mem_sum_mu.end()) return where->second;
@@ -926,7 +1068,7 @@ struct MiuPhiSumModer {
   }
 
   int64 get_sum_phi(int64 n) {
-    if (n <= maxp) return pre_sum_phi[n];
+    if (n <= PIVOT) return pre_sum_phi[n];
 
     auto where = mem_sum_phi.find(n);
     if (where != mem_sum_phi.end()) return where->second;
@@ -953,6 +1095,7 @@ struct MiuPhiSumModer {
     return mem_sum_phi[n] = ret;
   }
   int64 mod;
+  int64 PIVOT;
 
   int64* pre_sum_mu;
   unordered_map<int64, int64> mem_sum_mu;
@@ -961,13 +1104,13 @@ struct MiuPhiSumModer {
   unordered_map<int64, int64> mem_sum_phi;
 };
 
+/**
+ * Counts the number of square free number no more than n.
+ * If n is no more than PIVOT, use a pre-computed table.
+ */
 struct SFCounter {
-  SFCounter(int64 PIVOT = ::maxp) : pre(NULL), PIVOT(PIVOT) {
-    init(PIVOT);
-  }
-  ~SFCounter() {
-    reset();
-  }
+  SFCounter(int64 PIVOT = ::maxp) : pre(NULL), PIVOT(PIVOT) { init(PIVOT); }
+  ~SFCounter() { reset(); }
 
   void reset() {
     if (pre) {
@@ -980,10 +1123,10 @@ struct SFCounter {
     reset();
 
     this->PIVOT = PIVOT;
-    pre = new int64[PIVOT+1];
+    pre = new int64[PIVOT + 1];
     pre[0] = 0;
     for (int64 i = 1; i <= PIVOT; ++i) {
-      pre[i] = pre[i-1] + is_square_free(i);
+      pre[i] = pre[i - 1] + is_square_free(i);
     }
   }
 
@@ -992,7 +1135,7 @@ struct SFCounter {
     auto where = mem.find(n);
     if (where != mem.end()) return where->second;
     int64 ret = n;
-    for (int64 i = 2; ; ++i) {
+    for (int64 i = 2;; ++i) {
       int64 i2 = i * i;
       if (i2 > n) break;
       ret -= get(n / i2);

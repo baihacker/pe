@@ -9,19 +9,19 @@
 #include "pe_type_traits"
 
 template <typename T>
-SL REQUIRES(is_native_integer<T>::value)
+SL REQUIRES((is_native_integer<T>::value))
     RETURN(int) is_even(T v) {
   return (v & 1) == 0 ? 1 : 0;
 }
 
 template <typename T>
-SL REQUIRES(is_native_integer<T>::value)
+SL REQUIRES((is_native_integer<T>::value))
     RETURN(int) is_odd(T v) {
   return (v & 1) == 0 ? 0 : 1;
 }
 
 template <typename T0, typename T1>
-SL REQUIRES(is_native_integer<T0>::value && is_native_integer<T1>::value)
+SL REQUIRES((is_native_integer<T0>::value && is_native_integer<T1>::value))
     RETURN(int) same_parity(T0 v0, T1 v1) {
   const int x = (int)(v0&1);
   const int y = (int)(v1&1);
@@ -125,15 +125,46 @@ SL tuple<T1, int64> extract_factor(T1 A, T2 B) {
 }
 
 // greatest common divisor and extend greatest common divisor
-template <typename _EuclideanRingElement>
-_EuclideanRingElement gcd(_EuclideanRingElement __m,
-                          _EuclideanRingElement __n) {
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value))
+RETURN(T) gcd(T __m, T __n) {
   while (__n != 0) {
-    _EuclideanRingElement __t = __m % __n;
+    T __t = __m % __n;
     __m = __n;
     __n = __t;
   }
   return __m;
+}
+
+template <typename T0, typename T1>
+SL REQUIRES((is_native_integer<T0>::value && is_native_integer<T1>::value))
+RETURN_T(IntPromotionT(T0, T1)) gcd(T0 __m, T1 __n) {
+  typedef IntPromotion(T0, T1) ResultType;
+  return gcd((ResultType)__m, (ResultType)__n);
+}
+
+template <typename T>
+SL T gcd(T a) {
+  return a;
+}
+
+template <typename TH, typename... TT>
+SL IntPromotion(TH, TT...) gcd(TH a, TT... b) {
+  return gcd(a, gcd(b...));
+}
+
+template <typename T>
+SL REQUIRES(is_native_integer<T>::value)
+    RETURN(T) gcd(std::initializer_list<T> init) {
+  T ret = 0;
+  for (auto& v : init) {
+    if (ret == 0) {
+      ret = v;
+    } else {
+      ret = gcd(ret, v);
+    }
+  }
+  return ret;
 }
 
 template <typename T>

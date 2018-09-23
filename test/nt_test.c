@@ -12,7 +12,11 @@ SL void nt_test() {
 
   int64 s1 = moder.get_sum_phi(10000000);
   assert(s0 == s1);
+}
 
+PE_REGISTER_TEST(&nt_test, "nt_test", MEDIUM);
+
+SL void parity_test() {
   assert(is_even(0) == 1);
   assert(is_even(1) == 0);
   assert(is_even(2) == 1);
@@ -46,8 +50,14 @@ SL void nt_test() {
   for (int i = -100; i <= 100; ++i)
     assert(is_even(i) + is_odd(i) == 1);
 }
+PE_REGISTER_TEST(&parity_test, "parity_test", SMALL);
 
-PE_REGISTER_TEST(&nt_test, "nt_test", MEDIUM);
+SL void gcd_test() {
+  assert(gcd({2,4,6}) == 2);
+  assert(gcd(2, 4, 6) == 2);
+  assert(gcd(2L, 4LL, 6ULL) == 2);
+}
+PE_REGISTER_TEST(&gcd_test, "gcd_test", SMALL);
 
 SL void get_factors_test() {
   auto result = get_factors(1);

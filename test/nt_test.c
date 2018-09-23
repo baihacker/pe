@@ -12,6 +12,39 @@ SL void nt_test() {
 
   int64 s1 = moder.get_sum_phi(10000000);
   assert(s0 == s1);
+
+  assert(is_even(0) == 1);
+  assert(is_even(1) == 0);
+  assert(is_even(2) == 1);
+  assert(is_even(3) == 0);
+
+  assert(is_odd(0) == 0);
+  assert(is_odd(1) == 1);
+  assert(is_odd(2) == 0);
+  assert(is_odd(3) == 1);
+
+  assert(same_parity(0, 0) == 1);
+  assert(same_parity(0, 1) == 0);
+  assert(same_parity(0, 2) == 1);
+  assert(same_parity(0, 3) == 0);
+
+  assert(same_parity(1, 0) == 0);
+  assert(same_parity(1, 1) == 1);
+  assert(same_parity(1, 2) == 0);
+  assert(same_parity(1, 3) == 1);
+
+  assert(same_parity(2, 0) == 1);
+  assert(same_parity(2, 1) == 0);
+  assert(same_parity(2, 2) == 1);
+  assert(same_parity(2, 3) == 0);
+
+  assert(same_parity(3, 0) == 0);
+  assert(same_parity(3, 1) == 1);
+  assert(same_parity(3, 2) == 0);
+  assert(same_parity(3, 3) == 1);
+
+  for (int i = -100; i <= 100; ++i)
+    assert(is_even(i) + is_odd(i) == 1);
 }
 
 PE_REGISTER_TEST(&nt_test, "nt_test", MEDIUM);

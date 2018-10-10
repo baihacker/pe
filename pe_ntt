@@ -731,7 +731,22 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 
 #endif
 
+
 /**
+ * Name convention:
+ *   poly_mul_<implementation>[suffix]
+ *
+ *   implementation is one of:
+ *     ntt32 (32 bit mod), ntt64 (64 bit mod), min25, libbf, flint
+ *
+ *   suffix is:
+ *      _small at least support (p-1)^2*n < 1e18
+ *      <empty string> at least support (p-1)^2*n < 1e28
+ *
+ * Template parameters:
+ *   T:
+ *     native integer which can be promoted to uint64
+ *
  * Availability
  * ntt32 small : always available
  * ntt32 large : always available
@@ -739,9 +754,9 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
  * ntt64 large : always available
  * min25 small : requires int128
  * min25 large : requires int128
- * libbf       : enable libbf
- * flint p     : enable flint
- * flint n     : enable flint
+ * libbf       : enable libbf && LIMB_BITS >= 64
+ * flint p     : enable flint && GMP_LIMB_BITS >= 64
+ * flint n     : enable flint && GMP_LIMB_BITS >= 64
  *
  * Limitations
  * ntt32 small
@@ -761,6 +776,9 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
  *
  * min25 ntt large
  * (p-1)^2*n < 1265198875113262859862934516672757761            1.2e36
+ *
+ * flint
+ * (p-1)^2*n < oo                                               3.4e38
  *
  * libbf
  * (p-1)^2*n < 340282366920938463463374607431768211456 (2^128)  3.4e38

@@ -1,0 +1,128 @@
+#ifndef __PE_NTT_FLINT__
+#define __PE_NTT_FLINT__
+
+#if ENABLE_FLINT
+
+#define HAS_POLY_MUL_FLINT 1
+
+namespace ntt_flint {
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_mul_flint_prime_internal(const T* X, const int n, const T* Y,
+                                  const int m, T* result, int64 mod) {
+  fmpz_t xmod;
+  fmpz_init_set_ui(xmod, mod);
+
+  fq_nmod_ctx_t ctx;
+  fq_nmod_ctx_init(ctx, xmod, 1, "Z");
+
+  fq_nmod_poly_t a, b;
+  fq_nmod_poly_init2(a, n, ctx);
+  fq_nmod_poly_init2(b, m, ctx);
+
+  fmpz_t c;
+  fmpz_init(c);
+  for (int i = 0; i < n; ++i) {
+    fmpz_set_si(c, X[i]);
+    fq_nmod_poly_set_coeff_fmpz(a, i, c, ctx);
+  }
+  for (int i = 0; i < m; ++i) {
+    fmpz_set_si(c, Y[i]);
+    fq_nmod_poly_set_coeff_fmpz(b, i, c, ctx);
+  }
+  fq_nmod_poly_mul(a, a, b, ctx);
+
+  const int size = (int)a[0].length;
+
+  for (int i = 0; i < size; ++i) {
+    auto v = nmod_poly_get_coeff_ui(a[0].coeffs + i, 0);
+    result[i] = v;
+  }
+  fq_nmod_poly_clear(a, ctx);
+  fq_nmod_poly_clear(b, ctx);
+  fq_nmod_ctx_clear(ctx);
+  fmpz_clear(xmod);
+  fmpz_clear(c);
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_mul_flint_prime(const T* X, const int n, const T* Y, const int m,
+                         T* result, int64 mod) {
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m,
+                              (unsignedT*)result, mod,
+                              &poly_mul_flint_prime_internal<unsignedT>);
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
+    poly_mul_flint_prime(const vector<T>& X, const vector<T>& Y, int64 mod) {
+  const int n = (int)X.size();
+  const int m = (int)Y.size();
+
+  vector<T> result(n + m - 1);
+  poly_mul_flint_prime(&X[0], n, &Y[0], m, &result[0], mod);
+
+  return result;
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_mul_flint_internal(const T* X, const int n, const T* Y, const int m,
+                            T* result, int64 mod) {
+  nmod_poly_t a, b;
+  nmod_poly_init2(a, mod, n);
+  nmod_poly_init2(b, mod, m);
+
+  for (int i = 0; i < n; ++i) {
+    nmod_poly_set_coeff_ui(a, i, X[i]);
+  }
+  for (int i = 0; i < m; ++i) {
+    nmod_poly_set_coeff_ui(b, i, Y[i]);
+  }
+  nmod_poly_mul(a, a, b);
+
+  const int size = (int)a[0].length;
+
+  for (int i = 0; i < size; ++i) {
+    auto v = a[0].coeffs[i];
+    result[i] = v;
+  }
+
+  const int allSize = n + m - 1;
+  for (int i = size; i < allSize; ++i) {
+    result[i] = 0;
+  }
+  nmod_poly_clear(a);
+  nmod_poly_clear(b);
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_mul_flint(const T* X, const int n, const T* Y, const int m, T* result,
+                   int64 mod) {
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m,
+                              (unsignedT*)result, mod,
+                              &poly_mul_flint_internal<unsignedT>);
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
+    poly_mul_flint(const vector<T>& X, const vector<T>& Y, int64 mod) {
+  const int n = (int)X.size();
+  const int m = (int)Y.size();
+
+  vector<T> result(n + m - 1);
+  poly_mul_flint(&X[0], n, &Y[0], m, &result[0], mod);
+
+  return result;
+}
+} // namespace ntt_flint
+
+#else
+#define HAS_POLY_MUL_FLINT 0
+#endif
+
+#endif

@@ -4,8 +4,7 @@ namespace print_int128_test {
 #if PE_HAS_INT128
 SL void print_int128_test() {
   int128 x = 1;
-  for (int i = 0; i < 127; ++i)
-  {
+  for (int i = 0; i < 127; ++i) {
     assert(to_string(x) == bi(x).toString());
     assert(to_string(-x) == bi(-x).toString());
     x <<= 1;
@@ -18,12 +17,12 @@ SL void print_int128_test() {
 PE_REGISTER_TEST(&print_int128_test, "print_int128_test", SMALL);
 
 SL void int128_literal_test() {
-  const int128 p1 =  10;
-  const int128 p2 =  p1 * p1;
-  const int128 p4 =  p2 * p2;
-  const int128 p8 =  p4 * p4;
-  const int128 p16 =  p8 * p8;
-  const int128 p32 =  p16 * p16;
+  const int128 p1 = 10;
+  const int128 p2 = p1 * p1;
+  const int128 p4 = p2 * p2;
+  const int128 p8 = p4 * p4;
+  const int128 p16 = p8 * p8;
+  const int128 p32 = p16 * p16;
   assert(p32 == "100000000000000000000000000000000"_i128);
   assert(p32 == "+100000000000000000000000000000000"_i128);
   assert(-p32 == "-100000000000000000000000000000000"_i128);
@@ -40,4 +39,4 @@ SL void int128_literal_test() {
 
 PE_REGISTER_TEST(&int128_literal_test, "int128_literal_test", SMALL);
 #endif
-}
+}  // namespace print_int128_test

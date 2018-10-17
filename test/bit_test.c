@@ -27,20 +27,20 @@ SL void bit_test() {
       assert(__pe_lg64(target) == __lg(target));
     }
   }
-  
+
   int x = 0;
   x = bit_set(x, 20);
-  assert(x == (1<<20));
+  assert(x == (1 << 20));
   assert(bit_get(x, 20) == 1);
-  
+
   x = bit_rev(x, 20);
   assert(x == 0);
   assert(bit_get(x, 20) == 0);
-  
+
   x = bit_rev(x, 21);
-  assert(x == (1<<21));
+  assert(x == (1 << 21));
   assert(bit_get(x, 21) == 1);
-  
+
   x = bit_reset(x, 21);
   assert(x == 0);
   assert(bit_get(x, 21) == 0);

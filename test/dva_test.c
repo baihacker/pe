@@ -17,7 +17,8 @@ SL void test_s0() {
 
 SL void test_s1() {
   int64 s = 0;
-  for (int i = 2; i <= 10000; ++i) if (is_prime(i)) s += i;
+  for (int i = 2; i <= 10000; ++i)
+    if (is_prime(i)) s += i;
   assert(s == 5736396LL);
 
   auto orz = prime_s1<int64>(10000);
@@ -27,7 +28,8 @@ SL void test_s1() {
   assert(orz[10000] == 5736396LL);
 
   s = 0;
-  for (int i = 2; i <= 1000000; ++i) if (is_prime(i)) s += i;
+  for (int i = 2; i <= 1000000; ++i)
+    if (is_prime(i)) s += i;
   assert(s == 37550402023LL);
 
   orz = prime_s1<int64>(1000000);
@@ -43,4 +45,4 @@ SL void dva_test() {
 }
 
 PE_REGISTER_TEST(&dva_test, "dva_test", SMALL);
-}
+}  // namespace dva_test

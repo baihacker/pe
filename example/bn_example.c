@@ -1,12 +1,10 @@
 #define USE_BIG_NUMBER
 #include <pe.hpp>
 
-void performance_test()
-{
+void performance_test() {
   TimeRecorder tr;
   int s = 0;
-  for (int j = 0; j < 5; ++j)
-  {
+  for (int j = 0; j < 5; ++j) {
     bn x = 1;
     for (int i = 1; i <= 50000; ++i) x *= i;
     s += x[0];
@@ -14,8 +12,7 @@ void performance_test()
   cerr << s << " " << tr.elapsed().format() << endl;
 }
 
-int main()
-{
+int main() {
   performance_test();
   return 0;
 }

@@ -30,19 +30,16 @@ PeTest& getTester() {
   return tester;
 }
 
-TestSize enabledTestSize[]{
+TestSize enabledTestSize[] {
 #if defined(TEST_ALL)
-  SMALL,
-  MEDIUM,
-  BIG,
-  SPECIFIED,
+  SMALL, MEDIUM, BIG, SPECIFIED,
 #else
   SPECIFIED,
 #endif
 };
 
 SL bool isEnabledTestSize(TestSize size) {
-  for (auto& iter: enabledTestSize) {
+  for (auto& iter : enabledTestSize) {
     if (iter == size) {
       return true;
     }
@@ -58,7 +55,7 @@ int main() {
 
   auto& tester = getTester();
   const int size = (int)tester.tests.size();
-  
+
   bool isFirstTest = true;
   ntt32::init_ntt();
 #if PE_HAS_INT128

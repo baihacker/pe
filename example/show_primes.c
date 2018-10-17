@@ -1,12 +1,10 @@
 #include <pe.hpp>
 
-int main()
-{
+int main() {
   init_primes();
 
   int total = 0;
-  for (int i = 0; i < pcnt; ++i)
-  {
+  for (int i = 0; i < pcnt; ++i) {
     const int v = plist[i];
     if (v > 10000) break;
     printf("%d ", v);

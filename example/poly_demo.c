@@ -10,14 +10,13 @@ int main() {
 
   {
     NModPoly x{{}, 97};
-    for (int i = 1; i < 100; ++i)
-      x.data.push_back(i%97);
+    for (int i = 1; i < 100; ++i) x.data.push_back(i % 97);
     cout << x.inv(100) * x << endl;
   }
 
   {
     // Fibonacci sequence
-    NModPoly x{{1, mod-1, mod-1}, mod};
+    NModPoly x{{1, mod - 1, mod - 1}, mod};
 
     TimeRecorder tr;
     cout << x.inv(100000)[99999] << endl;

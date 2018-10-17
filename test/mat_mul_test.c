@@ -9,22 +9,20 @@ SL void mat_mul_test() {
   DEFAULT_MOD = mod;
   vector<int> data;
   for (int i = 0; i < K; ++i)
-  for (int j = 0; j < K; ++j)
-  data.push_back(j * K + i);
+    for (int j = 0; j < K; ++j) data.push_back(j * K + i);
   vector<int> V;
-  for (int i = 0; i < K; ++i)
-  V.push_back(i);
+  for (int i = 0; i < K; ++i) V.push_back(i);
   {
     std::vector<int64> v(K, 0);
     Mat64 m = Mat64::Zero(K, K);
 
     for (int i = 0; i < K; ++i) v[i] = V[i];
-    rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j*K+i];
+    rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j * K + i];
 
     TimeRecorder tr;
     v = power_mod(m, 4, v, mod);
     int64 s = 0;
-    for (auto i: v) s += i;
+    for (auto i : v) s += i;
     // cout << s << endl;
     // cout << tr.elapsed().format() << endl;
     assert(s == 256670487618LL);
@@ -35,12 +33,12 @@ SL void mat_mul_test() {
     Mat128 m = Mat128::Zero(K, K);
 
     for (int i = 0; i < K; ++i) v[i] = V[i];
-    rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j*K+i];
+    rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j * K + i];
 
     TimeRecorder tr;
     v = power_mod(m, 4, v, mod);
     int128 s = 0;
-    for (auto i: v) s += i;
+    for (auto i : v) s += i;
     // cout << s << endl;
     // cout << tr.elapsed().format() << endl;
     assert(s == 247446585411LL);
@@ -51,12 +49,12 @@ SL void mat_mul_test() {
     MatM<mod> m = MatM<mod>::Zero(K, K);
 
     for (int i = 0; i < K; ++i) v[i] = V[i];
-    rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j*K+i];
+    rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j * K + i];
 
     TimeRecorder tr;
     v = power_mod(m, 4, v, mod);
     int64 s = 0;
-    for (auto i: v) s += i.value();
+    for (auto i : v) s += i.value();
     // cout << s << endl;
     // cout << tr.elapsed().format() << endl;
     assert(s == 247446585411LL);
@@ -67,12 +65,12 @@ SL void mat_mul_test() {
     MatMD m = MatMD::Zero(K, K);
 
     for (int i = 0; i < K; ++i) v[i] = V[i];
-    rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j*K+i];
+    rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j * K + i];
 
     TimeRecorder tr;
     v = power_mod(m, 4, v, mod);
     int64 s = 0;
-    for (auto i: v) s += i.value();
+    for (auto i : v) s += i.value();
     // cout << s << endl;
     // cout << tr.elapsed().format() << endl;
     assert(s == 247446585411LL);
@@ -83,12 +81,12 @@ SL void mat_mul_test() {
     MatML<mod> m = MatML<mod>::Zero(K, K);
 
     for (int i = 0; i < K; ++i) v[i] = V[i];
-    rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j*K+i];
+    rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j * K + i];
 
     TimeRecorder tr;
     v = power_mod(m, 4, v, mod);
     int64 s = 0;
-    for (auto i: v) s += i.value();
+    for (auto i : v) s += i.value();
     // cout << s << endl;
     // cout << tr.elapsed().format() << endl;
     assert(s == 247446585411LL);
@@ -99,12 +97,12 @@ SL void mat_mul_test() {
     MatMDL m = MatMDL::Zero(K, K);
 
     for (int i = 0; i < K; ++i) v[i] = V[i];
-    rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j*K+i];
+    rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j * K + i];
 
     TimeRecorder tr;
     v = power_mod(m, 4, v, mod);
     int64 s = 0;
-    for (auto i: v) s += i.value();
+    for (auto i : v) s += i.value();
     // cout << s << endl;
     // cout << tr.elapsed().format() << endl;
     assert(s == 247446585411LL);
@@ -114,4 +112,4 @@ SL void mat_mul_test() {
 
 PE_REGISTER_TEST(&mat_mul_test, "mat_mul_test", SMALL);
 #endif
-}
+}  // namespace mat_mul_test

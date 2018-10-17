@@ -4,7 +4,7 @@
 #define PE_TEST_MODE
 #include <pe>
 
-typedef std::function<void (void)> TestMethodT;
+typedef std::function<void(void)> TestMethodT;
 
 enum TestSize {
   SMALL = 0,
@@ -26,15 +26,16 @@ struct PeTest {
 PeTest& getTester();
 
 struct InitializeHelper {
-  InitializeHelper(const std::function<void (void)>& action) {
-    action();
-  }
+  InitializeHelper(const std::function<void(void)>& action) { action(); }
 };
 
 #define MAKE_INITIALIZER_NAME_IMPL(LINE_NUMBER) __initializeHelper##LINE_NUMBER
-#define MAKE_INITIALIZER_NAME(LINE_NUMBER) MAKE_INITIALIZER_NAME_IMPL(LINE_NUMBER)
+#define MAKE_INITIALIZER_NAME(LINE_NUMBER) \
+  MAKE_INITIALIZER_NAME_IMPL(LINE_NUMBER)
 
-#define PE_REGISTER_TEST(t, d, s) \
-static InitializeHelper MAKE_INITIALIZER_NAME(__LINE__)([](){getTester().tests.push_back({t, d, s});})
+#define PE_REGISTER_TEST(t, d, s)                                \
+  static InitializeHelper MAKE_INITIALIZER_NAME(__LINE__)([]() { \
+    getTester().tests.push_back({t, d, s});                      \
+  })
 
 #endif

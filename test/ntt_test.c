@@ -40,9 +40,9 @@ MulImpl mulImpl[] = {
 };
 
 const char* dataPolicy[3] = {
-  "random",
-  "min mod",
-  "max mod",
+    "random",
+    "min mod",
+    "max mod",
 };
 
 SL void test_impl(int dp, int size, int n, int64 mod) {
@@ -106,11 +106,9 @@ SL void ntt_test() {
 }
 PE_REGISTER_TEST(&ntt_test, "ntt_test", BIG);
 
-
 SL void ntt_performance_test() {
-  
   uint64 mods[3] = {100019, 100000000003, 316227766016779};
-  
+
   for (int level = 0; level <= 2; ++level) {
     printf("mod = %llu\n", (unsigned long long)mods[level]);
     const auto mod = mods[level];
@@ -118,9 +116,9 @@ SL void ntt_performance_test() {
     printf("log2(n)  ");
 
     for (int n = 10; n <= 20; ++n) {
-      printf("%-6d ", n); 
+      printf("%-6d ", n);
     }
-    
+
     puts("");
 
     const int M = sizeof(mulImpl) / sizeof(mulImpl[0]);
@@ -136,14 +134,14 @@ SL void ntt_performance_test() {
         const int size = 1 << n;
         vector<uint64> x, y;
         for (int i = 0; i < size; ++i)
-        x.push_back((uint64)crand63() % mod),
-        y.push_back((uint64)crand63() % mod);
+          x.push_back((uint64)crand63() % mod),
+              y.push_back((uint64)crand63() % mod);
 
         auto start = clock();
         who.impl(x, y, mod);
         auto end = clock();
 #if 1
-        printf("%-6.3f ", (end-start)*1e-3);
+        printf("%-6.3f ", (end - start) * 1e-3);
 #else
         uint64 a = n * (1 << n);
         uint64 b = end - start;

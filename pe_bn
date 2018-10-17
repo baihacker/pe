@@ -854,13 +854,13 @@ inline BigNumber operator/(const BigNumber& l, const BigNumber& r) {
   int cmp = BigNumber::AbsCompare(l, r);
 
   if (s == 0 || cmp < 0) {
-    //dbg(s);
-    //dbg(cmp);
+    // dbg(s);
+    // dbg(cmp);
     return 0;
   }
 
   if (cmp == 0) {
-    //cerr << "orz " << cmp << endl;
+    // cerr << "orz " << cmp << endl;
     return 1;
   }
 
@@ -900,11 +900,12 @@ inline BigNumber operator^(const BigNumber& l, BigNumber& n) {
   return ret;
 }
 
-BigNumber power_mod(const BigNumber& y, const BigNumber& m, const BigNumber& mod) {
+BigNumber power_mod(const BigNumber& y, const BigNumber& m,
+                    const BigNumber& mod) {
   auto x = y % mod;
   BigNumber ret = 1;
   for (BigNumber n = m; !n.IsZero(); n = n / 2) {
-    if (n[0]&1) ret = ret * x % mod;
+    if (n[0] & 1) ret = ret * x % mod;
     x = x * x % mod;
   }
   return ret;
@@ -1046,49 +1047,49 @@ inline BigNumber from_string(const char* number) {
 
 typedef BigNumber bn;
 
-
-struct FacModer
-{
+struct FacModer {
   std::vector<bn> F;
   int64 p;
   int64 e;
   bn mod;
   bn phi;
-  
-  FacModer(const int64 p, const int64 e): p(p), e(e)
-  {
+
+  FacModer(const int64 p, const int64 e) : p(p), e(e) {
     int64 pe = p * e;
     mod = bn(p) ^ e;
     phi = (bn(p) ^ (e - 1)) * (p - 1);
     F.resize(pe + 1, 1);
     for (int i = 1; i <= pe; ++i) {
-      if (i % p == 0) F[i] = F[i-1];
-      else F[i] = F[i-1] * i % mod;
+      if (i % p == 0)
+        F[i] = F[i - 1];
+      else
+        F[i] = F[i - 1] * i % mod;
     }
   }
-  
+
   bn cal(const bn& N) {
     bn u = N / p;
     bn v = N - u * p;
     int64 vv = v.ToInt();
     int64 r = e + 1 >> 1;
-    
+
     bn ret = 1;
     // F(up, p)
-    bn u2 = u*u;
+    bn u2 = u * u;
 
-    for (int j = 1; j <= r; ++j)
-    {
+    for (int j = 1; j <= r; ++j) {
       bn beta_numer = u;
       bn beta_denom = j;
-      
-      for (int i = 1; i <= r; ++i) if (i != j)
-        beta_numer *= u2 - i * i,
-        beta_denom *= j * j - i * i;//, cout << "orz " << u2-i*i << endl;
-      //cout << beta_numer << endl;
+
+      for (int i = 1; i <= r; ++i)
+        if (i != j)
+          beta_numer *= u2 - i * i,
+              beta_denom *=
+              j * j - i * i;  //, cout << "orz " << u2-i*i << endl;
+      // cout << beta_numer << endl;
       auto beta = beta_numer / beta_denom % phi;
       if (beta < 0) beta += phi;
-      ret *= power_mod(F[j*p], beta, mod);
+      ret *= power_mod(F[j * p], beta, mod);
       ret %= mod;
     }
 
@@ -1102,22 +1103,23 @@ struct FacModer
 
     // F(v, p)
     ret = ret * F[vv] % mod;
-    
+
     // (p + v, v)_p
     for (int j = 1; j < e; ++j) {
-      auto base = F[j*p+vv] * mod_inv(F[vv] * F[j*p], mod) % mod;
+      auto base = F[j * p + vv] * mod_inv(F[vv] * F[j * p], mod) % mod;
       bn alpha_numer = u;
       bn alpha_denom = j;
-      for (int i = 1; i < e; ++i) if (i != j) {
-        alpha_numer *= u - i;
-        alpha_denom *= j - i;
-      }
+      for (int i = 1; i < e; ++i)
+        if (i != j) {
+          alpha_numer *= u - i;
+          alpha_denom *= j - i;
+        }
       auto alpha = alpha_numer / alpha_denom % phi;
       if (alpha < 0) alpha += phi;
       ret *= power_mod(base, alpha, mod);
       ret %= mod;
     }
-    
+
     return ret;
   }
 };

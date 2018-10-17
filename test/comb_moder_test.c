@@ -10,7 +10,7 @@ SL void comb_moder_test() {
     const int m = rand() % mod;
     assert(m1.comb(n, m) == m2.comb(n, m));
   }
-  #if PE_HAS_INT128
+#if PE_HAS_INT128
   {
     const int64 mod = 99999999907;
     CombModerEx moder(mod);
@@ -20,7 +20,7 @@ SL void comb_moder_test() {
 
     assert(result == 99999410307);
   }
-  #endif
+#endif
 }
 PE_REGISTER_TEST(&comb_moder_test, "comb_moder_test", MEDIUM);
-}
+}  // namespace comb_moder_test

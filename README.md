@@ -62,6 +62,7 @@ File list:
 * pe_nt: Basic code of number theory.
 * pe_nt_base: Generate prime list, factorize integer, prime test, compute phi and mu.
 * pe_ntt: Number theoretic transform and polynomial multiplication.
+* pe_ntt_flint: An adapter which makes use of flint to implement ntt.
 * pe_ntt_libbf: An adapter which makes use of libbf to implement ntt.
 * pe_ntt_min_25: Min_25's ntt implementation. The fastest one for mod polynomials integrated into pe.
 * pe_parallel: A simple framework to solve problem with multi-threads. (windows only)

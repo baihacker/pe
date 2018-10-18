@@ -24,7 +24,8 @@ SL void mpf_test() {
   cout << Mpf("12345678987654321").toString() << endl;
   cout << mpf_get_d(tester) << endl;
   cout << mpf_get_prec(tester) << endl;
-  
+  
+
   Mpf y(1);
   y *= 123456789;
   y *= 1000000000;

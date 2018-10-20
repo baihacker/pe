@@ -6,35 +6,46 @@
 
 // Compiler and cpp version check
 #if defined(__GNUC__)
-#define COMPILER_GNU
 
-#if __cplusplus < 201103L
+#define COMPILER_GNU
+#define PE_CPP_VERSION __cplusplus
+
+#elif defined(_MSC_VER)
+
+#define COMPILER_MSVC
+// VC2015 (1900) or above to support c++11
+// https://en.wikipedia.org/wiki/Microsoft_Visual_C%2B%2B#Internal_version_numbering
+// https://en.cppreference.com/w/cpp/compiler_support#cpp11
+// https://blogs.msdn.microsoft.com/vcblog/2018/04/09/msvc-now-correctly-reports-__cplusplus/
+#if defined(_MSVC_LANG)
+#define PE_CPP_VERSION _MSVC_LANG
+#else
+#elif _MSC_VER == 1900
+#define PE_CPP_VERSION 201103L
+#else
+#define PE_CPP_VERSION 199711L
+#endif
+
+#else
+#define PE_CPP_VERSION 199711L
+#endif
+
+#if PE_CPP_VERSION < 201103L
 #define PE_HAS_CPP11 0
 #else
 #define PE_HAS_CPP11 1
 #endif
 
-#if __cplusplus < 201703L
+#if PE_CPP_VERSION < 201402L
+#define PE_HAS_CPP14 0
+#else
+#define PE_HAS_CPP14 1
+#endif
+
+#if PE_CPP_VERSION < 201703L
 #define PE_HAS_CPP17 0
 #else
 #define PE_HAS_CPP17 1
-#endif
-#elif defined(_MSC_VER)
-#define COMPILER_MSVC
-
-// VC2015 or above to support c++11
-// https://en.wikipedia.org/wiki/Microsoft_Visual_C%2B%2B#Internal_version_numbering
-// https://en.cppreference.com/w/cpp/compiler_support#cpp11
-#if _MSC_VER < 1900
-#define PE_HAS_CPP11 0
-#else
-#define PE_HAS_CPP11 1
-#endif
-
-#define PE_HAS_CPP17 0
-#else
-#define PE_HAS_CPP11 0
-#define PE_HAS_CPP17 0
 #endif
 
 // Platform

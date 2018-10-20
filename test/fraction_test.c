@@ -7,7 +7,6 @@ SL void fraction_test() {
   for (int i = 0; i < 10; ++i) {
     cout << from_continued_fraction<int>(data, i) << endl;
   }
-  
   for (int i = 50; i <= 50; ++i) {
   cout << i << " " << to_continued_fraction(1, 6, i) << endl;
   }*/

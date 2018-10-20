@@ -290,7 +290,7 @@ struct RangeBasedTaskGenerator {
 
 template <typename Derived>
 struct SupportCacheFileName {
-  SupportCacheFileName(const char* file_name = NULL) : file_name_(NULL) {}
+  SupportCacheFileName(const char* /*file_name*/ = NULL) : file_name_(NULL) {}
 
   const char* cache_file_name() const { return file_name_; }
 
@@ -309,7 +309,7 @@ struct GetCacheFileNameHelper {
 
 template <typename CONTEXT>
 struct GetCacheFileNameHelper<CONTEXT, false> {
-  const char* get(CONTEXT& context) { return NULL; }
+  const char* get(CONTEXT& /*context*/) { return NULL; }
 };
 
 // The implementation of task scheduler.
@@ -439,7 +439,7 @@ class ParallelRange : public RangeBasedTaskGenerator<ParallelRange>,
 
   void on_finished() { cerr << "result = " << result_ << endl; }
 
-  void handle_result(const Task& task, int64 result) {
+  void handle_result(const Task& /*task*/, int64 result) {
     result_ = update_result_(result_, result);
   }
 
@@ -486,17 +486,17 @@ class ParallelRange : public RangeBasedTaskGenerator<ParallelRange>,
     return *this;
   }
   ParallelRange& map(std::function<int64(int64, int64)> woi) {
-    work_on_item_ = woi;
+    work_on_item_ = std::move(woi);
     has_woi_ = true;
     return *this;
   }
   ParallelRange& block_map(std::function<int64(int64, int64, int64)> wor) {
-    work_on_block_ = wor;
+    work_on_block_ = std::move(wor);
     has_wob_ = true;
     return *this;
   }
   ParallelRange& reduce(std::function<int64(int64, int64)> ur) {
-    update_result_ = ur;
+    update_result_ = std::move(ur);
     return *this;
   }
   ParallelRange& start() {
@@ -546,8 +546,8 @@ class ParallelRangeT : public RangeBasedTaskGenerator<ParallelRangeT<Derived>>,
 
   void on_finished() { cerr << "result = " << result_ << endl; }
 
-  void handle_result(const Task& task, int64 result) {
-    Derived& obj = static_cast<Derived&>(*this);
+  void handle_result(const Task& /*task*/, int64 result) {
+    auto& obj = static_cast<Derived&>(*this);
     result_ = obj.update_result(result_, result);
   }
 
@@ -556,12 +556,14 @@ class ParallelRangeT : public RangeBasedTaskGenerator<ParallelRangeT<Derived>>,
     return true;
   }
 
-  int64 update_result(int64 result, int64 value) { return result; }
+  int64 update_result(int64 result, int64 /*value*/) { return result; }
 
-  int64 work_on_block(int64 first, int64 last, int64 worker) { return 0; }
+  int64 work_on_block(int64 /*first*/, int64 /*last*/, int64 /*worker*/) {
+    return 0;
+  }
 
   int64 work(const Task& task, int64 worker_idx) {
-    Derived& obj = static_cast<Derived&>(*this);
+    auto& obj = static_cast<Derived&>(*this);
     auto range = obj.task_id_to_range(task.id);
     return obj.work_on_block(range.first, range.second, worker_idx);
   }

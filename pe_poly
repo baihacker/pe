@@ -288,9 +288,9 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_mul(a, n, tmp[0], n, tmp[1], mod);
     for (int i = 0; i < n; ++i) {
       auto t = b[i] << 1;
-      if (t >= (uint64)mod) t -= mod;
+      if (t >= static_cast<uint64>(mod)) t -= mod;
       t = t + mod - tmp[1][i];
-      if (t >= (uint64)mod) t -= mod;
+      if (t >= static_cast<uint64>(mod)) t -= mod;
       b[i] = t;
     }
   }
@@ -560,7 +560,7 @@ struct NModPoly {
   }
 
   NModPoly& operator=(const vector<int64>&& v) {
-    data = std::move(v);
+    data = v;
     return *this;
   }
 
@@ -585,7 +585,7 @@ struct NModPoly {
   int size() const { return static_cast<int>(data.size()); }
 
   NModPoly& resize(int n) {
-    const int m = (int)data.size();
+    const int m = static_cast<int>(data.size());
     data.resize(n);
     for (int i = m; i < n; ++i) {
       data[i] = 0;
@@ -701,7 +701,8 @@ PPOLY_MOD_IMPL(poly_mod, poly_div_and_mod)
 inline NModPoly NModPoly::inv(int n) const {
   // It is assumed that mod is a prime
   auto t = poly_inv_mod(data, n, mod);
-  return NModPoly(std::vector<int64>((int64*)&t[0], (int64*)&t[0] + t.size()),
+  return NModPoly(std::vector<int64>(static_cast<int64*>(&t[0]),
+                                     static_cast<int64*>(&t[0]) + t.size()),
                   mod);
 }
 
@@ -771,7 +772,7 @@ SL NModPoly operator%(int64 n, const NModPoly& mod) {
 }
 
 SL ostream& operator<<(ostream& o, const NModPoly& p) {
-  const int n = (int)p.data.size();
+  const int n = static_cast<int>(p.data.size());
   for (int i = 0; i < n - 1; ++i) {
     o << p.data[i] << ", ";
   }

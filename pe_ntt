@@ -61,7 +61,7 @@ struct NttMod32 {
   NttMod32(unsigned mod, unsigned r, int k, unsigned g)
       : mod(mod), r(r), k(k), g(g) {
     for (int i = 0; i <= k; ++i) {
-      omg[i] = (unsigned)power_mod<uint64>(g, (mod - 1) >> i, mod);
+      omg[i] = static_cast<unsigned>(power_mod<uint64>(g, (mod - 1) >> i, mod));
     }
     fill(preOmg, preOmg + 32, (unsigned*)NULL);
   }
@@ -118,7 +118,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
         const int limit = j + halfH;
         for (int k = j; k < limit; ++k) {
           const auto u = data[k] % mod;
-          const auto t = (uint64)*omg++ * data[k + halfH] % mod;
+          const auto t = static_cast<uint64>(*omg++) * data[k + halfH] % mod;
           data[k] = (u + t) % mod;
           data[k + halfH] = (u + mod - t) % mod;
         }
@@ -222,7 +222,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     }
     const uint64 mod = moder.mod;
     for (int i = 0; i < alignedSize; ++i) {
-      XX[i] = (uint64)XX[i] * YY[i] % mod;
+      XX[i] = static_cast<uint64>(XX[i]) * YY[i] % mod;
     }
     ntt(&XX[0], alignedSize, moder, true);
     tresult[id] = std::move(XX);
@@ -249,9 +249,9 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     const uint64 modab = y1 * ntt_constant::M1 + a;
     const uint64 x2 = modab >= c ? modab - c : ntt_constant::M1M2 - c + modab;
 #if PE_HAS_INT128
-    const uint64 y2 =
-        (uint128)x2 * ntt_constant::INV_M3__M1M2 % ntt_constant::M1M2;
-    const uint128 t = (uint128)y2 * ntt_constant::M3 + c;
+    const uint64 y2 = static_cast<uint128>(x2) * ntt_constant::INV_M3__M1M2 %
+                      ntt_constant::M1M2;
+    const uint128 t = static_cast<uint128>(y2) * ntt_constant::M3 + c;
     result[i] = mod > 0 ? t % mod : t;
 #else
     PE_ASSERT(mod > 0);
@@ -334,7 +334,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     }
     const uint64 mod = moder.mod;
     for (int i = 0; i < alignedSize; ++i) {
-      XX[i] = (uint64)XX[i] * YY[i] % mod;
+      XX[i] = static_cast<uint64>(XX[i]) * YY[i] % mod;
     }
     ntt(&XX[0], alignedSize, moder, true);
     tresult[id] = std::move(XX);
@@ -427,7 +427,7 @@ struct NttMod64 {
       target[0] = 1;
       for (int i = 1; i < cnt; ++i) {
 #if PE_HAS_INT128
-        last = mod128_64((uint128)last * m, mod);
+        last = mod128_64(static_cast<uint128>(last) * m, mod);
 #else
         last = mul_mod_ex(last, m, mod);
 #endif
@@ -460,7 +460,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
         for (int k = j; k < limit; ++k) {
           const auto u = data[k] % mod;
 #if PE_HAS_INT128
-          const auto t = mod128_64((uint128)*omg++ * data[k + halfH], mod);
+          const auto t =
+              mod128_64(static_cast<uint128>(*omg++) * data[k + halfH], mod);
 #else
           const auto t = mul_mod_ex(*omg++, data[k + halfH], mod);
 #endif
@@ -479,14 +480,15 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
         for (int k = j; k < limit; ++k) {
           const auto u = data[k] % mod;
 #if PE_HAS_INT128
-          const auto t = mod128_64((uint128)omgn * data[k + halfH], mod);
+          const auto t =
+              mod128_64(static_cast<uint128>(omgn) * data[k + halfH], mod);
 #else
           const auto t = mul_mod_ex(omgn, data[k + halfH], mod);
 #endif
           data[k] = (u + t) % mod;
           data[k + halfH] = (u + mod - t) % mod;
 #if PE_HAS_INT128
-          omgn = mod128_64((uint128)omgn * moder.omg[id], mod);
+          omgn = mod128_64(static_cast<uint128>(omgn) * moder.omg[id], mod);
 #else
           omgn = mul_mod_ex(omgn, moder.omg[id], mod);
 #endif
@@ -500,7 +502,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     const uint64 c = power_mod_ex<uint64>(n, mod - 2, mod);
     for (int i = 0; i < n; ++i) {
 #if PE_HAS_INT128
-      data[i] = mod128_64((uint128)c * data[i], mod);
+      data[i] = mod128_64(static_cast<uint128>(c) * data[i], mod);
 #else
       data[i] = mul_mod_ex(c, data[i], mod);
 #endif
@@ -560,7 +562,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     const uint64 mod = moder.mod;
     for (int i = 0; i < alignedSize; ++i) {
 #if PE_HAS_INT128
-      XX[i] = mod128_64((uint128)XX[i] * YY[i], mod);
+      XX[i] = mod128_64(static_cast<uint128>(XX[i]) * YY[i], mod);
 #else
       XX[i] = mul_mod_ex(XX[i], YY[i], mod);
 #endif
@@ -578,9 +580,9 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     const uint64 b = tresult[1][i];
     const uint64 x = b >= a ? b - a : b + ntt_constant::M2 - a;
 #if PE_HAS_INT128
-    const uint64 y =
-        mod128_64((uint128)x * ntt_constant::INV_M1__M2, ntt_constant::M2);
-    const uint128 t = (uint128)y * ntt_constant::M1 + a;
+    const uint64 y = mod128_64(
+        static_cast<uint128>(x) * ntt_constant::INV_M1__M2, ntt_constant::M2);
+    const uint128 t = static_cast<uint128>(y) * ntt_constant::M1 + a;
     result[i] = mod > 0 ? t % mod : t;
 #else
     PE_ASSERT(mod > 0);
@@ -652,7 +654,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     const uint64 mod = moder.mod;
     for (int i = 0; i < alignedSize; ++i) {
 #if PE_HAS_INT128
-      XX[i] = mod128_64((uint128)XX[i] * YY[i], mod);
+      XX[i] = mod128_64(static_cast<uint128>(XX[i]) * YY[i], mod);
 #else
       XX[i] = mul_mod_ex(XX[i], YY[i], mod);
 #endif

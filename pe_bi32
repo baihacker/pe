@@ -158,7 +158,7 @@ class BigInteger {
   }
 
   BigInteger(const string& str) : BigInteger(zero_initialize_tag) {
-    const int n = (int)str.size();
+    const int n = static_cast<int>(str.size());
     if (n == 0) {
       reserve(1);
       data_[0] = 0;
@@ -188,10 +188,10 @@ class BigInteger {
       while (now > 0 && value[now] == 0) --now;
     } while (now > 0 || value[now] > 0);
 
-    reserve((int)result.size());
+    reserve(static_cast<int>(result.size()));
 
     sign_ = 1;
-    pos_ = max(0, (int)result.size() - 1);
+    pos_ = max(0, static_cast<int>(result.size()) - 1);
     copy(result.begin(), result.end(), data_);
     fixPos();
   }
@@ -206,7 +206,7 @@ class BigInteger {
       return;
     }
 
-    const unsigned int n = (unsigned int)v.size();
+    const auto n = (unsigned int)v.size();
     unsigned int need = (n + 31) >> 5;
     reserve(need);
 
@@ -254,7 +254,7 @@ class BigInteger {
   void resetAbs(uint64 v) {
     if (v <= max_32bit_value) {
       reserve(1);
-      data_[0] = (unsigned)v;
+      data_[0] = static_cast<unsigned>(v);
       pos_ = 0;
     } else {
       reserve(2);
@@ -408,14 +408,14 @@ class BigInteger {
     unsigned int inc = 0;
 
     while (idx <= minPos) {
-      uint64 t = (uint64)l[idx] + r[idx] + inc;
+      uint64 t = static_cast<uint64>(l[idx]) + r[idx] + inc;
       l[idx++] = t & max_32bit_value;
       inc = t >> 32;
     }
 
     const auto* largeData = l.pos_ > r.pos_ ? l.data_ : r.data_;
     while (idx <= maxPos) {
-      uint64 t = (uint64)largeData[idx] + inc;
+      uint64 t = static_cast<uint64>(largeData[idx]) + inc;
       l[idx++] = t & max_32bit_value;
       inc = t >> 32;
     }
@@ -449,11 +449,11 @@ class BigInteger {
     for (int curr = 0; curr <= minPos; ++curr) {
       unsigned int nextBorrow = 0;
       uint64 t = l[curr];
-      while (t < (uint64)r[curr] + borrow) {
+      while (t < static_cast<uint64>(r[curr]) + borrow) {
         nextBorrow++;
         t += bit32_value;
       }
-      l[curr] = (unsigned)(t - r[curr] - borrow);
+      l[curr] = static_cast<unsigned>(t - r[curr] - borrow);
       borrow = nextBorrow;
     }
     for (int curr = minPos + 1; curr <= maxPos; ++curr) {
@@ -463,7 +463,7 @@ class BigInteger {
         nextBorrow++;
         t += bit32_value;
       }
-      l[curr] = (unsigned)(t - borrow);
+      l[curr] = static_cast<unsigned>(t - borrow);
       borrow = nextBorrow;
     }
     l.fixPos();
@@ -505,7 +505,7 @@ class BigInteger {
 
     BigInteger ret(now >> 1, alloc_mem_tag);
     for (int i = 0; i < now; i += 2) {
-      ret[i >> 1] = (unsigned)((result[i + 1] << 16) | result[i]);
+      ret[i >> 1] = static_cast<unsigned>((result[i + 1] << 16) | result[i]);
     }
     ret.pos_ = (now >> 1) - 1;
     ret.sign_ = 1;
@@ -516,7 +516,7 @@ class BigInteger {
 
   static BigInteger absMul(const BigInteger& l, const BigInteger& r) {
     if (l.size() <= 1 && r.size() <= 1) {
-      return (uint64)l[0] * r[0];
+      return static_cast<uint64>(l[0]) * r[0];
     }
     if (r.size() <= 1) {
       return absMul(l, r.toInt<uint64>());
@@ -528,11 +528,11 @@ class BigInteger {
 #if HAS_POLY_MUL_NTT32_SMALL
     {
       // If the cost of ntt is less than normal multiplication, then use ntt.
-      const uint64 cost1 = (uint64)l.size() * r.size();
+      const uint64 cost1 = static_cast<uint64>(l.size()) * r.size();
       const uint64 len = (l.size() + r.size()) << 1;
       int64 alignedLen = 1;
       int bit = 1;
-      while (alignedLen < (int64)len) alignedLen <<= 1, ++bit;
+      while (alignedLen < static_cast<int64>(len)) alignedLen <<= 1, ++bit;
       const uint64 cost2 = alignedLen * bit * 3;
 
       if (cost2 * 2 < cost1) {
@@ -554,7 +554,7 @@ class BigInteger {
       uint64 inc = 0;
       int j = 0;
       for (; j <= posL; ++j) {
-        inc += (uint64)t * l[j] + ret[i + j];
+        inc += static_cast<uint64>(t) * l[j] + ret[i + j];
         ret[i + j] = inc & max_32bit_value;
         inc >>= 32;
       }
@@ -587,7 +587,7 @@ class BigInteger {
     }
 
     if (l.size() <= 1) {
-      l.resetAbs((uint64)l[0] * r);
+      l.resetAbs(static_cast<uint64>(l[0]) * r);
       return;
     }
 
@@ -596,7 +596,7 @@ class BigInteger {
     uint64 inc = 0;
     int top = 0;
     for (int i = 0; i <= l.pos_; ++i) {
-      uint64 v = (uint64)l[i] * r + inc;
+      uint64 v = static_cast<uint64>(l[i]) * r + inc;
       l[top++] = v & max_32bit_value;
       inc = v >> 32;
     }
@@ -794,12 +794,12 @@ class BigInteger {
     } else {
       uint64 add = 0;
       for (int i = l.pos_; i > 0; --i) {
-        const uint128 x = ((uint128)add << 32) + l.data_[i];
+        const uint128 x = (static_cast<uint128>(add) << 32) + l.data_[i];
         const uint64 next_add = x % r;
         l.data_[i] = x / r;
         add = next_add;
       }
-      const uint128 x = ((uint128)add << 32) + l.data_[0];
+      const uint128 x = (static_cast<uint128>(add) << 32) + l.data_[0];
       l.data_[0] = x / r;
       remain = x % r;
       l.fixPos();
@@ -1008,16 +1008,16 @@ class BigInteger {
       for (int i = t.pos_; i > 0; --i) {
         const uint64 x = add + t.data_[i];
         const uint64 next_add = (x % output_mod) << 32;
-        t.data_[i] = (unsigned)(x / output_mod);
+        t.data_[i] = static_cast<unsigned>(x / output_mod);
         add = next_add;
       }
       uint64 x = add + t.data_[0];
-      t.data_[0] = (unsigned)(x / output_mod);
+      t.data_[0] = static_cast<unsigned>(x / output_mod);
       mods.push_back(x % output_mod);
       t.fixPos();
     } while (!t.isZero());
 
-    int idx = (int)mods.size() - 1;
+    int idx = static_cast<int>(mods.size()) - 1;
     char buff[32];
     sprintf(buff, "%u", mods[idx--]);
     ss << buff;
@@ -1595,7 +1595,7 @@ inline ostream& operator<<(ostream& o, const BigInteger& bi) {
 
 SL string to_string(const BigInteger& x) { return x.toString(); }
 
-inline BigInteger operator"" _bi(const char* sv, size_t sc) {
+inline BigInteger operator"" _bi(const char* sv, size_t /*sc*/) {
   return BigInteger(string(sv));
 }
 
@@ -1704,7 +1704,7 @@ struct Fraction<bi> {
   }
   double toDouble() { return 1. * a.toDouble() / b.toDouble(); }
   long double toLongDouble() {
-    return (long double)1. * a.toLongDouble() / b.toLongDouble();
+    return static_cast<long double>(1.) * a.toLongDouble() / b.toLongDouble();
   }
   bi a, b;
 };
@@ -1725,7 +1725,7 @@ bi find_integer_part(const bi& a, const bi& q, const bi& b, const bi& c) {
   long double test =
       (a.toLongDouble() * sqrt(q.toLongDouble()) + b.toLongDouble()) /
       c.toLongDouble();
-  bi now = (int64)test;
+  bi now = static_cast<int64>(test);
   const bi target = a * a * q;
   for (;;) {
     bi next = now + 1;

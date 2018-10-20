@@ -27,7 +27,8 @@ SL int __pe_clz32(uint32 x) {
 }
 
 SL int __pe_clz64(uint64 x) {
-  return x >> 32 ? __pe_clz32(x >> 32) : 32 + __pe_clz32((uint32)x);
+  return x >> 32 ? __pe_clz32(x >> 32)
+                 : 32 + __pe_clz32(static_cast<uint32>(x));
 }
 
 #if PE_HAS_INT128
@@ -57,13 +58,15 @@ SL int __pe_ctz32(uint32 x) {
 }
 
 SL int __pe_ctz64(uint64 x) {
-  return (uint32)x ? __pe_ctz32((uint32)x) : 32 + __pe_ctz32(x >> 32);
+  return static_cast<uint32>(x) ? __pe_ctz32(static_cast<uint32>(x))
+                                : 32 + __pe_ctz32(x >> 32);
 }
 
 #if PE_HAS_INT128
 
 SL int __pe_ctz128(uint128 x) {
-  return (uint64)x ? __pe_ctz64((uint64)x) : 64 + __pe_ctz64(x >> 64);
+  return static_cast<uint64>(x) ? __pe_ctz64(static_cast<uint64>(x))
+                                : 64 + __pe_ctz64(x >> 64);
 }
 
 #endif
@@ -103,7 +106,7 @@ SL int __pe_bitcnt32(uint32 x) {
 
 SL int __pe_bitcnt64(uint64 x) {
   int ret = 0;
-  if ((uint32)x) ret += __pe_bitcnt32((uint32)x);
+  if (static_cast<uint32>(x)) ret += __pe_bitcnt32(static_cast<uint32>(x));
   if (x >> 32) ret += __pe_bitcnt32(x >> 32);
   return ret;
 }
@@ -112,7 +115,7 @@ SL int __pe_bitcnt64(uint64 x) {
 
 SL int __pe_bitcnt128(uint128 x) {
   int ret = 0;
-  if ((uint64)x) ret += __pe_bitcnt64((uint64)x);
+  if (static_cast<uint64>(x)) ret += __pe_bitcnt64(static_cast<uint64>(x));
   if (x >> 64) ret += __pe_bitcnt64(x >> 64);
   return ret;
 }

@@ -25,7 +25,7 @@ struct PSPTree {
   }
 
   static PSPTree* build_minus(int64* values, int n, int64 mod) {
-    PSPTree* ptree = new PSPTree();
+    auto* ptree = new PSPTree();
     auto& tree = *ptree;
     tree.mod = mod;
     tree.v = values;
@@ -46,7 +46,7 @@ struct PSPTree {
   }
 
   static PSPTree* build_plus(int64* values, int n, int64 mod) {
-    PSPTree* ptree = new PSPTree();
+    auto* ptree = new PSPTree();
     auto& tree = *ptree;
     tree.mod = mod;
     tree.v = values;
@@ -80,12 +80,14 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   int c2 = psp->n - c1;
 
   vector<T> m(max(psp->L->p.size(), psp->R->p.size()));
-  poly_mod(X, n, (const T*)&psp->L->p[0], (int)psp->L->p.size(), &m[0], mod);
-  poly_evaluate_mod_normal_internal(&m[0], (int)psp->L->p.size() - 1, psp->L,
-                                    result, mod);
-  poly_mod(X, n, (const T*)&psp->R->p[0], (int)psp->R->p.size(), &m[0], mod);
-  poly_evaluate_mod_normal_internal(&m[0], (int)psp->R->p.size() - 1, psp->R,
-                                    result + c1, mod);
+  poly_mod(X, n, (const T*)&psp->L->p[0], static_cast<int>(psp->L->p.size()),
+           &m[0], mod);
+  poly_evaluate_mod_normal_internal(
+      &m[0], static_cast<int>(psp->L->p.size()) - 1, psp->L, result, mod);
+  poly_mod(X, n, (const T*)&psp->R->p[0], static_cast<int>(psp->R->p.size()),
+           &m[0], mod);
+  poly_evaluate_mod_normal_internal(
+      &m[0], static_cast<int>(psp->R->p.size()) - 1, psp->R, result + c1, mod);
 }
 
 // size(V) = n
@@ -119,6 +121,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     int lastSize = n;
     while (lastSize != 1) {
       vector<vector<T>> to;
+      to.reserve(lastSize / 2);
       for (int i = 0; i < lastSize / 2; ++i) {
         to.push_back(poly_mul(from[i * 2], from[i * 2 + 1], mod));
       }
@@ -379,23 +382,23 @@ struct FactModer {
     if (n >= p) return 0;
     if (n < q) return preFact[n];
 
-    uint64 m = (int64)sqrt(n);
+    uint64 m = static_cast<int64>(sqrt(n));
     uint64 ret = 1;
 
     for (uint64 i = m * m + 1; i <= n; ++i) {
       ret = mul_mod_ex(ret, i, p);
     }
 
-    evaluate((int)m, (uint64*)&V[0], m);
+    evaluate(static_cast<int>(m), static_cast<uint64*>(&V[0]), m);
 
     for (int i = 0; i < m; ++i) {
       ret = mul_mod_ex(ret, V[i], p);
     }
-    return (int64)ret;
+    return static_cast<int64>(ret);
   }
 
   void init() {
-    q = (uint64)sqrt(p);
+    q = static_cast<uint64>(sqrt(p));
     while (q * q < p) ++q;
     q <<= 1;
     q += 1;
@@ -652,7 +655,7 @@ struct FactSumModer {
     if (n >= p) n = p - 1;
     if (n < q) return preFactSum[n];
 
-    int64 m = (int64)sqrt(n);
+    auto m = static_cast<int64>(sqrt(n));
     uint64 ret = 1;
 
     // Prepare data for computing P
@@ -669,7 +672,7 @@ struct FactSumModer {
 
     // Compute P
     vector<uint64> YQ;
-    auto YP = poly_batch_mul_acc_mod(X, 0, (int)(m - 1), YQ, p);
+    auto YP = poly_batch_mul_acc_mod(X, 0, static_cast<int>(m - 1), YQ, p);
     YP[0] = add_mod(YP[0], 1, p);
     auto P = poly_evaluate_mod_bls(YP, V, p);
 
@@ -677,7 +680,7 @@ struct FactSumModer {
     // YQ *= (m + xm)
     YQ.resize(m + 1);
     YQ[m] = YQ[m - 1];
-    for (int i = (int)(m - 1); i >= 1; --i)
+    for (int i = static_cast<int>(m - 1); i >= 1; --i)
       YQ[i] = add_mod(YQ[i], YQ[i - 1], p);
     for (auto& i : YQ) i = mul_mod_ex(i, m, p);
 
@@ -703,7 +706,7 @@ struct FactSumModer {
     }
 
     uint64 last = Q[m - 1];
-    for (int64 i = m * m; i <= (int64)n; ++i) {
+    for (int64 i = m * m; i <= static_cast<int64>(n); ++i) {
       result = add_mod(result, last, p);
       last = mul_mod_ex(last, i + 1, p);
     }
@@ -711,7 +714,7 @@ struct FactSumModer {
   }
 
   void init() {
-    q = (uint64)sqrt(p);
+    q = static_cast<uint64>(sqrt(p));
     while (q * q < p) ++q;
     q <<= 1;
     q += 1;
@@ -779,7 +782,7 @@ SL void init_bernoulli_number(int64* dest, int64 n, int64* invs, int64 mod) {
     t[i] = v;
   }
 
-  auto result = poly_inv_mod<uint64>(t, (int)n, mod);
+  auto result = poly_inv_mod<uint64>(t, static_cast<int>(n), mod);
 
   uint64 c = 1;
   dest[0] = result[0];
@@ -791,8 +794,8 @@ SL void init_bernoulli_number(int64* dest, int64 n, int64* invs, int64 mod) {
 
 SL void init_bernoulli_number(int64* dest, int64 n, int64 mod) {
   vector<uint64> invs(n + 1);
-  init_inv((int64*)&invs[0], n + 1, mod);
-  init_bernoulli_number(dest, n, (int64*)&invs[0], mod);
+  init_inv(reinterpret_cast<int64*>(&invs[0]), n + 1, mod);
+  init_bernoulli_number(dest, n, reinterpret_cast<int64*>(&invs[0]), mod);
 }
 
 // Compute 1^k + 2^k + ... n^k based on bernoulli number
@@ -1063,7 +1066,7 @@ SL int64 gf_at(const vector<int64>& A, const vector<int64>& B, const int64 n,
   int has = solve_linear_equation<int64>(A[0], 1, mod, v, u);
   if (!has) return -1;
 
-  const int64 m = min((int64)max(sa - 1, sb - 1), n);
+  const int64 m = min(static_cast<int64>(max(sa - 1, sb - 1)), n);
   vector<int64> result(m + 1, 0);
 
   // if u < mod, we have more than one solution.
@@ -1086,7 +1089,7 @@ SL int64 gf_at(const vector<int64>& A, const vector<int64>& B, const int64 n,
   const int64 D = sa - 1;
   const int64 size = D * D;
   string data(size * sizeof(int64) * 3, '\0');
-  int64* buffer = (int64*)data.c_str();
+  auto* buffer = (int64*)data.c_str();
 
   int64* mat = buffer;
   int64* res = mat + size;
@@ -1124,7 +1127,7 @@ SL int64 gf_at(const NModPoly& A, const NModPoly& B, const int64 n) {
 
 // Berlekamp Massey
 SL NModPoly find_minimal_poly(const NModPoly& s) {
-  const int m = (int)s.data.size();
+  const int m = static_cast<int>(s.data.size());
   const int n = m >> 1;
   const int64 mod = s.mod;
   PE_ASSERT(n * 2 == m);
@@ -1151,7 +1154,7 @@ SL NModPoly find_minimal_poly(const NModPoly& s) {
 
 SL int64 nth_element(const NModPoly& s, int64 n, const NModPoly& min_poly) {
   if (n <= s.deg()) {
-    return s[(int)n];
+    return s[static_cast<int>(n)];
   }
 
   auto r = n % min_poly;
@@ -1164,7 +1167,7 @@ SL int64 nth_element(const NModPoly& s, int64 n, const NModPoly& min_poly) {
 }
 
 SL NModPoly find_linear_recurrence(const NModPoly& s) {
-  const int len = (int)s.data.size();
+  const int len = static_cast<int>(s.data.size());
   for (int n = 2; n < len; n += 2) {
     auto use = s.lowerTerms(n);
     auto min_poly = find_minimal_poly(use);
@@ -1185,7 +1188,7 @@ SL NModPoly find_linear_recurrence(const NModPoly& s) {
 
 SL int64 nth_element(const NModPoly& s, int64 n) {
   if (n <= s.deg()) {
-    return s[(int)n];
+    return s[static_cast<int>(n)];
   }
 
   auto min_poly = find_linear_recurrence(s);

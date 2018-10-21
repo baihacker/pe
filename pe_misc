@@ -426,21 +426,10 @@ struct Partition {
    */
 };
 
-SL DVA<int64> prime_sk_ex(const int64 n, int k, int64* PK, int64 mod) {
-  PowerSumModerB psm(mod);
-
-  PE_ASSERT(n >= 1);
-  DVA<int64> dva(n);
-
+template <typename TreeType>
+SL void prime_sk_ex_impl(const int64 n, int k, int64* PK, TreeType& tree,
+                         DVA<int64>& dva, int64 mod) {
   const int keySize = dva.keySize;
-  RUBit<NModNumberD6464> tree(keySize);
-
-  for (auto& key : dva.fKeys()) {
-    const int id = dva.idxOfValue(key);
-    const int64 val = sub_mod(psm.cal(key, k), 1, mod);
-    tree.update(id, id, val);
-  }
-
   int pid = 0;
   for (int64 p = 2; p <= dva.m; ++p)
     if (is_prime(p)) {
@@ -459,10 +448,9 @@ SL DVA<int64> prime_sk_ex(const int64 n, int k, int64* PK, int64 mod) {
     }
 
   for (int i = 1; i < keySize; ++i) dva[dva.keys[i]] = tree.query(i).value();
-  return dva;
 }
 
-SL DVA<int64> prime_sk_ex(const int64 n, int k, int64 mod) {
+SL DVA<int64> prime_sk_ex(const int64 n, int k, int64* PK, int64 mod) {
   PowerSumModerB psm(mod);
 
   PE_ASSERT(n >= 1);
@@ -476,6 +464,37 @@ SL DVA<int64> prime_sk_ex(const int64 n, int k, int64 mod) {
     const int64 val = sub_mod(psm.cal(key, k), 1, mod);
     tree.update(id, id, val);
   }
+
+  prime_sk_ex_impl(n, k, PK, tree, dva, mod);
+
+  return dva;
+}
+
+template <int64 mod>
+SL DVA<int64> prime_sk_ex(const int64 n, int k, int64* PK) {
+  PowerSumModerB psm(mod);
+
+  PE_ASSERT(n >= 1);
+  DVA<int64> dva(n);
+
+  const int keySize = dva.keySize;
+  RUBit<NModNumber6464<mod>> tree(keySize);
+
+  for (auto& key : dva.fKeys()) {
+    const int id = dva.idxOfValue(key);
+    const int64 val = sub_mod(psm.cal(key, k), 1, mod);
+    tree.update(id, id, val);
+  }
+
+  prime_sk_ex_impl(n, k, PK, tree, dva, mod);
+
+  return dva;
+}
+
+template <typename TreeType>
+SL void prime_sk_ex_impl(const int64 n, int k, TreeType& tree, DVA<int64>& dva,
+                         int64 mod) {
+  const int keySize = dva.keySize;
 
   for (int64 p = 2; p <= dva.m; ++p)
     if (is_prime(p)) {
@@ -494,6 +513,46 @@ SL DVA<int64> prime_sk_ex(const int64 n, int k, int64 mod) {
     }
 
   for (int i = 1; i < keySize; ++i) dva[dva.keys[i]] = tree.query(i).value();
+}
+
+SL DVA<int64> prime_sk_ex(const int64 n, int k, int64 mod) {
+  PowerSumModerB psm(mod);
+
+  PE_ASSERT(n >= 1);
+  DVA<int64> dva(n);
+
+  const int keySize = dva.keySize;
+  RUBit<NModNumberD6464> tree(keySize);
+
+  for (auto& key : dva.fKeys()) {
+    const int id = dva.idxOfValue(key);
+    const int64 val = sub_mod(psm.cal(key, k), 1, mod);
+    tree.update(id, id, val);
+  }
+
+  prime_sk_ex_impl(n, k, tree, dva, mod);
+
+  return dva;
+}
+
+template <int64 mod>
+SL DVA<int64> prime_sk_ex(const int64 n, int k) {
+  PowerSumModerB psm(mod);
+
+  PE_ASSERT(n >= 1);
+  DVA<int64> dva(n);
+
+  const int keySize = dva.keySize;
+  RUBit<NModNumber6464<mod>> tree(keySize);
+
+  for (auto& key : dva.fKeys()) {
+    const int id = dva.idxOfValue(key);
+    const int64 val = sub_mod(psm.cal(key, k), 1, mod);
+    tree.update(id, id, val);
+  }
+
+  prime_sk_ex_impl(n, k, tree, dva, mod);
+
   return dva;
 }
 

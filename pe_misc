@@ -426,4 +426,75 @@ struct Partition {
    */
 };
 
+SL DVA<int64> prime_sk_ex(const int64 n, int k, int64* PK, int64 mod) {
+  PowerSumModerB psm(mod);
+
+  PE_ASSERT(n >= 1);
+  DVA<int64> dva(n);
+
+  const int keySize = dva.keySize;
+  RUBit<NModNumberD6464> tree(keySize);
+
+  for (auto& key : dva.fKeys()) {
+    const int id = dva.idxOfValue(key);
+    const int64 val = sub_mod(psm.cal(key, k), 1, mod);
+    tree.update(id, id, val);
+  }
+
+  int pid = 0;
+  for (int64 p = 2; p <= dva.m; ++p)
+    if (is_prime(p)) {
+      const auto psum = tree.query(static_cast<int>(p - 1)).value();
+      const int64 p2 = p * p;
+      const int a = keySize - 1;
+      const int b = dva.idxOfValue(p2);
+      for (int i = a; i >= b;) {
+        const auto delta = sub_mod(
+            tree.query(dva.idxOfValue(dva.keys[i] / p)).value(), psum, mod);
+        const int mini = max(dva.idxOfValue(dva.keys[i] / p * p), b);
+        tree.update(mini, i, sub_mod(0, mul_mod_ex(delta, PK[pid], mod), mod));
+        i = mini - 1;
+      }
+      ++pid;
+    }
+
+  for (int i = 1; i < keySize; ++i) dva[dva.keys[i]] = tree.query(i).value();
+  return dva;
+}
+
+SL DVA<int64> prime_sk_ex(const int64 n, int k, int64 mod) {
+  PowerSumModerB psm(mod);
+
+  PE_ASSERT(n >= 1);
+  DVA<int64> dva(n);
+
+  const int keySize = dva.keySize;
+  RUBit<NModNumberD6464> tree(keySize);
+
+  for (auto& key : dva.fKeys()) {
+    const int id = dva.idxOfValue(key);
+    const int64 val = sub_mod(psm.cal(key, k), 1, mod);
+    tree.update(id, id, val);
+  }
+
+  for (int64 p = 2; p <= dva.m; ++p)
+    if (is_prime(p)) {
+      const int64 pk = power_mod_ex(p, k, mod);
+      const auto psum = tree.query(static_cast<int>(p - 1)).value();
+      const int64 p2 = p * p;
+      const int a = keySize - 1;
+      const int b = dva.idxOfValue(p2);
+      for (int i = a; i >= b;) {
+        const auto delta = sub_mod(
+            tree.query(dva.idxOfValue(dva.keys[i] / p)).value(), psum, mod);
+        const int mini = max(dva.idxOfValue(dva.keys[i] / p * p), b);
+        tree.update(mini, i, sub_mod(0, mul_mod_ex(delta, pk, mod), mod));
+        i = mini - 1;
+      }
+    }
+
+  for (int i = 1; i < keySize; ++i) dva[dva.keys[i]] = tree.query(i).value();
+  return dva;
+}
+
 #endif

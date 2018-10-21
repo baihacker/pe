@@ -17,6 +17,8 @@ def format():
     for f in files:
       fpath = os.path.join(rt, f)
       filename, fileExtension = os.path.splitext(fpath)
+      if f == 'parallel_cal_pi_1e8.c':
+        continue
       if len(fileExtension) == 0 or fileExtension in ['.h', '.hpp', '.c', '.cxx', '.cpp']:
         print fpath
         ret = subprocess.call('clang-format -style=Google -sort-includes=0 -i %s' % fpath)

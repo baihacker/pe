@@ -1,0 +1,1300 @@
+#ifndef __PE_ALGO__
+#define __PE_ALGO__
+
+#include "pe_base"
+#include "pe_nt"
+#include "pe_poly_algo"
+#include "pe_tree"
+
+/**
+ * Compuates n! % p
+ * Algorithm source: // https://min-25.hatenablog.com/entry/2017/04/10/215046
+ * Complexity is M(p^(1/2))
+ */
+struct FactModer {
+  FactModer(uint64 p) : p(p) { init(); }
+
+  // Evaluate (x+v*0+1)*(x+v*1+1)*(x+v*2+1)*...*(x+v*(d-1)+1) at 0, 1, 2, ..., d
+  void evaluate(int d, uint64* result, uint64 v) {
+    if (d == 1) {
+      result[0] = 1;
+      result[1] = p == 2 ? 0 : 2;
+      return;
+    }
+
+    const int halfD = d >> 1;
+    evaluate(halfD, result, v);
+    copy(result, result + halfD + 1, &G0[0]);
+#if ENABLE_OPENMP
+#pragma omp parallel sections if (d >= 10000)
+#endif
+    {
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+      poly_offset_evaluate<uint64>(halfD, result, &G1[0], halfD + 1,
+                                   &preFactInv[0], p);
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+      poly_offset_evaluate<uint64>(halfD, result, &G2[0], v * halfD,
+                                   &preFactInv[0], p);
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+      poly_offset_evaluate<uint64>(halfD, result, &G3[0], v * halfD + halfD,
+                                   &preFactInv[0], p);
+    }
+
+    for (int i = 0; i <= halfD; ++i) {
+      result[i] = mul_mod_ex(G0[i], G2[i], p);
+    }
+    for (int i = halfD + 1, j = 0; i <= halfD * 2; ++i, ++j) {
+      result[i] = mul_mod_ex(G1[j], G3[j + 1], p);
+    }
+
+    if (d & 1) {
+      uint64 tmp = (v * (d - 1) + 1) % p;
+      for (int i = 0; i <= 2 * halfD; ++i) {
+        result[i] = mul_mod_ex(result[i], tmp++, p);
+        if (tmp >= p) tmp -= p;
+      }
+      uint64 t = 1;
+      uint64 c = d + 1;
+      for (int i = 0; i < d; ++i) {
+        t = mul_mod_ex(t, c, p);
+        c += v;
+        if (c >= p) c -= p;
+      }
+      result[d] = t;
+    }
+  }
+
+  int64 cal(uint64 n) {
+    if (n >= p) return 0;
+    if (n < q) return preFact[n];
+
+    uint64 m = static_cast<int64>(sqrt(n));
+    uint64 ret = 1;
+
+    for (uint64 i = m * m + 1; i <= n; ++i) {
+      ret = mul_mod_ex(ret, i, p);
+    }
+
+    evaluate(static_cast<int>(m), static_cast<uint64*>(&V[0]), m);
+
+    for (int i = 0; i < m; ++i) {
+      ret = mul_mod_ex(ret, V[i], p);
+    }
+    return static_cast<int64>(ret);
+  }
+
+  void init() {
+    q = static_cast<uint64>(sqrt(p));
+    while (q * q < p) ++q;
+    q <<= 1;
+    q += 1;
+    preFact.resize(q);
+    preFactInv.resize(q);
+    init_seq_prod<uint64>(&preFact[0], 1, q - 1, p);
+    init_seq_prod_inv<uint64>(&preFactInv[0], 1, q - 1, p,
+                              power_mod_ex<uint64>(preFact[q - 1], p - 2, p));
+    G0.resize(q);
+    G1.resize(q);
+    G2.resize(q);
+    G3.resize(q);
+    V.resize(q);
+  }
+
+  vector<uint64> preFact, preFactInv;
+  vector<uint64> G0, G1, G2, G3;
+  vector<uint64> V;
+  uint64 p;
+  uint64 q;
+};
+
+/**
+ * Computes (0! + 1! + 2! + ... + n!) % p
+ * The complexity is M(p^(1/2))
+ * f(4e8)%99999999907 = 16815920030
+ */
+struct FactSumModer {
+  FactSumModer(uint64 p) : p(p) { init(); }
+
+  int64 cal(uint64 n) {
+    if (n >= p) n = p - 1;
+    if (n < q) return preFactSum[n];
+
+    auto m = static_cast<int64>(sqrt(n));
+    uint64 ret = 1;
+
+    // Prepare data for computing P
+    vector<uint64> X((m - 1) * 2);
+    for (int i = 0; i < m - 1; ++i) {
+      X[i * 2] = i + 1;
+      X[i * 2 + 1] = m;
+    }
+
+    vector<uint64> V(m);
+    for (int i = 0; i < m; ++i) {
+      V[i] = i;
+    }
+
+    // Compute P
+    vector<uint64> YQ;
+    auto YP = poly_batch_mul_acc_mod(X, 0, static_cast<int>(m - 1), YQ, p);
+    YP[0] = add_mod(YP[0], 1, p);
+    auto P = poly_evaluate_mod_bls(YP, V, p);
+
+    // Prepare data for computing Q
+    // YQ *= (m + xm)
+    YQ.resize(m + 1);
+    YQ[m] = YQ[m - 1];
+    for (int i = static_cast<int>(m - 1); i >= 1; --i)
+      YQ[i] = add_mod(YQ[i], YQ[i - 1], p);
+    for (auto& i : YQ) i = mul_mod_ex(i, m, p);
+
+    // V.extend(m)
+    V.push_back(m);
+
+    // Compute Q
+    auto Q = poly_evaluate_mod_bls(YQ, V, p);
+    for (int i = 1; i <= m; ++i) {
+      Q[i] = mul_mod_ex(Q[i], Q[i - 1], p);
+    }
+
+    // Compute P
+    X.resize((m - 1) * 2);
+    V.resize(m);
+    // deg y = m - 1
+
+    // Compute result
+    int64 result = P[0];
+    for (int i = 1; i < m; ++i) {
+      uint64 t = mul_mod_ex(P[i], Q[i - 1], p);
+      result = add_mod(result, t, p);
+    }
+
+    uint64 last = Q[m - 1];
+    for (int64 i = m * m; i <= static_cast<int64>(n); ++i) {
+      result = add_mod(result, last, p);
+      last = mul_mod_ex(last, i + 1, p);
+    }
+    return result;
+  }
+
+  void init() {
+    q = static_cast<uint64>(sqrt(p));
+    while (q * q < p) ++q;
+    q <<= 1;
+    q += 1;
+    preFact.resize(q);
+    preFactSum.resize(q);
+    init_seq_prod<uint64>(&preFact[0], 1, q - 1, p);
+    preFactSum[0] = preFact[0];
+    for (int i = 1; i < q; ++i) {
+      preFactSum[i] = add_mod(preFactSum[i - 1], preFact[i], p);
+    }
+  }
+
+  vector<uint64> preFact, preFactSum;
+  uint64 p;
+  uint64 q;
+};
+
+/**
+ * Calculates C(n, m) % P where P is prime
+ * Deprecated
+ */
+template <int64 P, int64 F = P>
+struct comb_moder {
+  static_assert(P <= PE_SOI63, "P <= PE_SOI63");
+  static_assert(F > 0, "F > 0");
+  comb_moder() { init(); }
+  static int64 inv(int64 x) {
+    int64 result = 1;
+    int n = P - 2;
+    x %= P;
+    for (; n; n >>= 1, x = x * x % P)
+      if (n & 1) result = result * x % P;
+    return result;
+  }
+  static int64* fac;
+  static void init() {
+    if (fac == NULL) {
+      fac = new int64[F];
+      fac[0] = 1;
+      for (int i = 1; i < F; ++i) fac[i] = fac[i - 1] * i % P;
+    }
+  }
+  static void destroy_fac() {
+    delete[] fac;
+    fac = NULL;
+  }
+  static int64 s(int64 x) { return x & 1 ? -1 : 1; }
+  static int64 comb(int64 m, int64 n) {
+    PE_ASSERT(fac);
+
+    if (m < 0 || n > m) return 0;
+
+    int64 pp = 0;
+    int64 dist = m - n;
+
+    for (int64 mm = m / P, nn = n / P, dd = dist / P; mm;
+         mm /= P, nn /= P, dd /= P) {
+      pp += mm - nn - dd;
+    }
+    if (pp) return 0;
+    int64 l = 1, r = 1;
+    for (int64 x = m; x; x /= P) {
+      PE_ASSERT(x % P < F);
+      l = l * s(x / P) * fac[x % P] % P;
+    }
+    for (int64 x = n; x; x /= P) {
+      PE_ASSERT(x % P < F);
+      r = r * s(x / P) * fac[x % P] % P;
+    }
+    for (int64 x = dist; x; x /= P) {
+      PE_ASSERT(x % P < F);
+      r = r * s(x / P) * fac[x % P] % P;
+    }
+    l = (l + P) % P;
+    r = (r + P) % P;
+    int64 t = (inv(r) * l % P + P) % P;
+    return t;
+  }
+};
+template <int64 P, int64 F>
+int64* comb_moder<P, F>::fac;
+
+/**
+ * Calculates C(n, m) % P where P is prime
+ */
+struct CombModer {
+  CombModer(uint64 P, uint64 F = 0) : P(P), F(F == 0 ? P : F), fac(NULL) {
+    init();
+  }
+  ~CombModer() {
+    delete[] fac;
+    fac = NULL;
+  }
+  void init() {
+    if (fac == NULL) {
+      fac = new uint64[F];
+      fac[0] = 1;
+      for (int i = 1; i < F; ++i) {
+        fac[i] = mul_mod_ex(fac[i - 1], i, P);
+      }
+    }
+  }
+  uint64 s(int64 x) { return x & 1 ? P - 1 : 1; }
+  uint64 comb(int64 m, int64 n) {
+    if (m < 0 || n > m) return 0;
+    if (n == m || n == 0) return 1;
+    if (n == 1 || n == m - 1) return m % P;
+
+    int64 pp = 0;
+    int64 dist = m - n;
+
+    for (uint64 mm = m / P, nn = n / P, dd = dist / P; mm;
+         mm /= P, nn /= P, dd /= P) {
+      pp += mm - nn - dd;
+    }
+    if (pp) return 0;
+    uint64 l = 1, r = 1;
+    for (uint64 x = m; x; x /= P) {
+      l = mul_mod_ex(l, s(x / P), P);
+      l = mul_mod_ex(l, fac[x % P], P);
+    }
+    for (uint64 x = n; x; x /= P) {
+      r = mul_mod_ex(r, s(x / P), P);
+      r = mul_mod_ex(r, fac[x % P], P);
+    }
+    for (uint64 x = dist; x; x /= P) {
+      r = mul_mod_ex(r, s(x / P), P);
+      r = mul_mod_ex(r, fac[x % P], P);
+    }
+    return mul_mod_ex(inv_of(r, P), l, P);
+  }
+
+  uint64 P, F;
+  uint64* fac;
+};
+
+int64 short_comb_mod(int64 n, int64 m, int64 mod) {
+  if (m > n || m < 0) return 0;
+  if (n - m < m) m = n - m;
+  vector<int64> data;
+  for (int64 i = n; i >= n - m + 1; --i) data.push_back(i);
+  const int size = static_cast<int>(data.size());
+  for (int i = 2; i <= m; ++i) {
+    int64 a = i;
+    for (int j = 0; j < size && a > 1; ++j) {
+      for (;;) {
+        int64 t = gcd(a, data[j]);
+        if (t == 1) break;
+        a /= t;
+        data[j] /= t;
+      }
+    }
+  }
+  int64 ret = 1;
+  for (int i = 0; i < size; ++i) ret = ret * data[i] % mod;
+  return ret;
+}
+
+/**
+ * Calculates C(n, m) % P where P is a large prime.
+ * The complexity is log(m) M(p^(1/2))
+ */
+struct CombModerEx {
+  CombModerEx(uint64 P) : P(P), fmoder(P) {}
+  int64 s(int64 x) { return x & 1 ? P - 1 : 1; }
+  int64 comb(int64 m, int64 n) {
+    if (m < 0 || n > m) return 0;
+    if (n == m || n == 0) return 1;
+    if (n == 1 || n == m - 1) return m % P;
+
+    int64 pp = 0;
+    int64 dist = m - n;
+
+    for (int64 mm = m / P, nn = n / P, dd = dist / P; mm;
+         mm /= P, nn /= P, dd /= P) {
+      pp += mm - nn - dd;
+    }
+    if (pp) return 0;
+    int64 l = 1, r = 1;
+    for (int64 x = m; x; x /= P) {
+      l = mul_mod_ex(l, s(x / P), P);
+      l = mul_mod_ex(l, fmoder.cal(x % P), P);
+    }
+    for (int64 x = n; x; x /= P) {
+      r = mul_mod_ex(r, s(x / P), P);
+      r = mul_mod_ex(r, fmoder.cal(x % P), P);
+    }
+    for (int64 x = dist; x; x /= P) {
+      r = mul_mod_ex(r, s(x / P), P);
+      r = mul_mod_ex(r, fmoder.cal(x % P), P);
+    }
+
+    return mul_mod_ex(inv_of(r, P), l, P);
+  }
+
+  uint64 P;
+  FactModer fmoder;
+};
+
+/**
+ * Computes 1^k + 2^k + ... n^k based on Bernoulli number.
+ * It uses O(k^2) to initialize Bernoulli number.
+ * It is recommended to use PowerSumModerB or PowerSumModerB1 to support larger
+ * k.
+ */
+struct PowerSumModer {
+  PowerSumModer(int64 mod, int maxk = 128)
+      : mod(mod), maxk(maxk), P(NULL), invs(NULL) {
+    init(maxk);
+  }
+
+  ~PowerSumModer() { reset(); }
+
+  void reset() {
+    if (P) {
+      for (int i = 0; i <= maxk; ++i) {
+        delete[] P[i];
+      }
+      delete[] P;
+      P = NULL;
+    }
+    if (invs) {
+      delete[] invs;
+      invs = NULL;
+    }
+  }
+
+  void init(int maxk) {
+    reset();
+
+    P = new int64*[maxk + 1];
+    for (int i = 0; i <= maxk; ++i) {
+      P[i] = new int64[maxk + 1];
+    }
+
+    invs = new int64[maxk + 2];
+    init_inv(invs, maxk + 2, mod);
+    for (int i = 0; i <= maxk; ++i)
+      for (int j = 0; j <= maxk; ++j) {
+        P[i][j] = 0;
+      }
+    for (int i = 0; i <= maxk; ++i) P[i][1] = 1;
+    for (int i = 1; i <= maxk; ++i) {
+      for (int j = 1; j < i; ++j) {
+        int64 t = P[i - 1][j - 1] + P[i - 1][j];
+        if (t >= mod) t -= mod;
+        P[i][j] = mul_mod_ex(j, t, mod);
+      }
+      P[i][i] = 1;
+      for (int j = 1; j <= i; ++j) {
+        P[i][i] = mul_mod_ex(P[i][i], j, mod);
+      }
+    }
+  }
+
+  // n + 1, n, ..., n-k+1 is not divisible by mod
+  // 2,3,...k+1 is not divisible by mod
+  int64 cal(int64 n, int64 k) {
+    PE_ASSERT(k <= maxk);
+
+    int64 ret = 0;
+    int64 c = (n + 1) % mod;
+    for (int i = 1; i <= k; ++i) {
+      // ret += P[k][i] * short_comb_mod(n + 1, i + 1, mod) % mod;
+      c = mul_mod_ex(c, regulate_mod(n + 1 - i, mod), mod);
+      c = mul_mod_ex(c, invs[i + 1], mod);
+      if (c == 0) {
+        break;
+      }
+      ret += mul_mod_ex(P[k][i], c, mod);
+    }
+    return ret % mod;
+  }
+
+  int64 cal_safe(int64 n, int64 k) {
+    PE_ASSERT(k <= maxk);
+
+    int64 A, B;
+    tie(A, B) = extract_factor(n + 1, mod);
+
+    int64 ret = 0;
+    int64 c = A;
+    int64 d = B;
+    for (int i = 1; i <= k; ++i) {
+      // ret += P[k][i] * short_comb_mod(n + 1, i + 1, mod) % mod;
+      tie(A, B) = extract_factor(n + 1 - i, mod);
+      d += B;
+      c = mul_mod_ex(c, regulate_mod(A, mod), mod);
+
+      tie(A, B) = extract_factor(i + 1, mod);
+      d -= B;
+      c = mul_mod_ex(c, invs[A], mod);
+
+      if (c == 0) {
+        break;
+      }
+
+      if (d == 0) {
+        ret += mul_mod_ex(P[k][i], c, mod);
+      }
+    }
+    return ret % mod;
+  }
+
+  int64 mod;
+  int maxk;
+  int64** P;
+  int64* invs;
+};
+
+/**
+ * Computes 1^k + 2^k + ... n^k based on Bernoulli number
+ * See
+ * https://en.wikipedia.org/wiki/Bernoulli_number#Sum_of_powers
+ * https://blog.csdn.net/acdreamers/article/details/38929067
+ */
+struct PowerSumModerB {
+  PowerSumModerB(int64 mod, int64 maxk = 128)
+      : mod(mod), maxk(maxk), BNL(NULL), invs(NULL) {
+    init(maxk);
+  }
+
+  ~PowerSumModerB() { reset(); }
+
+  void reset() {
+    if (BNL) {
+      delete[] BNL;
+      BNL = NULL;
+    }
+    if (invs) {
+      delete[] invs;
+      invs = NULL;
+    }
+  }
+
+  void init(int64 maxk) {
+    reset();
+
+    this->maxk = maxk;
+    BNL = new int64[maxk + 1];
+    invs = new int64[maxk + 2];
+    init_inv(invs, maxk + 2, mod);
+    init_bernoulli_number(BNL, maxk + 1, invs, mod);
+
+    BNL[1] = mod - BNL[1];
+  }
+
+  // n + 1, n, ..., n-k+1 is not divisible by mod
+  // 2,3,...k+1 is not divisible by mod
+  int64 cal(int64 n, int64 k) {
+    PE_ASSERT(k <= maxk);
+
+    int64 ret = 0;
+
+    int64 invn = power_mod_ex(n % mod, mod - 2, mod);
+    int64 c = power_mod_ex(n % mod, k + 1, mod);
+
+    for (int64 i = 0; i <= k; ++i) {
+      if (i > 0) {
+        c = mul_mod_ex(c, regulate_mod(k + 2 - i, mod), mod);
+        c = mul_mod_ex(c, invs[i], mod);
+        c = mul_mod_ex(c, invn, mod);
+      }
+
+      if (c == 0) {
+        break;
+      }
+
+      ret += mul_mod_ex(c, BNL[i], mod);
+      if (ret >= mod) ret -= mod;
+    }
+    ret = mul_mod_ex(ret, invs[k + 1], mod);
+    return ret;
+  }
+
+  int64 cal_safe(int64 n, int64 k) {
+    PE_ASSERT(k <= maxk);
+
+    int64 ret = 0;
+
+    int64 invn = power_mod_ex(n % mod, mod - 2, mod);
+    int64 c = power_mod_ex(n % mod, k + 1, mod);
+
+    int64 d = 0;
+    for (int64 i = 0; i <= k; ++i) {
+      if (i > 0) {
+        int64 A, B;
+
+        tie(A, B) = extract_factor(k + 2 - i, mod);
+        d += B;
+        c = mul_mod_ex(c, regulate_mod(A, mod), mod);
+
+        tie(A, B) = extract_factor(i, mod);
+        d -= B;
+        c = mul_mod_ex(c, invs[A], mod);
+
+        c = mul_mod_ex(c, invn, mod);
+      }
+      if (c == 0) {
+        break;
+      }
+      if (d == 0) {
+        ret += mul_mod_ex(c, BNL[i], mod);
+        if (ret >= mod) ret -= mod;
+      }
+    }
+    ret = mul_mod_ex(ret, invs[k + 1], mod);
+    return ret;
+  }
+
+  int64 mod;
+  int64 maxk;
+  int64* BNL;
+  int64* invs;
+};
+
+/**
+ * Computes 1^k + 2^k + ... n^k based on Bernoulli number
+ * See
+ * https://en.wikipedia.org/wiki/Bernoulli_number#Sum_of_powers
+ * https://blog.csdn.net/acdreamers/article/details/38929067
+ */
+struct PowerSumModerB1 {
+  PowerSumModerB1(int64 mod, int64 maxk = 128)
+      : mod(mod), maxk(maxk), BNL(NULL), invs(NULL) {
+    init(maxk);
+  }
+
+  ~PowerSumModerB1() { reset(); }
+
+  void reset() {
+    if (BNL) {
+      delete[] BNL;
+      BNL = NULL;
+    }
+    if (invs) {
+      delete[] invs;
+      invs = NULL;
+    }
+  }
+
+  void init(int64 maxk) {
+    reset();
+
+    this->maxk = maxk;
+    BNL = new int64[maxk + 1];
+    invs = new int64[maxk + 2];
+    init_inv(invs, maxk + 2, mod);
+    init_bernoulli_number(BNL, maxk + 1, invs, mod);
+  }
+
+  // n + 1, n, ..., n-k+1 is not divisible by mod
+  // 2,3,...k+1 is not divisible by mod
+  int64 cal(int64 n, int64 k) {
+    PE_ASSERT(k <= maxk);
+
+    const int64 n1 = (n + 1) % mod;
+    const int64 k1 = k + 1;
+
+    int64 ret = 0;
+
+    int64 c = 1 % mod;
+    for (int64 i = 1; i <= k1; ++i) {
+      c = mul_mod_ex(c, regulate_mod(k1 - i + 1, mod), mod);
+      c = mul_mod_ex(c, invs[i], mod);
+      c = mul_mod_ex(c, n1, mod);
+
+      if (c == 0) {
+        break;
+      }
+
+      ret += mul_mod_ex(c, BNL[k1 - i], mod);
+      if (ret >= mod) ret -= mod;
+    }
+    ret = mul_mod_ex(ret, invs[k1], mod);
+    return ret;
+  }
+
+  int64 cal_safe(int64 n, int64 k) {
+    PE_ASSERT(k <= maxk);
+
+    const int64 n1 = (n + 1) % mod;
+    const int64 k1 = k + 1;
+
+    int64 ret = 0;
+
+    int64 c = 1 % mod;
+    int64 d = 0;
+    for (int64 i = 1; i <= k1; ++i) {
+      int64 A, B;
+
+      tie(A, B) = extract_factor(k1 - i + 1, mod);
+      d += B;
+      c = mul_mod_ex(c, regulate_mod(A, mod), mod);
+
+      tie(A, B) = extract_factor(i, mod);
+      d -= B;
+      c = mul_mod_ex(c, invs[A], mod);
+
+      c = mul_mod_ex(c, n1, mod);
+
+      if (c == 0) {
+        break;
+      }
+      if (d == 0) {
+        ret += mul_mod_ex(c, BNL[k1 - i], mod);
+        if (ret >= mod) ret -= mod;
+      }
+    }
+    ret = mul_mod_ex(ret, invs[k1], mod);
+    return ret;
+  }
+
+  int64 mod;
+  int64 maxk;
+  int64* BNL;
+  int64* invs;
+};
+
+SL int64 power_sum(int64 n, int64 k, int64 mod) {
+  return PowerSumModerB(mod, k).cal(n, k);
+}
+
+SL int64 power_sum_safe(int64 n, int64 k, int64 mod) {
+  return PowerSumModerB(mod, k).cal_safe(n, k);
+}
+
+/**
+ * Counts the number of square free number no more than n.
+ * If n is no more than PIVOT, use a pre-computed table.
+ */
+struct SFCounter {
+  SFCounter(int64 PIVOT = ::maxp) : pre(NULL), PIVOT(PIVOT) { init(PIVOT); }
+  ~SFCounter() { reset(); }
+
+  void reset() {
+    if (pre) {
+      delete[] pre;
+      pre = NULL;
+    }
+  }
+
+  void init(int64 PIVOT) {
+    reset();
+
+    this->PIVOT = PIVOT;
+    pre = new int64[PIVOT + 1];
+    pre[0] = 0;
+    for (int64 i = 1; i <= PIVOT; ++i) {
+      pre[i] = pre[i - 1] + is_square_free(i);
+    }
+  }
+
+  int64 get(int64 n) {
+    if (n <= PIVOT) return pre[n];
+    auto where = mem.find(n);
+    if (where != mem.end()) return where->second;
+    int64 ret = n;
+    for (int64 i = 2;; ++i) {
+      int64 i2 = i * i;
+      if (i2 > n) break;
+      ret -= get(n / i2);
+    }
+    return mem[n] = ret;
+  }
+  int64* pre;
+  int64 PIVOT;
+  unordered_map<int64, int64> mem;
+};
+
+/**
+ * Computes (the sum of mu[x] or phi[x]) % mod where x is no more than n.
+ * If n is no more than PIVOT, use a pre-computed table.
+ */
+struct MiuPhiSumModer {
+  MiuPhiSumModer(int64 mod, int64 PIVOT = ::maxp) : mod(mod), PIVOT(PIVOT) {
+    pre_sum_mu = pre_sum_phi = NULL;
+    init(PIVOT);
+  }
+
+  ~MiuPhiSumModer() { reset(); }
+
+  void reset() {
+    if (pre_sum_mu == NULL) {
+      delete[] pre_sum_mu;
+      pre_sum_mu = NULL;
+    }
+    if (pre_sum_phi == NULL) {
+      delete[] pre_sum_phi;
+      pre_sum_phi = NULL;
+    }
+  }
+
+  void init(int64 PIVOT) {
+    reset();
+    this->PIVOT = PIVOT;
+
+    pre_sum_mu = new int64[PIVOT + 1];
+    pre_sum_phi = new int64[PIVOT + 1];
+    pre_sum_mu[0] = pre_sum_phi[0] = 0;
+    for (int i = 1; i <= PIVOT; ++i) {
+      pre_sum_mu[i] = ::mu[i] + pre_sum_mu[i - 1];
+      pre_sum_phi[i] = (::phi[i] + pre_sum_phi[i - 1]) % mod;
+      if (pre_sum_mu[i] < 0)
+        pre_sum_mu[i] += mod;
+      else if (pre_sum_mu[i] >= mod)
+        pre_sum_mu[i] -= mod;
+    }
+  }
+
+  int64 get_sum_mu(const int64 n) {
+    if (n <= PIVOT) return pre_sum_mu[n];
+
+    auto where = mem_sum_mu.find(n);
+    if (where != mem_sum_mu.end()) return where->second;
+
+    int64 ret = 1;
+    for (int64 i = 2; i <= n;) {
+      int64 v = n / i;
+      int64 maxi = n / v;
+      ret = sub_mod(ret, mul_mod_ex((maxi - i + 1) % mod, get_sum_mu(v), mod),
+                    mod);
+      i = maxi + 1;
+    }
+    return mem_sum_mu[n] = ret;
+  }
+
+  int64 get_sum_phi(int64 n) {
+    if (n <= PIVOT) return pre_sum_phi[n];
+
+    auto where = mem_sum_phi.find(n);
+    if (where != mem_sum_phi.end()) return where->second;
+
+    int64 ret = 0;
+    int64 last = 0;
+    for (int64 k = 1; k <= n;) {
+      int64 v = n / k;
+      int64 maxk = n / v;
+      int64 now = get_sum_mu(maxk);
+
+      int64 x = sub_mod(now, last, mod);
+      last = now;
+
+      int64 s = 0;
+      if (v & 1) {
+        s = mul_mod_ex((v + 1) / 2 % mod, v % mod, mod);
+      } else {
+        s = mul_mod_ex(v / 2 % mod, (v + 1) % mod, mod);
+      }
+      ret = add_mod(ret, mul_mod_ex(s, x, mod), mod);
+      k = maxk + 1;
+    }
+    return mem_sum_phi[n] = ret;
+  }
+  int64 mod;
+  int64 PIVOT;
+
+  int64* pre_sum_mu;
+  unordered_map<int64, int64> mem_sum_mu;
+
+  int64* pre_sum_phi;
+  unordered_map<int64, int64> mem_sum_phi;
+};
+
+template <typename T>
+class DVA {
+ public:
+  template <typename IT>
+  struct DVARange {
+    IT first;
+    IT last;
+    DVARange(IT first, IT last) : first(first), last(last) {}
+    IT begin() { return first; }
+    IT end() { return last; }
+  };
+  template <typename IT>
+  DVARange<IT> makeRange(IT first, IT last) const {
+    return DVARange<IT>(first, last);
+  }
+
+ public:
+  int64 n;
+  int64 m;
+  int isPerfectSquare;
+
+  std::vector<int64> keys;
+  std::vector<T> values;
+  int keySize;
+
+  DVA(int64 n)
+      : n(n), m(static_cast<int64>(sqrt(n))), isPerfectSquare(m * m == n) {
+    keys.push_back(0);
+
+    for (int64 i = 1; i <= m; ++i) {
+      keys.push_back(i);
+    }
+    for (int64 i = n / m > m ? m : m - 1; i >= 1; --i) {
+      keys.push_back(n / i);
+    }
+    keySize = (int)keys.size();
+    values.resize(keys.size());
+    fill(values.begin(), values.end(), 0);
+  }
+
+  DVA(const DVA& other) = default;
+  DVA(DVA&& other) = default;
+  DVA& operator=(const DVA& other) = default;
+  DVA& operator=(DVA&& other) = default;
+
+  int idxOfValue(int64 v) const { return (int)(v <= m ? v : keySize - n / v); }
+
+  T& operator[](int64 v) { return values[idxOfValue(v)]; }
+
+  T operator[](int64 v) const { return values[idxOfValue(v)]; }
+
+  DVARange<std::vector<int64>::const_iterator> fKeys() const {
+    return makeRange(keys.begin() + 1, keys.end());
+  }
+
+  DVARange<std::vector<int64>::const_reverse_iterator> bKeys() const {
+    return makeRange(keys.rbegin(), keys.rend() - 1);
+  }
+};
+
+template <typename T>
+SL DVA<T> prime_s0(const int64 n) {
+  PE_ASSERT(n >= 1);
+  DVA<T> dva(n);
+
+  for (auto& key : dva.fKeys()) dva[key] = key - 1;
+
+  for (int64 p = 2; p <= dva.m; ++p)
+    if (dva[p] != dva[p - 1]) {
+      const auto pcnt = dva[p - 1];
+      const int64 p2 = p * p;
+      for (auto& key : dva.bKeys()) {
+        if (key < p2) break;
+        dva[key] -= dva[key / p] - pcnt;
+      }
+    }
+  return dva;
+}
+
+#define prime_pi prime_s0
+
+template <typename T>
+SL DVA<T> prime_s1(const int64 n) {
+  PE_ASSERT(n >= 1);
+  DVA<T> dva(n);
+  for (auto& key : dva.fKeys()) {
+    if (key & 1) {
+      T v((key + 1) >> 1);
+      dva[key] = v * key - 1;
+    } else {
+      T v(key >> 1);
+      dva[key] = v * (key + 1) - 1;
+    }
+  }
+
+  for (int64 p = 2; p <= dva.m; ++p)
+    if (dva[p] != dva[p - 1]) {
+      const auto psum = dva[p - 1];
+      const int64 p2 = p * p;
+      for (auto& key : dva.bKeys()) {
+        if (key < p2) break;
+        dva[key] -= (dva[key / p] - psum) * p;
+      }
+    }
+  return dva;
+}
+
+#define prime_sum prime_s1
+
+template <typename T>
+SL DVA<T> prime_s0_ex(const int64 n) {
+  PE_ASSERT(n >= 1);
+  DVA<T> dva(n);
+
+  const int keySize = dva.keySize;
+  RUBit<T> tree(keySize);
+
+  for (auto& key : dva.fKeys()) {
+    const int id = dva.idxOfValue(key);
+    tree.update(id, id, key - 1);
+  }
+
+  for (int64 p = 2; p <= dva.m; ++p)
+    if (is_prime(p)) {
+      const auto pcnt = tree.query(static_cast<int>(p - 1));
+      const int64 p2 = p * p;
+      const int a = keySize - 1;
+      const int b = dva.idxOfValue(p2);
+      for (int i = a; i >= b;) {
+        const auto delta = tree.query(dva.idxOfValue(dva.keys[i] / p)) - pcnt;
+        const int mini = max(dva.idxOfValue(dva.keys[i] / p * p), b);
+        tree.update(mini, i, -delta);
+        i = mini - 1;
+      }
+    }
+  for (int i = 1; i < keySize; ++i) dva[dva.keys[i]] = tree.query(i);
+  return dva;
+}
+
+template <typename T>
+SL DVA<T> prime_s1_ex(const int64 n) {
+  PE_ASSERT(n >= 1);
+  DVA<T> dva(n);
+
+  const int keySize = dva.keySize;
+  RUBit<T> tree(keySize);
+
+  for (auto& key : dva.fKeys()) {
+    const int id = dva.idxOfValue(key);
+
+    if (key & 1) {
+      T v((key + 1) >> 1);
+      tree.update(id, id, v * key - 1);
+    } else {
+      T v(key >> 1);
+      tree.update(id, id, v * (key + 1) - 1);
+    }
+  }
+
+  for (int64 p = 2; p <= dva.m; ++p)
+    if (is_prime(p)) {
+      const auto psum = tree.query(static_cast<int>(p - 1));
+      const int64 p2 = p * p;
+      const int a = keySize - 1;
+      const int b = dva.idxOfValue(p2);
+      for (int i = a; i >= b;) {
+        const auto delta = tree.query(dva.idxOfValue(dva.keys[i] / p)) - psum;
+        const int mini = max(dva.idxOfValue(dva.keys[i] / p * p), b);
+        tree.update(mini, i, -delta * p);
+        i = mini - 1;
+      }
+    }
+
+  for (int i = 1; i < keySize; ++i) dva[dva.keys[i]] = tree.query(i);
+  return dva;
+}
+
+template <typename T>
+SL vector<DVA<T>> prime_s0_pmod_even(int64 n, int mod) {
+  vector<DVA<T>> result;
+  for (int i = 0; i < mod; ++i) result.emplace_back(n);
+
+  for (int i = 1; i < mod; i += 2) {
+    auto& target = result[i];
+    const int dec = i == 1;
+    for (auto key : result[0].fKeys())
+      target[key] = (key + mod - i) / mod - dec;
+  }
+  for (int i = 1;; ++i) {
+    const int64 p = plist[i];
+    const int64 p2 = p * p;
+    if (p2 > n) break;
+    for (auto key : result[0].bKeys()) {
+      if (key < p2) break;
+      const int rp = p % mod;
+      for (int j = 1; j < mod; j += 2) {
+        const int next = rp * j % mod;
+        result[next][key] -= result[j][key / p] - result[j][p - 1];
+      }
+    }
+  }
+
+  auto& target = result[2 % mod];
+  for (auto key : result[0].fKeys()) {
+    target[key] += key >= 2 ? 1 : 0;
+  }
+  return result;
+}
+
+template <typename T>
+SL vector<DVA<T>> prime_s0_pmod_odd(int64 n, int mod) {
+  vector<DVA<T>> result;
+  for (int i = 0; i < mod; ++i) result.emplace_back(n);
+
+  for (int i = 0; i < mod; ++i) {
+    const int dec = (i == 1 % mod) + (i == 0);
+    for (auto key : result[0].fKeys())
+      result[i][key] = (key + mod - i) / mod - dec;
+  }
+  for (int i = 0;; ++i) {
+    const int64 p = plist[i];
+    const int64 p2 = p * p;
+    if (p2 > n) break;
+    for (auto key : result[0].bKeys()) {
+      if (key < p2) break;
+      const int rp = p % mod;
+      for (int j = 0; j < mod; ++j) {
+        const int next = rp * j % mod;
+        result[next][key] -= result[j][key / p] - result[j][p - 1];
+      }
+    }
+  }
+  return result;
+}
+
+template <typename T>
+SL vector<DVA<T>> prime_s0_pmod(int64 n, int mod) {
+  return mod & 1 ? prime_s0_pmod_odd<T>(n, mod) : prime_s0_pmod_even<T>(n, mod);
+}
+
+template <typename T>
+SL vector<DVA<T>> prime_s1_pmod_even(int64 n, int mod) {
+  vector<DVA<T>> result;
+  for (int i = 0; i < mod; ++i) result.emplace_back(n);
+
+  for (int i = 1; i < mod; i += 2) {
+    auto& target = result[i];
+    const int dec = i == 1;
+    for (auto key : result[0].fKeys()) {
+#if PE_HAS_int128
+      const int128 c = (key + mod - i) / mod;
+#else
+      const int64 c = (key + mod - i) / mod;
+#endif
+      target[key] = c * (c - 1) / 2 * mod + c * i - dec;
+    }
+  }
+  for (int i = 1;; ++i) {
+    const int64 p = plist[i];
+    const int64 p2 = p * p;
+    if (p2 > n) break;
+    for (auto key : result[0].bKeys()) {
+      if (key < p2) break;
+      const int rp = p % mod;
+      for (int j = 1; j < mod; j += 2) {
+        const int next = rp * j % mod;
+        result[next][key] -= (result[j][key / p] - result[j][p - 1]) * p;
+      }
+    }
+  }
+
+  auto& target = result[2 % mod];
+  for (auto key : result[0].fKeys()) {
+    target[key] += key >= 2 ? 2 : 0;
+  }
+  return result;
+}
+
+template <typename T>
+SL vector<DVA<T>> prime_s1_pmod_odd(int64 n, int mod) {
+  vector<DVA<T>> result;
+  for (int i = 0; i < mod; ++i) result.emplace_back(n);
+
+  for (int i = 0; i < mod; ++i) {
+    auto& target = result[i];
+    const int dec = i == 1 % mod;
+    for (auto key : result[0].fKeys()) {
+#if PE_HAS_int128
+      const int128 c = (key + mod - i) / mod;
+#else
+      const int64 c = (key + mod - i) / mod;
+#endif
+      target[key] = c * (c - 1) / 2 * mod + c * i - dec;
+    }
+  }
+
+  for (int i = 0;; ++i) {
+    const int64 p = plist[i];
+    const int64 p2 = p * p;
+    if (p2 > n) break;
+    for (auto key : result[0].bKeys()) {
+      if (key < p2) break;
+      const int rp = p % mod;
+      for (int j = 0; j < mod; ++j) {
+        const int next = rp * j % mod;
+        result[next][key] -= (result[j][key / p] - result[j][p - 1]) * p;
+      }
+    }
+  }
+
+  return result;
+}
+
+template <typename T>
+SL vector<DVA<T>> prime_s1_pmod(int64 n, int mod) {
+  return mod & 1 ? prime_s1_pmod_odd<T>(n, mod) : prime_s1_pmod_even<T>(n, mod);
+}
+
+template <typename TreeType>
+SL void prime_sk_ex_impl(const int64 /*n*/, int /*k*/, int64* PK,
+                         TreeType& tree, DVA<int64>& dva, int64 mod) {
+  const int keySize = dva.keySize;
+  int pid = 0;
+  for (int64 p = 2; p <= dva.m; ++p)
+    if (is_prime(p)) {
+      const auto psum = tree.query(static_cast<int>(p - 1)).value();
+      const int64 p2 = p * p;
+      const int a = keySize - 1;
+      const int b = dva.idxOfValue(p2);
+      for (int i = a; i >= b;) {
+        const auto delta = sub_mod(
+            tree.query(dva.idxOfValue(dva.keys[i] / p)).value(), psum, mod);
+        const int mini = max(dva.idxOfValue(dva.keys[i] / p * p), b);
+        tree.update(mini, i, sub_mod(0, mul_mod_ex(delta, PK[pid], mod), mod));
+        i = mini - 1;
+      }
+      ++pid;
+    }
+
+  for (int i = 1; i < keySize; ++i) dva[dva.keys[i]] = tree.query(i).value();
+}
+
+SL DVA<int64> prime_sk_ex(const int64 n, int k, int64* PK, int64 mod) {
+  PowerSumModerB psm(mod);
+
+  PE_ASSERT(n >= 1);
+  DVA<int64> dva(n);
+
+  const int keySize = dva.keySize;
+  RUBit<NModNumberD6464> tree(keySize);
+
+  for (auto& key : dva.fKeys()) {
+    const int id = dva.idxOfValue(key);
+    const int64 val = sub_mod(psm.cal(key, k), 1, mod);
+    tree.update(id, id, val);
+  }
+
+  prime_sk_ex_impl(n, k, PK, tree, dva, mod);
+
+  return dva;
+}
+
+template <int64 mod>
+SL DVA<int64> prime_sk_ex(const int64 n, int k, int64* PK) {
+  PowerSumModerB psm(mod);
+
+  PE_ASSERT(n >= 1);
+  DVA<int64> dva(n);
+
+  const int keySize = dva.keySize;
+  RUBit<NModNumber6464<mod>> tree(keySize);
+
+  for (auto& key : dva.fKeys()) {
+    const int id = dva.idxOfValue(key);
+    const int64 val = sub_mod(psm.cal(key, k), 1, mod);
+    tree.update(id, id, val);
+  }
+
+  prime_sk_ex_impl(n, k, PK, tree, dva, mod);
+
+  return dva;
+}
+
+template <typename TreeType>
+SL void prime_sk_ex_impl(const int64 /*n*/, int k, TreeType& tree,
+                         DVA<int64>& dva, int64 mod) {
+  const int keySize = dva.keySize;
+
+  for (int64 p = 2; p <= dva.m; ++p)
+    if (is_prime(p)) {
+      const int64 pk = power_mod_ex(p, k, mod);
+      const auto psum = tree.query(static_cast<int>(p - 1)).value();
+      const int64 p2 = p * p;
+      const int a = keySize - 1;
+      const int b = dva.idxOfValue(p2);
+      for (int i = a; i >= b;) {
+        const auto delta = sub_mod(
+            tree.query(dva.idxOfValue(dva.keys[i] / p)).value(), psum, mod);
+        const int mini = max(dva.idxOfValue(dva.keys[i] / p * p), b);
+        tree.update(mini, i, sub_mod(0, mul_mod_ex(delta, pk, mod), mod));
+        i = mini - 1;
+      }
+    }
+
+  for (int i = 1; i < keySize; ++i) dva[dva.keys[i]] = tree.query(i).value();
+}
+
+SL DVA<int64> prime_sk_ex(const int64 n, int k, int64 mod) {
+  PowerSumModerB psm(mod);
+
+  PE_ASSERT(n >= 1);
+  DVA<int64> dva(n);
+
+  const int keySize = dva.keySize;
+  RUBit<NModNumberD6464> tree(keySize);
+
+  for (auto& key : dva.fKeys()) {
+    const int id = dva.idxOfValue(key);
+    const int64 val = sub_mod(psm.cal(key, k), 1, mod);
+    tree.update(id, id, val);
+  }
+
+  prime_sk_ex_impl(n, k, tree, dva, mod);
+
+  return dva;
+}
+
+template <int64 mod>
+SL DVA<int64> prime_sk_ex(const int64 n, int k) {
+  PowerSumModerB psm(mod);
+
+  PE_ASSERT(n >= 1);
+  DVA<int64> dva(n);
+
+  const int keySize = dva.keySize;
+  RUBit<NModNumber6464<mod>> tree(keySize);
+
+  for (auto& key : dva.fKeys()) {
+    const int id = dva.idxOfValue(key);
+    const int64 val = sub_mod(psm.cal(key, k), 1, mod);
+    tree.update(id, id, val);
+  }
+
+  prime_sk_ex_impl(n, k, tree, dva, mod);
+
+  return dva;
+}
+
+#endif

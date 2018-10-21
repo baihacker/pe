@@ -1,5 +1,6 @@
 #include "pe_test.h"
 
+#include "algo_test.c"
 #include "bi_test.c"
 #include "bit_test.c"
 #include "comb_moder_test.c"

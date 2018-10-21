@@ -56,19 +56,6 @@ SL void gf_test() {
 }
 PE_REGISTER_TEST(&gf_test, "gf_test", SMALL);
 
-SL void power_sum_test() {
-  assert(power_sum(10, 2, 1000000007) == 385);
-  assert(power_sum(100, 100, 1000000007) == 568830579);
-  assert(power_sum(1000, 1000, 1000000007) == 918088852);
-  assert(power_sum(1000, 10000, 1000000007) == 163720385);
-
-  assert(power_sum_safe(10, 2, 1000000007) == 385);
-  assert(power_sum_safe(100, 100, 1000000007) == 568830579);
-  assert(power_sum_safe(1000, 1000, 1000000007) == 918088852);
-  assert(power_sum_safe(1000, 10000, 1000000007) == 163720385);
-}
-PE_REGISTER_TEST(&power_sum_test, "power_sum_test", SMALL);
-
 SL void minimal_polynomial_test() {
   const int64 P = 1000000009;
   NModPoly s{{0, 1, 1, 2, 3, 5}, P};
@@ -117,50 +104,6 @@ SL void poly_multipoint_evaluation_test() {
 PE_REGISTER_TEST(&poly_multipoint_evaluation_test,
                  "poly_multipoint_evaluation_test", SMALL);
 
-SL void poly_fact_mod_test() {
-  {
-    const int64 mod = 10007;
-    FactModer moder(mod);
-    int64 last = 1;
-    for (int i = 1; i <= mod; ++i) {
-      last = last * i % mod;
-      assert(moder.cal(i) == last);
-    }
-  }
-#if PE_HAS_INT128
-  {
-    const int64 mod = 1000000007;
-    FactModer moder(mod);
-    int64 step = sqrt(mod);
-    int64 n = 500000000;
-    int64 last = moder.cal(n);
-    for (int i = n, j = 0; j < 10; ++i, ++j) {
-      i += step;
-      while (n != i) last = last * ++n % mod;
-      assert(moder.cal(n) == last);
-    }
-  }
-  {
-    const int64 mod = 4000000007;
-    FactModer moder(mod);
-    int64 step = sqrt(mod);
-    int64 n = 2000000000;
-    int64 last = moder.cal(n);
-    for (int64 i = n, j = 0; j < 10; ++j) {
-      i += step;
-      while (n != i) last = (uint64)last * ++n % mod;
-      assert(moder.cal(n) == last);
-    }
-  }
-  {
-    const int64 mod = 99999999907LL;
-    FactModer moder(mod);
-    assert(moder.cal(10000000000LL) == 40583077821);
-  }
-#endif
-}
-PE_REGISTER_TEST(&poly_fact_mod_test, "poly_fact_mod_test", BIG);
-
 SL void poly_batch_mul_mod_test() {
   const int mod = 10007;
   vector<int64> data{1, 1, 2, 1, 3, 1};
@@ -170,21 +113,4 @@ SL void poly_batch_mul_mod_test() {
   assert(expected == result);
 }
 PE_REGISTER_TEST(&poly_batch_mul_mod_test, "poly_batch_mul_mod_test", SMALL);
-
-SL void poly_fact_sum_mod_test() {
-  const int64 mod = 99999999907;
-  FactSumModer moder(mod);
-
-  const int64 n = 100000000;
-  auto ans = moder.cal(n);
-
-  int64 now = 1;
-  int64 s = 1;
-  for (int64 i = 1; i <= n; ++i) {
-    now = mul_mod_ex(now, i, mod);
-    s = add_mod(s, now, mod);
-  }
-  assert(ans == s);
-}
-PE_REGISTER_TEST(&poly_fact_sum_mod_test, "poly_fact_sum_mod_test", BIG);
 }  // namespace poly_app_test

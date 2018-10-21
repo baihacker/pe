@@ -1,20 +1,6 @@
 #include "pe_test.h"
 
 namespace nt_test {
-SL void nt_test() {
-  const int mod = 1000000007;
-  MiuPhiSumModer moder(mod);
-
-  int64 s0 = 0;
-  for (int i = 1; i <= 10000000; ++i) s0 += cal_phi(i) % mod;
-  s0 %= mod;
-
-  int64 s1 = moder.get_sum_phi(10000000);
-  assert(s0 == s1);
-}
-
-PE_REGISTER_TEST(&nt_test, "nt_test", MEDIUM);
-
 SL void parity_test() {
   assert(is_even(0) == 1);
   assert(is_even(1) == 0);
@@ -106,15 +92,4 @@ SL void is_square_free_test() {
 }
 
 PE_REGISTER_TEST(&is_square_free_test, "is_square_free_test", SMALL);
-
-SL void square_free_counter_test() {
-  const int64 n = maxp * 2;
-  int64 ans1 = 0;
-  for (int i = 1; i <= n; ++i) ans1 += is_square_free(i);
-
-  int64 ans2 = SFCounter(maxp).get(n);
-  assert(ans1 == ans2);
-}
-
-PE_REGISTER_TEST(&square_free_counter_test, "square_free_counter_test", SMALL);
 }  // namespace nt_test

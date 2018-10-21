@@ -46,7 +46,8 @@ File list:
 -----------
 * pe: Including all the files.
 * pe.hpp: The file for generating precompile header.
-* pe_base: Some pre-including headers. Some macros and typedef. Some basice inline functions.
+* pe_algo: Algorithms.
+* pe_base: Some pre-including headers. Some macros and typedef. Some basic inline functions.
 * pe_bi: Big integer whose base is 1 << 30.
 * pe_bi32: Big integer whose base is 1 << 32.
 * pe_bit: Bit operation tricks.

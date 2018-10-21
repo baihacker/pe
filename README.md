@@ -38,6 +38,8 @@ Use:
 ----
 #include <pe.hpp> in your source code.
 
+Use pe().maxPrime(prime limit).init(); to initialize the environment. See the end of "pe" for details.
+
 Prerequirements:
 ----------------
 C++11 or above

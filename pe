@@ -379,4 +379,95 @@ static inline std::ostream& operator<<(std::ostream& o, __mpz_struct const* x) {
 // Misc
 #include "pe_misc"
 
+struct PeInitializer {
+  PeInitializer& maxPrime(int64 maxp = 1000000) {
+    this->maxp = maxp;
+    return *this;
+  }
+
+  PeInitializer& calPhi(int cal_phi = 1) {
+    this->cal_phi = cal_phi;
+    return *this;
+  }
+
+  PeInitializer& calMu(int cal_mu = 1) {
+    this->cal_mu = cal_mu;
+    return *this;
+  }
+
+  PeInitializer& fft(int fft_k = 22) {
+    this->fft_k = fft_k;
+    return *this;
+  }
+
+  PeInitializer& ntt32(int ntt32_k = 22) {
+    this->ntt32_k = ntt32_k;
+    return *this;
+  }
+
+  PeInitializer& ntt64(int ntt64_k = 22) {
+    this->ntt64_k = ntt64_k;
+    return *this;
+  }
+
+  void init() {
+    init_nt();
+    init_parallel();
+    init_fft();
+    init_ntt32();
+    init_ntt64();
+  }
+
+  void init_nt() {
+    deinit_primes();
+    INIT_MAXP(maxp);
+    if (cal_phi == 0 && cal_mu == 0) {
+      init_primes();
+    } else {
+      init_primes(cal_phi, cal_mu);
+    }
+  }
+
+  void init_parallel() {
+#if ENABLE_OPENMP
+    omp_set_nested(1);
+    omp_set_dynamic(1);
+#endif
+
+#if PLATFORM_WIN
+    set_process_priority(PRIORITY_IDLE);
+#endif
+  }
+
+  void init_fft(int k = 22) {
+    if (k >= 0) {
+      fft::init_fft(k);
+    }
+  }
+
+  void init_ntt32(int k = 22) {
+    if (k >= 0) {
+      ntt32::init_ntt(k);
+    }
+  }
+
+  void init_ntt64(int k = 22) {
+#if PE_HAS_INT128
+    if (k >= 0) {
+      ntt64::init_ntt(k);
+    }
+#endif
+  }
+
+ private:
+  int64 maxp = 1000000;
+  int cal_phi = 0;
+  int cal_mu = 0;
+
+  int fft_k = -1;
+  int ntt32_k = -1;
+  int ntt64_k = -1;
+};
+
+PeInitializer pe() { return PeInitializer(); }
 #endif

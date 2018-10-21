@@ -22,7 +22,6 @@
 #include "square_root_test.c"
 #include "tree_test.c"
 
-static parallel_initialize_t __parallel_initializer;
 static time_usage __time_usage;
 
 PeTest& getTester() {
@@ -48,7 +47,7 @@ SL bool isEnabledTestSize(TestSize size) {
 }
 
 int main() {
-  init_primes(1, 1);
+  pe().calPhi().calMu().fft().ntt32().ntt64().init();
 
   dbg(maxp);
   dbg(maxp2);
@@ -57,11 +56,7 @@ int main() {
   const int size = (int)tester.tests.size();
 
   bool isFirstTest = true;
-  ntt32::init_ntt();
-#if PE_HAS_INT128
-  ntt64::init_ntt();
-#endif
-  fft::init_fft();
+
   for (int i = 0; i < size; ++i) {
     auto& item = tester.tests[i];
     if (!isEnabledTestSize(item.testSize)) {

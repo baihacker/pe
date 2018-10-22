@@ -713,6 +713,30 @@ SL int64 power_sum_safe(int64 n, int64 k, int64 mod) {
 }
 
 /**
+ * Computes (1^k+2^k+...+n^k)%mod and store it in result[k].
+ * comb[i][j] is Binomial coefficient.
+ */
+template <typename T, int D>
+SL void init_power_sum_mod(int64 n, const int maxk, int* result, T (*comb)[D],
+                           const int64 mod) {
+  PE_ASSERT(maxk < D);
+  result[0] = n % mod;
+  for (int i = 1; i <= maxk; ++i) {
+    int64 tmp = power_mod(n, i + 1, mod);
+    for (int j = 1; j <= i + 1; ++j) {
+      if (j & 1) {
+        tmp = sub_mod(tmp, mul_mod_ex(comb[i + 1][j], result[i + 1 - j], mod),
+                      mod);
+      } else {
+        tmp = add_mod(tmp, mul_mod_ex(comb[i + 1][j], result[i + 1 - j], mod),
+                      mod);
+      }
+    }
+    result[i] = tmp * inv_of(comb[i + 1][1], mod) % mod;
+  }
+}
+
+/**
  * Counts the number of square free number no more than n.
  * If n is no more than PIVOT, use a pre-computed table.
  */

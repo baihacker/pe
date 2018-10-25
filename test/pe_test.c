@@ -19,7 +19,7 @@
 #include "poly_algo_test.c"
 #include "fft_test.c"
 #include "fraction_test.c"
-#include "prime_phi_sum_test.c"
+#include "prime_pi_sum_test.c"
 #include "square_root_test.c"
 #include "tree_test.c"
 

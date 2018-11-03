@@ -37,6 +37,16 @@ SL void misc_test() {
 PE_REGISTER_TEST(&misc_test, "misc_test", SMALL);
 
 SL void count_pt_in_circle_test() {
+  for (int64 n = 0; n <= 100; ++n) {
+    int64 u = count_pt_in_circle(n);
+    int64 v = count_pt_in_circle_bf(n);
+    int64 ans = 0;
+    const int t = sqrti(n);
+    for (int x = -t; x <= t; ++x)
+      for (int y = -t; y <= t; ++y) ans += sq(x) + sq(y) <= n;
+    assert(u == ans);
+    assert(v == ans);
+  }
 #if 1
   for (int64 i = 1; i <= 10000; ++i) {
     int64 u = count_pt_in_circle_q1(i);
@@ -61,7 +71,7 @@ SL void count_pt_in_circle_test() {
   }
 }
 
-PE_REGISTER_TEST(&count_pt_in_circle_test, "count_pt_in_circle_test", MEDIUM);
+PE_REGISTER_TEST(&count_pt_in_circle_test, "count_pt_in_circle_test", BIG);
 
 #if PE_HAS_INT128
 SL void sum_sigma0_test() {

@@ -41,7 +41,7 @@ SL void count_pt_in_circle_test() {
     int64 u = count_pt_in_circle(n);
     int64 v = count_pt_in_circle_bf(n);
     int64 ans = 0;
-    const int t = sqrti(n);
+    const int t = (int)sqrti(n);
     for (int x = -t; x <= t; ++x)
       for (int y = -t; y <= t; ++y) ans += sq(x) + sq(y) <= n;
     assert(u == ans);

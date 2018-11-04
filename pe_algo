@@ -1321,4 +1321,125 @@ SL DVA<int64> prime_sk_ex(const int64 n, int k) {
   return dva;
 }
 
+struct CachedPi {
+  CachedPi(int64 PIVOT = ::maxp) : prepi(NULL), PIVOT(PIVOT) { init(PIVOT); }
+
+  ~CachedPi() { release(); }
+
+  void release() {
+    if (prepi != NULL) {
+      delete[] prepi;
+      prepi = NULL;
+    }
+  }
+
+  void init(int pivot) {
+    release();
+    PIVOT = pivot;
+    prepi = new int[PIVOT + 1];
+    prepi[0] = 0;
+    for (int i = 1; i <= PIVOT; ++i) {
+      prepi[i] = prepi[i - 1] + is_prime(i);
+    }
+  }
+
+  int64 cal(int64 n) {
+    if (n <= PIVOT) return prepi[n];
+    auto where = piCache.find(n);
+    if (where != piCache.end()) return where->second;
+    return piCache[n] = prime_s0_ex<int128>(n)[n];
+  }
+
+  int64 operator()(int64 n) { return cal(n); }
+
+  int* prepi;
+  int PIVOT;
+  unordered_map<int64, int64> piCache;
+};
+
+/**
+ * Counts the number in the pattern of p1^e1 p2^e2 p3^e3... no more than given
+ * n.
+ */
+struct PatternNumberCounter {
+  PatternNumberCounter() : isPrimeUsed(NULL) {}
+
+  ~PatternNumberCounter() { release(); }
+
+  void release() {
+    if (isPrimeUsed != NULL) {
+      delete[] isPrimeUsed;
+      isPrimeUsed = NULL;
+    }
+  }
+
+  // primeCnt: int a given pattern, we only consider the first primeCnt primes.
+  // piPivot: when computing the number of prime no more than m, if m <=
+  // piPivot, use pre-computed results in an array.
+  void init(int primeCnt, int piPivot = 0) {
+    PE_ASSERT(primeCnt > 0);
+    release();
+
+    this->primeCnt = primeCnt;
+    isPrimeUsed = new char[primeCnt];
+    if (piPivot == 0) {
+      piPivot = plist[primeCnt - 1];
+    }
+    cachedPi.init(piPivot);
+  }
+
+  int128 dfs_pattern(const int start, const int id, const int patternLength,
+                     const vi& pattern, const int128 remain) {
+    int128 ret = 0;
+    if (id == patternLength - 1) {
+      const int64 t = nrooti(remain, pattern[patternLength - 1]);
+      const int64 how_many = cachedPi(t);
+      const int64 idx = how_many - 1;
+      if (idx < start) return 0;
+      int64 have = idx - start + 1;
+      for (int i = 0; i < top; ++i)
+        if (usedPrimeIdx[i] >= start && usedPrimeIdx[i] <= idx) {
+          --have;
+        }
+      return have > 0 ? have : 0;
+    }
+
+    int e = pattern[id];
+    for (int j = id + 1; j < patternLength; ++j)
+      if (pattern[j] == pattern[id])
+        e += pattern[id];
+      else
+        break;
+
+    for (int i = start;; ++i)
+      if (isPrimeUsed[i] == 0) {
+        int128 tmp = remain;
+        for (int j = 0; j < e; ++j) tmp /= plist[i];
+        if (tmp == 0) break;
+
+        isPrimeUsed[i] = 1;
+        usedPrimeIdx[top++] = i;
+        const int128 v = power<int128>(plist[i], pattern[id]);
+        ret += dfs_pattern(pattern[id + 1] == pattern[id] ? i + 1 : 0, id + 1,
+                           patternLength, pattern, remain / v);
+        --top;
+        isPrimeUsed[i] = 0;
+      }
+    return ret;
+  }
+
+  int128 cal(vi pattern, int128 n) {
+    sort(all(pattern));
+    reverse(all(pattern));
+
+    top = 0;
+    return dfs_pattern(0, 0, sz(pattern), pattern, n);
+  }
+
+  int primeCnt;
+  int usedPrimeIdx[1024];  // the index of used primes.
+  char* isPrimeUsed;       // is the ith prime used
+  int top;
+  CachedPi cachedPi;
+};
 #endif

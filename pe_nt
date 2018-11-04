@@ -26,6 +26,9 @@ SL REQUIRES((is_native_integer<T0>::value && is_native_integer<T1>::value))
 }
 
 // 90000000599999991
+
+#if 0
+// Legacy implementation
 SL int64 sqrti(int64 d) {
   const auto result = static_cast<int64>(sqrt(d));
   return result * result > d ? result - 1 : result;
@@ -37,6 +40,51 @@ SL int64 sqrti(int128 d) {
   return static_cast<int128>(result) * result > d ? result - 1 : result;
 }
 #endif
+#endif
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) sqrti(T v) {
+  return static_cast<T>(sqrt((long double)v));
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) nrooti_internal(T v, int n) {
+  // n > 2 && v > 1
+  T r = static_cast<T>(pow((long double)v, static_cast<long double>(1.) / n));
+  for (T nextr = r + 1;; ++nextr) {
+    T t = v;
+    for (int i = 0; i < n; ++i) {
+      t /= nextr;
+      if (t == 0) {
+        return r;
+      }
+    }
+    r = nextr;
+  }
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) nrooti(T v, int n) {
+  PE_ASSERT(n >= 0);
+  if (n == 0) {
+    return 1;
+  }
+  if (n == 1) {
+    return v;
+  }
+  if (v == 0 || v == 1) {
+    return v;
+  }
+  if (v == -1) {
+    PE_ASSERT(n % 2 == 1);
+    return v;
+  }
+  if (n == 2) {
+    PE_ASSERT(v > 0);
+    return sqrti(v);
+  }
+  return v > 0 ? nrooti_internal(v, n) : nrooti_internal(-v, n);
+}
 
 SL int64 square_root_safe(int64 n) {
   if (n <= 0) return 0;

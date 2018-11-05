@@ -42,16 +42,34 @@ SL int64 sqrti(int128 d) {
 #endif
 #endif
 
+#if defined(COMPILER_MSVC)
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) sqrti(T d) {
+  const auto result = static_cast<T>(sqrt((long double)d));
+  return result * result > d ? result - 1 : result;
+}
+#else
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(T) sqrti(T v) {
   return static_cast<T>(sqrt((long double)v));
 }
+#endif
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
     nrooti_internal(T v, int n) {
   // n > 2 && v > 1
   T r = static_cast<T>(pow((long double)v, static_cast<long double>(1.) / n));
+#if defined(COMPILER_MSVC)
+  // Avoid floating round error when the compiler is msvc.
+  if (r > 2) {
+    --r;
+  }
+#endif
+  // If r is 0, the for loop may take a long time.
+  if (r < 1) {
+    r = 1;
+  }
   for (T nextr = r + 1;; ++nextr) {
     T t = v;
     for (int i = 0; i < n; ++i) {

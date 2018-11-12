@@ -1443,4 +1443,57 @@ struct PatternNumberCounter {
   CachedPi cachedPi;
 };
 #endif
+
+struct MVVHistory {
+  int64 p;  // value of a prime factor.
+  int ip;   // index of a prime factor.
+  int e;    // exponential of a prime rfactor.
+};
+
+/**
+ * Visit all values of x / (max primer factor of x) for x no more than n.
+ * auto compute = [&](int64 val, int imp, int64 vmp, MVVHistory* his,
+ *                    int top) -> int64 { return 1; };
+ */
+template <typename T = int64>
+struct MValueVisitor {
+  typedef std::function<T(int64, int, int64, MVVHistory*, int)> VisitorType;
+
+  MValueVisitor(const VisitorType& visitor) : visitor(visitor), top(0) {}
+
+  T dfs(int limit, int64 n, int64 val, int imp, int64 vmp) {
+    T ret = visitor(val, imp, vmp, history, top);
+    for (int i = 0; i < limit; ++i) {
+      const int64 p = plist[i];
+      const int nextimp = imp == -1 ? i : imp;
+      const int64 nextvmp = imp == -1 ? p : vmp;
+      const int64 valLimit = n / p / nextvmp;
+      if (val > valLimit) break;
+      history[top].ip = i;
+      history[top].p = p;
+      history[top].e = 1;
+      int& e = history[top++].e;
+      for (int64 nextval = val * p;; ++e) {
+        ret += dfs(i, n, nextval, nextimp, nextvmp);
+        if (nextval > valLimit) break;
+        nextval *= p;
+      }
+      --top;
+    }
+    return ret;
+  }
+
+  T run(int64 n) { return dfs(find_prime_idx_sg(n), n, 1, -1, 0); }
+
+  VisitorType visitor;
+  MVVHistory history[128];
+  int top;
+};
+
+template <typename T>
+T for_m_values(
+    int64 n,
+    const std::function<T(int64, int, int64, MVVHistory*, int)>& visitor) {
+  return MValueVisitor<T>(visitor).run(n);
+}
 #endif

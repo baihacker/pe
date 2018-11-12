@@ -1,6 +1,6 @@
 #include "pe_test.h"
 
-namespace nt_test {
+namespace algo_test {
 SL void fact_mod_test() {
   {
     const int64 mod = 10007;
@@ -99,4 +99,13 @@ SL void square_free_counter_test() {
 }
 
 PE_REGISTER_TEST(&square_free_counter_test, "square_free_counter_test", SMALL);
-}  // namespace nt_test
+
+SL void mvalues_test() {
+  auto compute = [&](int64 val, int imp, int64 vmp, MVVHistory* his,
+                     int top) -> int64 { return 1; };
+
+  assert(for_m_values<int64>(100000000000LL, compute) == 34113193);
+}
+
+PE_REGISTER_TEST(&mvalues_test, "mvalues_test", SPECIFIED);
+}  // namespace algo_test

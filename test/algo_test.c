@@ -77,7 +77,7 @@ PE_REGISTER_TEST(&power_sum_test, "power_sum_test", SMALL);
 
 SL void miu_phi_sum_moder_test() {
   const int mod = 1000000007;
-  MiuPhiSumModer moder(mod);
+  MuPhiSumModer moder(mod);
 
   int64 s0 = 0;
   for (int i = 1; i <= 10000000; ++i) s0 += cal_phi(i) % mod;

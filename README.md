@@ -38,7 +38,13 @@ Use:
 ----
 #include <pe.hpp> in your source code.
 
-Use pe().maxPrime(prime limit).init(); to initialize the environment. See the end of "pe" for details.
+Use pe().maxPrime(prime limit).init(); to initialize builtin variables such as prime list, prime count . See the end of "pe" for details.
+
+* **maxp** the maximum value in the prime list should be no more than maxp. Use pe().maxPrime(prime limit) to set the limit.
+* **plist** plist[i] is the ith prime. (i starts from 0, i < pcnt)
+* **pcnt** the number of prime no more than maxp, i.e. the element in plist.
+* **mu** mu[i] where i <= maxp, if i > maxp, please use cal_mu(i). Please use pe().calMu() to initialize it.
+* **phi** phi[i] where i <= maxp, if i > maxp, please use cal_phi(i). Please use pe().calPhi() to initialize it.
 
 Prerequirements:
 ----------------

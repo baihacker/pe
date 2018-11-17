@@ -5,14 +5,27 @@
 // https://github.com/baihacker/pe/blob/master/libraries_on_win64.md#use
 
 // Compiler and cpp version check
+// https://blog.kowalczyk.info/article/j/guide-to-predefined-macros-in-c-compilers-gcc-clang-msvc-etc..html
 #if defined(__GNUC__)
 
-// COMPILER_GNU includes gcc/mingw/clang
+// COMPILER_GNU: gcc/mingw32/mingw64/clang
 #define COMPILER_GNU
+
+#if defined(__clang__)
+#define COMPILER_CLANG
+#elif defined(__MINGW64__)
+#define COMPILER_MINGW64
+#elif defined(__MINGW32__)
+#define COMPILER_MINGW32
+#else
+#define COMPILER_GCC
+#endif
+
 #define PE_CPP_VERSION __cplusplus
 
 #elif defined(_MSC_VER)
 
+// COMPILER_MSVC
 #define COMPILER_MSVC
 // VC2015 (1900) or above to support c++11
 // https://en.wikipedia.org/wiki/Microsoft_Visual_C%2B%2B#Internal_version_numbering
@@ -30,6 +43,7 @@
 #define PE_CPP_VERSION 199711L
 #endif
 
+// C++ version check
 #if PE_CPP_VERSION < 201103L
 #define PE_HAS_CPP11 0
 #else
@@ -51,8 +65,16 @@
 // Platform
 #if _WIN32 || _WIN64
 #define PLATFORM_WIN 1
+#define PLATFORM_APPLE 0
+#define PLATFORM_LINUX 0
+#elif defined(__APPLE__)
+#define PLATFORM_WIN 0
+#define PLATFORM_APPLE 1
+#define PLATFORM_LINUX 0
 #else
 #define PLATFORM_WIN 0
+#define PLATFORM_APPLE 0
+#define PLATFORM_LINUX 1
 #endif
 
 // Arch
@@ -96,7 +118,7 @@
 #define TRY_TO_USE_INT128 1
 #endif
 
-// Make the vscoder support int128
+// Make the vscode support int128
 #if defined(VSCODE_EDITOR)
 #define __SIZEOF_INT128__ 16
 #define __int128 long long

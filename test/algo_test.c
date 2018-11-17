@@ -75,7 +75,7 @@ SL void power_sum_test() {
 }
 PE_REGISTER_TEST(&power_sum_test, "power_sum_test", SMALL);
 
-SL void miu_phi_sum_moder_test() {
+SL void mu_phi_sum_moder_test() {
   const int mod = 1000000007;
   MuPhiSumModer moder(mod);
 
@@ -87,7 +87,7 @@ SL void miu_phi_sum_moder_test() {
   assert(s0 == s1);
 }
 
-PE_REGISTER_TEST(&miu_phi_sum_moder_test, "miu_phi_sum_moder_test", MEDIUM);
+PE_REGISTER_TEST(&mu_phi_sum_moder_test, "mu_phi_sum_moder_test", MEDIUM);
 
 SL void square_free_counter_test() {
   const int64 n = maxp * 2;

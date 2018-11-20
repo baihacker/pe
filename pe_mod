@@ -191,8 +191,13 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
 
   // The openmp has issue about long double on windows.
   // Seems caused by thread library.
+#if defined(COMPILER_GNU) && PLATFORM_WIN && ENABLE_OPENMP
+  constexpr bool GNU_ON_WINDOWS_WITH_OPENMP = true;
+#else
+  constexpr bool GNU_ON_WINDOWS_WITH_OPENMP = false;
+#endif
   constexpr bool CAN_USE_LONG_DOUBLE =
-      sizeof(long double) > sizeof(double) && !(PLATFORM_WIN && ENABLE_OPENMP);
+      sizeof(long double) > sizeof(double) && !GNU_ON_WINDOWS_WITH_OPENMP;
 
   if (CAN_USE_LONG_DOUBLE) {
     const int64 x = a, y = b, m = mod;

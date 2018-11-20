@@ -163,6 +163,13 @@ SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(int64)
 }
 #endif
 
+SL void mul_mod_ex_slow_warning_once() {
+  static atomic_int WARNING_ONCE_FLAG = 0;
+  if (WARNING_ONCE_FLAG.exchange(1) == 0) {
+    fprintf(stderr, "mul_mod_ex may be very slow.\n");
+  }
+}
+
 template <typename T1, typename T2, typename M>
 SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
              is_native_integer<M>::value))
@@ -180,21 +187,22 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
   }
 #if PE_HAS_INT128
   return (ResultType)mul_mod_impl<int128, M>(a, b, mod);
-#elif defined(COMPILER_MSVC) || !PLATFORM_WIN || !ENABLE_OPENMP
-  // The openmp has issue about long double on windows.
-  // Seems caused by thread library.
-  const int64 x = a, y = b, m = mod;
-  int64 r = (x * y - (int64)(((long double)x * y) / m) * m);
-  if (r >= m) r -= r / m * m;
-  if (r < 0) r += m;
-  return r;
 #else
 
-#if defined(COMPILER_GNU)
-#warning "mul_mod_ex may be very slow."
-#else
-#pragma message("mul_mod_ex may be very slow.")
-#endif
+  // The openmp has issue about long double on windows.
+  // Seems caused by thread library.
+  constexpr bool CAN_USE_LONG_DOUBLE =
+      sizeof(long double) > sizeof(double) && !(PLATFORM_WIN && ENABLE_OPENMP);
+
+  if (CAN_USE_LONG_DOUBLE) {
+    const int64 x = a, y = b, m = mod;
+    int64 r = (x * y - (int64)(((long double)x * y) / m) * m);
+    if (r >= m) r -= r / m * m;
+    if (r < 0) r += m;
+    return r;
+  }
+
+  mul_mod_ex_slow_warning_once();
 
   atLeastInt64T ret = 0;
   atLeastInt64T flag = b;

@@ -1056,6 +1056,7 @@ SL DVA<T> prime_s1_ex(const int64 n) {
 template <typename T>
 SL vector<DVA<T>> prime_s0_pmod_even(int64 n, int mod) {
   vector<DVA<T>> result;
+  result.reserve(mod);
   for (int i = 0; i < mod; ++i) result.emplace_back(n);
 
   for (int i = 1; i < mod; i += 2) {
@@ -1088,6 +1089,7 @@ SL vector<DVA<T>> prime_s0_pmod_even(int64 n, int mod) {
 template <typename T>
 SL vector<DVA<T>> prime_s0_pmod_odd(int64 n, int mod) {
   vector<DVA<T>> result;
+  result.reserve(mod);
   for (int i = 0; i < mod; ++i) result.emplace_back(n);
 
   for (int i = 0; i < mod; ++i) {
@@ -1499,5 +1501,76 @@ T for_m_values(
     int64 n,
     const std::function<T(int64, int, int64, MVVHistory*, int)>& visitor) {
   return MValueVisitor<T>(visitor).run(n);
+}
+
+// Returns the number of integer solutions of
+// x^2+y^2=z^n where 0 < x < y, 0 < z <= n.
+// See https://oeis.org/A101930
+int64 count_pythagorean_triple(int64 n) {
+  // f(i) = 4 prod(e_i + 1, p_i%4==1) #(write i as sum of two squares)
+  // s = sum(f(i^2), i=1..n)
+  // return (s - 4 * n) / 8
+  auto _ = prime_s0_pmod<int64>(n, 4);
+  auto ps1 = _[1];
+  auto ps3 = _[3];
+  auto compute = [&](int64 val, int imp, int64 vmp, MVVHistory* his,
+                     int top) -> int64 {
+    if (val == 1) {
+      return 3 * ps1[n] + ps3[n] + 2;  // 2 is for 1 and 2.
+    }
+    int64 ret = 0;
+    int64 t = 1;
+    for (int i = 0; i < top; ++i) {
+      if (his[i].p % 4 == 1) t *= 2 * his[i].e + 1;
+    }
+    if (his[0].p % 4 == 1) {
+      ret += t / (2 * his[0].e + 1) * (2 * his[0].e + 3);
+    } else {
+      ret += t;
+    }
+    ret += (ps1[n / val] - ps1[vmp]) * t * 3;
+    ret += (ps3[n / val] - ps3[vmp]) * t;
+    return ret;
+  };
+
+  return for_m_values<int64>(n, compute) - n >> 1;
+}
+
+int64 count_pythagorean_triple_ex(int64 n) {
+  auto _ = prime_s0_pmod<int64>(n, 4);
+  auto ps1 = _[1];
+  auto ps3 = _[3];
+  function<int64(int, int64, int64, int64, int, int64)> dfs =
+      [&](int limit, int64 n, int64 val, int64 c, int evmp,
+          int64 vmp) -> int64 {
+    int64 ret = 0;
+    if (val == 1) {
+      ret = 3 * ps1[n] + ps3[n] + 2;  // 2 is for 1 and 2.
+    } else {
+      ret += (ps1[n / val] - ps1[vmp]) * c * 3;
+      ret += (ps3[n / val] - ps3[vmp]) * c;
+      if (vmp % 4 == 1) {
+        ret += c / (2 * evmp + 1) * (2 * evmp + 3);
+      } else {
+        ret += c;
+      }
+    }
+    for (int i = 0; i < limit; ++i) {
+      const int64 p = plist[i];
+      const int64 nextvmp = vmp == 0 ? p : vmp;
+      const int64 valLimit = n / p / nextvmp;
+      if (val > valLimit) break;
+      int e = 1;
+      int should = p % 4 == 1;
+      for (int64 nextval = val * p;; ++e) {
+        ret += dfs(i, n, nextval, should ? c * (2 * e + 1) : c,
+                   nextvmp == p ? e : evmp, nextvmp);
+        if (nextval > valLimit) break;
+        nextval *= p;
+      }
+    }
+    return ret;
+  };
+  return dfs(pcnt, n, 1, 1, 0, 0) - n >> 1;
 }
 #endif

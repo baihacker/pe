@@ -107,5 +107,22 @@ SL void mvalues_test() {
   assert(for_m_values<int64>(100000000000LL, compute) == 34113193);
 }
 
-PE_REGISTER_TEST(&mvalues_test, "mvalues_test", SPECIFIED);
+PE_REGISTER_TEST(&mvalues_test, "mvalues_test", SMALL);
+
+SL void count_pythagorean_triple_test() {
+  // https://oeis.org/A101930
+  const int64 ans[] = {2,       52,       881,       12471,      161436,
+                       1980642, 23471475, 271360653, 3080075432, 34465432859};
+
+  int64 n = 1;
+  for (int i = 0; i < 10; ++i) {
+    n *= 10;
+    int64 t = ans[i];
+    assert(count_pythagorean_triple(n) == t);
+    assert(count_pythagorean_triple_ex(n) == t);
+  }
+}
+
+PE_REGISTER_TEST(&count_pythagorean_triple_test,
+                 "count_pythagorean_triple_test", SMALL);
 }  // namespace algo_test

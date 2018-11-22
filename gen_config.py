@@ -25,6 +25,7 @@ def add_define(key, value):
   content.append('#ifndef %s'%key);
   content.append('#define %s %s'%(key, value));
   content.append('#endif');
+  content.append('');
 
 def check_target(path):
   for folder in CHECKING_PATHS:
@@ -48,6 +49,7 @@ def main():
   content.append('// 3. The configurations in file pe');
   content.append('');
   add_define('ENABLE_ASSERT', '1');
+  add_define('TRY_TO_USE_INT128', '1');
   for (key, value) in RULE.items():
     ok = check_target(value)
     add_define(key, '1' if ok else '0')

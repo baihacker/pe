@@ -13,7 +13,7 @@ Installation:
 -------------
 * Put all the files in a folder (directory). For example, we put them in the directory D:\usr\include.
 * Make sure the environment variable CPLUS_INCLUDE_PATH contain D:\usr\include.
-* In [pe](https://github.com/baihacker/pe/blob/master/pe), configure this library. 
+* In [pe_config](https://github.com/baihacker/pe/blob/master/pe_config) or [pe](https://github.com/baihacker/pe/blob/master/pe), configure this library. 
   * ENABLE_EIGEN whether to use [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page) library.
   
   * ENABLE_OPENMP swhether to use [openmp](http://www.openmp.org).
@@ -29,6 +29,8 @@ Installation:
   * ENABLE_LIBBF wheter to use [libbf](https://bellard.org/libbf).
   
   > Note: The compiled flint, gmp, mpfr, mpir, libbf (all for win64) can be found [here](https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA)(pwd:x7cg).
+
+* You can also use gen_config.py to generate pe_config automatically according to you environment.
 
 * [optional, recommended] Generate precompile header "pe.hpp.gch".
   * Command: "g++ xc++-header pe.hpp". Run in D:\usr\include
@@ -60,6 +62,7 @@ File list:
 * pe_bi32: Big integer whose base is 1 << 32.
 * pe_bit: Bit operation tricks.
 * pe_bn: Old big integer implementation.
+* pe_config: a centralized place the configure pe.
 * pe_fft: Fast fourier transform and polynomial multiplication.
 * pe_fraction: Fraction arithmetic.
 * pe_geometry: Support Point2D and Point3D.

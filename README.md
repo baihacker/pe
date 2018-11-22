@@ -30,7 +30,7 @@ Installation:
   
   > Note: The compiled flint, gmp, mpfr, mpir, libbf (all for win64) can be found [here](https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA)(pwd:x7cg).
 
-* You can also use gen_config.py to generate pe_config automatically according to you environment.
+* You can also use gen_config.py to generate pe_config automatically according to your environment.
 
 * [optional, recommended] Generate precompile header "pe.hpp.gch".
   * Command: "g++ xc++-header pe.hpp". Run in D:\usr\include

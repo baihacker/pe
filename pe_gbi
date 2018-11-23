@@ -217,13 +217,58 @@ SL REQUIRES((is_gbi<GBI>::value)) RETURN(tuple<int, GBI, GBI>)
   return tuple<int, GBI, GBI>{have, v, u};
 }
 
+template <typename GBI>
+struct GbiFraction {
+  GbiFraction(const GBI& u = 0, const GBI& v = 1) : a(u), b(v) {
+    GBI d = gcd(abs(a), abs(b));
+    if (d > 1) a /= d, b /= d;
+    if (b < 0) b = -b, a = -a;
+  }
+  int operator<(const GbiFraction& o) const { return a * o.b < b * o.a; }
+  int operator>(const GbiFraction& o) const { return a * o.b > b * o.a; }
+  int operator==(const GbiFraction& o) const { return a * o.b == b * o.a; }
+  GbiFraction operator+(const GbiFraction& o) const {
+    return GbiFraction(a * o.b + o.a * b, b * o.b);
+  }
+  GbiFraction operator-(const GbiFraction& o) const {
+    return GbiFraction(a * o.b - o.a * b, b * o.b);
+  }
+  GbiFraction operator*(const GbiFraction& o) const {
+    return GbiFraction(a * o.a, b * o.b);
+  }
+  GbiFraction operator/(const GbiFraction& o) const {
+    return GbiFraction(a * o.b, b * o.a);
+  }
+  double toDouble() { return 1. * to_float<double>(a) / to_float<double>(b); }
+  long double toLongDouble() {
+    return static_cast<long double>(1.) * to_float<long double>(a) /
+           to_float<long double>(b);
+  }
+  GBI a, b;
+};
+
+template <typename T>
+GbiFraction<T> operator+(const GbiFraction<T>& f) {
+  return f;
+}
+
+template <typename T>
+GbiFraction<T> operator-(const GbiFraction<T>& f) {
+  return GbiFraction<T>(-f.a, f.b);
+}
+
+template <typename T>
+ostream& operator<<(ostream& o, const GbiFraction<T>& f) {
+  return o << f.a << "/" << f.b;
+}
+
 template <typename GBI, typename T>
-SL Fraction<GBI> from_continued_fraction(const vector<T>& data, int pos = -1) {
+SL GbiFraction<GBI> from_continued_fraction(const vector<T>& data, int pos = -1) {
   const int size = (int)data.size();
   const int n = pos <= 0 ? 1 : min(size, pos + 1);
-  Fraction<GBI> now(data[n - 1], 1);
+  GbiFraction<GBI> now(data[n - 1], 1);
   for (int i = n - 2; i >= 0; --i) {
-    now = Fraction<GBI>(data[i] * now.a + now.b, now.a);
+    now = GbiFraction<GBI>(data[i] * now.a + now.b, now.a);
   }
   return now;
 }

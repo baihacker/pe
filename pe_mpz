@@ -83,36 +83,6 @@ SL T to_float(const Mpz& x) {
   return sgn > 0 ? r : -r;
 }
 
-template <>
-struct Fraction<Mpz> {
-  Fraction(const Mpz& u = 0, const Mpz& v = 1) : a(u), b(v) {
-    Mpz d = gcd(abs(a), abs(b));
-    if (d > 1) a /= d, b /= d;
-    if (b < 0) b = -b, a = -a;
-  }
-  int operator<(const Fraction& o) const { return a * o.b < b * o.a; }
-  int operator>(const Fraction& o) const { return a * o.b > b * o.a; }
-  int operator==(const Fraction& o) const { return a * o.b == b * o.a; }
-  Fraction operator+(const Fraction& o) const {
-    return Fraction(a * o.b + o.a * b, b * o.b);
-  }
-  Fraction operator-(const Fraction& o) const {
-    return Fraction(a * o.b - o.a * b, b * o.b);
-  }
-  Fraction operator*(const Fraction& o) const {
-    return Fraction(a * o.a, b * o.b);
-  }
-  Fraction operator/(const Fraction& o) const {
-    return Fraction(a * o.b, b * o.a);
-  }
-  double toDouble() { return 1. * to_float<double>(a) / to_float<double>(b); }
-  long double toLongDouble() {
-    return static_cast<long double>(1.) * to_float<long double>(a) /
-           to_float<long double>(b);
-  }
-  Mpz a, b;
-};
-
 // Compute n! mod p^e
 // Note: if i % p == 0, then the contribution of i is 1.
 // The complexity is at least max(e*e, p*e)

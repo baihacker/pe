@@ -1,9 +1,9 @@
 #include <pe.hpp>
 
 template <typename S>
-struct mtype_policy<S, bn> {
+struct mtype_policy<S, bi> {
   typedef S ints;
-  typedef bn intb;
+  typedef bi intb;
   static ints add(ints a, ints b, ints mod) {
     intb c = (intb)a + b;
     if (c >= mod) c -= mod;
@@ -21,9 +21,9 @@ struct mtype_policy<S, bn> {
 };
 
 template <>
-struct mtype_policy<bn, bn> {
-  typedef bn ints;
-  typedef bn intb;
+struct mtype_policy<bi, bi> {
+  typedef bi ints;
+  typedef bi intb;
   static ints add(ints a, ints b, ints mod) {
     intb c = (intb)a + b;
     if (c >= mod) c -= mod;
@@ -52,7 +52,7 @@ void basic() {
 const int N = 10000000;
 NModNumber3264<1000000007> u[N + 5];
 // mintd3264 v[N+5];
-// mint<int, bn, 1000000007> v[N+5];
+// mint<int, bi, 1000000007> v[N+5];
 NModNumber<int, fake_int128, 1000000007> v[N + 5];
 void perf() {
   TimeRecorder tr;

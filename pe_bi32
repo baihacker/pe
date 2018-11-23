@@ -1490,111 +1490,6 @@ inline REQUIRES((is_native_integer<T>::value &&
   return ret;
 }
 
-template <typename T>
-inline REQUIRES((is_native_integer<T>::value &&
-                 !is_same<typename remove_cvref<T>::type, BigInteger>::value))
-    RETURN(BigInteger) power(const BigInteger& l, T n) {
-  BigInteger ret(1);
-  BigInteger x(l);
-  for (; n > 0; n >>= 1) {
-    if (n & 1) ret = ret * x;
-    if (n > 1) x = x * x;
-  }
-  return ret;
-}
-
-template <typename T>
-inline REQUIRES((is_native_integer<T>::value &&
-                 !is_same<typename remove_cvref<T>::type, BigInteger>::value))
-    RETURN(BigInteger)
-        power_mod(const BigInteger& l, T n, const BigInteger& mod) {
-  if (mod == 1) {
-    return 0;
-  }
-  BigInteger ret(1);
-  BigInteger x(l % mod);
-  for (; n > 0; n >>= 1) {
-    if (n & 1) ret = ret * x % mod;
-    if (n > 1) x = x * x % mod;
-  }
-  return ret;
-}
-
-inline BigInteger power_mod(const BigInteger& l, const BigInteger& m,
-                            const BigInteger& mod) {
-  if (mod == 1) {
-    return 0;
-  }
-  BigInteger ret(1);
-  BigInteger x(l % mod);
-  BigInteger n(m);
-  for (; n.getSign() > 0;) {
-    if (n[0] & 1) ret = ret * x % mod;
-    n >>= 1;
-    if (n.getSign() > 0) x = x * x % mod;
-  }
-  return ret;
-}
-
-inline BigInteger exgcd(const BigInteger& a, const BigInteger& b, BigInteger& x,
-                        BigInteger& y) {
-  if (b.isZero()) {
-    x = 1;
-    y = 0;
-    return a;
-  }
-
-  BigInteger x1 = 0, y1 = 0;
-  BigInteger ret = exgcd(b, a % b, x1, y1);
-  // b * x1 + (a%b) * y1 = ret
-  // b * x1 + (a - a / b * b) * y1 = ret
-  // b * x1 + a * y1 - a / b * b * y1 = ret
-  // y1 * a + (x1 - a / b * y1) b = ret
-  y = x1 - a / b * y1;
-  x = std::move(y1);
-  return ret;
-}
-
-SL tuple<BigInteger, BigInteger, BigInteger> exgcd(const BigInteger& a,
-                                                   const BigInteger& b) {
-  PE_ASSERT(a != 0 || b != 0);
-  BigInteger x = 0, y = 0;
-  const BigInteger r = exgcd(a, b, x, y);
-  PE_ASSERT(a * x + b * y == r);
-  return tuple<BigInteger, BigInteger, BigInteger>{r, x, y};
-}
-
-inline BigInteger gcd(BigInteger m, BigInteger n) {
-  while (!n.isZero()) {
-    BigInteger t = m % n;
-    m = std::move(n);
-    n = std::move(t);
-  }
-  return m;
-}
-
-inline BigInteger mod_inv(const BigInteger& a, const BigInteger& mod) {
-  BigInteger x, y;
-  exgcd(a, mod, x, y);
-  x %= mod;
-  if (x.getSign() < 0) {
-    x += mod;
-  }
-  return x;
-}
-
-inline BigInteger fabs(const BigInteger& n) {
-  return n.getSign() >= 0 ? n : -n;
-}
-
-inline BigInteger abs(const BigInteger& n) { return n.getSign() >= 0 ? n : -n; }
-
-inline ostream& operator<<(ostream& o, const BigInteger& bi) {
-  return o << bi.toString();
-}
-
-SL string to_string(const BigInteger& x) { return x.toString(); }
-
 inline BigInteger operator"" _bi(const char* sv, size_t /*sc*/) {
   return BigInteger(string(sv));
 }
@@ -1604,10 +1499,109 @@ inline BigInteger operator"" _bi(unsigned long long v) { return BigInteger(v); }
 typedef BigInteger bi;
 typedef BigInteger bn;
 
+template <typename T>
+inline REQUIRES((is_native_integer<T>::value &&
+                 !is_same<typename remove_cvref<T>::type, bi>::value))
+    RETURN(bi) power(const bi& l, T n) {
+  bi ret(1);
+  bi x(l);
+  for (; n > 0; n >>= 1) {
+    if (n & 1) ret = ret * x;
+    if (n > 1) x = x * x;
+  }
+  return ret;
+}
+
+template <typename T>
+inline REQUIRES((is_native_integer<T>::value &&
+                 !is_same<typename remove_cvref<T>::type, bi>::value))
+    RETURN(bi) power_mod(const bi& l, T n, const bi& mod) {
+  if (mod == 1) {
+    return 0;
+  }
+  bi ret(1);
+  bi x(l % mod);
+  for (; n > 0; n >>= 1) {
+    if (n & 1) ret = ret * x % mod;
+    if (n > 1) x = x * x % mod;
+  }
+  return ret;
+}
+
+inline bi power_mod(const bi& l, const bi& m, const bi& mod) {
+  if (mod == 1) {
+    return 0;
+  }
+  bi ret(1);
+  bi x(l % mod);
+  bi n(m);
+  for (; n.getSign() > 0;) {
+    if (n[0] & 1) ret = ret * x % mod;
+    n >>= 1;
+    if (n.getSign() > 0) x = x * x % mod;
+  }
+  return ret;
+}
+
+inline bi exgcd(const bi& a, const bi& b, bi& x, bi& y) {
+  if (b.isZero()) {
+    x = 1;
+    y = 0;
+    return a;
+  }
+
+  bi x1 = 0, y1 = 0;
+  bi ret = exgcd(b, a % b, x1, y1);
+  // b * x1 + (a%b) * y1 = ret
+  // b * x1 + (a - a / b * b) * y1 = ret
+  // b * x1 + a * y1 - a / b * b * y1 = ret
+  // y1 * a + (x1 - a / b * y1) b = ret
+  y = x1 - a / b * y1;
+  x = std::move(y1);
+  return ret;
+}
+
+SL tuple<bi, bi, bi> exgcd(const bi& a, const bi& b) {
+  PE_ASSERT(a != 0 || b != 0);
+  bi x = 0, y = 0;
+  const bi r = exgcd(a, b, x, y);
+  PE_ASSERT(a * x + b * y == r);
+  return tuple<bi, bi, bi>{r, x, y};
+}
+
+inline bi gcd(bi m, bi n) {
+  while (!n.isZero()) {
+    bi t = m % n;
+    m = std::move(n);
+    n = std::move(t);
+  }
+  return m;
+}
+
+inline bi mod_inv(const bi& a, const bi& mod) {
+  bi x, y;
+  exgcd(a, mod, x, y);
+  x %= mod;
+  if (x.getSign() < 0) {
+    x += mod;
+  }
+  return x;
+}
+
+inline bi fabs(const bi& n) { return n.getSign() >= 0 ? n : -n; }
+
+inline bi abs(const bi& n) { return n.getSign() >= 0 ? n : -n; }
+
+inline ostream& operator<<(ostream& o, const bi& bi) {
+  return o << bi.toString();
+}
+
+SL string to_string(const bi& x) { return x.toString(); }
+
 // solve equation a x = b (mod m)
 // return 0 and set u = -1 and v = 0 if failed
 // return 1, x = v (mod u)
-SL int solve_linear_equation(bn a, bn b, const bn& m, bn& v, bn& u) {
+SL int solve_linear_equation(bi a, bi b, const bi& m, bi& v, bi& u) {
   v = 0;
   u = 0;
 
@@ -1619,7 +1613,7 @@ SL int solve_linear_equation(bn a, bn b, const bn& m, bn& v, bn& u) {
   if (a < 0) a += m;
   if (b < 0) b += m;
 
-  bn xx = 0, yy = 0, d = exgcd(a, m, xx, yy);
+  bi xx = 0, yy = 0, d = exgcd(a, m, xx, yy);
 
   if (!(b % d).isZero()) return 0;
 
@@ -1635,7 +1629,7 @@ SL int solve_linear_equation(bn a, bn b, const bn& m, bn& v, bn& u) {
 // solve equation x = a (mod m1) x = b (mod m2)
 // return 0 and set u = 0 and t = 0 if failed
 // return 1, x = v (mod u)
-SL int crt2(bn a, const bn& m1, bn b, const bn& m2, bn& v, bn& u) {
+SL int crt2(bi a, const bi& m1, bi b, const bi& m2, bi& v, bi& u) {
   v = 0;
   u = 0;
 
@@ -1650,7 +1644,7 @@ SL int crt2(bn a, const bn& m1, bn b, const bn& m2, bn& v, bn& u) {
   if (a < 0) a = -a;
   if (b < 0) b = -b;
 
-  bn s = 0, t = 0;
+  bi s = 0, t = 0;
   if (!solve_linear_equation(m1, b - a, m2, t, s)) return 0;
   // k0 = k1 * s + t
   // x = (k1 * s + t) * m1 + a
@@ -1661,23 +1655,23 @@ SL int crt2(bn a, const bn& m1, bn b, const bn& m2, bn& v, bn& u) {
   return 1;
 }
 
-SL tuple<int, bn, bn> crt2(const bn& a, const bn& m1, const bn& b,
-                           const bn& m2) {
-  bn v = 0, u = 0;
+SL tuple<int, bi, bi> crt2(const bi& a, const bi& m1, const bi& b,
+                           const bi& m2) {
+  bi v = 0, u = 0;
   int r = crt2(a, m1, b, m2, v, u);
-  return tuple<int, bn, bn>{r, v, u};
+  return tuple<int, bi, bi>{r, v, u};
 }
 
-SL tuple<int, bn, bn> crtn(bn* val, bn* mod, int n) {
-  bn v = 0, u = 1;
+SL tuple<int, bi, bi> crtn(bi* val, bi* mod, int n) {
+  bi v = 0, u = 1;
   int have = 1;
   for (int i = 0; i < n; ++i) {
     tie(have, v, u) = crt2(v, u, val[i], mod[i]);
     if (!have) {
-      return tuple<int, bn, bn>{0, 0, 0};
+      return tuple<int, bi, bi>{0, 0, 0};
     }
   }
-  return tuple<int, bn, bn>{have, v, u};
+  return tuple<int, bi, bi>{have, v, u};
 }
 
 template <>

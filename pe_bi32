@@ -1088,17 +1088,9 @@ class BigInteger {
     return result;
   }
 
-  double toDouble() const {
-    double result = 0;
-    for (int i = pos_; i >= 0; --i) result = result * 4294967296 + data_[i];
-    if (sign_ < 0) {
-      result = -result;
-    }
-    return result;
-  }
-
-  long double toLongDouble() const {
-    long double result = 0;
+  template <typename T>
+  T toFloat() const {
+    T result = 0;
     for (int i = pos_; i >= 0; --i) result = result * 4294967296 + data_[i];
     if (sign_ < 0) {
       result = -result;
@@ -1496,182 +1488,36 @@ inline BigInteger operator"" _bi(const char* sv, size_t /*sc*/) {
 
 inline BigInteger operator"" _bi(unsigned long long v) { return BigInteger(v); }
 
-typedef BigInteger bi;
-typedef BigInteger bn;
-
-template <typename T>
-inline REQUIRES((is_native_integer<T>::value &&
-                 !is_same<typename remove_cvref<T>::type, bi>::value))
-    RETURN(bi) power(const bi& l, T n) {
-  bi ret(1);
-  bi x(l);
-  for (; n > 0; n >>= 1) {
-    if (n & 1) ret = ret * x;
-    if (n > 1) x = x * x;
-  }
-  return ret;
-}
-
-template <typename T>
-inline REQUIRES((is_native_integer<T>::value &&
-                 !is_same<typename remove_cvref<T>::type, bi>::value))
-    RETURN(bi) power_mod(const bi& l, T n, const bi& mod) {
-  if (mod == 1) {
-    return 0;
-  }
-  bi ret(1);
-  bi x(l % mod);
-  for (; n > 0; n >>= 1) {
-    if (n & 1) ret = ret * x % mod;
-    if (n > 1) x = x * x % mod;
-  }
-  return ret;
-}
-
-inline bi power_mod(const bi& l, const bi& m, const bi& mod) {
-  if (mod == 1) {
-    return 0;
-  }
-  bi ret(1);
-  bi x(l % mod);
-  bi n(m);
-  for (; n.getSign() > 0;) {
-    if (n[0] & 1) ret = ret * x % mod;
-    n >>= 1;
-    if (n.getSign() > 0) x = x * x % mod;
-  }
-  return ret;
-}
-
-inline bi exgcd(const bi& a, const bi& b, bi& x, bi& y) {
-  if (b.isZero()) {
-    x = 1;
-    y = 0;
-    return a;
-  }
-
-  bi x1 = 0, y1 = 0;
-  bi ret = exgcd(b, a % b, x1, y1);
-  // b * x1 + (a%b) * y1 = ret
-  // b * x1 + (a - a / b * b) * y1 = ret
-  // b * x1 + a * y1 - a / b * b * y1 = ret
-  // y1 * a + (x1 - a / b * y1) b = ret
-  y = x1 - a / b * y1;
-  x = std::move(y1);
-  return ret;
-}
-
-SL tuple<bi, bi, bi> exgcd(const bi& a, const bi& b) {
-  PE_ASSERT(a != 0 || b != 0);
-  bi x = 0, y = 0;
-  const bi r = exgcd(a, b, x, y);
-  PE_ASSERT(a * x + b * y == r);
-  return tuple<bi, bi, bi>{r, x, y};
-}
-
-inline bi gcd(bi m, bi n) {
-  while (!n.isZero()) {
-    bi t = m % n;
-    m = std::move(n);
-    n = std::move(t);
-  }
-  return m;
-}
-
-inline bi mod_inv(const bi& a, const bi& mod) {
-  bi x, y;
-  exgcd(a, mod, x, y);
-  x %= mod;
-  if (x.getSign() < 0) {
-    x += mod;
-  }
-  return x;
-}
-
-inline bi fabs(const bi& n) { return n.getSign() >= 0 ? n : -n; }
-
-inline bi abs(const bi& n) { return n.getSign() >= 0 ? n : -n; }
-
-inline ostream& operator<<(ostream& o, const bi& bi) {
+inline ostream& operator<<(ostream& o, const BigInteger& bi) {
   return o << bi.toString();
 }
 
-SL string to_string(const bi& x) { return x.toString(); }
+typedef BigInteger bi;
+typedef BigInteger bn;
 
-// solve equation a x = b (mod m)
-// return 0 and set u = -1 and v = 0 if failed
-// return 1, x = v (mod u)
-SL int solve_linear_equation(bi a, bi b, const bi& m, bi& v, bi& u) {
-  v = 0;
-  u = 0;
-
-  PE_ASSERT(!m.isZero());
-
-  a %= m;
-  b %= m;
-
-  if (a < 0) a += m;
-  if (b < 0) b += m;
-
-  bi xx = 0, yy = 0, d = exgcd(a, m, xx, yy);
-
-  if (!(b % d).isZero()) return 0;
-
-  xx = (xx % m + m) % m;
-  xx = xx * (b / d) % m;
-
-  u = m / d;
-  v = xx % u;
-
-  return 1;
-}
-
-// solve equation x = a (mod m1) x = b (mod m2)
-// return 0 and set u = 0 and t = 0 if failed
-// return 1, x = v (mod u)
-SL int crt2(bi a, const bi& m1, bi b, const bi& m2, bi& v, bi& u) {
-  v = 0;
-  u = 0;
-
-  PE_ASSERT(!m1.isZero() && !m2.isZero());
-  // x = a (mod m1)
-  // x = b (mod m2)
-  // x = k0 m1 + a
-  // k0 m1 + a = b (mod m2)
-  // k0 m1 = b - a (mod m2)
-  a %= m1;
-  b %= m2;
-  if (a < 0) a = -a;
-  if (b < 0) b = -b;
-
-  bi s = 0, t = 0;
-  if (!solve_linear_equation(m1, b - a, m2, t, s)) return 0;
-  // k0 = k1 * s + t
-  // x = (k1 * s + t) * m1 + a
-  // x = k1 * s * m1 + (a + t * m1)
-
-  u = s * m1;
-  v = ((a + t * m1) % u + u) % u;
-  return 1;
-}
-
-SL tuple<int, bi, bi> crt2(const bi& a, const bi& m1, const bi& b,
-                           const bi& m2) {
-  bi v = 0, u = 0;
-  int r = crt2(a, m1, b, m2, v, u);
-  return tuple<int, bi, bi>{r, v, u};
-}
-
-SL tuple<int, bi, bi> crtn(bi* val, bi* mod, int n) {
-  bi v = 0, u = 1;
-  int have = 1;
-  for (int i = 0; i < n; ++i) {
-    tie(have, v, u) = crt2(v, u, val[i], mod[i]);
-    if (!have) {
-      return tuple<int, bi, bi>{0, 0, 0};
-    }
+template <>
+struct Gbi<BigInteger> {
+  template <typename T,
+            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
+  static BigInteger of(T value) {
+    return BigInteger(value);
   }
-  return tuple<int, bi, bi>{have, v, u};
+
+  static BigInteger of(const string& s) { return BigInteger(s); }
+};
+
+SL string to_string(const BigInteger& x) { return x.toString(); }
+SL int gbi_zero(const BigInteger& x) { return x.isZero(); }
+SL int gbi_sign(const BigInteger& x) { return x.getSign(); }
+SL int gbi_parity(const BigInteger& x) { return x[0] & 1; }
+template <typename T>
+SL T to_int(const BigInteger& x) {
+  return x.toInt<T>();
+}
+
+template <typename T>
+SL T to_float(const BigInteger& x) {
+  return x.toFloat<T>();
 }
 
 template <>
@@ -1696,80 +1542,20 @@ struct Fraction<bi> {
   Fraction operator/(const Fraction& o) const {
     return Fraction(a * o.b, b * o.a);
   }
-  double toDouble() { return 1. * a.toDouble() / b.toDouble(); }
+  double toDouble() { return 1. * to_float<double>(a) / to_float<double>(b); }
   long double toLongDouble() {
-    return static_cast<long double>(1.) * a.toLongDouble() / b.toLongDouble();
+    return static_cast<long double>(1.) * to_float<long double>(a) /
+           to_float<long double>(b);
   }
   bi a, b;
 };
-
-template <typename T>
-Fraction<bi> from_continued_fraction(const vector<T>& data, int pos = -1) {
-  const int size = (int)data.size();
-  const int n = pos <= 0 ? 1 : min(size, pos + 1);
-  Fraction<bi> now(data[n - 1], 1);
-  for (int i = n - 2; i >= 0; --i) {
-    now = Fraction<bi>(data[i] * now.a + now.b, now.a);
-  }
-  return now;
-}
-
-bi find_integer_part(const bi& a, const bi& q, const bi& b, const bi& c) {
-  // a q^(1/2) + b >= c x
-  long double test =
-      (a.toLongDouble() * sqrt(q.toLongDouble()) + b.toLongDouble()) /
-      c.toLongDouble();
-  bi now = static_cast<int64>(test);
-  const bi target = a * a * q;
-  for (;;) {
-    bi next = now + 1;
-    bi t = sq(c * next - b);
-    if (t <= target) {
-      now = next;
-    } else {
-      break;
-    }
-  }
-  return now;
-}
-
-// convert p sqrt(q) to continued fraction
-// q is square free
-vector<bi> to_continued_fraction(int64 p, int64 q, int n) {
-  vector<bi> result;
-  bi a = p, f = q, b = 0, c = 1;
-  // (a f^(1/2) + b) / c
-  bi val = find_integer_part(a, f, b, c);
-  result.pb(val);
-  b = b - val * c;
-
-  while (result.size() < n) {
-    // (a f^(1/2) + b) / c
-    // c * (aq^(1/2) - b)
-    auto cc = a * a * f - b * b;
-    auto aa = c * a;
-    auto bb = -c * b;
-    bi val = find_integer_part(aa, f, bb, cc);
-    result.pb(val);
-    a = aa;
-    b = bb - val * cc;
-    c = cc;
-    auto d = abs(gcd(gcd(a, b), c));
-    if (d > 1) {
-      a /= d;
-      b /= d;
-      c /= d;
-    }
-  }
-
-  return result;
-}
 
 // Compute n! mod p^e
 // Note: if i % p == 0, then the contribution of i is 1.
 // The complexity is at least max(e*e, p*e)
 // It is slow if N is very big, e.g. N = 10^10000. ((10^10000)! mod p^e)
-struct FactPPowerModer {
+template <>
+struct FactPPowerModer<bi> {
   std::vector<bi> F;
   int64 p;
   int64 e;
@@ -1793,7 +1579,7 @@ struct FactPPowerModer {
     bi u;
     bi v;
     tie(u, v) = div(N, p);
-    int64 vv = v.toInt<int64>();
+    auto vv = to_int<int64>(v);
     int64 r = (e + 1) >> 1;
 
     bi ret = 1;
@@ -1807,7 +1593,7 @@ struct FactPPowerModer {
       for (int i = 1; i <= r; ++i)
         if (i != j) beta_numer *= u2 - i * i, beta_denom *= j2 - i * i;
       auto beta = beta_numer / beta_denom % phi;
-      if (beta.getSign() < 0) beta += phi;
+      if (gbi_sign(beta) < 0) beta += phi;
       ret = ret * power_mod(F[j * p], beta, mod) % mod;
     }
 
@@ -1833,7 +1619,7 @@ struct FactPPowerModer {
           alpha_denom *= j - i;
         }
       auto alpha = alpha_numer / alpha_denom % phi;
-      if (alpha.getSign() < 0) alpha += phi;
+      if (gbi_sign(alpha) < 0) alpha += phi;
       ret = ret * power_mod(base, alpha, mod) % mod;
     }
 

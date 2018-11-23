@@ -1,0 +1,285 @@
+#ifndef __PE_GBI__
+#define __PE_GBI__
+
+// General big integer.
+
+#include "pe_type_traits"
+
+template <typename GBI>
+struct FactPPowerModer;
+
+template <typename GBI>
+struct Gbi;
+
+template <typename GBI>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(int) gbi_zero(const GBI& x);
+
+template <typename GBI>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(int) gbi_sign(const GBI& x);
+
+template <typename GBI>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(int) gbi_parity(const GBI& x);
+
+template <typename T, typename GBI>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(T) to_int(const GBI& x);
+
+template <typename T, typename GBI>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(T) to_float(const GBI& x);
+
+template <typename GBI, typename T>
+SL REQUIRES((is_gbi<GBI>::value && is_native_integer<T>::value)) RETURN(GBI)
+    power(const GBI& l, T n) {
+  GBI ret(1);
+  GBI x(l);
+  for (; n > 0; n >>= 1) {
+    if (n & 1) ret = ret * x;
+    if (n > 1) x = x * x;
+  }
+  return ret;
+}
+
+template <typename GBI, typename T>
+SL REQUIRES((is_gbi<GBI>::value && is_native_integer<T>::value)) RETURN(GBI)
+    power_mod(const GBI& l, T n, const GBI& mod) {
+  if (mod == 1) {
+    return 0;
+  }
+  GBI ret(1);
+  GBI x(l % mod);
+  for (; n > 0; n >>= 1) {
+    if (gbi_parity(n)) ret = ret * x % mod;
+    if (n > 1) x = x * x % mod;
+  }
+  return ret;
+}
+
+template <typename GBI>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI)
+    power_mod(const GBI& l, const GBI& m, const GBI& mod) {
+  if (mod == 1) {
+    return 0;
+  }
+  GBI ret(1);
+  GBI x(l % mod);
+  GBI n(m);
+  for (; !gbi_zero(n);) {
+    if (gbi_parity(n)) ret = ret * x % mod;
+    n >>= 1;
+    if (!gbi_zero(n)) x = x * x % mod;
+  }
+  return ret;
+}
+
+template <typename GBI>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI)
+    exgcd(const GBI& a, const GBI& b, GBI& x, GBI& y) {
+  if (gbi_zero(b)) {
+    x = 1;
+    y = 0;
+    return a;
+  }
+
+  GBI x1 = 0, y1 = 0;
+  GBI ret = exgcd(b, GBI(a % b), x1, y1);
+  // b * x1 + (a%b) * y1 = ret
+  // b * x1 + (a - a / b * b) * y1 = ret
+  // b * x1 + a * y1 - a / b * b * y1 = ret
+  // y1 * a + (x1 - a / b * y1) b = ret
+  y = x1 - a / b * y1;
+  x = std::move(y1);
+  return ret;
+}
+
+template <typename GBI>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(tuple<GBI, GBI, GBI>)
+    exgcd(const GBI& a, const GBI& b) {
+  PE_ASSERT(!gbi_zero(a) || !gbi_zero(b));
+  GBI x = 0, y = 0;
+  const GBI r = exgcd(a, b, x, y);
+  PE_ASSERT(a * x + b * y == r);
+  return tuple<GBI, GBI, GBI>{r, x, y};
+}
+
+// gcd is only for BigInteger
+template <typename GBI>
+SL REQUIRES((is_gbi<GBI>::value && std::is_same<GBI, BigInteger>::value))
+    RETURN(GBI) gcd(GBI m, GBI n) {
+  while (!gbi_zero(n)) {
+    GBI t = m % n;
+    m = std::move(n);
+    n = std::move(t);
+  }
+  return m;
+}
+
+template <typename GBI>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI)
+    mod_inv(const GBI& a, const GBI& mod) {
+  GBI x, y;
+  exgcd(a, mod, x, y);
+  x %= mod;
+  if (gbi_sign(x) < 0) {
+    x += mod;
+  }
+  return x;
+}
+
+template <typename GBI>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI) fabs(const GBI& n) {
+  return gbi_sign(n) >= 0 ? n : -n;
+}
+
+template <typename GBI>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI) abs(const GBI& n) {
+  return gbi_sign(n) >= 0 ? n : -n;
+}
+
+// solve equation a x = b (mod m)
+// return 0 and set u = -1 and v = 0 if failed
+// return 1, x = v (mod u)
+template <typename GBI>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(int)
+    solve_linear_equation(GBI a, GBI b, const GBI& m, GBI& v, GBI& u) {
+  v = 0;
+  u = 0;
+
+  PE_ASSERT(!gbi_zero(m));
+
+  a %= m;
+  b %= m;
+
+  if (a < 0) a += m;
+  if (b < 0) b += m;
+
+  GBI xx = 0, yy = 0, d = exgcd(a, m, xx, yy);
+
+  if (!(b % d).isZero()) return 0;
+
+  xx = (xx % m + m) % m;
+  xx = xx * (b / d) % m;
+
+  u = m / d;
+  v = xx % u;
+
+  return 1;
+}
+
+// solve equation x = a (mod m1) x = b (mod m2)
+// return 0 and set u = 0 and t = 0 if failed
+// return 1, x = v (mod u)
+template <typename GBI>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(int)
+    crt2(GBI a, const GBI& m1, GBI b, const GBI& m2, GBI& v, GBI& u) {
+  v = 0;
+  u = 0;
+
+  PE_ASSERT(!gbi_zero(m1) && !gbi_zero(m2));
+  // x = a (mod m1)
+  // x = b (mod m2)
+  // x = k0 m1 + a
+  // k0 m1 + a = b (mod m2)
+  // k0 m1 = b - a (mod m2)
+  a %= m1;
+  b %= m2;
+  if (a < 0) a = -a;
+  if (b < 0) b = -b;
+
+  GBI s = 0, t = 0;
+  if (!solve_linear_equation(m1, b - a, m2, t, s)) return 0;
+  // k0 = k1 * s + t
+  // x = (k1 * s + t) * m1 + a
+  // x = k1 * s * m1 + (a + t * m1)
+
+  u = s * m1;
+  v = ((a + t * m1) % u + u) % u;
+  return 1;
+}
+
+template <typename GBI>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(tuple<int, GBI, GBI>)
+    crt2(const GBI& a, const GBI& m1, const GBI& b, const GBI& m2) {
+  GBI v = 0, u = 0;
+  int r = crt2(a, m1, b, m2, v, u);
+  return tuple<int, GBI, GBI>{r, v, u};
+}
+
+template <typename GBI>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(tuple<int, GBI, GBI>)
+    crtn(GBI* val, GBI* mod, int n) {
+  GBI v = 0, u = 1;
+  int have = 1;
+  for (int i = 0; i < n; ++i) {
+    tie(have, v, u) = crt2(v, u, val[i], mod[i]);
+    if (!have) {
+      return tuple<int, GBI, GBI>{0, 0, 0};
+    }
+  }
+  return tuple<int, GBI, GBI>{have, v, u};
+}
+
+template <typename GBI, typename T>
+SL Fraction<GBI> from_continued_fraction(const vector<T>& data, int pos = -1) {
+  const int size = (int)data.size();
+  const int n = pos <= 0 ? 1 : min(size, pos + 1);
+  Fraction<GBI> now(data[n - 1], 1);
+  for (int i = n - 2; i >= 0; --i) {
+    now = Fraction<GBI>(data[i] * now.a + now.b, now.a);
+  }
+  return now;
+}
+
+template <typename GBI>
+SL GBI find_integer_part(const GBI& a, const GBI& q, const GBI& b,
+                         const GBI& c) {
+  // a q^(1/2) + b >= c x
+  long double test =
+      (to_float<long double>(a) * sqrt(to_float<long double>(q)) +
+       to_float<long double>(b)) /
+      to_float<long double>(c);
+  GBI now(Gbi<GBI>::of(static_cast<int64>(test)));
+  const GBI target = a * a * q;
+  for (;;) {
+    GBI next = now + 1;
+    GBI t = sq(GBI(c * next - b));
+    if (t <= target) {
+      now = next;
+    } else {
+      break;
+    }
+  }
+  return now;
+}
+
+// convert p sqrt(q) to continued fraction
+// q is square free
+template <typename GBI>
+SL vector<GBI> to_continued_fraction(int64 p, int64 q, int n) {
+  vector<GBI> result;
+  GBI a = Gbi<GBI>::of(p), f = Gbi<GBI>::of(q), b = 0, c = 1;
+  // (a f^(1/2) + b) / c
+  GBI val = find_integer_part(a, f, b, c);
+  result.pb(val);
+  b = b - val * c;
+
+  while (result.size() < n) {
+    // (a f^(1/2) + b) / c
+    // c * (aq^(1/2) - b)
+    GBI cc = a * a * f - b * b;
+    GBI aa = c * a;
+    GBI bb = -c * b;
+    GBI val = find_integer_part(aa, f, bb, cc);
+    result.pb(val);
+    a = aa;
+    b = bb - val * cc;
+    c = cc;
+    GBI d = abs(gcd(GBI(gcd(a, b)), c));
+    if (d > 1) {
+      a /= d;
+      b /= d;
+      c /= d;
+    }
+  }
+
+  return result;
+}
+#endif

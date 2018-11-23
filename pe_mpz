@@ -1,0 +1,198 @@
+#ifndef __PE_MPZ__
+#define __PE_MPZ__
+
+#include "pe_type_traits"
+
+#if defined(__GMP_PLUSPLUS__)
+#define HAS_MPZ 1
+typedef mpz_class Mpz;
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(Mpz) MPZ(const T& v) {
+  return Mpz(v);
+}
+
+SL Mpz MPZ(const string& s) { return Mpz(s.c_str(), 10); }
+
+SL Mpz MPZ(int64 v) { return v == 0 ? 0 : Mpz(to_string(v).c_str(), 10); }
+
+SL Mpz MPZ(uint64 v) { return v == 0 ? 0 : Mpz(to_string(v).c_str(), 10); }
+
+#if PE_HAS_INT128
+SL Mpz MPZ(int128 v) { return v == 0 ? 0 : Mpz(to_string(v).c_str(), 10); }
+
+SL Mpz MPZ(uint128 v) { return v == 0 ? 0 : Mpz(to_string(v).c_str(), 10); }
+#endif
+
+SL string to_string(const Mpz& x) {
+  string s;
+  stringstream ss;
+  ss << x;
+  ss >> s;
+  return s;
+}
+
+template <>
+struct Gbi<Mpz> {
+  template <typename T,
+            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
+  static Mpz of(T value) {
+    return MPZ(value);
+  }
+
+  static Mpz of(const string& s) { return MPZ(s); }
+};
+
+SL int gbi_zero(const Mpz& x) { return mpz_sgn(x.get_mpz_t()) == 0; }
+SL int gbi_sign(const Mpz& x) { return mpz_sgn(x.get_mpz_t()); }
+SL int gbi_parity(const Mpz& x) { return mpz_odd_p(x.get_mpz_t()); }
+
+template <typename T>
+SL T to_int(const Mpz& x) {
+  if (gbi_zero(x)) return 0;
+
+  const auto val = x.get_mpz_t();
+
+  const int sgn = val[0]._mp_size > 0 ? 1 : -1;
+  const int size = sgn > 0 ? val[0]._mp_size : -val[0]._mp_size;
+  const auto* data = val[0]._mp_d;
+
+  typename AtLeastInt64<T>::type r = 0;
+  for (int i = size - 1; i >= 0; --i) {
+    r = (r << sizeof(mp_limb_t) * 4);
+    r = (r << sizeof(mp_limb_t) * 4) | data[i];
+  }
+  return static_cast<T>(sgn > 0 ? r : -r);
+}
+
+template <typename T>
+SL T to_float(const Mpz& x) {
+  if (gbi_zero(x)) return 0;
+
+  const auto val = x.get_mpz_t();
+
+  const int sgn = val[0]._mp_size > 0 ? 1 : -1;
+  const int size = sgn > 0 ? val[0]._mp_size : -val[0]._mp_size;
+  const auto* data = val[0]._mp_d;
+
+  T each = 1LL << sizeof(mp_limb_t) * 4;
+  each = each * each;
+
+  T r = 0;
+  for (int i = size - 1; i >= 0; --i) r = r * each + data[i];
+  return sgn > 0 ? r : -r;
+}
+
+template <>
+struct Fraction<Mpz> {
+  Fraction(const Mpz& u = 0, const Mpz& v = 1) : a(u), b(v) {
+    Mpz d = gcd(abs(a), abs(b));
+    if (d > 1) a /= d, b /= d;
+    if (b < 0) b = -b, a = -a;
+  }
+  int operator<(const Fraction& o) const { return a * o.b < b * o.a; }
+  int operator>(const Fraction& o) const { return a * o.b > b * o.a; }
+  int operator==(const Fraction& o) const { return a * o.b == b * o.a; }
+  Fraction operator+(const Fraction& o) const {
+    return Fraction(a * o.b + o.a * b, b * o.b);
+  }
+  Fraction operator-(const Fraction& o) const {
+    return Fraction(a * o.b - o.a * b, b * o.b);
+  }
+  Fraction operator*(const Fraction& o) const {
+    return Fraction(a * o.a, b * o.b);
+  }
+  Fraction operator/(const Fraction& o) const {
+    return Fraction(a * o.b, b * o.a);
+  }
+  double toDouble() { return 1. * to_float<double>(a) / to_float<double>(b); }
+  long double toLongDouble() {
+    return static_cast<long double>(1.) * to_float<long double>(a) /
+           to_float<long double>(b);
+  }
+  Mpz a, b;
+};
+
+// Compute n! mod p^e
+// Note: if i % p == 0, then the contribution of i is 1.
+// The complexity is at least max(e*e, p*e)
+// It is slow if N is very big, e.g. N = 10^10000. ((10^10000)! mod p^e)
+template <>
+struct FactPPowerModer<Mpz> {
+  std::vector<Mpz> F;
+  int64 p;
+  int64 e;
+  Mpz mpzP;
+  Mpz mod;
+  Mpz phi;
+
+  FactPPowerModer(const int64 p, const int64 e) : p(p), e(e) {
+    int64 pe = p * e;
+    mpzP = MPZ(p);
+    mod = power(mpzP, e);
+    phi = power(mpzP, (e - 1)) * MPZ(p - 1);
+    F.resize(pe + 1, 1);
+    for (int i = 1; i <= pe; ++i) {
+      if (i % p == 0)
+        F[i] = F[i - 1];
+      else
+        F[i] = F[i - 1] * i % mod;
+    }
+  }
+
+  Mpz cal(const Mpz& N) {
+    Mpz u(N / mpzP);
+    Mpz v(N % mpzP);
+    auto vv = to_int<int64>(v);
+    int64 r = (e + 1) >> 1;
+
+    Mpz ret = 1;
+    // F(up, p)
+    const Mpz u2 = u * u;
+
+    for (int j = 1; j <= r; ++j) {
+      Mpz beta_numer = u;
+      Mpz beta_denom = j;
+      const int j2 = j * j;
+      for (int i = 1; i <= r; ++i)
+        if (i != j) beta_numer *= u2 - i * i, beta_denom *= j2 - i * i;
+      Mpz beta = beta_numer / beta_denom % phi;
+      if (gbi_sign(beta) < 0) beta += phi;
+      ret = ret * power_mod(F[j * p], beta, mod) % mod;
+    }
+
+    if (p == 2) {
+      int64 left_mod4 = ((to_int<int>((u * mpzP + 1) % 8) & 4) >> 1) + 1;
+      int64 right_mod4 = to_int<int>(ret % 8) % 4;
+      if (left_mod4 != right_mod4) {
+        ret = (mod - ret) % mod;
+      }
+    }
+
+    // F(v, p)
+    ret = ret * F[vv] % mod;
+
+    // (p + v, v)_p
+    for (int j = 1; j < e; ++j) {
+      Mpz base = F[j * p + vv] * mod_inv(Mpz(F[vv] * F[j * p]), mod) % mod;
+      Mpz alpha_numer = u;
+      Mpz alpha_denom = j;
+      for (int i = 1; i < e; ++i)
+        if (i != j) {
+          alpha_numer *= u - i;
+          alpha_denom *= j - i;
+        }
+      Mpz alpha = alpha_numer / alpha_denom % phi;
+      if (gbi_sign(alpha) < 0) alpha += phi;
+      ret = ret * power_mod(base, alpha, mod) % mod;
+    }
+
+    return ret;
+  }
+};
+
+#else
+#define HAS_MPZ 0
+#endif
+
+#endif

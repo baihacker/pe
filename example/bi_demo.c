@@ -10,7 +10,7 @@ void test() {
   dbg(v);
   bi mod = power(2_bi, 48);
   bi ans = 1;
-  FactPPowerModer moder(2, 48);
+  FactPPowerModer<bi> moder(2, 48);
   int i = 0;
   while (N > 1) {
     ans = ans * moder.cal(N) % mod;

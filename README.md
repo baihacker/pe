@@ -68,6 +68,7 @@ File list:
 * pe_config: a centralized place the configure pe.
 * pe_fft: Fast fourier transform and polynomial multiplication.
 * pe_fraction: Fraction arithmetic.
+* pe_gbi: general big integer. The content corresponds to pe_nt.
 * pe_geometry: Support Point2D and Point3D.
 * pe_int128: Support to output int128 and the corresponding type traits.
 * pe_mat: Matrix operations.

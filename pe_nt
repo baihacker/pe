@@ -8,6 +8,11 @@
 #include "pe_type_traits"
 
 template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(int) is_zero(T v) {
+  return v ? 0 : 1;
+}
+
+template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(int) is_even(T v) {
   return (v & 1) == 0 ? 1 : 0;
 }
@@ -24,6 +29,29 @@ SL REQUIRES((is_native_integer<T0>::value && is_native_integer<T1>::value))
   const int y = (int)(v1 & 1);
   return x == y ? 1 : 0;
 }
+
+template <typename TARGET, typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(TARGET) to_int(T v) {
+  return static_cast<TARGET>(v);
+}
+
+template <typename TARGET, typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(TARGET) to_float(T v) {
+  return static_cast<TARGET>(v);
+}
+
+template <typename T1, typename T2>
+SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value))
+    RETURN(T1) power(T1 x, T2 n) {
+  T1 ret = 1;
+  for (; n; n >>= 1) {
+    if (n & 1) ret = ret * x;
+    if (n > 1) x = x * x;
+  }
+  return ret;
+}
+
+// power_mod is ine pe_mod
 
 // 90000000599999991
 
@@ -131,54 +159,6 @@ SL int64 square_root(int64 n) {
   // int64 ret = static_cast<int64>(sqrt(n + 0.5));
   int64 ret = sqrti(n);
   return ret * ret == n ? ret : 0;
-}
-
-SL int is_square_free_normal(int64 n) {
-  for (auto& iter : factorize(n))
-    if (iter.second > 1) {
-      return 0;
-    }
-  return 1;
-}
-
-SL int is_square_free_by_pmask(int64 n) {
-  while (n != 1) {
-    int now = pmask[n];
-    int c = 0;
-    while (n % now == 0) n /= now, ++c;
-    if (c > 1) return 0;
-  }
-  return 1;
-}
-
-SL int is_square_free(int64 n) {
-  if (n <= 0) {
-    return 0;
-  }
-
-  for (int i = 0; i < pcnt; ++i) {
-    if (n <= maxp) {
-      return is_square_free_by_pmask(n);
-    }
-    const int64 p = plist[i];
-    const int64 test = p * p;
-    if (test > n) break;
-    int c = 0;
-    while (n % p == 0) n /= p, ++c;
-    if (c > 1) return 0;
-  }
-  return 1;
-}
-
-template <typename T1, typename T2>
-SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value))
-    RETURN(T1) power(T1 x, T2 n) {
-  T1 ret = 1;
-  for (; n; n >>= 1) {
-    if (n & 1) ret = ret * x;
-    if (n > 1) x = x * x;
-  }
-  return ret;
 }
 
 template <typename T1, typename T2>
@@ -377,6 +357,43 @@ SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value))
     }
   }
   return tuple<int, T, T>{have, v, u};
+}
+
+SL int is_square_free_normal(int64 n) {
+  for (auto& iter : factorize(n))
+    if (iter.second > 1) {
+      return 0;
+    }
+  return 1;
+}
+
+SL int is_square_free_by_pmask(int64 n) {
+  while (n != 1) {
+    int now = pmask[n];
+    int c = 0;
+    while (n % now == 0) n /= now, ++c;
+    if (c > 1) return 0;
+  }
+  return 1;
+}
+
+SL int is_square_free(int64 n) {
+  if (n <= 0) {
+    return 0;
+  }
+
+  for (int i = 0; i < pcnt; ++i) {
+    if (n <= maxp) {
+      return is_square_free_by_pmask(n);
+    }
+    const int64 p = plist[i];
+    const int64 test = p * p;
+    if (test > n) break;
+    int c = 0;
+    while (n % p == 0) n /= p, ++c;
+    if (c > 1) return 0;
+  }
+  return 1;
 }
 
 /**

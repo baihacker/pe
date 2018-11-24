@@ -6,7 +6,7 @@ SL void fact_ppower_mod_test() {
   for (int i = 1; i <= 20; ++i) N *= i;
 
   bi v = 0;
-  for (bi n = N; !gbi_zero(n); n >>= 1, v += n)
+  for (bi n = N; !is_zero(n); n >>= 1, v += n)
     ;
 
   bi mod = power(bi(2), 48);
@@ -31,7 +31,7 @@ SL void mpz_fact_ppower_mod_test() {
   for (int i = 1; i <= 20; ++i) N *= i;
 
   Mpz v = 0;
-  for (Mpz n = N; !gbi_zero(n); n >>= 1, v += n)
+  for (Mpz n = N; !is_zero(n); n >>= 1, v += n)
     ;
 
   Mpz mod = power(Mpz(2), 48);

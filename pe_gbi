@@ -4,21 +4,38 @@
 // General big integer.
 
 #include "pe_type_traits"
-
-template <typename GBI>
-struct FactPPowerModer;
+#include "pe_nt"
 
 template <typename GBI>
 struct Gbi;
 
 template <typename GBI>
-SL REQUIRES((is_gbi<GBI>::value)) RETURN(int) gbi_zero(const GBI& x);
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(int) is_zero(const GBI& x);
 
 template <typename GBI>
-SL REQUIRES((is_gbi<GBI>::value)) RETURN(int) gbi_sign(const GBI& x);
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(int) int_sign(const GBI& x);
 
 template <typename GBI>
-SL REQUIRES((is_gbi<GBI>::value)) RETURN(int) gbi_parity(const GBI& x);
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(int) is_even(const GBI& x);
+
+template <typename GBI>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(int) is_odd(const GBI& x);
+
+template <typename T0, typename T1>
+SL REQUIRES((is_gbi<T0>::value && is_gbi<T1>::value)) RETURN(int)
+    same_parity(const T0& v0, const T1& v1) {
+  return is_even(v0) == is_even(v1);
+}
+
+template <typename GBI>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI) fabs(const GBI& n) {
+  return int_sign(n) >= 0 ? n : -n;
+}
+
+template <typename GBI>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI) abs(const GBI& n) {
+  return int_sign(n) >= 0 ? n : -n;
+}
 
 template <typename T, typename GBI>
 SL REQUIRES((is_gbi<GBI>::value)) RETURN(T) to_int(const GBI& x);
@@ -47,7 +64,7 @@ SL REQUIRES((is_gbi<GBI>::value && is_native_integer<T>::value)) RETURN(GBI)
   GBI ret(1);
   GBI x(l % mod);
   for (; n > 0; n >>= 1) {
-    if (gbi_parity(n)) ret = ret * x % mod;
+    if (n & 1) ret = ret * x % mod;
     if (n > 1) x = x * x % mod;
   }
   return ret;
@@ -62,18 +79,30 @@ SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI)
   GBI ret(1);
   GBI x(l % mod);
   GBI n(m);
-  for (; !gbi_zero(n);) {
-    if (gbi_parity(n)) ret = ret * x % mod;
+  for (; !is_zero(n);) {
+    if (is_odd(n)) ret = ret * x % mod;
     n >>= 1;
-    if (!gbi_zero(n)) x = x * x % mod;
+    if (!is_zero(n)) x = x * x % mod;
   }
   return ret;
+}
+
+// gcd is only for BigInteger
+template <typename GBI>
+SL REQUIRES((is_gbi<GBI>::value && std::is_same<GBI, BigInteger>::value))
+    RETURN(GBI) gcd(GBI m, GBI n) {
+  while (!is_zero(n)) {
+    GBI t = m % n;
+    m = std::move(n);
+    n = std::move(t);
+  }
+  return m;
 }
 
 template <typename GBI>
 SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI)
     exgcd(const GBI& a, const GBI& b, GBI& x, GBI& y) {
-  if (gbi_zero(b)) {
+  if (is_zero(b)) {
     x = 1;
     y = 0;
     return a;
@@ -93,23 +122,11 @@ SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI)
 template <typename GBI>
 SL REQUIRES((is_gbi<GBI>::value)) RETURN(tuple<GBI, GBI, GBI>)
     exgcd(const GBI& a, const GBI& b) {
-  PE_ASSERT(!gbi_zero(a) || !gbi_zero(b));
+  PE_ASSERT(!is_zero(a) || !is_zero(b));
   GBI x = 0, y = 0;
   const GBI r = exgcd(a, b, x, y);
   PE_ASSERT(a * x + b * y == r);
   return tuple<GBI, GBI, GBI>{r, x, y};
-}
-
-// gcd is only for BigInteger
-template <typename GBI>
-SL REQUIRES((is_gbi<GBI>::value && std::is_same<GBI, BigInteger>::value))
-    RETURN(GBI) gcd(GBI m, GBI n) {
-  while (!gbi_zero(n)) {
-    GBI t = m % n;
-    m = std::move(n);
-    n = std::move(t);
-  }
-  return m;
 }
 
 template <typename GBI>
@@ -118,20 +135,10 @@ SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI)
   GBI x, y;
   exgcd(a, mod, x, y);
   x %= mod;
-  if (gbi_sign(x) < 0) {
+  if (int_sign(x) < 0) {
     x += mod;
   }
   return x;
-}
-
-template <typename GBI>
-SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI) fabs(const GBI& n) {
-  return gbi_sign(n) >= 0 ? n : -n;
-}
-
-template <typename GBI>
-SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI) abs(const GBI& n) {
-  return gbi_sign(n) >= 0 ? n : -n;
 }
 
 // solve equation a x = b (mod m)
@@ -143,7 +150,7 @@ SL REQUIRES((is_gbi<GBI>::value)) RETURN(int)
   v = 0;
   u = 0;
 
-  PE_ASSERT(!gbi_zero(m));
+  PE_ASSERT(!is_zero(m));
 
   a %= m;
   b %= m;
@@ -173,7 +180,7 @@ SL REQUIRES((is_gbi<GBI>::value)) RETURN(int)
   v = 0;
   u = 0;
 
-  PE_ASSERT(!gbi_zero(m1) && !gbi_zero(m2));
+  PE_ASSERT(!is_zero(m1) && !is_zero(m2));
   // x = a (mod m1)
   // x = b (mod m2)
   // x = k0 m1 + a
@@ -263,7 +270,8 @@ ostream& operator<<(ostream& o, const GbiFraction<T>& f) {
 }
 
 template <typename GBI, typename T>
-SL GbiFraction<GBI> from_continued_fraction(const vector<T>& data, int pos = -1) {
+SL GbiFraction<GBI> from_continued_fraction(const vector<T>& data,
+                                            int pos = -1) {
   const int size = (int)data.size();
   const int n = pos <= 0 ? 1 : min(size, pos + 1);
   GbiFraction<GBI> now(data[n - 1], 1);
@@ -327,4 +335,7 @@ SL vector<GBI> to_continued_fraction(int64 p, int64 q, int n) {
 
   return result;
 }
+
+template <typename GBI>
+struct FactPPowerModer;
 #endif

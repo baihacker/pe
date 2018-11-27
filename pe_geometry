@@ -2,6 +2,7 @@
 #define __PE_GEOMETRY_H__
 
 #include "pe_base"
+#include "pe_nt"
 
 template <typename T>
 struct Point3D;
@@ -85,6 +86,59 @@ struct Point2D {
 
   friend ostream& operator<<(ostream& o, const Point2D& p) {
     return o << p.x << ", " << p.y;
+  }
+};
+
+template <typename T>
+struct Line2D {
+  T A, B, C;
+
+  Line2D(T A = 0, T B = 0, T C = 0) : A(A), B(B), C(C) { normalize(); }
+
+  Line2D(Point2D<T> a, Point2D<T> b) {
+    Point2D<T> delta = b - a;
+    A = delta.y;
+    B = -delta.x;
+    C = -a.x * delta.y + a.y * delta.x;
+    normalize();
+  }
+
+  void normalize() {
+    if (A == 0 && B == 0) {
+      return;
+    }
+    auto t = gcd(A, B, C);
+    if (int_sign(A == 0 ? B : A) != int_sign(t)) {
+      t = -t;
+    }
+    A /= t;
+    B /= t;
+    C /= t;
+  }
+  int operator==(const Line2D& o) const {
+    return A == o.A && B == o.B && C == o.C;
+  }
+
+  int operator!=(const Line2D& o) const { return !(*this == o); }
+
+  int operator<(const Line2D& o) const {
+    if (A != o.A) return A < o.A;
+    if (B != o.B) return B < o.B;
+    return C < o.C;
+  }
+
+  int operator<=(const Line2D& o) const { return !(*this > o); }
+
+  int operator>(const Line2D& o) const {
+    if (A != o.A) return A > o.A;
+    if (B != o.B) return B > o.B;
+    return C > o.C;
+  }
+
+  int operator>=(const Line2D& o) const { return !(*this < o); }
+
+  friend ostream& operator<<(ostream& o, const Line2D& l) {
+    return o << l.A << ", " << l.B << ", " << l.C;
   }
 };
 

@@ -12,6 +12,8 @@ class Mpf {
 
   explicit Mpf(int t) { mpf_init_set_si(f, t); }
 
+  explicit Mpf(double t) { mpf_init_set_d(f, t); }
+
   explicit Mpf(const string& s) {
     mpf_init(f);
     mpf_set_str(f, s.c_str(), 10);
@@ -21,15 +23,9 @@ class Mpf {
 
   ~Mpf() { mpf_clear(f); }
 
-  Mpf(const Mpf& o) {
-    mpf_init(f);
-    mpf_set(f, o.f);
-  }
+  Mpf(const Mpf& o) { mpf_init_set(f, o.f); }
 
-  Mpf(Mpf&& o) {
-    mpf_init(f);
-    mpf_swap(f, o.f);
-  }
+  Mpf(Mpf&& o) { mpf_swap(f, o.f); }
 
   Mpf& operator=(const Mpf& o) {
     mpf_set(f, o.f);
@@ -38,6 +34,11 @@ class Mpf {
 
   Mpf& operator=(Mpf&& o) {
     mpf_swap(f, o.f);
+    return *this;
+  }
+
+  Mpf& operator=(double o) {
+    mpf_set_d(f, o);
     return *this;
   }
 
@@ -193,6 +194,7 @@ SL int operator>(const Mpf& a, const Mpf& b) { return compare(a, b) > 0; }
 SL int operator>=(const Mpf& a, const Mpf& b) { return compare(a, b) >= 0; }
 SL int operator==(const Mpf& a, const Mpf& b) { return compare(a, b) == 0; }
 SL int operator!=(const Mpf& a, const Mpf& b) { return compare(a, b) != 0; }
+SL ostream& operator<<(ostream& o, const Mpf& v) { return o << v.toString(20); }
 #else
 #define HAS_MPF 0
 #endif

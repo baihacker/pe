@@ -74,6 +74,7 @@ File list:
 * pe_mat: Matrix operations.
 * pe_memory: Memory manipulation such as allocating large memory. (windows only)
 * pe_misc：misc codes.
+* pe_mma: support mma: helper method or class to generate mma codes.
 * pe_mod: Modular arithmetic.
 * pe_nt: Basic code of number theory.
 * pe_nt_base: Generate prime list, factorize integer, prime test, compute phi and mu.

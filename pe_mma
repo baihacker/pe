@@ -1,0 +1,199 @@
+#ifndef __PE_MMA__
+#define __PE_MMA__
+
+#include "pe_base"
+#include "pe_nt"
+
+// InterpolatingPolynomial
+struct IntPoly {
+  IntPoly() : n(0) {}
+
+  void reset(const vector<string>& variables) { n = sz(variables); }
+
+  void add(const vector<int64>& p, int64 v) {
+    const int len = sz(p);
+    if (n == 0) {
+      n = len;
+    } else {
+      PE_ASSERT(n == len);
+    }
+    auto where = vals.find(p);
+    if (where != vals.end()) {
+      PE_ASSERT(where->second == v);
+    } else {
+      vals[p] = v;
+    }
+  }
+
+  ostream& to_stream(ostream& o) const {
+    o << "InterpolatingPolynomial[{";
+    int idx = 0;
+    for (auto& iter : vals) {
+      if (++idx >= 2) {
+        o << ", ";
+      }
+      o << "{";
+      pprint_vec(o, iter.first);
+      o << ", " << iter.second << "}";
+    }
+    o << "}, ";
+    auto var = variables;
+    if (sz(var) < n) {
+      var.resize(n);
+      for (int i = 0; i < n; ++i) {
+        char tmp[2] = {static_cast<char>('a' + i)};
+        var[i] = tmp;
+      }
+    }
+    pprint_vec(o, var);
+
+    return o << "]";
+  }
+
+  vector<string> variables;
+  map<vector<int64>, int64> vals;
+  int n = 0;
+};
+
+ostream& operator<<(ostream& o, const IntPoly& ip) { return ip.to_stream(o); }
+
+struct IntPoly2D {
+  IntPoly2D(int n1 = 1, int n2 = -1, int n3 = -1) { reset(n1, n2, n3); }
+
+  void reset(const vector<string>& vars, int n1, int n2 = -1, int n3 = -1) {
+    this->vars = vars;
+    reset(n1, n2, n3);
+  }
+  void reset(int n1, int n2 = -1, int n3 = -1) {
+    PE_ASSERT(n1 >= 0);
+    if (n2 == -1) {
+      n2 = n1;
+    }
+    if (n3 == -1) {
+      n3 = n1;
+    }
+    this->n1 = n1;
+    this->n2 = n2;
+    this->n3 = n3;
+    vcnt = 0;
+    symbols.resize(0);
+    for (int i = 0; i <= n1; ++i) {
+      for (int j = 0; j <= n2; ++j) {
+        if (i == 0 || j == 0 || i + j <= n3) {
+          ++vcnt;
+          symbols.pb(format(i, j));
+        }
+      }
+    }
+  }
+
+  string format(int a, int b) {
+    if (a == 0) return format(vars[1], b);
+    if (b == 0) return format(vars[0], a);
+    return format(vars[0], a) + " " + format(vars[1], b);
+  }
+
+  string format(string s, int a) {
+    if (a == 0) {
+      return "1";
+    } else if (a == 1) {
+      return s;
+    } else {
+      return s + "^" + to_string(a);
+    }
+  }
+
+  int64 eval(int64 v1, int64 v2, int a, int b) const {
+    return power(v1, a) * power(v2, b);
+  }
+
+  void add(const vector<int64>& p, int64 v) {
+    const int len = sz(p);
+    PE_ASSERT(len == 2);
+    auto where = vals.find(p);
+    if (where != vals.end()) {
+      PE_ASSERT(where->second == v);
+    } else {
+      vals[p] = v;
+    }
+  }
+
+  ostream& show(ostream& o, const vector<int64>& v) {
+    const int len = sz(v);
+    PE_ASSERT(vcnt == len);
+    int id = 0;
+    for (int i = 0; i < vcnt; ++i)
+      if (v[i] != 0) {
+        int64 coe = v[i];
+        int sgn = coe > 0 ? 1 : -1;
+        if (coe < 0) {
+          coe = -coe;
+        }
+
+        if (sgn > 0) {
+          if (id > 0) {
+            o << " + ";
+          }
+        } else {
+          if (id > 0) {
+            o << " - ";
+          } else {
+            o << "-";
+          }
+        }
+        //           coe
+        //         1     not 1
+        // sym
+        //  1      1     coe
+        // not 1   sym   coe sym
+        if (symbols[i] == "1") {
+          o << coe;
+        } else {
+          if (coe != 1) {
+            o << coe << " ";
+          }
+          o << symbols[i];
+        }
+        ++id;
+      }
+    return o;
+  }
+
+  ostream& to_stream(ostream& o) const {
+    o << "Values[Solve[{";
+    int idx = 0;
+    for (auto& iter : vals) {
+      if (++idx >= 2) {
+        o << " && ";
+      }
+      int id = 0;
+      for (int i = 0; i <= n1; ++i) {
+        for (int j = 0; j <= n2; ++j) {
+          if (i == 0 || j == 0 || i + j <= n3) {
+            if (id > 0) {
+              o << " + ";
+            }
+            o << eval(iter.first[0], iter.first[1], i, j) << " "
+              << string("x") + to_string(id++);
+          }
+        }
+      }
+      o << " == " << iter.second;
+    }
+    o << "}, ";
+    vector<string> vars;
+    for (int i = 0; i < vcnt; ++i) vars.pb(string("x") + to_string(i));
+    pprint_vec(o, vars);
+    return o << "]]";
+  }
+
+  int n1, n2, n3;
+  int vcnt;
+  map<vector<int64>, int64> vals;
+  vector<string> vars{"x", "y"};
+  vector<string> symbols;
+};
+
+ostream& operator<<(ostream& o, const IntPoly2D& ip) { return ip.to_stream(o); }
+
+#endif

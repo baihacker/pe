@@ -223,23 +223,35 @@ enum {
   LK,
   RK,
   EOI,
-  // COMMA
+  // COMMA,
+  UNKNOWN_TOKEN,
 };
 
 int priority[] = {
-    65535, 5, 5, 5,
+    65535,
+    5,
+    5,
+    5,
     // 400,
-    7, 10, 10,
+    7,
+    10,
+    10,
     // 10,
-    20, 20, 30, 30,
+    20,
+    20,
+    30,
+    30,
     // 40, 40,
     // 50, 50, 50, 50,
     // 60, 60, 60,
     // 70, 80, 90,
     // 100,
     // 200,
-    400, 400, 65533,
-    // 65534
+    400,
+    400,
+    65533,
+    // 65534,
+    65535,
 };
 
 struct MmaExpTree {
@@ -252,8 +264,7 @@ struct MmaExpTree {
   MmaExpTree(MmaExpTree* p = 0, MmaExpTree* l = 0, MmaExpTree* r = 0)
       : parent(p), left(l), right(r) {}
 
-  ~MmaExpTree() {
-  }
+  ~MmaExpTree() {}
 
   static void destroyTree(MmaExpTree* tree) {
     if (!tree) return;
@@ -353,61 +364,63 @@ struct MmaExpParser {
       case '^':
         token = expression[curr++];
         return POW;
-        /**
-        case ',':
-          token = expression[curr++];
-          return COMMA;
-        case ';':
-          token = expression[curr++];
-          return END;
-        case '^':
-          token = expression[curr++];
-          return XOR;
-        case '!': {
-          token = expression[curr++];
-          if (expression[curr] == '=') {
-            token = token + "=";
-            ++curr;
-            return NEG;
-          }
-          return FAC;
+      /**
+      case ',':
+        token = expression[curr++];
+        return COMMA;
+      case ';':
+        token = expression[curr++];
+        return END;
+      case '^':
+        token = expression[curr++];
+        return XOR;
+      case '!': {
+        token = expression[curr++];
+        if (expression[curr] == '=') {
+          token = token + "=";
+          ++curr;
+          return NEG;
         }
-        case '=': {
-          token = expression[curr++];
-          if (expression[curr] == '=') {
-            token = token + "=";
-            ++curr;
-            return EQU;
-          }
-          return ASSIGN;
+        return FAC;
+      }
+      case '=': {
+        token = expression[curr++];
+        if (expression[curr] == '=') {
+          token = token + "=";
+          ++curr;
+          return EQU;
         }
-        case '>': {
-          token = expression[curr++];
-          if (expression[curr] == '=') {
-            token = token + "=";
-            ++curr;
-            return GTE;
-          } else if (expression[curr] == '>') {
-            token = token + ">";
-            ++curr;
-            return SHR;
-          }
-          return GT;
+        return ASSIGN;
+      }
+      case '>': {
+        token = expression[curr++];
+        if (expression[curr] == '=') {
+          token = token + "=";
+          ++curr;
+          return GTE;
+        } else if (expression[curr] == '>') {
+          token = token + ">";
+          ++curr;
+          return SHR;
         }
-        case '<': {
-          token = expression[curr++];
-          if (expression[curr] == '=') {
-            token = token + "=";
-            ++curr;
-            return LTE;
-          } else if (expression[curr] == '<') {
-            token = token + "<";
-            ++curr;
-            return SHL;
-          }
-          return LT;
+        return GT;
+      }
+      case '<': {
+        token = expression[curr++];
+        if (expression[curr] == '=') {
+          token = token + "=";
+          ++curr;
+          return LTE;
+        } else if (expression[curr] == '<') {
+          token = token + "<";
+          ++curr;
+          return SHL;
         }
-        */
+        return LT;
+      }
+      */
+      default:
+        return UNKNOWN_TOKEN;
     }
   }
 
@@ -520,6 +533,7 @@ struct MmaExpParser {
     lastcurr = curr = 0;
     return parse();
   }
+
   /**
   void getExpressionList(MmaExpTree* tree, vector<MmaExpTree*>& result) {
     if (!tree) return;
@@ -741,7 +755,7 @@ vector<string> compile(const string& s, string funName = "foo") {
   MmaExpParser parser;
   auto t = parser.parse(s);
   MmaExpCompiler compiler;
-  compiler.compile(t, std::move(funName));
+  compiler.compile(t, funName);
   MmaExpTree::destroyTree(t);
   return compiler.result;
 }

@@ -200,7 +200,8 @@ struct IntPoly2D {
 ostream& operator<<(ostream& o, const IntPoly2D& ip) { return ip.to_stream(o); }
 
 namespace mma_compiler {
-enum {
+// Shared enum to indicate a token or a node type
+enum TokenOrNodeType {
   ROOT,
   NUMBER,
   VAR,
@@ -214,14 +215,21 @@ enum {
   DIV,
   ADD,
   SUB,
-  // SHL, SHR,
-  // GT, LT, GTE, LTE,
-  // EQU, NEQ,
-  // AND, XOR, OR,
+  // SHL,
+  // SHR,
+  // GT,
+  // LT,
+  // GTE,
+  // LTE,
+  // EQU,
+  // NEQ,
+  // AND,
+  // XOR,
+  // OR,
   // ASSIGN,
   // END,
-  LK,
-  RK,
+  LEFT_BRACKET,
+  RIGHT_BRACKET,
   EOI,
   // COMMA,
   UNKNOWN_TOKEN,
@@ -241,10 +249,17 @@ int priority[] = {
     20,
     30,
     30,
-    // 40, 40,
-    // 50, 50, 50, 50,
-    // 60, 60, 60,
-    // 70, 80, 90,
+    // 40,
+    // 40,
+    // 50,
+    // 50,
+    // 50,
+    // 50,
+    // 60,
+    // 60,
+    // 70,
+    // 80,
+    // 90,
     // 100,
     // 200,
     400,
@@ -256,9 +271,10 @@ int priority[] = {
 
 struct MmaExpTree {
   MmaExpTree *parent, *left, *right;
-  int64 value;
-  int node_type;
+
+  int nodeType;
   string token;
+  int64 value;
   int iid;  // internal id for removing duplicated tree.
 
   MmaExpTree(MmaExpTree* p = 0, MmaExpTree* l = 0, MmaExpTree* r = 0)
@@ -274,7 +290,7 @@ struct MmaExpTree {
   }
 
   ostream& display(ostream& o) {
-    if (node_type == VAR || node_type == NUMBER) {
+    if (nodeType == VAR || nodeType == NUMBER) {
       return o << token;
     }
     o << "(";
@@ -357,10 +373,10 @@ struct MmaExpParser {
       */
       case '(':
         token = expression[curr++];
-        return LK;
+        return LEFT_BRACKET;
       case ')':
         token = expression[curr++];
-        return RK;
+        return RIGHT_BRACKET;
       case '^':
         token = expression[curr++];
         return POW;
@@ -427,9 +443,11 @@ struct MmaExpParser {
   MmaExpTree* parse() {
     auto* vt = new MmaExpTree(0, 0, 0);
     MmaExpTree* build = vt;
-    vt->node_type = ROOT;
-    // = 0, an operand is expected
-    // = 1, an operator is expected
+    vt->nodeType = ROOT;
+    // = 0, an operand is expected, build is the node of the operator whose
+    // operand is missing.
+    // = 1, an operator is expected, build is the node of
+    // the last operand of the previous expression.
     int state = 0;
     string token;
     for (int t = nextToken(token); token != ";" && token != ")" && token != "";
@@ -437,7 +455,7 @@ struct MmaExpParser {
       if (state == 0) {
         if (t == NUMBER) {
           build = new MmaExpTree(build, 0, 0);
-          build->node_type = NUMBER;
+          build->nodeType = NUMBER;
           build->token = token;
           build->value = atoll(token.c_str());
           build->parent->right = build;
@@ -445,26 +463,26 @@ struct MmaExpParser {
         } else if (t == VAR) {
           vars[token] = 0;
           build = new MmaExpTree(build, 0, 0);
-          build->node_type = VAR;
+          build->nodeType = VAR;
           build->token = token;
           build->parent->right = build;
           state = 1;
         } else if (t == FUN) {
           build = new MmaExpTree(build, 0, 0);
-          build->node_type = FUN;
+          build->nodeType = FUN;
           build->token = token;
           build->parent->right = build;
         } /* else if (t == REV) {
            build = new MmaExpTree(build, 0, 0);
-           build->node_type = REV;
+           build->nodeType = REV;
            build->parent->right = build;
          }*/
-        else if (t == LK) {
+        else if (t == LEFT_BRACKET) {
           MmaExpTree* x = parse();
           if (x) {
             x->parent = build;
             build->right = x;
-            if (build->node_type != FUN) {
+            if (build->nodeType != FUN) {
               build = x;
             }
           }
@@ -474,7 +492,7 @@ struct MmaExpParser {
         } else if (t == SUB) {
           // Leading -
           build = new MmaExpTree(build, 0, 0);
-          build->node_type = NEG;
+          build->nodeType = NEG;
           build->token = token;
           build->parent->right = build;
         } else {
@@ -483,7 +501,7 @@ struct MmaExpParser {
       } else {
         /*if (t == FAC) {
           auto* x = new MmaExpTree(0, 0, 0);
-          x->node_type = FAC;
+          x->nodeType = FAC;
           build = build->parent;
           x->left = build->right;
           build->right->parent = x;
@@ -492,23 +510,22 @@ struct MmaExpParser {
           build = x;
         } else {*/
         auto* x = new MmaExpTree(0, 0);
-        x->node_type = t;
+        x->nodeType = t;
         x->token = token;
-        if (t == NUMBER || t == VAR || t == FUN || t == LK) {
+        if (t == NUMBER || t == VAR || t == FUN || t == LEFT_BRACKET) {
           delete x;
           x = new MmaExpTree(0, 0);
-          x->node_type = MUL;
+          x->nodeType = MUL;
           x->token = "*";
           t = MUL;
           curr = lastcurr;
         }
-        PE_ASSERT(build->node_type != ROOT);
+        PE_ASSERT(build->nodeType != ROOT);
         build = build->parent;
         if (/*t == ASSIGN || */ t == POW) {  // right association
-          while (priority[t] > priority[build->node_type])
-            build = build->parent;
+          while (priority[t] > priority[build->nodeType]) build = build->parent;
         } else {  // left association
-          while (priority[t] >= priority[build->node_type])
+          while (priority[t] >= priority[build->nodeType])
             build = build->parent;
         }
         x->left = build->right;
@@ -537,7 +554,7 @@ struct MmaExpParser {
   /**
   void getExpressionList(MmaExpTree* tree, vector<MmaExpTree*>& result) {
     if (!tree) return;
-    if (tree->node_type == COMMA) {
+    if (tree->nodeType == COMMA) {
       getExpressionList(tree->left, result);
       result.push_back(tree->right);
     } else {
@@ -546,11 +563,11 @@ struct MmaExpParser {
   }
 
   int evalue(MmaExpTree* tree) {
-    if (tree->node_type == NUMBER) {
+    if (tree->nodeType == NUMBER) {
       return tree->value;
-    } else if (tree->node_type == VAR) {
+    } else if (tree->nodeType == VAR) {
       return tree->value = vars[tree->token];
-    } else if (tree->node_type == FUN) {
+    } else if (tree->nodeType == FUN) {
       vector<MmaExpTree*> para;
       getExpressionList(tree->right, para);
       if (tree->token == "min") {
@@ -603,22 +620,22 @@ struct MmaExpParser {
         return tree->value = x;
       }
       cerr << "error 2" << endl;
-    } else if (tree->node_type == FAC) {
+    } else if (tree->nodeType == FAC) {
       int value = evalue(tree->left);
       int ans = 1;
       for (int i = 1; i <= value; ++i) ans *= i;
       return tree->value = ans;
-    } else if (tree->node_type == REV) {
+    } else if (tree->nodeType == REV) {
       int value = evalue(tree->right);
       return tree->value = ~value;
-    } else if (tree->node_type == NEG) {
+    } else if (tree->nodeType == NEG) {
       int value = evalue(tree->right);
       return tree->value = -value;
-    } else if (tree->node_type == ASSIGN) {
+    } else if (tree->nodeType == ASSIGN) {
       return tree->value = vars[tree->left->token] = evalue(tree->right);
     } else {
       int x = evalue(tree->left), y = evalue(tree->right);
-      switch (tree->node_type) {
+      switch (tree->nodeType) {
         case MUL:
           return tree->value = x * y;
         case DIV:
@@ -663,7 +680,7 @@ struct MmaExpCompiler {
   vector<string> result;
   void compileImpl(MmaExpTree* tree, int has_mod = 1) {
     char buff[512];
-    switch (tree->node_type) {
+    switch (tree->nodeType) {
       case NUMBER:
       case VAR:
         sprintf(buff, "%s", tree->token.c_str());
@@ -679,7 +696,7 @@ struct MmaExpCompiler {
         int a = tree->left->iid;
         int b = tree->right->iid;
         if (a > b) swap(a, b);
-        if (tree->node_type == ADD) {
+        if (tree->nodeType == ADD) {
           sprintf(buff, "(t%d + t%d)", a, b);
         } else {
           sprintf(buff, "(t%d * t%d)", a, b);
@@ -691,11 +708,11 @@ struct MmaExpCompiler {
       case POW: {
         compileImpl(tree->left);
         int a = tree->left->iid;
-        if (tree->node_type == SUB) {
+        if (tree->nodeType == SUB) {
           compileImpl(tree->right, has_mod);
           int b = tree->right->iid;
           sprintf(buff, "(t%d - t%d)", a, b);
-        } else if (tree->node_type == DIV) {
+        } else if (tree->nodeType == DIV) {
           compileImpl(tree->right, has_mod);
           int b = tree->right->iid;
           sprintf(buff, "t%d * inv_of(t%d, mod)", a, b);
@@ -708,7 +725,7 @@ struct MmaExpCompiler {
       }
     }
     string myExpr = buff;
-    if (tree->node_type == VAR) {
+    if (tree->nodeType == VAR) {
       if (varset.count(myExpr) == 0) {
         varset.insert(myExpr);
         vars.push_back(myExpr);
@@ -716,7 +733,7 @@ struct MmaExpCompiler {
     }
     if (has_mod) {
       myExpr += " % mod";
-      if (tree->node_type == SUB) {
+      if (tree->nodeType == SUB) {
         myExpr = "(mod + " + myExpr + ") % mod";
       }
     }
@@ -751,7 +768,7 @@ struct MmaExpCompiler {
   }
 };
 
-vector<string> compile(const string& s, string funName = "foo") {
+vector<string> compile(const string& s, const string& funName = "foo") {
   MmaExpParser parser;
   auto t = parser.parse(s);
   MmaExpCompiler compiler;

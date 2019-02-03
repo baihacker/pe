@@ -691,7 +691,9 @@ SL int64 gf_at(const NModPoly& A, const NModPoly& B, const int64 n) {
 }
 
 // Berlekamp Massey
-SL NModPoly find_minimal_poly(const NModPoly& s) {
+// This implementation requires that s[0] has contribution to the
+// sequence. i.e. result[0] != 0
+SL NModPoly find_minimal_poly_a(const NModPoly& s) {
   const int m = static_cast<int>(s.data.size());
   const int n = m >> 1;
   const int64 mod = s.mod;
@@ -703,7 +705,7 @@ SL NModPoly find_minimal_poly(const NModPoly& s) {
   NModPoly v0{{0}, mod};
   NModPoly v1{{1}, mod};
 
-  while (n + 1 <= r1.deg()) {
+  while (n + 1 <= r1.size()) {
     NModPoly q, r;
     tie(q, r) = poly_div_and_mod(r0, r1);
     NModPoly v(v0 - q * v1);
@@ -715,6 +717,34 @@ SL NModPoly find_minimal_poly(const NModPoly& s) {
   v1 = std::move(inv_of(v1[0], mod) * v1);
   reverse(v1.data.begin(), v1.data.end());
   return v1;
+}
+
+// This implementation can handle the case that s[0] has no contribution to the
+// sequence. i.e. result[0] == 0
+SL NModPoly find_minimal_poly(const NModPoly& s) {
+  const int m = static_cast<int>(s.data.size());
+  const int n = m >> 1;
+  const int64 mod = s.mod;
+  PE_ASSERT(n * 2 == m);
+
+  NModPoly r0{{1}, mod};
+  r0 = r0 << m;
+  NModPoly r1(s);
+  reverse(r1.data.begin(), r1.data.end());
+  adjust_poly_leading_zero(r1.data);
+  NModPoly v0{{0}, mod};
+  NModPoly v1{{1}, mod};
+
+  while (n + 1 <= r1.size()) {
+    NModPoly q, r;
+    tie(q, r) = poly_div_and_mod(r0, r1);
+    NModPoly v(v0 - q * v1);
+    v0 = std::move(v1);
+    v1 = std::move(v);
+    r0 = std::move(r1);
+    r1 = std::move(r);
+  }
+  return std::move(inv_of(v1.data.back(), mod) * v1);
 }
 
 SL int64 nth_element(const NModPoly& s, int64 n, const NModPoly& min_poly) {

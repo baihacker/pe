@@ -272,16 +272,55 @@ ostream& operator<<(ostream& o, const GbiFraction<T>& f) {
   return o << f.a << "/" << f.b;
 }
 
+// Find f[0], f[1], f[2], ..., f[pos] if pos >= 0 else
+// f[0], f[1], f[2], ..., f[data.size()-1]
+// https://en.wikipedia.org/wiki/Continued_fraction#Some_useful_theorems
+template <typename GBI, typename T>
+SL vector<GbiFraction<GBI>> from_continued_fraction_n(const vector<T>& data,
+                                                      int pos = -1) {
+  const int size = (int)data.size();
+  const int n = pos < 0 ? size : min(size, pos + 1);
+  if (n == 0) {
+    return vector<GbiFraction<GBI>>();
+  }
+
+  vector<GBI> p(n + 1), q(n + 1);
+  p[0] = 1, q[0] = 0;
+  p[1] = data[0], q[1] = 1;
+
+  for (int i = 2; i <= n; ++i) {
+    p[i] = p[i - 1] * data[i - 1] + p[i - 2];
+    q[i] = q[i - 1] * data[i - 1] + q[i - 2];
+  }
+
+  vector<GbiFraction<GBI>> result(n);
+  for (int i = 0; i < n; ++i) {
+    result[i].a = std::move(p[i + 1]), result[i].b = std::move(q[i + 1]);
+  }
+
+  return result;
+}
+
+// Find f[pos] if pos >= 0 else f[data.size()-1]
 template <typename GBI, typename T>
 SL GbiFraction<GBI> from_continued_fraction(const vector<T>& data,
                                             int pos = -1) {
   const int size = (int)data.size();
-  const int n = pos <= 0 ? 1 : min(size, pos + 1);
-  GbiFraction<GBI> now(data[n - 1], 1);
-  for (int i = n - 2; i >= 0; --i) {
-    now = GbiFraction<GBI>(data[i] * now.a + now.b, now.a);
+  const int n = pos < 0 ? size - 1 : min(size - 1, pos);
+  PE_ASSERT(n >= 0);
+
+  GBI p0 = 1, q0 = 0, p1 = data[0], q1 = 1;
+
+  for (int i = 1; i <= n; ++i) {
+    GBI p = p1 * data[i] + p0;
+    GBI q = q1 * data[i] + q0;
+    p0 = std::move(p1), p1 = std::move(p);
+    q0 = std::move(q1), q1 = std::move(q);
   }
-  return now;
+
+  GbiFraction<GBI> t;
+  t.a = p1, t.b = q1;
+  return t;
 }
 
 template <typename GBI>
@@ -338,6 +377,10 @@ SL vector<GBI> to_continued_fraction(int64 p, int64 q, int n) {
 
   return result;
 }
+
+#define from_cf_n from_continued_fraction_n
+#define from_cf from_continued_fraction
+#define to_cf to_continued_fraction
 
 template <typename GBI>
 struct FactPPowerModer;

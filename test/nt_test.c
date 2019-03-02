@@ -92,4 +92,24 @@ SL void is_square_free_test() {
 }
 
 PE_REGISTER_TEST(&is_square_free_test, "is_square_free_test", SMALL);
+
+SL void square_root_mod_test() {
+  for (int i = 0; i < 1000; ++i) {
+    const int64 p = plist[i];
+    int cnt = 0;
+    for (int n = 0; n < p; ++n) {
+      int64 x = square_root_mod(n, p);
+      if (x != -1) {
+        assert(x * x % p == n);
+        ++cnt;
+      }
+    }
+    if (p > 2)
+      assert(cnt * 2 == p + 1);
+    else
+      assert(cnt == 2);
+  }
+}
+
+PE_REGISTER_TEST(&square_root_mod_test, "square_root_mod_test", SMALL);
 }  // namespace nt_test

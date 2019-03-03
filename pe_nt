@@ -480,41 +480,6 @@ SL void init_comb(T (*comb)[D], int n, int64 mod) {
           j == 0 ? ONE : add_mod(comb[i - 1][j - 1], comb[i - 1][j], mod);
 }
 
-// returns x where x^2 = n mod p
-// if no solution, return -1.
-// https://en.wikipedia.org/wiki/Tonelli%E2%80%93Shanks_algorithm
-int64 square_root_mod(int64 n, int64 p) {
-  if (p == 2) {
-    return n;
-  }
-  if (n == 0) {
-    return 0;
-  }
-  if (power_mod_ex(n, (p - 1) / 2, p) == p - 1) {
-    return -1;
-  }
-  if (p % 4 == 3) {
-    return power_mod_ex(n, (p + 1) >> 2, p);
-  }
-  int64 Q = p - 1, S = 0;
-  while (Q % 2 == 0) Q >>= 1, ++S;
-  int64 z = 1;
-  while (power_mod_ex(z, (p - 1) >> 1, p) == 1) ++z;
-  int64 M = S, c = power_mod_ex(z, Q, p);
-  int64 t = power_mod_ex(n, Q, p), R = power_mod_ex(n, (Q + 1) >> 1, p);
-  for (;;) {
-    if (t == 0) return -1;
-    if (t == 1) return R;
-    int64 i = 0, tt = t;
-    while (tt != 1) tt = mul_mod_ex(tt, tt, p), ++i;
-    int64 b = power_mod_ex(c, 1 << M - i - 1, p);
-    M = i;
-    c = mul_mod_ex(b, b, p);
-    t = mul_mod_ex(t, c, p);
-    R = mul_mod_ex(R, b, p);
-  }
-}
-
 // Primitive Root
 namespace pr {
 
@@ -619,6 +584,82 @@ class ind_solver {
 };
 }  // namespace pr
 
+// returns x where x^2 = n mod p
+// if no solution, return -1.
+// https://en.wikipedia.org/wiki/Tonelli%E2%80%93Shanks_algorithm
+int64 square_root_mod_impl(int64 n, int64 p) {
+  if (p == 2) {
+    return n;
+  }
+  if (n == 0) {
+    return 0;
+  }
+  if (power_mod_ex(n, (p - 1) / 2, p) == p - 1) {
+    return -1;
+  }
+  if (p % 4 == 3) {
+    return power_mod_ex(n, (p + 1) >> 2, p);
+  }
+  int64 Q = p - 1, S = 0;
+  while (Q % 2 == 0) Q >>= 1, ++S;
+  int64 z = 1;
+  while (power_mod_ex(z, (p - 1) >> 1, p) == 1) ++z;
+  int64 M = S, c = power_mod_ex(z, Q, p);
+  int64 t = power_mod_ex(n, Q, p), R = power_mod_ex(n, (Q + 1) >> 1, p);
+  for (;;) {
+    if (t == 0) return -1;
+    if (t == 1) return R;
+    int64 i = 0, tt = t;
+    while (tt != 1) tt = mul_mod_ex(tt, tt, p), ++i;
+    int64 b = power_mod_ex(c, 1 << M - i - 1, p);
+    M = i;
+    c = mul_mod_ex(b, b, p);
+    t = mul_mod_ex(t, c, p);
+    R = mul_mod_ex(R, b, p);
+  }
+}
+
+vector<int64> square_root_mod(int64 n, int64 p) {
+  const int64 x = square_root_mod_impl(n, p);
+  if (x != -1) {
+    const int64 y = x == 0 ? 0 : p - x;
+    return x == y ? vector<int64>{x} : vector<int64>{x, y};
+  } else {
+    return vector<int64>{};
+  }
+}
+
+vector<int64> nroot_mod(int64 a, int64 n, int64 p, int64 retCnt = -1) {
+  if (p == 2) {
+    return vector<int64>{a};
+  }
+  if (a == 0) {
+    return vector<int64>{0};
+  }
+  pr::ind_solver sv(p);
+  const int64 r = sv(a);
+  if (r == -1) return vector<int64>{};
+  // x^n = a mod p
+  // n log_x = r mod q
+  const int64 q = p - 1;
+  int64 u, v;
+  if (solve_linear_equation(n % q, r % q, q, u, v) == 0) {
+    return vector<int64>{};
+  }
+  vector<int64> result;
+  int64 coe = power_mod_ex(sv.pr(), v, p);
+  int64 x = power_mod_ex(sv.pr(), u, p);
+  int64 oldx = x;
+  do {
+    if (retCnt < 0 || result.size() < retCnt) {
+      result.push_back(x);
+    } else {
+      break;
+    }
+    x = mul_mod_ex(x, coe, p);
+  } while (oldx != x);
+  return result;
+}
 // 65701
 #endif
 /*

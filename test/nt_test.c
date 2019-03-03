@@ -98,11 +98,11 @@ SL void square_root_mod_test() {
     const int64 p = plist[i];
     int cnt = 0;
     for (int n = 0; n < p; ++n) {
-      int64 x = square_root_mod(n, p);
-      if (x != -1) {
+      vector<int64> ans = square_root_mod(n, p);
+      for (auto x : ans) {
         assert(x * x % p == n);
-        ++cnt;
       }
+      cnt += sz(ans) > 0;
     }
     if (p > 2)
       assert(cnt * 2 == p + 1);

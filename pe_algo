@@ -1615,4 +1615,142 @@ SL int64 gp_sum_mod_ivx1(int64 x, int64 invXSub1, int64 a, int64 b, int64 mod,
   return zeroPzero % mod;
 }
 
+template <typename T>
+struct PerfectPowerCounter {
+  PerfectPowerCounter(int pivot = 1000000) : PIVOT(pivot) { init(); }
+
+  ~PerfectPowerCounter() { delete[] pre; }
+
+  void init() {
+    PE_ASSERT(PIVOT < (1 << 20));
+    pre = new int[PIVOT][20];
+    fill(pre[0], pre[0] + 20, 0);
+    pre[0][0] = 1;
+    for (int i = 2; i <= PIVOT; ++i) {
+      auto f = factorize(i);
+      int d = 0;
+      for (auto& iter : f) d = gcd(d, iter.second);
+      for (int j = 0; j <= 19; ++j) pre[i][j] = pre[i - 1][j];
+      pre[i][d]++;
+    }
+  }
+
+  // Use f(x) to detnoe gcd of exponention of x.
+  // i.e if x=p1^e1 * p2^e2 * pe^e3, f(x) = gcd(e1, e2, e3).
+  // f(1) = 0
+  // This method returns # {x | f(x) = d, x >= 1, x <= n}
+  // n < 2^128, d >= 0
+  T cal(T n, int d) {
+    if (n <= PIVOT) {
+      if (d < 20)
+        return pre[n][d];
+      else
+        return 0;
+    }
+    if (d == 0) return n >= 1 ? 1 : 0;
+    if (d > 128) return 0;
+
+    pair<T, int> key{n, d};
+    auto where = mem.find(key);
+    if (where != mem.end()) return where->second;
+
+    if (d == 1) {
+      T ret = n - 1;
+      for (int i = 2; i < 128; ++i) {
+        ret -= cal(n, i);
+      }
+      return mem[key] = ret;
+    }
+
+    return mem[key] = cal(nrooti<T>(n, d), 1);
+  }
+  int PIVOT;
+  int (*pre)[20];
+  map<pair<T, int>, T> mem;
+};
+
+// See pe466, Lucy_Hedgehog's post.
+template <typename T>
+struct NotDivCounter {
+  T notDivCoprimeImpl(T n, const vector<int64>& L, int i) {
+    T ret = n;
+    for (int j = 0; j < i; ++j) {
+      const auto x = L[j];
+      if (x > n) break;
+      ret -= notDivCoprimeImpl(n / x, L, j);
+    }
+    return ret;
+  }
+
+  // Returns the number of integers in the range of 1..n not
+  // divisible by any integer in L.
+  // The intergers in L must be pairwise coprime.
+  T notDivCoprime(T n, const vector<int64>& L) {
+    const int size = sz(L);
+    if (size == 0) return n;
+    if (checkSorted(L)) return notDivCoprimeImpl(n, L, size);
+
+    vector<int64> LL(L);
+    sort(LL.begin(), LL.end());
+    return notDivCoprimeImpl(n, LL, size);
+  }
+
+  T notDivImpl(T n, const vector<int64>& L) {
+    const int size = sz(L);
+    if (size == 0) return n;
+
+    vector<int> flag(size, 0);
+    for (int i = 0; i < size; ++i)
+      for (int j = i + 1; j < size; ++j)
+        if (L[j] % L[i] == 0) flag[j] = 1;
+    vector<int64> R;
+    for (int i = 0; i < size; ++i)
+      if (flag[i] == 0) R.push_back(L[i]);
+
+    for (int i = 0; i < pcnt; ++i) {
+      const int64 p = plist[i];
+      if (p > L[size - 1]) break;
+
+      vector<int64> D;
+      for (auto& iter : R)
+        if (iter % p == 0) D.push_back(iter);
+      if (sz(D) < 2) continue;
+      vector<int64> C;
+      for (auto& iter : R)
+        if (iter % p) C.push_back(iter);
+      vector<int64> B(C);
+      for (auto& iter : D) B.push_back(iter / p);
+      sort(B.begin(), B.end());
+      return notDivImpl(n, C) - notDivImpl(n / p, C) + notDivImpl(n / p, B);
+    }
+
+    pair<T, vector<int64>> key{n, R};
+    auto where = mem.find(key);
+    if (where != mem.end()) return where->second;
+    return mem[key] = notDivCoprime(n, R);
+  }
+
+  // Returns the number of inters in the range of 1..n not
+  // divisible by any integer in L.
+  T notDiv(T n, const vector<int64>& L) {
+    const int size = sz(L);
+    if (size == 0) return n;
+    if (checkSorted(L)) return notDivImpl(n, L);
+
+    vector<int64> LL(L);
+    sort(LL.begin(), LL.end());
+    return notDivImpl(n, LL);
+  }
+
+  int checkSorted(const vector<int64>& L) {
+    const int size = sz(L);
+    for (int i = 0; i + 1 < size; ++i)
+      if (L[i] > L[i + 1]) {
+        return 0;
+      }
+    return 1;
+  }
+
+  map<pair<T, vector<int64>>, T> mem;
+};
 #endif

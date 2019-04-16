@@ -40,23 +40,26 @@ void parallel_sort(T* s, T* e) {
   }
 }
 
-template<typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) find_first(T first, T last, const std::function<bool (T)>& f) {
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
+    find_first(T first, T last, const std::function<bool(T)>& f) {
   const T end = last + 1;
   if (first > last) return end;
-  while (first <= last && ! f(first)) ++first;
+  while (first <= last && !f(first)) ++first;
   return first;
 }
 
-template<typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) find_first(T first, const std::function<bool (T)>& f) {
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
+    find_first(T first, const std::function<bool(T)>& f) {
   while (!f(first)) ++first;
   return first;
 }
 
-template<typename T, int B = 10000>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) find_first(T first, const std::function<T (T, T)>& f) {
-  for (T j = first;;j += B) {
+template <typename T, int B = 10000>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
+    find_first(T first, const std::function<T(T, T)>& f) {
+  for (T j = first;; j += B) {
     const T y = j + B - 1;
     T x = f(j, y);
     if (x <= y) {
@@ -65,50 +68,52 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T) find_first(T first, const s
   }
 }
 
-template<int TN, typename T, int B = 10000>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_first(T first, T last, const std::function<T (T, T)>& f) {
-  #if !ENABLE_OPENMP
-    return f(first, last);
-  #else
-    const T end = last + 1;
-    if (first > last) return end;
-    if (TN <= 1 || last - first + 1 <= B) return f(first, last);
+template <int TN, typename T, int B = 10000>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
+    parallel_find_first(T first, T last, const std::function<T(T, T)>& f) {
+#if !ENABLE_OPENMP
+  return f(first, last);
+#else
+  const T end = last + 1;
+  if (first > last) return end;
+  if (TN <= 1 || last - first + 1 <= B) return f(first, last);
 
-    omp_lock_t locker;
-    omp_init_lock(&locker);
+  omp_lock_t locker;
+  omp_init_lock(&locker);
 
-    const T STEP = static_cast<T>(TN) * B;
-    T best = last + 1;
+  const T STEP = static_cast<T>(TN) * B;
+  T best = last + 1;
 
-    #pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
-    for (int id = 0; id < TN; ++id) {
-      for (T j = first + (T)id * B; j <= last; j += STEP) {
-        const T y = min(last, j + B - 1);
-        T x = f(j, y);
-        if (x <= y) {
-          omp_set_lock(&locker);
-          if (x < best) best = x;
-          omp_unset_lock(&locker);
-          break;
-        } else {
-          int should_exit = 0;
-          omp_set_lock(&locker);
-          if (best < j) should_exit = 1;
-          omp_unset_lock(&locker);
-          if (should_exit) break;
-        }
+#pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
+  for (int id = 0; id < TN; ++id) {
+    for (T j = first + (T)id * B; j <= last; j += STEP) {
+      const T y = min(last, j + B - 1);
+      T x = f(j, y);
+      if (x <= y) {
+        omp_set_lock(&locker);
+        if (x < best) best = x;
+        omp_unset_lock(&locker);
+        break;
+      } else {
+        int should_exit = 0;
+        omp_set_lock(&locker);
+        if (best < j) should_exit = 1;
+        omp_unset_lock(&locker);
+        if (should_exit) break;
       }
     }
+  }
 
-    omp_destroy_lock(&locker);
+  omp_destroy_lock(&locker);
 
-    return best;
+  return best;
 
-  #endif
+#endif
 }
 
-template<int TN, typename T, int B = 10000>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_first(T first, T last, const std::function<bool (T)>& f) {
+template <int TN, typename T, int B = 10000>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
+    parallel_find_first(T first, T last, const std::function<bool(T)>& f) {
   auto g = [&](T a, T b) -> T {
     while (a <= b && !f(a)) ++a;
     return a;
@@ -116,50 +121,52 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_first(T first
   return parallel_find_first<TN, T, B>(first, last, g);
 }
 
-template<int TN, typename T, int B = 10000>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_first(T first, const std::function<T (T, T)>& f) {
-  #if !ENABLE_OPENMP
+template <int TN, typename T, int B = 10000>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
+    parallel_find_first(T first, const std::function<T(T, T)>& f) {
+#if !ENABLE_OPENMP
+  return find_first<T, B>(first, f);
+#else
+  if (TN <= 1) {
     return find_first<T, B>(first, f);
-  #else
-    if (TN <= 1) {
-      return find_first<T, B>(first, f);
-    }
-    omp_lock_t locker;
-    omp_init_lock(&locker);
+  }
+  omp_lock_t locker;
+  omp_init_lock(&locker);
 
-    const T guard = first - 1;
-    const T STEP = static_cast<T>(TN) * B;
-    T best = guard;
+  const T guard = first - 1;
+  const T STEP = static_cast<T>(TN) * B;
+  T best = guard;
 
-    #pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
-    for (int id = 0; id < TN; ++id) {
-      for (T j = first + (T)id * B; ; j += STEP) {
-        const T y = j + B - 1;
-        T x = f(j, y);
-        if (x <= y) {
-          omp_set_lock(&locker);
-          if (best == guard || x < best) best = x;
-          omp_unset_lock(&locker);
-          break;
-        } else {
-          int should_exit = 0;
-          omp_set_lock(&locker);
-          if (best != guard && best < j) should_exit = 1;
-          omp_unset_lock(&locker);
-          if (should_exit) break;
-        }
+#pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
+  for (int id = 0; id < TN; ++id) {
+    for (T j = first + (T)id * B;; j += STEP) {
+      const T y = j + B - 1;
+      T x = f(j, y);
+      if (x <= y) {
+        omp_set_lock(&locker);
+        if (best == guard || x < best) best = x;
+        omp_unset_lock(&locker);
+        break;
+      } else {
+        int should_exit = 0;
+        omp_set_lock(&locker);
+        if (best != guard && best < j) should_exit = 1;
+        omp_unset_lock(&locker);
+        if (should_exit) break;
       }
     }
+  }
 
-    omp_destroy_lock(&locker);
+  omp_destroy_lock(&locker);
 
-    return best;
+  return best;
 
-  #endif
+#endif
 }
 
-template<int TN, typename T, int B = 10000>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_first(T first, const std::function<bool (T)>& f) {
+template <int TN, typename T, int B = 10000>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
+    parallel_find_first(T first, const std::function<bool(T)>& f) {
   auto g = [&](T a, T b) -> T {
     while (a <= b && !f(a)) ++a;
     return a;
@@ -167,23 +174,26 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_first(T first
   return parallel_find_first<TN, T, B>(first, g);
 }
 
-template<typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) find_last(T first, T last, const std::function<bool (T)>& f) {
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
+    find_last(T first, T last, const std::function<bool(T)>& f) {
   const T end = first - 1;
   if (first > last) return end;
   while (last >= first && !f(last)) --last;
   return last;
 }
 
-template<typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) find_last(T last, const std::function<bool (T)>& f) {
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
+    find_last(T last, const std::function<bool(T)>& f) {
   while (!f(last)) --last;
   return last;
 }
 
-template<typename T, int B = 10000>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) find_last(T last, const std::function<T (T, T)>& f) {
-  for (T j = last;;j -= B) {
+template <typename T, int B = 10000>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
+    find_last(T last, const std::function<T(T, T)>& f) {
+  for (T j = last;; j -= B) {
     const T y = j - B + 1;
     T x = f(y, j);
     if (x >= y) {
@@ -192,50 +202,52 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T) find_last(T last, const std
   }
 }
 
-template<int TN, typename T, int B = 10000>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_last(T first, T last, const std::function<T (T, T)>& f) {
-  #if !ENABLE_OPENMP
-    return f(first, last);
-  #else
-    const T end = first - 1;
-    if (first > last) return end;
-    if (TN <= 1 || last - first + 1 <= B) return f(first, last);
+template <int TN, typename T, int B = 10000>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
+    parallel_find_last(T first, T last, const std::function<T(T, T)>& f) {
+#if !ENABLE_OPENMP
+  return f(first, last);
+#else
+  const T end = first - 1;
+  if (first > last) return end;
+  if (TN <= 1 || last - first + 1 <= B) return f(first, last);
 
-    omp_lock_t locker;
-    omp_init_lock(&locker);
+  omp_lock_t locker;
+  omp_init_lock(&locker);
 
-    const T STEP = static_cast<T>(TN) * B;
-    T best = first - 1;
+  const T STEP = static_cast<T>(TN) * B;
+  T best = first - 1;
 
-    #pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
-    for (int id = 0; id < TN; ++id) {
-      for (T j = last - (T)id * B; j >= first; j -= STEP) {
-        const T y = max(first, j - B + 1);
-        T x = f(y, j);
-        if (x >= y) {
-          omp_set_lock(&locker);
-          if (x > best) best = x;
-          omp_unset_lock(&locker);
-          break;
-        } else {
-          int should_exit = 0;
-          omp_set_lock(&locker);
-          if (best > j) should_exit = 1;
-          omp_unset_lock(&locker);
-          if (should_exit) break;
-        }
+#pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
+  for (int id = 0; id < TN; ++id) {
+    for (T j = last - (T)id * B; j >= first; j -= STEP) {
+      const T y = max(first, j - B + 1);
+      T x = f(y, j);
+      if (x >= y) {
+        omp_set_lock(&locker);
+        if (x > best) best = x;
+        omp_unset_lock(&locker);
+        break;
+      } else {
+        int should_exit = 0;
+        omp_set_lock(&locker);
+        if (best > j) should_exit = 1;
+        omp_unset_lock(&locker);
+        if (should_exit) break;
       }
     }
+  }
 
-    omp_destroy_lock(&locker);
+  omp_destroy_lock(&locker);
 
-    return best;
+  return best;
 
-  #endif
+#endif
 }
 
-template<int TN, typename T, int B = 10000>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_last(T first, T last, const std::function<bool (T)>& f) {
+template <int TN, typename T, int B = 10000>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
+    parallel_find_last(T first, T last, const std::function<bool(T)>& f) {
   auto g = [&](T a, T b) -> T {
     while (b >= a && !f(b)) --b;
     return b;
@@ -243,50 +255,52 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_last(T first,
   return parallel_find_last<TN, T, B>(first, last, g);
 }
 
-template<int TN, typename T, int B = 10000>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_last(T last, const std::function<T (T, T)>& f) {
-  #if !ENABLE_OPENMP
+template <int TN, typename T, int B = 10000>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
+    parallel_find_last(T last, const std::function<T(T, T)>& f) {
+#if !ENABLE_OPENMP
+  return find_last(last, f);
+#else
+  if (TN <= 1) {
     return find_last(last, f);
-  #else
-    if (TN <= 1) {
-      return find_last(last, f);
-    }
-    omp_lock_t locker;
-    omp_init_lock(&locker);
+  }
+  omp_lock_t locker;
+  omp_init_lock(&locker);
 
-    const T guard = last + 1;
-    const T STEP = static_cast<T>(TN) * B;
-    T best = guard;
+  const T guard = last + 1;
+  const T STEP = static_cast<T>(TN) * B;
+  T best = guard;
 
-    #pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
-    for (int id = 0; id < TN; ++id) {
-      for (T j = last - (T)id * B; ; j -= STEP) {
-        const T y = j - B + 1;
-        T x = f(j, y);
-        if (x >= y) {
-          omp_set_lock(&locker);
-          if (best == guard || x > best) best = x;
-          omp_unset_lock(&locker);
-          break;
-        } else {
-          int should_exit = 0;
-          omp_set_lock(&locker);
-          if (best != guard && best > j) should_exit = 1;
-          omp_unset_lock(&locker);
-          if (should_exit) break;
-        }
+#pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
+  for (int id = 0; id < TN; ++id) {
+    for (T j = last - (T)id * B;; j -= STEP) {
+      const T y = j - B + 1;
+      T x = f(j, y);
+      if (x >= y) {
+        omp_set_lock(&locker);
+        if (best == guard || x > best) best = x;
+        omp_unset_lock(&locker);
+        break;
+      } else {
+        int should_exit = 0;
+        omp_set_lock(&locker);
+        if (best != guard && best > j) should_exit = 1;
+        omp_unset_lock(&locker);
+        if (should_exit) break;
       }
     }
+  }
 
-    omp_destroy_lock(&locker);
+  omp_destroy_lock(&locker);
 
-    return best;
+  return best;
 
-  #endif
+#endif
 }
 
-template<int TN, typename T, int B = 10000>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_last(T last, const std::function<bool (T)>& f) {
+template <int TN, typename T, int B = 10000>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
+    parallel_find_last(T last, const std::function<bool(T)>& f) {
   auto g = [&](T a, T b) -> T {
     while (b >= a && !f(b)) --b;
     return b;

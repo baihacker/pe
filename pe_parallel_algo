@@ -41,7 +41,7 @@ void parallel_sort(T* s, T* e) {
 }
 
 template<typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) find_first(T first, T last, const std::function<int (T)>& f) {
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) find_first(T first, T last, const std::function<bool (T)>& f) {
   const T end = last + 1;
   if (first > last) return end;
   while (first <= last && ! f(first)) ++first;
@@ -49,22 +49,30 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T) find_first(T first, T last,
 }
 
 template<typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) find_first(T first, const std::function<int (T)>& f) {
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) find_first(T first, const std::function<bool (T)>& f) {
   while (!f(first)) ++first;
   return first;
 }
 
-template<int TN, typename T, int B = 10000>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_first(T first, T last, const std::function<int (T)>& f) {
-  #if !ENABLE_OPENMP
-    return find_first(first, last, f);
-  #else
-    if (TN <= 1) {
-      return find_first(first, last, f);
+template<typename T, int B = 10000>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) find_first(T first, const std::function<T (T, T)>& f) {
+  for (T j = first;;j += B) {
+    const T y = j + B - 1;
+    T x = f(j, y);
+    if (x <= y) {
+      return x;
     }
+  }
+}
+
+template<int TN, typename T, int B = 10000>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_first(T first, T last, const std::function<T (T, T)>& f) {
+  #if !ENABLE_OPENMP
+    return f(first, last);
+  #else
     const T end = last + 1;
     if (first > last) return end;
-    if (last - first + 1 <= B) return find_first(first, last, f);
+    if (TN <= 1 || last - first + 1 <= B) return f(first, last);
 
     omp_lock_t locker;
     omp_init_lock(&locker);
@@ -75,8 +83,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_first(T first
     #pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
     for (int id = 0; id < TN; ++id) {
       for (T j = first + (T)id * B; j <= last; j += STEP) {
-        T x = j, y = min(last, j + B - 1);
-        while (x <= y && !f(x)) ++x;
+        const T y = min(last, j + B - 1);
+        T x = f(j, y);
         if (x <= y) {
           omp_set_lock(&locker);
           if (x < best) best = x;
@@ -100,12 +108,21 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_first(T first
 }
 
 template<int TN, typename T, int B = 10000>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_first(T first, const std::function<int (T)>& f) {
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_first(T first, T last, const std::function<bool (T)>& f) {
+  auto g = [&](T a, T b) -> T {
+    while (a <= b && !f(a)) ++a;
+    return a;
+  };
+  return parallel_find_first<TN, T, B>(first, last, g);
+}
+
+template<int TN, typename T, int B = 10000>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_first(T first, const std::function<T (T, T)>& f) {
   #if !ENABLE_OPENMP
-    return find_first(first, f);
+    return find_first<T, B>(first, f);
   #else
     if (TN <= 1) {
-      return find_first(first, f);
+      return find_first<T, B>(first, f);
     }
     omp_lock_t locker;
     omp_init_lock(&locker);
@@ -117,8 +134,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_first(T first
     #pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
     for (int id = 0; id < TN; ++id) {
       for (T j = first + (T)id * B; ; j += STEP) {
-        T x = j, y = j + B - 1;
-        while (x <= y && !f(x)) ++x;
+        const T y = j + B - 1;
+        T x = f(j, y);
         if (x <= y) {
           omp_set_lock(&locker);
           if (best == guard || x < best) best = x;
@@ -141,8 +158,17 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_first(T first
   #endif
 }
 
+template<int TN, typename T, int B = 10000>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_first(T first, const std::function<bool (T)>& f) {
+  auto g = [&](T a, T b) -> T {
+    while (a <= b && !f(a)) ++a;
+    return a;
+  };
+  return parallel_find_first<TN, T, B>(first, g);
+}
+
 template<typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) find_last(T first, T last, const std::function<int (T)>& f) {
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) find_last(T first, T last, const std::function<bool (T)>& f) {
   const T end = first - 1;
   if (first > last) return end;
   while (last >= first && !f(last)) --last;
@@ -150,22 +176,30 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T) find_last(T first, T last, 
 }
 
 template<typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) find_last(T last, const std::function<int (T)>& f) {
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) find_last(T last, const std::function<bool (T)>& f) {
   while (!f(last)) --last;
   return last;
 }
 
-template<int TN, typename T, int B = 10000>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_last(T first, T last, const std::function<int (T)>& f) {
-  #if !ENABLE_OPENMP
-    return find_last(first, last, f);
-  #else
-    if (TN <= 1) {
-      return find_last(first, last, f);
+template<typename T, int B = 10000>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) find_last(T last, const std::function<T (T, T)>& f) {
+  for (T j = last;;j -= B) {
+    const T y = j - B + 1;
+    T x = f(y, j);
+    if (x >= y) {
+      return x;
     }
+  }
+}
+
+template<int TN, typename T, int B = 10000>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_last(T first, T last, const std::function<T (T, T)>& f) {
+  #if !ENABLE_OPENMP
+    return f(first, last);
+  #else
     const T end = first - 1;
     if (first > last) return end;
-    if (last - first + 1 <= B) return find_last(first, last, f);
+    if (TN <= 1 || last - first + 1 <= B) return f(first, last);
 
     omp_lock_t locker;
     omp_init_lock(&locker);
@@ -176,8 +210,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_last(T first,
     #pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
     for (int id = 0; id < TN; ++id) {
       for (T j = last - (T)id * B; j >= first; j -= STEP) {
-        T x = j, y = max(first, j - B + 1);
-        while (x >= y && !f(x)) --x;
+        const T y = max(first, j - B + 1);
+        T x = f(y, j);
         if (x >= y) {
           omp_set_lock(&locker);
           if (x > best) best = x;
@@ -201,7 +235,16 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_last(T first,
 }
 
 template<int TN, typename T, int B = 10000>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_last(T last, const std::function<int (T)>& f) {
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_last(T first, T last, const std::function<bool (T)>& f) {
+  auto g = [&](T a, T b) -> T {
+    while (b >= a && !f(b)) --b;
+    return b;
+  };
+  return parallel_find_last<TN, T, B>(first, last, g);
+}
+
+template<int TN, typename T, int B = 10000>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_last(T last, const std::function<T (T, T)>& f) {
   #if !ENABLE_OPENMP
     return find_last(last, f);
   #else
@@ -218,8 +261,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_last(T last, 
     #pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
     for (int id = 0; id < TN; ++id) {
       for (T j = last - (T)id * B; ; j -= STEP) {
-        T x = j, y = j - B + 1;
-        while (x >= y && !f(x)) --x;
+        const T y = j - B + 1;
+        T x = f(j, y);
         if (x >= y) {
           omp_set_lock(&locker);
           if (best == guard || x > best) best = x;
@@ -240,5 +283,14 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_last(T last, 
     return best;
 
   #endif
+}
+
+template<int TN, typename T, int B = 10000>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) parallel_find_last(T last, const std::function<bool (T)>& f) {
+  auto g = [&](T a, T b) -> T {
+    while (b >= a && !f(b)) --b;
+    return b;
+  };
+  return parallel_find_last<TN, T, B>(last, g);
 }
 #endif

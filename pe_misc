@@ -97,24 +97,26 @@ class GaussianEliminationSolver {
     return x > 0 ? 1 : -1;
   }
 
-  int reduce() {
+  int reduce(int selectRow = 1) {
     x = y = 0;
     while (x < row && y < col) {
       int bestId = x;
-      double bestV = fabs(at(x, y));
-      for (int i = x + 1; i < row; ++i) {
-        auto now = fabs(at(i, y));
-        if (now > bestV) {
-          bestId = i;
-          bestV = now;
+      if (selectRow) {
+        double bestV = fabs(at(x, y));
+        for (int i = x + 1; i < row; ++i) {
+          auto now = fabs(at(i, y));
+          if (now > bestV) {
+            bestId = i;
+            bestV = now;
+          }
         }
-      }
-      if (dbsgn(bestV) == 0) {
-        ++y;
-        continue;
-      }
-      if (bestId != x) {
-        data[bestId].swap(data[x]);
+        if (dbsgn(bestV) == 0) {
+          ++y;
+          continue;
+        }
+        if (bestId != x) {
+          data[bestId].swap(data[x]);
+        }
       }
       for (int i = x + 1; i < row; ++i) {
         if (dbsgn(at(i, y)) == 0) continue;
@@ -127,7 +129,7 @@ class GaussianEliminationSolver {
   }
 
   const vector<double>& solve() {
-    reduce();
+    reduce(0);
     PE_ASSERT(rank() == row);
     ans.resize(row);
     for (int i = row - 1; i >= 0; --i) {

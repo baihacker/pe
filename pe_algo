@@ -888,10 +888,82 @@ class DVA {
     IT begin() { return first; }
     IT end() { return last; }
   };
+
   template <typename IT>
   DVARange<IT> makeRange(IT first, IT last) const {
     return DVARange<IT>(first, last);
   }
+
+  struct DVAItem {
+    T value;
+    int64 key;
+    int idx;
+  };
+
+  struct DVAIteratorBase {
+    const std::vector<int64>& keys;
+    const std::vector<T>& values;
+    int idx;
+    const int keySize;
+
+    DVAIteratorBase(const std::vector<int64>& keys,
+                    const std::vector<T>& values, int idx, int keySize)
+        : keys(keys), values(values), idx(idx), keySize(keySize) {}
+
+    DVAItem operator*() { return DVAItem{values[idx], keys[idx], idx}; }
+
+    int operator==(const DVAIteratorBase& o) const {
+      return idx == o.idx && keySize == o.keySize;
+    }
+
+    int operator!=(const DVAIteratorBase& o) const {
+      return !(this->operator==(o));
+    }
+  };
+
+  struct DVAIterator : public DVAIteratorBase {
+    using DVAIteratorBase::DVAIteratorBase;
+
+    DVAIterator& operator++() {
+      ++DVAIteratorBase::idx;
+      return *this;
+    }
+
+    DVAIterator operator++(int) {
+      return DVAIterator(keys, values, DVAIteratorBase::idx++, keySize);
+    }
+
+    DVAIterator& operator--() {
+      --DVAIteratorBase::idx;
+      return *this;
+    }
+
+    DVAIterator operator--(int) {
+      return DVAIterator(keys, values, DVAIteratorBase::idx--, keySize);
+    }
+  };
+
+  struct DVARIterator : public DVAIteratorBase {
+    using DVAIteratorBase::DVAIteratorBase;
+
+    DVARIterator& operator++() {
+      --DVAIteratorBase::idx;
+      return *this;
+    }
+
+    DVARIterator operator++(int) {
+      return DVARIterator(keys, values, DVAIteratorBase::idx--, keySize);
+    }
+
+    DVARIterator& operator--() {
+      ++DVAIteratorBase::idx;
+      return *this;
+    }
+
+    DVARIterator operator--(int) {
+      return DVARIterator(keys, values, DVAIteratorBase::idx++, keySize);
+    }
+  };
 
  public:
   int64 n;
@@ -934,6 +1006,20 @@ class DVA {
   DVARange<std::vector<int64>::const_reverse_iterator> bKeys() const {
     return makeRange(keys.rbegin(), keys.rend() - 1);
   }
+
+  DVARange<DVAIterator> fItems() const { return makeRange(begin(), end()); }
+
+  DVARange<DVARIterator> bItems() const { return makeRange(rbegin(), rend()); }
+
+  DVAIterator begin() const { return DVAIterator(keys, values, 1, keySize); }
+  DVAIterator end() const {
+    return DVAIterator(keys, values, keySize, keySize);
+  }
+
+  DVARIterator rbegin() const {
+    return DVARIterator(keys, values, keySize - 1, keySize);
+  }
+  DVARIterator rend() const { return DVARIterator(keys, values, 0, keySize); }
 };
 
 template <typename T>

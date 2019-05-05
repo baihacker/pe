@@ -2,6 +2,8 @@
 #define __PE_GEOMETRY_H__
 
 #include "pe_base"
+#include "pe_int128"
+#include "pe_type_traits"
 #include "pe_nt"
 
 template <typename T>
@@ -103,7 +105,9 @@ struct Line2D {
     normalize();
   }
 
-  void normalize() {
+  void normalize() { normalize(IntToType<is_native_integer<T>::value>()); }
+
+  void normalize(IntToType<1>) {
     if (A == 0 && B == 0) {
       return;
     }
@@ -115,6 +119,9 @@ struct Line2D {
     B /= t;
     C /= t;
   }
+
+  void normalize(IntToType<0>) {}
+
   int operator==(const Line2D& o) const {
     return A == o.A && B == o.B && C == o.C;
   }

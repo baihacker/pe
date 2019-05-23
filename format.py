@@ -17,6 +17,8 @@ def tidy():
 
 def format():
   for rt, dirs, files in os.walk(CURRENT_DIRECTORY):
+    if rt.find(".git") != -1:
+      continue
     for f in files:
       fpath = os.path.join(rt, f)
       filename, fileExtension = os.path.splitext(fpath)

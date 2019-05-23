@@ -121,13 +121,11 @@ SL void mat_mul_vec_mod(T* aa, T* b, T* c, int64 mod, int N) {
 
 #if ENABLE_EIGEN
 
-template <typename T>
-using MatT = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
-
-template <typename _Scalar>
-SL MatT<_Scalar> power_mod_impl(const MatT<_Scalar>& x, int64 n, int64 mod,
-                                NModNumberIndicator<0>) {
-  typedef MatT<_Scalar> MatrixT;
+template <typename _Scalar, int _Rows, int _Cols>
+SL Eigen::Matrix<_Scalar, _Rows, _Cols> power_mod_impl(
+    const Eigen::Matrix<_Scalar, _Rows, _Cols>& x, int64 n, int64 mod,
+    NModNumberOrNModNumberDIndicator<0>) {
+  typedef Eigen::Matrix<_Scalar, _Rows, _Cols> MatrixT;
   auto fixmod = [=](MatrixT& m) {
     const auto r = m.rows();
     const auto c = m.cols();
@@ -156,10 +154,11 @@ SL MatT<_Scalar> power_mod_impl(const MatT<_Scalar>& x, int64 n, int64 mod,
   return e;
 }
 
-template <typename _Scalar>
-SL MatT<_Scalar> power_mod_impl(const MatT<_Scalar>& x, int64 n, int64 /*mod*/,
-                                NModNumberIndicator<1>) {
-  typedef MatT<_Scalar> MatrixT;
+template <typename _Scalar, int _Rows, int _Cols>
+SL Eigen::Matrix<_Scalar, _Rows, _Cols> power_mod_impl(
+    const Eigen::Matrix<_Scalar, _Rows, _Cols>& x, int64 n, int64 /*mod*/,
+    NModNumberOrNModNumberDIndicator<1>) {
+  typedef Eigen::Matrix<_Scalar, _Rows, _Cols> MatrixT;
   auto fixmod = [=](MatrixT& m) {
     const auto r = m.rows();
     const auto c = m.cols();
@@ -188,17 +187,22 @@ SL MatT<_Scalar> power_mod_impl(const MatT<_Scalar>& x, int64 n, int64 /*mod*/,
   return e;
 }
 
-template <typename _Scalar>
-SL MatT<_Scalar> power_mod(const MatT<_Scalar>& x, int64 n, int64 mod) {
-  return power_mod_impl(x, n, mod,
-                        NModNumberIndicator<IsNModNumber<_Scalar>::result>());
+template <typename _Scalar, int _Rows, int _Cols>
+SL Eigen::Matrix<_Scalar, _Rows, _Cols> power_mod(
+    const Eigen::Matrix<_Scalar, _Rows, _Cols>& x, int64 n, int64 mod) {
+  return power_mod_impl(
+      x, n, mod,
+      NModNumberOrNModNumberDIndicator < IsNModNumber<_Scalar>::result ||
+          IsNModNumberD<_Scalar>::result > ());
 }
 
-template <typename _Scalar>
-SL vector<_Scalar> power_mod_impl(const MatT<_Scalar>& x, int64 n,
-                                  const vector<_Scalar>& v, int64 mod,
-                                  NModNumberIndicator<0>) {
-  typedef MatT<_Scalar> MatrixT;
+template <typename _Scalar, int _Rows, int _Cols, typename _ScalarV>
+SL vector<_ScalarV> power_mod_impl(
+    const Eigen::Matrix<_Scalar, _Rows, _Cols>& x, int64 n,
+    const vector<_ScalarV>& v, int64 mod, NModNumberOrNModNumberDIndicator<0>) {
+  static_assert(std::is_same<_Scalar, _ScalarV>::value,
+                "Matrix's element type must be the same as vector's");
+  typedef Eigen::Matrix<_Scalar, _Rows, _Cols> MatrixT;
   auto fixmod = [=](MatrixT& m) {
     const auto r = m.rows();
     const auto c = m.cols();
@@ -209,7 +213,7 @@ SL vector<_Scalar> power_mod_impl(const MatT<_Scalar>& x, int64 n,
   };
   const int K = x.rows();
 
-  vector<_Scalar> result(v);
+  vector<_ScalarV> result(v);
   for (auto& i : result) i = regulate_mod(i, mod);
 
   MatrixT y = x;
@@ -217,9 +221,9 @@ SL vector<_Scalar> power_mod_impl(const MatT<_Scalar>& x, int64 n,
   for (; n; n >>= 1) {
     // cout << "n = " << n << endl;
     if (n & 1) {
-      vector<_Scalar> temp(K, 0);
+      vector<_ScalarV> temp(K, 0);
       for (int i = 0; i < K; ++i) {
-        _Scalar s = 0;
+        _ScalarV s = 0;
         for (int j = 0; j < K; ++j) {
           s += y(i, j) * result[j];
         }
@@ -235,11 +239,14 @@ SL vector<_Scalar> power_mod_impl(const MatT<_Scalar>& x, int64 n,
   return result;
 }
 
-template <typename _Scalar>
-SL vector<_Scalar> power_mod_impl(const MatT<_Scalar>& x, int64 n,
-                                  const vector<_Scalar>& v, int64 /*mod*/,
-                                  NModNumberIndicator<1>) {
-  typedef MatT<_Scalar> MatrixT;
+template <typename _Scalar, int _Rows, int _Cols, typename _ScalarV>
+SL vector<_ScalarV> power_mod_impl(
+    const Eigen::Matrix<_Scalar, _Rows, _Cols>& x, int64 n,
+    const vector<_ScalarV>& v, int64 /*mod*/,
+    NModNumberOrNModNumberDIndicator<1>) {
+  static_assert(std::is_same<_Scalar, _ScalarV>::value,
+                "Matrix's element type must be the same as vector's");
+  typedef Eigen::Matrix<_Scalar, _Rows, _Cols> MatrixT;
   auto fixmod = [=](MatrixT& m) {
     const auto r = m.rows();
     const auto c = m.cols();
@@ -251,15 +258,15 @@ SL vector<_Scalar> power_mod_impl(const MatT<_Scalar>& x, int64 n,
 
   const int K = x.rows();
 
-  vector<_Scalar> result(v);
+  vector<_ScalarV> result(v);
   MatrixT y = x;
 
   for (; n; n >>= 1) {
     // cout << "n = " << n << endl;
     if (n & 1) {
-      vector<_Scalar> temp(K, 0);
+      vector<_ScalarV> temp(K, 0);
       for (int i = 0; i < K; ++i) {
-        _Scalar s = 0;
+        _ScalarV s = 0;
         for (int j = 0; j < K; ++j) {
           s += y(i, j) * result[j];
         }
@@ -276,11 +283,13 @@ SL vector<_Scalar> power_mod_impl(const MatT<_Scalar>& x, int64 n,
   return result;
 }
 
-template <typename _Scalar>
-SL vector<_Scalar> power_mod(const MatT<_Scalar>& x, int64 n,
-                             const vector<_Scalar>& v, int64 mod) {
-  return power_mod_impl(x, n, v, mod,
-                        NModNumberIndicator<IsNModNumber<_Scalar>::result>());
+template <typename _Scalar, int _Rows, int _Cols, typename _ScalarV>
+SL vector<_ScalarV> power_mod(const Eigen::Matrix<_Scalar, _Rows, _Cols>& x,
+                              int64 n, const vector<_ScalarV>& v, int64 mod) {
+  return power_mod_impl(
+      x, n, v, mod,
+      NModNumberOrNModNumberDIndicator < IsNModNumber<_Scalar>::result ||
+          IsNModNumberD<_Scalar>::result > ());
 }
 
 /**
@@ -299,14 +308,19 @@ SL vector<_Scalar> power_mod(const MatT<_Scalar>& x, int64 n,
  *   v[1] = 1;
  * }, 2, 100000);
  */
-
-// Dynamic mod version: use int128 or global variable DEFAULT_MOD (slow).
+// If int128 is available, use int128 as the matrix element type
+// and the vector element type.
+// Otherwise, use NModNumber6464<mod> and so the mod value must
+// be specified as template argument which is required to be
+// a compiling time constant.
 #if PE_HAS_INT128
 SL vector<int64> power_mod(
-    const function<void(MatT<int128>& mat, vector<int128>& v)>& init,
+    const function<
+        void(Eigen::Matrix<int128, Eigen::Dynamic, Eigen::Dynamic>& mat,
+             vector<int128>& v)>& init,
     const int K, int64 n, int64 mod) {
   typedef int128 ScalarT;
-  typedef MatT<ScalarT> MatrixT;
+  typedef Eigen::Matrix<ScalarT, Eigen::Dynamic, Eigen::Dynamic> MatrixT;
 
   vector<ScalarT> v(K, 0);
   MatrixT m = MatrixT::Zero(K, K);
@@ -321,10 +335,21 @@ SL vector<int64> power_mod(
   return res;
 }
 
-SL MatT<int64> power_mod(const function<void(MatT<int128>& mat)>& init,
-                         const int K, int64 n, int64 mod) {
+template <int64 mod>
+SL vector<int64> power_mod(
+    const function<
+        void(Eigen::Matrix<int128, Eigen::Dynamic, Eigen::Dynamic>& mat,
+             vector<int128>& v)>& init,
+    const int K, int64 n) {
+  return power_mod(init, K, n, mod);
+}
+
+SL Eigen::Matrix<int64, Eigen::Dynamic, Eigen::Dynamic> power_mod(
+    const function<
+        void(Eigen::Matrix<int128, Eigen::Dynamic, Eigen::Dynamic>& mat)>& init,
+    const int K, int64 n, int64 mod) {
   typedef int128 ScalarT;
-  typedef MatT<ScalarT> MatrixT;
+  typedef Eigen::Matrix<ScalarT, Eigen::Dynamic, Eigen::Dynamic> MatrixT;
 
   MatrixT m = MatrixT::Zero(K, K);
 
@@ -332,61 +357,29 @@ SL MatT<int64> power_mod(const function<void(MatT<int128>& mat)>& init,
 
   auto t = power_mod(m, n, mod);
 
-  MatT<int64> res(K, K);
+  Eigen::Matrix<int64, Eigen::Dynamic, Eigen::Dynamic> res(K, K);
   for (int i = 0; i < K; ++i)
     for (int j = 0; j < K; ++j) res(i, j) = static_cast<int64>(t(i, j));
 
   return res;
 }
-#else
-SL vector<int64> power_mod(
-    const function<void(MatT<NModNumber<DefaultMod>>& mat,
-                        vector<NModNumber<DefaultMod>>& v)>& init,
-    const int K, int64 n, int64 mod) {
-  typedef NModNumber<DefaultMod> ScalarT;
-  typedef MatT<ScalarT> MatrixT;
 
-  vector<ScalarT> v(K, 0);
-  MatrixT m = MatrixT::Zero(K, K);
-
-  init(m, v);
-
-  auto t = power_mod(m, n, v, mod);
-
-  vector<int64> res(K, 0);
-  for (int i = 0; i < K; ++i) res[i] = t[i].value();
-
-  return res;
-}
-
-SL MatT<int64> power_mod(
-    const function<void(MatT<NModNumber<DefaultMod>>& mat)>& init, const int K,
-    int64 n, int64 mod) {
-  typedef NModNumber<DefaultMod> ScalarT;
-  typedef MatT<ScalarT> MatrixT;
-
-  MatrixT m = MatrixT::Zero(K, K);
-
-  init(m);
-
-  auto t = power_mod(m, n, mod);
-
-  MatT<int64> res(K, K);
-  for (int i = 0; i < K; ++i)
-    for (int j = 0; j < K; ++j) res(i, j) = static_cast<int64>(t(i, j).value());
-
-  return res;
-}
-#endif  // end PE_HAS_INT128
-
-// Compiling time mod version.
-// mod * mod < int64
 template <int64 mod>
-SL vector<int64> power_mod(
-    const function<void(MatT<NMod<mod>>& mat, vector<NMod<mod>>& v)>& init,
+SL Eigen::Matrix<int64, Eigen::Dynamic, Eigen::Dynamic> power_mod(
+    const function<
+        void(Eigen::Matrix<int128, Eigen::Dynamic, Eigen::Dynamic>& mat)>& init,
     const int K, int64 n) {
-  typedef NMod<mod> ScalarT;
-  typedef MatT<ScalarT> MatrixT;
+  return power_mod(init, K, n, mod);
+}
+#else
+template <int64 mod>
+SL vector<int64> power_mod(
+    const function<void(
+        Eigen::Matrix<NModNumber6464<mod>, Eigen::Dynamic, Eigen::Dynamic>& mat,
+        vector<NModNumber6464<mod> >& v)>& init,
+    const int K, int64 n) {
+  typedef NModNumber6464<mod> ScalarT;
+  typedef Eigen::Matrix<ScalarT, Eigen::Dynamic, Eigen::Dynamic> MatrixT;
 
   vector<ScalarT> v(K, 0);
   MatrixT m = MatrixT::Zero(K, K);
@@ -401,12 +394,13 @@ SL vector<int64> power_mod(
   return res;
 }
 
-// mod * mod < int64
 template <int64 mod>
-SL MatT<int64> power_mod(const function<void(MatT<NMod<mod>>& mat)>& init,
-                         const int K, int64 n) {
-  typedef NMod<mod> ScalarT;
-  typedef MatT<ScalarT> MatrixT;
+SL Eigen::Matrix<int64, Eigen::Dynamic, Eigen::Dynamic> power_mod(
+    const function<void(Eigen::Matrix<NModNumber6464<mod>, Eigen::Dynamic,
+                                      Eigen::Dynamic>& mat)>& init,
+    const int K, int64 n) {
+  typedef NModNumber6464<mod> ScalarT;
+  typedef Eigen::Matrix<ScalarT, Eigen::Dynamic, Eigen::Dynamic> MatrixT;
 
   MatrixT m = MatrixT::Zero(K, K);
 
@@ -414,12 +408,30 @@ SL MatT<int64> power_mod(const function<void(MatT<NMod<mod>>& mat)>& init,
 
   auto t = power_mod(m, n, mod);
 
-  MatT<int64> res(K, K);
+  Eigen::Matrix<int64, Eigen::Dynamic, Eigen::Dynamic> res(K, K);
   for (int i = 0; i < K; ++i)
     for (int j = 0; j < K; ++j) res(i, j) = t(i, j).value();
 
   return res;
 }
+#endif
+
+using Mat64 = Eigen::Matrix<int64, Eigen::Dynamic, Eigen::Dynamic>;
+
+template <int64 mod>
+using MatM = Eigen::Matrix<NModNumber6464<mod>, Eigen::Dynamic, Eigen::Dynamic>;
+
+using MatMD = Eigen::Matrix<NModNumberD6464, Eigen::Dynamic, Eigen::Dynamic>;
+
+#if PE_HAS_INT128
+using Mat128 = Eigen::Matrix<int128, Eigen::Dynamic, Eigen::Dynamic>;
+
+template <int64 mod>
+using MatML =
+    Eigen::Matrix<NModNumberL128<mod>, Eigen::Dynamic, Eigen::Dynamic>;
+
+using MatMDL = Eigen::Matrix<NModNumberDL128, Eigen::Dynamic, Eigen::Dynamic>;
+#endif
 
 #endif  // end ENABLE_EIGEN
 

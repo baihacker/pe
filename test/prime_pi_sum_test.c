@@ -69,7 +69,7 @@ SL void prime_pi_sum_pmod_test() {
   for (int mod = 1; mod <= 30; ++mod) {
     int64 result[32] = {0};
     for (int i = 0; i < pcnt && plist[i] <= N; ++i) ++result[plist[i] % mod];
-    auto v = prime_s0_pmod<NModNumber6464<M>>(N, mod);
+    auto v = prime_s0_pmod<NModNumber<CCMod<M>>>(N, mod);
     for (int j = 0; j < mod; ++j) {
       assert(result[j] % M == v[j][N].value());
     }
@@ -78,7 +78,7 @@ SL void prime_pi_sum_pmod_test() {
     int64 result[32] = {0};
     for (int i = 0; i < pcnt && plist[i] <= N; ++i)
       result[plist[i] % mod] += plist[i];
-    auto v = prime_s1_pmod<NModNumber6464<M>>(N, mod);
+    auto v = prime_s1_pmod<NModNumber<CCMod<M>>>(N, mod);
     for (int j = 0; j < mod; ++j) {
       assert(result[j] % M == v[j][N].value());
     }

@@ -406,35 +406,16 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
   return power_mod_ex_impl<atLeastInt64T1, T2, M>(x, n, mod);
 }
 
+// Implementation of
+// NModNumber, NModNumberL, NModNumberD, NModNumberDL
+// L: lazy, the  Modular arithmetic is performed when you call fix_value
+// D: dynamic, the mod number is specified by a global variable.
 struct init_direct_t {};
 static const init_direct_t __init_direct{};
 struct fake_int128 {};
-int64 DEFAULT_MOD = 1;
 
-// Mod context implementations
-// The mod value is a member field
-struct DefaultMod {
-  static int64 mod() { return ::DEFAULT_MOD; }
-};
-
-// The mod value is a compiling time constant
-template <int64 M>
-struct CCMod {
-  constexpr static int64 mod() { return M; }
-};
-
-template <typename T>
-struct MemMod {
-  MemMod(T M = ::DEFAULT_MOD) : M(M) {}
-  T mod() const { return M; }
-  T M;
-};
-
-using MemMod64 = MemMod<int64>;
-
-// Arithmetic policy implementations
 template <typename S, typename B>
-struct APSB {
+struct mtype_policy {
   typedef S ints;
   typedef B intb;
   static ints add(ints a, ints b, ints mod) {
@@ -451,13 +432,10 @@ struct APSB {
     intb c = (intb)a * b % mod;
     return static_cast<ints>(c);
   }
-  static void fix_value(ints& v, ints mod) {
-    // Do nothing
-  }
 };
 
 template <typename S>
-struct APSB<S, S> {
+struct mtype_policy<S, S> {
   typedef S ints;
   typedef S intb;
   static ints add(ints a, ints b, ints mod) {
@@ -474,13 +452,10 @@ struct APSB<S, S> {
     a = a * b % mod;
     return a;
   }
-  static void fix_value(ints& v, ints mod) {
-    // Do nothing
-  }
 };
 
 template <typename S>
-struct APSB<S, fake_int128> {
+struct mtype_policy<S, fake_int128> {
   typedef S ints;
   typedef fake_int128 intb;
   static ints add(ints a, ints b, ints mod) {
@@ -494,77 +469,61 @@ struct APSB<S, fake_int128> {
     return a;
   }
   static ints mul(ints a, ints b, ints mod) { return mul_mod_ex(a, b, mod); }
-  static void fix_value(ints& v, ints mod) {
-    // Do nothing
-  }
 };
 
-template <typename S>
-struct APSBL {
-  typedef S ints;
-  typedef fake_int128 intb;
-  static ints add(ints a, ints b, ints /*mod*/) { return a + b; }
-  static ints sub(ints a, ints b, ints /*mod*/) { return a - b; }
-  static ints mul(ints a, ints b, ints /*mod*/) { return a * b; }
-  static void fix_value(ints& v, ints mod) { v = regulate_mod(v, mod); }
-};
-
-// Forward declarations related to NModNumber;
-template <typename MC, typename AP>
+template <typename S, typename B, S MOD>
 struct NModNumber;
 
-// MC = mod context
-// AP = arithmetic policy
-template <typename MC, typename AP = APSB<int64, int64> >
+template <typename T, int64 MOD>
+struct NModNumberL;
+
+template <typename S, typename B>
+struct NModNumberD;
+
+template <typename T>
+struct NModNumberDL;
+
+template <typename S, typename B, S MOD>
+ostream& operator<<(ostream& o, const NModNumber<S, B, MOD>& m);
+
+template <typename T, int64 mod>
+ostream& operator<<(ostream& o, const NModNumberL<T, mod>& m);
+
+template <typename S, typename B>
+ostream& operator<<(ostream& o, const NModNumberD<S, B>& m);
+
+template <typename T>
+ostream& operator<<(ostream& o, const NModNumberDL<T>& m);
+
+template <typename S, typename B, S MOD>
 struct NModNumber {
-  friend NModNumber operator+(const NModNumber& x, const NModNumber& y) {
-    return NModNumber(AP::add(x.value_, y.value_, MC::mod()), __init_direct);
-  }
+  typedef mtype_policy<S, B> MTI;
+  typedef typename MTI::ints ints;
+  typedef typename MTI::intb intb;
 
-  template <typename T>
-  friend REQUIRES((is_native_integer<T>::value)) RETURN(NModNumber) operator+(
-      const NModNumber& x, T y) {
-    return x + NModNumber(y);
-  }
+  static_assert(MOD > 0, "MOD > 0");
 
-  template <typename T>
-  friend REQUIRES((is_native_integer<T>::value)) RETURN(NModNumber) operator+(
-      T x, const NModNumber& y) {
-    return NModNumber(x) + y;
-  }
-
-  friend NModNumber operator-(const NModNumber& x, const NModNumber& y) {
-    return NModNumber(AP::sub(x.value_, y.value_, MC::mod()), __init_direct);
-  }
-
-  friend NModNumber operator*(const NModNumber& x, const NModNumber& y) {
-    return NModNumber(AP::mul(x.value_, y.value_, MC::mod()), __init_direct);
-  }
-
-  friend ostream& operator<<(ostream& o, const NModNumber& m) {
-    return o << m.value_;
-  }
-
-  typedef typename AP::ints ints;
-
-  NModNumber(ints value = 0) {
-    const ints M = MC::mod();
-    if (value >= 0) {
-      value_ = value >= M ? value % M : value;
+  NModNumber(ints val = 0) {
+    if (val >= 0) {
+      value_ = val >= MOD ? val % MOD : val;
     } else {
-      value_ = value <= -M ? value % M + M : value + M;
+      value_ = val <= -MOD ? val % MOD + MOD : val + MOD;
     }
   }
 
-  NModNumber(ints value, init_direct_t) : value_(value) {}
+  NModNumber(ints val, init_direct_t) : value_(val) {}
+
+  NModNumber operator+(const NModNumber& y) const {
+    return NModNumber(MTI::add(value_, y.value_, MOD), __init_direct);
+  }
 
   NModNumber& operator+=(const NModNumber& y) {
-    value_ = AP::add(value_, y.value_, MC::mod());
+    value_ = MTI::add(value_, y.value_, MOD);
     return *this;
   }
 
   NModNumber& operator++() {
-    value_ = AP::add(value_, 1, MC::mod());
+    value_ = MTI::add(value_, 1, MOD);
     return *this;
   }
 
@@ -574,13 +533,17 @@ struct NModNumber {
     return t;
   }
 
+  NModNumber operator-(const NModNumber& y) const {
+    return NModNumber(MTI::sub(value_, y.value_, MOD), __init_direct);
+  }
+
   NModNumber& operator-=(const NModNumber& y) {
-    value_ = AP::sub(value_, y.value_, MC::mod());
+    value_ = MTI::sub(value_, y.value_, MOD);
     return *this;
   }
 
   NModNumber& operator--() {
-    value_ = AP::sub(value_, 1, MC::mod());
+    value_ = MTI::sub(value_, 1, MOD);
     return *this;
   }
 
@@ -593,236 +556,328 @@ struct NModNumber {
   NModNumber operator+() const { return NModNumber(value_, __init_direct); }
 
   NModNumber operator-() const {
-    return NModNumber(AP::sub(0, value_, MC::mod()), __init_direct);
+    return NModNumber(MTI::sub(0, value_, MOD), __init_direct);
+  }
+
+  NModNumber operator*(const NModNumber& y) const {
+    return NModNumber(MTI::mul(value_, y.value_, MOD), __init_direct);
   }
 
   NModNumber& operator*=(const NModNumber& y) {
-    value_ = AP::mul(value_, y.value_, MC::mod());
+    value_ = MTI::mul(value_, y.value_, MOD);
     return *this;
   }
 
+  int operator<(const NModNumber& y) const { return value() < y.value(); }
+
+  // operator ints () const {return value_;}
   ints value() const { return value_; }
+  NModNumber& fix_value() { return *this; }
+  friend ostream& operator<<<S, B, MOD>(ostream& o, const NModNumber& m);
 
-  const NModNumber& fix_value() const {
-    AP::fix_value(value_, MC::mod());
-    return *this;
-  }
-
-  NModNumber& fix_value() {
-    AP::fix_value(value_, MC::mod());
-    return *this;
-  }
-
- private:
-  mutable ints value_;
+  ints value_;
 };
 
-template <typename MC, typename AP>
-int operator==(const NModNumber<MC, AP>& x, const NModNumber<MC, AP>& y) {
-  return x.fix_value().value() == y.fix_value().value();
+template <typename S, typename B, S MOD>
+ostream& operator<<(ostream& o, const NModNumber<S, B, MOD>& m) {
+  return o << m.value_;
 }
 
-template <typename MC, typename AP>
-int operator!=(const NModNumber<MC, AP>& x, const NModNumber<MC, AP>& y) {
-  return x.fix_value().value() != y.fix_value().value();
-}
+template <int mod>
+using NModNumber3232 = NModNumber<int, int, mod>;
 
-template <typename MC, typename AP>
-int operator<(const NModNumber<MC, AP>& x, const NModNumber<MC, AP>& y) {
-  return x.fix_value().value() < y.fix_value().value();
-}
+template <int mod>
+using NModNumber3264 = NModNumber<int, int64, mod>;
 
-template <typename MC, typename AP>
-int operator<=(const NModNumber<MC, AP>& x, const NModNumber<MC, AP>& y) {
-  return x.fix_value().value() <= y.fix_value().value();
-}
+template <int64 mod>
+using NModNumber6464 = NModNumber<int64, int64, mod>;
 
-template <typename MC, typename AP>
-int operator>(const NModNumber<MC, AP>& x, const NModNumber<MC, AP>& y) {
-  return x.fix_value().value() > y.fix_value().value();
-}
+#if PE_HAS_INT128
+template <int128 mod>
+using NModNumber128128 = NModNumber<int128, int128, mod>;
+template <int64 mod>
+using NModNumber64128 = NModNumber<int64, int128, mod>;
+#endif
 
-template <typename MC, typename AP>
-int operator>=(const NModNumber<MC, AP>& x, const NModNumber<MC, AP>& y) {
-  return x.fix_value().value() >= y.fix_value().value();
-}
+template <typename T, int64 MOD>
+struct NModNumberL {
+  static_assert(MOD > 0, "MOD > 0");
 
-template <int64 M, typename AP = APSB<int64, int64> >
-using NMod = NModNumber<CCMod<M>, AP>;
+  NModNumberL(T val = 0) : value_(val) {}
 
-// Forward declarations related to NModNumberM;
-template <typename MC, typename AP>
-struct NModNumberM;
-
-// MC = mod context
-// AP = arithmetic policy
-template <typename MC, typename AP = APSB<int64, int64> >
-struct NModNumberM {
-  friend NModNumberM operator+(const NModNumberM& x, const NModNumberM& y) {
-    return NModNumberM(AP::add(x.value_, y.value_, x.mod()), x.mc,
-                       __init_direct);
+  NModNumberL operator+(const NModNumberL& y) const {
+    return NModNumberL(value_ + y.value_);
   }
 
-  template <typename T>
-  friend REQUIRES((is_native_integer<T>::value)) RETURN(NModNumberM) operator+(
-      const NModNumberM& x, T y) {
-    return x + NModNumberM(y, x.mc);
-  }
-
-  template <typename T>
-  friend REQUIRES((is_native_integer<T>::value)) RETURN(NModNumberM) operator+(
-      T x, const NModNumberM& y) {
-    return NModNumberM(x, y.mc) + y;
-  }
-
-  friend NModNumberM operator-(const NModNumberM& x, const NModNumberM& y) {
-    return NModNumberM(AP::sub(x.value_, y.value_, x.mod()), x.mc,
-                       __init_direct);
-  }
-
-  template <typename T>
-  friend REQUIRES((is_native_integer<T>::value)) RETURN(NModNumberM) operator-(
-      const NModNumberM& x, T y) {
-    return x - NModNumberM(y, x.mc);
-  }
-
-  template <typename T>
-  friend REQUIRES((is_native_integer<T>::value)) RETURN(NModNumberM) operator-(
-      T x, const NModNumberM& y) {
-    return NModNumberM(x, y.mc) - y;
-  }
-
-  friend NModNumberM operator*(const NModNumberM& x, const NModNumberM& y) {
-    return NModNumberM(AP::mul(x.value_, y.value_, x.mod()), x.mc,
-                       __init_direct);
-  }
-
-  template <typename T>
-  friend REQUIRES((is_native_integer<T>::value)) RETURN(NModNumberM) operator*(
-      const NModNumberM& x, T y) {
-    return x * NModNumberM(y, x.mc);
-  }
-
-  template <typename T>
-  friend REQUIRES((is_native_integer<T>::value)) RETURN(NModNumberM) operator*(
-      T x, const NModNumberM& y) {
-    return NModNumberM(x, y.mc) * y;
-  }
-
-  friend ostream& operator<<(ostream& o, const NModNumberM& m) {
-    return o << m.value_;
-  }
-
-  typedef typename AP::ints ints;
-
-  NModNumberM(ints value = 0, const MC& mc = MC()) : mc(mc) {
-    const ints M = mod();
-    if (value >= 0) {
-      value_ = value >= M ? value % M : value;
-    } else {
-      value_ = value <= -M ? value % M + M : value + M;
-    }
-  }
-
-  NModNumberM(ints value, const MC& mc, init_direct_t)
-      : value_(value), mc(mc) {}
-
-  ints mod() const { return mc.mod(); }
-
-  NModNumberM& operator+=(const NModNumberM& y) {
-    value_ = AP::add(value_, y.value_, mod());
+  NModNumberL& operator+=(const NModNumberL& y) {
+    value_ += y.value_;
     return *this;
   }
 
-  NModNumberM& operator++() {
-    value_ = AP::add(value_, 1, mod());
+  NModNumberL& operator++() {
+    ++value_;
     return *this;
   }
 
-  NModNumberM operator++(int) {
-    NModNumberM t(value_, mc, __init_direct);
+  NModNumberL operator++(int) {
+    NModNumberL t(value_);
     ++*this;
     return t;
   }
 
-  NModNumberM& operator-=(const NModNumberM& y) {
-    value_ = AP::sub(value_, y.value_, mod());
+  NModNumberL operator-(const NModNumberL& y) const {
+    return NModNumberL(value_ - y.value_);
+  }
+
+  NModNumberL& operator-=(const NModNumberL& y) {
+    value_ -= y.value_;
     return *this;
   }
 
-  NModNumberM& operator--() {
-    value_ = AP::sub(value_, 1, mod());
+  NModNumberL& operator--() {
+    --value_;
     return *this;
   }
 
-  NModNumberM operator--(int) {
-    NModNumberM t(value_, __init_direct);
+  NModNumberL operator--(int) {
+    NModNumberL t(value_);
     --*this;
     return t;
   }
 
-  NModNumberM operator+() const {
-    return NModNumberM(value_, mc, __init_direct);
+  NModNumberL operator+() const { return NModNumberL(value_); }
+
+  NModNumberL operator-() const { return NModNumberL(-value_); }
+
+  NModNumberL operator*(const NModNumberL& y) const {
+    return NModNumberL(value_ * y.value_);
   }
 
-  NModNumberM operator-() const {
-    return NModNumberM(AP::sub(0, value_, mod()), mc, __init_direct);
-  }
-
-  NModNumberM& operator*=(const NModNumberM& y) {
-    value_ = AP::mul(value_, y.value_, mod());
+  NModNumberL& operator*=(const NModNumberL& y) {
+    value_ = value_ * y.value_;
     return *this;
   }
 
-  ints value() const { return value_; }
+  int operator<(const NModNumberL& y) const { return value_ < y.value_; }
 
-  const NModNumberM& fix_value() const {
-    AP::fix_value(value_, mod());
+  T value() const { return value_; }
+
+  NModNumberL& fix_value() {
+    value_ = regulate_mod(value_, MOD);
     return *this;
   }
 
-  NModNumberM& fix_value() {
-    AP::fix_value(value_, mod());
-    return *this;
-  }
-
- private:
-  mutable ints value_;
-  MC mc;
+  T value_;
 };
 
-template <typename MC, typename AP>
-int operator==(const NModNumberM<MC, AP>& x, const NModNumberM<MC, AP>& y) {
-  return x.fix_value().value() == y.fix_value().value();
+template <typename T, int64 mod>
+ostream& operator<<(ostream& o, const NModNumberL<T, mod>& m) {
+  return o << m.value();
 }
 
-template <typename MC, typename AP>
-int operator!=(const NModNumberM<MC, AP>& x, const NModNumberM<MC, AP>& y) {
-  return x.fix_value().value() != y.fix_value().value();
+template <int64 mod>
+using NModNumberL32 = NModNumberL<int, mod>;
+
+template <int64 mod>
+using NModNumberL64 = NModNumberL<int64, mod>;
+
+#if PE_HAS_INT128
+template <int64 mod>
+using NModNumberL128 = NModNumberL<int128, mod>;
+#endif
+
+int64 DEFAULT_MOD = 1;
+
+template <typename S, typename B>
+struct NModNumberD {
+  typedef mtype_policy<S, B> MTI;
+  typedef typename MTI::ints ints;
+  typedef typename MTI::intb intb;
+
+  NModNumberD(ints val = 0) {
+    if (val >= 0) {
+      value_ = val >= DEFAULT_MOD ? val % DEFAULT_MOD : val;
+    } else {
+      value_ = val <= -DEFAULT_MOD ? val % DEFAULT_MOD + DEFAULT_MOD
+                                   : val + DEFAULT_MOD;
+    }
+  }
+
+  NModNumberD(ints val, init_direct_t) : value_(val) {}
+
+  NModNumberD& operator=(const NModNumberD& other) {
+    value_ = other.value_;
+    return *this;
+  }
+
+  NModNumberD operator+(const NModNumberD& y) const {
+    return NModNumberD(MTI::add(value_, y.value_, DEFAULT_MOD), __init_direct);
+  }
+
+  NModNumberD& operator+=(const NModNumberD& y) {
+    value_ = MTI::add(value_, y.value_, DEFAULT_MOD);
+    return *this;
+  }
+
+  NModNumberD& operator++() {
+    value_ = MTI::add(1, value_, DEFAULT_MOD);
+    return *this;
+  }
+
+  NModNumberD operator++(int) {
+    NModNumberD t(value_, __init_direct);
+    ++*this;
+    return t;
+  }
+
+  NModNumberD operator-(const NModNumberD& y) const {
+    return NModNumberD(MTI::sub(value_, y.value_, DEFAULT_MOD), __init_direct);
+  }
+
+  NModNumberD& operator-=(const NModNumberD& y) {
+    value_ = MTI::sub(value_, y.value_, DEFAULT_MOD);
+    return *this;
+  }
+
+  NModNumberD& operator--() {
+    value_ = MTI::sub(value_, 1, DEFAULT_MOD);
+    return *this;
+  }
+
+  NModNumberD operator--(int) {
+    NModNumberD t(value_, __init_direct);
+    --*this;
+    return t;
+  }
+
+  NModNumberD operator+() const { return NModNumberD(value_, __init_direct); }
+
+  NModNumberD operator-() const {
+    return NModNumberD(MTI::sub(0, value_, DEFAULT_MOD), __init_direct);
+  }
+
+  NModNumberD operator*(const NModNumberD& y) const {
+    return NModNumberD(MTI::mul(value_, y.value_, DEFAULT_MOD), __init_direct);
+  }
+
+  NModNumberD& operator*=(const NModNumberD& y) {
+    value_ = MTI::mul(value_, y.value_, DEFAULT_MOD);
+    return *this;
+  }
+
+  int operator<(const NModNumberD& y) const { return value_ < y.value_; }
+
+  // operator ints () const {return value_;}
+  ints value() const { return value_; }
+  NModNumberD& fix_value() { return *this; }
+  friend ostream& operator<<<S, B>(ostream& o, const NModNumberD& m);
+
+  ints value_;
+};
+
+template <typename S, typename B>
+ostream& operator<<(ostream& o, const NModNumberD<S, B>& m) {
+  return o << m.value_;
 }
 
-template <typename MC, typename AP>
-int operator<(const NModNumberM<MC, AP>& x, const NModNumberM<MC, AP>& y) {
-  return x.fix_value().value() < y.fix_value().value();
+using NModNumberD3232 = NModNumberD<int, int>;
+
+using NModNumberD3264 = NModNumberD<int, int64>;
+
+using NModNumberD6464 = NModNumberD<int64, int64>;
+
+#if PE_HAS_INT128
+using NModNumberD128128 = NModNumberD<int128, int128>;
+using NModNumberD64128 = NModNumberD<int64, int128>;
+#endif
+
+template <typename T>
+struct NModNumberDL {
+  NModNumberDL(T val = 0) : value_(val) {}
+
+  NModNumberDL& operator=(const NModNumberDL& other) {
+    value_ = other.value_;
+    return *this;
+  }
+
+  NModNumberDL operator+(const NModNumberDL& y) const {
+    return NModNumberDL(value_ + y.value_);
+  }
+
+  NModNumberDL& operator+=(const NModNumberDL& y) {
+    value_ += y.value_;
+    return *this;
+  }
+
+  NModNumberDL& operator++() {
+    ++value_;
+    return *this;
+  }
+
+  NModNumberDL operator++(int) {
+    NModNumberDL t(value_);
+    ++*this;
+    return t;
+  }
+
+  NModNumberDL operator-(const NModNumberDL& y) const {
+    return NModNumberDL(value_ - y.value_);
+  }
+
+  NModNumberDL& operator--() {
+    --value_;
+    return *this;
+  }
+
+  NModNumberDL operator--(int) {
+    NModNumberDL t(value_);
+    --*this;
+    return t;
+  }
+
+  NModNumberDL& operator-=(const NModNumberDL& y) {
+    value_ -= y.value_;
+    return *this;
+  }
+
+  NModNumberDL operator+() const { return NModNumberDL(value_); }
+
+  NModNumberDL operator-() const { return NModNumberDL(-value_); }
+
+  NModNumberDL operator*(const NModNumberDL& y) const {
+    return NModNumberDL(value_ * y.value_);
+  }
+
+  NModNumberDL& operator*=(const NModNumberDL& y) {
+    value_ *= y.value_;
+    return *this;
+  }
+
+  int operator<(const NModNumberDL& y) const { return value_ < y.value_; }
+
+  // operator ints () const {return value_;}
+  T value() const { return value_; }
+  NModNumberDL& fix_value() {
+    value_ = regulate_mod(value_, DEFAULT_MOD);
+    return *this;
+  }
+  friend ostream& operator<<<T>(ostream& o, const NModNumberDL& m);
+
+  T value_;
+};
+
+template <typename T>
+ostream& operator<<(ostream& o, const NModNumberDL<T>& m) {
+  return o << m.value_;
 }
 
-template <typename MC, typename AP>
-int operator<=(const NModNumberM<MC, AP>& x, const NModNumberM<MC, AP>& y) {
-  return x.fix_value().value() <= y.fix_value().value();
-}
+using NModNumberDL32 = NModNumberDL<int>;
 
-template <typename MC, typename AP>
-int operator>(const NModNumberM<MC, AP>& x, const NModNumberM<MC, AP>& y) {
-  return x.fix_value().value() > y.fix_value().value();
-}
+using NModNumberDL64 = NModNumberDL<int64>;
 
-template <typename MC, typename AP>
-int operator>=(const NModNumberM<MC, AP>& x, const NModNumberM<MC, AP>& y) {
-  return x.fix_value().value() >= y.fix_value().value();
-}
-
-template <int64 M, typename AP = APSB<int64, int64> >
-using NModM = NModNumberM<CCMod<M>, AP>;
+#if PE_HAS_INT128
+using NModNumberDL128 = NModNumberDL<int128>;
+#endif
 
 template <int v>
 struct NModNumberIndicator {
@@ -833,11 +888,13 @@ template <typename X>
 struct IsNModNumber {
   static constexpr NModNumberIndicator<0> NModNumberMatch(...);
 
-  template <typename MC, typename AP>
-  static constexpr NModNumberIndicator<1> NModNumberMatch(NModNumber<MC, AP>);
+  template <typename S, typename B, S mod>
+  static constexpr NModNumberIndicator<1> NModNumberMatch(
+      NModNumber<S, B, mod>);
 
-  template <typename MC, typename AP>
-  static constexpr NModNumberIndicator<1> NModNumberMatch(NModNumberM<MC, AP>);
+  template <typename T, int64 mod>
+  static constexpr NModNumberIndicator<1> NModNumberMatch(
+      const NModNumberL<T, mod>&);
 
   static X makeX();
 
@@ -846,4 +903,31 @@ struct IsNModNumber {
   enum { result = result_type::value };
 };
 
+template <int v>
+struct NModNumberDIndicator {
+  enum { value = v };
+};
+
+template <typename X>
+struct IsNModNumberD {
+  static constexpr NModNumberDIndicator<0> NModNumberDMatch(...);
+
+  template <typename S, typename B>
+  static constexpr NModNumberDIndicator<1> NModNumberDMatch(NModNumberD<S, B>);
+
+  template <typename T>
+  static constexpr NModNumberDIndicator<1> NModNumberDMatch(
+      const NModNumberDL<T>&);
+
+  static X makeX();
+
+  typedef decltype(NModNumberDMatch(makeX())) result_type;
+
+  enum { result = result_type::value };
+};
+
+template <int v>
+struct NModNumberOrNModNumberDIndicator {
+  enum { value = v };
+};
 #endif

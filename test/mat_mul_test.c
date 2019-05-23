@@ -107,6 +107,6 @@ SL void mat_mul_test() {
   test<NModNumberM<DefaultMod, APSBL<int128>>>(data, V);
 }
 
-PE_REGISTER_TEST(&mat_mul_test, "mat_mul_test", SPECIFIED);
+PE_REGISTER_TEST(&mat_mul_test, "mat_mul_test", MEDIUM);
 #endif
 }  // namespace mat_mul_test

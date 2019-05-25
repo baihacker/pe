@@ -61,10 +61,8 @@ File list:
 * pe.hpp: The file for generating precompile header.
 * pe_algo: Algorithms.
 * pe_base: Some pre-including headers. Some macros and typedef. Some basic inline functions.
-* pe_bi: Big integer whose base is 1 << 30.
 * pe_bi32: Big integer whose base is 1 << 32.
 * pe_bit: Bit operation tricks.
-* pe_bn: Old big integer implementation.
 * pe_config: a centralized place the configure pe.
 * pe_fft: Fast fourier transform and polynomial multiplication.
 * pe_fraction: Fraction arithmetic.
@@ -73,7 +71,7 @@ File list:
 * pe_int128: Support to output int128 and the corresponding type traits.
 * pe_mat: Matrix operations.
 * pe_memory: Memory manipulation such as allocating large memory. (windows only)
-* pe_misc：misc codes.
+* pe_misc: misc codes.
 * pe_mma: support mma: helper method or class to generate mma codes.
 * pe_mod: Modular arithmetic.
 * pe_nt: Basic code of number theory.

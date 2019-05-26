@@ -157,9 +157,12 @@ SL MatT<_Scalar> power_mod_impl(const MatT<_Scalar>& x, int64 n, int64 mod,
 }
 
 template <typename _Scalar>
-SL MatT<_Scalar> power_mod_impl(const MatT<_Scalar>& x, int64 n, int64 /*mod*/,
+SL MatT<_Scalar> power_mod_impl(const MatT<_Scalar>& x, int64 n, int64 mod,
                                 NModNumberIndicator<1>) {
   typedef MatT<_Scalar> MatrixT;
+
+  PE_ASSERT(mod == _Scalar().mod());
+
   auto fixmod = [=](MatrixT& m) {
     const auto r = m.rows();
     const auto c = m.cols();
@@ -237,9 +240,12 @@ SL vector<_Scalar> power_mod_impl(const MatT<_Scalar>& x, int64 n,
 
 template <typename _Scalar>
 SL vector<_Scalar> power_mod_impl(const MatT<_Scalar>& x, int64 n,
-                                  const vector<_Scalar>& v, int64 /*mod*/,
+                                  const vector<_Scalar>& v, int64 mod,
                                   NModNumberIndicator<1>) {
   typedef MatT<_Scalar> MatrixT;
+
+  PE_ASSERT(mod == _Scalar().mod());
+
   auto fixmod = [=](MatrixT& m) {
     const auto r = m.rows();
     const auto c = m.cols();
@@ -284,107 +290,33 @@ SL vector<_Scalar> power_mod(const MatT<_Scalar>& x, int64 n,
 }
 
 /**
- * Helper method to avoid writing type explicitly.
- * auto res = power_mod<1000000007>([=](auto& m) {
- *   m(0, 0) = 1;
- *   m(0, 1) = 1;
- *   m(1, 0) = 1;
- * }, 2, 100000);
- * or
- * auto res = power_mod<1000000007>([=](auto& m, auto& v) {
- *   m(0, 0) = 1;
- *   m(0, 1) = 1;
- *   m(1, 0) = 1;
- *   v[0] = 1;
- *   v[1] = 1;
- * }, 2, 100000);
+ * Helper method for matrix multiplication
+ * 1. Compiling time mod version, you only need to specify mod
+ * 2. Use Customized element type.
+ * 3. ynamic mod version: use int128 (if available) or global variable
+ * DEFAULT_MOD (slow).
  */
 
-// Dynamic mod version: use int128 or global variable DEFAULT_MOD (slow).
-#if PE_HAS_INT128
-SL vector<int64> power_mod(
-    const function<void(MatT<int128>& mat, vector<int128>& v)>& init,
-    const int K, int64 n, int64 mod) {
-  typedef int128 ScalarT;
-  typedef MatT<ScalarT> MatrixT;
-
-  vector<ScalarT> v(K, 0);
-  MatrixT m = MatrixT::Zero(K, K);
-
-  init(m, v);
-
-  auto t = power_mod(m, n, v, mod);
-
-  vector<int64> res(K, 0);
-  for (int i = 0; i < K; ++i) res[i] = t[i];
-
-  return res;
-}
-
-SL MatT<int64> power_mod(const function<void(MatT<int128>& mat)>& init,
-                         const int K, int64 n, int64 mod) {
-  typedef int128 ScalarT;
-  typedef MatT<ScalarT> MatrixT;
-
-  MatrixT m = MatrixT::Zero(K, K);
-
-  init(m);
-
-  auto t = power_mod(m, n, mod);
-
-  MatT<int64> res(K, K);
-  for (int i = 0; i < K; ++i)
-    for (int j = 0; j < K; ++j) res(i, j) = static_cast<int64>(t(i, j));
-
-  return res;
-}
-#else
-SL vector<int64> power_mod(
-    const function<void(MatT<NModNumber<DefaultMod>>& mat,
-                        vector<NModNumber<DefaultMod>>& v)>& init,
-    const int K, int64 n, int64 mod) {
-  typedef NModNumber<DefaultMod> ScalarT;
-  typedef MatT<ScalarT> MatrixT;
-
-  PE_ASSERT(mod == DefaultMod::mod());
-
-  vector<ScalarT> v(K, 0);
-  MatrixT m = MatrixT::Zero(K, K);
-
-  init(m, v);
-
-  auto t = power_mod(m, n, v, mod);
-
-  vector<int64> res(K, 0);
-  for (int i = 0; i < K; ++i) res[i] = t[i].value();
-
-  return res;
-}
-
-SL MatT<int64> power_mod(
-    const function<void(MatT<NModNumber<DefaultMod>>& mat)>& init, const int K,
-    int64 n, int64 mod) {
-  typedef NModNumber<DefaultMod> ScalarT;
-  typedef MatT<ScalarT> MatrixT;
-
-  PE_ASSERT(mod == DefaultMod::mod());
-
-  MatrixT m = MatrixT::Zero(K, K);
-
-  init(m);
-
-  auto t = power_mod(m, n, mod);
-
-  MatT<int64> res(K, K);
-  for (int i = 0; i < K; ++i)
-    for (int j = 0; j < K; ++j) res(i, j) = static_cast<int64>(t(i, j).value());
-
-  return res;
-}
-#endif  // end PE_HAS_INT128
-
-// Compiling time mod version.
+// Version 1
 // mod * mod < int64
+/**
+    auto res0 = power_mod<1000000007>(
+        [=](auto& m) {
+          m(0, 0) = 1;
+          m(0, 1) = 1;
+          m(1, 0) = 1;
+        },
+        2, 100000);
+    auto res1 = power_mod<1000000007>(
+        [=](auto& m, auto& v) {
+          m(0, 0) = 1;
+          m(0, 1) = 1;
+          m(1, 0) = 1;
+          v[0] = 1;
+          v[1] = 1;
+        },
+        2, 100000);
+ */
 template <int64 mod>
 SL vector<int64> power_mod(
     const function<void(MatT<NMod<mod>>& mat, vector<NMod<mod>>& v)>& init,
@@ -424,6 +356,156 @@ SL MatT<int64> power_mod(const function<void(MatT<NMod<mod>>& mat)>& init,
 
   return res;
 }
+
+// Version 2
+// mod == T().mod()
+/**
+    auto res0 = power_mod<NMod<1000000007>>(
+        [=](auto& m) {
+          m(0, 0) = 1;
+          m(0, 1) = 1;
+          m(1, 0) = 1;
+        },
+        2, 100000, 1000000007);
+    auto res1 = power_mod<NMod<1000000007>>(
+        [=](auto& m, auto& v) {
+          m(0, 0) = 1;
+          m(0, 1) = 1;
+          m(1, 0) = 1;
+          v[0] = 1;
+          v[1] = 1;
+        },
+        2, 100000, 1000000007);
+*/
+template <typename T>
+SL vector<T> power_mod(const function<void(MatT<T>& mat, vector<T>& v)>& init,
+                       const int K, int64 n, int64 mod) {
+  typedef T ScalarT;
+  typedef MatT<ScalarT> MatrixT;
+
+  vector<T> v(K, 0);
+  MatrixT m = MatrixT::Zero(K, K);
+
+  init(m, v);
+
+  return power_mod(m, n, v, mod);
+}
+
+template <typename T>
+SL MatT<T> power_mod(const function<void(MatT<T>& mat)>& init, const int K,
+                     int64 n, int64 mod) {
+  typedef T ScalarT;
+  typedef MatT<ScalarT> MatrixT;
+
+  MatrixT m = MatrixT::Zero(K, K);
+
+  init(m);
+
+  return power_mod(m, n, mod);
+}
+
+// Version 3
+/**
+    auto res0 = power_mod(
+        [=](auto& m) {
+          m(0, 0) = 1;
+          m(0, 1) = 1;
+          m(1, 0) = 1;
+        },
+        2, 100000, 1000000007);
+    auto res1 = power_mod(
+        [=](auto& m, auto& v) {
+          m(0, 0) = 1;
+          m(0, 1) = 1;
+          m(1, 0) = 1;
+          v[0] = 1;
+          v[1] = 1;
+        },
+        2, 100000, 1000000007);
+ */
+#if PE_HAS_INT128
+SL vector<int64> power_mod(
+    const function<void(MatT<int128>& mat, vector<int128>& v)>& init,
+    const int K, int64 n, int64 mod) {
+  typedef int128 ScalarT;
+  typedef MatT<ScalarT> MatrixT;
+
+  vector<ScalarT> v(K, 0);
+  MatrixT m = MatrixT::Zero(K, K);
+
+  init(m, v);
+
+  auto t = power_mod(m, n, v, mod);
+
+  vector<int64> res(K, 0);
+  for (int i = 0; i < K; ++i) res[i] = t[i];
+
+  return res;
+}
+
+SL MatT<int64> power_mod(const function<void(MatT<int128>& mat)>& init,
+                         const int K, int64 n, int64 mod) {
+  typedef int128 ScalarT;
+  typedef MatT<ScalarT> MatrixT;
+
+  MatrixT m = MatrixT::Zero(K, K);
+
+  init(m);
+
+  auto t = power_mod(m, n, mod);
+
+  MatT<int64> res(K, K);
+  for (int i = 0; i < K; ++i)
+    for (int j = 0; j < K; ++j) res(i, j) = static_cast<int64>(t(i, j));
+
+  return res;
+}
+#else
+// mod == DefaultMod::mod()
+SL vector<int64> power_mod(
+    const function<void(MatT<NModNumber<DefaultMod>>& mat,
+                        vector<NModNumber<DefaultMod>>& v)>& init,
+    const int K, int64 n, int64 mod) {
+  typedef NModNumber<DefaultMod> ScalarT;
+  typedef MatT<ScalarT> MatrixT;
+
+  PE_ASSERT(mod == DefaultMod::mod());
+
+  vector<ScalarT> v(K, 0);
+  MatrixT m = MatrixT::Zero(K, K);
+
+  init(m, v);
+
+  auto t = power_mod(m, n, v, mod);
+
+  vector<int64> res(K, 0);
+  for (int i = 0; i < K; ++i) res[i] = t[i].value();
+
+  return res;
+}
+
+// mod == DefaultMod::mod()
+SL MatT<int64> power_mod(
+    const function<void(MatT<NModNumber<DefaultMod>>& mat)>& init, const int K,
+    int64 n, int64 mod) {
+  typedef NModNumber<DefaultMod> ScalarT;
+  typedef MatT<ScalarT> MatrixT;
+
+  PE_ASSERT(mod == DefaultMod::mod());
+
+  MatrixT m = MatrixT::Zero(K, K);
+
+  init(m);
+
+  auto t = power_mod(m, n, mod);
+
+  MatT<int64> res(K, K);
+  for (int i = 0; i < K; ++i)
+    for (int j = 0; j < K; ++j) res(i, j) = static_cast<int64>(t(i, j).value());
+
+  return res;
+}
+#endif  // end PE_HAS_INT128
 
 #endif  // end ENABLE_EIGEN
 

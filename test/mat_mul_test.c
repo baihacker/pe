@@ -26,6 +26,65 @@ void test(const vector<int>& data, const vector<int>& V) {
   sort(all(v));
 }
 
+SL void test_helper_method() {
+  {
+    auto res0 = power_mod<1000000007>(
+        [=](auto& m) {
+          m(0, 0) = 1;
+          m(0, 1) = 1;
+          m(1, 0) = 1;
+        },
+        2, 100000);
+    auto res1 = power_mod<1000000007>(
+        [=](auto& m, auto& v) {
+          m(0, 0) = 1;
+          m(0, 1) = 1;
+          m(1, 0) = 1;
+          v[0] = 1;
+          v[1] = 1;
+        },
+        2, 100000);
+  }
+
+  {
+    auto res0 = power_mod<NMod<1000000007>>(
+        [=](auto& m) {
+          m(0, 0) = 1;
+          m(0, 1) = 1;
+          m(1, 0) = 1;
+        },
+        2, 100000, 1000000007);
+    auto res1 = power_mod<NMod<1000000007>>(
+        [=](auto& m, auto& v) {
+          m(0, 0) = 1;
+          m(0, 1) = 1;
+          m(1, 0) = 1;
+          v[0] = 1;
+          v[1] = 1;
+        },
+        2, 100000, 1000000007);
+  }
+
+  {
+    auto res0 = power_mod(
+        [=](auto& m) {
+          m(0, 0) = 1;
+          m(0, 1) = 1;
+          m(1, 0) = 1;
+        },
+        2, 100000, 1000000007);
+    auto res1 = power_mod(
+        [=](auto& m, auto& v) {
+          m(0, 0) = 1;
+          m(0, 1) = 1;
+          m(1, 0) = 1;
+          v[0] = 1;
+          v[1] = 1;
+        },
+        2, 100000, 1000000007);
+  }
+}
+
 SL void mat_mul_test() {
   DEFAULT_MOD = mod;
   vector<int> data;
@@ -105,6 +164,8 @@ SL void mat_mul_test() {
 
   test<NModNumberM<CCMod<mod>, APSBL<int128>>>(data, V);
   test<NModNumberM<DefaultMod, APSBL<int128>>>(data, V);
+
+  test_helper_method();
 }
 
 PE_REGISTER_TEST(&mat_mul_test, "mat_mul_test", MEDIUM);

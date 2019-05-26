@@ -76,6 +76,7 @@ SL void minimal_polynomial_test() {
   assert(t[1] == 30);
   assert(t[2] == 1);
   assert(nth_element({{0, 1, 1, 2, 3, 5, 8, 13}, P}, 38) == 39088169);
+  assert(nth_element({0, 1, 1, 2, 3, 5, 8, 13}, P, 38) == 39088169);
 }
 PE_REGISTER_TEST(&minimal_polynomial_test, "minimal_polynomial_test", SMALL);
 

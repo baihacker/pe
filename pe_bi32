@@ -62,13 +62,22 @@ struct bi_allocator_fixed_size {
 typedef bi_allocator_std bi_allocator;
 
 class BigInteger {
-  static const unsigned int max_32bit_value = 0xFFFFFFFF;
-  static const uint64 bit32_value = 1ull << 32;
-  static const unsigned int output_mod = 1000000000;
-  static const unsigned int output_mod_dig = 9;
+ public:
+  static constexpr unsigned int max_32bit_value = 0xFFFFFFFF;
+  static constexpr uint64 bit32_value = 1ull << 32;
+  static constexpr unsigned int output_mod = 1000000000;
+  static constexpr unsigned int output_mod_dig = 9;
 
-  static const unsigned int div32_bit = 5;
-  static const unsigned int mod32_mask = 31;
+  static constexpr unsigned int div32_bit = 5;
+  static constexpr unsigned int mod32_mask = 31;
+
+  template <typename T>
+  friend REQUIRES((is_native_integer<T>::value && is_signed<T>::value))
+      RETURN(void) __init_big_integer(BigInteger& b, T value);
+
+  template <typename T>
+  friend REQUIRES((is_native_integer<T>::value && is_unsigned<T>::value))
+      RETURN(void) __init_big_integer(BigInteger& b, T value);
 
  public:
   // constructors, destructors, value semantics.
@@ -76,84 +85,6 @@ class BigInteger {
     reserve(1);
     data_[0] = 0;
     sign_ = 0;
-  }
-
-  ~BigInteger() {
-    if (data_) {
-      bi_allocator::deallocate(data_);
-    }
-  }
-
-  BigInteger(const BigInteger& other) : BigInteger(zero_initialize_tag) {
-    reserve(other.bufferLength_);
-    sign_ = other.sign_;
-    pos_ = other.pos_;
-    copy(other.data_, other.data_ + other.pos_ + 1, data_);
-  }
-
-  BigInteger(BigInteger&& other) : BigInteger(zero_initialize_tag) {
-    std::swap(data_, other.data_);
-    std::swap(bufferLength_, other.bufferLength_);
-    std::swap(sign_, other.sign_);
-    std::swap(pos_, other.pos_);
-  }
-
-  BigInteger& operator=(const BigInteger& other) {
-    return *this = BigInteger(other);
-  }
-
-  BigInteger& operator=(BigInteger&& other) {
-    std::swap(data_, other.data_);
-    std::swap(bufferLength_, other.bufferLength_);
-    std::swap(sign_, other.sign_);
-    std::swap(pos_, other.pos_);
-    return *this;
-  }
-
-  template <typename T,
-            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
-  BigInteger(T value) : BigInteger(zero_initialize_tag) {
-    if (value == 0) {
-      reserve(1);
-      data_[0] = 0;
-      sign_ = 0;
-      return;
-    }
-
-    typedef typename std::make_unsigned<T>::type unsignedT;
-    unsignedT absValue = getAbsValue(value);
-    if (sizeof(T) <= 8) {
-      resetAbs(absValue);
-    } else {
-      int need = 0;
-      for (auto t = absValue; t > 0; ++need, t >>= 32)
-        ;
-      reserve(need);
-
-      pos_ = -1;
-      for (auto t = absValue; t > 0;
-           data_[++pos_] = t & max_32bit_value, t >>= 32)
-        ;
-    }
-    sign_ = value > 0 ? 1 : -1;
-  }
-
-  template <typename T>
-  SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(T)
-      getAbsValue(T x) {
-    return x >= 0 ? x : -x;
-  }
-
-  template <typename T>
-  SL REQUIRES((is_native_integer<T>::value && is_unsigned<T>::value)) RETURN(T)
-      getAbsValue(T x) {
-    return x;
-  }
-
-  template <typename T,
-            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
-  BigInteger& operator=(T value) {
-    return *this = BigInteger(value);
   }
 
   BigInteger(const string& str) : BigInteger(zero_initialize_tag) {
@@ -228,6 +159,62 @@ class BigInteger {
     --pos_;
     sign_ = 1;
     fixPos();
+  }
+
+  template <typename T,
+            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(void)>
+  BigInteger(T value) : BigInteger(zero_initialize_tag) {
+    __init_big_integer(*this, value);
+  }
+
+  BigInteger(const BigInteger& other) : BigInteger(zero_initialize_tag) {
+    reserve(other.bufferLength_);
+    sign_ = other.sign_;
+    pos_ = other.pos_;
+    copy(other.data_, other.data_ + other.pos_ + 1, data_);
+  }
+
+  BigInteger(BigInteger&& other) : BigInteger(zero_initialize_tag) {
+    std::swap(data_, other.data_);
+    std::swap(bufferLength_, other.bufferLength_);
+    std::swap(sign_, other.sign_);
+    std::swap(pos_, other.pos_);
+  }
+
+  ~BigInteger() {
+    if (data_) {
+      bi_allocator::deallocate(data_);
+    }
+  }
+
+  BigInteger& operator=(const BigInteger& other) {
+    return *this = BigInteger(other);
+  }
+
+  BigInteger& operator=(BigInteger&& other) {
+    std::swap(data_, other.data_);
+    std::swap(bufferLength_, other.bufferLength_);
+    std::swap(sign_, other.sign_);
+    std::swap(pos_, other.pos_);
+    return *this;
+  }
+
+  template <typename T,
+            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
+  BigInteger& operator=(T value) {
+    return *this = BigInteger(value);
+  }
+
+  template <typename T>
+  SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(T)
+      getAbsValue(T x) {
+    return x >= 0 ? x : -x;
+  }
+
+  template <typename T>
+  SL REQUIRES((is_native_integer<T>::value && is_unsigned<T>::value)) RETURN(T)
+      getAbsValue(T x) {
+    return x;
   }
 
  private:
@@ -739,9 +726,9 @@ class BigInteger {
   template <typename T>
   friend inline REQUIRES(
       (is_native_integer<T>::value &&
-       !is_same<typename remove_cvref<T>::type, BigInteger>::value))
-      RETURN(BigInteger)
-      operator/(const BigInteger& l, T r);
+       !is_same<typename remove_cvref<T>::type, BigInteger>::value &&
+       sizeof(T) <= 8)) RETURN(BigInteger)
+  operator/(const BigInteger& l, T r);
 
   friend inline tuple<BigInteger, BigInteger> div(const BigInteger& l,
                                                   const BigInteger& r);
@@ -749,8 +736,9 @@ class BigInteger {
   template <typename T>
   friend inline REQUIRES(
       (is_native_integer<T>::value &&
-       !is_same<typename remove_cvref<T>::type, BigInteger>::value))
-      RETURN(tuple<BigInteger, T>) div(const BigInteger& l, T r);
+       !is_same<typename remove_cvref<T>::type, BigInteger>::value &&
+       sizeof(T) <= 8)) RETURN(tuple<BigInteger, T>)
+      div(const BigInteger& l, T r);
 
   template <typename T>
   friend inline REQUIRES(
@@ -763,7 +751,8 @@ class BigInteger {
   template <typename T>
   friend inline REQUIRES(
       (is_native_integer<T>::value &&
-       !is_same<typename remove_cvref<T>::type, BigInteger>::value)) RETURN(T)
+       !is_same<typename remove_cvref<T>::type, BigInteger>::value &&
+       sizeof(T) <= 8)) RETURN(T)
   operator%(const BigInteger& l, T r);
 
   friend inline BigInteger operator&(const BigInteger& l, const BigInteger& r);
@@ -888,7 +877,7 @@ class BigInteger {
   }
 
   template <typename T>
-  REQUIRES(is_native_integer<T>::value)
+  REQUIRES(is_native_integer<T>::value && sizeof(T) <= 8)
   RETURN(BigInteger&) operator/=(T other) {
     T r;
     divInplace(*this, other, r);
@@ -901,7 +890,7 @@ class BigInteger {
   }
 
   template <typename T>
-  REQUIRES(is_native_integer<T>::value)
+  REQUIRES(is_native_integer<T>::value && sizeof(T) <= 8)
   RETURN(BigInteger&) operator%=(T other) {
     T r;
     divInplace(*this, other, r);
@@ -1029,6 +1018,12 @@ class BigInteger {
   }
 
   int bitCount() const {
+    int ret = 0;
+    for (int i = pos_; i >= 0; --i) ret += pe_popcount(data_[i]);
+    return ret;
+  }
+
+  int bitHeight() const {
     int ret = pos_ << div32_bit;
     int hiCnt = 0;
     unsigned int v = data_[pos_];
@@ -1036,6 +1031,7 @@ class BigInteger {
       ;
     return ret + hiCnt;
   }
+
   string toString() const {
     BigInteger t(*this);
     std::vector<unsigned int> mods;
@@ -1128,7 +1124,51 @@ class BigInteger {
   mutable int pos_;
   mutable int sign_;
 };
+template <typename T>
+REQUIRES((is_native_integer<T>::value && is_signed<T>::value))
+RETURN(void) __init_big_integer(BigInteger& b, T value) {
+  if (value == 0) {
+    b.reserve(1);
+    b.data_[0] = 0;
+    b.sign_ = 0;
+    return;
+  }
 
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  if (value > 0) {
+    __init_big_integer<unsignedT>(b, static_cast<unsignedT>(value));
+  } else {
+    // Note: it works for value = T::min()
+    __init_big_integer<unsignedT>(b, static_cast<unsignedT>(-value));
+    b.sign_ = -1;
+  }
+}
+
+template <typename T>
+REQUIRES((is_native_integer<T>::value && is_unsigned<T>::value))
+RETURN(void) __init_big_integer(BigInteger& b, T value) {
+  if (value == 0) {
+    b.reserve(1);
+    b.data_[0] = 0;
+    b.sign_ = 0;
+    return;
+  }
+
+  if (sizeof(T) <= 8) {
+    b.resetAbs(value);
+  } else {
+    int need = 0;
+    for (auto t = value; t > 0; ++need, t >>= 32)
+      ;
+    b.reserve(need);
+
+    b.pos_ = -1;
+    for (auto t = value; t > 0;
+         b.data_[++b.pos_] = t & BigInteger::max_32bit_value, t >>= 32)
+      ;
+  }
+  b.sign_ = 1;
+}
 inline int operator>(const BigInteger& l, const BigInteger& r) {
   const int s1 = l.sign_;
   const int s2 = r.sign_;
@@ -1263,9 +1303,9 @@ inline BigInteger operator/(const BigInteger& l, const BigInteger& r) {
 
 template <typename T>
 inline REQUIRES((is_native_integer<T>::value &&
-                 !is_same<typename remove_cvref<T>::type, BigInteger>::value))
-    RETURN(BigInteger)
-    operator/(const BigInteger& l, T r) {
+                 !is_same<typename remove_cvref<T>::type, BigInteger>::value &&
+                 sizeof(T) <= 8)) RETURN(BigInteger)
+operator/(const BigInteger& l, T r) {
   BigInteger u;
   T v;
   tie(u, v) = div(l, r);
@@ -1308,8 +1348,9 @@ inline tuple<BigInteger, BigInteger> div(const BigInteger& l,
 
 template <typename T>
 inline REQUIRES((is_native_integer<T>::value &&
-                 !is_same<typename remove_cvref<T>::type, BigInteger>::value))
-    RETURN(tuple<BigInteger, T>) div(const BigInteger& l, T r) {
+                 !is_same<typename remove_cvref<T>::type, BigInteger>::value &&
+                 sizeof(T) <= 8)) RETURN(tuple<BigInteger, T>)
+    div(const BigInteger& l, T r) {
   if (l.isZero() && r == 0) {
     return make_tuple(1, 0);
   }
@@ -1374,9 +1415,9 @@ inline BigInteger operator%(const BigInteger& l, const BigInteger& r) {
 
 template <typename T>
 inline REQUIRES((is_native_integer<T>::value &&
-                 !is_same<typename remove_cvref<T>::type, BigInteger>::value))
-    RETURN(T)
-    operator%(const BigInteger& l, T r) {
+                 !is_same<typename remove_cvref<T>::type, BigInteger>::value &&
+                 sizeof(T) <= 8)) RETURN(T)
+operator%(const BigInteger& l, T r) {
   BigInteger u;
   T v;
   tie(u, v) = div(l, r);
@@ -1448,7 +1489,7 @@ inline REQUIRES((is_native_integer<T>::value &&
   if (n == 0) {
     return l;
   }
-  const int bitCnt = l.bitCount();
+  const int bitCnt = l.bitHeight();
   vector<unsigned int> v(n + bitCnt, 0);
   for (int i = 0, j = n; i < bitCnt; ++i, ++j) {
     const int x = i >> BigInteger::div32_bit;
@@ -1472,7 +1513,7 @@ inline REQUIRES((is_native_integer<T>::value &&
   if (n == 0) {
     return l;
   }
-  const int bitCnt = l.bitCount();
+  const int bitCnt = l.bitHeight();
   if (n >= bitCnt) {
     return 0;
   }

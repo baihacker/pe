@@ -139,8 +139,8 @@ struct FactPPowerModer<Mpz> {
     }
 
     if (p == 2) {
-      int64 left_mod4 = ((to_int<int>((u * mpzP + 1) % 8) & 4) >> 1) + 1;
-      int64 right_mod4 = to_int<int>(ret % 8) % 4;
+      int64 left_mod4 = ((to_int<int>(Mpz((u * mpzP + 1) % 8)) & 4) >> 1) + 1;
+      int64 right_mod4 = to_int<int>(Mpz(ret % 8)) % 4;
       if (left_mod4 != right_mod4) {
         ret = (mod - ret) % mod;
       }
@@ -176,6 +176,18 @@ struct FactPPowerModer<Mpz> {
 
 class MpInteger {
  public:
+  static constexpr int LIMB_BIT = sizeof(limb_t) * 8;
+  static constexpr limb_t LIMB_MASK = -1;
+
+  template <typename T>
+  friend REQUIRES((is_native_integer<T>::value && is_signed<T>::value))
+      RETURN(void) __init_mpz(mpz_t mp, T value);
+
+  template <typename T>
+  friend REQUIRES((is_native_integer<T>::value && is_unsigned<T>::value))
+      RETURN(void) __init_mpz(mpz_t mp, T value);
+
+ public:
   MpInteger() {
     mpz_init(mp);  // zero value
   }
@@ -188,20 +200,15 @@ class MpInteger {
 
   MpInteger(unsigned long val) { mpz_init_set_ui(mp, val); }
 
-  template <typename T,
-            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
-  MpInteger(T value) {
-    if (value == 0) {
-      mpz_init(mp);
-      return;
-    }
-    string v = to_string(value);
-    mpz_init_set_str(mp, v.c_str(), 10);
-  }
-
   MpInteger(const string& s) { mpz_init_set_str(mp, s.c_str(), 10); }
 
   MpInteger(const char* s) { mpz_init_set_str(mp, s, 10); }
+
+  template <typename T,
+            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(void)>
+  MpInteger(T value) {
+    __init_mpz(mp, value);
+  }
 
   MpInteger(const MpInteger& o) { mpz_init_set(mp, o.mp); }
 
@@ -212,12 +219,22 @@ class MpInteger {
 
   ~MpInteger() { mpz_clear(mp); }
 
-  MpInteger& operator=(signed long int val) {
+  MpInteger& operator=(int val) {
     mpz_set_si(mp, val);
     return *this;
   }
 
-  MpInteger& operator=(unsigned long int val) {
+  MpInteger& operator=(long val) {
+    mpz_set_si(mp, val);
+    return *this;
+  }
+
+  MpInteger& operator=(unsigned int val) {
+    mpz_set_ui(mp, val);
+    return *this;
+  }
+
+  MpInteger& operator=(unsigned long val) {
     mpz_set_ui(mp, val);
     return *this;
   }
@@ -307,10 +324,21 @@ class MpInteger {
 
   friend inline MpInteger operator/(const MpInteger& l, const MpInteger& r);
   template <typename T>
-  friend inline REQUIRES((is_native_integer<T>::value &&
-                          (is_same<T, unsigned int>::value ||
-                           is_same<T, unsigned long>::value))) RETURN(MpInteger)
-  operator/(const MpInteger& l, T r);
+  friend inline REQUIRES(
+      (is_native_integer<T>::value &&
+       !is_same<typename remove_cvref<T>::type, MpInteger>::value &&
+       (is_same<T, unsigned int>::value || is_same<T, unsigned long>::value)))
+      RETURN(MpInteger)
+      operator/(const MpInteger& l, T r);
+
+  friend inline MpInteger operator%(const MpInteger& l, const MpInteger& r);
+  template <typename T>
+  friend inline REQUIRES(
+      (is_native_integer<T>::value &&
+       !is_same<typename remove_cvref<T>::type, MpInteger>::value &&
+       (is_same<T, unsigned int>::value || is_same<T, unsigned long>::value)))
+      RETURN(MpInteger)
+      operator%(const MpInteger& l, T r);
 
   friend inline MpInteger operator>>(const MpInteger& l, const MpInteger& cnt);
   friend inline MpInteger operator>>(const MpInteger& l, int cnt);
@@ -529,6 +557,40 @@ class MpInteger {
   mpz_t mp;
 };
 
+template <typename T>
+REQUIRES((is_native_integer<T>::value && is_signed<T>::value))
+RETURN(void) __init_mpz(mpz_t mp, T value) {
+  if (value == 0) {
+    mpz_init(mp);
+    return;
+  }
+
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  if (value > 0) {
+    __init_mpz<unsignedT>(mp, static_cast<unsignedT>(value));
+  } else {
+    // Note: it works for value = T::min()
+    __init_mpz<unsignedT>(mp, static_cast<unsignedT>(-value));
+    mp->_mp_size = -mp->_mp_size;
+  }
+}
+
+template <typename T>
+REQUIRES((is_native_integer<T>::value && is_unsigned<T>::value))
+RETURN(void) __init_mpz(mpz_t mp, T value) {
+  if (value == 0) {
+    mpz_init(mp);
+    return;
+  }
+  int cnt = 0;
+  for (auto v = value; v; v >>= MpInteger::LIMB_BIT) ++cnt;
+  mpz_init2(mp, cnt * MpInteger::LIMB_BIT * cnt);
+  auto* t = mp->_mp_d;
+  for (int i = 0; i < cnt; ++i)
+    *t++ = MpInteger::LIMB_MASK & value, value >>= MpInteger::LIMB_BIT;
+  mp->_mp_size = cnt;
+}
+
 // Operators
 int operator>(const MpInteger& l, const MpInteger& r) {
   return mpz_cmp(l.mp, r.mp) > 0;
@@ -659,8 +721,10 @@ MpInteger operator/(const MpInteger& l, const MpInteger& r) {
 }
 
 template <typename T>
-REQUIRES((is_native_integer<T>::value && (is_same<T, unsigned int>::value ||
-                                          is_same<T, unsigned long>::value)))
+REQUIRES((is_native_integer<T>::value &&
+          !is_same<typename remove_cvref<T>::type, MpInteger>::value &&
+          (is_same<T, unsigned int>::value ||
+           is_same<T, unsigned long>::value)))
 RETURN(MpInteger)
 operator/(const MpInteger& l, T r) {
   MpInteger ret;
@@ -668,9 +732,27 @@ operator/(const MpInteger& l, T r) {
   return ret;
 }
 
-MpInteger operator<<(const MpInteger& l, const MpInteger& /*cnt*/) {
+MpInteger operator%(const MpInteger& l, const MpInteger& r) {
   MpInteger ret;
-  mpz_mul_2exp(ret.mp, l.mp, 0);
+  mpz_mod(ret.mp, l.mp, r.mp);
+  return ret;
+}
+
+template <typename T>
+REQUIRES((is_native_integer<T>::value &&
+          !is_same<typename remove_cvref<T>::type, MpInteger>::value &&
+          (is_same<T, unsigned int>::value ||
+           is_same<T, unsigned long>::value)))
+RETURN(MpInteger)
+operator%(const MpInteger& l, T r) {
+  MpInteger ret;
+  mpz_mod_ui(ret.mp, l.mp, r);
+  return ret;
+}
+
+MpInteger operator<<(const MpInteger& l, const MpInteger& cnt) {
+  MpInteger ret;
+  mpz_mul_2exp(ret.mp, l.mp, cnt.toInt<int>());
   return ret;
 }
 
@@ -680,9 +762,9 @@ MpInteger operator<<(const MpInteger& l, int cnt) {
   return ret;
 }
 
-MpInteger operator>>(const MpInteger& l, const MpInteger& /*cnt*/) {
+MpInteger operator>>(const MpInteger& l, const MpInteger& cnt) {
   MpInteger ret;
-  mpz_tdiv_q_2exp(ret.mp, l.mp, 0);
+  mpz_tdiv_q_2exp(ret.mp, l.mp, cnt.toInt<int>());
   return ret;
 }
 

@@ -1,4 +1,5 @@
 pe++.py bi_demo.c
+pe++.py bi_demo1.c
 pe++.py bi_gmp_perf.c
 pe++.py bi_example.c
 pe++.py bi_example_pe483.c

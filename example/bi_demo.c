@@ -1,119 +1,232 @@
 #include <pe.hpp>
 
-void test() {
-  bi N(1);
-  for (int i = 1; i <= 20; ++i) N = N * i;
-
-  bi v = 0;
-  for (bi n = N; !n.isZero(); v = v + n, n = n / 2)
-    ;
-  dbg(v);
-  bi mod = power(2_bi, 48);
-  bi ans = 1;
-  FactPPowerModer<bi> moder(2, 48);
-  int i = 0;
-  while (N > 1) {
-    ans = ans * moder.cal(N) % mod;
-    N = N / 2;
-  }
-  v = v % 4;
-  dbg(ans);
-  ans = ans * power(2_bi, v[0]) % mod;
-
-  cout << ans << endl;
-  cout << ans.toInt<int64>() << endl;
-  printf("%llx\n", (unsigned long long)ans.toInt<unsigned long long>());
+template <typename T>
+void test_constructor_internal() {
+  cout << typeid(T).name() << endl;
+  cout << BigInteger(T()) << endl;
+  cout << BigInteger(T(0)) << " " << BigInteger(T(1)) << endl;
+  cout << BigInteger(numeric_limits<T>::min()) << " "
+       << numeric_limits<T>::min() << endl;
+  cout << BigInteger(numeric_limits<T>::max()) << " "
+       << numeric_limits<T>::max() << endl;
+  assert(BigInteger(numeric_limits<T>::min()).toInt<T>() ==
+         numeric_limits<T>::min());
+  assert(BigInteger(numeric_limits<T>::max()).toInt<T>() ==
+         numeric_limits<T>::max());
+  cout << endl;
 }
 
-void facTest() {
+void test_constructor() {
+  cout << BigInteger() << endl;
+  test_constructor_internal<bool>();
+  test_constructor_internal<char>();
+  test_constructor_internal<signed char>();
+  test_constructor_internal<unsigned char>();
+  test_constructor_internal<short>();
+  test_constructor_internal<int>();
+  test_constructor_internal<long>();
+  test_constructor_internal<long long>();
+  test_constructor_internal<unsigned short>();
+  test_constructor_internal<unsigned int>();
+  test_constructor_internal<unsigned long>();
+  test_constructor_internal<unsigned long long>();
+
+  int128 max_int128 = ((uint128)-1) >> 1;
+  cout << BigInteger(max_int128) << " " << max_int128 << endl;
+  assert(BigInteger(max_int128).toInt<int128>() == max_int128);
+
+  int128 min_int128 = -max_int128 - 1;
+  cout << BigInteger(min_int128) << " " << min_int128 << endl;
+  assert(BigInteger(min_int128).toInt<int128>() == min_int128);
+
+  uint128 max_uint128 = -1;
+  cout << BigInteger(max_uint128) << " " << max_uint128 << endl;
+  assert(BigInteger(max_uint128).toInt<uint128>() == max_uint128);
+}
+
+template <typename T>
+void test_assignment_internal() {
+  BigInteger x;
+  x = T();
+  assert(x.toInt<T>() == T());
+
+  x = numeric_limits<T>::max();
+  assert(x.toInt<T>() == numeric_limits<T>::max());
+
+  x = numeric_limits<T>::min();
+  assert(x.toInt<T>() == numeric_limits<T>::min());
+}
+
+void test_assignment_operator() {
+  test_assignment_internal<bool>();
+  test_assignment_internal<char>();
+  test_assignment_internal<signed char>();
+  test_assignment_internal<unsigned char>();
+  test_assignment_internal<short>();
+  test_assignment_internal<int>();
+  test_assignment_internal<long>();
+  test_assignment_internal<long long>();
+  test_assignment_internal<unsigned short>();
+  test_assignment_internal<unsigned int>();
+  test_assignment_internal<unsigned long>();
+  test_assignment_internal<unsigned long long>();
+
+  string s = "123456789123456789123456789";
+  BigInteger x;
+  x = s;
+  assert(x.toString() == s);
+}
+
+template <typename T>
+void test_asmd_internal() {
+  BigInteger x;
+  x += T(1);
+  x = x + T(1);
+  x = T(1) + x;
+  x = x + x;
+
+  x -= T(1);
+  x = x - T(1);
+  x = T(1) - x;
+  x = x - x;
+
+  x *= T(1);
+  x = x * T(1);
+  x = T(1) * x;
+  x = x * x;
+
+  x = 1;
+  x /= T(1);
+  x = x / T(1);
+  x = T(1) / x;
+  x = 1;
+  x = x / x;
+
+  x = 1;
+  x %= T(2);
+  x = x % T(2);
+  x = 1;
+  x = x % x;
+}
+
+void test_asmd_operator() {
+  // test_asmd_internal<bool>();
+  test_asmd_internal<char>();
+  test_asmd_internal<signed char>();
+  test_asmd_internal<unsigned char>();
+  test_asmd_internal<short>();
+  test_asmd_internal<int>();
+  test_asmd_internal<long>();
+  test_asmd_internal<long long>();
+  test_asmd_internal<int128>();
+  test_asmd_internal<unsigned short>();
+  test_asmd_internal<unsigned int>();
+  test_asmd_internal<unsigned long>();
+  test_asmd_internal<unsigned long long>();
+  test_asmd_internal<uint128>();
+}
+
+template <typename T>
+void test_compare_operator_internal() {
+  BigInteger x;
+  assert((x == T(0)) == 1);
+  assert((x > T(0)) == 0);
+  assert((x < T(0)) == 0);
+  assert((x <= T(0)) == 1);
+  assert((x >= T(0)) == 1);
+  assert((x != T(0)) == 0);
+
+  assert((x == x) == 1);
+  assert((x > x) == 0);
+  assert((x < x) == 0);
+  assert((x <= x) == 1);
+  assert((x >= x) == 1);
+  assert((x != x) == 0);
+
+  x = 1;
+  assert((x == T(1)) == 1);
+  assert((x > T(1)) == 0);
+  assert((x < T(1)) == 0);
+  assert((x <= T(1)) == 1);
+  assert((x >= T(1)) == 1);
+  assert((x != T(1)) == 0);
+
+  assert((x == x) == 1);
+  assert((x > x) == 0);
+  assert((x < x) == 0);
+  assert((x <= x) == 1);
+  assert((x >= x) == 1);
+  assert((x != x) == 0);
+}
+
+void test_compare_operator() {
+  // test_compare_operator_internal<bool>();
+  test_compare_operator_internal<char>();
+  test_compare_operator_internal<signed char>();
+  test_compare_operator_internal<unsigned char>();
+  test_compare_operator_internal<short>();
+  test_compare_operator_internal<int>();
+  test_compare_operator_internal<long>();
+  test_compare_operator_internal<long long>();
+  test_compare_operator_internal<int128>();
+  test_compare_operator_internal<unsigned short>();
+  test_compare_operator_internal<unsigned int>();
+  test_compare_operator_internal<unsigned long>();
+  test_compare_operator_internal<unsigned long long>();
+  test_compare_operator_internal<uint128>();
+}
+
+void test_bit_operator() {
+  BigInteger x;
+  for (int i = 0; i <= 19; ++i) x.setBit(i);
+  assert(x.toInt<int>() == 1048575);
+  x.revBit(0);
+  assert(x.toInt<int>() == 1048574);
+  x.resetBit(1);
+  assert(x.toInt<int>() == 1048572);
+  assert(x.bitCount() == 18);
+
+  BigInteger y;
+  y.setBit(0);
+
+  x = x | y;
+  assert(x.toInt<int>() == 1048573);
+
+  x = x & BigInteger(1048575 - 4);
+  assert(x.toInt<int>() == 1048573 - 4);
+
+  x = x ^ x;
+  assert(x.toInt<int>() == 0);
+
+  x = x ^ y;
+  assert(x.toInt<int>() == 1);
+}
+
+void test_utilities() {
+  power_mod(MpInteger(5), 10, MpInteger("123456789"));
+  power_mod(MpInteger(5), MpInteger(10), MpInteger("123456789"));
+
+  power(MpInteger(2), 10u);
+  power(MpInteger(2), 10);
+
+  gcd(12_mpi, 8_mpi);
+  123456789123456789_mpi * 2 * 5_mpi * "10"_mpi;
+
+  cout << power(MpInteger(2), 20) << endl;
+  cout << power(MpInteger(2), 20LL) << endl;
+
   TimeRecorder tr;
-  BigInteger result = 1;
-  for (int i = 1; i <= 100000; ++i) result = result * i;
-  cout << tr.elapsed().format() << endl;
-  cout << result.toString().size() << endl;
-  cout << result.size() << endl;
+  BigInteger v(1);
+  for (int i = 1; i <= 100000; ++i) v *= i;
+  cout << tr.elapsed().format() << " " << v.bitCount() << endl;
 }
 
 int main() {
-  // cout << GCDEX(281474976710656_bi, 207628560027673_bi) << endl;
-  // cout << "123455"_bi - 12345678_bi << endl;
-  // cout << 1_bi * -3 << endl;
-  test();
-  cout << (1_bi << 64) << endl;
-  BigInteger f(32768);
-  for (int i = 1; i < 20; ++i) cout << (f >> i) << " " << (f << i) << endl;
-  cout << (1_bi << 20) << endl;
-  for (int i = -10; i <= 10; ++i)
-    for (int j = -10; j <= 10; ++j)
-      if (j != 0)
-        assert(i / j == BigInteger(i) / BigInteger(j)),
-            assert(i % j == BigInteger(i) % BigInteger(j));
-
-  cout << ~"1048576"_bi << endl;
-  cout << ~"255"_bi << endl;
-  cout << ~"1"_bi << endl;
-  cout << ~"0"_bi << endl;
-  cout << ~"5"_bi << endl;
-  cout << "123123456789123456789"_bi << endl;
-  //       123123456789123456789
-
-  cout << "123123456789123456789"_bi + "123123456789123456789"_bi << endl;
-  cout << "123123456789123456789"_bi - "113123456789123456788"_bi << endl;
-  cout << "123123456789123456789"_bi * "113123456789123456788"_bi << endl;
-
-  cout << BigInteger(vector<char>{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}) << endl;
-  /*cout << BigInteger(vector<char>{0,0,0,0,0,0,0,0,0,0,1}) << endl;
-  cout << BigInteger(vector<char>{0,0,0,0,0,0,0,0,0,1}) << endl;
-  cout << BigInteger(vector<char>{0,0,0,0,0,0,0,0,1}) << endl;
-  cout << BigInteger(vector<char>{0,0,0,0,0,0,0,1}) << endl;
-  cout << BigInteger(vector<char>{0,0,0,0,0,0,1}) << endl;
-  cout << BigInteger(vector<char>{0,0,0,0,0,1}) << endl;
-  cout << BigInteger(vector<char>{0,0,0,0,1}) << endl;
-  cout << BigInteger(vector<char>{0,0,0,1}) << endl;
-  cout << BigInteger(vector<char>{0,0,1}) << endl;
-  cout << BigInteger(vector<char>{0,1}) << endl;
-  cout << BigInteger(vector<char>{1}) << endl;*/
-
-  BigInteger a = 123456789;
-  BigInteger b = a * a;
-
-  for (auto& iter : a.toBinVector<int>()) cerr << (int)iter;
-  cerr << endl;
-  cout << a << endl;
-  cout << b << endl;
-  // cout << b / a << endl;
-
-  cout << "5"_bi % "4"_bi << endl;
-  cout << ~"16384"_bi << endl;
-
-  TimeRecorder tr;
-  BigInteger result = 1;
-  for (int i = 1; i <= 100; ++i) result = result * i;
-  cout << tr.elapsed().format() << endl;
-  cout << result.toString().size() << endl;
-  cout << result.size() << endl;
-  // cout << - "123"_bi << endl;
-
-  // cout << BigInteger((int128)1000000000000 * (int128)999999999) << endl;
-  tie(a, b) = div("1234"_bi, "5"_bi);
-  cout << a << " " << b << endl;
-
-  cout << a / 123 << endl;
-
-  cout << a / 2 << endl;
-  cout << a / 5 << endl;
-
-  tie(a, b) = div("12340000000000000000000"_bi, 5);
-  cout << a << " " << b << endl;
-  cout << "12340000000000000000000"_bi % 5 << endl;
-  //  cout << div("1234"_bi, "5"_bi) << endl;
-
-  facTest();
-
-  cout << "1234556"_bi % (unsigned)123 << endl;
+  test_constructor();
+  test_assignment_operator();
+  test_asmd_operator();
+  test_compare_operator();
+  test_bit_operator();
+  test_utilities();
   return 0;
 }
-/*
-13928151043811916475759392165831626733732
-13928151043811916475759392165831626733732
-*/

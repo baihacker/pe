@@ -124,6 +124,48 @@ void test_asmd_operator() {
   test_asmd_internal<unsigned long>();
   test_asmd_internal<unsigned long long>();
   test_asmd_internal<uint128>();
+
+  for (int a = -10; a <= 10; ++a)
+    for (int b = -10; b <= 10; ++b) {
+      assert((BigInteger(a) + BigInteger(b)).toInt<int>() == (a + b));
+      assert((BigInteger(a) - BigInteger(b)).toInt<int>() == (a - b));
+      assert((BigInteger(a) * BigInteger(b)).toInt<int>() == (a * b));
+      if (b != 0) {
+        assert((BigInteger(a) / BigInteger(b)).toInt<int>() == (a / b));
+        assert((BigInteger(a) % BigInteger(b)).toInt<int>() == (a % b));
+      }
+      if (a >= 0 && b >= 0) {
+        assert((BigInteger(a) | BigInteger(b)).toInt<int>() == (a | b));
+        assert((BigInteger(a) & BigInteger(b)).toInt<int>() == (a & b));
+        assert((BigInteger(a) ^ BigInteger(b)).toInt<int>() == (a ^ b));
+      }
+
+      assert((BigInteger(a) + b).toInt<int>() == (a + b));
+      assert((BigInteger(a) - b).toInt<int>() == (a - b));
+      assert((BigInteger(a) * b).toInt<int>() == (a * b));
+      if (b != 0) {
+        assert((BigInteger(a) / b).toInt<int>() == (a / b));
+        assert((BigInteger(a) % b) == (a % b));
+      }
+      if (a >= 0 && b >= 0) {
+        assert((BigInteger(a) | b).toInt<int>() == (a | b));
+        assert((BigInteger(a) & b).toInt<int>() == (a & b));
+        assert((BigInteger(a) ^ b).toInt<int>() == (a ^ b));
+      }
+
+      assert((a + BigInteger(b)).toInt<int>() == (a + b));
+      assert((a - BigInteger(b)).toInt<int>() == (a - b));
+      assert((a * BigInteger(b)).toInt<int>() == (a * b));
+      if (b != 0) {
+        assert((a / BigInteger(b)).toInt<int>() == (a / b));
+        assert((a % BigInteger(b)).toInt<int>() == (a % b));
+      }
+      if (a >= 0 && b >= 0) {
+        assert((a | BigInteger(b)).toInt<int>() == (a | b));
+        assert((a & BigInteger(b)).toInt<int>() == (a & b));
+        assert((a ^ BigInteger(b)).toInt<int>() == (a ^ b));
+      }
+    }
 }
 
 template <typename T>
@@ -203,17 +245,17 @@ void test_bit_operator() {
 }
 
 void test_utilities() {
-  power_mod(MpInteger(5), 10, MpInteger("123456789"));
-  power_mod(MpInteger(5), MpInteger(10), MpInteger("123456789"));
+  power_mod(BigInteger(5), 10, BigInteger("123456789"));
+  power_mod(BigInteger(5), BigInteger(10), BigInteger("123456789"));
 
-  power(MpInteger(2), 10u);
-  power(MpInteger(2), 10);
+  power(BigInteger(2), 10u);
+  power(BigInteger(2), 10);
 
   gcd(12_mpi, 8_mpi);
   123456789123456789_mpi * 2 * 5_mpi * "10"_mpi;
 
-  cout << power(MpInteger(2), 20) << endl;
-  cout << power(MpInteger(2), 20LL) << endl;
+  cout << power(BigInteger(2), 20) << endl;
+  cout << power(BigInteger(2), 20LL) << endl;
 
   TimeRecorder tr;
   BigInteger v(1);

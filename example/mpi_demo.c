@@ -124,6 +124,48 @@ void test_asmd_operator() {
   test_asmd_internal<unsigned long>();
   test_asmd_internal<unsigned long long>();
   test_asmd_internal<uint128>();
+
+  for (int a = -10; a <= 10; ++a)
+    for (int b = -10; b <= 10; ++b) {
+      assert((MpInteger(a) + MpInteger(b)).toInt<int>() == (a + b));
+      assert((MpInteger(a) - MpInteger(b)).toInt<int>() == (a - b));
+      assert((MpInteger(a) * MpInteger(b)).toInt<int>() == (a * b));
+      if (b != 0) {
+        assert((MpInteger(a) / MpInteger(b)).toInt<int>() == (a / b));
+        assert((MpInteger(a) % MpInteger(b)).toInt<int>() == (a % b));
+      }
+      if (a >= 0 && b >= 0) {
+        assert((MpInteger(a) | MpInteger(b)).toInt<int>() == (a | b));
+        assert((MpInteger(a) & MpInteger(b)).toInt<int>() == (a & b));
+        assert((MpInteger(a) ^ MpInteger(b)).toInt<int>() == (a ^ b));
+      }
+
+      assert((MpInteger(a) + b).toInt<int>() == (a + b));
+      assert((MpInteger(a) - b).toInt<int>() == (a - b));
+      assert((MpInteger(a) * b).toInt<int>() == (a * b));
+      if (b != 0) {
+        assert((MpInteger(a) / b).toInt<int>() == (a / b));
+        assert((MpInteger(a) % b).toInt<int>() == (a % b));
+      }
+      if (a >= 0 && b >= 0) {
+        assert((MpInteger(a) | b).toInt<int>() == (a | b));
+        assert((MpInteger(a) & b).toInt<int>() == (a & b));
+        assert((MpInteger(a) ^ b).toInt<int>() == (a ^ b));
+      }
+
+      assert((a + MpInteger(b)).toInt<int>() == (a + b));
+      assert((a - MpInteger(b)).toInt<int>() == (a - b));
+      assert((a * MpInteger(b)).toInt<int>() == (a * b));
+      if (b != 0) {
+        assert((a / MpInteger(b)).toInt<int>() == (a / b));
+        assert((a % MpInteger(b)).toInt<int>() == (a % b));
+      }
+      if (a >= 0 && b >= 0) {
+        assert((a | MpInteger(b)).toInt<int>() == (a | b));
+        assert((a & MpInteger(b)).toInt<int>() == (a & b));
+        assert((a ^ MpInteger(b)).toInt<int>() == (a ^ b));
+      }
+    }
 }
 
 template <typename T>

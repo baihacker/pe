@@ -176,8 +176,8 @@ struct FactPPowerModer<Mpz> {
 
 class MpInteger {
  public:
-  static constexpr int LIMB_BIT = sizeof(limb_t) * 8;
-  static constexpr limb_t LIMB_MASK = -1;
+  static constexpr int LIMB_BIT = sizeof(mp_limb_t) * 8;
+  static constexpr mp_limb_t LIMB_MASK = -1;
 
   template <typename T>
   friend REQUIRES((is_native_integer<T>::value && is_signed<T>::value))
@@ -875,6 +875,86 @@ inline MpInteger operator"" _mpi(const char* sv, size_t /*sc*/) {
 }
 
 inline MpInteger operator"" _mpi(unsigned long long v) { return MpInteger(v); }
+
+// Compute n! mod p^e
+// Note: if i % p == 0, then the contribution of i is 1.
+// The complexity is at least max(e*e, p*e)
+// It is slow if N is very big, e.g. N = 10^10000. ((10^10000)! mod p^e)
+// Compute n! mod p^e
+// Note: if i % p == 0, then the contribution of i is 1.
+// The complexity is at least max(e*e, p*e)
+// It is slow if N is very big, e.g. N = 10^10000. ((10^10000)! mod p^e)
+template <>
+struct FactPPowerModer<MpInteger> {
+  std::vector<MpInteger> F;
+  int64 p;
+  int64 e;
+  MpInteger mod;
+  MpInteger phi;
+
+  FactPPowerModer(const int64 p, const int64 e) : p(p), e(e) {
+    int64 pe = p * e;
+    mod = power(MpInteger(p), e);
+    phi = power(MpInteger(p), (e - 1)) * (p - 1);
+    F.resize(pe + 1, 1);
+    for (int i = 1; i <= pe; ++i) {
+      if (i % p == 0)
+        F[i] = F[i - 1];
+      else
+        F[i] = F[i - 1] * i % mod;
+    }
+  }
+
+  MpInteger cal(const MpInteger& N) {
+    MpInteger u = N / p;
+    MpInteger v = N % p;
+    auto vv = to_int<int64>(v);
+    int64 r = (e + 1) >> 1;
+
+    MpInteger ret = 1;
+    // F(up, p)
+    const MpInteger u2 = u * u;
+
+    for (int j = 1; j <= r; ++j) {
+      MpInteger beta_numer = u;
+      MpInteger beta_denom = j;
+      const int j2 = j * j;
+      for (int i = 1; i <= r; ++i)
+        if (i != j) beta_numer *= u2 - i * i, beta_denom *= j2 - i * i;
+      auto beta = beta_numer / beta_denom % phi;
+      if (int_sign(beta) < 0) beta += phi;
+      ret = ret * power_mod(F[j * p], beta, mod) % mod;
+    }
+
+    if (p == 2) {
+      int64 left_mod4 = (((u * p + 1)[0] & 4) >> 1) + 1;
+      int64 right_mod4 = ret[0] & 3;
+      if (left_mod4 != right_mod4) {
+        ret = (mod - ret) % mod;
+      }
+    }
+
+    // F(v, p)
+    ret = ret * F[vv] % mod;
+
+    // (p + v, v)_p
+    for (int j = 1; j < e; ++j) {
+      auto base = F[j * p + vv] * mod_inv(F[vv] * F[j * p], mod) % mod;
+      MpInteger alpha_numer = u;
+      MpInteger alpha_denom = j;
+      for (int i = 1; i < e; ++i)
+        if (i != j) {
+          alpha_numer *= u - i;
+          alpha_denom *= j - i;
+        }
+      auto alpha = alpha_numer / alpha_denom % phi;
+      if (int_sign(alpha) < 0) alpha += phi;
+      ret = ret * power_mod(base, alpha, mod) % mod;
+    }
+
+    return ret;
+  }
+};
 #endif  // end ENABLE_GMP
 
 #endif

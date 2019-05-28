@@ -279,8 +279,8 @@ SL void test_utilities() {
   power(BigInteger(2), 10u);
   power(BigInteger(2), 10);
 
-  gcd(12_mpi, 8_mpi);
-  123456789123456789_mpi * 2 * 5_mpi * "10"_mpi;
+  gcd(12_bi, 8_bi);
+  123456789123456789_bi * 2 * 5_bi * "10"_bi;
 
   power(BigInteger(2), 20);
   power(BigInteger(2), 20LL);

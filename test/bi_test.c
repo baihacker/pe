@@ -22,7 +22,7 @@ SL void test_constructor_internal() {
 SL void test_constructor() {
   //cout << BigInteger() << endl;
   BigInteger x;
-  test_constructor_internal<bool>();
+  // test_constructor_internal<bool>();
   test_constructor_internal<char>();
   test_constructor_internal<signed char>();
   test_constructor_internal<unsigned char>();

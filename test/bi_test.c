@@ -136,63 +136,123 @@ SL void test_asmd_operator() {
   test_asmd_internal<uint128>();
 #endif
 
-  for (int a = -10; a <= 10; ++a)
-    for (int b = -10; b <= 10; ++b) {
-      assert((BigInteger(a) + BigInteger(b)).toInt<int>() == (a + b));
-      assert((BigInteger(a) += BigInteger(b)).toInt<int>() == (a + b));
-      assert((BigInteger(a) - BigInteger(b)).toInt<int>() == (a - b));
-      assert((BigInteger(a) -= BigInteger(b)).toInt<int>() == (a - b));
-      assert((BigInteger(a) * BigInteger(b)).toInt<int>() == (a * b));
-      assert((BigInteger(a) *= BigInteger(b)).toInt<int>() == (a * b));
-      if (b != 0) {
-        assert((BigInteger(a) / BigInteger(b)).toInt<int>() == (a / b));
-        assert((BigInteger(a) /= BigInteger(b)).toInt<int>() == (a / b));
-        assert((BigInteger(a) % BigInteger(b)).toInt<int>() == (a % b));
-        assert((BigInteger(a) %= BigInteger(b)).toInt<int>() == (a % b));
-      }
-      if (a >= 0 && b >= 0) {
-        assert((BigInteger(a) | BigInteger(b)).toInt<int>() == (a | b));
-        assert((BigInteger(a) |= BigInteger(b)).toInt<int>() == (a | b));
-        assert((BigInteger(a) & BigInteger(b)).toInt<int>() == (a & b));
-        assert((BigInteger(a) &= BigInteger(b)).toInt<int>() == (a & b));
-        assert((BigInteger(a) ^ BigInteger(b)).toInt<int>() == (a ^ b));
-        assert((BigInteger(a) ^= BigInteger(b)).toInt<int>() == (a ^ b));
+  for (int A : {-10000, 0, 10000})
+    for (int a = A - 10; a <= A + 10; ++a)
+      for (int b = -10; b <= 10; ++b) {
+        assert((BigInteger(a) + BigInteger(b)).toInt<int>() == (a + b));
+        assert((BigInteger(a) += BigInteger(b)).toInt<int>() == (a + b));
+        assert((BigInteger(a) - BigInteger(b)).toInt<int>() == (a - b));
+        assert((BigInteger(a) -= BigInteger(b)).toInt<int>() == (a - b));
+        assert((BigInteger(a) * BigInteger(b)).toInt<int>() == (a * b));
+        assert((BigInteger(a) *= BigInteger(b)).toInt<int>() == (a * b));
+        if (b != 0) {
+          assert((BigInteger(a) / BigInteger(b)).toInt<int>() == (a / b));
+          assert((BigInteger(a) /= BigInteger(b)).toInt<int>() == (a / b));
+          assert((BigInteger(a) % BigInteger(b)).toInt<int>() == (a % b));
+          assert((BigInteger(a) %= BigInteger(b)).toInt<int>() == (a % b));
+        }
+        if (a >= 0 && b >= 0) {
+          assert((BigInteger(a) | BigInteger(b)).toInt<int>() == (a | b));
+          assert((BigInteger(a) |= BigInteger(b)).toInt<int>() == (a | b));
+          assert((BigInteger(a) & BigInteger(b)).toInt<int>() == (a & b));
+          assert((BigInteger(a) &= BigInteger(b)).toInt<int>() == (a & b));
+          assert((BigInteger(a) ^ BigInteger(b)).toInt<int>() == (a ^ b));
+          assert((BigInteger(a) ^= BigInteger(b)).toInt<int>() == (a ^ b));
+        }
+
+        assert((BigInteger(a) + b).toInt<int>() == (a + b));
+        assert((BigInteger(a) += b).toInt<int>() == (a + b));
+        assert((BigInteger(a) - b).toInt<int>() == (a - b));
+        assert((BigInteger(a) -= b).toInt<int>() == (a - b));
+        assert((BigInteger(a) * b).toInt<int>() == (a * b));
+        assert((BigInteger(a) *= b).toInt<int>() == (a * b));
+        if (b != 0) {
+          assert((BigInteger(a) / b).toInt<int>() == (a / b));
+          assert((BigInteger(a) /= b).toInt<int>() == (a / b));
+          assert((BigInteger(a) % b).toInt<int>() == (a % b));
+          assert((BigInteger(a) %= b).toInt<int>() == (a % b));
+        }
+        if (a >= 0 && b >= 0) {
+          assert((BigInteger(a) | b).toInt<int>() == (a | b));
+          assert((BigInteger(a) |= b).toInt<int>() == (a | b));
+          assert((BigInteger(a) & b).toInt<int>() == (a & b));
+          assert((BigInteger(a) &= b).toInt<int>() == (a & b));
+          assert((BigInteger(a) ^ b).toInt<int>() == (a ^ b));
+          assert((BigInteger(a) ^= b).toInt<int>() == (a ^ b));
+        }
+
+        assert((a + BigInteger(b)).toInt<int>() == (a + b));
+        assert((a - BigInteger(b)).toInt<int>() == (a - b));
+        assert((a * BigInteger(b)).toInt<int>() == (a * b));
+        if (b != 0) {
+          assert((a / BigInteger(b)).toInt<int>() == (a / b));
+          assert((a % BigInteger(b)).toInt<int>() == (a % b));
+        }
+        if (a >= 0 && b >= 0) {
+          assert((a | BigInteger(b)).toInt<int>() == (a | b));
+          assert((a & BigInteger(b)).toInt<int>() == (a & b));
+          assert((a ^ BigInteger(b)).toInt<int>() == (a ^ b));
+        }
       }
 
-      assert((BigInteger(a) + b).toInt<int>() == (a + b));
-      assert((BigInteger(a) += b).toInt<int>() == (a + b));
-      assert((BigInteger(a) - b).toInt<int>() == (a - b));
-      assert((BigInteger(a) -= b).toInt<int>() == (a - b));
-      assert((BigInteger(a) * b).toInt<int>() == (a * b));
-      assert((BigInteger(a) *= b).toInt<int>() == (a * b));
-      if (b != 0) {
-        assert((BigInteger(a) / b).toInt<int>() == (a / b));
-        assert((BigInteger(a) /= b).toInt<int>() == (a / b));
-        assert((BigInteger(a) % b).toInt<int>() == (a % b));
-        assert((BigInteger(a) %= b).toInt<int>() == (a % b));
-      }
-      if (a >= 0 && b >= 0) {
-        assert((BigInteger(a) | b).toInt<int>() == (a | b));
-        assert((BigInteger(a) |= b).toInt<int>() == (a | b));
-        assert((BigInteger(a) & b).toInt<int>() == (a & b));
-        assert((BigInteger(a) &= b).toInt<int>() == (a & b));
-        assert((BigInteger(a) ^ b).toInt<int>() == (a ^ b));
-        assert((BigInteger(a) ^= b).toInt<int>() == (a ^ b));
-      }
+  for (int64 A : {-10000000000LL, -10000LL, 0LL, 10000LL, 10000000000LL})
+    for (int64 a = A - 10; a <= A + 10; ++a)
+      for (int64 b = -10; b <= 10; ++b) {
+        assert((BigInteger(a) + BigInteger(b)).toInt<int64>() == (a + b));
+        assert((BigInteger(a) += BigInteger(b)).toInt<int64>() == (a + b));
+        assert((BigInteger(a) - BigInteger(b)).toInt<int64>() == (a - b));
+        assert((BigInteger(a) -= BigInteger(b)).toInt<int64>() == (a - b));
+        assert((BigInteger(a) * BigInteger(b)).toInt<int64>() == (a * b));
+        assert((BigInteger(a) *= BigInteger(b)).toInt<int64>() == (a * b));
+        if (b != 0) {
+          assert((BigInteger(a) / BigInteger(b)).toInt<int64>() == (a / b));
+          assert((BigInteger(a) /= BigInteger(b)).toInt<int64>() == (a / b));
+          assert((BigInteger(a) % BigInteger(b)).toInt<int64>() == (a % b));
+          assert((BigInteger(a) %= BigInteger(b)).toInt<int64>() == (a % b));
+        }
+        if (a >= 0 && b >= 0) {
+          assert((BigInteger(a) | BigInteger(b)).toInt<int64>() == (a | b));
+          assert((BigInteger(a) |= BigInteger(b)).toInt<int64>() == (a | b));
+          assert((BigInteger(a) & BigInteger(b)).toInt<int64>() == (a & b));
+          assert((BigInteger(a) &= BigInteger(b)).toInt<int64>() == (a & b));
+          assert((BigInteger(a) ^ BigInteger(b)).toInt<int64>() == (a ^ b));
+          assert((BigInteger(a) ^= BigInteger(b)).toInt<int64>() == (a ^ b));
+        }
 
-      assert((a + BigInteger(b)).toInt<int>() == (a + b));
-      assert((a - BigInteger(b)).toInt<int>() == (a - b));
-      assert((a * BigInteger(b)).toInt<int>() == (a * b));
-      if (b != 0) {
-        assert((a / BigInteger(b)).toInt<int>() == (a / b));
-        assert((a % BigInteger(b)).toInt<int>() == (a % b));
+        assert((BigInteger(a) + b).toInt<int64>() == (a + b));
+        assert((BigInteger(a) += b).toInt<int64>() == (a + b));
+        assert((BigInteger(a) - b).toInt<int64>() == (a - b));
+        assert((BigInteger(a) -= b).toInt<int64>() == (a - b));
+        assert((BigInteger(a) * b).toInt<int64>() == (a * b));
+        assert((BigInteger(a) *= b).toInt<int64>() == (a * b));
+        if (b != 0) {
+          assert((BigInteger(a) / b).toInt<int64>() == (a / b));
+          assert((BigInteger(a) /= b).toInt<int64>() == (a / b));
+          assert((BigInteger(a) % b).toInt<int64>() == (a % b));
+          assert((BigInteger(a) %= b).toInt<int64>() == (a % b));
+        }
+        if (a >= 0 && b >= 0) {
+          assert((BigInteger(a) | b).toInt<int64>() == (a | b));
+          assert((BigInteger(a) |= b).toInt<int64>() == (a | b));
+          assert((BigInteger(a) & b).toInt<int64>() == (a & b));
+          assert((BigInteger(a) &= b).toInt<int64>() == (a & b));
+          assert((BigInteger(a) ^ b).toInt<int64>() == (a ^ b));
+          assert((BigInteger(a) ^= b).toInt<int64>() == (a ^ b));
+        }
+
+        assert((a + BigInteger(b)).toInt<int64>() == (a + b));
+        assert((a - BigInteger(b)).toInt<int64>() == (a - b));
+        assert((a * BigInteger(b)).toInt<int64>() == (a * b));
+        if (b != 0) {
+          assert((a / BigInteger(b)).toInt<int64>() == (a / b));
+          assert((a % BigInteger(b)).toInt<int64>() == (a % b));
+        }
+        if (a >= 0 && b >= 0) {
+          assert((a | BigInteger(b)).toInt<int64>() == (a | b));
+          assert((a & BigInteger(b)).toInt<int64>() == (a & b));
+          assert((a ^ BigInteger(b)).toInt<int64>() == (a ^ b));
+        }
       }
-      if (a >= 0 && b >= 0) {
-        assert((a | BigInteger(b)).toInt<int>() == (a | b));
-        assert((a & BigInteger(b)).toInt<int>() == (a & b));
-        assert((a ^ BigInteger(b)).toInt<int>() == (a ^ b));
-      }
-    }
 }
 
 template <typename T>

@@ -195,6 +195,65 @@ SL void test_asmd_operator() {
         assert((a ^ MpInteger(b)).toInt<int>() == (a ^ b));
       }
     }
+
+  for (int64 A : {-10000000000LL, -10000LL, 0LL, 10000LL, 10000000000LL})
+    for (int64 a = A - 10; a <= A + 10; ++a)
+      for (int64 b = -10; b <= 10; ++b) {
+        assert((MpInteger(a) + MpInteger(b)).toInt<int64>() == (a + b));
+        assert((MpInteger(a) += MpInteger(b)).toInt<int64>() == (a + b));
+        assert((MpInteger(a) - MpInteger(b)).toInt<int64>() == (a - b));
+        assert((MpInteger(a) -= MpInteger(b)).toInt<int64>() == (a - b));
+        assert((MpInteger(a) * MpInteger(b)).toInt<int64>() == (a * b));
+        assert((MpInteger(a) *= MpInteger(b)).toInt<int64>() == (a * b));
+        if (b != 0) {
+          assert((MpInteger(a) / MpInteger(b)).toInt<int64>() == (a / b));
+          assert((MpInteger(a) /= MpInteger(b)).toInt<int64>() == (a / b));
+          assert((MpInteger(a) % MpInteger(b)).toInt<int64>() == (a % b));
+          assert((MpInteger(a) %= MpInteger(b)).toInt<int64>() == (a % b));
+        }
+        if (a >= 0 && b >= 0) {
+          assert((MpInteger(a) | MpInteger(b)).toInt<int64>() == (a | b));
+          assert((MpInteger(a) |= MpInteger(b)).toInt<int64>() == (a | b));
+          assert((MpInteger(a) & MpInteger(b)).toInt<int64>() == (a & b));
+          assert((MpInteger(a) &= MpInteger(b)).toInt<int64>() == (a & b));
+          assert((MpInteger(a) ^ MpInteger(b)).toInt<int64>() == (a ^ b));
+          assert((MpInteger(a) ^= MpInteger(b)).toInt<int64>() == (a ^ b));
+        }
+
+        assert((MpInteger(a) + b).toInt<int64>() == (a + b));
+        assert((MpInteger(a) += b).toInt<int64>() == (a + b));
+        assert((MpInteger(a) - b).toInt<int64>() == (a - b));
+        assert((MpInteger(a) -= b).toInt<int64>() == (a - b));
+        assert((MpInteger(a) * b).toInt<int64>() == (a * b));
+        assert((MpInteger(a) *= b).toInt<int64>() == (a * b));
+        if (b != 0) {
+          assert((MpInteger(a) / b).toInt<int64>() == (a / b));
+          assert((MpInteger(a) /= b).toInt<int64>() == (a / b));
+          assert((MpInteger(a) % b).toInt<int64>() == (a % b));
+          assert((MpInteger(a) %= b).toInt<int64>() == (a % b));
+        }
+        if (a >= 0 && b >= 0) {
+          assert((MpInteger(a) | b).toInt<int64>() == (a | b));
+          assert((MpInteger(a) |= b).toInt<int64>() == (a | b));
+          assert((MpInteger(a) & b).toInt<int64>() == (a & b));
+          assert((MpInteger(a) &= b).toInt<int64>() == (a & b));
+          assert((MpInteger(a) ^ b).toInt<int64>() == (a ^ b));
+          assert((MpInteger(a) ^= b).toInt<int64>() == (a ^ b));
+        }
+
+        assert((a + MpInteger(b)).toInt<int64>() == (a + b));
+        assert((a - MpInteger(b)).toInt<int64>() == (a - b));
+        assert((a * MpInteger(b)).toInt<int64>() == (a * b));
+        if (b != 0) {
+          assert((a / MpInteger(b)).toInt<int64>() == (a / b));
+          assert((a % MpInteger(b)).toInt<int64>() == (a % b));
+        }
+        if (a >= 0 && b >= 0) {
+          assert((a | MpInteger(b)).toInt<int64>() == (a | b));
+          assert((a & MpInteger(b)).toInt<int64>() == (a & b));
+          assert((a ^ MpInteger(b)).toInt<int64>() == (a ^ b));
+        }
+      }
 }
 
 template <typename T>
@@ -305,6 +364,6 @@ SL void mpi_test() {
   test_utilities();
 }
 
-PE_REGISTER_TEST(&mpi_test, "mpi_test", SMALL);
+PE_REGISTER_TEST(&mpi_test, "mpi_test", SPECIFIED);
 }  // namespace mpi_test
 #endif

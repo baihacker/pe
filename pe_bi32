@@ -1093,7 +1093,14 @@ class BigInteger {
   REQUIRES(is_native_integer<T>::value&& std::is_signed<T>::value)
   RETURN(T) toInt() const {
     T result = 0;
-    for (int i = pos_; i >= 0; --i) result = (result << 32) | data_[i];
+    for (int i = pos_; i >= 0; --i) {
+#ifdef COMPILER_MSVC
+      result <<= 16;
+      result = (result << 16) | data_[i];
+#else
+      result = (result << 32) | data_[i];
+#endif
+    }
     if (std::is_signed<T>::value) {
       if (sign_ < 0) {
         result = -result;
@@ -1106,7 +1113,14 @@ class BigInteger {
   REQUIRES(is_native_integer<T>::value&& std::is_unsigned<T>::value)
   RETURN(T) toInt() const {
     T result = 0;
-    for (int i = pos_; i >= 0; --i) result = (result << 32) | data_[i];
+    for (int i = pos_; i >= 0; --i) {
+#ifdef COMPILER_MSVC
+      result <<= 16;
+      result = (result << 16) | data_[i];
+#else
+      result = (result << 32) | data_[i];
+#endif
+    }
     if (std::is_signed<T>::value) {
       // Warning
     }

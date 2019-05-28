@@ -217,6 +217,18 @@ class BigInteger {
     return x;
   }
 
+  template <typename T>
+  SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(T)
+      getNegValue(T x) {
+    return -x;
+  }
+
+  template <typename T>
+  SL REQUIRES((is_native_integer<T>::value && is_unsigned<T>::value)) RETURN(T)
+      getNegValue(T x) {
+    return x;
+  }
+
  private:
   // Internal constructor
   BigInteger(int size, alloc_mem) : BigInteger(zero_initialize_tag) {
@@ -652,7 +664,7 @@ class BigInteger {
     if (l.size() <= 2) {
       const uint64 a = l.toInt<uint64>();
       const uint64 b = r;
-      remain = a % b;
+      remain = static_cast<T>(a % b);
       l.resetAbs(a / b);
       return;
     }
@@ -1298,7 +1310,7 @@ inline REQUIRES((is_native_integer<T>::value &&
   if (r == 0 || l.isZero()) return 0;
 
   typedef typename std::make_unsigned<T>::type unsignedT;
-  unsignedT absValue = r > 0 ? r : -r;
+  unsignedT absValue = BigInteger::getAbsValue(r);
   const int s = l.getSign() * (r > 0 ? 1 : -1);
   BigInteger ret(BigInteger::absMul(l, absValue));
   ret.sign_ = s;
@@ -1424,7 +1436,7 @@ inline REQUIRES((is_native_integer<T>::value &&
   remain = (T)remainT;
   if (signl < 0) {
     PE_ASSERT(remain == 0 || !std::is_unsigned<T>::value);
-    remain = -remain;
+    remain = BigInteger::getNegtValue(remain);
   }
 }
 
@@ -1443,7 +1455,7 @@ operator%(const BigInteger& l, T r) {
   T v;
   tie(u, v) = div(l, r);
   if (l.getSign() < 0) {
-    v = -v;
+    v = BigIntegter::getNegValue(v);
   }
   return v;
 }

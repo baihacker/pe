@@ -234,12 +234,16 @@ SL void test_compare_operator() {
   test_compare_operator_internal<int>();
   test_compare_operator_internal<long>();
   test_compare_operator_internal<long long>();
+#if PE_HAS_INT128
   test_compare_operator_internal<int128>();
+#endif
   test_compare_operator_internal<unsigned short>();
   test_compare_operator_internal<unsigned int>();
   test_compare_operator_internal<unsigned long>();
   test_compare_operator_internal<unsigned long long>();
+#if PE_HAS_INT128
   test_compare_operator_internal<uint128>();
+#endif
 }
 
 SL void test_bit_operator() {

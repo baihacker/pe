@@ -509,22 +509,12 @@ class MpInteger {
   template <typename T>
   REQUIRES(is_native_integer<T>::value&& std::is_signed<T>::value)
   RETURN(T) toInt() const {
-    T result = 0;
-    const auto* buff = data();
-    for (int i = size() - 1; i >= 0; --i) {
-#ifdef COMPILER_MSVC
-      result <<= sizeof(mp_limb_t) * 4;
-      result = (result << sizeof(mp_limb_t) * 4) | buff[i];
-#else
-      result = (result << sizeof(mp_limb_t) * 4) | buff[i];
-#endif
+    typedef typename std::make_unsigned<T>::type unsignedT;
+    unsignedT v = toInt<unsignedT>();
+    if (getSign() < 0) {
+      v = ~v + 1;
     }
-    if (std::is_signed<T>::value) {
-      if (getSign() < 0) {
-        result = -result;
-      }
-    }
-    return result;
+    return static_cast<T>(v);
   }
 
   template <typename T>
@@ -533,15 +523,14 @@ class MpInteger {
     T result = 0;
     const auto* buff = data();
     for (int i = size() - 1; i >= 0; --i) {
-#ifdef COMPILER_MSVC
-      result <<= sizeof(mp_limb_t) * 4;
-      result = (result << sizeof(mp_limb_t) * 4) | buff[i];
+#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
+      result <<= sizeof(mp_limb_t) * 2;
+      result <<= sizeof(mp_limb_t) * 2;
+      result <<= sizeof(mp_limb_t) * 2;
+      result = (result << sizeof(mp_limb_t) * 2) | buff[i];
 #else
-      result = (result << sizeof(mp_limb_t) * 4) | buff[i];
+      result = (result << sizeof(mp_limb_t) * 8) | buff[i];
 #endif
-      }
-    if (std::is_signed<T>::value) {
-      // Warning
     }
     return result;
   }
@@ -595,11 +584,30 @@ RETURN(void) __init_mpz(mpz_t mp, T value) {
     return;
   }
   int cnt = 0;
-  for (auto v = value; v; v >>= MpInteger::LIMB_BIT) ++cnt;
+  for (auto v = value; v;) {
+    ++cnt;
+#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
+    v >>= MpInteger::LIMB_BIT / 4;
+    v >>= MpInteger::LIMB_BIT / 4;
+    v >>= MpInteger::LIMB_BIT / 4;
+    v >>= MpInteger::LIMB_BIT / 4;
+#else
+    v >>= MpInteger::LIMB_BIT;
+#endif
+  }
   mpz_init2(mp, cnt * MpInteger::LIMB_BIT * cnt);
   auto* t = mp->_mp_d;
-  for (int i = 0; i < cnt; ++i)
-    *t++ = MpInteger::LIMB_MASK & value, value >>= MpInteger::LIMB_BIT;
+  for (int i = 0; i < cnt; ++i) {
+    *t++ = MpInteger::LIMB_MASK & value;
+#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
+    value >>= MpInteger::LIMB_BIT / 4;
+    value >>= MpInteger::LIMB_BIT / 4;
+    value >>= MpInteger::LIMB_BIT / 4;
+    value >>= MpInteger::LIMB_BIT / 4;
+#else
+    value >>= MpInteger::LIMB_BIT;
+#endif
+  }
   mp->_mp_size = cnt;
 }
 

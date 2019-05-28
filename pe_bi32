@@ -908,12 +908,12 @@ class BigInteger {
     divInplace(*this, other, r);
     return *this = r;
   }
-  
+
   BigInteger& operator&=(const BigInteger& other) {
     *this = *this & other;
     return *this;
   }
-  
+
   BigInteger& operator^=(const BigInteger& other) {
     *this = *this ^ other;
     return *this;
@@ -1104,21 +1104,12 @@ class BigInteger {
   template <typename T>
   REQUIRES(is_native_integer<T>::value&& std::is_signed<T>::value)
   RETURN(T) toInt() const {
-    T result = 0;
-    for (int i = pos_; i >= 0; --i) {
-#ifdef COMPILER_MSVC
-      result <<= 16;
-      result = (result << 16) | data_[i];
-#else
-      result = (result << 32) | data_[i];
-#endif
+    typedef typename std::make_unsigned<T>::type unsignedT;
+    unsignedT v = toInt<unsignedT>();
+    if (getSign() < 0) {
+      v = ~v + 1;
     }
-    if (std::is_signed<T>::value) {
-      if (sign_ < 0) {
-        result = -result;
-      }
-    }
-    return result;
+    return static_cast<T>(v);
   }
 
   template <typename T>
@@ -1126,15 +1117,12 @@ class BigInteger {
   RETURN(T) toInt() const {
     T result = 0;
     for (int i = pos_; i >= 0; --i) {
-#ifdef COMPILER_MSVC
+#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
       result <<= 16;
       result = (result << 16) | data_[i];
 #else
       result = (result << 32) | data_[i];
 #endif
-    }
-    if (std::is_signed<T>::value) {
-      // Warning
     }
     return result;
   }
@@ -1189,14 +1177,26 @@ RETURN(void) __init_big_integer(BigInteger& b, T value) {
     b.resetAbs(value);
   } else {
     int need = 0;
-    for (auto t = value; t > 0; ++need, t >>= 32)
-      ;
+    for (auto t = value; t > 0; ++need) {
+#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
+      t >>= 16;
+      t >>= 16;
+#else
+      t >>= 32;
+#endif
+    }
     b.reserve(need);
 
     b.pos_ = -1;
-    for (auto t = value; t > 0;
-         b.data_[++b.pos_] = t & BigInteger::max_32bit_value, t >>= 32)
-      ;
+    for (auto t = value; t > 0;) {
+      b.data_[++b.pos_] = t & BigInteger::max_32bit_value;
+#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
+      t >>= 16;
+      t >>= 16;
+#else
+      t >>= 32;
+#endif
+    }
   }
   b.sign_ = 1;
 }

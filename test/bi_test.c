@@ -10,17 +10,17 @@ SL void test_constructor_internal() {
        << numeric_limits<T>::min() << endl;
   cout << BigInteger(numeric_limits<T>::max()) << " "
        << numeric_limits<T>::max() << endl;*/
-#ifndef COMPILER_MSVC
-  assert(to_string(BigInteger(numeric_limits<T>::min()).toInt<T>()) ==
-         to_string(numeric_limits<T>::min()));
-  assert(to_string(BigInteger(numeric_limits<T>::max()).toInt<T>()) ==
-         to_string(numeric_limits<T>::max()));
+#if !defined(COMPILER_MSVC)
+  assert(BigInteger(numeric_limits<T>::min()).toInt<T>() ==
+         numeric_limits<T>::min());
+  assert(BigInteger(numeric_limits<T>::max()).toInt<T>() ==
+         numeric_limits<T>::max());
 #endif
   // cout << endl;
 }
 
 SL void test_constructor() {
-  //cout << BigInteger() << endl;
+  // cout << BigInteger() << endl;
   BigInteger x;
   // test_constructor_internal<bool>();
   test_constructor_internal<char>();
@@ -37,15 +37,15 @@ SL void test_constructor() {
 
 #if PE_HAS_INT128
   int128 max_int128 = ((uint128)-1) >> 1;
-  //cout << BigInteger(max_int128) << " " << max_int128 << endl;
+  // cout << BigInteger(max_int128) << " " << max_int128 << endl;
   assert(BigInteger(max_int128).toInt<int128>() == max_int128);
 
   int128 min_int128 = -max_int128 - 1;
-  //cout << BigInteger(min_int128) << " " << min_int128 << endl;
+  // cout << BigInteger(min_int128) << " " << min_int128 << endl;
   assert(BigInteger(min_int128).toInt<int128>() == min_int128);
 
   uint128 max_uint128 = -1;
-  //cout << BigInteger(max_uint128) << " " << max_uint128 << endl;
+  // cout << BigInteger(max_uint128) << " " << max_uint128 << endl;
   assert(BigInteger(max_uint128).toInt<uint128>() == max_uint128);
 #endif
 }
@@ -55,7 +55,7 @@ SL void test_assignment_internal() {
   BigInteger x;
   x = T();
   assert(x.toInt<T>() == T());
-#ifndef COMPILER_MSVC
+#if !defined(COMPILER_MSVC)
   x = numeric_limits<T>::max();
   assert(x.toInt<T>() == numeric_limits<T>::max());
 
@@ -139,11 +139,11 @@ SL void test_asmd_operator() {
   for (int a = -10; a <= 10; ++a)
     for (int b = -10; b <= 10; ++b) {
       assert((BigInteger(a) + BigInteger(b)).toInt<int>() == (a + b));
-      assert((BigInteger(a) += BigInteger(b)).toInt<int>() == (a+b));
+      assert((BigInteger(a) += BigInteger(b)).toInt<int>() == (a + b));
       assert((BigInteger(a) - BigInteger(b)).toInt<int>() == (a - b));
-      assert((BigInteger(a) -= BigInteger(b)).toInt<int>() == (a-b));
+      assert((BigInteger(a) -= BigInteger(b)).toInt<int>() == (a - b));
       assert((BigInteger(a) * BigInteger(b)).toInt<int>() == (a * b));
-      assert((BigInteger(a) *= BigInteger(b)).toInt<int>() == (a*b));
+      assert((BigInteger(a) *= BigInteger(b)).toInt<int>() == (a * b));
       if (b != 0) {
         assert((BigInteger(a) / BigInteger(b)).toInt<int>() == (a / b));
         assert((BigInteger(a) /= BigInteger(b)).toInt<int>() == (a / b));
@@ -303,4 +303,4 @@ SL void bi_test() {
   test_utilities();
 }
 PE_REGISTER_TEST(&bi_test, "bi_test", SMALL);
-}
+}  // namespace bi_test

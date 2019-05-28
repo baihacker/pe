@@ -2,7 +2,7 @@
 
 #if ENABLE_GMP
 namespace mpi_test {
-  
+
 template <typename T>
 SL void test_constructor_internal() {
   /*cout << typeid(T).name() << endl;
@@ -12,7 +12,7 @@ SL void test_constructor_internal() {
        << endl;
   cout << MpInteger(numeric_limits<T>::max()) << " " << numeric_limits<T>::max()
        << endl;*/
-#ifndef COMPILER_MSVC
+#if !defined(COMPILER_MSVC)
   assert(MpInteger(numeric_limits<T>::min()).toInt<T>() ==
          numeric_limits<T>::min());
   assert(MpInteger(numeric_limits<T>::max()).toInt<T>() ==
@@ -36,7 +36,6 @@ SL void test_constructor() {
   test_constructor_internal<unsigned int>();
   test_constructor_internal<unsigned long>();
   test_constructor_internal<unsigned long long>();
-
 #if PE_HAS_INT128
   int128 max_int128 = ((uint128)-1) >> 1;
   // cout << MpInteger(max_int128) << " " << max_int128 << endl;
@@ -58,7 +57,7 @@ SL void test_assignment_internal() {
   x = T();
   assert(x.toInt<T>() == T());
 
-#ifndef COMPILER_MSVC
+#if !defined(COMPILER_MSVC)
   x = numeric_limits<T>::max();
   assert(x.toInt<T>() == numeric_limits<T>::max());
 
@@ -142,11 +141,11 @@ SL void test_asmd_operator() {
   for (int a = -10; a <= 10; ++a)
     for (int b = -10; b <= 10; ++b) {
       assert((MpInteger(a) + MpInteger(b)).toInt<int>() == (a + b));
-      assert((MpInteger(a) += MpInteger(b)).toInt<int>() == (a+b));
+      assert((MpInteger(a) += MpInteger(b)).toInt<int>() == (a + b));
       assert((MpInteger(a) - MpInteger(b)).toInt<int>() == (a - b));
-      assert((MpInteger(a) -= MpInteger(b)).toInt<int>() == (a-b));
+      assert((MpInteger(a) -= MpInteger(b)).toInt<int>() == (a - b));
       assert((MpInteger(a) * MpInteger(b)).toInt<int>() == (a * b));
-      assert((MpInteger(a) *= MpInteger(b)).toInt<int>() == (a*b));
+      assert((MpInteger(a) *= MpInteger(b)).toInt<int>() == (a * b));
       if (b != 0) {
         assert((MpInteger(a) / MpInteger(b)).toInt<int>() == (a / b));
         assert((MpInteger(a) /= MpInteger(b)).toInt<int>() == (a / b));
@@ -307,5 +306,5 @@ SL void mpi_test() {
 }
 
 PE_REGISTER_TEST(&mpi_test, "mpi_test", SMALL);
-}
+}  // namespace mpi_test
 #endif

@@ -1,23 +1,26 @@
 #include <pe.hpp>
 
+#if ENABLE_GMP
+namespace mpi_test {
+  
 template <typename T>
-void test_constructor_internal() {
-  cout << typeid(T).name() << endl;
+SL void test_constructor_internal() {
+  /*cout << typeid(T).name() << endl;
   cout << MpInteger(T()) << endl;
   cout << MpInteger(T(0)) << " " << MpInteger(T(1)) << endl;
   cout << MpInteger(numeric_limits<T>::min()) << " " << numeric_limits<T>::min()
        << endl;
   cout << MpInteger(numeric_limits<T>::max()) << " " << numeric_limits<T>::max()
-       << endl;
+       << endl;*/
   assert(MpInteger(numeric_limits<T>::min()).toInt<T>() ==
          numeric_limits<T>::min());
   assert(MpInteger(numeric_limits<T>::max()).toInt<T>() ==
          numeric_limits<T>::max());
-  cout << endl;
+  // cout << endl;
 }
 
-void test_constructor() {
-  cout << MpInteger() << endl;
+SL void test_constructor() {
+  // cout << MpInteger() << endl;
   test_constructor_internal<bool>();
   test_constructor_internal<char>();
   test_constructor_internal<signed char>();
@@ -32,20 +35,20 @@ void test_constructor() {
   test_constructor_internal<unsigned long long>();
 
   int128 max_int128 = ((uint128)-1) >> 1;
-  cout << MpInteger(max_int128) << " " << max_int128 << endl;
+  // cout << MpInteger(max_int128) << " " << max_int128 << endl;
   assert(MpInteger(max_int128).toInt<int128>() == max_int128);
 
   int128 min_int128 = -max_int128 - 1;
-  cout << MpInteger(min_int128) << " " << min_int128 << endl;
+  // cout << MpInteger(min_int128) << " " << min_int128 << endl;
   assert(MpInteger(min_int128).toInt<int128>() == min_int128);
 
   uint128 max_uint128 = -1;
-  cout << MpInteger(max_uint128) << " " << max_uint128 << endl;
+  // cout << MpInteger(max_uint128) << " " << max_uint128 << endl;
   assert(MpInteger(max_uint128).toInt<uint128>() == max_uint128);
 }
 
 template <typename T>
-void test_assignment_internal() {
+SL void test_assignment_internal() {
   MpInteger x;
   x = T();
   assert(x.toInt<T>() == T());
@@ -57,7 +60,7 @@ void test_assignment_internal() {
   assert(x.toInt<T>() == numeric_limits<T>::min());
 }
 
-void test_assignment_operator() {
+SL void test_assignment_operator() {
   test_assignment_internal<bool>();
   test_assignment_internal<char>();
   test_assignment_internal<signed char>();
@@ -78,7 +81,7 @@ void test_assignment_operator() {
 }
 
 template <typename T>
-void test_asmd_internal() {
+SL void test_asmd_internal() {
   MpInteger x;
   x += T(1);
   x = x + T(1);
@@ -109,7 +112,7 @@ void test_asmd_internal() {
   x = x % x;
 }
 
-void test_asmd_operator() {
+SL void test_asmd_operator() {
   test_asmd_internal<bool>();
   test_asmd_internal<char>();
   test_asmd_internal<signed char>();
@@ -128,29 +131,45 @@ void test_asmd_operator() {
   for (int a = -10; a <= 10; ++a)
     for (int b = -10; b <= 10; ++b) {
       assert((MpInteger(a) + MpInteger(b)).toInt<int>() == (a + b));
+      assert((MpInteger(a) += MpInteger(b)).toInt<int>() == (a+b));
       assert((MpInteger(a) - MpInteger(b)).toInt<int>() == (a - b));
+      assert((MpInteger(a) -= MpInteger(b)).toInt<int>() == (a-b));
       assert((MpInteger(a) * MpInteger(b)).toInt<int>() == (a * b));
+      assert((MpInteger(a) *= MpInteger(b)).toInt<int>() == (a*b));
       if (b != 0) {
         assert((MpInteger(a) / MpInteger(b)).toInt<int>() == (a / b));
+        assert((MpInteger(a) /= MpInteger(b)).toInt<int>() == (a / b));
         assert((MpInteger(a) % MpInteger(b)).toInt<int>() == (a % b));
+        assert((MpInteger(a) %= MpInteger(b)).toInt<int>() == (a % b));
       }
       if (a >= 0 && b >= 0) {
         assert((MpInteger(a) | MpInteger(b)).toInt<int>() == (a | b));
+        assert((MpInteger(a) |= MpInteger(b)).toInt<int>() == (a | b));
         assert((MpInteger(a) & MpInteger(b)).toInt<int>() == (a & b));
+        assert((MpInteger(a) &= MpInteger(b)).toInt<int>() == (a & b));
         assert((MpInteger(a) ^ MpInteger(b)).toInt<int>() == (a ^ b));
+        assert((MpInteger(a) ^= MpInteger(b)).toInt<int>() == (a ^ b));
       }
 
       assert((MpInteger(a) + b).toInt<int>() == (a + b));
+      assert((MpInteger(a) += b).toInt<int>() == (a + b));
       assert((MpInteger(a) - b).toInt<int>() == (a - b));
+      assert((MpInteger(a) -= b).toInt<int>() == (a - b));
       assert((MpInteger(a) * b).toInt<int>() == (a * b));
+      assert((MpInteger(a) *= b).toInt<int>() == (a * b));
       if (b != 0) {
         assert((MpInteger(a) / b).toInt<int>() == (a / b));
+        assert((MpInteger(a) /= b).toInt<int>() == (a / b));
         assert((MpInteger(a) % b).toInt<int>() == (a % b));
+        assert((MpInteger(a) %= b).toInt<int>() == (a % b));
       }
       if (a >= 0 && b >= 0) {
         assert((MpInteger(a) | b).toInt<int>() == (a | b));
+        assert((MpInteger(a) |= b).toInt<int>() == (a | b));
         assert((MpInteger(a) & b).toInt<int>() == (a & b));
+        assert((MpInteger(a) &= b).toInt<int>() == (a & b));
         assert((MpInteger(a) ^ b).toInt<int>() == (a ^ b));
+        assert((MpInteger(a) ^= b).toInt<int>() == (a ^ b));
       }
 
       assert((a + MpInteger(b)).toInt<int>() == (a + b));
@@ -169,7 +188,7 @@ void test_asmd_operator() {
 }
 
 template <typename T>
-void test_compare_operator_internal() {
+SL void test_compare_operator_internal() {
   MpInteger x;
   assert((x == T(0)) == 1);
   assert((x > T(0)) == 0);
@@ -201,7 +220,7 @@ void test_compare_operator_internal() {
   assert((x != x) == 0);
 }
 
-void test_compare_operator() {
+SL void test_compare_operator() {
   test_compare_operator_internal<bool>();
   test_compare_operator_internal<char>();
   test_compare_operator_internal<signed char>();
@@ -218,7 +237,7 @@ void test_compare_operator() {
   test_compare_operator_internal<uint128>();
 }
 
-void test_bit_operator() {
+SL void test_bit_operator() {
   MpInteger x;
   for (int i = 0; i <= 19; ++i) x.setBit(i);
   assert(x.toInt<int>() == 1048575);
@@ -244,7 +263,7 @@ void test_bit_operator() {
   assert(x.toInt<int>() == 1);
 }
 
-void test_utilities() {
+SL void test_utilities() {
   power_mod(MpInteger(5), 10, MpInteger("123456789"));
   power_mod(MpInteger(5), MpInteger(10), MpInteger("123456789"));
 
@@ -254,21 +273,24 @@ void test_utilities() {
   gcd(12_mpi, 8_mpi);
   123456789123456789_mpi * 2 * 5_mpi * "10"_mpi;
 
-  cout << power(MpInteger(2), 20) << endl;
-  cout << power(MpInteger(2), 20LL) << endl;
+  power(MpInteger(2), 20);
+  power(MpInteger(2), 20LL);
 
   TimeRecorder tr;
   MpInteger v(1);
   for (int i = 1; i <= 100000; ++i) v *= i;
-  cout << tr.elapsed().format() << " " << v.bitCount() << endl;
+  // cout << tr.elapsed().format() << " " << v.bitCount() << endl;
 }
 
-int main() {
+SL void mpi_test() {
   test_constructor();
   test_assignment_operator();
   test_asmd_operator();
   test_compare_operator();
   test_bit_operator();
   test_utilities();
-  return 0;
 }
+
+PE_REGISTER_TEST(&mpi_test, "mpi_test", SPECIFIED);
+}
+#endif

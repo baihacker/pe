@@ -1,5 +1,4 @@
 pe++.py bi_demo.c
-pe++.py bi_demo1.c
 pe++.py bi_gmp_perf.c
 pe++.py bi_example.c
 pe++.py bi_example_pe483.c
@@ -7,7 +6,6 @@ pe++.py billion_sort.c
 pe++.py continued_fraction_demo.c
 pe++.py geometry_demo.c
 pe++.py modulo_integer.c
-pe++.py mpi_demo.c
 pe++.py ntt_demo.c
 pe++.py parallel_cal_pi_1e8.c
 pe++.py parallel_cal_pi_1e8_1.c

@@ -752,7 +752,7 @@ class BigInteger {
   friend inline REQUIRES(
       (is_native_integer<T>::value &&
        !is_same<typename remove_cvref<T>::type, BigInteger>::value &&
-       sizeof(T) <= 8)) RETURN(T)
+       sizeof(T) <= 8)) RETURN(BigInteger)
   operator%(const BigInteger& l, T r);
 
   friend inline BigInteger operator&(const BigInteger& l, const BigInteger& r);
@@ -896,7 +896,12 @@ class BigInteger {
     divInplace(*this, other, r);
     return *this = r;
   }
-
+  
+  BigInteger& operator&=(const BigInteger& other) {
+    *this = *this & other;
+    return *this;
+  }
+  
   BigInteger& operator^=(const BigInteger& other) {
     *this = *this ^ other;
     return *this;
@@ -1326,7 +1331,9 @@ inline tuple<BigInteger, BigInteger> div(const BigInteger& l,
     BigInteger ret(BigInteger::absDiv(l, r, x));
     ret.sign_ = l.sign_ * r.sign_;
     ret.fixPos();
-    x.sign_ = l.sign_;
+    if (l.sign_ < 0) {
+      x.sign_ = -x.sign_;
+    }
     x.fixPos();
 
     return make_tuple(std::move(ret), std::move(x));
@@ -1401,7 +1408,7 @@ inline REQUIRES((is_native_integer<T>::value &&
   l.sign_ = signl * (r > 0 ? 1 : -1);
   l.fixPos();
   remain = (T)remainT;
-  if (l.sign_ < 0) {
+  if (signl < 0) {
     PE_ASSERT(remain == 0 || !std::is_unsigned<T>::value);
     remain = -remain;
   }
@@ -1416,7 +1423,7 @@ inline BigInteger operator%(const BigInteger& l, const BigInteger& r) {
 template <typename T>
 inline REQUIRES((is_native_integer<T>::value &&
                  !is_same<typename remove_cvref<T>::type, BigInteger>::value &&
-                 sizeof(T) <= 8)) RETURN(T)
+                 sizeof(T) <= 8)) RETURN(BigInteger)
 operator%(const BigInteger& l, T r) {
   BigInteger u;
   T v;

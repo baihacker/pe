@@ -2,6 +2,7 @@
 
 #include "algo_test.c"
 #include "bi_test.c"
+#include "bi_test1.c"
 #include "bit_test.c"
 #include "comb_moder_test.c"
 #include "dva_test.c"
@@ -12,6 +13,7 @@
 #include "misc_test.c"
 #include "mod_test.c"
 #include "mpf_test.c"
+#include "mpi_test.c"
 #include "nt_test.c"
 #include "ntt_test.c"
 #include "parallel_sort_test.c"

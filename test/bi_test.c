@@ -1,147 +1,293 @@
-#include "pe_test.h"
+#include <pe.hpp>
 
 namespace bi_test {
-SL void bi_test_small() {
-  for (int i = -100; i <= 100; ++i)
-    for (int j = -100; j <= 100; ++j) {
-      bi a(i), b(j);
-      assert(i + j == a + b);
-      assert(i - j == a - b);
-      assert(i * j == a * b);
-      if (j != 0) {
-        assert(i / j == a / b);
-        assert(i % j == a % b);
+template <typename T>
+SL void test_constructor_internal() {
+  /*cout << typeid(T).name() << endl;
+  cout << BigInteger(T()) << endl;
+  cout << BigInteger(T(0)) << " " << BigInteger(T(1)) << endl;
+  cout << BigInteger(numeric_limits<T>::min()) << " "
+       << numeric_limits<T>::min() << endl;
+  cout << BigInteger(numeric_limits<T>::max()) << " "
+       << numeric_limits<T>::max() << endl;*/
+  assert(to_string(BigInteger(numeric_limits<T>::min()).toInt<T>()) ==
+         to_string(numeric_limits<T>::min()));
+  assert(to_string(BigInteger(numeric_limits<T>::max()).toInt<T>()) ==
+         to_string(numeric_limits<T>::max()));
+  // cout << endl;
+}
+
+SL void test_constructor() {
+  //cout << BigInteger() << endl;
+  BigInteger x;
+  test_constructor_internal<bool>();
+  test_constructor_internal<char>();
+  test_constructor_internal<signed char>();
+  test_constructor_internal<unsigned char>();
+  test_constructor_internal<short>();
+  test_constructor_internal<int>();
+  test_constructor_internal<long>();
+  test_constructor_internal<long long>();
+  test_constructor_internal<unsigned short>();
+  test_constructor_internal<unsigned int>();
+  test_constructor_internal<unsigned long>();
+  test_constructor_internal<unsigned long long>();
+
+  int128 max_int128 = ((uint128)-1) >> 1;
+  //cout << BigInteger(max_int128) << " " << max_int128 << endl;
+  assert(BigInteger(max_int128).toInt<int128>() == max_int128);
+
+  int128 min_int128 = -max_int128 - 1;
+  //cout << BigInteger(min_int128) << " " << min_int128 << endl;
+  assert(BigInteger(min_int128).toInt<int128>() == min_int128);
+
+  uint128 max_uint128 = -1;
+  //cout << BigInteger(max_uint128) << " " << max_uint128 << endl;
+  assert(BigInteger(max_uint128).toInt<uint128>() == max_uint128);
+}
+
+template <typename T>
+SL void test_assignment_internal() {
+  BigInteger x;
+  x = T();
+  assert(x.toInt<T>() == T());
+
+  x = numeric_limits<T>::max();
+  assert(x.toInt<T>() == numeric_limits<T>::max());
+
+  x = numeric_limits<T>::min();
+  assert(x.toInt<T>() == numeric_limits<T>::min());
+}
+
+SL void test_assignment_operator() {
+  test_assignment_internal<bool>();
+  test_assignment_internal<char>();
+  test_assignment_internal<signed char>();
+  test_assignment_internal<unsigned char>();
+  test_assignment_internal<short>();
+  test_assignment_internal<int>();
+  test_assignment_internal<long>();
+  test_assignment_internal<long long>();
+  test_assignment_internal<unsigned short>();
+  test_assignment_internal<unsigned int>();
+  test_assignment_internal<unsigned long>();
+  test_assignment_internal<unsigned long long>();
+
+  string s = "123456789123456789123456789";
+  BigInteger x;
+  x = s;
+  assert(x.toString() == s);
+}
+
+template <typename T>
+SL void test_asmd_internal() {
+  BigInteger x;
+  x += T(1);
+  x = x + T(1);
+  x = T(1) + x;
+  x = x + x;
+
+  x -= T(1);
+  x = x - T(1);
+  x = T(1) - x;
+  x = x - x;
+
+  x *= T(1);
+  x = x * T(1);
+  x = T(1) * x;
+  x = x * x;
+
+  x = 1;
+  x /= T(1);
+  x = x / T(1);
+  x = T(1) / x;
+  x = 1;
+  x = x / x;
+
+  x = 1;
+  x %= T(2);
+  x = x % T(2);
+  x = 1;
+  x = x % x;
+}
+
+SL void test_asmd_operator() {
+  // test_asmd_internal<bool>();
+  test_asmd_internal<char>();
+  test_asmd_internal<signed char>();
+  test_asmd_internal<unsigned char>();
+  test_asmd_internal<short>();
+  test_asmd_internal<int>();
+  test_asmd_internal<long>();
+  test_asmd_internal<long long>();
+  test_asmd_internal<int128>();
+  test_asmd_internal<unsigned short>();
+  test_asmd_internal<unsigned int>();
+  test_asmd_internal<unsigned long>();
+  test_asmd_internal<unsigned long long>();
+  test_asmd_internal<uint128>();
+
+  for (int a = -10; a <= 10; ++a)
+    for (int b = -10; b <= 10; ++b) {
+      assert((BigInteger(a) + BigInteger(b)).toInt<int>() == (a + b));
+      assert((BigInteger(a) += BigInteger(b)).toInt<int>() == (a+b));
+      assert((BigInteger(a) - BigInteger(b)).toInt<int>() == (a - b));
+      assert((BigInteger(a) -= BigInteger(b)).toInt<int>() == (a-b));
+      assert((BigInteger(a) * BigInteger(b)).toInt<int>() == (a * b));
+      assert((BigInteger(a) *= BigInteger(b)).toInt<int>() == (a*b));
+      if (b != 0) {
+        assert((BigInteger(a) / BigInteger(b)).toInt<int>() == (a / b));
+        assert((BigInteger(a) /= BigInteger(b)).toInt<int>() == (a / b));
+        assert((BigInteger(a) % BigInteger(b)).toInt<int>() == (a % b));
+        assert((BigInteger(a) %= BigInteger(b)).toInt<int>() == (a % b));
       }
-      if (i >= 0 && j >= 0) {
-        assert((i & j) == (a & b));
-        assert((i ^ j) == (a ^ b));
-        assert((i | j) == (a | b));
+      if (a >= 0 && b >= 0) {
+        assert((BigInteger(a) | BigInteger(b)).toInt<int>() == (a | b));
+        assert((BigInteger(a) |= BigInteger(b)).toInt<int>() == (a | b));
+        assert((BigInteger(a) & BigInteger(b)).toInt<int>() == (a & b));
+        assert((BigInteger(a) &= BigInteger(b)).toInt<int>() == (a & b));
+        assert((BigInteger(a) ^ BigInteger(b)).toInt<int>() == (a ^ b));
+        assert((BigInteger(a) ^= BigInteger(b)).toInt<int>() == (a ^ b));
       }
-      assert((i > j) == (bool)(a > b));
-      assert((i < j) == (bool)(a < b));
-      assert((i == j) == (bool)(a == b));
-      assert((i >= j) == (bool)(a >= b));
-      assert((i <= j) == (bool)(a <= b));
+
+      assert((BigInteger(a) + b).toInt<int>() == (a + b));
+      assert((BigInteger(a) += b).toInt<int>() == (a + b));
+      assert((BigInteger(a) - b).toInt<int>() == (a - b));
+      assert((BigInteger(a) -= b).toInt<int>() == (a - b));
+      assert((BigInteger(a) * b).toInt<int>() == (a * b));
+      assert((BigInteger(a) *= b).toInt<int>() == (a * b));
+      if (b != 0) {
+        assert((BigInteger(a) / b).toInt<int>() == (a / b));
+        assert((BigInteger(a) /= b).toInt<int>() == (a / b));
+        assert((BigInteger(a) % b).toInt<int>() == (a % b));
+        assert((BigInteger(a) %= b).toInt<int>() == (a % b));
+      }
+      if (a >= 0 && b >= 0) {
+        assert((BigInteger(a) | b).toInt<int>() == (a | b));
+        assert((BigInteger(a) |= b).toInt<int>() == (a | b));
+        assert((BigInteger(a) & b).toInt<int>() == (a & b));
+        assert((BigInteger(a) &= b).toInt<int>() == (a & b));
+        assert((BigInteger(a) ^ b).toInt<int>() == (a ^ b));
+        assert((BigInteger(a) ^= b).toInt<int>() == (a ^ b));
+      }
+
+      assert((a + BigInteger(b)).toInt<int>() == (a + b));
+      assert((a - BigInteger(b)).toInt<int>() == (a - b));
+      assert((a * BigInteger(b)).toInt<int>() == (a * b));
+      if (b != 0) {
+        assert((a / BigInteger(b)).toInt<int>() == (a / b));
+        assert((a % BigInteger(b)).toInt<int>() == (a % b));
+      }
+      if (a >= 0 && b >= 0) {
+        assert((a | BigInteger(b)).toInt<int>() == (a | b));
+        assert((a & BigInteger(b)).toInt<int>() == (a & b));
+        assert((a ^ BigInteger(b)).toInt<int>() == (a ^ b));
+      }
     }
 }
 
-PE_REGISTER_TEST(&bi_test_small, "bi_test_small", SMALL);
+template <typename T>
+SL void test_compare_operator_internal() {
+  BigInteger x;
+  assert((x == T(0)) == 1);
+  assert((x > T(0)) == 0);
+  assert((x < T(0)) == 0);
+  assert((x <= T(0)) == 1);
+  assert((x >= T(0)) == 1);
+  assert((x != T(0)) == 0);
 
-#if ENABLE_GMP
-SL void bi_mul_test_impl(int x, int y) {
-  for (int s1 = -1; s1 <= 1; ++s1)
-    for (int s2 = -1; s2 <= 1; ++s2)
-      for (int id = 0; id < x; ++id) {
-        std::vector<int> A, B;
-        for (int i = 0; i < y; ++i) {
-          A.push_back(rand());
-          B.push_back(rand());
-        }
-        string expectedResult;
-        {
-          mpz_class a = s1;
-          mpz_class b = s2;
-          for (auto& iter : A) a *= iter;
-          for (auto& iter : B) b *= iter;
-          mpz_class c = a * b;
-          stringstream ss;
-          ss << c;
-          ss >> expectedResult;
-        }
-        string myResult;
-        {
-          bi a = s1;
-          bi b = s2;
-          for (auto& iter : A) a *= iter;
-          for (auto& iter : B) b *= iter;
-          bi c = a * b;
-          stringstream ss;
-          ss << c;
-          ss >> myResult;
-        }
-        assert(expectedResult == myResult);
-      }
+  assert((x == x) == 1);
+  assert((x > x) == 0);
+  assert((x < x) == 0);
+  assert((x <= x) == 1);
+  assert((x >= x) == 1);
+  assert((x != x) == 0);
+
+  x = 1;
+  assert((x == T(1)) == 1);
+  assert((x > T(1)) == 0);
+  assert((x < T(1)) == 0);
+  assert((x <= T(1)) == 1);
+  assert((x >= T(1)) == 1);
+  assert((x != T(1)) == 0);
+
+  assert((x == x) == 1);
+  assert((x > x) == 0);
+  assert((x < x) == 0);
+  assert((x <= x) == 1);
+  assert((x >= x) == 1);
+  assert((x != x) == 0);
 }
 
-SL void bi_mul_test_medium() { bi_mul_test_impl(1000, 500); }
-
-PE_REGISTER_TEST(&bi_mul_test_medium, "bi_mul_test_medium", MEDIUM);
-
-SL void bi_mul_test_big() { bi_mul_test_impl(10, 10000); }
-
-#if !defined(CONTINUOUS_INTEGRATION_TEST)
-PE_REGISTER_TEST(&bi_mul_test_big, "bi_mul_test_big", BIG);
-#endif
-
-SL void bi_div_test_medium_impl(int x, int y) {
-  for (int strategy = 0; strategy < 2; ++strategy)
-    for (int s1 = -1; s1 <= 1; ++s1)
-      for (int s2 = -1; s2 <= 1; ++s2)
-        if (s2 != 0)
-          for (int id = 0; id < x; ++id) {
-            std::vector<int> A, B;
-            if (strategy == 0) {
-              for (int i = 0; i < y; ++i) {
-                int t = rand() + 1;
-                A.push_back(t);
-                if (i & 1) {
-                  B.push_back(t);
-                }
-              }
-            } else {
-              for (int i = 0; i < y; ++i) {
-                A.push_back(rand() + 1);
-                if (i & 1) {
-                  B.push_back(rand() + 1);
-                }
-              }
-            }
-            string expectedResult1;
-            string expectedResult2;
-            {
-              mpz_class a = s1;
-              mpz_class b = s2;
-              for (auto& iter : A) a *= iter;
-              for (auto& iter : B) b *= iter;
-              mpz_class c = a / b;
-              mpz_class d = a % b;
-              stringstream ss;
-              ss << c;
-              ss >> expectedResult1;
-              ss << d;
-              ss >> expectedResult2;
-            }
-            string myResult1;
-            string myResult2;
-            {
-              bi a = s1;
-              bi b = s2;
-              for (auto& iter : A) a *= iter;
-              for (auto& iter : B) b *= iter;
-              bi c, d;
-              tie(c, d) = div(a, b);
-              stringstream ss;
-              ss << c;
-              ss >> myResult1;
-              ss << d;
-              ss >> myResult2;
-            }
-            assert(expectedResult1 == myResult1);
-            assert(expectedResult2 == myResult2);
-          }
+SL void test_compare_operator() {
+  // test_compare_operator_internal<bool>();
+  test_compare_operator_internal<char>();
+  test_compare_operator_internal<signed char>();
+  test_compare_operator_internal<unsigned char>();
+  test_compare_operator_internal<short>();
+  test_compare_operator_internal<int>();
+  test_compare_operator_internal<long>();
+  test_compare_operator_internal<long long>();
+  test_compare_operator_internal<int128>();
+  test_compare_operator_internal<unsigned short>();
+  test_compare_operator_internal<unsigned int>();
+  test_compare_operator_internal<unsigned long>();
+  test_compare_operator_internal<unsigned long long>();
+  test_compare_operator_internal<uint128>();
 }
 
-SL void bi_div_test_medium() { bi_div_test_medium_impl(100, 500); }
+SL void test_bit_operator() {
+  BigInteger x;
+  for (int i = 0; i <= 19; ++i) x.setBit(i);
+  assert(x.toInt<int>() == 1048575);
+  x.revBit(0);
+  assert(x.toInt<int>() == 1048574);
+  x.resetBit(1);
+  assert(x.toInt<int>() == 1048572);
+  assert(x.bitCount() == 18);
 
-#if !defined(CONTINUOUS_INTEGRATION_TEST)
-PE_REGISTER_TEST(&bi_div_test_medium, "bi_div_test_medium", MEDIUM);
-#endif
+  BigInteger y;
+  y.setBit(0);
 
-SL void bi_div_test_big() { bi_div_test_medium_impl(10, 2000); }
+  x = x | y;
+  assert(x.toInt<int>() == 1048573);
 
-#if !defined(CONTINUOUS_INTEGRATION_TEST)
-PE_REGISTER_TEST(&bi_div_test_big, "bi_div_test_big", BIG);
-#endif
+  x = x & BigInteger(1048575 - 4);
+  assert(x.toInt<int>() == 1048573 - 4);
 
-#endif
-}  // namespace bi_test
+  x = x ^ x;
+  assert(x.toInt<int>() == 0);
+
+  x = x ^ y;
+  assert(x.toInt<int>() == 1);
+}
+
+SL void test_utilities() {
+  power_mod(BigInteger(5), 10, BigInteger("123456789"));
+  power_mod(BigInteger(5), BigInteger(10), BigInteger("123456789"));
+
+  power(BigInteger(2), 10u);
+  power(BigInteger(2), 10);
+
+  gcd(12_mpi, 8_mpi);
+  123456789123456789_mpi * 2 * 5_mpi * "10"_mpi;
+
+  power(BigInteger(2), 20);
+  power(BigInteger(2), 20LL);
+
+  TimeRecorder tr;
+  BigInteger v(1);
+  for (int i = 1; i <= 100000; ++i) v *= i;
+  // cout << tr.elapsed().format() << " " << v.bitCount() << endl;
+}
+
+SL void bi_test() {
+  test_constructor();
+  test_assignment_operator();
+  test_asmd_operator();
+  test_compare_operator();
+  test_bit_operator();
+  test_utilities();
+}
+PE_REGISTER_TEST(&bi_test, "bi_test", SMALL);
+}

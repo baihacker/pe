@@ -32,22 +32,15 @@ SL void test_constructor() {
   test_constructor_internal<int>();
   test_constructor_internal<long>();
   test_constructor_internal<long long>();
+#if PE_HAS_INT128
+  test_constructor_internal<int128>();
+#endif
   test_constructor_internal<unsigned short>();
   test_constructor_internal<unsigned int>();
   test_constructor_internal<unsigned long>();
   test_constructor_internal<unsigned long long>();
 #if PE_HAS_INT128
-  int128 max_int128 = ((uint128)-1) >> 1;
-  // cout << MpInteger(max_int128) << " " << max_int128 << endl;
-  assert(MpInteger(max_int128).toInt<int128>() == max_int128);
-
-  int128 min_int128 = -max_int128 - 1;
-  // cout << MpInteger(min_int128) << " " << min_int128 << endl;
-  assert(MpInteger(min_int128).toInt<int128>() == min_int128);
-
-  uint128 max_uint128 = -1;
-  // cout << MpInteger(max_uint128) << " " << max_uint128 << endl;
-  assert(MpInteger(max_uint128).toInt<uint128>() == max_uint128);
+  test_constructor_internal<uint128>();
 #endif
 }
 
@@ -73,10 +66,16 @@ SL void test_assignment_operator() {
   test_assignment_internal<int>();
   test_assignment_internal<long>();
   test_assignment_internal<long long>();
+#if PE_HAS_INT128
+  test_assignment_internal<int128>();
+#endif
   test_assignment_internal<unsigned short>();
   test_assignment_internal<unsigned int>();
   test_assignment_internal<unsigned long>();
   test_assignment_internal<unsigned long long>();
+#if PE_HAS_INT128
+  test_assignment_internal<uint128>();
+#endif
 
   string s = "123456789123456789123456789";
   MpInteger x;
@@ -362,6 +361,6 @@ SL void mpi_test() {
   test_utilities();
 }
 
-PE_REGISTER_TEST(&mpi_test, "mpi_test", SPECIFIED);
+PE_REGISTER_TEST(&mpi_test, "mpi_test", SMALL);
 }  // namespace mpi_test
 #endif

@@ -33,6 +33,7 @@ SL void test_constructor() {
   test_constructor_internal<unsigned long>();
   test_constructor_internal<unsigned long long>();
 
+#if PE_HAS_INT128
   int128 max_int128 = ((uint128)-1) >> 1;
   //cout << BigInteger(max_int128) << " " << max_int128 << endl;
   assert(BigInteger(max_int128).toInt<int128>() == max_int128);
@@ -44,6 +45,7 @@ SL void test_constructor() {
   uint128 max_uint128 = -1;
   //cout << BigInteger(max_uint128) << " " << max_uint128 << endl;
   assert(BigInteger(max_uint128).toInt<uint128>() == max_uint128);
+#endif
 }
 
 template <typename T>
@@ -120,12 +122,16 @@ SL void test_asmd_operator() {
   test_asmd_internal<int>();
   test_asmd_internal<long>();
   test_asmd_internal<long long>();
+#if PE_HAS_INT128
   test_asmd_internal<int128>();
+#endif
   test_asmd_internal<unsigned short>();
   test_asmd_internal<unsigned int>();
   test_asmd_internal<unsigned long>();
   test_asmd_internal<unsigned long long>();
+#if PE_HAS_INT128
   test_asmd_internal<uint128>();
+#endif
 
   for (int a = -10; a <= 10; ++a)
     for (int b = -10; b <= 10; ++b) {

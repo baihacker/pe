@@ -10,12 +10,12 @@ SL void test_constructor_internal() {
        << numeric_limits<T>::min() << endl;
   cout << BigInteger(numeric_limits<T>::max()) << " "
        << numeric_limits<T>::max() << endl;*/
-#if !defined(COMPILER_MSVC)
+
   assert(BigInteger(numeric_limits<T>::min()).toInt<T>() ==
          numeric_limits<T>::min());
   assert(BigInteger(numeric_limits<T>::max()).toInt<T>() ==
          numeric_limits<T>::max());
-#endif
+
   // cout << endl;
 }
 
@@ -55,13 +55,12 @@ SL void test_assignment_internal() {
   BigInteger x;
   x = T();
   assert(x.toInt<T>() == T());
-#if !defined(COMPILER_MSVC)
+
   x = numeric_limits<T>::max();
   assert(x.toInt<T>() == numeric_limits<T>::max());
 
   x = numeric_limits<T>::min();
   assert(x.toInt<T>() == numeric_limits<T>::min());
-#endif
 }
 
 SL void test_assignment_operator() {

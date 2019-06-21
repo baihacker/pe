@@ -18,14 +18,13 @@ struct A : public B {
 };
 */
 
-
 namespace array_test {
 SL void array_test() {
-  PeArray<int, 2> vec({5,6});
+  PeArray<int, 2> vec({5, 6});
   for (int i = 0; i < 5; ++i)
     for (int j = 0; j < 6; ++j) {
-      vec[i][j] = i*j;
+      vec[i][j] = i * j;
     }
 }
 PE_REGISTER_TEST(&array_test, "array_test", SPECIFIED);
-}
+}  // namespace array_test

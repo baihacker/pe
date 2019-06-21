@@ -14,25 +14,25 @@ struct PeArray : public PeArrayRef<T, D> {
 
   typedef PeArrayRef<T, D> base;
   template <class... Args>
-  PeArray(const vector<int64>& dimentions, Args&&... arg)
-      : dimentions(dimentions), base(NULL, 0, NULL, NULL) {
+  PeArray(const vector<int64>& dimension, Args&&... arg)
+      : dimension(dimension), base(NULL, 0, NULL, NULL) {
     init(arg...);
-    PE_ASSERT(dimentions.size() == D);
+    PE_ASSERT(dimension.size() == D);
   }
 
   ~PeArray() { reset(); }
 
   template <class... Args>
   void init(Args&&... arg) {
-    const int d = (int)dimentions.size();
+    const int d = (int)dimension.size();
     elementCounts.clear();
     elementCounts.push_back(1);
     for (int i = d - 1; i >= 0; --i) {
-      elementCounts.push_back(elementCounts.back() * dimentions[i]);
+      elementCounts.push_back(elementCounts.back() * dimension[i]);
     }
     reverse(elementCounts.begin(), elementCounts.end());
     elementCount = elementCounts[0];
-    base::dimentions = &dimentions[0];
+    base::dimension = &dimension[0];
     base::elementCounts = &elementCounts[0];
     base::data = (T*)A::allocate(elementCount * sizeof(T));
     for (int64 i = 0; i < elementCount; ++i) {
@@ -50,12 +50,12 @@ struct PeArray : public PeArrayRef<T, D> {
   T* getData() { return base::data; }
 
   PeArrayRef<T, D> ref() {
-    return PeArrayRef<T, D>(base::data, 0, base::dimentions,
+    return PeArrayRef<T, D>(base::data, 0, base::dimension,
                             base::elementCounts);
   }
 
  private:
-  vector<int64> dimentions;
+  vector<int64> dimension;
   vector<int64> elementCounts;
   int64 elementCount;
 };
@@ -64,32 +64,32 @@ template <typename T, int D>
 struct PeArrayRef {
   typedef PeArrayRef<T, D - 1> valueType;
 
-  PeArrayRef(T* data, int off, const int64* dimentions,
+  PeArrayRef(T* data, int off, const int64* dimension,
              const int64* elementCounts)
       : data(data),
         off(off),
-        dimentions(dimentions),
+        dimension(dimension),
         elementCounts(elementCounts) {}
 
   PeArrayRef<T, D - 1> operator[](int64 idx) {
     return PeArrayRef<T, D - 1>(data + idx * elementCounts[off + 1], off + 1,
-                                dimentions, elementCounts);
+                                dimension, elementCounts);
   }
 
  protected:
   T* data;
   const int off;
   const int64* elementCounts;
-  const int64* dimentions;
+  const int64* dimension;
 };
 
 template <typename T>
 struct PeArrayRef<T, 1> {
-  PeArrayRef(T* data, int off, const int64* dimentions,
+  PeArrayRef(T* data, int off, const int64* dimension,
              const int64* elementCounts)
       : data(data),
         off(off),
-        dimentions(dimentions),
+        dimension(dimension),
         elementCounts(elementCounts) {}
 
   typedef T& valueType;
@@ -100,6 +100,6 @@ struct PeArrayRef<T, 1> {
   T* data;
   const int off;
   const int64* elementCounts;
-  const int64* dimentions;
+  const int64* dimension;
 };
 #endif

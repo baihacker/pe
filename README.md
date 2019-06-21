@@ -60,6 +60,7 @@ File list:
 * pe: Including all the files.
 * pe.hpp: The file for generating precompile header.
 * pe_algo: Algorithms.
+* pe_array: An array implementation with compiling time dimentation length. The element count can be more than the limit of int32 and you can specify customized allocator.
 * pe_base: Some pre-including headers. Some macros and typedef. Some basic inline functions.
 * pe_bi32: Big integer whose base is 1 << 32.
 * pe_bit: Bit operation tricks.

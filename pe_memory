@@ -44,6 +44,32 @@ struct LargeMemory {
  private:
   map<void*, HANDLE> allocated_;
 };
+
+SL LargeMemory& get_lm_allocator() {
+  static LargeMemory __lm;
+  return __lm;
+}
+
+struct LmAllocator {
+  static void* allocate(int64 size) {
+    return get_lm_allocator().allocate(size);
+  }
+
+  static void deallocate(void* ptr) { get_lm_allocator().deallocate(ptr); }
+};
+
+SL void* lm_allocate(int64 size) { return LmAllocator::allocate(size); }
+
+SL void lm_deallocate(void* ptr) { LmAllocator::deallocate(ptr); }
 #endif
+
+SL void* std_allocate(int64 size) { return new char[size]; }
+
+SL void std_deallocate(void* ptr) { delete[] ptr; }
+
+struct StdAllocator {
+  static void* allocate(int64 size) { return new char[size]; }
+  static void deallocate(void* ptr) { delete[] ptr; }
+};
 
 #endif

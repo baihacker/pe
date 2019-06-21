@@ -1,6 +1,7 @@
 #include "pe_test.h"
 
 #include "algo_test.c"
+#include "array_test.c"
 #include "bi_test.c"
 #include "bi_test1.c"
 #include "bit_test.c"

@@ -5,22 +5,28 @@
 #include "pe_memory"
 
 template <typename T, int D>
-struct PeArrayRef;
+struct DArrayRef;
 
 template <typename T, int D, typename A = StdAllocator>
-struct PeArray : public PeArrayRef<T, D> {
+struct DArray : public DArrayRef<T, D> {
   template <typename TT, int DD>
-  friend struct PeArrayRef;
+  friend struct DArrayRef;
 
-  typedef PeArrayRef<T, D> base;
+  typedef DArrayRef<T, D> base;
   template <class... Args>
-  PeArray(const vector<int64>& dimension, Args&&... arg)
+  DArray(const vector<int64>& dimension, Args&&... arg)
       : dimension(dimension), base(NULL, 0, NULL, NULL) {
     init(arg...);
     PE_ASSERT(dimension.size() == D);
   }
 
-  ~PeArray() { reset(); }
+  DArray(const DArray&) = delete;
+  DArray(DArray&&) = delete;
+
+  DArray& operator=(const DArray&) = delete;
+  DArray& operator=(DArray&&) = delete;
+
+  ~DArray() { reset(); }
 
   template <class... Args>
   void init(Args&&... arg) {
@@ -49,9 +55,8 @@ struct PeArray : public PeArrayRef<T, D> {
 
   T* getData() { return base::data; }
 
-  PeArrayRef<T, D> ref() {
-    return PeArrayRef<T, D>(base::data, 0, base::dimension,
-                            base::elementCounts);
+  DArrayRef<T, D> ref() {
+    return DArrayRef<T, D>(base::data, 0, base::dimension, base::elementCounts);
   }
 
  private:
@@ -61,19 +66,20 @@ struct PeArray : public PeArrayRef<T, D> {
 };
 
 template <typename T, int D>
-struct PeArrayRef {
-  typedef PeArrayRef<T, D - 1> valueType;
+struct DArrayRef {
+  typedef DArrayRef<T, D - 1> ValueType;
+  typedef DArrayRef<T, D - 1> ConstValueType;
 
-  PeArrayRef(T* data, int off, const int64* dimension,
-             const int64* elementCounts)
+  DArrayRef(T* data, int off, const int64* dimension,
+            const int64* elementCounts)
       : data(data),
         off(off),
         dimension(dimension),
         elementCounts(elementCounts) {}
 
-  PeArrayRef<T, D - 1> operator[](int64 idx) {
-    return PeArrayRef<T, D - 1>(data + idx * elementCounts[off + 1], off + 1,
-                                dimension, elementCounts);
+  DArrayRef<T, D - 1> operator[](int64 idx) const {
+    return DArrayRef<T, D - 1>(data + idx * elementCounts[off + 1], off + 1,
+                               dimension, elementCounts);
   }
 
  protected:
@@ -84,17 +90,19 @@ struct PeArrayRef {
 };
 
 template <typename T>
-struct PeArrayRef<T, 1> {
-  PeArrayRef(T* data, int off, const int64* dimension,
-             const int64* elementCounts)
+struct DArrayRef<T, 1> {
+  typedef T& ValueType;
+  typedef const T& ConstValueType;
+
+  DArrayRef(T* data, int off, const int64* dimension,
+            const int64* elementCounts)
       : data(data),
         off(off),
         dimension(dimension),
         elementCounts(elementCounts) {}
 
-  typedef T& valueType;
-
   T& operator[](int64 idx) { return data[idx]; }
+  ConstValueType operator[](int64 idx) const { return data[idx]; }
 
  protected:
   T* data;
@@ -102,4 +110,96 @@ struct PeArrayRef<T, 1> {
   const int64* elementCounts;
   const int64* dimension;
 };
+
+template <int64... X>
+struct ArrayShape;
+
+template <int64 H, int64... X>
+struct ArrayShape<H, X...> {
+  typedef ArrayShape<X...> Next;
+  const static int64 D = 1 + Next::D;
+  const static int64 EC = H * Next::EC;
+};
+
+template <int64 H>
+struct ArrayShape<H> {
+  const static int64 D = 1;
+  const static int64 EC = H;
+};
+
+template <typename T, typename S>
+struct FArrayRef;
+
+template <typename T, typename S, typename A = StdAllocator>
+struct FArray : public FArrayRef<T, S> {
+  typedef FArrayRef<T, S> base;
+
+  template <class... Args>
+  FArray(Args&&... arg) : base(NULL) {
+    init(arg...);
+  }
+
+  FArray(const FArray&) = delete;
+  FArray(FArray&&) = delete;
+
+  FArray& operator=(const FArray&) = delete;
+  FArray& operator=(FArray&&) = delete;
+
+  ~FArray() { reset(); }
+
+  template <class... Args>
+  void init(Args&&... arg) {
+    base::data = (T*)A::allocate(S::EC * sizeof(T));
+    for (int64 i = 0; i < S::EC; ++i) {
+      new (base::data + i) T(arg...);
+    }
+  }
+
+  void reset() {
+    for (int64 i = 0; i < S::EC; ++i) {
+      (base::data + i)->~T();
+    }
+    A::deallocate(base::data);
+  }
+
+  T* getData() { return base::data; }
+
+  FArrayRef<T, S> ref() { return FArrayRef<T, S>(base::data); }
+};
+
+template <typename T, typename S>
+struct FArrayRef {
+  typedef typename S::Next NextShape;
+  typedef FArrayRef<T, NextShape> ValueType;
+  typedef FArrayRef<T, NextShape> ConstValueType;
+
+  FArrayRef(T* data) : data(data) {}
+
+  FArrayRef<T, NextShape> operator[](int64 idx) const {
+    return FArrayRef<T, NextShape>(data + idx * NextShape::EC);
+  }
+
+ protected:
+  T* data;
+};
+
+template <typename T, int64 H>
+struct FArrayRef<T, ArrayShape<H>> {
+  typedef T& ValueType;
+  typedef const T& ConstValueType;
+
+  FArrayRef(T* data) : data(data) {}
+
+  ValueType operator[](int64 idx) { return data[idx]; }
+  ConstValueType operator[](int64 idx) const { return data[idx]; }
+
+ protected:
+  T* data;
+};
+
+template <typename T, int64... X>
+using Array = FArray<T, ArrayShape<X...>>;
+
+template <typename T, typename A, int64... X>
+using AArray = FArray<T, ArrayShape<X...>, A>;
 #endif

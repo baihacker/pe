@@ -82,6 +82,26 @@ SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
   return a >= b ? a - b : mod - b + a;
 }
 
+template <typename M, typename T>
+SL T sum_mod(M /*mod*/, T a) {
+  return a;
+}
+
+template <typename M, typename TH, typename... TT>
+SL IntPromotion(TH, TT...) sum_mod(M mod, TH a, TT... b) {
+  return add_mod(a, sum_mod(mod, b...), mod);
+}
+
+template <typename M, typename T>
+SL REQUIRES(is_native_integer<T>::value) RETURN(T)
+    sum_mod(M mod, std::initializer_list<T> init) {
+  T ret = 0;
+  for (auto& v : init) {
+    ret = add_mod(ret, v, mod);
+  }
+  return ret;
+}
+
 template <typename T1, typename T2, typename M>
 SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
              is_native_integer<M>::value)) RETURN_T(IntPromotionT(T1, T2, M))
@@ -103,6 +123,29 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
   typedef IntPromotion(T1, T2) T;
   typedef typename AtLeastInt64<T>::type atLeastInt64T;
   return mul_mod_impl<atLeastInt64T, M>(a, b, mod);
+}
+
+template <typename M, typename T>
+SL T prod_mod(M /*mod*/, T a) {
+  return a;
+}
+
+template <typename M, typename TH, typename... TT>
+SL IntPromotion(TH, TT...) prod_mod(M mod, TH a, TT... b) {
+  return mul_mod(a, prod_mod(mod, b...), mod);
+}
+
+template <typename M, typename T>
+SL REQUIRES(is_native_integer<T>::value) RETURN(T)
+    prod_mod(M mod, std::initializer_list<T> init) {
+  T ret = 1;
+  if (mod == 1) {
+    return 0;
+  }
+  for (auto& v : init) {
+    ret = mul_mod(ret, v, mod);
+  }
+  return ret;
 }
 
 #if PE_HAS_INT128
@@ -331,6 +374,29 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
 #endif
 
 #endif
+}
+
+template <typename M, typename T>
+SL T prod_mod_ex(M /*mod*/, T a) {
+  return a;
+}
+
+template <typename M, typename TH, typename... TT>
+SL IntPromotion(TH, TT...) prod_mod_ex(M mod, TH a, TT... b) {
+  return mul_mod_ex(a, prod_mod_ex(mod, b...), mod);
+}
+
+template <typename M, typename T>
+SL REQUIRES(is_native_integer<T>::value) RETURN(T)
+    prod_mod_ex(M mod, std::initializer_list<T> init) {
+  T ret = 1;
+  if (mod == 1) {
+    return 0;
+  }
+  for (auto& v : init) {
+    ret = mul_mod_ex(ret, v, mod);
+  }
+  return ret;
 }
 
 // It's expected that all elements in b are prime.

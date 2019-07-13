@@ -307,4 +307,30 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
   };
   return parallel_find_last<TN, T, B>(last, g);
 }
+
+#if ENABLE_OPENMP
+template <typename T>
+struct PSumHelper {
+  PSumHelper(T mod) : mod(mod) { fill(data, data + 128, 0); }
+
+  void add(T v) {
+    const auto tid = omp_get_thread_num();
+    data[tid] = add_mod(data[tid], v, mod);
+  }
+
+  T value() const {
+    T r = 0;
+    for (int i = 0; i < 128; ++i) {
+      r = add_mod(r, data[i], mod);
+    }
+    return r;
+  }
+
+  operator T() const { return value(); }
+
+  // Note: false sharing issue
+  T data[128];
+  const T mod;
+};
+#endif
 #endif

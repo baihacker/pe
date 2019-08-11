@@ -1,0 +1,77 @@
+#ifndef __PE_IO_H__
+#define __PE_IO_H__
+
+#include "pe_base"
+template <typename T>
+SL T read_int() {
+  struct X {
+    int dig[256];
+    X() {
+      for (int i = '0'; i <= '9'; ++i) dig[i] = 1;
+      dig['-'] = 1;
+    }
+  };
+  static X f;
+  T v = 0;
+  int s = 1, c;
+  for (; !f.dig[c = getchar()];)
+    ;
+  if (c == '-')
+    s = 0;
+  else if (f.dig[c])
+    v = c ^ 48;
+  for (; f.dig[c = getchar()]; v = v * 10 + (c ^ 48))
+    ;
+  return s ? v : -v;
+}
+
+#define Rint read_int<int>
+
+template <typename T>
+SL T read_value() {
+  T v;
+  cin >> v;
+  return v;
+}
+
+template <>
+inline int read_value<int>() {
+  return read_int<int>();
+}
+
+template <>
+inline int64 read_value<int64>() {
+  return read_int<int64>();
+}
+
+#if PE_HAS_INT128
+template <>
+inline int128 read_value<int128>() {
+  return read_int<int128>();
+}
+#endif
+
+#define DF_IMPL_1(I, V1) V1 = I
+#define DF_IMPL_2(I, V1, ...) V1 = I, DF_IMPL_1(I, __VA_ARGS__)
+#define DF_IMPL_3(I, V1, ...) V1 = I, DF_IMPL_2(I, __VA_ARGS__)
+#define DF_IMPL_4(I, V1, ...) V1 = I, DF_IMPL_3(I, __VA_ARGS__)
+#define DF_IMPL_5(I, V1, ...) V1 = I, DF_IMPL_4(I, __VA_ARGS__)
+#define DF_IMPL_6(I, V1, ...) V1 = I, DF_IMPL_5(I, __VA_ARGS__)
+#define DF_IMPL_7(I, V1, ...) V1 = I, DF_IMPL_6(I, __VA_ARGS__)
+#define DF_IMPL_8(I, V1, ...) V1 = I, DF_IMPL_7(I, __VA_ARGS__)
+#define DF_IMPL_9(I, V1, ...) V1 = I, DF_IMPL_8(I, __VA_ARGS__)
+#define DF_IMPL_10(I, V1, ...) V1 = I, DF_IMPL_9(I, __VA_ARGS__)
+#define DF_IMPL_11(I, V1, ...) V1 = I, DF_IMPL_10(I, __VA_ARGS__)
+#define DF_IMPL_12(I, V1, ...) V1 = I, DF_IMPL_11(I, __VA_ARGS__)
+#define DF_IMPL_13(I, V1, ...) V1 = I, DF_IMPL_12(I, __VA_ARGS__)
+#define DF_IMPL_14(I, V1, ...) V1 = I, DF_IMPL_13(I, __VA_ARGS__)
+#define DF_IMPL_15(I, V1, ...) V1 = I, DF_IMPL_14(I, __VA_ARGS__)
+#define DF_IMPL_16(I, V1, ...) V1 = I, DF_IMPL_15(I, __VA_ARGS__)
+
+#define DF_IMPL(n, input, ...) PE_CONCAT(DF_IMPL_, n)(input, __VA_ARGS__)
+
+#define DF(T, ...) T DF_IMPL(PE_NARG(__VA_ARGS__), read_value<T>(), __VA_ARGS__)
+#define DFC(T, ...) \
+  const T DF_IMPL(PE_NARG(__VA_ARGS__), read_value<T>(), __VA_ARGS__)
+
+#endif

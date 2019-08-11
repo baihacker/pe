@@ -70,6 +70,7 @@ File list:
 * pe_gbi: general big integer. The content corresponds to pe_nt.
 * pe_geometry: Support Point2D and Point3D.
 * pe_int128: Support to output int128 and the corresponding type traits.
+* pe_io: methods and macros that simplify or fasten reading from and writing std io.
 * pe_mat: Matrix operations.
 * pe_memory: Memory manipulation such as allocating large memory. (windows only)
 * pe_misc: misc codes.

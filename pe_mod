@@ -404,7 +404,7 @@ SL REQUIRES(is_native_integer<T>::value) RETURN(T)
 template <typename T, typename M>
 SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
     RETURN_T(IntPromotionT(T, M))
-        frac_mod_impl(std::vector<T> a, std::vector<T> b, M mod) {
+        frac_mod_impl(const std::vector<T>& a, std::vector<T> b, M mod) {
   typedef IntPromotion(T, M) ResultType;
   ResultType ret = 1;
   const int size = b.size();
@@ -425,10 +425,12 @@ template <typename T1, typename T2 = T1, typename M>
 SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
              is_native_integer<M>::value))
     RETURN_T(IntPromotionT(T1, T2, int64, M))
-        frac_mod(std::vector<T1> a, std::vector<T2> b, M mod) {
+        frac_mod(const std::vector<T1>& a, const std::vector<T2>& b, M mod) {
   typedef IntPromotion(T1, T2) T;
   typedef typename AtLeastInt64<T>::type atLeastInt64T;
-  return frac_mod_impl<atLeastInt64T, M>(a, b, mod);
+  return frac_mod_impl<atLeastInt64T, M>(
+      vector<atLeastInt64T>(a.begin(), a.end()),
+      vector<atLeastInt64T>(b.begin(), b.end()), mod);
 }
 
 template <typename T1, typename T2, typename M>
@@ -588,6 +590,7 @@ struct NModNumber;
 
 // MC = mod context
 // AP = arithmetic policy
+// Use MC::mod() to get the modulo.
 template <typename MC, typename AP = APSB<int64, int64> >
 struct NModNumber {
   friend NModNumber operator+(const NModNumber& x, const NModNumber& y) {
@@ -731,6 +734,7 @@ struct NModNumberM;
 
 // MC = mod context
 // AP = arithmetic policy
+// Use mc.mod() to get the modulo.
 template <typename MC, typename AP = APSB<int64, int64> >
 struct NModNumberM {
   friend NModNumberM operator+(const NModNumberM& x, const NModNumberM& y) {

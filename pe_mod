@@ -487,17 +487,31 @@ struct fake_int128 {};
 int64 DEFAULT_MOD = 1;
 
 // Mod context implementations
-// The mod value is a member field
+// The modulo is a global variable
 struct DefaultMod {
   static int64 mod() { return ::DEFAULT_MOD; }
 };
 
-// The mod value is a compiling time constant
+// The modulo is a compiling time constant
 template <int64 M>
 struct CCMod {
   constexpr static int64 mod() { return M; }
 };
 
+// The modulo is a thread local variable.
+template<typename T>
+struct TLMod {
+  static T mod() {return mod_value;}
+  static void set(T v) {mod_value = v;}
+  static thread_local T mod_value;
+};
+
+template<typename T>
+thread_local T TLMod<T>::mod_value = 1;
+
+using TLMod64 = TLMod<int64>;
+
+// The modulo is a field.
 template <typename T>
 struct MemMod {
   MemMod(T M = ::DEFAULT_MOD) : M(M) {}
@@ -728,6 +742,9 @@ int operator>=(const NModNumber<MC, AP>& x, const NModNumber<MC, AP>& y) {
 template <int64 M, typename AP = APSB<int64, int64> >
 using NMod = NModNumber<CCMod<M>, AP>;
 
+template <typename M = int64, typename AP = APSB<M, M> >
+using TLNMod = NModNumber<TLMod<M>, AP>;
+
 // Forward declarations related to NModNumberM;
 template <typename MC, typename AP>
 struct NModNumberM;
@@ -902,6 +919,9 @@ int operator>=(const NModNumberM<MC, AP>& x, const NModNumberM<MC, AP>& y) {
 
 template <int64 M, typename AP = APSB<int64, int64> >
 using NModM = NModNumberM<CCMod<M>, AP>;
+
+template <typename M = int64, typename AP = APSB<M, M> >
+using TLNModM = NModNumber<TLMod<M>, AP>;
 
 template <int v>
 struct NModNumberIndicator {

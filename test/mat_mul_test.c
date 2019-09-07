@@ -47,14 +47,14 @@ SL void test_helper_method() {
   }
 
   {
-    auto res0 = power_mod<NMod<1000000007>>(
+    auto res0 = power_mod<NMod64<1000000007>>(
         [=](auto& m) {
           m(0, 0) = 1;
           m(0, 1) = 1;
           m(1, 0) = 1;
         },
         2, 100000, 1000000007);
-    auto res1 = power_mod<NMod<1000000007>>(
+    auto res1 = power_mod<NMod64<1000000007>>(
         [=](auto& m, auto& v) {
           m(0, 0) = 1;
           m(0, 1) = 1;
@@ -133,36 +133,36 @@ SL void mat_mul_test() {
   if (show) {
     cout << endl;
   }
-  test<NModNumber<CCMod<mod>, APSB<int64, int64>>>(data, V);
+  test<NModNumber<CCMod64<mod>, APSB<int64, int64>>>(data, V);
   test<NModNumber<DefaultMod, APSB<int64, int64>>>(data, V);
 
-  test<NModNumber<CCMod<mod>, APSB<int64, int128>>>(data, V);
+  test<NModNumber<CCMod64<mod>, APSB<int64, int128>>>(data, V);
   test<NModNumber<DefaultMod, APSB<int64, int128>>>(data, V);
 
-  test<NModNumber<CCMod<mod>, APSB<int64, fake_int128>>>(data, V);
+  test<NModNumber<CCMod64<mod>, APSB<int64, fake_int128>>>(data, V);
   test<NModNumber<DefaultMod, APSB<int64, fake_int128>>>(data, V);
 
-  test<NModNumber<CCMod<mod>, APSB<int128, int128>>>(data, V);
+  test<NModNumber<CCMod64<mod>, APSB<int128, int128>>>(data, V);
   test<NModNumber<DefaultMod, APSB<int128, int128>>>(data, V);
 
-  test<NModNumber<CCMod<mod>, APSBL<int128>>>(data, V);
+  test<NModNumber<CCMod64<mod>, APSBL<int128>>>(data, V);
   test<NModNumber<DefaultMod, APSBL<int128>>>(data, V);
   if (show) {
     cout << endl;
   }
-  test<NModNumberM<CCMod<mod>, APSB<int64, int64>>>(data, V);
+  test<NModNumberM<CCMod64<mod>, APSB<int64, int64>>>(data, V);
   test<NModNumberM<DefaultMod, APSB<int64, int64>>>(data, V);
 
-  test<NModNumberM<CCMod<mod>, APSB<int64, int128>>>(data, V);
+  test<NModNumberM<CCMod64<mod>, APSB<int64, int128>>>(data, V);
   test<NModNumberM<DefaultMod, APSB<int64, int128>>>(data, V);
 
-  test<NModNumberM<CCMod<mod>, APSB<int64, fake_int128>>>(data, V);
+  test<NModNumberM<CCMod64<mod>, APSB<int64, fake_int128>>>(data, V);
   test<NModNumberM<DefaultMod, APSB<int64, fake_int128>>>(data, V);
 
-  test<NModNumberM<CCMod<mod>, APSB<int128, int128>>>(data, V);
+  test<NModNumberM<CCMod64<mod>, APSB<int128, int128>>>(data, V);
   test<NModNumberM<DefaultMod, APSB<int128, int128>>>(data, V);
 
-  test<NModNumberM<CCMod<mod>, APSBL<int128>>>(data, V);
+  test<NModNumberM<CCMod64<mod>, APSBL<int128>>>(data, V);
   test<NModNumberM<DefaultMod, APSBL<int128>>>(data, V);
 
   test_helper_method();

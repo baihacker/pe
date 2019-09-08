@@ -118,12 +118,13 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
      3. make install
      
    * mpir
-   
-     1. ./configure --disable-shared --enable-static --prefix=/usr
+     1. Make sure yasm.exe is in the PATH
+ 
+     2. ./configure --disable-shared --enable-static --prefix=/usr
      
-     2. make
+     3. make
      
-     3. make install
+     4. make install
      
    * mpfr
    
@@ -147,7 +148,7 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
        
      3. make
      
-     4. The previous make may be failed: some object file can not be found because the corresponding module is not built. The corresponding fold has no object file. Please modify BUILD_DIRS to build those missing module only, and use make -B to build these modules.
+     4. The previous make may be failed: some object file can not be found because the corresponding module is not built. The corresponding fold has no object file. Please modify BUILD_DIRS to build **those missing module** only (if the dir list is 1 2 3 4 5 and folder 3 has no object files you can keep 3 4 5), and use make -B to build these modules.
      
      5. Revert the change in makefile in the previous step and try to make -B again. If the error specified in the previous step occurs again, use repeat the fix step.
      

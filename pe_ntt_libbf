@@ -5,10 +5,18 @@
 
 #define HAS_POLY_MUL_LIBBF 1
 
+#include "pe_base"
+
+extern "C" {
+void* pe_bf_realloc(void*, void* ptr, size_t size) {
+  return realloc(ptr, size);
+}
+}
+
 namespace ntt_libbf {
 template <typename T>
-SL void bf_ntt_init(const T* X, int n, bf_t* target) {
-  bf_init(target);
+SL void bf_ntt_init(const T* X, int n, bf_context_t* context, bf_t* target) {
+  bf_init(context, target);
 
   bf_set_ui(target, 1);
 
@@ -29,14 +37,16 @@ template <typename T>
 SL void poly_mul_ntt_internal(const T* X, int n, const T* Y, int m, T* result,
                               int64 mod) {
   bf_t x, y;
+  bf_context_t bf_context;
+  bf_context_init(&bf_context, pe_bf_realloc, NULL);
 
-  bf_ntt_init(X, n, &x);
-  bf_ntt_init(Y, m, &y);
+  bf_ntt_init(X, n, &bf_context, &x);
+  bf_ntt_init(Y, m, &bf_context, &y);
 
   bf_t z0, z1, toadd;
-  bf_init(&z0);
-  bf_init(&z1);
-  bf_init(&toadd);
+  bf_init(&bf_context, &z0);
+  bf_init(&bf_context, &z1);
+  bf_init(&bf_context, &toadd);
 
   int offset = x.expn + y.expn;
   bf_set_ui(&toadd, 1);
@@ -74,6 +84,8 @@ SL void poly_mul_ntt_internal(const T* X, int n, const T* Y, int m, T* result,
   bf_delete(&z0);
   bf_ntt_deinit(&y);
   bf_ntt_deinit(&x);
+
+  bf_context_end(&bf_context);
 }
 
 template <typename T>

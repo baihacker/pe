@@ -6,7 +6,7 @@ import subprocess
 CURRENT_DIRECTORY = os.getcwd();
 # BINARY_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 
-compile_commands_template='[{ "directory": "$(CURRENT_DIRECTORY)", "file": "pe", "output": "X:\\\\TEMP\\\\pe.o", "arguments": ["clang++.exe", "-xc++", "pe", "--driver-mode=g++", "-c", "--std=c++11", "-O3", "-march=native", "-mtune=native", "--target=x86_64-w64-windows-gnu"]}]'
+compile_commands_template='[{ "directory": "$(CURRENT_DIRECTORY)", "file": "pe", "output": "X:\\\\TEMP\\\\pe.o", "arguments": ["clang++.exe", "-xc++", "pe", "--driver-mode=g++", "-c", "--std=c++14", "-O3", "-march=native", "-mtune=native", "--target=x86_64-w64-windows-gnu"]}]'
 
 def tidy():
   with open('compile_commands.json', 'wb') as tempf:

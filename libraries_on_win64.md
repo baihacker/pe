@@ -140,7 +140,7 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
      
    * flint
    
-     1. ./configure --disable-shared --enable-static --prefix=/usr --with-mpir=/usr --with-mpfr=/usr
+     1. ./configure --disable-shared --enable-static --prefix=/usr --with-gmp=/usr --with-mpfr=/usr
      
      2. Fix error in make file
      

@@ -132,7 +132,7 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
      
      2. Fix error in makefile
      
-       * "rm: unknown option -- c": caused by argument passing when sh.exe is executing libtool. Please replace -DLT_OBJDIR=\".libs/\" in variable DEFS by -DLT_OBJDIR=.libs Meanwhile, -DMPFR_PRINTF_MAXLM=\"ll\" is replaced by -DMPFR_PRINTF_MAXLM=ll
+       * "rm: unknown option -- c": caused by argument passing when sh.exe is executing libtool. Please replace -DLT_OBJDIR=\".libs/\" in variable DEFS by -DLT_OBJDIR=.libs Meanwhile, -DMPFR_PRINTF_MAXLM=\"ll\" is replaced by -DMPFR_PRINTF_MAXLM=ll (ll may be other value, like j)
        
      3. make
      

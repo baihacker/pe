@@ -1,7 +1,7 @@
 #include <pe.hpp>
 
 void test0() {
-  NModNumber<CCMod<5>> orz(1);
+  NModNumber<CCMod64<5>> orz(1);
   cout << sizeof(orz) << endl;
   orz = orz + 4LL;
   orz = 4 + orz;
@@ -56,9 +56,9 @@ void test1() {
 
 const int N = 10000000;
 
-NMod<1000000007, APSB<int, int64>> u[N + 5];
-NMod<1000000007, APSB<int, int128>> v[N + 5];
-NMod<1000000007, APSB<int, fake_int128>> w[N + 5];
+NMod64<1000000007, APSB<int, int64>> u[N + 5];
+NMod64<1000000007, APSB<int, int128>> v[N + 5];
+NMod64<1000000007, APSB<int, fake_int128>> w[N + 5];
 
 void perf() {
   TimeRecorder tr;

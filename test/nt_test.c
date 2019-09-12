@@ -113,6 +113,7 @@ SL void square_root_mod_test() {
 
 PE_REGISTER_TEST(&square_root_mod_test, "square_root_mod_test", SMALL);
 
+#if PE_HAS_INT128
 SL void test_n_to_squares(int64 n, int64 expected) {
   int64 real = 0;
   auto f = to_squares(n);
@@ -152,4 +153,5 @@ SL void to_squares_test() {
 }
 
 PE_REGISTER_TEST(&to_squares_test, "to_squares_test", SMALL);
+#endif
 }  // namespace nt_test

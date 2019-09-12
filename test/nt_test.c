@@ -114,9 +114,9 @@ SL void square_root_mod_test() {
 PE_REGISTER_TEST(&square_root_mod_test, "square_root_mod_test", SMALL);
 
 #if PE_HAS_INT128
-SL void test_n_to_squares(int64 n, int64 expected) {
+SL void test_n_two_squares(int64 n, int64 expected) {
   int64 real = 0;
-  auto f = to_squares(n);
+  auto f = two_squares(n);
   for (auto& iter : f) {
     if (iter.first == 0) {
       real += 4;
@@ -128,7 +128,7 @@ SL void test_n_to_squares(int64 n, int64 expected) {
   for (auto& iter : f) assert(sq(iter.first) + sq(iter.second) == n);
 }
 
-SL void to_squares_test() {
+SL void two_squares_test() {
   auto num_solutions = [=](int64 n) -> int64 {
     int64 ret = 1;
     for (auto& iter : factorize(n)) {
@@ -143,15 +143,15 @@ SL void to_squares_test() {
   };
   int64 offset = 0;
   for (int64 n = 2; n <= 10000; ++n) {
-    test_n_to_squares(offset + n, num_solutions(offset + n));
+    test_n_two_squares(offset + n, num_solutions(offset + n));
   }
   // 1e12
   offset = 1000000000000;
   for (int64 n = 2; n <= 10000; ++n) {
-    test_n_to_squares(offset + n, num_solutions(offset + n));
+    test_n_two_squares(offset + n, num_solutions(offset + n));
   }
 }
 
-PE_REGISTER_TEST(&to_squares_test, "to_squares_test", SMALL);
+PE_REGISTER_TEST(&two_squares_test, "two_squares_test", SMALL);
 #endif
 }  // namespace nt_test

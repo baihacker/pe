@@ -34,5 +34,5 @@ SL void array_test() {
   for (int i = 0; i < 4; ++i)
     for (int j = 0; j < 5; ++j) arr1[i][j] = i * j;
 }
-PE_REGISTER_TEST(&array_test, "array_test", SPECIFIED);
+PE_REGISTER_TEST(&array_test, "array_test", SMALL);
 }  // namespace array_test

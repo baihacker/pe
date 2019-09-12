@@ -660,6 +660,187 @@ vector<int64> nroot_mod(int64 a, int64 n, int64 p, int64 retCnt = -1) {
   } while (oldx != x);
   return result;
 }
+
+#if PE_HAS_INT128
+namespace to_squares_internal {
+SL void factorize_by_pmask(int64 n, vector<pair<int64, int>>& ret) {
+  while (n != 1) {
+    int now = pmask[n];
+    int c = 0;
+    while (n % now == 0) n /= now, ++c;
+    if (c) {
+      if ((now & 3) == 3) {
+        if (is_odd(c)) {
+          vector<pair<int64, int>>{}.swap(ret);
+          return;
+        }
+      }
+      ret.emplace_back(static_cast<int64>(now), c);
+    }
+  }
+}
+
+// n > 2
+SL vector<pair<int64, int>> factorize(int64 n) {
+  vector<pair<int64, int>> ret;
+
+  int p2 = 0;
+  while (is_even(n)) n >>= 1, ++p2;
+  if (p2 > 0) {
+    ret.emplace_back(2LL, p2);
+  }
+
+  for (int i = 1; i < pcnt; ++i) {
+    if (n <= maxp) {
+      to_squares_internal::factorize_by_pmask(n, ret);
+      return ret;
+    }
+    const int64 p = plist[i];
+    const int64 test = p * p;
+    if (test > n) break;
+    int c = 0;
+    while (n % p == 0) n /= p, ++c;
+    if (c) {
+      if ((p & 3) == 3) {
+        if (is_odd(c)) {
+          return vector<pair<int64, int>>();
+        }
+      }
+      ret.emplace_back(p, c);
+    }
+  }
+  if (n != 1) {
+    if ((n & 3) == 3) {
+      return vector<pair<int64, int>>();
+    }
+    ret.emplace_back(n, 1);
+  }
+  return ret;
+}
+
+// (x+yi)(a+bi)
+SL void gauss_mul(int64& x, int64& y, int64 a, int64 b) {
+  const int64 xx = x * a - b * y;
+  const int64 yy = x * b + a * y;
+  x = xx, y = yy;
+}
+}  // namespace to_squares_internal
+
+// 4k+1 primes p = x^2+y^2 (x >= 0, y >= 0)
+// 2 = 1^2 + 1^2
+// 0, 1 are handled as special case.
+SL vector<pair<int64, int64>> prime_to_squares(const int64 p) {
+  if (p == 0) {
+    return vector<pair<int64, int64>>{{0LL, 0LL}};
+  } else if (p == 1) {
+    return vector<pair<int64, int64>>{{0LL, 1LL}};
+  } else if (p == 2) {
+    return vector<pair<int64, int64>>{{1LL, 1LL}};
+  }
+  if ((p & 3) != 1) {
+    return vector<pair<int64, int64>>{};
+  }
+  int128 y = 1, x = 2;
+  for (x = 2; power_mod_ex(x, (p - 1) >> 1, p) != p - 1; ++x)
+    ;
+  x = power_mod_ex(x, (p - 1) >> 2, p);
+
+  for (int128 s = x * x + y * y; s != p;) {
+    const int128 k = s / p, k2 = k >> 1;
+    int128 a = (x % k + k) % k, b = (y % k + k) % k;
+    if (a > k2) a = k - a;
+    if (b > k2) b = k - b;
+    if ((x * a + y * b) % k) swap(a, b);
+    const int128 u = (x * a + y * b) / k, v = (b * x - a * y) / k;
+    x = u, y = v;
+    s = x * x + y * y;
+  }
+  if (y < 0) y = -y;
+  if (x < 0) x = -x;
+  if (x > y) swap(x, y);
+  return vector<pair<int64, int64>>{{x, y}};
+}
+
+SL void to_squares_impl(int now, const vector<pair<int64, int>>& f, int64 u,
+                        int64 v, vector<pair<int64, int64>>& result) {
+  if (now == sz(f)) {
+    u = abs(u), v = abs(v);
+    if (u > v) swap(u, v);
+    result.emplace_back(u, v);
+  } else {
+    const auto& item = f[now];
+    if (item.first == 2) {
+      for (int i = 0; i < item.second; ++i) {
+        to_squares_internal::gauss_mul(u, v, 1, 1);
+      }
+      to_squares_impl(now + 1, f, u, v, result);
+    } else if ((item.first & 3) == 3) {
+      const int64 t = item.first;
+      int64 me = 1;
+      for (int i = 0, j = item.second >> 1; i < j; ++i) me *= t;
+      to_squares_impl(now + 1, f, u * me, v * me, result);
+    } else {
+      auto t = prime_to_squares(item.first);
+      const int64 a = t[0].first, b = t[0].second;
+      vector<pair<int64, int64>> U, V;
+      {
+        int64 x = 1, y = 0;
+        for (int i = 0; i <= item.second; ++i) {
+          U.emplace_back(x, y);
+          to_squares_internal::gauss_mul(x, y, a, b);
+        }
+        x = 1, y = 0;
+        for (int i = 0; i <= item.second; ++i) {
+          V.emplace_back(x, y);
+          to_squares_internal::gauss_mul(x, y, a, -b);
+        }
+      }
+      for (int i = 0, j = item.second; i <= item.second; ++i, --j) {
+        int64 uu = u, vv = v;
+        to_squares_internal::gauss_mul(uu, vv, U[i].first, U[i].second);
+        to_squares_internal::gauss_mul(uu, vv, V[j].first, V[j].second);
+        to_squares_impl(now + 1, f, uu, vv, result);
+      }
+    }
+  }
+}
+
+SL vector<pair<int64, int64>> to_squares_impl(
+    const vector<pair<int64, int>>& f) {
+  vector<pair<int64, int64>> ret;
+  to_squares_impl(0, f, 1, 0, ret);
+  sort(all(ret));
+  ret.resize(unique(ret.begin(), ret.end()) - ret.begin());
+  return ret;
+}
+
+SL vector<pair<int64, int64>> to_squares(const vector<pair<int64, int>>& f) {
+  for (auto& iter : f) {
+    if ((iter.first & 3) == 3) {
+      if (is_odd(iter.second)) {
+        return vector<pair<int64, int64>>{};
+      }
+    }
+  }
+  return to_squares_impl(f);
+}
+
+// Represent n as two squares: n = x^2 + y^2 where 0 <= x <= y.
+SL vector<pair<int64, int64>> to_squares(const int64 n) {
+  if (n == 0) {
+    return vector<pair<int64, int64>>{{0LL, 0LL}};
+  } else if (n == 1) {
+    return vector<pair<int64, int64>>{{0LL, 1LL}};
+  } else if (n == 2) {
+    return vector<pair<int64, int64>>{{1LL, 1LL}};
+  }
+  auto f = to_squares_internal::factorize(n);
+  if (sz(f) == 0) {
+    return vector<pair<int64, int64>>{};
+  }
+  return to_squares_impl(f);
+}
+#endif
 // 65701
 #endif
 /*

@@ -112,4 +112,43 @@ SL void square_root_mod_test() {
 }
 
 PE_REGISTER_TEST(&square_root_mod_test, "square_root_mod_test", SMALL);
+
+SL void test_n_to_squares(int64 n, int64 expected) {
+  int64 real = 0;
+  auto f = to_squares(n);
+  for (auto& iter : f) {
+    if (iter.first == 0) {
+      real += 4;
+    } else {
+      real += iter.first == iter.second ? 4 : 8;
+    }
+  }
+  assert(expected == real);
+  for (auto& iter : f) assert(sq(iter.first) + sq(iter.second) == n);
+}
+SL void to_squares_test() {
+  auto num_solutions = [=](int64 n) -> int64 {
+    int64 ret = 1;
+    for (auto& iter : factorize(n)) {
+      int mod4 = iter.first & 3;
+      if (mod4 == 3) {
+        if (is_odd(iter.second)) return 0;
+      } else if (mod4 == 1) {
+        ret *= iter.second + 1;
+      }
+    }
+    return ret * 4;
+  };
+  int64 offset = 0;
+  for (int64 n = 2; n <= 10000; ++n) {
+    test_n_to_squares(offset + n, num_solutions(offset + n));
+  }
+  // 1e12
+  offset = 1000000000000;
+  for (int64 n = 2; n <= 10000; ++n) {
+    test_n_to_squares(offset + n, num_solutions(offset + n));
+  }
+}
+
+PE_REGISTER_TEST(&to_squares_test, "to_squares_test", SMALL);
 }  // namespace nt_test

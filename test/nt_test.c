@@ -126,6 +126,7 @@ SL void test_n_to_squares(int64 n, int64 expected) {
   assert(expected == real);
   for (auto& iter : f) assert(sq(iter.first) + sq(iter.second) == n);
 }
+
 SL void to_squares_test() {
   auto num_solutions = [=](int64 n) -> int64 {
     int64 ret = 1;

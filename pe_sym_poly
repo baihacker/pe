@@ -1,0 +1,210 @@
+#ifndef __PE_SYM_POLY_H__
+#define __PE_SYM_POLY_H__
+
+#include "pe_base"
+
+// TermKey.size() == 0, constant term.
+// The elements are sorted.
+using TermKey = std::vector<std::pair<std::string, int>>;
+
+template <typename CT>
+struct SymPoly {
+  SymPoly() {}
+
+  SymPoly(const std::map<TermKey, CT>& terms) : terms(terms) {
+    fixCoefficient();
+  }
+
+  SymPoly(std::map<TermKey, CT>&& terms) : terms(terms) { fixCoefficient(); }
+
+  SymPoly(const SymPoly& o) : terms(o.terms) {}
+
+  SymPoly(SymPoly&& o) : terms(std::move(o.terms)) {}
+
+  SymPoly& operator=(const SymPoly& o) {
+    terms = o.terms;
+    return *this;
+  }
+
+  SymPoly& operator=(SymPoly&& o) {
+    terms = std::move(o.terms);
+    return *this;
+  }
+
+  void fixCoefficient() {
+    auto now = std::begin(terms);
+    auto end = std::end(terms);
+    while (now != end) {
+      if (now->second == 0) {
+        now = terms.erase(now);
+      } else {
+        ++now;
+      }
+    }
+  }
+
+  SymPoly power(int n) const {
+    SymPoly<CT> t;
+    t.terms[{}] = 1;
+    SymPoly<CT> x(this->terms);
+    for (; n; n >>= 1) {
+      if (n & 1) t = t * x;
+      if (n > 1) x = x * x;
+    }
+    return t;
+  }
+
+  SymPoly replace(string var, const SymPoly& target) const {
+    std::map<TermKey, CT> resultTerms;
+    for (const auto& iter : terms) {
+      int found = 0;
+      const int size = sz(iter.first);
+      for (int i = 0; i < size; ++i)
+        if (iter.first[i].first == var) {
+          SymPoly t = target.power(iter.first[i].second);
+          SymPoly k;
+          TermKey others;
+          for (int j = 0; j < size; ++j)
+            if (j != i) {
+              others.pb(iter.first[j]);
+            }
+          k.terms[others] = iter.second;
+          for (const auto& i : (k * t).terms) {
+            resultTerms[i.first] += i.second;
+          }
+          found = 1;
+          break;
+        }
+      if (!found) {
+        resultTerms[iter.first] += iter.second;
+      }
+    }
+    return SymPoly(resultTerms);
+  }
+
+  // TermKey -> coefficient.
+  // terms.size() == 0: value
+  std::map<TermKey, CT> terms;
+};
+
+template <typename CT>
+SL SymPoly<CT> operator+(const SymPoly<CT>& a, const SymPoly<CT>& b) {
+  auto terms = a.terms;
+  for (const auto& iter : b.terms) {
+    terms[iter.first] += iter.second;
+  }
+  return SymPoly<CT>(terms);
+}
+
+template <typename CT>
+SL SymPoly<CT> operator-(const SymPoly<CT>& a, const SymPoly<CT>& b) {
+  auto terms = a.terms;
+  for (const auto& iter : b.terms) {
+    terms[iter.first] -= iter.second;
+  }
+  return SymPoly<CT>(terms);
+}
+
+template <typename CT>
+SL TermKey mergeTermKey(const TermKey& a, const TermKey& b) {
+  if (a.size() == 0) return b;
+  if (b.size() == 0) return a;
+  std::map<std::string, int> terms;
+  for (const auto& iter : a) terms[iter.first] += iter.second;
+  for (const auto& iter : b) terms[iter.first] += iter.second;
+  TermKey result;
+  result.reserve(terms.size());
+  for (const auto& iter : terms) result.push_back({iter.first, iter.second});
+  return result;
+}
+
+template <typename CT>
+SL SymPoly<CT> operator*(const SymPoly<CT>& a, const SymPoly<CT>& b) {
+  decltype(a.terms) terms;
+  for (const auto& iter1 : a.terms)
+    for (const auto& iter2 : b.terms) {
+      terms[mergeTermKey<CT>(iter1.first, iter2.first)] +=
+          iter1.second * iter2.second;
+    }
+  return SymPoly<CT>(terms);
+}
+
+SL TermKey termKey(const string& s) {
+  std::map<std::string, int> tk;
+  int size = s.size();
+  for (int i = 0; i < size;) {
+    while (i < size && s[i] == ' ') ++i;
+    if (i == size) break;
+    if (isalpha(s[i])) {
+      int start = i;
+      while (i < size && std::isalpha(s[i])) ++i;
+      string t = s.substr(start, i);
+      while (i < size && s[i] != '^' && !std::isalpha(s[i])) ++i;
+      if (i == size || std::isalpha(s[i])) {
+        tk[t] += 1;
+      } else if (s[i] == '^') {
+        ++i;
+        while (i < size && !std::isdigit(s[i])) ++i;
+        if (i == size) {
+          // not expected
+        } else {
+          int v = 0;
+          while (i < size && std::isdigit(s[i])) v = v * 10 + (s[i] - '0'), ++i;
+          tk[t] += v;
+        }
+      }
+    } else {
+      // not expected.
+    }
+  }
+  TermKey result;
+  result.reserve(tk.size());
+  for (const auto& iter : tk) result.push_back({iter.first, iter.second});
+  return result;
+}
+
+SL ostream& operator<<(ostream& o, const TermKey& vpv) {
+  int idx = 0;
+  for (const auto& iter : vpv) {
+    if (++idx > 1) {
+      o << " ";
+    }
+    if (iter.second == 1) {
+      o << iter.first;
+    } else {
+      o << iter.first << "^" << iter.second;
+    }
+  }
+  return o;
+}
+
+template <typename CT>
+SL ostream& operator<<(ostream& o, const SymPoly<CT>& sp) {
+  int idx = 0;
+  for (const auto& iter : sp.terms) {
+    if (iter.second == 0) continue;
+    ++idx;
+    if (idx == 1) {
+      o << iter.second;
+    } else {
+      if (iter.second > 0) {
+        o << " +";
+      } else {
+        o << " -";
+      }
+      if (abs(iter.second) != 1) {
+        o << " " << abs(iter.second);
+      }
+      if (iter.first.size() > 0) {
+        o << " " << iter.first;
+        //::operator<<<CT>(o, iter.first);
+      }
+    }
+  }
+  if (idx == 0) {
+    o << "0";
+  }
+  return o;
+}
+
+#endif

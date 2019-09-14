@@ -8,6 +8,9 @@
 using TermKey = std::vector<std::pair<std::string, int>>;
 
 template <typename CT>
+std::map<TermKey, CT> parseSymPolyTerms(const string& s);
+
+template <typename CT>
 struct SymPoly {
   SymPoly() {}
 
@@ -20,6 +23,10 @@ struct SymPoly {
   SymPoly(const SymPoly& o) : terms(o.terms) {}
 
   SymPoly(SymPoly&& o) : terms(std::move(o.terms)) {}
+
+  SymPoly(const string& str) : terms(parseSymPolyTerms<CT>(str)) {
+    fixCoefficient();
+  }
 
   SymPoly& operator=(const SymPoly& o) {
     terms = o.terms;
@@ -36,7 +43,7 @@ struct SymPoly {
     auto end = std::end(terms);
     while (now != end) {
       if (now->second == 0) {
-        now = terms.erase(now);
+        terms.erase(now++);
       } else {
         ++now;
       }
@@ -82,10 +89,18 @@ struct SymPoly {
     return SymPoly(resultTerms);
   }
 
+  string to_string(int cstyle = 1, int showMul = 0) const {
+    stringstream ss;
+    to_string(*this, ss, cstyle, showMul);
+    return ss.str();
+  }
+
   // TermKey -> coefficient.
   // terms.size() == 0: value
   std::map<TermKey, CT> terms;
 };
+
+using SymPoly64 = SymPoly<int64>;
 
 template <typename CT>
 SL SymPoly<CT> operator+(const SymPoly<CT>& a, const SymPoly<CT>& b) {
@@ -129,82 +144,208 @@ SL SymPoly<CT> operator*(const SymPoly<CT>& a, const SymPoly<CT>& b) {
   return SymPoly<CT>(terms);
 }
 
-SL TermKey termKey(const string& s) {
-  std::map<std::string, int> tk;
-  int size = sz(s);
-  for (int i = 0; i < size;) {
-    while (i < size && s[i] == ' ') ++i;
-    if (i == size) break;
-    if (isalpha(s[i])) {
-      int start = i;
-      while (i < size && std::isalpha(s[i])) ++i;
-      string t = s.substr(start, i);
-      while (i < size && s[i] != '^' && !std::isalpha(s[i])) ++i;
-      if (i == size || std::isalpha(s[i])) {
-        tk[t] += 1;
-      } else if (s[i] == '^') {
-        ++i;
-        while (i < size && !std::isdigit(s[i])) ++i;
-        if (i == size) {
-          // not expected
-        } else {
-          int v = 0;
-          while (i < size && std::isdigit(s[i])) v = v * 10 + (s[i] - '0'), ++i;
-          tk[t] += v;
-        }
-      }
+// [+- ]*
+SL vector<int> parseSgnList(const string& s, int& i) {
+  const int size = sz(s);
+  vector<int> sgns;
+  for (;;) {
+    while (i < size && std::isspace(s[i])) ++i;
+    if (i < size && (s[i] == '+' || s[i] == '-')) {
+      sgns.pb(s[i] == '+' ? 1 : -1);
+      ++i;
     } else {
-      // not expected.
+      return sgns;
     }
   }
-  TermKey result;
-  result.reserve(tk.size());
-  for (const auto& iter : tk) result.push_back({iter.first, iter.second});
-  return result;
 }
 
-SL ostream& operator<<(ostream& o, const TermKey& vpv) {
+SL string parseDigList(const string& s, int& i) {
+  const int size = sz(s);
+  while (i < size && std::isspace(s[i])) ++i;
+  if (i < size && std::isdigit(s[i])) {
+    int start = i;
+    while (i < size && std::isdigit(s[i])) {
+      ++i;
+    }
+    return s.substr(start, i - start);
+  }
+  return "";
+}
+
+SL string parseIdentifier(const string& s, int& i) {
+  const int size = sz(s);
+  while (i < size && std::isspace(s[i])) ++i;
+  if (i < size && (s[i] == '_' || std::isalpha(s[i]))) {
+    int start = i;
+    while (i < size &&
+           (s[i] == '_' || std::isdigit(s[i]) || std::isalpha(s[i]))) {
+      ++i;
+    }
+    return s.substr(start, i - start);
+  }
+  return "";
+}
+
+SL std::vector<std::pair<string, string>> parseSingleTermList(const string& s,
+                                                              int& i) {
+  std::vector<std::pair<string, string>> result;
+  const int size = sz(s);
+  for (;;) {
+    while (i < size && std::isspace(s[i])) ++i;
+    if (s[i] == '*') {
+      ++i;
+      while (i < size && std::isspace(s[i])) ++i;
+    }
+    string variable = parseIdentifier(s, i);
+    if (variable.empty()) variable = parseDigList(s, i);
+    if (variable.empty()) return result;
+    while (i < size && std::isspace(s[i])) ++i;
+    if (i < size && (s[i] == '^' && !std::isdigit(variable[0]))) {
+      ++i;
+      string e = parseDigList(s, i);
+      result.pb({variable, e});
+    } else {
+      result.pb({variable, ""});
+    }
+  }
+}
+
+template <typename CT>
+SL CT evalDigs(const vector<int>& sgns, const string& digs, CT defaultVal = 0) {
+  int s = 1;
+  for (const auto& iter : sgns)
+    if (iter == -1) s = -s;
+  CT v = 0;
+  for (const auto& iter : digs) v = v * 10 + iter - '0';
+  if (digs.empty()) v = defaultVal;
+  return s == 1 ? v : -v;
+}
+
+template <typename CT>
+SL std::pair<TermKey, CT> evalSingleTermList(
+    const std::vector<std::pair<string, string>>& singleTerms) {
+  std::map<std::string, int> t;
+  CT c = 1;
+  for (const auto& iter : singleTerms) {
+    if (std::isdigit(iter.first[0])) {
+      c *= evalDigs<int>({}, iter.first, 1);
+    } else {
+      t[iter.first] += evalDigs<int>({}, iter.second, 1);
+    }
+  }
+  TermKey key;
+  for (const auto& iter : t) key.push_back({iter.first, iter.second});
+  return {key, c};
+}
+
+template <typename CT>
+SL std::pair<TermKey, CT> parseTerm(const string& s, int& i) {
+  auto sgns = parseSgnList(s, i);
+  auto singleTerms = parseSingleTermList(s, i);
+  auto t = evalSingleTermList<CT>(singleTerms);
+  auto sgn = evalDigs<CT>(sgns, "", 1);
+  return {t.first,
+          singleTerms.empty() ? CT(0) : (sgn == 1 ? t.second : -t.second)};
+}
+
+template <typename CT>
+SL std::pair<TermKey, CT> parseTerm(const string& s) {
+  int i = 0;
+  return parseTerm<CT>(s, i);
+}
+
+template <typename CT>
+SL std::map<TermKey, CT> parseSymPolyTerms(const string& s) {
+  const int size = sz(s);
+  int i = 0;
+  std::map<TermKey, CT> terms;
+  for (;;) {
+    while (i < size && std::isspace(s[i])) ++i;
+    int j = i;
+    auto t = parseTerm<CT>(s, i);
+    if (j == i) {
+      if (i < size) {
+        cerr << "Unknown: " << s.substr(i) << endl;
+      }
+      break;
+    }
+    terms[t.first] += t.second;
+  }
+  return terms;
+}
+
+template <typename CT>
+SL SymPoly<CT> parseSymPoly(const string& s) {
+  return SymPoly<CT>(parseSymPolyTerms<CT>(s));
+}
+
+SL TermKey termKey(const string& s) {
+  int i = 0;
+  return parseTerm<int64>(s, i).first;
+}
+
+SL ostream& to_string(const TermKey& vpv, ostream& o, int cstyle = 1,
+                      int showMul = 0) {
   int idx = 0;
   for (const auto& iter : vpv) {
     if (++idx > 1) {
-      o << " ";
+      o << (showMul ? " * " : " ");
     }
     if (iter.second == 1) {
       o << iter.first;
     } else {
-      o << iter.first << "^" << iter.second;
+      if (cstyle) {
+        o << "power(" << iter.first << ", " << iter.second << ")";
+      } else {
+        o << iter.first << "^" << iter.second;
+      }
     }
   }
   return o;
 }
 
 template <typename CT>
-SL ostream& operator<<(ostream& o, const SymPoly<CT>& sp) {
+SL ostream& to_string(const SymPoly<CT>& sp, ostream& o, int cstyle = 0,
+                      int showMul = 0) {
+  if (cstyle) showMul = 1;
   int idx = 0;
   for (const auto& iter : sp.terms) {
     if (iter.second == 0) continue;
     ++idx;
-    if (idx == 1) {
-      o << iter.second;
+    int out = idx == 1 ? 0 : 1;
+    int hasNum = 0;
+    if (iter.second > 0) {
+      if (idx > 1) {
+        if (out) o << " ";
+        o << "+";
+        out = 1;
+      }
     } else {
-      if (iter.second > 0) {
-        o << " +";
-      } else {
-        o << " -";
-      }
-      if (abs(iter.second) != 1) {
-        o << " " << abs(iter.second);
-      }
-      if (iter.first.size() > 0) {
-        o << " " << iter.first;
-        //::operator<<<CT>(o, iter.first);
-      }
+      if (out) o << " ";
+      o << "-";
+      out = 1;
+    }
+    if (abs(iter.second) != 1 || iter.first.empty()) {
+      if (out) o << " ";
+      o << abs(iter.second);
+      out = 1;
+      hasNum = 1;
+    }
+    if (iter.first.size() > 0) {
+      if (out) o << (showMul && hasNum ? " * " : " ");
+      to_string(iter.first, o, cstyle, showMul);
+      out = 1;
     }
   }
   if (idx == 0) {
     o << "0";
   }
   return o;
+}
+
+template <typename CT>
+SL ostream& operator<<(ostream& o, const SymPoly<CT>& sp) {
+  return to_string(sp, o);
 }
 
 #endif

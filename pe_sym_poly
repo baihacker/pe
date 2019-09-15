@@ -11,6 +11,13 @@ template <typename CT>
 SL std::map<TermKey, CT> parseSymPolyTerms(const string& s);
 
 template <typename CT>
+struct SymPoly;
+
+template <typename CT>
+SL ostream& to_string(const SymPoly<CT>& sp, ostream& o, int cstyle = 0,
+                      int showMul = 0);
+
+template <typename CT>
 struct SymPoly {
   SymPoly() {}
 
@@ -26,6 +33,12 @@ struct SymPoly {
 
   SymPoly(const string& str) : terms(parseSymPolyTerms<CT>(str)) {
     fixCoefficient();
+  }
+
+  SymPoly(CT v) {
+    if (v != 0) {
+      terms[{}] = v;
+    }
   }
 
   SymPoly& operator=(const SymPoly& o) {
@@ -61,7 +74,7 @@ struct SymPoly {
     return t;
   }
 
-  SymPoly replace(string var, const SymPoly& target) const {
+  SymPoly replace(string var, const SymPoly<CT>& target) const {
     std::map<TermKey, CT> resultTerms;
     for (const auto& iter : terms) {
       int found = 0;
@@ -89,9 +102,13 @@ struct SymPoly {
     return SymPoly(resultTerms);
   }
 
+  SymPoly replace(string var, const string& target) const {
+    return replace(var, SymPoly(target));
+  }
+
   string to_string(int cstyle = 1, int showMul = 0) const {
     stringstream ss;
-    to_string(*this, ss, cstyle, showMul);
+    ::to_string(*this, ss, cstyle, showMul);
     return ss.str();
   }
 
@@ -305,8 +322,8 @@ SL ostream& to_string(const TermKey& vpv, ostream& o, int cstyle = 1,
 }
 
 template <typename CT>
-SL ostream& to_string(const SymPoly<CT>& sp, ostream& o, int cstyle = 0,
-                      int showMul = 0) {
+SL ostream& to_string(const SymPoly<CT>& sp, ostream& o, int cstyle,
+                      int showMul) {
   if (cstyle) showMul = 1;
   int idx = 0;
   for (const auto& iter : sp.terms) {

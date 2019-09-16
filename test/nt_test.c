@@ -154,4 +154,23 @@ SL void two_squares_test() {
 
 PE_REGISTER_TEST(&two_squares_test, "two_squares_test", SMALL);
 #endif
+
+SL void basek_converstion_test() {
+  for (int64 n = 0; n <= 100; ++n)
+    for (int k = -200; k <= 200; ++k)
+      if (abs(k) >= 2) {
+        assert(from_basek<int64>(to_basek(n, k), k) == n);
+      }
+  for (int64 n = 0; n <= 10000; ++n)
+    for (int k = -16; k <= 16; ++k)
+      if (abs(k) >= 2) {
+        assert(from_basek<int64>(to_basek(n, k), k) == n);
+      }
+  for (int64 n = -100; n <= 100; ++n)
+    for (int k = -200; k <= -2; ++k)
+      if (abs(k) >= 2) {
+        assert(from_basek<int64>(to_basek(n, k), k) == n);
+      }
+}
+PE_REGISTER_TEST(&basek_converstion_test, "basek_converstion_test", SMALL);
 }  // namespace nt_test

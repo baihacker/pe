@@ -6,7 +6,7 @@
 
 * Date： 2019.09.18
 * OS:  Win10 Pro 1903 (18362.356)
-* CPU: i7-4790K (MMX, SSE, SSE2, SSE3, SSE4.1, SSE4.2, EM64T, VT-x, AES, AVX, AVX2, FMA3, TSX)
+* CPU: i9-9900K (MMX, SSE, SSE2, SSE3, SSE4.1, SSE4.2, EM64T, VT-x, AES, AVX, AVX2, FMA3, TSX)
 * Compiler: MinGW-x86_64-8.1.0-win32-seh-rt_v6-rev0
 * Msys2: msys2-x86_64-20190524
 * Test code: [Ntt test](https://github.com/baihacker/pe/blob/master/test/ntt_test.c)

@@ -1043,6 +1043,49 @@ SL DVA<T> prime_s0(const int64 n) {
   return dva;
 }
 
+template <typename T, int TN = 8>
+SL DVA<T> prime_s0_parallel(const int64 n) {
+  PE_ASSERT(n >= 1);
+  DVA<T> dva(n);
+
+  const int64 ks = dva.keySize;
+  auto* keys = &dva.keys[0];
+  auto* values = &dva.values[0];
+  vector<T> tmpdata(ks);
+  auto* tmp = &tmpdata[0];
+
+  for (auto& key : dva.fKeys()) dva[key] = key - 1;
+
+  int idx = 0;
+  for (int64 p = 2; p <= dva.m; ++p)
+    if (dva[p] != dva[p - 1]) {
+      const auto pcnt = dva[p - 1];
+      const int64 p2 = p * p;
+      while (idx + 1 < ks && keys[idx + 1] < p2) ++idx;
+#if ENABLE_OPENMP
+      if (ks - idx > 400000) {
+#pragma omp parallel for schedule(dynamic, 100000) num_threads(TN)
+        for (int j = idx + 1; j < ks; ++j) {
+          const int64 v = keys[j] / p;
+          tmp[j] = values[j] - values[v <= dva.m ? v : ks - n / v] + pcnt;
+        }
+#pragma omp parallel for schedule(dynamic, 100000) num_threads(TN)
+        for (int j = idx + 1; j < ks; ++j) {
+          values[j] = tmp[j];
+        }
+      } else {
+#endif
+        for (int j = ks - 1; j > idx; --j) {
+          const int64 v = keys[j] / p;
+          values[j] -= values[v <= dva.m ? v : ks - n / v] - pcnt;
+        }
+#if ENABLE_OPENMP
+      }
+#endif
+    }
+  return dva;
+}
+
 #define prime_pi prime_s0
 
 template <typename T>
@@ -1067,6 +1110,57 @@ SL DVA<T> prime_s1(const int64 n) {
         if (key < p2) break;
         dva[key] -= (dva[key / p] - psum) * p;
       }
+    }
+  return dva;
+}
+
+template <typename T, int TN = 8>
+SL DVA<T> prime_s1_parallel(const int64 n) {
+  PE_ASSERT(n >= 1);
+  DVA<T> dva(n);
+
+  const int64 ks = dva.keySize;
+  auto* keys = &dva.keys[0];
+  auto* values = &dva.values[0];
+  vector<T> tmpdata(ks);
+  auto* tmp = &tmpdata[0];
+
+  for (auto& key : dva.fKeys()) {
+    if (key & 1) {
+      T v((key + 1) >> 1);
+      dva[key] = v * key - 1;
+    } else {
+      T v(key >> 1);
+      dva[key] = v * (key + 1) - 1;
+    }
+  }
+
+  int idx = 0;
+  for (int64 p = 2; p <= dva.m; ++p)
+    if (dva[p] != dva[p - 1]) {
+      const auto psum = dva[p - 1];
+      const int64 p2 = p * p;
+      while (idx + 1 < ks && keys[idx + 1] < p2) ++idx;
+#if ENABLE_OPENMP
+      if (ks - idx > 400000) {
+#pragma omp parallel for schedule(dynamic, 100000) num_threads(TN)
+        for (int j = idx + 1; j < ks; ++j) {
+          const int64 v = keys[j] / p;
+          tmp[j] = values[j] - (values[v <= dva.m ? v : ks - n / v] - psum) * p;
+        }
+#pragma omp parallel for schedule(dynamic, 100000) num_threads(TN)
+        for (int j = idx + 1; j < ks; ++j) {
+          values[j] = tmp[j];
+        }
+      } else {
+#endif
+        for (int j = ks - 1; j > idx; --j) {
+          const int64 v = keys[j] / p;
+          values[j] -= (values[v <= dva.m ? v : ks - n / v] - psum) * p;
+        }
+#if ENABLE_OPENMP
+      }
+#endif
     }
   return dva;
 }

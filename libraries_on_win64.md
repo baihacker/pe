@@ -183,7 +183,7 @@ clean:
 
 -include $(wildcard *.d)
  ```
- * Build libntl, use the following makefile.
+ * Build ntl, use the following makefile.
  ```cpp
 CC=$(CROSS_PREFIX)gcc
 CFLAGS=-Wall

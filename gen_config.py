@@ -16,8 +16,9 @@ RULE = {
 'ENABLE_GMP': ['gmp.h'],
 'ENABLE_FLINT': ['flint.h'],
 'ENABLE_MPFR': ['mpfr.h'],
-'ENABLE_MPIR': ['mpir.h'],
+#'ENABLE_MPIR': ['mpir.h'],
 'ENABLE_LIBBF': ['libbf.h'],
+'ENABLE_NTL': ['NTL/ZZ.h'],
 }
 
 content = []

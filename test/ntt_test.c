@@ -37,6 +37,9 @@ MulImpl mulImpl[] = {
 #if HAS_POLY_MUL_LIBBF
     {&ntt_libbf::poly_mul_ntt<uint64>, 2, "libbf"},
 #endif
+#if HAS_POLY_MUL_NTL
+    {&ntt_ntl::poly_mul_ntt<uint64>, 2, "ntl"},
+#endif
 };
 
 const char* dataPolicy[3] = {

@@ -183,6 +183,31 @@ clean:
 
 -include $(wildcard *.d)
  ```
+ * Build libntl, use the following makefile.
+ ```cpp
+CC=$(CROSS_PREFIX)gcc
+CFLAGS=-Wall
+CFLAGS+=-O3
+CFLAGS+=-D__MSVCRT_VERSION__=0x1400
+CFLAGS+=-I../include
+CFLAGS+=--std=c++14
+LDFLAGS=
+
+SOURCE = $(wildcard *.cpp)
+OBJS = $(patsubst %.cpp,%.o,$(SOURCE))
+
+PROGS+=libntl.a
+
+all: $(PROGS)
+
+libntl.a : $(OBJS)
+	gcc-ar crv libntl.a $(OBJS)
+
+%.o: %.cpp
+	$(CC) $(CFLAGS) -c -o $@ $<
+```
+clean:
+	rm -f $(PROGS) *.o *.d *.a *.exe *~
    * Library order: "-lbf -lgmpxx -lflint -lgmp -lmpfr -lmpir"
    
    * The compiled binaries (flint, gmp, mpfr, mpir, libbf) on windows (x64) can be found [here](https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA) (pwd:x7cg)

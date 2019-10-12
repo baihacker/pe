@@ -205,9 +205,10 @@ libntl.a : $(OBJS)
 
 %.o: %.cpp
 	$(CC) $(CFLAGS) -c -o $@ $<
-```
+
 clean:
 	rm -f $(PROGS) *.o *.d *.a *.exe *~
+```
    * Library order: "-lbf -lgmpxx -lflint -lgmp -lmpfr -lmpir"
    
    * The compiled binaries (flint, gmp, mpfr, mpir, libbf) on windows (x64) can be found [here](https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA) (pwd:x7cg)

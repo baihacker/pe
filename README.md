@@ -29,13 +29,13 @@ Installation:
   
   * ENABLE_MPFR whether to use [mpfr](https://www.mpfr.org).
   
-  * ENABLE_MPIR whether to use [mpir](http://mpir.org).
-  
   * ENABLE_LIBBF wheter to use [libbf](https://bellard.org/libbf).
   
-  > Note: The compiled flint, gmp, mpfr, mpir, libbf (all for win64) can be found [here](https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA)(pwd:x7cg). The msys2 builds (installed by "pacman -S mingw-w64-x86_64-gmp") don't support msvc.
+  * ENABLE_MPIR whether to use [ntl](https://www.shoup.net/ntl/download.html).
   
-  > Recommended versions: gmp 6.1.2, flint 2.5.2, mpfr 4.0.2, mpir 3.0.0, libbf 2019-02-10.
+  > Note: The compiled flint, gmp, mpfr, mpir, libbf, ntl (all for win64) can be found [here](https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA)(pwd:x7cg). The msys2 builds (installed by "pacman -S mingw-w64-x86_64-gmp") don't support msvc.
+  
+  > Recommended versions: gmp 6.1.2, flint 2.5.2, mpfr 4.0.2, mpir 3.0.0, libbf 2019-02-10, ntl WinNTL-11_4_1.
 
 * [optional, recommended] Generate precompile header "pe.hpp.gch".
   * Command: "g++ xc++-header pe.hpp". Run in D:\usr\include
@@ -83,7 +83,8 @@ File list:
 * pe_ntt: Number theoretic transform and polynomial multiplication.
 * pe_ntt_flint: An adapter which makes use of flint to implement ntt.
 * pe_ntt_libbf: An adapter which makes use of libbf to implement ntt.
-* pe_ntt_min_25: Min_25's ntt implementation. The fastest one for mod polynomials integrated into pe.
+* pe_ntt_min_25: [Min_25](https://github.com/min-25)'s ntt implementation. The fastest one for mod polynomials integrated into pe.
+* pe_ntt_ntl: ntl based ntt implementation.
 * pe_parallel: A simple framework to solve problem with multi-threads. (windows only)
 * pe_parallel_algo: Parallel algorithms.
 * pe_persistance: KVPersistance. (it may support linux but we need change the generated cmdline and check the other codes)

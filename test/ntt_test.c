@@ -6,7 +6,7 @@ typedef vector<uint64> (*poly_mul_t)(const vector<uint64>& X,
                                      const vector<uint64>& Y, int64 mod);
 struct MulImpl {
   poly_mul_t impl;
-  int size;  // 0: coe < 1e18; 1: coe < 1e28; 2: coe < 1e35
+  int size;  // 1: coe < 1e18; 3: coe < 1e28; 4: coe < 1e35
   const char* name;
 };
 MulImpl mulImpl[] = {
@@ -92,20 +92,20 @@ SL void ntt_test() {
   // target = target * 100000000000000000 + 92721528518903091;
   // cerr << mod128_64(target, 100000000003) << endl;
 
-  test_impl(0, 0, 1000000, 100019);
-  test_impl(0, 1, 1479725, 100000000003);
-  test_impl(0, 2, 1000000, 316227766016779);
+  test_impl(0, 1, 1000000, 100019);
+  test_impl(0, 3, 1479725, 100000000003);
+  test_impl(0, 4, 1000000, 316227766016779);
 
   // test_impl(1, 0, 1000000, 100019);
   // test_impl(1, 1, 1479725, 100000000003);
   // test_impl(1, 2, 1000000, 316227766016779);
 
   // 1e18
-  test_impl(2, 0, 999996, 1000003);
+  test_impl(2, 1, 999996, 1000003);
   // 1e28
-  test_impl(2, 1, 1479725, 100000000003);
+  test_impl(2, 3, 1479725, 100000000003);
   // 1e35
-  test_impl(2, 2, 1000000, 316227766016779);
+  test_impl(2, 4, 1000000, 316227766016779);
 }
 PE_REGISTER_TEST(&ntt_test, "ntt_test", BIG);
 

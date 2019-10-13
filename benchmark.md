@@ -4,20 +4,16 @@
 
 ### Test Environment:
 
-* Date： 2019.09.18
+* Date： 2019.10.12
 * OS:  Win10 Pro 1903 (18362.418)
-* CPU: i9-9900K (MMX, SSE, SSE2, SSE3, SSE4.1, SSE4.2, EM64T, VT-x, AES, AVX, AVX2, FMA3, TSX)
+* CPU: [i9-9900K](https://en.wikichip.org/wiki/intel/core_i9/i9-9900k)
 * Compiler: gcc version 9.2.0 (Rev2, Built by MSYS2 project)
 * Msys2: msys2-x86_64-20190524
 * Test code: [Ntt test](https://github.com/baihacker/pe/blob/master/test/ntt_test.c)
-* Build libbf:
-  > gcc -Wall -O3 -mavx -mavx2 -mfma -mbmi2 -c -o libbf.avx2.o libbf.c
- 
-  > gcc -Wall -O3 -mavx -mavx2 -mfma -mbmi2 -c -o cutils.avx2.o cutils.c
- 
-  > gcc-ar crv libbf.avx2.a cutils.avx2.o libbf.avx2.o
-* Build test target:
-  > -o a.exe --std=c++14 -fno-diagnostics-color -O3 -march=native -mtune=native -fopenmp -Wl,--stack,268435456 -static -s -lbf -lgmpxx -lflint -lgmp -lmpfr -lntl
+* Build:
+  * [Build and use third party library in pe](https://en.wikichip.org/wiki/intel/core_i9/i9-9900k)
+  * Build test target:
+  > -o a.exe --std=c++14 -fno-diagnostics-color -O3 -march=native -mtune=native -fopenmp -Wl,--stack,268435456 -static -s -lbf -lgmpxx -lflint -lmpfr -lntl -lgmp
 
 ### Test result
 

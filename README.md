@@ -31,7 +31,7 @@ Installation:
   
   * ENABLE_LIBBF wheter to use [libbf](https://bellard.org/libbf).
   
-  * ENABLE_MPIR whether to use [ntl](https://www.shoup.net/ntl/download.html).
+  * ENABLE_NTL whether to use [ntl](https://www.shoup.net/ntl/download.html).
   
   > Note: The compiled flint, gmp, mpfr, mpir, libbf, ntl (all for win64) can be found [here](https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA)(pwd:x7cg). The msys2 builds (installed by "pacman -S mingw-w64-x86_64-gmp") don't support msvc.
   

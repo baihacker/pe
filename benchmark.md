@@ -11,7 +11,7 @@
 * Msys2: msys2-x86_64-20190524
 * Test code: [Ntt test](https://github.com/baihacker/pe/blob/master/test/ntt_test.c)
 * Build:
-  * [Build and use third party library in pe](https://en.wikichip.org/wiki/intel/core_i9/i9-9900k)
+  * [Build and use third party library in pe](https://github.com/baihacker/pe/blob/master/libraries_on_win64.md#build-and-use-third-party-library-in-pe)
   * Build test target:
   > -o a.exe --std=c++14 -fno-diagnostics-color -O3 -march=native -mtune=native -fopenmp -Wl,--stack,268435456 -static -s -lbf -lgmpxx -lflint -lmpfr -lntl -lgmp
 

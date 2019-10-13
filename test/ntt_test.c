@@ -156,6 +156,6 @@ SL void ntt_performance_test() {
   }
 }
 
-PE_REGISTER_TEST(&ntt_performance_test, "ntt_performance_test", SPECIFIED);
+PE_REGISTER_TEST(&ntt_performance_test, "ntt_performance_test", BIG);
 #endif
 }  // namespace ntt_test

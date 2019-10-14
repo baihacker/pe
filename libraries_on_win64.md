@@ -122,6 +122,7 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
     1. ./configure --disable-shared --enable-static --prefix=/usr --enable-cxx --host=x86_64-w64-mingw32
      
     2. Customized flags:
+    
        * CFLAGS = -O3 -pedantic -fomit-frame-pointer -m64 -mtune=k8-sse3 -march=skylake
        * CXXFLAGS = -O3 -pedantic -fomit-frame-pointer -m64 -mtune=k8-sse3 -march=skylake
      
@@ -130,9 +131,11 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
     4. make install
      
   * mpir
+
     1. Make sure yasm.exe is in the PATH
      
     2. Customized flags:
+    
        * CFLAGS = -m64 -O3 -march=k8-sse3 -mtune=skylake
        * CXXFLAGS = -O3 -march=k8-sse3 -mtune=skylake
  
@@ -147,7 +150,8 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
     1. ./configure --with-gmp=/usr --enable-static --disable-shared --prefix=/usr
      
     2. Customized flags:
-      * CFLAGS = -Wall -Wmissing-prototypes -Wc++-compat -Wpointer-arith -O3 -fomit-frame-pointer -m64 -mtune=skylake -march=k8-sse3
+    
+       * CFLAGS = -Wall -Wmissing-prototypes -Wc++-compat -Wpointer-arith -O3 -fomit-frame-pointer -m64 -mtune=skylake -march=k8-sse3
      
     3. Fix error in makefile
      
@@ -162,6 +166,7 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
     1. ./configure --disable-shared --enable-static --prefix=/usr --with-gmp=/usr --with-mpfr=/usr
      
     2. Customized flags:
+    
        * CFLAGS=-ansi -pedantic -Wall -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3
        * CXXFLAGS=-ansi -pedantic -Wall -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3
      
@@ -236,10 +241,12 @@ clean:
 	rm -f $(PROGS) *.o *.d *.a *.exe *~
 ```
 
- * ntl.
+ * ntl
+ 
    1. ./configure
    
    2. Customized flags
+   
       * CXXFLAGS=-O3 --std=c++14
       * CXXAUTOFLAGS= -pthread -march=k8-sse3 -mtune=skylake
    

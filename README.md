@@ -46,7 +46,7 @@ Use:
 * Use **pe().maxPrime(prime limit).init();** to initialize builtin variables such as prime list, prime count. See the end of file "pe" for details.
 
 * Important global variables
-  * **int64 maxp;** the maximum value in the prime list should be no more than maxp. Use pe().maxPrime(prime limit) to set the limit.
+  * **int64 maxp;** the maximum value in the prime list should be no more than maxp. Use **.maxPrime(prime limit)** to initialize it.
   * **int\* plist;** plist[i] is the ith prime. (i starts from 0, i < pcnt).
   * **int pcnt;** the number of prime no more than maxp, i.e. the number of elements in plist.
   * **int\* pmask;** pmask[i] is the minimal prime factor of i (i <= maxp).

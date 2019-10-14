@@ -33,9 +33,7 @@ Installation:
   
   * ENABLE_NTL whether to use [ntl](https://www.shoup.net/ntl/download.html).
   
-  > Note: The compiled flint, gmp, mpfr, mpir, libbf, ntl (all for win64) can be found [here](https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA)(pwd:x7cg). The msys2 builds (installed by "pacman -S mingw-w64-x86_64-gmp") don't support msvc.
-  
-  > Recommended versions: gmp 6.1.2, flint 2.5.2, mpfr 4.0.2, mpir 3.0.0, libbf 2019-02-10, ntl WinNTL-11_4_1.
+* See [Build and use third party library in pe](https://github.com/baihacker/pe/blob/master/libraries_on_win64.md#build-and-use-third-party-library-in-pe) for the pre-built third party libraries.
 
 * [optional, recommended] Generate precompile header "pe.hpp.gch".
   * Command: "g++ xc++-header pe.hpp". Run in D:\usr\include

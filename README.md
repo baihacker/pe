@@ -16,23 +16,23 @@ Installation:
 * Use gen_config.py to generate pe_config automatically according to your environment, or
 * Configure this library manually in [pe_config](https://github.com/baihacker/pe/blob/master/pe_config) or [pe](https://github.com/baihacker/pe/blob/master/pe). 
   * ENABLE_ASSERT whether to assert some inputs or conditions.
-  
+
   * TRY_TO_USE_INT128 whether to check whether the compiler support int128 and use it. Some implementations depends on this flag.
-  
+
   * ENABLE_EIGEN whether to use [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page) library.
-  
+
   * ENABLE_OPENMP swhether to use [openmp](http://www.openmp.org). The auto generated pe_config doesn't include this configuration since it will be checked and enable automatically in pe (you can still configure it in pe_config). In the configuration in pe, you can disable it evenif the environment supports it.
-  
+
   * ENABLE_GMP whether to use [gmp](https://gmplib.org).
-  
+
   * ENABLE_FLINT whether to use [FLINT](http://www.flintlib.org).
-  
+
   * ENABLE_MPFR whether to use [mpfr](https://www.mpfr.org).
-  
+
   * ENABLE_LIBBF wheter to use [libbf](https://bellard.org/libbf).
-  
+
   * ENABLE_NTL whether to use [ntl](https://www.shoup.net/ntl/download.html).
-  
+
 * See [Build and use third party library in pe](https://github.com/baihacker/pe/blob/master/libraries_on_win64.md#build-and-use-third-party-library-in-pe) for the pre-built third party libraries.
 
 * [optional, recommended] Generate precompile header "pe.hpp.gch".

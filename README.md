@@ -92,7 +92,7 @@ File list:
 * pe_poly_algo: Polynomial algorithms.
 * pe_rand: Randome number.
 * pe_sym_poly: Symbolic polynomial.
-* pe_time: Support TimeDelta, TimeRecorder
+* pe_time: Support TimeDelta, TimeRecorder.
 * pe_tree: Some tree based data structures.
 * pe_type_traits: Type traits.
 

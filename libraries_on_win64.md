@@ -109,13 +109,13 @@ Please read the README or INSTALL doc of the target library before building it, 
 cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:precise /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /errorReport:prompt /WX- /Zc:forScope /Gd /Oi /MT /openmp /FC /EHsc /nologo /diagnostics:classic /DTEST_ALL /DCONTINUOUS_INTEGRATION_TEST /DENABLE_ASSERT=0 /DTRY_TO_USE_INT128=1 /DENABLE_OPENMP=1 /DENABLE_EIGEN=0 /DENABLE_GMP=0 /DENABLE_FLINT=0 /DENABLE_MPFR=0 /DENABLE_LIBBF=0 /DENABLE_NTL=0 /I "C:\projects\pe"
 
 ## Build and use third party library in pe
-  * The compiled binaries (flint, gmp, mpfr, mpir, libbf, libntl) on windows (x64) can be found [here](https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA) (pwd:x7cg)
+  * general
 
-  * Current version: gmp 6.1.2, flint 2.5.2, mpfr 4.0.2, mpir 3.0.0, libbf 2019-02-10, ntl 11_4_1.
+    * Current version: gmp 6.1.2, flint 2.5.2, mpfr 4.0.2, mpir 3.0.0, libbf 2019-02-10, ntl 11_4_1.
+  
+    * The compiled binaries (flint, gmp, mpfr, mpir, libbf, libntl) on windows (x64) can be found [here](https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA) (pwd:x7cg). The msys2 builds (installed by "pacman -S mingw-w64-x86_64-gmp") don't support msvc.
    
-  * The msys2 builds (installed by "pacman -S mingw-w64-x86_64-gmp") don't support msvc.
-   
-  * Library order: "-lbf -lgmpxx -lflint -lmpfr -lntl -lgmp"
+    * Library order in compiling command: "-lbf -lgmpxx -lflint -lmpfr -lntl -lgmp"
  
   * gmp
    

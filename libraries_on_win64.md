@@ -109,71 +109,77 @@ Please read the README or INSTALL doc of the target library before building it, 
 cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:precise /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /errorReport:prompt /WX- /Zc:forScope /Gd /Oi /MT /openmp /FC /EHsc /nologo /diagnostics:classic /DTEST_ALL /DCONTINUOUS_INTEGRATION_TEST /DENABLE_ASSERT=0 /DTRY_TO_USE_INT128=1 /DENABLE_OPENMP=1 /DENABLE_EIGEN=0 /DENABLE_GMP=0 /DENABLE_FLINT=0 /DENABLE_MPFR=0 /DENABLE_LIBBF=0 /DENABLE_NTL=0 /I "C:\projects\pe"
 
 ## Build and use third party library in pe
- * Build gmp, mpir, mpfr and flint
- 
-   * gmp
+  * The compiled binaries (flint, gmp, mpfr, mpir, libbf, libntl) on windows (x64) can be found [here](https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA) (pwd:x7cg)
+
+  * Current version: gmp 6.1.2, flint 2.5.2, mpfr 4.0.2, mpir 3.0.0, libbf 2019-02-10, ntl 11_4_1.
    
-     1. /configure --disable-shared --enable-static --prefix=/usr --enable-cxx --host=x86_64-w64-mingw32
-     
-     2. Customized flags:
-         * CFLAGS = -O3 -pedantic -fomit-frame-pointer -m64 -mtune=k8-sse3 -march=skylake
-         * CXXFLAGS = -O3 -pedantic -fomit-frame-pointer -m64 -mtune=k8-sse3 -march=skylake
-     
-     3. make
-     
-     4. make install
-     
-   * mpir
-     1. Make sure yasm.exe is in the PATH
-     
-     2. Customized flags:
-         * CFLAGS = -m64 -O3 -march=k8-sse3 -mtune=skylake
-         * CXXFLAGS = -O3 -march=k8-sse3 -mtune=skylake
- 
-     3. ./configure --disable-shared --enable-static --prefix=/usr
-     
-     4. make
-     
-     5. make install
-     
-   * mpfr
+  * The msys2 builds (installed by "pacman -S mingw-w64-x86_64-gmp") don't support msvc.
    
-     1. ./configure --with-gmp=/usr --enable-static --disable-shared --prefix=/usr
+  * Library order: "-lbf -lgmpxx -lflint -lmpfr -lntl -lgmp"
+ 
+  * gmp
+   
+    1. ./configure --disable-shared --enable-static --prefix=/usr --enable-cxx --host=x86_64-w64-mingw32
      
-     2. Customized flags:
-         * CFLAGS = -Wall -Wmissing-prototypes -Wc++-compat -Wpointer-arith -O3 -fomit-frame-pointer -m64 -mtune=skylake -march=k8-sse3
+    2. Customized flags:
+       * CFLAGS = -O3 -pedantic -fomit-frame-pointer -m64 -mtune=k8-sse3 -march=skylake
+       * CXXFLAGS = -O3 -pedantic -fomit-frame-pointer -m64 -mtune=k8-sse3 -march=skylake
      
-     3. Fix error in makefile
+    3. make
+     
+    4. make install
+     
+  * mpir
+    1. Make sure yasm.exe is in the PATH
+     
+    2. Customized flags:
+       * CFLAGS = -m64 -O3 -march=k8-sse3 -mtune=skylake
+       * CXXFLAGS = -O3 -march=k8-sse3 -mtune=skylake
+ 
+    3. ./configure --disable-shared --enable-static --prefix=/usr
+     
+    4. make
+     
+    5. make install
+     
+  * mpfr
+   
+    1. ./configure --with-gmp=/usr --enable-static --disable-shared --prefix=/usr
+     
+    2. Customized flags:
+      * CFLAGS = -Wall -Wmissing-prototypes -Wc++-compat -Wpointer-arith -O3 -fomit-frame-pointer -m64 -mtune=skylake -march=k8-sse3
+     
+    3. Fix error in makefile
      
        * "rm: unknown option -- c": caused by argument passing when sh.exe is executing libtool. Please replace -DLT_OBJDIR=\".libs/\" in variable DEFS by -DLT_OBJDIR=.libs Meanwhile, -DMPFR_PRINTF_MAXLM=\"ll\" is replaced by -DMPFR_PRINTF_MAXLM=ll (ll may be other value, like j)
        
-     4. make
+    4. make
      
-     5. make install
+    5. make install
      
-   * flint
+  * flint
    
-     1. ./configure --disable-shared --enable-static --prefix=/usr --with-gmp=/usr --with-mpfr=/usr
+    1. ./configure --disable-shared --enable-static --prefix=/usr --with-gmp=/usr --with-mpfr=/usr
      
-     2. Customized flags:
-         * CFLAGS=-ansi -pedantic -Wall -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3
-         * CXXFLAGS=-ansi -pedantic -Wall -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3
+    2. Customized flags:
+       * CFLAGS=-ansi -pedantic -Wall -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3
+       * CXXFLAGS=-ansi -pedantic -Wall -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3
      
-     3. Fix error in make file
+    3. Fix error in make file
      
        * Replace BUILD_DIR=../build/$(dir); by BUILD_DIR=$(CURDIR)/build/$(dir); in the build command of target libflint.a.
        
-     4. make
+    4. make
      
-     5. The previous make may be failed: some object file can not be found because the corresponding module is not built. The corresponding fold has no object file. Please modify BUILD_DIRS to build **those missing module** only (if the dir list is 1 2 3 4 5 and folder 3 has no object files you can keep 3 4 5), and use make -B to build these modules.
+    5. The previous make may be failed: some object file can not be found because the corresponding module is not built. The corresponding fold has no object file. Please modify BUILD_DIRS to build **those missing module** only (if the dir list is 1 2 3 4 5 and folder 3 has no object files you can keep 3 4 5), and use make -B to build these modules.
      
-     6. Revert the change in makefile in the previous step and try to make -B again. If the error specified in the previous step occurs again, use repeat the fix step.
+    6. Revert the change in makefile in the previous step and try to make -B again. If the error specified in the previous step occurs again, use repeat the fix step.
      
-     7. make install
+    7. make install
 
- * Build libbf, use the following makefile. It will generate libbf.avx2.a and libbf.generic.a, please choose one and rename it to libbf.a
- ```cpp
- CC=$(CROSS_PREFIX)gcc
+  * libbf. Use the following makefile which will generate libbf.avx2.a and libbf.generic.a, please choose one and rename it to libbf.a
+```cpp
+CC=$(CROSS_PREFIX)gcc
 CFLAGS=-Wall
 CFLAGS+=-O3
 CFLAGS+=-D__MSVCRT_VERSION__=0x1400
@@ -200,9 +206,10 @@ clean:
 	rm -f $(PROGS) *.o *.d *.a *.exe *~
 
 -include $(wildcard *.d)
- ```
- * Build win-ntl, use the following makefile.
- ```cpp
+```
+
+  * ntl (windows)
+```cpp
 CC=$(CROSS_PREFIX)gcc
 CFLAGS=-Wall
 CFLAGS+=-O3
@@ -228,7 +235,7 @@ libntl.a : $(OBJS)
 clean:
 	rm -f $(PROGS) *.o *.d *.a *.exe *~
 ```
-   * Build ntl, use the following makefile. Changes in make file
+ * ntl. Use ./configure to generate makefile and the flowings are the changes
 ```
 CXXFLAGS=-O3 --std=c++14
 # Flags for the C++ compiler
@@ -238,6 +245,3 @@ CXXAUTOFLAGS= -pthread -march=k8-sse3 -mtune=skylake
 
 DESTDIR=/usr
 ```
-   * Library order: "-lbf -lgmpxx -lflint -lmpfr -lntl -lgmp"
-   
-   * The compiled binaries (flint, gmp, mpfr, mpir, libbf, libntl) on windows (x64) can be found [here](https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA) (pwd:x7cg)

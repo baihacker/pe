@@ -4,7 +4,7 @@
 
 ### Test Environment:
 
-* Date： 2019.10.13
+* Date: 2019.10.13
 * OS:  Win10 Pro 1903 (18362.418)
 * CPU: [i9-9900K](https://en.wikichip.org/wiki/intel/core_i9/i9-9900k)
 * Compiler: gcc version 9.2.0 (Rev2, Built by MSYS2 project)

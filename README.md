@@ -51,7 +51,7 @@ Use:
   * **int pcnt;** the number of prime no more than maxp, i.e. the number of elements in plist.
   * **int\* pmask;** pmask[i] is the minimal prime factor of i (i <= maxp).
   * **int\* mu;** mu[i] it mobius function value of i (i <= maxp). Add **.calMu()** to the initializing statement to initialize **mu**. Use **cal_mu(i)** if i > maxp.
-  * **int\* phi;** phi[i] is Euler's totient function value of i (i <= maxp). Add **.calPhi()** to the initializting statement to to initialize **phi**. use **cal_phi(i)** if i > maxp.
+  * **int\* phi;** phi[i] is Euler's totient function value of i (i <= maxp). Add **.calPhi()** to the initializting statement to initialize **phi**. use **cal_phi(i)** if i > maxp.
 
 Prerequirements:
 ----------------

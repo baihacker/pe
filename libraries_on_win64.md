@@ -15,7 +15,7 @@ Please read the README or INSTALL doc of the target library before building it, 
 
   * You can run C:/msys64/mingw64.exe to open the terminal.
 
-  * Make sure C:/msys64/home/<computer user name>/build is a valid directory.
+  * Make sure C:/msys64/home/`<computer user name>`/build is a valid directory.
 
 ### Build gmp
 * Extract the package to build directory and cd the build directory (use msys2 terminal)

@@ -13,7 +13,7 @@ Installation:
 -------------
 * Put all the files in a folder (directory). For example, we put them in the directory D:\usr\include.
 * Make sure the environment variable CPLUS_INCLUDE_PATH contain D:\usr\include.
-* Use gen_config.py to generate pe_config automatically according to your environment, or
+* Use **gen_config.py** to generate pe_config automatically according to your environment, or
 * Configure this library manually in [pe_config](https://github.com/baihacker/pe/blob/master/pe_config) or [pe](https://github.com/baihacker/pe/blob/master/pe). 
   * ENABLE_ASSERT whether to assert some inputs or conditions.
 
@@ -21,7 +21,7 @@ Installation:
 
   * ENABLE_EIGEN whether to use [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page) library.
 
-  * ENABLE_OPENMP swhether to use [openmp](http://www.openmp.org). The auto generated pe_config doesn't include this configuration since it will be checked and enable automatically in pe (you can still configure it in pe_config). In the configuration in pe, you can disable it evenif the environment supports it.
+  * ENABLE_OPENMP swhether to use [openmp](http://www.openmp.org). The auto generated pe_config doesn't include this configuration since it will be checked and enabled automatically in pe (you can still configure it in pe_config). In the configuration in pe, you can disable it evenif the environment supports it.
 
   * ENABLE_GMP whether to use [gmp](https://gmplib.org).
 
@@ -41,15 +41,17 @@ Installation:
 
 Use:
 ----
-#include <pe.hpp> in your source code.
+* #include <pe.hpp> in your source code.
 
-Use pe().maxPrime(prime limit).init(); to initialize builtin variables such as prime list, prime count . See the end of "pe" for details.
+* Use **pe().maxPrime(prime limit).init();** to initialize builtin variables such as prime list, prime count. See the end of file "pe" for details.
 
-* **maxp** the maximum value in the prime list should be no more than maxp. Use pe().maxPrime(prime limit) to set the limit.
-* **plist** plist[i] is the ith prime. (i starts from 0, i < pcnt)
-* **pcnt** the number of prime no more than maxp, i.e. the element in plist.
-* **mu** mu[i] where i <= maxp, if i > maxp, please use cal_mu(i). Please use pe().calMu() to initialize it.
-* **phi** phi[i] where i <= maxp, if i > maxp, please use cal_phi(i). Please use pe().calPhi() to initialize it.
+* Important global variables
+  * **int64 maxp;** the maximum value in the prime list should be no more than maxp. Use pe().maxPrime(prime limit) to set the limit.
+  * **int\* plist;** plist[i] is the ith prime. (i starts from 0, i < pcnt).
+  * **int pcnt;** the number of prime no more than maxp, i.e. the number of elements in plist.
+  * **int\* pmask;** pmask[i] is the minimal prime factor of i (i <= maxp).
+  * **int\* mu;** mu[i] it mobius function value of i (i <= maxp). Add **.calMu()** to the initializing statement to initialize **mu**. Use **cal_mu(i)** if i > maxp.
+  * **int\* phi;** phi[i] is Euler's totient function value of i (i <= maxp). Add **.calPhi()** to the initializting statement to to initialize **phi**. use **cal_phi(i)** if i > maxp.
 
 Prerequirements:
 ----------------

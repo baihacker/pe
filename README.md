@@ -61,7 +61,7 @@ C++11 or above
 
 File list:
 -----------
-* pe: Including all the files.
+* pe: Including all the files except pe_config and pe.hpp.
 * pe.hpp: The file for generating precompile header.
 * pe_algo: Algorithms.
 * pe_array: An array implementation with compiling time dimension length. The element count can be more than the limit of int32 and you can specify customized allocator.

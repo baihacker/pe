@@ -92,7 +92,7 @@ void matrix_power() {
 void big_number() {
   cout << power(2_bi, 128) << endl; // BigInteger
   cout << power(2_mpi, 128) << endl; // MpInteger, a wrapper of mpz_class
-  cout << power(MPZ(2), 128) << endl; // Some helper class of mpz_class
+  cout << power(MPZ(2), 128) << endl; // Helper function of mpz_class
 }
 
 void fraction() {

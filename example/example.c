@@ -90,9 +90,9 @@ void matrix_power() {
 }
 
 void big_number() {
-  cout << power(2_bi, 128) << endl; // BigInteger
-  cout << power(2_mpi, 128) << endl; // MpInteger, a wrapper of mpz_class
-  cout << power(MPZ(2), 128) << endl; // Helper function of mpz_class
+  cout << power(2_bi, 128) << endl;    // BigInteger
+  cout << power(2_mpi, 128) << endl;   // MpInteger, a wrapper of mpz_class
+  cout << power(MPZ(2), 128) << endl;  // Helper function of mpz_class
 }
 
 void fraction() {
@@ -111,7 +111,6 @@ void modular() {
   cout << x << " " << FactModer(mod).cal(10000) << endl;
 }
 
-
 void multi_precision_float() {
   Mpf::setDefaultPrec(2000);
   Mpf x;
@@ -125,8 +124,7 @@ void multi_precision_float() {
 
 void poly_mul_example() {
   vector<int64> a, b;
-  for (int i = 0; i < 100000; ++i)
-    a.pb(i), b.pb(i);
+  for (int i = 0; i < 100000; ++i) a.pb(i), b.pb(i);
   auto c = poly_mul(a, b, mod);
   cout << c[12345] << endl;
 }

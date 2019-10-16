@@ -3,7 +3,7 @@
 
 #include "pe_config"
 
-// How to use a library in MinGW or VC++
+// How to use a library in MinGW or VC++ (including compiled binaries on windows (x64))
 // https://github.com/baihacker/pe/blob/master/libraries_on_win64.md#use
 
 // Compiler and cpp version check
@@ -114,32 +114,6 @@
 #define PE_HAS_AVX2 0
 #endif
 
-// int128
-#if !defined(TRY_TO_USE_INT128)
-#define TRY_TO_USE_INT128 1
-#endif
-
-// Let int128 recognized in vscode.
-// Make the vscode support int128
-#if defined(VSCODE_EDITOR)
-#define __SIZEOF_INT128__ 16
-#define __int128 long long
-#endif
-
-#if TRY_TO_USE_INT128 && defined(__SIZEOF_INT128__)
-#define PE_HAS_INT128 1
-using int128 = __int128;
-using uint128 = unsigned __int128;
-#else
-#define PE_HAS_INT128 0
-#endif
-
-// Link options
-#if defined(COMPILER_MSVC)
-#pragma warning(disable : 4996)
-#pragma comment(linker, "/STACK:268435456")
-#endif
-
 // At least c++11
 #if !PE_HAS_CPP11
 #error "c++11 or above only"
@@ -153,11 +127,27 @@ using uint128 = unsigned __int128;
 // #error "Please add --std=c++XX to use standard c++ instead of --std=gnu++XX"
 // #endif
 
-// See https://github.com/baihacker/pe/blob/master/libraries_on_win64.md for how
-// to build and use a library. The compiled binaries  on windows (x64) can be found here
-// https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA) (pwd:x7cg)
-
 // Configurations
+
+// int128
+#if !defined(TRY_TO_USE_INT128)
+#define TRY_TO_USE_INT128 1
+#endif
+
+// Let int128 be recognized in vscode.
+// Make the vscode support int128
+#if defined(VSCODE_EDITOR)
+#define __SIZEOF_INT128__ 16
+#define __int128 long long
+#endif
+
+#if TRY_TO_USE_INT128 && defined(__SIZEOF_INT128__)
+#define PE_HAS_INT128 1
+using int128 = __int128;
+using uint128 = unsigned __int128;
+#else
+#define PE_HAS_INT128 0
+#endif
 #if !defined(ENABLE_ASSERT)
 #define ENABLE_ASSERT 1
 #endif
@@ -239,6 +229,15 @@ using uint128 = unsigned __int128;
 #endif
 
 // Include third party libraries and apply fixes to them.
+// Add the corresponding libraries if the compiler is msvc.
+#if defined(COMPILER_MSVC)
+#pragma warning(push)
+#pragma warning(disable : 4244)
+#pragma warning(disable : 4267)
+#pragma warning(disable : 4146)
+#pragma warning(disable : 4996)
+#endif
+
 #if ENABLE_LIBBF
 
 /**
@@ -263,13 +262,6 @@ extern "C" {
 #pragma comment(lib, "libbf.a")
 #endif
 
-#endif
-
-#if defined(COMPILER_MSVC)
-#pragma warning(push)
-#pragma warning(disable : 4244)
-#pragma warning(disable : 4267)
-#pragma warning(disable : 4146)
 #endif
 
 // flint must come before the following libs.
@@ -347,7 +339,6 @@ static inline std::ostream& operator<<(std::ostream& o, __mpz_struct const* x) {
 #include <NTL/ZZ_pX.h>
 #include <NTL/ZZ_p.h>
 #include <NTL/ZZ.h>
-#pragma comment(lib, "libntl.a")
 #endif
 #endif
 
@@ -370,6 +361,10 @@ static inline std::ostream& operator<<(std::ostream& o, __mpz_struct const* x) {
 #if defined(COMPILER_MSVC) && PLATFORM_WIN && PE_X86_64
 // pe_mod depends some windows api when the target arch is x64.
 #include <windows.h>
+#endif
+
+#if defined(COMPILER_MSVC)
+#pragma comment(linker, "/STACK:268435456")
 #endif
 
 // Include pe

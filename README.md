@@ -93,6 +93,7 @@ File list:
 * pe_poly: Polynomial.
 * pe_poly_algo: Polynomial algorithms.
 * pe_rand: Randome number.
+* pe_range: generate an range of numbers, iterate a container with index.
 * pe_sym_poly: Symbolic polynomial.
 * pe_time: Support TimeDelta, TimeRecorder.
 * pe_tree: Some tree based data structures.

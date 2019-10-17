@@ -1,0 +1,162 @@
+#ifndef __PE_RANGE_H__
+#define __PE_RANGE_H__
+
+template <typename T>
+struct NumberIter {
+  typedef T value_type;
+  typedef const T reference;
+
+  T i;
+
+  T operator*() const { return i; }
+
+  int operator==(const NumberIter& o) const { return i == o.i; }
+
+  int operator!=(const NumberIter& o) const { return !(this->operator==(o)); }
+
+  NumberIter& operator++() {
+    ++i;
+    return *this;
+  }
+
+  NumberIter operator++(int) { return NumberIter{++i}; }
+
+  NumberIter& operator--() {
+    --i;
+    return *this;
+  }
+
+  NumberIter operator--(int) { return NumberIter{i--}; }
+};
+
+template <typename T>
+struct NumberRange {
+  typedef T value_type;
+  typedef NumberIter<T> iterator;
+  typedef NumberIter<T> const_iterator;
+
+  T b;
+  T e;
+  NumberIter<T> begin() const { return NumberIter<T>{b}; }
+  NumberIter<T> end() const { return NumberIter<T>{e}; }
+  int64 size() const { return e - b; }
+};
+
+template <typename IT>
+struct ContainerIter {
+  IT iter;
+  int64 idx;
+
+  struct ContainerItem {
+    const int64 i;
+    typename IT::reference v;
+  };
+
+  typedef ContainerItem reference;
+
+  ContainerItem operator*() { return ContainerItem{idx, *iter}; }
+
+  int operator==(const ContainerIter& o) const { return idx == o.idx; }
+
+  int operator!=(const ContainerIter& o) const {
+    return !(this->operator==(o));
+  }
+
+  ContainerIter& operator++() {
+    ++idx;
+    ++iter;
+    return *this;
+  }
+
+  ContainerIter operator++(int) { return ContainerIter{iter++, idx++}; }
+
+  ContainerIter& operator--() {
+    --idx;
+    --iter;
+    return *this;
+  }
+
+  ContainerIter operator--(int) { return ContainerIter{iter--, idx--}; }
+};
+
+template <typename IT>
+struct ContainerRange {
+  typedef ContainerIter<IT> iterator;
+  typedef ContainerIter<IT> const_iterator;
+  IT b;
+  IT e;
+  int64 cnt;
+  ContainerIter<IT> begin() const { return ContainerIter<IT>{b, 0}; }
+  ContainerIter<IT> end() const { return ContainerIter<IT>{e, cnt}; }
+  int64 size() const { return cnt; }
+};
+
+template <typename T>
+struct VecIter {
+  T* start;
+  int64 idx;
+
+  struct ContainerItem {
+    const int64 i;
+    T& v;
+  };
+
+  typedef ContainerItem reference;
+
+  ContainerItem operator*() { return ContainerItem{idx, start[idx]}; }
+
+  int operator==(const VecIter& o) const {
+    return idx == o.idx && start == o.start;
+  }
+
+  int operator!=(const VecIter& o) const { return !(this->operator==(o)); }
+
+  VecIter& operator++() {
+    ++idx;
+    return *this;
+  }
+
+  VecIter operator++(int) { return VecIter{start, idx++}; }
+
+  VecIter& operator--() {
+    --idx;
+    return *this;
+  }
+
+  VecIter operator--(int) { return VecIter{start, idx--}; }
+};
+
+template <typename T>
+struct VecRange {
+  typedef VecIter<T> iterator;
+  typedef VecIter<T> const_iterator;
+  T* start;
+  int64 cnt;
+  VecIter<T> begin() const { return VecIter<T>{start, 0}; }
+  VecIter<T> end() const { return VecIter<T>{start, cnt}; }
+  int64 size() const { return cnt; }
+};
+
+NumberRange<int64> range(int64 s, int64 e) { return NumberRange<int64>{s, e}; }
+
+template <typename T>
+VecRange<T> range(vector<T>& v) {
+  return VecRange<T>{&v[0], sz(v)};
+}
+
+template <typename T>
+VecRange<const T> range(const vector<T>& v) {
+  return VecRange<const T>{&v[0], sz(v)};
+}
+
+template <typename CT>
+auto range(CT& v) -> ContainerRange<typename CT::iterator> {
+  return ContainerRange<typename CT::iterator>{v.begin(), v.end(), v.size()};
+}
+
+template <typename CT>
+auto range(const CT& v) -> ContainerRange<typename CT::const_iterator> {
+  return ContainerRange<typename CT::const_iterator>{v.begin(), v.end(),
+                                                     v.size()};
+}
+#endif

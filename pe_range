@@ -25,12 +25,13 @@ struct RangeBase {
       std::function<typename IIT::value_type(typename IIT::value_type,
                                              typename IIT::reference reference)>
           reducer) const {
+    typename std::remove_cv<typename IIT::value_type>::type ret = v;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
-      v = reducer(v, *now++);
+      ret = reducer(ret, *now++);
     }
-    return v;
+    return ret;
   }
 
   MappedRange<IIT> map(
@@ -171,12 +172,16 @@ struct NumberRangeD : public RangeBase<T, NumberRangeD<T>, NumberIter<T>> {
   T n;
 };
 
-SL NumberRange<int64> range(int64 s, int64 e) {
+template <typename T>
+SL REQUIRES(is_native_integer<T>::value) RETURN(NumberRange<int64>)
+    range(T s, T e) {
   PE_ASSERT(s <= e);
   return NumberRange<int64>{s, e};
 }
 
-SL NumberRangeD<int64> range(int64 s, int64 e, int64 delta) {
+template <typename T>
+SL REQUIRES(is_native_integer<T>::value) RETURN(NumberRangeD<int64>)
+    range(T s, T e, T delta) {
   if (s < e) {
     PE_ASSERT(delta > 0);
   } else if (s > e) {
@@ -226,6 +231,82 @@ struct Range : public RangeBase<IT, Range<IT>, RangeIter<IT>> {
   RangeIter<IT> begin() const { return RangeIter<IT>{base::b}; }
   RangeIter<IT> end() const { return RangeIter<IT>{base::e}; }
 };
+
+template <typename CT>
+SL auto range(CT& v) -> Range<typename CT::iterator> {
+  return Range<typename CT::iterator>{v.begin(), v.end()};
+}
+
+template <typename CT>
+SL auto range(const CT& v) -> Range<typename CT::const_iterator> {
+  return Range<typename CT::const_iterator>{v.begin(), v.end()};
+}
+
+template <typename T>
+SL REQUIRES(!is_native_integer<T>::value) RETURN(Range<T>) range(T s, T e) {
+  return Range<T>{s, e};
+}
+
+template <typename IT>
+struct ArrayRangeIter {
+  typedef IT& reference;
+  typedef IT value_type;
+
+  reference operator*() { return *iter; }
+
+  int operator==(const ArrayRangeIter& o) const { return iter == o.iter; }
+
+  int operator!=(const ArrayRangeIter& o) const {
+    return !(this->operator==(o));
+  }
+
+  ArrayRangeIter& operator++() {
+    ++iter;
+    return *this;
+  }
+
+  ArrayRangeIter operator++(int) { return ArrayRangeIter{iter++}; }
+
+  ArrayRangeIter& operator--() {
+    --iter;
+    return *this;
+  }
+
+  ArrayRangeIter operator--(int) { return ArrayRangeIter{iter--}; }
+
+  IT* iter;
+};
+
+template <typename IT>
+struct ArrayRange : public RangeBase<IT*, ArrayRange<IT>, ArrayRangeIter<IT>> {
+  typedef ArrayRangeIter<IT> iterator;
+  typedef ArrayRangeIter<IT> const_iterator;
+  typedef typename iterator::value_type value_type;
+
+  typedef RangeBase<IT*, ArrayRange<IT>, ArrayRangeIter<IT>> base;
+
+  ArrayRange(IT* b, IT* e) : base(b, e) {}
+
+  ArrayRangeIter<IT> begin() const { return ArrayRangeIter<IT>{base::b}; }
+  ArrayRangeIter<IT> end() const { return ArrayRangeIter<IT>{base::e}; }
+};
+
+template <typename T>
+SL ArrayRange<T> range(T* s, T* e) {
+  PE_ASSERT(s <= e);
+  return ArrayRange<T>{s, e};
+}
+
+template <typename T>
+SL ArrayRange<const T> range(const T* s, const T* e) {
+  PE_ASSERT(s <= e);
+  return ArrayRange<const T>{s, e};
+}
+
+template <typename T, int N>
+SL ArrayRange<T> range(T (&a)[N]) {
+  return ArrayRange<T>{a, a + N};
+}
 
 template <typename IT>
 struct MappedRangeIter {
@@ -280,7 +361,8 @@ struct MappedRange
   }
 
   const std::function<typename MappedRangeIter<IT>::value_type(
-      const typename MappedRangeIter<IT>::value_type&)>& mapper;
+      const typename MappedRangeIter<IT>::value_type&)>
+      mapper;
 };
 
 template <typename IT>
@@ -339,18 +421,8 @@ struct FilterRange
     return FilterRangeIter<IT>{base::e, base::e, filterImpl};
   }
 
-  const std::function<int(const typename IT::value_type&)>& filterImpl;
+  const std::function<int(const typename IT::value_type&)> filterImpl;
 };
-
-template <typename CT>
-SL auto range(CT& v) -> Range<typename CT::iterator> {
-  return Range<typename CT::iterator>{v.begin(), v.end()};
-}
-
-template <typename CT>
-SL auto range(const CT& v) -> Range<typename CT::const_iterator> {
-  return Range<typename CT::const_iterator>{v.begin(), v.end()};
-}
 
 // irange support. i = index.
 template <typename IT>
@@ -403,7 +475,7 @@ struct ContainerRangeI {
 };
 
 template <typename T>
-struct VecIterI {
+struct ArrayIterI {
   struct ContainerItemI {
     const int64 i;
     T& v;
@@ -413,50 +485,67 @@ struct VecIterI {
 
   ContainerItemI operator*() { return ContainerItemI{idx, start[idx]}; }
 
-  int operator==(const VecIterI& o) const {
+  int operator==(const ArrayIterI& o) const {
     return idx == o.idx && start == o.start;
   }
 
-  int operator!=(const VecIterI& o) const { return !(this->operator==(o)); }
+  int operator!=(const ArrayIterI& o) const { return !(this->operator==(o)); }
 
-  VecIterI& operator++() {
+  ArrayIterI& operator++() {
     ++idx;
     return *this;
   }
 
-  VecIterI operator++(int) { return VecIterI{start, idx++}; }
+  ArrayIterI operator++(int) { return ArrayIterI{start, idx++}; }
 
-  VecIterI& operator--() {
+  ArrayIterI& operator--() {
     --idx;
     return *this;
   }
 
-  VecIterI operator--(int) { return VecIterI{start, idx--}; }
+  ArrayIterI operator--(int) { return ArrayIterI{start, idx--}; }
 
   T* start;
   int64 idx;
 };
 
 template <typename T>
-struct VecRangeI {
-  typedef VecIterI<T> iterator;
-  typedef VecIterI<T> const_iterator;
+struct ArrayRangeI {
+  typedef ArrayIterI<T> iterator;
+  typedef ArrayIterI<T> const_iterator;
 
-  VecIterI<T> begin() const { return VecIterI<T>{start, 0}; }
-  VecIterI<T> end() const { return VecIterI<T>{start, cnt}; }
+  ArrayIterI<T> begin() const { return ArrayIterI<T>{start, 0}; }
+  ArrayIterI<T> end() const { return ArrayIterI<T>{start, cnt}; }
 
   T* start;
   int64 cnt;
 };
 
 template <typename T>
-SL VecRangeI<T> irange(vector<T>& v) {
-  return VecRangeI<T>{&v[0], sz(v)};
+SL ArrayRangeI<T> irange(vector<T>& v) {
+  return ArrayRangeI<T>{&v[0], sz(v)};
 }
 
 template <typename T>
-SL VecRangeI<const T> irange(const vector<T>& v) {
-  return VecRangeI<const T>{&v[0], sz(v)};
+SL ArrayRangeI<const T> irange(const vector<T>& v) {
+  return ArrayRangeI<const T>{&v[0], sz(v)};
+}
+
+template <typename T>
+SL ArrayRangeI<T> irange(T* s, T* e) {
+  PE_ASSERT(s <= e);
+  return ArrayRangeI<T>{s, e - s};
+}
+
+template <typename T>
+SL ArrayRangeI<T> irange(const T* s, const T* e) {
+  PE_ASSERT(s <= e);
+  return ArrayRangeI<const T>{s, e - s};
+}
+
+template <typename T, int N>
+SL ArrayRangeI<T> irange(T (&a)[N]) {
+  return ArrayRangeI<T>{a, N};
 }
 
 template <typename CT>

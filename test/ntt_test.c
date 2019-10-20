@@ -78,7 +78,8 @@ SL void test_impl(int dp, int size, int n, int64 mod) {
     auto start = clock();
     auto result = who.impl(x, y, mod);
     auto end = clock();
-    fprintf(stderr, "%-8s : %.3f\n", who.name, (end - start) * 1e-3);
+    fprintf(stderr, "%-8s : %.3f\n", who.name,
+            1. * (end - start) / CLOCKS_PER_SEC);
     if (i == 0) {
       expected = result;
     } else {
@@ -144,7 +145,7 @@ SL void ntt_performance_test() {
         who.impl(x, y, mod);
         auto end = clock();
 #if 1
-        printf("%-6.3f ", (end - start) * 1e-3);
+        printf("%-6.3f ", 1. * (end - start) / CLOCKS_PER_SEC);
 #else
         uint64 a = n * (1 << n);
         uint64 b = end - start;

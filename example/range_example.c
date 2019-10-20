@@ -212,6 +212,7 @@ void test_range() {
               [](auto& a, auto b) { a *= b; })
        << endl;
   cout << range(1, 101).pireduce(1, [](auto& a, auto b) { a *= b; }) << endl;
+  cout << range(1, 101).pireduce(1, &ru::imul) << endl;
 
   cout << range(1, 101).pireduce<int128>([](auto& a, auto b) { a *= b; },
                                          [](auto& a, auto b) { a *= b; })
@@ -219,7 +220,10 @@ void test_range() {
   cout << range(1, 101).pireduce([](auto& a, auto b) { a *= b; },
                                  [](auto& a, auto b) { a *= b; })
        << endl;
+  cout << range(1, 101).pireduce(&ru::imul, &ru::imul) << endl;
+
   cout << range(1, 101).pireduce([](auto& a, auto b) { a *= b; }) << endl;
+  cout << range(1, 101).pireduce(&ru::imul) << endl;
 
   cout << range(y).ireduce<int128>(0, [](auto& a, auto b) { a += b.a; })
        << endl;

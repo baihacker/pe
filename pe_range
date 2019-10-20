@@ -1,6 +1,7 @@
 #ifndef __PE_RANGE_H__
 #define __PE_RANGE_H__
 
+#include "pe_type_traits"
 #include "pe_mod"
 
 template <typename IT>
@@ -35,11 +36,38 @@ SL std::function<int64(int64, int64)> mul_mod(int64 mod) {
 SL std::function<int64(int64, int64)> add_mod(int64 mod) {
   return [=](int64 a, int64 b) { return ::add_mod(a, b, mod); };
 }
+
+SL void imul(int64& a, int64 b) { a *= b; }
+
+SL void iadd(int64& a, int64 b) { a += b; }
+
+template <int64 M>
+SL void imul_mod(int64& a, int64 b) {
+  a = ::mul_mod(a, b, M);
+}
+
+template <int64 M>
+SL void iadd_mod(int64& a, int64 b) {
+  a = ::add_mod(a, b, M);
+}
+
+SL std::function<void(int64&, int64)> imul_mod(int64 mod) {
+  return [=](int64& a, int64 b) { a = ::mul_mod(a, b, mod); };
+}
+
+SL std::function<void(int64&, int64)> iadd_mod(int64 mod) {
+  return [=](int64& a, int64 b) { a = ::add_mod(a, b, mod); };
+}
 }  // namespace ru
 
 template <typename IT, typename DERIVED, typename IIT>
 struct RangeBase {
   RangeBase(IT b, IT e) : b(b), e(e) {}
+
+  typedef typename IIT::reference reference;
+  typedef typename add_rvalue_reference<const typename IIT::value_type>::type
+      rvalue_reference;
+  typedef typename std::remove_cv<typename IIT::value_type>::type value_type;
 
   FilterRange<IIT> filter(
       std::function<int(const typename IIT::value_type&)> filter) const {
@@ -47,46 +75,182 @@ struct RangeBase {
                             static_cast<const DERIVED&>(*this).end(), filter};
   }
 
-  template <typename VT = typename IIT::value_type>
-  typename std::remove_cv<VT>::type reduce(
-      VT v, std::function<typename std::remove_cv<VT>::type(
-                typename std::remove_cv<VT>::type, typename IIT::reference)>
-                reducer) const {
-    typename std::remove_cv<VT>::type ret = v;
+  // reduce name convention
+  // i: inplace reduce
+  // p: parallel reduce
+
+  // Reduce: has initial value
+  template <typename VT = value_type>
+  VT reduce(const VT& v,
+            std::function<VT(const VT&, rvalue_reference)> reducer) const {
+    VT ret = v;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
-      ret = reducer(ret, *now++);
+      ret = reducer(ret, std::move(*now++));
     }
     return ret;
   }
 
-  template <typename VT = typename IIT::value_type>
-  typename std::remove_cv<VT>::type reduce(
-      std::function<typename std::remove_cv<VT>::type(
-          typename std::remove_cv<VT>::type, typename IIT::reference)>
-          reducer) const {
-    typename std::remove_cv<VT>::type ret;
+  template <typename VT = value_type>
+  VT ireduce(const VT& v,
+             std::function<void(VT&, rvalue_reference)> reducer) const {
+    VT ret = v;
+    auto now = static_cast<const DERIVED&>(*this).begin();
+    auto x = static_cast<const DERIVED&>(*this).end();
+    while (now != x) {
+      reducer(ret, std::move(*now++));
+    }
+    return ret;
+  }
+
+  value_type reduce(
+      const value_type& v,
+      std::function<value_type(const value_type&, rvalue_reference)> reducer)
+      const {
+    value_type ret = v;
+    auto now = static_cast<const DERIVED&>(*this).begin();
+    auto x = static_cast<const DERIVED&>(*this).end();
+    while (now != x) {
+      ret = reducer(ret, std::move(*now++));
+    }
+    return ret;
+  }
+
+  value_type ireduce(
+      const value_type& v,
+      std::function<void(value_type&, rvalue_reference)> reducer) const {
+    value_type ret = v;
+    auto now = static_cast<const DERIVED&>(*this).begin();
+    auto x = static_cast<const DERIVED&>(*this).end();
+    while (now != x) {
+      reducer(ret, std::move(*now++));
+    }
+    return ret;
+  }
+
+  // Reduce: no initial value
+  template <typename VT = value_type>
+  VT reduce(std::function<VT(const VT&, rvalue_reference)> reducer) const {
+    static_assert(std::is_convertible<value_type, VT>::value);
+    VT ret;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     if (now != x) {
       ret = *now++;
     }
     while (now != x) {
-      ret = reducer(ret, *now++);
+      ret = reducer(ret, std::move(*now++));
     }
     return ret;
   }
 
-  template <typename VT = typename IIT::value_type>
-  typename std::remove_cv<VT>::type preduce(
-      typename std::remove_cv<VT>::type v,
-      std::function<typename std::remove_cv<VT>::type(
-          typename std::remove_cv<VT>::type, typename IIT::reference)>
-          reducer,
-      std::function<typename std::remove_cv<VT>::type(
-          typename std::remove_cv<VT>::type, typename std::remove_cv<VT>::type)>
-          combiner,
+  template <typename VT = value_type>
+  VT ireduce(std::function<void(VT&, rvalue_reference)> reducer) const {
+    static_assert(std::is_convertible<value_type, VT>::value);
+    VT ret;
+    auto now = static_cast<const DERIVED&>(*this).begin();
+    auto x = static_cast<const DERIVED&>(*this).end();
+    if (now != x) {
+      ret = *now++;
+    }
+    while (now != x) {
+      reducer(ret, std::move(*now++));
+    }
+    return ret;
+  }
+
+  value_type reduce(
+      std::function<value_type(const value_type&, rvalue_reference)> reducer)
+      const {
+    value_type ret;
+    auto now = static_cast<const DERIVED&>(*this).begin();
+    auto x = static_cast<const DERIVED&>(*this).end();
+    if (now != x) {
+      ret = *now++;
+    }
+    while (now != x) {
+      ret = reducer(ret, std::move(*now++));
+    }
+    return ret;
+  }
+
+  value_type ireduce(
+      std::function<void(value_type&, rvalue_reference)> reducer) const {
+    value_type ret;
+    auto now = static_cast<const DERIVED&>(*this).begin();
+    auto x = static_cast<const DERIVED&>(*this).end();
+    if (now != x) {
+      ret = *now++;
+    }
+    while (now != x) {
+      reducer(ret, std::move(*now++));
+    }
+    return ret;
+  }
+
+  // Parallel reduce: has initial value
+  template <typename VT>
+  VT preduce(const VT& v,
+             std::function<VT(const VT&, rvalue_reference)> reducer,
+             std::function<VT(const VT&, const VT&)> combiner,
+             const int thread_number = 8) const {
+#if ENABLE_OPENMP
+    auto data = toVector();
+    const int size = sz(data);
+    if (size == 0) {
+      return v;
+    }
+
+    vector<VT> tmp(thread_number, v);
+#pragma omp parallel for schedule(dynamic) num_threads(thread_number)
+    for (int i = 0; i < size; ++i) {
+      const auto tid = omp_get_thread_num();
+      tmp[tid] = reducer(tmp[tid], std::move(data[i]));
+    }
+
+    VT ret = tmp[0];
+    for (int i = 1; i < thread_number; ++i) {
+      ret = combiner(ret, std::move(tmp[i]));
+    }
+    return ret;
+#else
+    return reduce(v, reducer);
+#endif
+  }
+
+  template <typename VT>
+  VT pireduce(const VT& v, std::function<void(VT&, rvalue_reference)> reducer,
+              std::function<void(VT&, const VT&)> combiner,
+              const int thread_number = 8) const {
+#if ENABLE_OPENMP
+    auto data = toVector();
+    const int size = sz(data);
+    if (size == 0) {
+      return v;
+    }
+
+    vector<VT> tmp(thread_number, v);
+#pragma omp parallel for schedule(dynamic) num_threads(thread_number)
+    for (int i = 0; i < size; ++i) {
+      const auto tid = omp_get_thread_num();
+      reducer(tmp[tid], std::move(data[i]));
+    }
+
+    VT ret = tmp[0];
+    for (int i = 1; i < thread_number; ++i) {
+      combiner(ret, std::move(tmp[i]));
+    }
+    return ret;
+#else
+    return ireduce(v, reducer);
+#endif
+  }
+
+  value_type preduce(
+      const value_type& v,
+      std::function<value_type(const value_type&, rvalue_reference)> reducer,
+      std::function<value_type(const value_type&, rvalue_reference)> combiner,
       const int thread_number = 8) const {
 #if ENABLE_OPENMP
     auto data = toVector();
@@ -95,16 +259,16 @@ struct RangeBase {
       return v;
     }
 
-    vector<typename std::remove_cv<VT>::type> tmp(thread_number, v);
+    vector<value_type> tmp(thread_number, v);
 #pragma omp parallel for schedule(dynamic) num_threads(thread_number)
     for (int i = 0; i < size; ++i) {
       const auto tid = omp_get_thread_num();
-      tmp[tid] = reducer(tmp[tid], data[i]);
+      tmp[tid] = reducer(tmp[tid], std::move(data[i]));
     }
 
-    typename std::remove_cv<VT>::type ret = tmp[0];
+    value_type ret = tmp[0];
     for (int i = 1; i < thread_number; ++i) {
-      ret = combiner(ret, tmp[i]);
+      ret = combiner(ret, std::move(tmp[i]));
     }
     return ret;
 #else
@@ -112,47 +276,83 @@ struct RangeBase {
 #endif
   }
 
-#if PE_HAS_CPP14
-  typename IIT::value_type preduce(
-      typename IIT::value_type v,
-      std::function<typename IIT::value_type(typename IIT::value_type,
-                                             typename IIT::reference)>
-          reducer,
-      const int thread_number = 8) const {
-    return preduce(
-        v, reducer, [&](auto a, auto b) { return reducer(a, b); },
-        thread_number);
-  }
-#endif
-
-  template <typename VT = typename IIT::value_type>
-  typename std::remove_cv<VT>::type preduce(
-      std::function<typename std::remove_cv<VT>::type(
-          typename std::remove_cv<VT>::type, typename IIT::reference)>
-          reducer,
-      std::function<typename std::remove_cv<VT>::type(
-          typename std::remove_cv<VT>::type, typename std::remove_cv<VT>::type)>
-          combiner,
+  value_type pireduce(
+      const value_type& v,
+      std::function<void(value_type&, rvalue_reference)> reducer,
+      std::function<void(value_type&, rvalue_reference)> combiner,
       const int thread_number = 8) const {
 #if ENABLE_OPENMP
     auto data = toVector();
     const int size = sz(data);
+    if (size == 0) {
+      return v;
+    }
 
-    vector<typename std::remove_cv<typename IIT::value_type>::type> tmp(
+    vector<value_type> tmp(thread_number, v);
+#pragma omp parallel for schedule(dynamic) num_threads(thread_number)
+    for (int i = 0; i < size; ++i) {
+      const auto tid = omp_get_thread_num();
+      reducer(tmp[tid], std::move(data[i]));
+    }
+
+    value_type ret = tmp[0];
+    for (int i = 1; i < thread_number; ++i) {
+      combiner(ret, std::move(tmp[i]));
+    }
+    return ret;
+#else
+    return ireduce(v, reducer);
+#endif
+  }
+
+#if PE_HAS_CPP14
+  value_type preduce(
+      const value_type& v,
+      std::function<value_type(const value_type&, rvalue_reference)> reducer,
+      const int thread_number = 8) const {
+    return preduce(
+        v, reducer,
+        [&](const value_type& a, rvalue_reference b) -> value_type {
+          return reducer(a, std::move(b));
+        },
         thread_number);
+  }
+
+  value_type pireduce(
+      const value_type& v,
+      std::function<void(value_type&, rvalue_reference)> reducer,
+      const int thread_number = 8) const {
+    return pireduce(
+        v, reducer,
+        [&](value_type& a, rvalue_reference b) { reducer(a, std::move(b)); },
+        thread_number);
+  }
+#endif
+
+  // Parallel reduce: no initial value
+  template <typename VT = value_type>
+  VT preduce(std::function<VT(const VT&, rvalue_reference)> reducer,
+             std::function<VT(const VT&, const VT&)> combiner,
+             const int thread_number = 8) const {
+    static_assert(std::is_convertible<value_type, VT>::value);
+#if ENABLE_OPENMP
+    auto data = toVector();
+    const int size = sz(data);
+
+    vector<VT> tmp(thread_number);
     char flag[thread_number] = {0};
 
 #pragma omp parallel for schedule(dynamic) num_threads(thread_number)
     for (int i = 0; i < size; ++i) {
       const auto tid = omp_get_thread_num();
       if (flag[tid] == 0) {
-        tmp[tid] = data[i];
         flag[tid] = 1;
+        tmp[tid] = data[i];
       } else {
-        tmp[tid] = reducer(tmp[tid], data[i]);
+        tmp[tid] = reducer(tmp[tid], std::move(data[i]));
       }
     }
-    typename IIT::value_type ret;
+    VT ret;
     int found = 0;
     for (int i = 0; i < thread_number; ++i)
       if (flag[i]) {
@@ -168,14 +368,137 @@ struct RangeBase {
 #endif
   }
 
+  template <typename VT = value_type>
+  VT pireduce(std::function<void(VT&, rvalue_reference)> reducer,
+              std::function<void(VT&, const VT&)> combiner,
+              const int thread_number = 8) const {
+    static_assert(std::is_convertible<value_type, VT>::value);
+#if ENABLE_OPENMP
+    auto data = toVector();
+    const int size = sz(data);
+
+    vector<VT> tmp(thread_number);
+    char flag[thread_number] = {0};
+
+#pragma omp parallel for schedule(dynamic) num_threads(thread_number)
+    for (int i = 0; i < size; ++i) {
+      const auto tid = omp_get_thread_num();
+      if (flag[tid] == 0) {
+        tmp[tid] = data[i];
+        flag[tid] = 1;
+      } else {
+        reducer(tmp[tid], std::move(data[i]));
+      }
+    }
+    VT ret;
+    int found = 0;
+    for (int i = 0; i < thread_number; ++i)
+      if (flag[i]) {
+        if (++found == 1) {
+          ret = tmp[i];
+        } else {
+          combiner(ret, tmp[i]);
+        }
+      }
+    return ret;
+#else
+    return ireduce<VT>(reducer);
+#endif
+  }
+
+  value_type preduce(
+      std::function<value_type(const value_type&, rvalue_reference)> reducer,
+      std::function<value_type(const value_type&, rvalue_reference)> combiner,
+      const int thread_number = 8) const {
+#if ENABLE_OPENMP
+    auto data = toVector();
+    const int size = sz(data);
+
+    vector<value_type> tmp(thread_number);
+    char flag[thread_number] = {0};
+
+#pragma omp parallel for schedule(dynamic) num_threads(thread_number)
+    for (int i = 0; i < size; ++i) {
+      const auto tid = omp_get_thread_num();
+      if (flag[tid] == 0) {
+        tmp[tid] = data[i];
+        flag[tid] = 1;
+      } else {
+        tmp[tid] = reducer(tmp[tid], std::move(data[i]));
+      }
+    }
+    value_type ret;
+    int found = 0;
+    for (int i = 0; i < thread_number; ++i)
+      if (flag[i]) {
+        if (++found == 1) {
+          ret = tmp[i];
+        } else {
+          ret = combiner(ret, std::move(tmp[i]));
+        }
+      }
+    return ret;
+#else
+    return reduce(reducer);
+#endif
+  }
+
+  value_type pireduce(
+      std::function<void(value_type&, rvalue_reference)> reducer,
+      std::function<void(value_type&, rvalue_reference)> combiner,
+      const int thread_number = 8) const {
+#if ENABLE_OPENMP
+    auto data = toVector();
+    const int size = sz(data);
+
+    vector<value_type> tmp(thread_number);
+    char flag[thread_number] = {0};
+
+#pragma omp parallel for schedule(dynamic) num_threads(thread_number)
+    for (int i = 0; i < size; ++i) {
+      const auto tid = omp_get_thread_num();
+      if (flag[tid] == 0) {
+        tmp[tid] = data[i];
+        flag[tid] = 1;
+      } else {
+        reducer(tmp[tid], std::move(data[i]));
+      }
+    }
+    value_type ret;
+    int found = 0;
+    for (int i = 0; i < thread_number; ++i)
+      if (flag[i]) {
+        if (++found == 1) {
+          ret = tmp[i];
+        } else {
+          combiner(ret, std::move(tmp[i]));
+        }
+      }
+    return ret;
+#else
+    return ireduce(reducer);
+#endif
+  }
+
 #if PE_HAS_CPP14
-  typename IIT::value_type preduce(
-      std::function<typename IIT::value_type(typename IIT::value_type,
-                                             typename IIT::reference)>
-          reducer,
+  value_type preduce(
+      std::function<value_type(const value_type&, rvalue_reference)> reducer,
       const int thread_number = 8) const {
     return preduce(
-        reducer, [&](auto a, auto b) { return reducer(a, b); }, thread_number);
+        reducer,
+        [&](const value_type& a, rvalue_reference b) -> value_type {
+          return reducer(a, std::move(b));
+        },
+        thread_number);
+  }
+
+  value_type pireduce(
+      std::function<void(value_type&, rvalue_reference)> reducer,
+      const int thread_number = 8) const {
+    return pireduce(
+        reducer,
+        [&](value_type& a, rvalue_reference b) { reducer(a, std::move(b)); },
+        thread_number);
   }
 #endif
 
@@ -186,9 +509,8 @@ struct RangeBase {
                             static_cast<const DERIVED&>(*this).end(), mapper};
   }
 
-  std::vector<typename std::remove_cv<typename IIT::value_type>::type>
-  toVector() const {
-    std::vector<typename std::remove_cv<typename IIT::value_type>::type> ret;
+  std::vector<value_type> toVector() const {
+    std::vector<value_type> ret;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
@@ -197,9 +519,8 @@ struct RangeBase {
     return ret;
   }
 
-  std::set<typename std::remove_cv<typename IIT::value_type>::type> toSet()
-      const {
-    std::set<typename std::remove_cv<typename IIT::value_type>::type> ret;
+  std::set<value_type> toSet() const {
+    std::set<value_type> ret;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {

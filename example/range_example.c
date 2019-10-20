@@ -39,6 +39,11 @@ void test_irange() {
   }
 }
 
+struct Pt {
+  int a, b;
+  operator int() const { return a; }
+};
+
 void test_range() {
   int a[6] = {1, 2, 3, 4, 5, 6};
   vector<int> x{3, 4, 5, 6};
@@ -165,6 +170,84 @@ void test_range() {
               .preduce(
                   0, [](auto a, auto b) { return a + is_prime(b); }, &ru::add)
        << endl;
+
+  // Reduce on mem
+  cout << range(mem).preduce<int64>(
+              0LL, [](int64 a, auto& b) -> int64 { return a + b.second; },
+              &ru::add)
+       << endl;
+  // Error
+  // cout << range(mem).preduce({0,0}, [](auto a, auto b) -> pair<const int,
+  // int> {return {0, a.second + b.second};}, 2) << endl;
+  vector<Pt> y;
+  y.pb({1, 2});
+  y.pb({3, 4});
+  range(y).preduce(
+      {0, 0},
+      [](auto a, auto b) -> Pt {
+        return {0, a.a + b.a};
+      },
+      2);
+
+  // Inplace reduce
+  cout << range(1, 101).ireduce<int128>(0, [](auto& a, auto b) { a += b; })
+       << endl;
+  cout << range(1, 101).ireduce(0, [](auto& a, auto b) { a += b; }) << endl;
+  cout << range(1, 101).ireduce(0, &ru::iadd) << endl;
+
+  cout << range(1, 101).ireduce<int128>(0, [](auto& a, auto b) { a += b; })
+       << endl;
+  cout << range(1, 101).ireduce([](auto& a, auto b) { a += b; }) << endl;
+  cout << range(1, 101).ireduce(&ru::iadd) << endl;
+
+  cout << range(1, 101).pireduce<int128>(
+              1, [](auto& a, auto b) { a *= b; },
+              [](auto& a, auto b) { a *= b; })
+       << endl;
+  cout << range(1, 101).pireduce(
+              1, [](auto& a, auto b) { a *= b; },
+              [](auto& a, auto b) { a *= b; })
+       << endl;
+  cout << range(1, 101).pireduce(1, [](auto& a, auto b) { a *= b; }) << endl;
+
+  cout << range(1, 101).pireduce<int128>([](auto& a, auto b) { a *= b; },
+                                         [](auto& a, auto b) { a *= b; })
+       << endl;
+  cout << range(1, 101).pireduce([](auto& a, auto b) { a *= b; },
+                                 [](auto& a, auto b) { a *= b; })
+       << endl;
+  cout << range(1, 101).pireduce([](auto& a, auto b) { a *= b; }) << endl;
+
+  cout << range(y).ireduce<int128>(0, [](auto& a, auto b) { a += b.a; })
+       << endl;
+  cout << range(y).ireduce<int128>([](auto& a, auto b) { a += b.a; }) << endl;
+  cout << range(y).ireduce({0, 0}, [](auto& a, auto b) { a.a += b.a; }).a
+       << endl;
+  cout << range(y).ireduce([](auto& a, auto b) { a.a += b.a; }).a << endl;
+
+  cout << range(y).pireduce<int64>(
+              0, [](auto& a, const Pt& b) { a += b.a; },
+              [](auto& a, auto b) { a += b; })
+       << endl;
+  cout << range(y).pireduce<int64>([](auto& a, const Pt& b) { a += b.a; },
+                                   [](auto& a, auto b) { a += b; })
+       << endl;
+
+  cout << range(y)
+              .pireduce(
+                  {0, 0}, [](auto& a, auto b) { a.a += b.a; },
+                  [](auto& a, auto b) { a.a += b.a; })
+              .a
+       << endl;
+  cout << range(y).pireduce({0, 0}, [](auto& a, auto b) { a.a += b.a; }).a
+       << endl;
+
+  cout << range(y)
+              .pireduce([](auto& a, auto b) { a.a += b.a; },
+                        [](auto& a, auto b) { a.a += b.a; })
+              .a
+       << endl;
+  cout << range(y).pireduce([](auto& a, auto b) { a.a += b.a; }).a << endl;
 }
 
 int main() {

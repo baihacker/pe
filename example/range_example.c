@@ -127,18 +127,18 @@ void test_range() {
   for (int i = 1; i < 1000000; ++i) t *= i;
   cout << t << endl;
 
-  cout << range(1, 1000000).reduce(1, [](auto a, auto b) {
+  cout << range(1, 1000000).reduce(1, [=](auto a, auto b) {
     return a * b % mod;
   }) << endl;
-  cout << range(1, 1000000).reduce([](auto a, auto b) { return a * b % mod; })
+  cout << range(1, 1000000).reduce([=](auto a, auto b) { return a * b % mod; })
        << endl;
   cout << range(1, 1000000).reduce(&ru::mul_mod<mod>) << endl;
   cout << range(1, 1000000).reduce(ru::mul_mod(mod)) << endl;
 
-  cout << range(1, 1000000).preduce(1, [](auto a, auto b) {
+  cout << range(1, 1000000).preduce(1, [=](auto a, auto b) {
     return a * b % mod;
   }) << endl;
-  cout << range(1, 1000000).preduce([](auto a, auto b) { return a * b % mod; })
+  cout << range(1, 1000000).preduce([=](auto a, auto b) { return a * b % mod; })
        << endl;
   cout << range(1, 1000000).preduce(&ru::mul_mod<mod>) << endl;
   cout << range(1, 1000000).preduce(ru::mul_mod(mod)) << endl;
@@ -190,6 +190,9 @@ void test_range() {
       2);
 
   // Inplace reduce
+#if !PE_HAS_INT128
+#define int128 int64
+#endif
   cout << range(1, 101).ireduce<int128>(0, [](auto& a, auto b) { a += b; })
        << endl;
   cout << range(1, 101).ireduce(0, [](auto& a, auto b) { a += b; }) << endl;

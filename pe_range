@@ -1,6 +1,8 @@
 #ifndef __PE_RANGE_H__
 #define __PE_RANGE_H__
 
+#include "pe_mod"
+
 template <typename IT>
 struct Range;
 
@@ -9,6 +11,31 @@ struct FilterRange;
 
 template <typename IT>
 struct MappedRange;
+
+// range utility
+namespace ru {
+SL int64 mul(int64 a, int64 b) { return a * b; }
+
+SL int64 add(int64 a, int64 b) { return a + b; }
+
+template <int64 M>
+SL int64 mul_mod(int64 a, int64 b) {
+  return ::mul_mod(a, b, M);
+}
+
+template <int64 M>
+SL int64 add_mod(int64 a, int64 b) {
+  return ::add_mod(a, b, M);
+}
+
+SL std::function<int64(int64, int64)> mul_mod(int64 mod) {
+  return [=](int64 a, int64 b) { return ::mul_mod(a, b, mod); };
+}
+
+SL std::function<int64(int64, int64)> add_mod(int64 mod) {
+  return [=](int64 a, int64 b) { return ::add_mod(a, b, mod); };
+}
+}  // namespace ru
 
 template <typename IT, typename DERIVED, typename IIT>
 struct RangeBase {
@@ -34,6 +61,116 @@ struct RangeBase {
     return ret;
   }
 
+  typename IIT::value_type reduce(
+      std::function<typename IIT::value_type(typename IIT::value_type,
+                                             typename IIT::reference reference)>
+          reducer) const {
+    typename std::remove_cv<typename IIT::value_type>::type ret;
+    auto now = static_cast<const DERIVED&>(*this).begin();
+    auto x = static_cast<const DERIVED&>(*this).end();
+    if (now != x) {
+      ret = *now++;
+    }
+    while (now != x) {
+      ret = reducer(ret, *now++);
+    }
+    return ret;
+  }
+
+  typename IIT::value_type preduce(
+      typename IIT::value_type v,
+      std::function<typename IIT::value_type(typename IIT::value_type,
+                                             typename IIT::reference reference)>
+          reducer,
+      std::function<typename IIT::value_type(typename IIT::value_type,
+                                             typename IIT::reference reference)>
+          combiner,
+      const int thread_number = 8) const {
+#if ENABLE_OPENMP
+    auto data = toVector();
+    const int size = sz(data);
+    if (size == 0) {
+      return v;
+    }
+
+    vector<typename std::remove_cv<typename IIT::value_type>::type> tmp(
+        thread_number, v);
+#pragma omp parallel for schedule(dynamic) num_threads(thread_number)
+    for (int i = 0; i < size; ++i) {
+      const auto tid = omp_get_thread_num();
+      tmp[tid] = reducer(tmp[tid], data[i]);
+    }
+
+    typename IIT::value_type ret = tmp[0];
+    for (int i = 1; i < thread_number; ++i) {
+      ret = combiner(ret, tmp[i]);
+    }
+    return ret;
+#else
+    return reduce(v, reducer);
+#endif
+  }
+
+  typename IIT::value_type preduce(
+      typename IIT::value_type v,
+      std::function<typename IIT::value_type(typename IIT::value_type,
+                                             typename IIT::reference reference)>
+          reducer,
+      const int thread_number = 8) const {
+    return preduce(v, reducer, reducer, thread_number);
+  }
+
+  typename IIT::value_type preduce(
+      std::function<typename IIT::value_type(typename IIT::value_type,
+                                             typename IIT::reference reference)>
+          reducer,
+
+      std::function<typename IIT::value_type(typename IIT::value_type,
+                                             typename IIT::reference reference)>
+          combiner,
+      const int thread_number = 8) const {
+#if ENABLE_OPENMP
+    auto data = toVector();
+    const int size = sz(data);
+
+    vector<typename std::remove_cv<typename IIT::value_type>::type> tmp(
+        thread_number);
+    char flag[thread_number] = {0};
+
+#pragma omp parallel for schedule(dynamic) num_threads(thread_number)
+    for (int i = 0; i < size; ++i) {
+      const auto tid = omp_get_thread_num();
+      if (flag[tid] == 0) {
+        tmp[tid] = data[i];
+        flag[tid] = 1;
+      } else {
+        tmp[tid] = reducer(tmp[tid], data[i]);
+      }
+    }
+    typename IIT::value_type ret;
+    int found = 0;
+    for (int i = 0; i < thread_number; ++i)
+      if (flag[i]) {
+        if (++found == 1) {
+          ret = tmp[i];
+        } else {
+          ret = combiner(ret, tmp[i]);
+        }
+      }
+    return ret;
+#else
+    return reduce(reducer);
+#endif
+  }
+
+  typename IIT::value_type preduce(
+      std::function<typename IIT::value_type(typename IIT::value_type,
+                                             typename IIT::reference reference)>
+          reducer,
+      const int thread_number = 8) const {
+    return preduce(reducer, reducer, thread_number);
+  }
+
   MappedRange<IIT> map(
       std::function<typename IIT::value_type(const typename IIT::value_type&)>
           mapper) const {
@@ -41,8 +178,9 @@ struct RangeBase {
                             static_cast<const DERIVED&>(*this).end(), mapper};
   }
 
-  std::vector<typename IIT::value_type> toVector() const {
-    std::vector<typename IIT::value_type> ret;
+  std::vector<typename std::remove_cv<typename IIT::value_type>::type>
+  toVector() const {
+    std::vector<typename std::remove_cv<typename IIT::value_type>::type> ret;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
@@ -51,8 +189,9 @@ struct RangeBase {
     return ret;
   }
 
-  std::set<typename IIT::value_type> toSet() const {
-    std::set<typename IIT::value_type> ret;
+  std::set<typename std::remove_cv<typename IIT::value_type>::type> toSet()
+      const {
+    std::set<typename std::remove_cv<typename IIT::value_type>::type> ret;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {

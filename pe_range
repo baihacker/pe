@@ -79,7 +79,7 @@ struct RangeBase {
   // i: inplace reduce
   // p: parallel reduce
 
-  // Reduce: has initial value
+  // Sequential reduce.
   template <typename VT = value_type>
   VT reduce(
       const VT& v,
@@ -130,68 +130,7 @@ struct RangeBase {
     return ret;
   }
 
-  // Reduce: no initial value
-  template <typename VT = value_type>
-  VT reduce(
-      const std::function<VT(const VT&, rvalue_reference)>& reducer) const {
-    static_assert(std::is_convertible<value_type, VT>::value);
-    VT ret;
-    auto now = static_cast<const DERIVED&>(*this).begin();
-    auto x = static_cast<const DERIVED&>(*this).end();
-    if (now != x) {
-      ret = *now++;
-    }
-    while (now != x) {
-      ret = reducer(ret, std::move(*now++));
-    }
-    return ret;
-  }
-
-  template <typename VT = value_type>
-  VT ireduce(const std::function<void(VT&, rvalue_reference)>& reducer) const {
-    static_assert(std::is_convertible<value_type, VT>::value);
-    VT ret;
-    auto now = static_cast<const DERIVED&>(*this).begin();
-    auto x = static_cast<const DERIVED&>(*this).end();
-    if (now != x) {
-      ret = *now++;
-    }
-    while (now != x) {
-      reducer(ret, std::move(*now++));
-    }
-    return ret;
-  }
-
-  value_type reduce(
-      const std::function<value_type(const value_type&, rvalue_reference)>&
-          reducer) const {
-    value_type ret;
-    auto now = static_cast<const DERIVED&>(*this).begin();
-    auto x = static_cast<const DERIVED&>(*this).end();
-    if (now != x) {
-      ret = *now++;
-    }
-    while (now != x) {
-      ret = reducer(ret, std::move(*now++));
-    }
-    return ret;
-  }
-
-  value_type ireduce(
-      const std::function<void(value_type&, rvalue_reference)>& reducer) const {
-    value_type ret;
-    auto now = static_cast<const DERIVED&>(*this).begin();
-    auto x = static_cast<const DERIVED&>(*this).end();
-    if (now != x) {
-      ret = *now++;
-    }
-    while (now != x) {
-      reducer(ret, std::move(*now++));
-    }
-    return ret;
-  }
-
-  // Parallel reduce: has initial value
+  // Parallel reduce
   template <typename VT>
   VT preduce(const VT& v,
              const std::function<VT(const VT&, rvalue_reference)>& reducer,
@@ -311,6 +250,18 @@ struct RangeBase {
   }
 
 #if PE_HAS_CPP14
+  template <typename VT>
+  VT preduce(const VT& v,
+             const std::function<VT(const VT&, rvalue_reference)>& reducer,
+             const int thread_number = 8) const {
+    return preduce<VT>(
+        v, reducer,
+        [&](const VT& a, const VT& b) -> VT {
+          return reducer(a, std::move(b));
+        },
+        thread_number);
+  }
+
   value_type preduce(const value_type& v,
                      const std::function<value_type(const value_type&,
                                                     rvalue_reference)>& reducer,
@@ -323,186 +274,21 @@ struct RangeBase {
         thread_number);
   }
 
+  template <typename VT>
+  VT pireduce(const VT& v,
+              const std::function<void(VT&, rvalue_reference)>& reducer,
+              const int thread_number = 8) const {
+    return pireduce<VT>(
+        v, reducer, [&](VT& a, const VT& b) { reducer(a, std::move(b)); },
+        thread_number);
+  }
+
   value_type pireduce(
       const value_type& v,
       const std::function<void(value_type&, rvalue_reference)>& reducer,
       const int thread_number = 8) const {
     return pireduce(
         v, reducer,
-        [&](value_type& a, rvalue_reference b) { reducer(a, std::move(b)); },
-        thread_number);
-  }
-#endif
-
-  // Parallel reduce: no initial value
-  template <typename VT = value_type>
-  VT preduce(const std::function<VT(const VT&, rvalue_reference)>& reducer,
-             const std::function<VT(const VT&, const VT&)>& combiner,
-             const int thread_number = 8) const {
-#if ENABLE_OPENMP
-    auto data = toVector();
-    const int size = sz(data);
-
-    vector<VT> tmp(thread_number);
-    char flag[thread_number] = {0};
-
-#pragma omp parallel for schedule(dynamic) num_threads(thread_number)
-    for (int i = 0; i < size; ++i) {
-      const auto tid = omp_get_thread_num();
-      if (flag[tid] == 0) {
-        flag[tid] = 1;
-        tmp[tid] = data[i];
-      } else {
-        tmp[tid] = reducer(tmp[tid], std::move(data[i]));
-      }
-    }
-    VT ret;
-    int found = 0;
-    for (int i = 0; i < thread_number; ++i)
-      if (flag[i]) {
-        if (++found == 1) {
-          ret = tmp[i];
-        } else {
-          ret = combiner(ret, tmp[i]);
-        }
-      }
-    return ret;
-#else
-    return reduce(reducer);
-#endif
-  }
-
-  template <typename VT = value_type>
-  VT pireduce(const std::function<void(VT&, rvalue_reference)>& reducer,
-              const std::function<void(VT&, const VT&)>& combiner,
-              const int thread_number = 8) const {
-    static_assert(std::is_convertible<value_type, VT>::value);
-#if ENABLE_OPENMP
-    auto data = toVector();
-    const int size = sz(data);
-
-    vector<VT> tmp(thread_number);
-    char flag[thread_number] = {0};
-
-#pragma omp parallel for schedule(dynamic) num_threads(thread_number)
-    for (int i = 0; i < size; ++i) {
-      const auto tid = omp_get_thread_num();
-      if (flag[tid] == 0) {
-        tmp[tid] = data[i];
-        flag[tid] = 1;
-      } else {
-        reducer(tmp[tid], std::move(data[i]));
-      }
-    }
-    VT ret;
-    int found = 0;
-    for (int i = 0; i < thread_number; ++i)
-      if (flag[i]) {
-        if (++found == 1) {
-          ret = tmp[i];
-        } else {
-          combiner(ret, tmp[i]);
-        }
-      }
-    return ret;
-#else
-    return ireduce<VT>(reducer);
-#endif
-  }
-
-  value_type preduce(
-      const std::function<value_type(const value_type&, rvalue_reference)>&
-          reducer,
-      const std::function<value_type(const value_type&, rvalue_reference)>&
-          combiner,
-      const int thread_number = 8) const {
-#if ENABLE_OPENMP
-    auto data = toVector();
-    const int size = sz(data);
-
-    vector<value_type> tmp(thread_number);
-    char flag[thread_number] = {0};
-
-#pragma omp parallel for schedule(dynamic) num_threads(thread_number)
-    for (int i = 0; i < size; ++i) {
-      const auto tid = omp_get_thread_num();
-      if (flag[tid] == 0) {
-        tmp[tid] = data[i];
-        flag[tid] = 1;
-      } else {
-        tmp[tid] = reducer(tmp[tid], std::move(data[i]));
-      }
-    }
-    value_type ret;
-    int found = 0;
-    for (int i = 0; i < thread_number; ++i)
-      if (flag[i]) {
-        if (++found == 1) {
-          ret = tmp[i];
-        } else {
-          ret = combiner(ret, std::move(tmp[i]));
-        }
-      }
-    return ret;
-#else
-    return reduce(reducer);
-#endif
-  }
-
-  value_type pireduce(
-      const std::function<void(value_type&, rvalue_reference)>& reducer,
-      const std::function<void(value_type&, rvalue_reference)>& combiner,
-      const int thread_number = 8) const {
-#if ENABLE_OPENMP
-    auto data = toVector();
-    const int size = sz(data);
-
-    vector<value_type> tmp(thread_number);
-    char flag[thread_number] = {0};
-
-#pragma omp parallel for schedule(dynamic) num_threads(thread_number)
-    for (int i = 0; i < size; ++i) {
-      const auto tid = omp_get_thread_num();
-      if (flag[tid] == 0) {
-        tmp[tid] = data[i];
-        flag[tid] = 1;
-      } else {
-        reducer(tmp[tid], std::move(data[i]));
-      }
-    }
-    value_type ret;
-    int found = 0;
-    for (int i = 0; i < thread_number; ++i)
-      if (flag[i]) {
-        if (++found == 1) {
-          ret = tmp[i];
-        } else {
-          combiner(ret, std::move(tmp[i]));
-        }
-      }
-    return ret;
-#else
-    return ireduce(reducer);
-#endif
-  }
-
-#if PE_HAS_CPP14
-  value_type preduce(const std::function<value_type(const value_type&,
-                                                    rvalue_reference)>& reducer,
-                     const int thread_number = 8) const {
-    return preduce(
-        reducer,
-        [&](const value_type& a, rvalue_reference b) -> value_type {
-          return reducer(a, std::move(b));
-        },
-        thread_number);
-  }
-
-  value_type pireduce(
-      const std::function<void(value_type&, rvalue_reference)>& reducer,
-      const int thread_number = 8) const {
-    return pireduce(
-        reducer,
         [&](value_type& a, rvalue_reference b) { reducer(a, std::move(b)); },
         thread_number);
   }

@@ -420,7 +420,7 @@ void range_map_reduce() {
     a[1] = 2;
     a[2] = 3;
     cout << range(a).preduce<int64>(
-                0, [](auto a, auto b) { return a + b.second; },
+                0, [](auto a, pair<const int, int> b) { return a + b.second; },
                 [](auto a, auto b) { return a + b; })
          << endl;
     // Cannot reduce on pair<const int, int>
@@ -448,7 +448,7 @@ void range_map_reduce() {
     a[1] = 2;
     a[2] = 3;
     cout << range(a).pireduce<int64>(
-                0, [](auto& a, auto b) { a += b.second; },
+                0, [](auto& a, pair<const int, int> b) { a += b.second; },
                 [](auto& a, auto b) { a += b; })
          << endl;
     // Cannot reduce on pair<const int, int>
@@ -512,7 +512,7 @@ void range_map_reduce() {
     t[2] = 3;
     const map<int, int> a = t;
     cout << range(a).preduce<int64>(
-                0, [](auto a, auto b) { return a + b.second; },
+                0, [](auto a, pair<const int, int> b) { return a + b.second; },
                 [](auto a, auto b) { return a + b; })
          << endl;
     // Cannot reduce on pair<const int, int>
@@ -541,7 +541,7 @@ void range_map_reduce() {
     t[2] = 3;
     const map<int, int> a = t;
     cout << range(a).pireduce<int64>(
-                0, [](auto& a, auto b) { a += b.second; },
+                0, [](auto& a, pair<const int, int> b) { a += b.second; },
                 [](auto& a, auto b) { a += b; })
          << endl;
     // Cannot reduce on pair<const int, int>

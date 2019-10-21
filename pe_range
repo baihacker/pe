@@ -252,45 +252,30 @@ struct RangeBase {
 #if PE_HAS_CPP14
   template <typename VT>
   VT preduce(const VT& v,
-             const std::function<VT(const VT&, rvalue_reference)>& reducer,
+             const std::function<VT(const VT&, const VT&)>& combiner,
              const int thread_number = 8) const {
-    return preduce<VT>(
-        v, reducer,
-        [&](const VT& a, const VT& b) -> VT {
-          return reducer(a, std::move(b));
-        },
-        thread_number);
+    return preduce<VT>(v, combiner, combiner, thread_number);
   }
 
-  value_type preduce(const value_type& v,
-                     const std::function<value_type(const value_type&,
-                                                    rvalue_reference)>& reducer,
-                     const int thread_number = 8) const {
-    return preduce(
-        v, reducer,
-        [&](const value_type& a, rvalue_reference b) -> value_type {
-          return reducer(a, std::move(b));
-        },
-        thread_number);
+  value_type preduce(
+      const value_type& v,
+      const std::function<value_type(const value_type&, const value_type&)>&
+          combiner,
+      const int thread_number = 8) const {
+    return preduce(v, combiner, combiner, thread_number);
   }
 
   template <typename VT>
-  VT pireduce(const VT& v,
-              const std::function<void(VT&, rvalue_reference)>& reducer,
+  VT pireduce(const VT& v, const std::function<void(VT&, const VT&)>& combiner,
               const int thread_number = 8) const {
-    return pireduce<VT>(
-        v, reducer, [&](VT& a, const VT& b) { reducer(a, std::move(b)); },
-        thread_number);
+    return pireduce<VT>(v, combiner, combiner, thread_number);
   }
 
   value_type pireduce(
       const value_type& v,
-      const std::function<void(value_type&, rvalue_reference)>& reducer,
+      const std::function<void(value_type&, const value_type&)>& combiner,
       const int thread_number = 8) const {
-    return pireduce(
-        v, reducer,
-        [&](value_type& a, rvalue_reference b) { reducer(a, std::move(b)); },
-        thread_number);
+    return pireduce(v, combiner, combiner, thread_number);
   }
 #endif
 

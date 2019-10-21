@@ -81,8 +81,9 @@ struct RangeBase {
 
   // Reduce: has initial value
   template <typename VT = value_type>
-  VT reduce(const VT& v,
-            std::function<VT(const VT&, rvalue_reference)> reducer) const {
+  VT reduce(
+      const VT& v,
+      const std::function<VT(const VT&, rvalue_reference)>& reducer) const {
     VT ret = v;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
@@ -94,7 +95,7 @@ struct RangeBase {
 
   template <typename VT = value_type>
   VT ireduce(const VT& v,
-             std::function<void(VT&, rvalue_reference)> reducer) const {
+             const std::function<void(VT&, rvalue_reference)>& reducer) const {
     VT ret = v;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
@@ -106,8 +107,8 @@ struct RangeBase {
 
   value_type reduce(
       const value_type& v,
-      std::function<value_type(const value_type&, rvalue_reference)> reducer)
-      const {
+      const std::function<value_type(const value_type&, rvalue_reference)>&
+          reducer) const {
     value_type ret = v;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
@@ -119,7 +120,7 @@ struct RangeBase {
 
   value_type ireduce(
       const value_type& v,
-      std::function<void(value_type&, rvalue_reference)> reducer) const {
+      const std::function<void(value_type&, rvalue_reference)>& reducer) const {
     value_type ret = v;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
@@ -131,7 +132,8 @@ struct RangeBase {
 
   // Reduce: no initial value
   template <typename VT = value_type>
-  VT reduce(std::function<VT(const VT&, rvalue_reference)> reducer) const {
+  VT reduce(
+      const std::function<VT(const VT&, rvalue_reference)>& reducer) const {
     static_assert(std::is_convertible<value_type, VT>::value);
     VT ret;
     auto now = static_cast<const DERIVED&>(*this).begin();
@@ -146,7 +148,7 @@ struct RangeBase {
   }
 
   template <typename VT = value_type>
-  VT ireduce(std::function<void(VT&, rvalue_reference)> reducer) const {
+  VT ireduce(const std::function<void(VT&, rvalue_reference)>& reducer) const {
     static_assert(std::is_convertible<value_type, VT>::value);
     VT ret;
     auto now = static_cast<const DERIVED&>(*this).begin();
@@ -161,8 +163,8 @@ struct RangeBase {
   }
 
   value_type reduce(
-      std::function<value_type(const value_type&, rvalue_reference)> reducer)
-      const {
+      const std::function<value_type(const value_type&, rvalue_reference)>&
+          reducer) const {
     value_type ret;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
@@ -176,7 +178,7 @@ struct RangeBase {
   }
 
   value_type ireduce(
-      std::function<void(value_type&, rvalue_reference)> reducer) const {
+      const std::function<void(value_type&, rvalue_reference)>& reducer) const {
     value_type ret;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
@@ -192,8 +194,8 @@ struct RangeBase {
   // Parallel reduce: has initial value
   template <typename VT>
   VT preduce(const VT& v,
-             std::function<VT(const VT&, rvalue_reference)> reducer,
-             std::function<VT(const VT&, const VT&)> combiner,
+             const std::function<VT(const VT&, rvalue_reference)>& reducer,
+             const std::function<VT(const VT&, const VT&)>& combiner,
              const int thread_number = 8) const {
 #if ENABLE_OPENMP
     auto data = toVector();
@@ -220,8 +222,9 @@ struct RangeBase {
   }
 
   template <typename VT>
-  VT pireduce(const VT& v, std::function<void(VT&, rvalue_reference)> reducer,
-              std::function<void(VT&, const VT&)> combiner,
+  VT pireduce(const VT& v,
+              const std::function<void(VT&, rvalue_reference)>& reducer,
+              const std::function<void(VT&, const VT&)>& combiner,
               const int thread_number = 8) const {
 #if ENABLE_OPENMP
     auto data = toVector();
@@ -249,8 +252,10 @@ struct RangeBase {
 
   value_type preduce(
       const value_type& v,
-      std::function<value_type(const value_type&, rvalue_reference)> reducer,
-      std::function<value_type(const value_type&, rvalue_reference)> combiner,
+      const std::function<value_type(const value_type&, rvalue_reference)>&
+          reducer,
+      const std::function<value_type(const value_type&, rvalue_reference)>&
+          combiner,
       const int thread_number = 8) const {
 #if ENABLE_OPENMP
     auto data = toVector();
@@ -278,8 +283,8 @@ struct RangeBase {
 
   value_type pireduce(
       const value_type& v,
-      std::function<void(value_type&, rvalue_reference)> reducer,
-      std::function<void(value_type&, rvalue_reference)> combiner,
+      const std::function<void(value_type&, rvalue_reference)>& reducer,
+      const std::function<void(value_type&, rvalue_reference)>& combiner,
       const int thread_number = 8) const {
 #if ENABLE_OPENMP
     auto data = toVector();
@@ -306,10 +311,10 @@ struct RangeBase {
   }
 
 #if PE_HAS_CPP14
-  value_type preduce(
-      const value_type& v,
-      std::function<value_type(const value_type&, rvalue_reference)> reducer,
-      const int thread_number = 8) const {
+  value_type preduce(const value_type& v,
+                     const std::function<value_type(const value_type&,
+                                                    rvalue_reference)>& reducer,
+                     const int thread_number = 8) const {
     return preduce(
         v, reducer,
         [&](const value_type& a, rvalue_reference b) -> value_type {
@@ -320,7 +325,7 @@ struct RangeBase {
 
   value_type pireduce(
       const value_type& v,
-      std::function<void(value_type&, rvalue_reference)> reducer,
+      const std::function<void(value_type&, rvalue_reference)>& reducer,
       const int thread_number = 8) const {
     return pireduce(
         v, reducer,
@@ -331,10 +336,9 @@ struct RangeBase {
 
   // Parallel reduce: no initial value
   template <typename VT = value_type>
-  VT preduce(std::function<VT(const VT&, rvalue_reference)> reducer,
-             std::function<VT(const VT&, const VT&)> combiner,
+  VT preduce(const std::function<VT(const VT&, rvalue_reference)>& reducer,
+             const std::function<VT(const VT&, const VT&)>& combiner,
              const int thread_number = 8) const {
-    static_assert(std::is_convertible<value_type, VT>::value);
 #if ENABLE_OPENMP
     auto data = toVector();
     const int size = sz(data);
@@ -369,8 +373,8 @@ struct RangeBase {
   }
 
   template <typename VT = value_type>
-  VT pireduce(std::function<void(VT&, rvalue_reference)> reducer,
-              std::function<void(VT&, const VT&)> combiner,
+  VT pireduce(const std::function<void(VT&, rvalue_reference)>& reducer,
+              const std::function<void(VT&, const VT&)>& combiner,
               const int thread_number = 8) const {
     static_assert(std::is_convertible<value_type, VT>::value);
 #if ENABLE_OPENMP
@@ -407,8 +411,10 @@ struct RangeBase {
   }
 
   value_type preduce(
-      std::function<value_type(const value_type&, rvalue_reference)> reducer,
-      std::function<value_type(const value_type&, rvalue_reference)> combiner,
+      const std::function<value_type(const value_type&, rvalue_reference)>&
+          reducer,
+      const std::function<value_type(const value_type&, rvalue_reference)>&
+          combiner,
       const int thread_number = 8) const {
 #if ENABLE_OPENMP
     auto data = toVector();
@@ -444,8 +450,8 @@ struct RangeBase {
   }
 
   value_type pireduce(
-      std::function<void(value_type&, rvalue_reference)> reducer,
-      std::function<void(value_type&, rvalue_reference)> combiner,
+      const std::function<void(value_type&, rvalue_reference)>& reducer,
+      const std::function<void(value_type&, rvalue_reference)>& combiner,
       const int thread_number = 8) const {
 #if ENABLE_OPENMP
     auto data = toVector();
@@ -481,9 +487,9 @@ struct RangeBase {
   }
 
 #if PE_HAS_CPP14
-  value_type preduce(
-      std::function<value_type(const value_type&, rvalue_reference)> reducer,
-      const int thread_number = 8) const {
+  value_type preduce(const std::function<value_type(const value_type&,
+                                                    rvalue_reference)>& reducer,
+                     const int thread_number = 8) const {
     return preduce(
         reducer,
         [&](const value_type& a, rvalue_reference b) -> value_type {
@@ -493,7 +499,7 @@ struct RangeBase {
   }
 
   value_type pireduce(
-      std::function<void(value_type&, rvalue_reference)> reducer,
+      const std::function<void(value_type&, rvalue_reference)>& reducer,
       const int thread_number = 8) const {
     return pireduce(
         reducer,
@@ -847,11 +853,11 @@ struct FilterRangeIter {
   }
 
   FilterRangeIter& operator++() {
-	while (iter != e) {
-	  ++iter;
-	  if (iter == e) break;
+    while (iter != e) {
+      ++iter;
+      if (iter == e) break;
       if (filter(*iter)) break;
-	}
+    }
     return *this;
   }
 
@@ -1007,7 +1013,7 @@ SL ArrayRangeI<T> irange(T* s, T* e) {
 }
 
 template <typename T>
-SL ArrayRangeI<T> irange(const T* s, const T* e) {
+SL ArrayRangeI<const T> irange(const T* s, const T* e) {
   PE_ASSERT(s <= e);
   return ArrayRangeI<const T>{s, e - s};
 }

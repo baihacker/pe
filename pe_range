@@ -77,9 +77,9 @@ struct RangeBase {
 
   // Recommendation:
   // 1. Use the template version and specify the result type (VT).
-  // 2. Sepecify the return type of reducer.
-  // 3. If the reducer and the combiner are the same, specify the return type of
-  // combiner.
+  // 2. Sepecify the return type of accumulator.
+  // 3. If the accumulator and the combiner are the same, specify the return
+  // type of combiner.
 
   // Name convention
   // i: inplace reduce
@@ -89,24 +89,25 @@ struct RangeBase {
   template <typename VT = value_type>
   VT reduce(
       const VT& v,
-      const std::function<VT(const VT&, rvalue_reference)>& reducer) const {
+      const std::function<VT(const VT&, rvalue_reference)>& accumulator) const {
     VT ret = v;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
-      ret = reducer(ret, std::move(*now++));
+      ret = accumulator(ret, std::move(*now++));
     }
     return ret;
   }
 
   template <typename VT = value_type>
-  VT ireduce(const VT& v,
-             const std::function<void(VT&, rvalue_reference)>& reducer) const {
+  VT ireduce(
+      const VT& v,
+      const std::function<void(VT&, rvalue_reference)>& accumulator) const {
     VT ret = v;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
-      reducer(ret, std::move(*now++));
+      accumulator(ret, std::move(*now++));
     }
     return ret;
   }
@@ -114,24 +115,24 @@ struct RangeBase {
   value_type reduce(
       const value_type& v,
       const std::function<value_type(const value_type&, rvalue_reference)>&
-          reducer) const {
+          accumulator) const {
     value_type ret = v;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
-      ret = reducer(ret, std::move(*now++));
+      ret = accumulator(ret, std::move(*now++));
     }
     return ret;
   }
 
-  value_type ireduce(
-      const value_type& v,
-      const std::function<void(value_type&, rvalue_reference)>& reducer) const {
+  value_type ireduce(const value_type& v,
+                     const std::function<void(value_type&, rvalue_reference)>&
+                         accumulator) const {
     value_type ret = v;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
-      reducer(ret, std::move(*now++));
+      accumulator(ret, std::move(*now++));
     }
     return ret;
   }
@@ -139,7 +140,7 @@ struct RangeBase {
   // Parallel reduce
   template <typename VT>
   VT preduce(const VT& v,
-             const std::function<VT(const VT&, rvalue_reference)>& reducer,
+             const std::function<VT(const VT&, rvalue_reference)>& accumulator,
              const std::function<VT(const VT&, const VT&)>& combiner,
              const int thread_number = 8) const {
 #if ENABLE_OPENMP
@@ -153,7 +154,7 @@ struct RangeBase {
 #pragma omp parallel for schedule(dynamic) num_threads(thread_number)
     for (int i = 0; i < size; ++i) {
       const auto tid = omp_get_thread_num();
-      tmp[tid] = reducer(tmp[tid], std::move(data[i]));
+      tmp[tid] = accumulator(tmp[tid], std::move(data[i]));
     }
 
     VT ret = tmp[0];
@@ -162,13 +163,13 @@ struct RangeBase {
     }
     return ret;
 #else
-    return reduce(v, reducer);
+    return reduce(v, accumulator);
 #endif
   }
 
   template <typename VT>
   VT pireduce(const VT& v,
-              const std::function<void(VT&, rvalue_reference)>& reducer,
+              const std::function<void(VT&, rvalue_reference)>& accumulator,
               const std::function<void(VT&, const VT&)>& combiner,
               const int thread_number = 8) const {
 #if ENABLE_OPENMP
@@ -182,7 +183,7 @@ struct RangeBase {
 #pragma omp parallel for schedule(dynamic) num_threads(thread_number)
     for (int i = 0; i < size; ++i) {
       const auto tid = omp_get_thread_num();
-      reducer(tmp[tid], std::move(data[i]));
+      accumulator(tmp[tid], std::move(data[i]));
     }
 
     VT ret = tmp[0];
@@ -191,14 +192,14 @@ struct RangeBase {
     }
     return ret;
 #else
-    return ireduce(v, reducer);
+    return ireduce(v, accumulator);
 #endif
   }
 
   value_type preduce(
       const value_type& v,
       const std::function<value_type(const value_type&, rvalue_reference)>&
-          reducer,
+          accumulator,
       const std::function<value_type(const value_type&, rvalue_reference)>&
           combiner,
       const int thread_number = 8) const {
@@ -213,7 +214,7 @@ struct RangeBase {
 #pragma omp parallel for schedule(dynamic) num_threads(thread_number)
     for (int i = 0; i < size; ++i) {
       const auto tid = omp_get_thread_num();
-      tmp[tid] = reducer(tmp[tid], std::move(data[i]));
+      tmp[tid] = accumulator(tmp[tid], std::move(data[i]));
     }
 
     value_type ret = tmp[0];
@@ -222,13 +223,13 @@ struct RangeBase {
     }
     return ret;
 #else
-    return reduce(v, reducer);
+    return reduce(v, accumulator);
 #endif
   }
 
   value_type pireduce(
       const value_type& v,
-      const std::function<void(value_type&, rvalue_reference)>& reducer,
+      const std::function<void(value_type&, rvalue_reference)>& accumulator,
       const std::function<void(value_type&, rvalue_reference)>& combiner,
       const int thread_number = 8) const {
 #if ENABLE_OPENMP
@@ -242,7 +243,7 @@ struct RangeBase {
 #pragma omp parallel for schedule(dynamic) num_threads(thread_number)
     for (int i = 0; i < size; ++i) {
       const auto tid = omp_get_thread_num();
-      reducer(tmp[tid], std::move(data[i]));
+      accumulator(tmp[tid], std::move(data[i]));
     }
 
     value_type ret = tmp[0];
@@ -251,7 +252,7 @@ struct RangeBase {
     }
     return ret;
 #else
-    return ireduce(v, reducer);
+    return ireduce(v, accumulator);
 #endif
   }
 

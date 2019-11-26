@@ -332,8 +332,8 @@ template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_inv(const T* x, int m, int n, T* result, int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
-  poly_inv_internal<unsignedT>((const unsignedT*)x, m, n,
-                                   (unsignedT*)result, mod);
+  poly_inv_internal<unsignedT>((const unsignedT*)x, m, n, (unsignedT*)result,
+                               mod);
 }
 
 template <typename T>
@@ -608,14 +608,16 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 }
 
 #if ENABLE_FLINT
+// More function can be found here:
+// http://flintlib.org/sphinx/nmod_poly.html#transcendental-functions
 extern "C" {
 typedef void (*nmod_poly_series_t)(nmod_poly_t g, const nmod_poly_t h, slong n);
 }
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_series_flint(const T* x, int m, int n, T* result, int64 mod,
-                      nmod_poly_series_t trans) {
+    poly_series_flint_internal(const T* x, int m, int n, T* result, int64 mod,
+                               nmod_poly_series_t trans) {
   nmod_poly_t u, v;
   nmod_poly_init2(u, mod, m);
   for (int i = 0; i < m; ++i) {
@@ -630,6 +632,31 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
   nmod_poly_clear(u);
   nmod_poly_clear(v);
+}
+
+// size result == n
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_series_flint(const T* x, int m, int n, T* result, int64 mod,
+                      nmod_poly_series_t trans) {
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  poly_series_flint_internal<unsignedT>((const unsignedT*)x, m, n,
+                                        (unsignedT*)result, mod, trans);
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
+    poly_series_flint(const vector<T>& x, int n, int64 mod,
+                      nmod_poly_series_t trans) {
+  // It is assumed that mod is a prime
+  const int m = (int)x.size();
+
+  // b
+  vector<T> b(n);
+
+  poly_series_flint(&x[0], m, n, &b[0], mod, trans);
+
+  return b;
 }
 
 // size result == n

@@ -273,13 +273,13 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_inv_internal(int n, const T* a, T* b, T* tmp[2], int64 mod) {
+    poly_inv_doubling_internal(int n, const T* a, T* b, T* tmp[2], int64 mod) {
   static_assert(std::is_unsigned<T>::value, "T must be unsigned");
   if (n == 1) {
     b[0] = power_mod_ex(a[0], mod - 2, mod);
   } else {
     const int m = (n + 1) >> 1;
-    poly_inv_internal(m, a, b, tmp, mod);
+    poly_inv_doubling_internal(m, a, b, tmp, mod);
     fill(b + m, b + n, 0);
     poly_mul(b, m, b, m, tmp[0], mod);
     if (m + m - 2 < n - 1) {
@@ -299,7 +299,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 // size result >= n
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_inv_internal(const T* x, int m, int n, T* result, int64 mod) {
+    poly_inv_doubling_internal(const T* x, int m, int n, T* result, int64 mod) {
   // It is assumed that mod is a prime
   const int t = max(n, m);
   const int p = 1 << pe_lg(4 * t - 1);
@@ -324,8 +324,31 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     tmp[i] = &tmpData[i][0];
   }
 
-  poly_inv_internal(n, &a[0], &b[0], tmp, mod);
+  poly_inv_doubling_internal(n, &a[0], &b[0], tmp, mod);
   copy(b.begin(), b.begin() + n, result);
+}
+
+// size result >= n
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_inv_doubling(const T* x, int m, int n, T* result, int64 mod) {
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  poly_inv_doubling_internal<unsignedT>((const unsignedT*)x, m, n, (unsignedT*)result,
+                               mod);
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
+    poly_inv_doubling(const vector<T>& x, int n, int64 mod) {
+  // It is assumed that mod is a prime
+  const int m = (int)x.size();
+
+  // b
+  vector<T> b(n);
+
+  poly_inv_doubling(&x[0], m, n, &b[0], mod);
+
+  return b;
 }
 
 // size result >= n
@@ -333,8 +356,13 @@ template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_inv(const T* x, int m, int n, T* result, int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
+#if ENABLE_FLINT
+  poly_inv_flint<unsignedT>((const unsignedT*)x, m, n, (unsignedT*)result,
+                               mod);
+#else
   poly_inv_internal<unsignedT>((const unsignedT*)x, m, n, (unsignedT*)result,
                                mod);
+#endif
 }
 
 template <typename T>
@@ -539,7 +567,7 @@ POLY_MOD_IMPL(poly_mod, poly_div_and_mod)
 // size result == m
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_differential_internal(const T* x, int m, T* result, int64 mod) {
+    poly_derivative_internal(const T* x, int m, T* result, int64 mod) {
   for (int i = 1; i < m; ++i) {
     result[i - 1] = mul_mod_ex(x[i], i, mod);
   }
@@ -549,23 +577,23 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 // size result == m
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_differential(const T* x, int m, T* result, int64 mod) {
+    poly_derivative(const T* x, int m, T* result, int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
-  poly_differential_internal<unsignedT>((const unsignedT*)x, m,
+  poly_derivative_internal<unsignedT>((const unsignedT*)x, m,
                                         (unsignedT*)result, mod);
 }
 
 // size result == m
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
-    poly_differential(const vector<T>& x, int64 mod) {
+    poly_derivative(const vector<T>& x, int64 mod) {
   // It is assumed that mod is a prime
   const int m = (int)x.size();
 
   // b
   vector<T> b(m);
 
-  poly_differential(&x[0], m, &b[0], mod);
+  poly_derivative(&x[0], m, &b[0], mod);
 
   return b;
 }
@@ -573,7 +601,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 // size result == m + 1
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_integrate_internal(const T* x, int m, T* result, int64 mod) {
+    poly_integral_internal(const T* x, int m, T* result, int64 mod) {
   vector<T> y(m + 1);
   init_inv(&y[0], m + 1, mod);
   for (int i = 0; i < m; ++i) {
@@ -585,23 +613,23 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 // size result == m + 1
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_integrate(const T* x, int m, T* result, int64 mod) {
+    poly_integral(const T* x, int m, T* result, int64 mod) {
   typedef typename std::make_unsigned<T>::type unsignedT;
-  poly_integrate_internal<unsignedT>((const unsignedT*)x, m, (unsignedT*)result,
+  poly_integral_internal<unsignedT>((const unsignedT*)x, m, (unsignedT*)result,
                                      mod);
 }
 
 // size result == m + 1
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
-    poly_integrate(const vector<T>& x, int64 mod) {
+    poly_integral(const vector<T>& x, int64 mod) {
   // It is assumed that mod is a prime
   const int m = (int)x.size();
 
   // b
   vector<T> b(m);
 
-  poly_integrate(&x[0], m, &b[0], mod);
+  poly_integral(&x[0], m, &b[0], mod);
 
   return b;
 }
@@ -611,7 +639,7 @@ template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_log_normal_internal(const T* x, int m, int n, T* result, int64 mod) {
   vector<T> dx(m);
-  poly_differential(x, m, &dx[0], mod);
+  poly_derivative(x, m, &dx[0], mod);
 
   vector<T> y(n);
   poly_inv(x, m, n, &y[0], mod);

@@ -90,8 +90,10 @@ File list:
 * pe_parallel: A simple framework to solve problem with multi-threads. (windows only)
 * pe_parallel_algo: Parallel algorithms.
 * pe_persistance: KVPersistance. (it may support linux but we need change the generated cmdline and check the other codes)
-* pe_poly: Polynomial.
+* pe_poly: Polynomial c++ wrapper.
 * pe_poly_algo: Polynomial algorithms.
+* pe_poly_base: Polynomial basic algorithms.
+* pe_poly_base_flint: Flint based polynomial basic algorithms.
 * pe_rand: Randome number.
 * pe_range: generate an range of numbers, iterate a container with index.
 * pe_sym_poly: Symbolic polynomial.

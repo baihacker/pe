@@ -105,7 +105,7 @@ SL void poly_multipoint_evaluation_test() {
       assert(p.valueAt(i % 10007) == result[i - 1]);
     }
   }
-#if ENABLE_FLINT
+#if ENABLE_FLINT && GMP_LIMB_BITS == 64
   {
     TimeRecorder tr;
     auto result = poly_multipoint_evaluate_flint(p.data, v, p.mod);
@@ -117,7 +117,7 @@ SL void poly_multipoint_evaluation_test() {
 #endif
 }
 PE_REGISTER_TEST(&poly_multipoint_evaluation_test,
-                 "poly_multipoint_evaluation_test", SPECIFIED);
+                 "poly_multipoint_evaluation_test", SMALL);
 
 SL void poly_batch_mul_test() {
   const int mod = 10007;

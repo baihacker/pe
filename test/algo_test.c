@@ -49,8 +49,10 @@ SL void fact_sum_mod_test() {
   const int64 mod = 99999999907;
   FactSumModer moder(mod);
 
+  TimeRecorder tr;
   const int64 n = 100000000;
   auto ans = moder.cal(n);
+  cerr << tr.elapsed().format() << endl;
 
   int64 now = 1;
   int64 s = 1;

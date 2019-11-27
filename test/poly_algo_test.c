@@ -105,6 +105,7 @@ SL void poly_multipoint_evaluation_test() {
       assert(p.valueAt(i % 10007) == result[i - 1]);
     }
   }
+#if ENABLE_FLINT
   {
     TimeRecorder tr;
     auto result = poly_multipoint_evaluate_flint(p.data, v, p.mod);
@@ -113,6 +114,7 @@ SL void poly_multipoint_evaluation_test() {
       assert(p.valueAt(i % 10007) == result[i - 1]);
     }
   }
+#endif
 }
 PE_REGISTER_TEST(&poly_multipoint_evaluation_test,
                  "poly_multipoint_evaluation_test", SPECIFIED);

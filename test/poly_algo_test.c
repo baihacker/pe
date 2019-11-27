@@ -84,34 +84,46 @@ SL void poly_multipoint_evaluation_test() {
   srand(123456789);
   vector<int64> data;
   int n = 5000;
-  const int64 mod = 10007;
+  const int64 mod = 1000000007;
   for (int i = 1; i <= n; ++i) data.push_back(i);
   NModPoly p(data, mod);
   vector<int64> v;
   for (int i = 1; i <= n; ++i) v.push_back(i % 10007);
   {
-    auto result = poly_evaluate_mod_normal(p, v);
+    TimeRecorder tr;
+    auto result = poly_multipoint_evaluate_normal(p.data, v, p.mod);
+    cout << tr.elapsed().format() << endl;
     for (int i = 1; i <= n; ++i) {
       assert(p.valueAt(i % 10007) == result[i - 1]);
     }
   }
   {
-    auto result = poly_evaluate_mod_bls(p, v);
+    TimeRecorder tr;
+    auto result = poly_multipoint_evaluate_bls(p.data, v, p.mod);
+    cout << tr.elapsed().format() << endl;
+    for (int i = 1; i <= n; ++i) {
+      assert(p.valueAt(i % 10007) == result[i - 1]);
+    }
+  }
+  {
+    TimeRecorder tr;
+    auto result = poly_multipoint_evaluate_flint(p.data, v, p.mod);
+    cout << tr.elapsed().format() << endl;
     for (int i = 1; i <= n; ++i) {
       assert(p.valueAt(i % 10007) == result[i - 1]);
     }
   }
 }
 PE_REGISTER_TEST(&poly_multipoint_evaluation_test,
-                 "poly_multipoint_evaluation_test", SMALL);
+                 "poly_multipoint_evaluation_test", SPECIFIED);
 
-SL void poly_batch_mul_mod_test() {
+SL void poly_batch_mul_test() {
   const int mod = 10007;
   vector<int64> data{1, 1, 2, 1, 3, 1};
-  auto result = poly_batch_mul_mod(data, mod);
+  auto result = poly_batch_mul(data, mod);
 
   vector<int64> expected{6, 11, 6, 1};
   assert(expected == result);
 }
-PE_REGISTER_TEST(&poly_batch_mul_mod_test, "poly_batch_mul_mod_test", SMALL);
+PE_REGISTER_TEST(&poly_batch_mul_test, "poly_batch_mul_test", SMALL);
 }  // namespace poly_app_test

@@ -1,0 +1,229 @@
+#ifndef __PE_POLY_BASE_FLINT__
+#define __PE_POLY_BASE_FLINT__
+
+#include "pe_base"
+#include "pe_int128"
+#include "pe_mod"
+#include "pe_ntt"
+#include "pe_type_traits"
+#include "pe_nt"
+
+#if ENABLE_FLINT
+
+// size result >= n
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_inv_flint_internal(const T* x, int m, int n, T* result, int64 mod) {
+  if (n == 1) {
+    result[0] = inv_of(x[0], mod);
+    return;
+  }
+  nmod_poly_t u, v, w;
+  nmod_poly_init2(u, mod, m);
+  for (int i = 0; i < m; ++i) {
+    nmod_poly_set_coeff_ui(u, i, x[i]);
+  }
+
+  nmod_poly_init2(w, mod, n + 1);
+  nmod_poly_set_coeff_ui(w, n, 1);
+
+  nmod_poly_init2(v, mod, n);
+
+  nmod_poly_invmod(v, u, w);
+  for (int i = 0; i < n; ++i) {
+    result[i] = nmod_poly_get_coeff_ui(v, i);
+  }
+
+  nmod_poly_clear(u);
+  nmod_poly_clear(v);
+  nmod_poly_clear(w);
+}
+
+// size result >= n
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_inv_flint(const T* x, int m, int n, T* result, int64 mod) {
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  poly_inv_flint_internal<unsignedT>((const unsignedT*)x, m, n,
+                                     (unsignedT*)result, mod);
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
+    poly_inv_flint(const vector<T>& x, int n, int64 mod) {
+  // It is assumed that mod is a prime
+  const int m = (int)x.size();
+
+  // b
+  vector<T> b(n);
+
+  poly_inv_flint(&x[0], m, n, &b[0], mod);
+
+  return b;
+}
+
+// More function can be found here:
+// http://flintlib.org/sphinx/nmod_poly.html#transcendental-functions
+extern "C" {
+typedef void (*nmod_poly_series_t)(nmod_poly_t g, const nmod_poly_t h, slong n);
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_series_flint_internal(const T* x, int m, int n, T* result, int64 mod,
+                               nmod_poly_series_t trans) {
+  nmod_poly_t u, v;
+  nmod_poly_init2(u, mod, m);
+  for (int i = 0; i < m; ++i) {
+    nmod_poly_set_coeff_ui(u, i, x[i]);
+  }
+
+  nmod_poly_init2(v, mod, n);
+  trans(v, u, n);
+  for (int i = 0; i < n; ++i) {
+    result[i] = nmod_poly_get_coeff_ui(v, i);
+  }
+
+  nmod_poly_clear(u);
+  nmod_poly_clear(v);
+}
+
+// size result == n
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_series_flint(const T* x, int m, int n, T* result, int64 mod,
+                      nmod_poly_series_t trans) {
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  poly_series_flint_internal<unsignedT>((const unsignedT*)x, m, n,
+                                        (unsignedT*)result, mod, trans);
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
+    poly_series_flint(const vector<T>& x, int n, int64 mod,
+                      nmod_poly_series_t trans) {
+  // It is assumed that mod is a prime
+  const int m = (int)x.size();
+
+  // b
+  vector<T> b(n);
+
+  poly_series_flint(&x[0], m, n, &b[0], mod, trans);
+
+  return b;
+}
+
+// size result == n
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_log_flint_internal(const T* x, int m, int n, T* result, int64 mod) {
+  poly_series_flint(x, m, n, result, mod, &nmod_poly_log_series);
+}
+
+// size result == n
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_log_flint(const T* x, int m, int n, T* result, int64 mod) {
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  poly_log_flint_internal<unsignedT>((const unsignedT*)x, m, n,
+                                     (unsignedT*)result, mod);
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
+    poly_log_flint(const vector<T>& x, int n, int64 mod) {
+  // It is assumed that mod is a prime
+  const int m = (int)x.size();
+
+  // b
+  vector<T> b(n);
+
+  poly_log_flint(&x[0], m, n, &b[0], mod);
+
+  return b;
+}
+
+// size result == n
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_exp_flint_internal(const T* x, int m, int n, T* result, int64 mod) {
+  PE_ASSERT(x[0] == 0);
+  poly_series_flint(x, m, n, result, mod, &nmod_poly_exp_series);
+}
+
+// size result == n
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_exp_flint(const T* x, int m, int n, T* result, int64 mod) {
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  poly_exp_flint_internal<unsignedT>((const unsignedT*)x, m, n,
+                                     (unsignedT*)result, mod);
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
+    poly_exp_flint(const vector<T>& x, int n, int64 mod) {
+  // It is assumed that mod is a prime
+  const int m = (int)x.size();
+
+  // b
+  vector<T> b(n);
+
+  poly_exp_flint(&x[0], m, n, &b[0], mod);
+
+  return b;
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_multipoint_evaluate_flint_internal(const T* X, int n, const T* V,
+                                            const int m, T* result, int64 mod) {
+  nmod_poly_t u;
+  nmod_poly_init2(u, mod, n);
+  for (int i = 0; i < n; ++i) {
+    nmod_poly_set_coeff_ui(u, i, X[i]);
+  }
+
+  if (sizeof(mp_limb_t) == sizeof(T)) {
+    nmod_poly_evaluate_nmod_vec_fast(result, u, V, m);
+  } else {
+    vector<mp_limb_t> x(m), y(m);
+    for (int i = 0; i < m; ++i) x[i] = V[i];
+    nmod_poly_evaluate_nmod_vec_fast(&y[0], u, &x[0], m);
+    for (int i = 0; i < m; ++i) result[i] = y[i];
+  }
+  nmod_poly_clear(u);
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_multipoint_evaluate_flint(const T* X, const int n, const T* V,
+                                   const int m, T* result, int64 mod) {
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  poly_multipoint_evaluate_flint_internal<unsignedT>(
+      (const unsignedT*)X, n, (const unsignedT*)V, m, (unsignedT*)result, mod);
+}
+
+// size(V) = n
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_multipoint_evaluate_flint(const T* X, const int n, const T* V,
+                                   T* result, int64 mod) {
+  typedef typename std::make_unsigned<T>::type unsignedT;
+  poly_multipoint_evaluate_flint_internal<unsignedT>(
+      (const unsignedT*)X, n, (const unsignedT*)V, n, (unsignedT*)result, mod);
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
+    poly_multipoint_evaluate_flint(const vector<T>& X, const vector<T>& V,
+                                   int64 mod) {
+  const int n = (int)X.size();
+  const int m = (int)V.size();
+  vector<T> result(m);
+  poly_multipoint_evaluate_flint(&X[0], n, &V[0], m, &result[0], mod);
+  return result;
+}
+#endif
+
+#endif

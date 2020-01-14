@@ -2,6 +2,9 @@
 #define __PE_MPF__
 
 #if ENABLE_GMP
+
+#include "pe_mpz"
+
 #define HAS_MPF 1
 class Mpf {
  public:
@@ -10,22 +13,35 @@ class Mpf {
 
   Mpf() { mpf_init_set_si(f, 0); }
 
-  explicit Mpf(int t) { mpf_init_set_si(f, t); }
+  Mpf(int t) : Mpf(static_cast<long>(t)) {}
 
-  explicit Mpf(double t) { mpf_init_set_d(f, t); }
+  Mpf(long t) { mpf_init_set_si(f, t); }
 
-  explicit Mpf(const string& s) {
+  Mpf(double t) { mpf_init_set_d(f, t); }
+
+  Mpf(const string& s) : Mpf(s.c_str()) {}
+
+  Mpf(const char* s) { mpf_init_set_str(f, s, 10); }
+
+  Mpf(const mpf_t o) { mpf_init_set(f, o); }
+
+  explicit Mpf(const MpInteger& mp) {
     mpf_init(f);
-    mpf_set_str(f, s.c_str(), 10);
+    mpf_set_z(f, mp.mpz());
   }
 
-  explicit Mpf(mpf_t o) { mpf_init_set(f, o); }
-
-  ~Mpf() { mpf_clear(f); }
+  template <typename T,
+            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(void)>
+  Mpf(T value) : Mpf(MpInteger(value)) {
+    mpf_init(f);
+    mpf_set_z(f, MpInteger(value).mpz());
+  }
 
   Mpf(const Mpf& o) { mpf_init_set(f, o.f); }
 
   Mpf(Mpf&& o) { mpf_swap(f, o.f); }
+
+  ~Mpf() { mpf_clear(f); }
 
   Mpf& operator=(const Mpf& o) {
     mpf_set(f, o.f);
@@ -37,8 +53,41 @@ class Mpf {
     return *this;
   }
 
+  Mpf& operator=(int o) { return this->operator=(static_cast<long>(o)); }
+
+  Mpf& operator=(long o) {
+    mpf_set_si(f, o);
+    return *this;
+  }
+
+  Mpf& operator=(unsigned int o) {
+    return this->operator=(static_cast<unsigned long>(o));
+  }
+
+  Mpf& operator=(unsigned long o) {
+    mpf_set_ui(f, o);
+    return *this;
+  }
+
   Mpf& operator=(double o) {
     mpf_set_d(f, o);
+    return *this;
+  }
+
+  Mpf& operator=(const mpf_t o) {
+    mpf_set(f, o);
+    return *this;
+  }
+
+  Mpf& operator=(const MpInteger& o) {
+    mpf_set_z(f, o.mpz());
+    return *this;
+  }
+
+  template <typename T,
+            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
+  Mpf& operator=(T value) {
+    mpf_set_z(f, MpInteger(value).mpz());
     return *this;
   }
 
@@ -47,7 +96,7 @@ class Mpf {
     mpf_add(f, f, a.f);
     return *this;
   }
-  Mpf& operator+=(unsigned int a) {
+  Mpf& operator+=(unsigned long a) {
     mpf_add_ui(f, f, a);
     return *this;
   }
@@ -55,7 +104,7 @@ class Mpf {
     mpf_sub(f, f, a.f);
     return *this;
   }
-  Mpf& operator-=(unsigned int a) {
+  Mpf& operator-=(unsigned long a) {
     mpf_sub_ui(f, f, a);
     return *this;
   }
@@ -63,7 +112,7 @@ class Mpf {
     mpf_mul(f, f, a.f);
     return *this;
   }
-  Mpf& operator*=(unsigned int a) {
+  Mpf& operator*=(unsigned long a) {
     mpf_mul_ui(f, f, a);
     return *this;
   }
@@ -71,7 +120,7 @@ class Mpf {
     mpf_div(f, f, a.f);
     return *this;
   }
-  Mpf& operator/=(unsigned int a) {
+  Mpf& operator/=(unsigned long a) {
     mpf_div_ui(f, f, a);
     return *this;
   }
@@ -80,7 +129,7 @@ class Mpf {
     mpf_sqrt(t.f, f);
     return t;
   }
-  Mpf power(int p) const {
+  Mpf power(unsigned long p) const {
     Mpf t;
     mpf_pow_ui(t.f, f, p);
     return t;
@@ -93,6 +142,21 @@ class Mpf {
   Mpf abs() const {
     Mpf t;
     mpf_abs(t.f, f);
+    return t;
+  }
+  Mpf ceil() const {
+    Mpf t;
+    mpf_ceil(t.f, f);
+    return t;
+  }
+  Mpf floor() const {
+    Mpf t;
+    mpf_floor(t.f, f);
+    return t;
+  }
+  Mpf trunc() const {
+    Mpf t;
+    mpf_trunc(t.f, f);
     return t;
   }
   int sgn() const { return mpf_sgn(f); }
@@ -123,20 +187,25 @@ class Mpf {
     sscanf(t.c_str(), "%Lf", &result);
     return result;
   }
+
+  __mpf_struct* mpf() { return f; }
+  const __mpf_struct* mpf() const { return f; }
+
   mpf_t f;
 };
+
 SL Mpf operator+(const Mpf& a) { return a; }
 SL Mpf operator+(const Mpf& a, const Mpf& b) {
   Mpf t;
   mpf_add(t.f, a.f, b.f);
   return t;
 }
-SL Mpf operator+(const Mpf& a, unsigned int b) {
+SL Mpf operator+(const Mpf& a, unsigned long b) {
   Mpf t;
   mpf_add_ui(t.f, a.f, b);
   return t;
 }
-SL Mpf operator+(unsigned int a, const Mpf& b) {
+SL Mpf operator+(unsigned long a, const Mpf& b) {
   Mpf t;
   mpf_add_ui(t.f, b.f, a);
   return t;
@@ -147,12 +216,12 @@ SL Mpf operator-(const Mpf& a, const Mpf& b) {
   mpf_sub(t.f, a.f, b.f);
   return t;
 }
-SL Mpf operator-(const Mpf& a, unsigned int b) {
+SL Mpf operator-(const Mpf& a, unsigned long b) {
   Mpf t;
   mpf_sub_ui(t.f, a.f, b);
   return t;
 }
-SL Mpf operator-(unsigned int a, const Mpf& b) {
+SL Mpf operator-(unsigned long a, const Mpf& b) {
   Mpf t;
   mpf_ui_sub(t.f, a, b.f);
   return t;
@@ -162,12 +231,12 @@ SL Mpf operator*(const Mpf& a, const Mpf& b) {
   mpf_mul(t.f, a.f, b.f);
   return t;
 }
-SL Mpf operator*(const Mpf& a, unsigned int b) {
+SL Mpf operator*(const Mpf& a, unsigned long b) {
   Mpf t;
   mpf_mul_ui(t.f, a.f, b);
   return t;
 }
-SL Mpf operator*(unsigned int a, const Mpf& b) {
+SL Mpf operator*(unsigned long a, const Mpf& b) {
   Mpf t;
   mpf_mul_ui(t.f, b.f, a);
   return t;
@@ -177,12 +246,12 @@ SL Mpf operator/(const Mpf& a, const Mpf& b) {
   mpf_div(t.f, a.f, b.f);
   return t;
 }
-SL Mpf operator/(const Mpf& a, unsigned int b) {
+SL Mpf operator/(const Mpf& a, unsigned long b) {
   Mpf t;
   mpf_div_ui(t.f, a.f, b);
   return t;
 }
-SL Mpf operator/(unsigned int a, const Mpf& b) {
+SL Mpf operator/(unsigned long a, const Mpf& b) {
   Mpf t;
   mpf_div_ui(t.f, b.f, a);
   return t;
@@ -195,6 +264,17 @@ SL int operator>=(const Mpf& a, const Mpf& b) { return compare(a, b) >= 0; }
 SL int operator==(const Mpf& a, const Mpf& b) { return compare(a, b) == 0; }
 SL int operator!=(const Mpf& a, const Mpf& b) { return compare(a, b) != 0; }
 SL ostream& operator<<(ostream& o, const Mpf& v) { return o << v.toString(20); }
+SL Mpf ceil(const Mpf& f) { return f.ceil(); }
+SL Mpf floor(const Mpf& f) { return f.floor(); }
+SL Mpf trunc(const Mpf& f) { return f.trunc(); }
+MpInteger::MpInteger(const Mpf& o) {
+  mpz_init(z);
+  mpz_set_f(z, o.mpf());
+}
+MpInteger& MpInteger::operator=(const Mpf& o) {
+  mpz_set_f(z, o.mpf());
+  return *this;
+}
 #else
 #define HAS_MPF 0
 #endif

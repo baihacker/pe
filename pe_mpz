@@ -173,7 +173,7 @@ struct FactPPowerModer<Mpz> {
 #endif
 
 // Adapter of mpz_t
-
+class Mpf;
 class MpInteger {
  public:
   static constexpr int LIMB_BIT = sizeof(mp_limb_t) * 8;
@@ -181,61 +181,65 @@ class MpInteger {
 
   template <typename T>
   friend REQUIRES((is_native_integer<T>::value && is_signed<T>::value))
-      RETURN(void) __init_mpz(mpz_t mp, T value);
+      RETURN(void) __init_mpz(mpz_t z, T value);
 
   template <typename T>
   friend REQUIRES((is_native_integer<T>::value && is_unsigned<T>::value))
-      RETURN(void) __init_mpz(mpz_t mp, T value);
+      RETURN(void) __init_mpz(mpz_t z, T value);
 
  public:
   MpInteger() {
-    mpz_init(mp);  // zero value
+    mpz_init(z);  // zero value
   }
 
-  MpInteger(int val) { mpz_init_set_si(mp, val); }
+  MpInteger(int val) : MpInteger(static_cast<long>(val)) {}
 
-  MpInteger(unsigned int val) { mpz_init_set_ui(mp, val); }
+  MpInteger(unsigned int val) : MpInteger(static_cast<unsigned long>(val)) {}
 
-  MpInteger(long val) { mpz_init_set_si(mp, val); }
+  MpInteger(long val) { mpz_init_set_si(z, val); }
 
-  MpInteger(unsigned long val) { mpz_init_set_ui(mp, val); }
+  MpInteger(unsigned long val) { mpz_init_set_ui(z, val); }
 
-  MpInteger(const string& s) { mpz_init_set_str(mp, s.c_str(), 10); }
+  MpInteger(const string& s) { mpz_init_set_str(z, s.c_str(), 10); }
 
-  MpInteger(const char* s) { mpz_init_set_str(mp, s, 10); }
+  MpInteger(const char* s) { mpz_init_set_str(z, s, 10); }
+
+  MpInteger(const mpz_t o) { mpz_init_set(z, o); }
+
+  inline MpInteger(const Mpf& o);
 
   template <typename T,
             typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(void)>
   MpInteger(T value) {
-    __init_mpz(mp, value);
+    __init_mpz(z, value);
   }
 
-  MpInteger(const MpInteger& o) { mpz_init_set(mp, o.mp); }
+  MpInteger(const MpInteger& o) { mpz_init_set(z, o.z); }
 
   MpInteger(MpInteger&& o) {
-    mpz_init(mp);
-    mpz_swap(mp, o.mp);
+    mpz_init(z);
+    mpz_swap(z, o.z);
   }
 
-  ~MpInteger() { mpz_clear(mp); }
+  ~MpInteger() { mpz_clear(z); }
 
   MpInteger& operator=(int val) {
-    mpz_set_si(mp, val);
+    mpz_set_si(z, val);
     return *this;
   }
 
   MpInteger& operator=(long val) {
-    mpz_set_si(mp, val);
+    mpz_set_si(z, val);
     return *this;
   }
 
   MpInteger& operator=(unsigned int val) {
-    mpz_set_ui(mp, val);
+    mpz_set_ui(z, val);
     return *this;
   }
 
   MpInteger& operator=(unsigned long val) {
-    mpz_set_ui(mp, val);
+    mpz_set_ui(z, val);
     return *this;
   }
 
@@ -247,24 +251,26 @@ class MpInteger {
   }
 
   MpInteger& operator=(const string& s) {
-    mpz_set_str(mp, s.c_str(), 10);
+    mpz_set_str(z, s.c_str(), 10);
     return *this;
   }
 
   MpInteger& operator=(const char* s) {
-    mpz_set_str(mp, s, 10);
+    mpz_set_str(z, s, 10);
     return *this;
   }
 
   MpInteger& operator=(const MpInteger& o) {
-    mpz_set(mp, o.mp);
+    mpz_set(z, o.z);
     return *this;
   }
 
   MpInteger& operator=(MpInteger&& o) {
-    mpz_swap(mp, o.mp);
+    mpz_swap(z, o.z);
     return *this;
   }
+
+  inline MpInteger& operator=(const Mpf& o);
 
  public:
   // compare operators
@@ -353,7 +359,7 @@ class MpInteger {
   friend inline ostream& operator<<(ostream& o, const MpInteger& val);
 
   MpInteger& operator+=(const MpInteger& o) {
-    mpz_add(mp, mp, o.mp);
+    mpz_add(z, z, o.z);
     return *this;
   }
 
@@ -362,12 +368,12 @@ class MpInteger {
                                             is_same<T, unsigned long>::value)))
   RETURN(MpInteger&)
   operator+=(T val) {
-    mpz_add_ui(mp, mp, val);
+    mpz_add_ui(z, z, val);
     return *this;
   }
 
   MpInteger& operator-=(const MpInteger& o) {
-    mpz_sub(mp, mp, o.mp);
+    mpz_sub(z, z, o.z);
     return *this;
   }
 
@@ -376,12 +382,12 @@ class MpInteger {
                                             is_same<T, unsigned long>::value)))
   RETURN(MpInteger&)
   operator-=(T val) {
-    mpz_sub_ui(mp, mp, val);
+    mpz_sub_ui(z, z, val);
     return *this;
   }
 
   MpInteger& operator*=(const MpInteger& o) {
-    mpz_mul(mp, mp, o.mp);
+    mpz_mul(z, z, o.z);
     return *this;
   }
 
@@ -390,7 +396,7 @@ class MpInteger {
             (is_same<T, int>::value || is_same<T, long>::value)))
   RETURN(MpInteger&)
   operator*=(T val) {
-    mpz_mul_si(mp, mp, val);
+    mpz_mul_si(z, z, val);
     return *this;
   }
 
@@ -399,12 +405,12 @@ class MpInteger {
                                             is_same<T, unsigned long>::value)))
   RETURN(MpInteger&)
   operator*=(T val) {
-    mpz_mul_ui(mp, mp, val);
+    mpz_mul_ui(z, z, val);
     return *this;
   }
 
   MpInteger& operator/=(const MpInteger& o) {
-    mpz_tdiv_q(mp, mp, o.mp);
+    mpz_tdiv_q(z, z, o.z);
     return *this;
   }
 
@@ -413,37 +419,37 @@ class MpInteger {
                                             is_same<T, unsigned long>::value)))
   MpInteger&
   operator/=(T val) {
-    mpz_tdiv_q_ui(mp, mp, val);
+    mpz_tdiv_q_ui(z, z, val);
     return *this;
   }
 
   MpInteger& operator%=(const MpInteger& o) {
-    mpz_tdiv_r(mp, mp, o.mp);
+    mpz_tdiv_r(z, z, o.z);
     return *this;
   }
 
   MpInteger& operator<<=(int cnt) {
-    mpz_mul_2exp(mp, mp, cnt);
+    mpz_mul_2exp(z, z, cnt);
     return *this;
   }
 
   MpInteger& operator>>=(int cnt) {
-    mpz_tdiv_q_2exp(mp, mp, cnt);
+    mpz_tdiv_q_2exp(z, z, cnt);
     return *this;
   }
 
   MpInteger& operator&=(const MpInteger& o) {
-    mpz_and(mp, mp, o.mp);
+    mpz_and(z, z, o.z);
     return *this;
   }
 
   MpInteger& operator|=(const MpInteger& o) {
-    mpz_ior(mp, mp, o.mp);
+    mpz_ior(z, z, o.z);
     return *this;
   }
 
   MpInteger& operator^=(const MpInteger& o) {
-    mpz_xor(mp, mp, o.mp);
+    mpz_xor(z, z, o.z);
     return *this;
   }
 
@@ -472,13 +478,13 @@ class MpInteger {
   const MpInteger& operator+() const { return *this; }
   const MpInteger& operator-() const {
     MpInteger ret(*this);
-    mpz_neg(ret.mp, ret.mp);
+    mpz_neg(ret.z, ret.z);
     return ret;
   }
 
   MpInteger nrooti(int n) const {
     MpInteger ret;
-    mpz_root(ret.mpz(), mpz(), n );
+    mpz_root(ret.mpz(), mpz(), n);
     return std::move(ret);
   }
 
@@ -489,29 +495,29 @@ class MpInteger {
   }
 
  public:
-  int size() const { return abs(mp[0]._mp_size); }
-  mp_limb_t* data() { return mp[0]._mp_d; }
-  const mp_limb_t* data() const { return mp[0]._mp_d; }
+  int size() const { return abs(z[0]._mp_size); }
+  mp_limb_t* data() { return z[0]._mp_d; }
+  const mp_limb_t* data() const { return z[0]._mp_d; }
 
-  int getSign() const { return mpz_sgn(mp); }
+  int getSign() const { return mpz_sgn(z); }
   int isZero() const { return getSign() == 0; }
-  int isEven() const { return mpz_even_p(mp) ? 1 : 0; }
-  int isOdd() const { return mpz_odd_p(mp) ? 1 : 0; }
+  int isEven() const { return mpz_even_p(z) ? 1 : 0; }
+  int isOdd() const { return mpz_odd_p(z) ? 1 : 0; }
   mp_limb_t operator[](int idx) const { return data()[idx]; }
   mp_limb_t& operator[](int idx) { return data()[idx]; }
 
-  void setBit(int idx) { mpz_setbit(mp, idx); }
-  void resetBit(int idx) { mpz_clrbit(mp, idx); }
-  int getBit(int idx) const { return mpz_tstbit(mp, idx); }
-  void revBit(int idx) { mpz_combit(mp, idx); }
-  int bitCount() const { return mpz_popcount(mp); }
+  void setBit(int idx) { mpz_setbit(z, idx); }
+  void resetBit(int idx) { mpz_clrbit(z, idx); }
+  int getBit(int idx) const { return mpz_tstbit(z, idx); }
+  void revBit(int idx) { mpz_combit(z, idx); }
+  int bitCount() const { return mpz_popcount(z); }
 
   string toString(int base = 10) const {
-    size_t sz = mpz_sizeinbase(mp, base) + 1;
+    size_t sz = mpz_sizeinbase(z, base) + 1;
 
     char* buff = new char[sz + 1];
     if (buff != NULL) {
-      gmp_sprintf(buff, "%Zd", mp);
+      gmp_sprintf(buff, "%Zd", z);
     }
     string ret(buff);
     delete[] buff;
@@ -563,36 +569,36 @@ class MpInteger {
     return result;
   }
 
-  __mpz_struct* mpz() { return mp; }
-  const __mpz_struct* mpz() const { return mp; }
+  __mpz_struct* mpz() { return z; }
+  const __mpz_struct* mpz() const { return z; }
 
  private:
-  mpz_t mp;
+  mpz_t z;
 };
 
 template <typename T>
 REQUIRES((is_native_integer<T>::value && is_signed<T>::value))
-RETURN(void) __init_mpz(mpz_t mp, T value) {
+RETURN(void) __init_mpz(mpz_t z, T value) {
   if (value == 0) {
-    mpz_init(mp);
+    mpz_init(z);
     return;
   }
 
   typedef typename std::make_unsigned<T>::type unsignedT;
   if (value > 0) {
-    __init_mpz<unsignedT>(mp, static_cast<unsignedT>(value));
+    __init_mpz<unsignedT>(z, static_cast<unsignedT>(value));
   } else {
     // Note: it works for value = T::min()
-    __init_mpz<unsignedT>(mp, static_cast<unsignedT>(-value));
-    mp->_mp_size = -mp->_mp_size;
+    __init_mpz<unsignedT>(z, static_cast<unsignedT>(-value));
+    z->_mp_size = -z->_mp_size;
   }
 }
 
 template <typename T>
 REQUIRES((is_native_integer<T>::value && is_unsigned<T>::value))
-RETURN(void) __init_mpz(mpz_t mp, T value) {
+RETURN(void) __init_mpz(mpz_t z, T value) {
   if (value == 0) {
-    mpz_init(mp);
+    mpz_init(z);
     return;
   }
   int cnt = 0;
@@ -608,8 +614,8 @@ RETURN(void) __init_mpz(mpz_t mp, T value) {
     v >>= MpInteger::LIMB_BIT / 2;
 #endif
   }
-  mpz_init2(mp, cnt * MpInteger::LIMB_BIT * cnt);
-  auto* t = mp->_mp_d;
+  mpz_init2(z, cnt * MpInteger::LIMB_BIT * cnt);
+  auto* t = z->_mp_d;
   for (int i = 0; i < cnt; ++i) {
     *t++ = MpInteger::LIMB_MASK & value;
 #if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
@@ -622,37 +628,37 @@ RETURN(void) __init_mpz(mpz_t mp, T value) {
     value >>= MpInteger::LIMB_BIT / 2;
 #endif
   }
-  mp->_mp_size = cnt;
+  z->_mp_size = cnt;
 }
 
 // Operators
 int operator>(const MpInteger& l, const MpInteger& r) {
-  return mpz_cmp(l.mp, r.mp) > 0;
+  return mpz_cmp(l.z, r.z) > 0;
 }
 
 int operator<(const MpInteger& l, const MpInteger& r) {
-  return mpz_cmp(l.mp, r.mp) < 0;
+  return mpz_cmp(l.z, r.z) < 0;
 }
 
 int operator==(const MpInteger& l, const MpInteger& r) {
-  return mpz_cmp(l.mp, r.mp) == 0;
+  return mpz_cmp(l.z, r.z) == 0;
 }
 
 int operator>=(const MpInteger& l, const MpInteger& r) {
-  return mpz_cmp(l.mp, r.mp) >= 0;
+  return mpz_cmp(l.z, r.z) >= 0;
 }
 
 int operator<=(const MpInteger& l, const MpInteger& r) {
-  return mpz_cmp(l.mp, r.mp) <= 0;
+  return mpz_cmp(l.z, r.z) <= 0;
 }
 
 int operator!=(const MpInteger& l, const MpInteger& r) {
-  return mpz_cmp(l.mp, r.mp) != 0;
+  return mpz_cmp(l.z, r.z) != 0;
 }
 
 MpInteger operator+(const MpInteger& l, const MpInteger& r) {
   MpInteger ret;
-  mpz_add(ret.mp, l.mp, r.mp);
+  mpz_add(ret.z, l.z, r.z);
   return ret;
 }
 
@@ -662,7 +668,7 @@ REQUIRES((is_native_integer<T>::value && (is_same<T, unsigned int>::value ||
 RETURN(MpInteger)
 operator+(const MpInteger& l, T r) {
   MpInteger ret;
-  mpz_add_ui(ret.mp, l.mp, r);
+  mpz_add_ui(ret.z, l.z, r);
   return ret;
 }
 
@@ -672,13 +678,13 @@ REQUIRES((is_native_integer<T>::value && (is_same<T, unsigned int>::value ||
 RETURN(MpInteger)
 operator+(T l, const MpInteger& r) {
   MpInteger ret;
-  mpz_add_ui(ret.mp, r.mp, l);
+  mpz_add_ui(ret.z, r.z, l);
   return ret;
 }
 
 MpInteger operator-(const MpInteger& l, const MpInteger& r) {
   MpInteger ret;
-  mpz_sub(ret.mp, l.mp, r.mp);
+  mpz_sub(ret.z, l.z, r.z);
   return ret;
 }
 
@@ -688,7 +694,7 @@ REQUIRES((is_native_integer<T>::value && (is_same<T, unsigned int>::value ||
 RETURN(MpInteger)
 operator-(const MpInteger& l, T r) {
   MpInteger ret;
-  mpz_sub_ui(ret.mp, l.mp, r);
+  mpz_sub_ui(ret.z, l.z, r);
   return ret;
 }
 
@@ -698,13 +704,13 @@ REQUIRES((is_native_integer<T>::value && (is_same<T, unsigned int>::value ||
 RETURN(MpInteger)
 operator-(T l, const MpInteger& r) {
   MpInteger ret;
-  mpz_ui_sub(ret.mp, l, r.mp);
+  mpz_ui_sub(ret.z, l, r.z);
   return ret;
 }
 
 MpInteger operator*(const MpInteger& l, const MpInteger& r) {
   MpInteger ret;
-  mpz_mul(ret.mp, l.mp, r.mp);
+  mpz_mul(ret.z, l.z, r.z);
   return ret;
 }
 
@@ -714,7 +720,7 @@ REQUIRES((is_native_integer<T>::value &&
 RETURN(MpInteger)
 operator*(const MpInteger& l, T r) {
   MpInteger ret;
-  mpz_mul_si(ret.mp, l.mp, r);
+  mpz_mul_si(ret.z, l.z, r);
   return ret;
 }
 
@@ -724,7 +730,7 @@ REQUIRES((is_native_integer<T>::value &&
 RETURN(MpInteger)
 operator*(T l, const MpInteger& r) {
   MpInteger ret;
-  mpz_mul_si(ret.mp, r.mp, l);
+  mpz_mul_si(ret.z, r.z, l);
   return ret;
 }
 
@@ -734,7 +740,7 @@ REQUIRES((is_native_integer<T>::value && (is_same<T, unsigned int>::value ||
 RETURN(MpInteger)
 operator*(const MpInteger& l, T r) {
   MpInteger ret;
-  mpz_mul_ui(ret.mp, l.mp, r);
+  mpz_mul_ui(ret.z, l.z, r);
   return ret;
 }
 
@@ -744,13 +750,13 @@ REQUIRES((is_native_integer<T>::value && (is_same<T, unsigned int>::value ||
 RETURN(MpInteger)
 operator*(T l, const MpInteger& r) {
   MpInteger ret;
-  mpz_mul_ui(ret.mp, r.mp, l);
+  mpz_mul_ui(ret.z, r.z, l);
   return ret;
 }
 
 MpInteger operator/(const MpInteger& l, const MpInteger& r) {
   MpInteger ret;
-  mpz_tdiv_q(ret.mp, l.mp, r.mp);
+  mpz_tdiv_q(ret.z, l.z, r.z);
   return ret;
 }
 
@@ -762,13 +768,13 @@ REQUIRES((is_native_integer<T>::value &&
 RETURN(MpInteger)
 operator/(const MpInteger& l, T r) {
   MpInteger ret;
-  mpz_tdiv_q_ui(ret.mp, l.mp, r);
+  mpz_tdiv_q_ui(ret.z, l.z, r);
   return ret;
 }
 
 MpInteger operator%(const MpInteger& l, const MpInteger& r) {
   MpInteger ret;
-  mpz_tdiv_r(ret.mp, l.mp, r.mp);
+  mpz_tdiv_r(ret.z, l.z, r.z);
   return ret;
 }
 
@@ -780,55 +786,55 @@ REQUIRES((is_native_integer<T>::value &&
 RETURN(MpInteger)
 operator%(const MpInteger& l, T r) {
   MpInteger ret;
-  mpz_tdiv_r_ui(ret.mp, l.mp, r);
+  mpz_tdiv_r_ui(ret.z, l.z, r);
   return ret;
 }
 
 MpInteger operator<<(const MpInteger& l, const MpInteger& cnt) {
   MpInteger ret;
-  mpz_mul_2exp(ret.mp, l.mp, cnt.toInt<int>());
+  mpz_mul_2exp(ret.z, l.z, cnt.toInt<int>());
   return ret;
 }
 
 MpInteger operator<<(const MpInteger& l, int cnt) {
   MpInteger ret;
-  mpz_mul_2exp(ret.mp, l.mp, cnt);
+  mpz_mul_2exp(ret.z, l.z, cnt);
   return ret;
 }
 
 MpInteger operator>>(const MpInteger& l, const MpInteger& cnt) {
   MpInteger ret;
-  mpz_tdiv_q_2exp(ret.mp, l.mp, cnt.toInt<int>());
+  mpz_tdiv_q_2exp(ret.z, l.z, cnt.toInt<int>());
   return ret;
 }
 
 MpInteger operator>>(const MpInteger& l, int cnt) {
   MpInteger ret;
-  mpz_tdiv_q_2exp(ret.mp, l.mp, cnt);
+  mpz_tdiv_q_2exp(ret.z, l.z, cnt);
   return ret;
 }
 
 MpInteger operator&(const MpInteger& l, const MpInteger& r) {
   MpInteger ret;
-  mpz_and(ret.mp, l.mp, r.mp);
+  mpz_and(ret.z, l.z, r.z);
   return ret;
 }
 
 MpInteger operator|(const MpInteger& l, const MpInteger& r) {
   MpInteger ret;
-  mpz_ior(ret.mp, l.mp, r.mp);
+  mpz_ior(ret.z, l.z, r.z);
   return ret;
 }
 
 MpInteger operator^(const MpInteger& l, const MpInteger& r) {
   MpInteger ret;
-  mpz_xor(ret.mp, l.mp, r.mp);
+  mpz_xor(ret.z, l.z, r.z);
   return ret;
 }
 
 MpInteger operator~(const MpInteger& o) {
   MpInteger ret;
-  mpz_com(ret.mp, o.mp);
+  mpz_com(ret.z, o.z);
   return ret;
 }
 

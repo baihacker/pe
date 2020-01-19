@@ -5,6 +5,7 @@
 #include "pe_nt"
 #include "pe_poly_algo"
 #include "pe_tree"
+#include "pe_array"
 
 /**
  * Compuates n! % p
@@ -1944,5 +1945,121 @@ struct NotDivCounter {
   }
 
   map<pair<T, vector<int64>>, T> mem;
+};
+
+/**
+ * DfaCounter<Count type> dc;
+ * dc.init(state count, transCount, max len)[.setCountEachLen(1)];
+ * dc.addTrans(src, dig, dest);
+ * dc.markAsCount(state);
+ * [optional] dc.prepare();
+ * dc.count(upper bound);
+ * dc.findKth(k, upper bound);
+ */
+template <typename CT>
+struct DfaCounter {
+  DfaCounter& setCountEachLen(int countEachLen) {
+    this->countEachLen = countEachLen;
+    return *this;
+  }
+
+  DfaCounter& init(int stateCount, int transCount, int maxLen) {
+    this->stateCount = stateCount;
+    this->transCount = transCount;
+    this->maxLen = maxLen;
+
+    vector<int64> d;
+    d.push_back(stateCount);
+    d.push_back(transCount);
+    dfa.reset(d);
+
+    d.clear();
+    d.push_back(maxLen + 1);
+    d.push_back(stateCount);
+    dp.reset(d);
+
+    toCount.resize(stateCount);
+    fill(toCount.begin(), toCount.end(), 0);
+
+    prepared = 0;
+
+    return *this;
+  }
+
+  DfaCounter& addTrans(int s, int d, int t) {
+    dfa[s][d] = t;
+    return *this;
+  }
+
+  DfaCounter& markAsCount(int s, int v = 1) {
+    toCount[s] = v;
+    return *this;
+  }
+
+  void prepare() {
+    for (int i = 0; i < stateCount; ++i) {
+      dp[0][i] = toCount[i];
+    }
+    for (int i = 1; i <= maxLen; ++i)
+      for (int j = 0; j < stateCount; ++j) {
+        auto to = dfa[j];
+        for (int k = 0; k < transCount; ++k) dp[i][j] += dp[i - 1][to[k]];
+      }
+    prepared = 1;
+  }
+
+  template <typename U>
+  CT count(U n) {
+    if (prepared == 0) {
+      prepare();
+      prepared = 1;
+    }
+
+    vector<int> dig;
+    for (auto x = n; !is_zero(x); x /= 10) dig.push_back(to_int<int>(x % 10));
+    const int len = dig.size();
+    PE_ASSERT(len <= maxLen);
+
+    CT result = 0;
+    if (countEachLen) {
+      for (int i = 1; i < len; ++i) result += dp[i][0];
+    }
+
+    int state = 0;
+    for (int curr = len - 1; curr >= 0; --curr) {
+      const int me = dig[curr];
+      for (int i = 0; i < me; ++i) {
+        result += dp[curr][dfa[state][i]];
+      }
+      state = dfa[state][me];
+    }
+    if (toCount[state]) {
+      result += 1;
+    }
+    return result;
+  }
+
+  template <typename U>
+  CT findKth(CT k, U maxV) {
+    U l = 1, r = maxV;
+    while (l <= r) {
+      U mid = (l + r) / 2;
+      if (count(mid) >= k)
+        r = mid - 1;
+      else
+        l = mid + 1;
+    }
+    return l;
+  }
+
+private:
+  DArray<int, 2> dfa;
+  DArray<CT, 2> dp;
+  vector<int> toCount;
+  int countEachLen = 0;
+  int stateCount = 0;
+  int transCount = 0;
+  int prepared = 0;
+  int maxLen = 0;
 };
 #endif

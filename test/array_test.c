@@ -26,6 +26,10 @@ SL void array_test() {
       vec[i][j] = i * j;
     }
 
+  vec.reset({3, 2});
+  for (int i = 0; i < 3; ++i)
+    for (int j = 0; j < 2; ++j) vec[i][j] = i * j;
+
   Array<int, 4, 5> arr(5);
   for (int i = 0; i < 4; ++i)
     for (int j = 0; j < 5; ++j) arr[i][j] = i * j;

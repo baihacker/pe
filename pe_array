@@ -25,13 +25,26 @@ struct DArray : public DArrayRef<T, D> {
     PE_ASSERT(dimension.size() == D);
   }
 
+  DArray() : base(NULL, 0, NULL, NULL) {
+    dimension = vector<int64>(D, 1);
+    init();
+    PE_ASSERT(dimension.size() == D);
+  }
+
   DArray(const DArray&) = delete;
   DArray(DArray&&) = delete;
 
   DArray& operator=(const DArray&) = delete;
   DArray& operator=(DArray&&) = delete;
 
-  ~DArray() { reset(); }
+  ~DArray() { clear(); }
+
+  template <class... Args>
+  void reset(const vector<int64>& dimension, Args&&... arg) {
+    clear();
+    this->dimension = dimension;
+    init(arg...);
+  }
 
   template <class... Args>
   void init(Args&&... arg) {
@@ -51,7 +64,7 @@ struct DArray : public DArrayRef<T, D> {
     }
   }
 
-  void reset() {
+  void clear() {
     for (int64 i = 0; i < elementCount; ++i) {
       (base::data + i)->~T();
     }
@@ -155,7 +168,7 @@ struct FArray : public FArrayRef<T, S> {
   FArray& operator=(const FArray&) = delete;
   FArray& operator=(FArray&&) = delete;
 
-  ~FArray() { reset(); }
+  ~FArray() { clear(); }
 
   template <class... Args>
   void init(Args&&... arg) {
@@ -165,7 +178,7 @@ struct FArray : public FArrayRef<T, S> {
     }
   }
 
-  void reset() {
+  void clear() {
     for (int64 i = 0; i < S::EC; ++i) {
       (base::data + i)->~T();
     }

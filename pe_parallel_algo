@@ -310,12 +310,56 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
 
 #if ENABLE_OPENMP
 template <typename T>
-struct PSumHelper {
-  PSumHelper(T mod) : mod(mod) { fill(data, data + 128, 0); }
+struct PSum {
+  PSum() { reset(); }
 
-  void add(T v) {
+  PSum& reset() {
+    fill(data, data + 128, 0);
+    return *this;
+  }
+
+  PSum& operator+=(T v) {
+    const auto tid = omp_get_thread_num();
+    data[tid] += v;
+    return *this;
+  }
+
+  PSum& add(T v) {
+    *this += v;
+    return *this;
+  }
+
+  T value() const {
+    T r = 0;
+    for (int i = 0; i < 128; ++i) {
+      r += data[i];
+    }
+    return r;
+  }
+
+  operator T() const { return value(); }
+
+  // Note: false sharing issue
+  T data[128];
+};
+template <typename T>
+struct PSumMod {
+  PSumMod(T mod) : mod(mod) { reset(); }
+
+  PSumMod& reset() {
+    fill(data, data + 128, 0);
+    return *this;
+  }
+
+  PSumMod& operator+=(T v) {
     const auto tid = omp_get_thread_num();
     data[tid] = add_mod(data[tid], v, mod);
+    return *this;
+  }
+
+  PSumMod& add(T v) {
+    *this += v;
+    return *this;
   }
 
   T value() const {

@@ -2,6 +2,7 @@
 #define __PE_RAND_H__
 
 #include "pe_base"
+#include "pe_nt"
 
 // C-style random number generator
 // ANSI_ISO_9899-1999: The value of the RAND_MAX macro shall be at least 32767.
@@ -71,4 +72,32 @@ make_uniform_generator(int min, int max) {
       std::mt19937(rd()), std::uniform_int_distribution<int>(min, max));
 }
 
+template <typename ET, typename RT>
+SL void halton(ET idx, const int n, RT* result) {
+  fill(result, result + n, 0);
+  vector<RT> prime_inv(n, 0);
+  vector<ET> t(n, idx);
+  for (int i = 0; i < n; ++i) prime_inv[i] = (RT)1. / plist[i];
+  for (ET sum = n * idx; sum > 0;) {
+    for (int i = 0; i < n; ++i) {
+      const auto d = t[i] % plist[i];
+      result[i] += d * prime_inv[i];
+      prime_inv[i] /= plist[i];
+      sum -= t[i];
+      t[i] /= plist[i];
+      sum += t[i];
+    }
+  }
+}
+
+template <typename ET, typename RT>
+SL vector<RT> halton(ET idx, const int n) {
+  return halton<ET, RT>(idx, n);
+}
+
+SL vector<double> halton(int64 idx, const int n) {
+  vector<double> r(n, 0);
+  halton(idx, n, &r[0]);
+  return r;
+}
 #endif

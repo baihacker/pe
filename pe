@@ -108,6 +108,12 @@
 #define PE_X86_32 1
 #endif
 
+#if PE_X86_64
+#define _AMD64_
+#else
+#define _X86_
+#endif
+
 #if defined(__AVX2__) && __AVX2__
 #define PE_HAS_AVX2 1
 #else
@@ -354,19 +360,60 @@ static inline std::ostream& operator<<(std::ostream& o, __mpz_struct const* x) {
 #pragma comment(lib, "legacy_stdio_definitions.lib")
 #endif
 
+// Disable unnecessary features in windows.h
+#if PLATFORM_WIN
+#define NOGDICAPMASKS
+#define NOVIRTUALKEYCODES
+#define NOWINMESSAGES
+#define NOWINSTYLES
+#define NOSYSMETRICS
+#define NOMENUS
+#define NOICONS
+#define NOKEYSTATES
+#define NOSYSCOMMANDS
+#define NORASTEROPS
+#define NOSHOWWINDOW
+#define OEMRESOURCE
+#define NOATOM
+#define NOCLIPBOARD
+#define NOCOLOR
+#define NOCTLMGR
+#define NODRAWTEXT
+#define NOGDI
+#define NOKERNEL
+#define NOUSER
+#define NONLS
+#define NOMB
+#define NOMEMMGR
+#define NOMETAFILE
+#define NOMINMAX
+#define NOMSG
+#define NOOPENFILE
+#define NOSCROLL
+#define NOSERVICE
+#define NOSOUND
+#define NOTEXTMETRIC
+#define NOWH
+#define NOWINOFFSETS
+#define NOCOMM
+#define NOKANJI
+#define NOHELP
+#define NOPROFILER
+#define NODEFERWINDOWPOS
+#define NOMCX
+
+#define NOCRYPT
+#endif
+
 // Disable max/min in windows.h
 #ifndef NOMINMAX
 #define NOMINMAX 1
 #endif
 
-// Disable unnecessary features in windows.h
 #if PLATFORM_WIN
-#define NOCRYPT
-#define NOGDI
-#endif
-
-#if defined(COMPILER_MSVC) && PLATFORM_WIN && PE_X86_64
-// pe_mod depends some windows api when the target arch is x64.
+// #if defined(COMPILER_MSVC) && PLATFORM_WIN && PE_X86_64
+// pe_mod depends VirtualProtect when the target arch is x64.
+// pe_memory depends on several APIs if the platform is windows.
 #include <windows.h>
 #endif
 

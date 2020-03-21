@@ -53,7 +53,7 @@ SL void test_helper_method() {
           m(0, 1) = 1;
           m(1, 0) = 1;
         },
-        2, 100000, 1000000007);
+        2, 100000);
     auto res1 = power_mod<NMod64<1000000007>>(
         [=](auto& m, auto& v) {
           m(0, 0) = 1;
@@ -62,7 +62,7 @@ SL void test_helper_method() {
           v[0] = 1;
           v[1] = 1;
         },
-        2, 100000, 1000000007);
+        2, 100000);
   }
 
   {

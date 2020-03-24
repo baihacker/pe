@@ -57,7 +57,7 @@ Use:
 
 Prerequirements:
 ----------------
-C++11 or above
+C++17 or above
 
 File list:
 -----------

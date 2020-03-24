@@ -64,10 +64,10 @@ template <typename IT, typename DERIVED, typename IIT>
 struct RangeBase {
   RangeBase(IT b, IT e) : b(b), e(e) {}
 
-  typedef typename IIT::reference reference;
-  typedef typename add_rvalue_reference<const typename IIT::value_type>::type
-      rvalue_reference;
-  typedef typename std::remove_cv<typename IIT::value_type>::type value_type;
+  using reference = typename IIT::reference;
+  using rvalue_reference =
+      typename add_rvalue_reference<const typename IIT::value_type>::type;
+  using value_type = typename std::remove_cv<typename IIT::value_type>::type;
 
   FilterRange<IIT> filter(
       std::function<int(const typename IIT::value_type&)> filter) const {
@@ -319,8 +319,8 @@ struct RangeBase {
 
 template <typename T>
 struct NumberIter {
-  typedef const T reference;
-  typedef T value_type;
+  using reference = const T;
+  using value_type = T;
 
   T operator*() const { return i; }
 
@@ -347,9 +347,9 @@ struct NumberIter {
 
 template <typename T>
 struct NumberRange : public RangeBase<T, NumberRange<T>, NumberIter<T>> {
-  typedef NumberIter<T> iterator;
-  typedef NumberIter<T> const_iterator;
-  typedef T value_type;
+  using iterator = NumberIter<T>;
+  using const_iterator = NumberIter<T>;
+  using value_type = T;
 
   typedef RangeBase<T, NumberRange<T>, NumberIter<T>> base;
 
@@ -361,8 +361,8 @@ struct NumberRange : public RangeBase<T, NumberRange<T>, NumberIter<T>> {
 
 template <typename T>
 struct NumberIterD {
-  typedef const T reference;
-  typedef T value_type;
+  using reference = const T;
+  using value_type = T;
 
   T operator*() const { return i; }
 
@@ -399,9 +399,9 @@ struct NumberIterD {
 
 template <typename T>
 struct NumberRangeD : public RangeBase<T, NumberRangeD<T>, NumberIter<T>> {
-  typedef NumberIterD<T> iterator;
-  typedef NumberIterD<T> const_iterator;
-  typedef T value_type;
+  using iterator = NumberIterD<T>;
+  using const_iterator = NumberIterD<T>;
+  using value_type = T;
 
   typedef RangeBase<T, NumberRangeD<T>, NumberIter<T>> base;
 
@@ -444,8 +444,8 @@ SL REQUIRES(is_native_integer<T>::value) RETURN(NumberRangeD<int64>)
 
 template <typename IT>
 struct RangeIter {
-  typedef typename IT::reference reference;
-  typedef typename IT::value_type value_type;
+  using reference = typename IT::reference;
+  using value_type = typename IT::value_type;
 
   reference operator*() { return *iter; }
 
@@ -472,9 +472,9 @@ struct RangeIter {
 
 template <typename IT>
 struct Range : public RangeBase<IT, Range<IT>, RangeIter<IT>> {
-  typedef RangeIter<IT> iterator;
-  typedef RangeIter<IT> const_iterator;
-  typedef typename iterator::value_type value_type;
+  using iterator = RangeIter<IT>;
+  using const_iterator = RangeIter<IT>;
+  using value_type = typename iterator::value_type;
 
   typedef RangeBase<IT, Range<IT>, RangeIter<IT>> base;
 
@@ -501,8 +501,8 @@ SL REQUIRES(!is_native_integer<T>::value) RETURN(Range<T>) range(T s, T e) {
 
 template <typename IT>
 struct ArrayRangeIter {
-  typedef IT& reference;
-  typedef IT value_type;
+  using reference = IT&;
+  using value_type = IT;
 
   reference operator*() { return *iter; }
 
@@ -531,9 +531,9 @@ struct ArrayRangeIter {
 
 template <typename IT>
 struct ArrayRange : public RangeBase<IT*, ArrayRange<IT>, ArrayRangeIter<IT>> {
-  typedef ArrayRangeIter<IT> iterator;
-  typedef ArrayRangeIter<IT> const_iterator;
-  typedef typename iterator::value_type value_type;
+  using iterator = ArrayRangeIter<IT>;
+  using const_iterator = ArrayRangeIter<IT>;
+  using value_type = typename iterator::value_type;
 
   typedef RangeBase<IT*, ArrayRange<IT>, ArrayRangeIter<IT>> base;
 
@@ -562,8 +562,8 @@ SL ArrayRange<T> range(T (&a)[N]) {
 
 template <typename IT>
 struct MappedRangeIter {
-  typedef typename IT::value_type reference;
-  typedef typename IT::value_type value_type;
+  using reference = typename IT::value_type;
+  using value_type = typename IT::value_type;
 
   reference operator*() { return mapper(*iter); }
 
@@ -594,9 +594,9 @@ struct MappedRangeIter {
 template <typename IT>
 struct MappedRange
     : public RangeBase<IT, MappedRange<IT>, MappedRangeIter<IT>> {
-  typedef MappedRangeIter<IT> iterator;
-  typedef MappedRangeIter<IT> const_iterator;
-  typedef typename iterator::value_type value_type;
+  using iterator = MappedRangeIter<IT>;
+  using const_iterator = MappedRangeIter<IT>;
+  using value_type = typename iterator::value_type;
 
   typedef RangeBase<IT, MappedRange<IT>, MappedRangeIter<IT>> base;
 
@@ -619,8 +619,8 @@ struct MappedRange
 
 template <typename IT>
 struct FilterRangeIter {
-  typedef typename IT::reference reference;
-  typedef typename IT::value_type value_type;
+  using reference = typename IT::reference;
+  using value_type = typename IT::value_type;
 
   reference operator*() { return *iter; }
 
@@ -653,9 +653,9 @@ struct FilterRangeIter {
 template <typename IT>
 struct FilterRange
     : public RangeBase<IT, FilterRange<IT>, FilterRangeIter<IT>> {
-  typedef FilterRangeIter<IT> iterator;
-  typedef FilterRangeIter<IT> const_iterator;
-  typedef typename FilterRangeIter<IT>::value_type value_type;
+  using iterator = FilterRangeIter<IT>;
+  using const_iterator = FilterRangeIter<IT>;
+  using value_type = typename FilterRangeIter<IT>::value_type;
 
   typedef RangeBase<IT, FilterRange<IT>, FilterRangeIter<IT>> base;
 
@@ -685,7 +685,7 @@ struct ContainerIterI {
     typename IT::reference v;
   };
 
-  typedef ContainerItemI reference;
+  using reference = ContainerItemI;
 
   ContainerItemI operator*() { return ContainerItemI{idx, *iter}; }
 
@@ -717,8 +717,8 @@ struct ContainerIterI {
 
 template <typename IT>
 struct ContainerRangeI {
-  typedef ContainerIterI<IT> iterator;
-  typedef ContainerIterI<IT> const_iterator;
+  using iterator = ContainerIterI<IT>;
+  using const_iterator = ContainerIterI<IT>;
 
   ContainerIterI<IT> begin() const { return ContainerIterI<IT>{b, 0}; }
   ContainerIterI<IT> end() const { return ContainerIterI<IT>{e, 0}; }
@@ -734,7 +734,7 @@ struct ArrayIterI {
     T& v;
   };
 
-  typedef ContainerItemI reference;
+  using reference = ContainerItemI;
 
   ContainerItemI operator*() { return ContainerItemI{idx, start[idx]}; }
 
@@ -764,8 +764,8 @@ struct ArrayIterI {
 
 template <typename T>
 struct ArrayRangeI {
-  typedef ArrayIterI<T> iterator;
-  typedef ArrayIterI<T> const_iterator;
+  using iterator = ArrayIterI<T>;
+  using const_iterator = ArrayIterI<T>;
 
   ArrayIterI<T> begin() const { return ArrayIterI<T>{start, 0}; }
   ArrayIterI<T> end() const { return ArrayIterI<T>{start, cnt}; }

@@ -8,7 +8,7 @@
 
 // InterpolatingPolynomial
 struct IntPoly {
-  IntPoly() : n(0) {}
+  IntPoly() {}
 
   void reset(const vector<string>& variables) { n = sz(variables); }
 
@@ -277,10 +277,11 @@ struct MmaExpTree {
   int64 value;
   int iid;  // internal id for removing duplicated tree.
 
-  MmaExpTree(MmaExpTree* p = 0, MmaExpTree* l = 0, MmaExpTree* r = 0)
+  MmaExpTree(MmaExpTree* p = nullptr, MmaExpTree* l = nullptr,
+             MmaExpTree* r = nullptr)
       : parent(p), left(l), right(r) {}
 
-  ~MmaExpTree() {}
+  ~MmaExpTree() = default;
 
   static void destroyTree(MmaExpTree* tree) {
     if (!tree) return;
@@ -441,7 +442,7 @@ struct MmaExpParser {
   }
 
   MmaExpTree* parse() {
-    auto* vt = new MmaExpTree(0, 0, 0);
+    auto* vt = new MmaExpTree(nullptr, nullptr, nullptr);
     MmaExpTree* build = vt;
     vt->nodeType = ROOT;
     // = 0, an operand is expected, build is the node of the operator whose
@@ -457,7 +458,7 @@ struct MmaExpParser {
          t = nextToken(token)) {
       if (state == 0) {
         if (t == NUMBER) {
-          build = new MmaExpTree(build, 0, 0);
+          build = new MmaExpTree(build, nullptr, nullptr);
           build->nodeType = NUMBER;
           build->token = token;
           build->value = atoll(token.c_str());
@@ -465,13 +466,13 @@ struct MmaExpParser {
           state = 1;
         } else if (t == VAR) {
           vars[token] = 0;
-          build = new MmaExpTree(build, 0, 0);
+          build = new MmaExpTree(build, nullptr, nullptr);
           build->nodeType = VAR;
           build->token = token;
           build->parent->right = build;
           state = 1;
         } else if (t == FUN) {
-          build = new MmaExpTree(build, 0, 0);
+          build = new MmaExpTree(build, nullptr, nullptr);
           build->nodeType = FUN;
           build->token = token;
           build->parent->right = build;
@@ -494,7 +495,7 @@ struct MmaExpParser {
           // Leading +
         } else if (t == SUB) {
           // Leading -
-          build = new MmaExpTree(build, 0, 0);
+          build = new MmaExpTree(build, nullptr, nullptr);
           build->nodeType = NEG;
           build->token = token;
           build->parent->right = build;
@@ -512,12 +513,12 @@ struct MmaExpParser {
           x->parent = build;
           build = x;
         } else {*/
-        auto* x = new MmaExpTree(0, 0);
+        auto* x = new MmaExpTree(nullptr, nullptr);
         x->nodeType = t;
         x->token = token;
         if (t == NUMBER || t == VAR || t == FUN || t == LEFT_BRACKET) {
           delete x;
-          x = new MmaExpTree(0, 0);
+          x = new MmaExpTree(nullptr, nullptr);
           x->nodeType = MUL;
           x->token = "*";
           t = MUL;
@@ -544,7 +545,7 @@ struct MmaExpParser {
     }
     MmaExpTree* result = vt->right;
     delete vt;
-    if (result) result->parent = 0;
+    if (result) result->parent = nullptr;
     return result;
   }
 

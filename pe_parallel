@@ -29,7 +29,7 @@ class MultiThreadsTaskRunner {
   };
 
 #if PE_HAS_CPP11
-  typedef std::function<void(TaskItem)>* worker_ptr_t;
+  using worker_ptr_t = std::function<void(TaskItem)>*;
 #else
   typedef void (*worker_ptr_t)(TaskItem task_item);
 #endif
@@ -41,26 +41,25 @@ class MultiThreadsTaskRunner {
   };
 
  public:
-  MultiThreadsTaskRunner()
-      : threads_count(0), worker_ptr(NULL), next_task_item_id(0), p(0), q(0) {
+  MultiThreadsTaskRunner() : worker_ptr(nullptr) {
     memset(threads_context, 0, sizeof threads_context);
   }
 
   void reset() {
     threads_count = 0;
-    worker_ptr = NULL;
+    worker_ptr = nullptr;
     p = q = 0;
     memset(threads_context, 0, sizeof threads_context);
   }
 
   void init(worker_ptr_t worker, const int threads = 3,
             const int stack = 100 * (1 << 20)) {
-    assert(worker_ptr == NULL);
+    assert(worker_ptr == nullptr);
 
     p = q = 0;
     InitializeCriticalSection(&request_access);
-    has_new_request = CreateEvent(NULL, FALSE, FALSE, NULL);
-    request_removed = CreateEvent(NULL, FALSE, FALSE, NULL);
+    has_new_request = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    request_removed = CreateEvent(nullptr, FALSE, FALSE, nullptr);
     threads_count = max(threads, (int)min_thread);
     threads_count = min(threads_count, (int)max_thread);
     worker_ptr = worker;
@@ -68,9 +67,9 @@ class MultiThreadsTaskRunner {
       threads_context[i].idx = i;
       threads_context[i].worker_ptr = worker_ptr;
       threads_context[i].host = this;
-      threads_handle[i] =
-          (HANDLE)_beginthreadex(NULL, max(stack, 100 * (1 << 20)), work_thread,
-                                 (void*)&threads_context[i], 0, NULL);
+      threads_handle[i] = (HANDLE)_beginthreadex(
+          nullptr, max(stack, 100 * (1 << 20)), work_thread,
+          (void*)&threads_context[i], 0, nullptr);
     }
     start = GetTickCount();
   }
@@ -175,7 +174,7 @@ class MultiThreadsTaskRunner {
   DWORD start, end;
 
  private:
-  int threads_count;
+  int threads_count{0};
 
   HANDLE threads_handle[max_thread];
   ThreadContext threads_context[max_thread];
@@ -186,8 +185,8 @@ class MultiThreadsTaskRunner {
   worker_ptr_t worker_ptr;
 
   TaskItem task_que[max_pending_tasks + 1];
-  int64 next_task_item_id;
-  int p, q;
+  int64 next_task_item_id{0};
+  int p{0}, q{0};
 };
 
 enum {
@@ -214,7 +213,7 @@ static inline void make_sure_process_singleton(const char* id) {
     exit(-1);
     return;
   }
-  hMutex = ::CreateMutex(NULL, TRUE, mutex_name.c_str());
+  hMutex = ::CreateMutex(nullptr, TRUE, mutex_name.c_str());
   if (::GetLastError() == ERROR_ALREADY_EXISTS) {
     fprintf(stderr, "another process is running\n");
     ::CloseHandle(hMutex);
@@ -244,7 +243,7 @@ struct RangeBasedTaskGenerator {
     last_task_ = (cnt + block_size - 1) / block_size;
   }
 
-  ~RangeBasedTaskGenerator() {}
+  ~RangeBasedTaskGenerator() = default;
 
   Derived& set_range(int64 first = 0, int64 last = 0, int64 block_size = 1) {
     first_ = first;
@@ -290,7 +289,7 @@ struct RangeBasedTaskGenerator {
 
 template <typename Derived>
 struct SupportCacheFileName {
-  SupportCacheFileName(const char* /*file_name*/ = NULL) : file_name_(NULL) {}
+  SupportCacheFileName(const char* /*file_name*/ = nullptr) {}
 
   const char* cache_file_name() const { return file_name_; }
 
@@ -299,7 +298,7 @@ struct SupportCacheFileName {
     return static_cast<Derived&>(*this);
   }
 
-  const char* file_name_;
+  const char* file_name_{NULL};
 };
 
 template <typename CONTEXT, bool has_file_name>
@@ -309,7 +308,7 @@ struct GetCacheFileNameHelper {
 
 template <typename CONTEXT>
 struct GetCacheFileNameHelper<CONTEXT, false> {
-  const char* get(CONTEXT& /*context*/) { return NULL; }
+  const char* get(CONTEXT& /*context*/) { return nullptr; }
 };
 
 // The implementation of task scheduler.
@@ -320,13 +319,13 @@ struct GetCacheFileNameHelper<CONTEXT, false> {
 // a thread.
 template <typename CONTEXT>
 class ParallelRunner {
-  typedef MultiThreadsTaskRunner<typename CONTEXT::Task> runner_t;
-  typedef typename runner_t::TaskItem TaskItem;
+  using runner_t = MultiThreadsTaskRunner<typename CONTEXT::Task>;
+  using TaskItem = typename runner_t::TaskItem;
 
  public:
-  ParallelRunner() : kv_(NULL) {}
+  ParallelRunner() {}
 
-  ~ParallelRunner() {}
+  ~ParallelRunner() = default;
 
   void work_on_thread(TaskItem ti) {
     // step 1: check cache
@@ -406,16 +405,16 @@ class ParallelRunner {
 
     if (kv_) {
       delete kv_;
-      kv_ = NULL;
+      kv_ = nullptr;
     }
-    context_ptr_ = NULL;
+    context_ptr_ = nullptr;
 
     return context.result();
   }
 
  private:
   runner_t oml_;
-  KVPersistance* kv_;
+  KVPersistance* kv_{NULL};
   CONTEXT* context_ptr_;
 };
 
@@ -427,13 +426,9 @@ class ParallelRange : public RangeBasedTaskGenerator<ParallelRange>,
                       public SupportCacheFileName<ParallelRange> {
  public:
   ParallelRange(int64 first = 0, int64 last = 0, int64 block_size = 1,
-                const char* file_name = NULL)
+                const char* file_name = nullptr)
       : RangeBasedTaskGenerator(first, last, block_size),
-        SupportCacheFileName(file_name),
-        result_(0),
-        threads_count_(-1),
-        has_woi_(false),
-        has_wob_(false) {}
+        SupportCacheFileName(file_name) {}
 
   int64 result() const { return result_; }
 
@@ -508,10 +503,10 @@ class ParallelRange : public RangeBasedTaskGenerator<ParallelRange>,
 
  protected:
   ParallelRunner<ParallelRange> runner_;
-  int64 result_;
-  int threads_count_;
-  bool has_woi_;
-  bool has_wob_;
+  int64 result_{0};
+  int threads_count_{-1};
+  bool has_woi_{false};
+  bool has_wob_{false};
   std::function<int64(int64, int64)> update_result_;
   std::function<int64(int64, int64)> work_on_item_;
   std::function<int64(int64, int64, int64)> work_on_block_;
@@ -540,8 +535,8 @@ template <typename Derived>
 class ParallelRangeT : public RangeBasedTaskGenerator<ParallelRangeT<Derived>>,
                        public SupportCacheFileName<ParallelRangeT<Derived>> {
  public:
-  typedef ParallelRangeT<Derived> Self;
-  typedef typename RangeBasedTaskGenerator<Self>::Task Task;
+  using Self = ParallelRangeT<Derived>;
+  using Task = typename RangeBasedTaskGenerator<Self>::Task;
   int64 result() const { return result_; }
 
   void on_finished() { cerr << "result = " << result_ << endl; }

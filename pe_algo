@@ -744,21 +744,16 @@ SL void init_power_sum_mod(int64 n, const int maxk, int* result, T (*comb)[D],
  * If n is no more than PIVOT, use a pre-computed table.
  */
 struct SFCounter {
-  SFCounter(int64 PIVOT = ::maxp) : PIVOT(PIVOT) { init(PIVOT); }
-  ~SFCounter() { reset(); }
-
-  void reset() {
-    if (pre) {
-      delete[] pre;
-      pre = nullptr;
+  SFCounter(int64 PIVOT = ::maxp) : PIVOT(PIVOT) {
+    if (::maxp > 0) {
+      init(PIVOT);
     }
   }
+  ~SFCounter() = default;
 
   void init(int64 PIVOT) {
-    reset();
-
     this->PIVOT = PIVOT;
-    pre = new int64[PIVOT + 1];
+    pre.resize(PIVOT + 1);
     pre[0] = 0;
     for (int64 i = 1; i <= PIVOT; ++i) {
       pre[i] = pre[i - 1] + is_square_free(i);
@@ -777,7 +772,7 @@ struct SFCounter {
     }
     return mem[n] = ret;
   }
-  int64* pre{NULL};
+  vector<int64> pre;
   int64 PIVOT;
   unordered_map<int64, int64> mem;
 };
@@ -788,33 +783,20 @@ struct SFCounter {
  */
 struct MuPhiSumModer {
   MuPhiSumModer(int64 mod, int64 PIVOT = ::maxp) : mod(mod), PIVOT(PIVOT) {
-    pre_sum_mu = pre_sum_phi = nullptr;
-    init(PIVOT);
-  }
-
-  ~MuPhiSumModer() { reset(); }
-
-  void reset() {
-    if (pre_sum_mu == nullptr) {
-      delete[] pre_sum_mu;
-      pre_sum_mu = nullptr;
-    }
-    if (pre_sum_phi == nullptr) {
-      delete[] pre_sum_phi;
-      pre_sum_phi = nullptr;
+    if (::maxp != 0) {
+      init(PIVOT);
     }
   }
+
+  ~MuPhiSumModer() = default;
 
   void init(int64 PIVOT) {
-    reset();
     this->PIVOT = PIVOT;
 
-    PE_ASSERT(::mu != nullptr);
-    PE_ASSERT(::phi != nullptr);
     PE_ASSERT(PIVOT <= ::maxp);
 
-    pre_sum_mu = new int64[PIVOT + 1];
-    pre_sum_phi = new int64[PIVOT + 1];
+    pre_sum_mu.resize(PIVOT + 1);
+    pre_sum_phi.resize(PIVOT + 1);
     pre_sum_mu[0] = pre_sum_phi[0] = 0;
     for (int i = 1; i <= PIVOT; ++i) {
       pre_sum_mu[i] = ::mu[i] + pre_sum_mu[i - 1];
@@ -870,14 +852,69 @@ struct MuPhiSumModer {
     }
     return mem_sum_phi[n] = ret;
   }
+
   int64 mod;
   int64 PIVOT;
 
-  int64* pre_sum_mu;
+  vector<int64> pre_sum_mu;
   unordered_map<int64, int64> mem_sum_mu;
 
-  int64* pre_sum_phi;
+  vector<int64> pre_sum_phi;
   unordered_map<int64, int64> mem_sum_phi;
+};
+
+struct Sigma0SumModer {
+  Sigma0SumModer(int64 mod, int64 PIVOT = ::maxp) : mod(mod), PIVOT(PIVOT) {
+    if (::maxp != 0) {
+      init(PIVOT);
+    }
+  }
+
+  ~Sigma0SumModer() = default;
+
+  void init(int64 PIVOT) {
+    this->PIVOT = PIVOT;
+
+    PE_ASSERT(PIVOT <= ::maxp);
+
+    pre.resize(PIVOT + 1);
+    fill(pre.begin(), pre.end(), 0);
+    for (int i = 1; i <= PIVOT; ++i) {
+      for (int j = i; j <= PIVOT; j += i) {
+        ++pre[j];
+      }
+    }
+    for (int i = 1; i <= PIVOT; ++i) {
+      pre[i] = add_mod(pre[i] % mod, pre[i - 1], mod);
+    }
+  }
+
+  int64 get(const int64 n) {
+    if (n <= PIVOT) return pre[n];
+
+    auto where = mem.find(n);
+    if (where != mem.end()) return where->second;
+
+    int64 ret = 0;
+    for (int64 i = 1; i * i <= n; ++i) {
+      ret += n / i;
+      if (ret >= mod) {
+        ret -= mod;
+      }
+    }
+    ret <<= 1;
+    if (ret >= mod) {
+      ret -= mod;
+    }
+    const int64 t = sqrti(n) % mod;
+    return mem[n] = sub_mod(ret, mul_mod_ex(t, t, mod), mod);
+  }
+
+  int64 mod;
+  int64 PIVOT;
+
+  vector<int64> pre;
+  unordered_map<int64, int64> mem;
 };
 
 template <typename T>
@@ -1550,7 +1587,7 @@ struct CachedPi {
 
   int64 operator()(int64 n) { return cal(n); }
 
-  int* prepi{NULL};
+  int* prepi{nullptr};
   int PIVOT;
   unordered_map<int64, int64> piCache;
 };
@@ -1561,7 +1598,7 @@ struct CachedPi {
  * n.
  */
 struct PatternNumberCounter {
-  PatternNumberCounter() {}
+  PatternNumberCounter() = default;
 
   ~PatternNumberCounter() { release(); }
 
@@ -1636,8 +1673,8 @@ struct PatternNumberCounter {
   }
 
   int primeCnt;
-  int usedPrimeIdx[1024];   // the index of used primes.
-  char* isPrimeUsed{NULL};  // is the ith prime used
+  int usedPrimeIdx[1024];      // the index of used primes.
+  char* isPrimeUsed{nullptr};  // is the ith prime used
   int top;
   CachedPi cachedPi;
 };

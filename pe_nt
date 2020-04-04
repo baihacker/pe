@@ -437,6 +437,7 @@ SL void init_inv(T* dest, int64 n, M mod) {
   }
 }
 
+#if 0
 /**
  * dest[0] = 1
  * dest[1] = s
@@ -454,14 +455,20 @@ SL void init_seq_prod(T* dest, T s, T e, int64 mod) {
   }
 }
 
+template <typename T>
+SL void init_seq_prod(T* dest, T e, int64 mod) {
+  init_seq_prod<T>(dest, 1, e, mod);
+}
+
 /**
  * dest[0] = 1
  * dest[1] = 1/s
  * dest[2] = 1/(s(s+1))
- * dest[e-s+1]=1/(s(s+1)...e))
+ * dest[e-s+1]=1/(s(s+1)...e)
+ * lastv = 1/(s*(s+1)...e)
  */
 template <typename T>
-SL void init_seq_prod_inv(T* dest, T s, T e, T mod, T lastv = 0) {
+SL void init_seq_prod_inv_lastv(T* dest, T s, T e, T mod, T lastv = 0) {
   if (lastv == 0) {
     lastv = 1;
     for (T i = s; i <= e; ++i) {
@@ -477,6 +484,63 @@ SL void init_seq_prod_inv(T* dest, T s, T e, T mod, T lastv = 0) {
   for (int j = cnt - 1; j > 0; --j) {
     dest[j] = mul_mod_ex(dest[j + 1], i--, mod);
   }
+}
+
+template <typename T>
+SL void init_seq_prod_inv(T* dest, T s, T e, T mod) {
+  init_seq_prod_inv_lastv<T>(dest, s, e, mod, 0);
+}
+
+template <typename T>
+SL void init_seq_prod_inv(T* dest, T e, T mod) {
+  init_seq_prod_inv_lastv<T>(dest, 1, e, mod, 0);
+}
+#endif
+
+/**
+ * dest[0] = 1
+ * dest[1] = s
+ * dest[2] = s(s+1)
+ * dest[e-s+1]=s(s+1)...e
+ * idest[0] = 1
+ * idest[1] = 1/s
+ * idest[2] = 1/(s(s+1))
+ * idest[e-s+1]=1/(s(s+1)...e)
+ */
+template <typename T>
+SL void init_seq_prod2(T* dest, T* idest, T s, T e, T mod) {
+  if (dest == nullptr && idest == nullptr) {
+    return;
+  }
+  const int cnt = (int)(e - s + 1);
+  T lastv = 0;
+  if (dest == nullptr) {
+    lastv = 1;
+    for (T i = s; i <= e; ++i) {
+      lastv = mul_mod_ex(lastv, i, mod);
+    }
+  } else {
+    dest[0] = lastv = 1;
+    for (T i = s, j = 1; i <= e; ++i, ++j) {
+      dest[j] = lastv = mul_mod_ex(lastv, i, mod);
+    }
+  }
+  if (idest == nullptr) {
+    return;
+  }
+  lastv = power_mod_ex(lastv, mod - 2, mod);
+  idest[0] = 1;
+  idest[cnt] = lastv;
+
+  T i = e;
+  for (int j = cnt - 1; j > 0; --j) {
+    idest[j] = mul_mod_ex(idest[j + 1], i--, mod);
+  }
+}
+
+template <typename T>
+SL void init_seq_prod2(T* dest, T* idest, T e, T mod) {
+  init_seq_prod2<T>(dest, idest, 1, e, mod);
 }
 
 template <typename T, int D>

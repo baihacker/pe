@@ -6,6 +6,7 @@
 #include "pe_poly_algo"
 #include "pe_tree"
 #include "pe_array"
+#include "pe_parallel_algo"
 
 /**
  * Compuates n! % p
@@ -1732,6 +1733,109 @@ T for_m_values(
     const std::function<T(int64, int, int64, MVVHistory*, int)>& visitor) {
   return MValueVisitor<T>(visitor).run(n);
 }
+
+/**
+DVA<int64> dva(1);
+struct Solver : public MValueBaseTP<Solver, int64, 8> {
+  int64 batch(int64 n, int64 val, int imp, int64 vmp, int emp, int64 now) {
+    int64 ret = 0, remain = n / val;
+    // we have remain >= vmp
+    // handle val * q where q > vmp
+    if (remain > vmp) {
+      ret += now * (dva[remain] - (imp + 1)) * 2;
+    }
+    if (val > 1) {
+      // handle val * vmp
+      ret += now / (emp + 1) * (emp + 2);
+    } else {
+      // handle f(1)
+      ret += 1;
+    }
+    return ret;
+  }
+  int64 each(int64 p, int e) { return e + 1; }
+};
+*/
+template <typename D, typename T = int64>
+struct MValueBaseT {
+  T dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, T now) {
+    T ret = static_cast<D&>(*this).batch(n, val, imp, vmp, emp, now);
+    for (int i = 0; i < limit; ++i) {
+      const int64 p = plist[i];
+      const int nextimp = imp == -1 ? i : imp;
+      const int64 nextvmp = imp == -1 ? p : vmp;
+      const int64 valLimit = n / p / nextvmp;
+      if (val > valLimit) break;
+      history[top].ip = i;
+      history[top].p = p;
+      history[top].e = 1;
+      int& e = history[top++].e;
+      for (int64 nextval = val * p;; ++e) {
+        ret += dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp,
+                   now * static_cast<D&>(*this).each(p, e));
+        if (nextval > valLimit) break;
+        nextval *= p;
+      }
+      --top;
+    }
+    return ret;
+  }
+
+  T solve(int64 n) {
+    top = 0;
+    return dfs(find_prime_idx_sg(n), n, 1, -1, 1, 0, 1);
+  }
+
+  MVVHistory history[128];
+  int top;
+};
+
+template <typename D, typename T = int64, int TN = 1>
+struct MValueBaseTP {
+  T dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, T now) {
+    T ret = static_cast<D&>(*this).batch(n, val, imp, vmp, emp, now);
+#if ENABLE_OPENMP
+    if (val == 1 && TN > 1) {
+      PSum<T> sumHelper;
+#pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
+      for (int i = 0; i < limit; ++i) {
+        const int64 p = plist[i];
+        const int nextimp = imp == -1 ? i : imp;
+        const int64 nextvmp = imp == -1 ? p : vmp;
+        const int64 valLimit = n / p / nextvmp;
+        int e = 1;
+        for (int64 nextval = val * p;; ++e) {
+          sumHelper += dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp,
+                           now * static_cast<D&>(*this).each(p, e));
+          if (nextval > valLimit) break;
+          nextval *= p;
+        }
+      }
+      ret += sumHelper.value();
+    } else {
+#endif
+      for (int i = 0; i < limit; ++i) {
+        const int64 p = plist[i];
+        const int nextimp = imp == -1 ? i : imp;
+        const int64 nextvmp = imp == -1 ? p : vmp;
+        const int64 valLimit = n / p / nextvmp;
+        if (val > valLimit) break;
+        int e = 1;
+        for (int64 nextval = val * p;; ++e) {
+          ret += dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp,
+                     now * static_cast<D&>(*this).each(p, e));
+          if (nextval > valLimit) break;
+          nextval *= p;
+        }
+      }
+#if ENABLE_OPENMP
+    }
+#endif
+    return ret;
+  }
+
+  T solve(int64 n) { return dfs(find_prime_idx_sg(n), n, 1, -1, 1, 0, 1); }
+};
 
 // Returns the number of integer solutions of
 // x^2+y^2=z^2 where 0 < x < y, 0 < z <= n.

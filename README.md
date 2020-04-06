@@ -94,7 +94,7 @@ File list:
 * pe_poly_algo: Polynomial algorithms.
 * pe_poly_base: Polynomial basic algorithms.
 * pe_poly_base_flint: Flint based polynomial basic algorithms.
-* pe_rand: Randome number.
+* pe_rand: Random number.
 * pe_range: generate an range of numbers, iterate a container with index.
 * pe_sym_poly: Symbolic polynomial.
 * pe_time: Support TimeDelta, TimeRecorder.

@@ -748,9 +748,10 @@ struct SFCounter {
       init(PIVOT);
     }
   }
+
   ~SFCounter() = default;
 
-  void init(int64 PIVOT) {
+  void init(int64 PIVOT = ::maxp) {
     this->PIVOT = PIVOT;
     pre.resize(PIVOT + 1);
     pre[0] = 0;
@@ -776,6 +777,176 @@ struct SFCounter {
   unordered_map<int64, int64> mem;
 };
 
+template <typename T = int64>
+struct MuSummer {
+  MuSummer(int64 PIVOT = ::maxp) : PIVOT(PIVOT) {
+    if (::maxp != 0) {
+      init(PIVOT);
+    }
+  }
+
+  ~MuSummer() = default;
+
+  void init(int64 PIVOT = ::maxp) {
+    this->PIVOT = PIVOT;
+
+    PE_ASSERT(PIVOT <= ::maxp);
+
+    pre.resize(PIVOT + 1);
+    pre[0] = 0;
+    for (int i = 1; i <= PIVOT; ++i) {
+      pre[i] = ::mu[i] + pre[i - 1];
+    }
+  }
+
+  T get(const int64 n) {
+    if (n <= PIVOT) return pre[n];
+
+    auto where = mem.find(n);
+    if (where != mem.end()) return where->second;
+
+    T ret = 1;
+    for (int64 i = 2; i <= n;) {
+      int64 v = n / i;
+      int64 maxi = n / v;
+      ret -= (maxi - i + 1) * get(v);
+      i = maxi + 1;
+    }
+    return mem[n] = ret;
+  }
+
+  int64 PIVOT;
+
+  vector<T> pre;
+  unordered_map<int64, T> mem;
+};
+
+template <typename T = int64>
+struct MuPhiSummer {
+  MuPhiSummer(int64 PIVOT = ::maxp) : PIVOT(PIVOT) {
+    if (::maxp != 0) {
+      init(PIVOT);
+    }
+  }
+
+  ~MuPhiSummer() = default;
+
+  void init(int64 PIVOT = ::maxp) {
+    this->PIVOT = PIVOT;
+
+    PE_ASSERT(PIVOT <= ::maxp);
+
+    pre_sum_mu.resize(PIVOT + 1);
+    pre_sum_phi.resize(PIVOT + 1);
+    pre_sum_mu[0] = pre_sum_phi[0] = 0;
+    for (int i = 1; i <= PIVOT; ++i) {
+      pre_sum_mu[i] = ::mu[i] + pre_sum_mu[i - 1];
+      pre_sum_phi[i] = ::phi[i] + pre_sum_phi[i - 1];
+    }
+  }
+
+  T get_sum_mu(const int64 n) {
+    if (n <= PIVOT) return pre_sum_mu[n];
+
+    auto where = mem_sum_mu.find(n);
+    if (where != mem_sum_mu.end()) return where->second;
+
+    T ret = 1;
+    for (int64 i = 2; i <= n;) {
+      int64 v = n / i;
+      int64 maxi = n / v;
+      int64 d = maxi - i + 1;
+      ret -= d * get_sum_mu(v);
+      i = maxi + 1;
+    }
+    return mem_sum_mu[n] = ret;
+  }
+
+  T get_sum_phi(int64 n) {
+    if (n <= PIVOT) return pre_sum_phi[n];
+
+    auto where = mem_sum_phi.find(n);
+    if (where != mem_sum_phi.end()) return where->second;
+
+    T ret = 0;
+    T last = 0;
+    for (int64 k = 1; k <= n;) {
+      int64 v = n / k;
+      int64 maxk = n / v;
+      T now = get_sum_mu(maxk);
+
+      T x = now - last;
+      last = now;
+
+      T s = 0;
+      if (v & 1) {
+        s = T(v + 1 >> 1) * v;
+      } else {
+        s = T(v >> 1) * (v + 1);
+      }
+      ret += s * x;
+      k = maxk + 1;
+    }
+    return mem_sum_phi[n] = ret;
+  }
+
+  int64 PIVOT;
+
+  vector<T> pre_sum_mu;
+  unordered_map<int64, T> mem_sum_mu;
+
+  vector<T> pre_sum_phi;
+  unordered_map<int64, T> mem_sum_phi;
+};
+
+template <typename T = int64>
+struct Sigma0Summer {
+  Sigma0Summer(int64 PIVOT = ::maxp) : PIVOT(PIVOT) {
+    if (::maxp != 0) {
+      init(PIVOT);
+    }
+  }
+
+  ~Sigma0Summer() = default;
+
+  void init(int64 PIVOT = ::maxp) {
+    this->PIVOT = PIVOT;
+
+    PE_ASSERT(PIVOT <= ::maxp);
+
+    pre.resize(PIVOT + 1);
+    fill(pre.begin(), pre.end(), 0);
+    for (int i = 1; i <= PIVOT; ++i) {
+      for (int j = i; j <= PIVOT; j += i) {
+        ++pre[j];
+      }
+    }
+    for (int i = 1; i <= PIVOT; ++i) {
+      pre[i] += pre[i - 1];
+    }
+  }
+
+  T get(const int64 n) {
+    if (n <= PIVOT) return pre[n];
+
+    auto where = mem.find(n);
+    if (where != mem.end()) return where->second;
+
+    T ret = 0;
+    for (int64 i = 1; i * i <= n; ++i) {
+      ret += n / i;
+    }
+    ret += ret;
+    const T t = sqrti(n);
+    return mem[n] = ret - t * t;
+  }
+
+  int64 PIVOT;
+
+  vector<T> pre;
+  unordered_map<int64, T> mem;
+};
+
 /**
  * Computes (the sum of mu[x] or phi[x]) % mod where x is no more than n.
  * If n is no more than PIVOT, use a pre-computed table.
@@ -789,7 +960,7 @@ struct MuPhiSumModer {
 
   ~MuPhiSumModer() = default;
 
-  void init(int64 PIVOT) {
+  void init(int64 PIVOT = ::maxp) {
     this->PIVOT = PIVOT;
 
     PE_ASSERT(PIVOT <= ::maxp);
@@ -871,7 +1042,7 @@ struct Sigma0SumModer {
 
   ~Sigma0SumModer() = default;
 
-  void init(int64 PIVOT) {
+  void init(int64 PIVOT = ::maxp) {
     this->PIVOT = PIVOT;
 
     PE_ASSERT(PIVOT <= ::maxp);

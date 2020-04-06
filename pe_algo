@@ -271,22 +271,20 @@ int64* comb_moder<P, F>::fac;
  * Calculates C(n, m) % P where P is prime
  */
 struct CombModer {
-  CombModer(uint64 P, uint64 F = 0) : P(P), F(F == 0 ? P : F), fac(nullptr) {
-    init();
-  }
-  ~CombModer() {
-    delete[] fac;
-    fac = nullptr;
-  }
-  void init() {
-    if (fac == nullptr) {
-      fac = new uint64[F];
-      fac[0] = 1;
-      for (int i = 1; i < F; ++i) {
-        fac[i] = mul_mod_ex(fac[i - 1], i, P);
-      }
+  CombModer(uint64 P, uint64 F = 0) : P(P), F(F == 0 ? P : F) { init(this->F); }
+
+  ~CombModer() = default;
+
+  void init(uint64 F) {
+    this->F = F;
+
+    vector<uint64>(F).swap(fac);
+    fac[0] = 1;
+    for (int i = 1; i < F; ++i) {
+      fac[i] = mul_mod_ex(fac[i - 1], i, P);
     }
   }
+
   uint64 s(int64 x) { return x & 1 ? P - 1 : 1; }
   uint64 comb(int64 m, int64 n) {
     if (m < 0 || n > m) return 0;
@@ -318,7 +316,7 @@ struct CombModer {
   }
 
   uint64 P, F;
-  uint64* fac;
+  vector<uint64> fac;
 };
 
 int64 short_comb_mod(int64 n, int64 m, int64 mod) {
@@ -391,37 +389,23 @@ struct CombModerEx {
  * k.
  */
 struct PowerSumModer {
-  PowerSumModer(int64 mod, int maxk = 128)
-      : mod(mod), maxk(maxk), P(nullptr), invs(nullptr) {
+  PowerSumModer(int64 mod, int maxk = 128) : mod(mod), maxk(maxk) {
     init(maxk);
   }
 
-  ~PowerSumModer() { reset(); }
+  ~PowerSumModer() = default;
 
-  void reset() {
-    if (P) {
-      for (int i = 0; i <= maxk; ++i) {
-        delete[] P[i];
-      }
-      delete[] P;
-      P = nullptr;
-    }
-    if (invs) {
-      delete[] invs;
-      invs = nullptr;
-    }
-  }
+  void init(int maxk = 128) {
+    this->maxk = maxk;
 
-  void init(int maxk) {
-    reset();
-
-    P = new int64*[maxk + 1];
+    vector<vector<int64>>(maxk + 1).swap(P);
     for (int i = 0; i <= maxk; ++i) {
-      P[i] = new int64[maxk + 1];
+      vector<int64>(maxk + 1).swap(P[i]);
     }
 
-    invs = new int64[maxk + 2];
-    init_inv(invs, maxk + 2, mod);
+    vector<int64>(maxk + 2).swap(invs);
+
+    init_inv(&invs[0], maxk + 2, mod);
     for (int i = 0; i <= maxk; ++i)
       for (int j = 0; j <= maxk; ++j) {
         P[i][j] = 0;
@@ -493,8 +477,8 @@ struct PowerSumModer {
 
   int64 mod;
   int maxk;
-  int64** P;
-  int64* invs;
+  vector<vector<int64>> P;
+  vector<int64> invs;
 };
 
 /**
@@ -504,32 +488,22 @@ struct PowerSumModer {
  * https://blog.csdn.net/acdreamers/article/details/38929067
  */
 struct PowerSumModerB {
-  PowerSumModerB(int64 mod, int64 maxk = 128)
-      : mod(mod), maxk(maxk), BNL(nullptr), invs(nullptr) {
+  PowerSumModerB(int64 mod, int64 maxk = 128) : mod(mod), maxk(maxk) {
     init(maxk);
   }
 
-  ~PowerSumModerB() { reset(); }
+  ~PowerSumModerB() = default;
 
-  void reset() {
-    if (BNL) {
-      delete[] BNL;
-      BNL = nullptr;
-    }
-    if (invs) {
-      delete[] invs;
-      invs = nullptr;
-    }
-  }
-
-  void init(int64 maxk) {
-    reset();
+  void init(int64 maxk = 128) {
+    this->maxk = maxk;
 
     this->maxk = maxk;
-    BNL = new int64[maxk + 1];
-    invs = new int64[maxk + 2];
-    init_inv(invs, maxk + 2, mod);
-    init_bernoulli_number(BNL, maxk + 1, invs, mod);
+
+    vector<int64>(maxk + 1).swap(BNL);
+    vector<int64>(maxk + 2).swap(invs);
+
+    init_inv(&invs[0], maxk + 2, mod);
+    init_bernoulli_number(&BNL[0], maxk + 1, &invs[0], mod);
 
     BNL[1] = mod - BNL[1];
   }
@@ -599,8 +573,8 @@ struct PowerSumModerB {
 
   int64 mod;
   int64 maxk;
-  int64* BNL;
-  int64* invs;
+  vector<int64> BNL;
+  vector<int64> invs;
 };
 
 /**
@@ -610,32 +584,22 @@ struct PowerSumModerB {
  * https://blog.csdn.net/acdreamers/article/details/38929067
  */
 struct PowerSumModerB1 {
-  PowerSumModerB1(int64 mod, int64 maxk = 128)
-      : mod(mod), maxk(maxk), BNL(nullptr), invs(nullptr) {
+  PowerSumModerB1(int64 mod, int64 maxk = 128) : mod(mod), maxk(maxk) {
     init(maxk);
   }
 
-  ~PowerSumModerB1() { reset(); }
+  ~PowerSumModerB1() = default;
 
-  void reset() {
-    if (BNL) {
-      delete[] BNL;
-      BNL = nullptr;
-    }
-    if (invs) {
-      delete[] invs;
-      invs = nullptr;
-    }
-  }
-
-  void init(int64 maxk) {
-    reset();
+  void init(int64 maxk = 128) {
+    this->maxk = maxk;
 
     this->maxk = maxk;
-    BNL = new int64[maxk + 1];
-    invs = new int64[maxk + 2];
-    init_inv(invs, maxk + 2, mod);
-    init_bernoulli_number(BNL, maxk + 1, invs, mod);
+
+    vector<int64>(maxk + 1).swap(BNL);
+    vector<int64>(maxk + 2).swap(invs);
+
+    init_inv(&invs[0], maxk + 2, mod);
+    init_bernoulli_number(&BNL[0], maxk + 1, &invs[0], mod);
   }
 
   // n + 1, n, ..., n-k+1 is not divisible by mod
@@ -702,8 +666,8 @@ struct PowerSumModerB1 {
 
   int64 mod;
   int64 maxk;
-  int64* BNL;
-  int64* invs;
+  vector<int64> BNL;
+  vector<int64> invs;
 };
 
 SL int64 power_sum(int64 n, int64 k, int64 mod) {
@@ -780,7 +744,7 @@ struct SFCounter {
 template <typename T = int64>
 struct MuSummer {
   MuSummer(int64 PIVOT = ::maxp) : PIVOT(PIVOT) {
-    if (::maxp != 0) {
+    if (::maxp > 0) {
       init(PIVOT);
     }
   }
@@ -824,7 +788,7 @@ struct MuSummer {
 template <typename T = int64>
 struct MuPhiSummer {
   MuPhiSummer(int64 PIVOT = ::maxp) : PIVOT(PIVOT) {
-    if (::maxp != 0) {
+    if (::maxp > 0) {
       init(PIVOT);
     }
   }
@@ -902,7 +866,7 @@ struct MuPhiSummer {
 template <typename T = int64>
 struct Sigma0Summer {
   Sigma0Summer(int64 PIVOT = ::maxp) : PIVOT(PIVOT) {
-    if (::maxp != 0) {
+    if (::maxp > 0) {
       init(PIVOT);
     }
   }
@@ -953,7 +917,7 @@ struct Sigma0Summer {
  */
 struct MuPhiSumModer {
   MuPhiSumModer(int64 mod, int64 PIVOT = ::maxp) : mod(mod), PIVOT(PIVOT) {
-    if (::maxp != 0) {
+    if (::maxp > 0) {
       init(PIVOT);
     }
   }
@@ -1035,7 +999,7 @@ struct MuPhiSumModer {
 
 struct Sigma0SumModer {
   Sigma0SumModer(int64 mod, int64 PIVOT = ::maxp) : mod(mod), PIVOT(PIVOT) {
-    if (::maxp != 0) {
+    if (::maxp > 0) {
       init(PIVOT);
     }
   }

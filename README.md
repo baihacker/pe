@@ -1,5 +1,4 @@
-pe
-==
+# pe
 
 [![Build Status](https://travis-ci.org/baihacker/pe.svg?branch=master)](https://travis-ci.org/baihacker/pe)
 [![Build status](https://ci.appveyor.com/api/projects/status/scaji00tde2gb7uy?svg=true)](https://ci.appveyor.com/project/baihacker/pe)
@@ -9,8 +8,7 @@ It is my basic code for solving problem on project euler.
 
 Latest release: [Pe4.0](https://github.com/baihacker/pe/releases)
 
-Installation:
--------------
+## Installation:
 * Put all the files in a folder (directory). For example, we put them in the directory D:\usr\include.
 * Make sure the environment variable CPLUS_INCLUDE_PATH contain D:\usr\include.
 * Use **gen_config.py** to generate pe_config automatically according to your environment, or
@@ -39,8 +37,7 @@ Installation:
   * Command: "g++ xc++-header pe.hpp". Run in D:\usr\include
   * You can add more options, usually, they are the same as the options to compile your target. e.g. "g++ -xc++-header pe.hpp --std=c++11 -O3 -march=native -fopenmp".
 
-Use:
-----
+## Use:
 * #include <pe.hpp> in your source code.
 
 * Use **pe().maxPrime(prime limit).init();** to initialize builtin variables such as prime list, prime count. See the end of file "pe" for details.
@@ -55,12 +52,10 @@ Use:
 
 * See [example.c](https://github.com/baihacker/pe/blob/master/example/example.c) for quick start.
 
-Prerequirements:
-----------------
+## Prerequirements:
 C++17 or above
 
-File list:
------------
+## File list:
 * pe: Including all the files except pe_config and pe.hpp.
 * pe.hpp: The file for generating precompile header.
 * pe_algo: Algorithms.
@@ -101,8 +96,7 @@ File list:
 * pe_tree: Some tree based data structures.
 * pe_type_traits: Type traits.
 
-Design principle:
---------------------
+## Design principle:
 Fast and easy to use.
 
 eg:

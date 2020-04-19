@@ -35,7 +35,7 @@ Latest release: [Pe4.0](https://github.com/baihacker/pe/releases)
 
 * [optional, recommended] Generate precompile header "pe.hpp.gch".
   * Command: "g++ xc++-header pe.hpp". Run in D:\usr\include
-  * You can add more options, usually, they are the same as the options to compile your target. e.g. "g++ -xc++-header pe.hpp --std=c++11 -O3 -march=native -fopenmp".
+  * You can add more options, usually, they are the same as the options to compile your target. e.g. "g++ -xc++-header pe.hpp --std=c++17 -O3 -march=native -fopenmp".
 
 ## Use:
 * #include <pe.hpp> in your source code.

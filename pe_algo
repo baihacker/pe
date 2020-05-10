@@ -1941,8 +1941,11 @@ struct MValueBaseTP {
         const int64 valLimit = n / p / nextvmp;
         int e = 1;
         for (int64 nextval = val * p;; ++e) {
-          sumHelper += dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp,
-                           now * static_cast<D&>(*this).each(p, e));
+          T tmp = now * static_cast<D&>(*this).each(p, e);
+          if (imp == -1) {
+            static_cast<D&>(*this).visitMaxPrime(nextvmp, e, tmp);
+          }
+          sumHelper += dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp, tmp);
           if (nextval > valLimit) break;
           nextval *= p;
         }
@@ -1958,8 +1961,11 @@ struct MValueBaseTP {
         if (val > valLimit) break;
         int e = 1;
         for (int64 nextval = val * p;; ++e) {
-          ret += dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp,
-                     now * static_cast<D&>(*this).each(p, e));
+          T tmp = now * static_cast<D&>(*this).each(p, e);
+          if (imp == -1) {
+            static_cast<D&>(*this).visitMaxPrime(nextvmp, e, tmp);
+          }
+          ret += dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp, tmp);
           if (nextval > valLimit) break;
           nextval *= p;
         }
@@ -1970,6 +1976,8 @@ struct MValueBaseTP {
     return ret;
   }
 
+  void visitMaxPrime(int64 vmp, int emp, T now) {}
+  int tid() const {return omp_get_thread_num();}
   T solve(int64 n) { return dfs(find_prime_idx_sg(n), n, 1, -1, 1, 0, 1); }
 };
 

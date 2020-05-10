@@ -1417,149 +1417,6 @@ SL DVA<T> prime_s1_ex(const int64 n) {
   return dva;
 }
 
-template <typename T>
-SL vector<DVA<T>> prime_s0_pmod_even(int64 n, int mod) {
-  vector<DVA<T>> result;
-  result.reserve(mod);
-  for (int i = 0; i < mod; ++i) result.emplace_back(n);
-
-  for (int i = 1; i < mod; i += 2) {
-    auto& target = result[i];
-    const int dec = i == 1;
-    for (auto key : result[0].fKeys())
-      target[key] = (key + mod - i) / mod - dec;
-  }
-  for (int i = 1;; ++i) {
-    const int64 p = plist[i];
-    const int64 p2 = p * p;
-    if (p2 > n) break;
-    for (auto key : result[0].bKeys()) {
-      if (key < p2) break;
-      const int rp = p % mod;
-      for (int j = 1; j < mod; j += 2) {
-        const int next = rp * j % mod;
-        result[next][key] -= result[j][key / p] - result[j][p - 1];
-      }
-    }
-  }
-
-  auto& target = result[2 % mod];
-  for (auto key : result[0].fKeys()) {
-    target[key] += key >= 2 ? 1 : 0;
-  }
-  return result;
-}
-
-template <typename T>
-SL vector<DVA<T>> prime_s0_pmod_odd(int64 n, int mod) {
-  vector<DVA<T>> result;
-  result.reserve(mod);
-  for (int i = 0; i < mod; ++i) result.emplace_back(n);
-
-  for (int i = 0; i < mod; ++i) {
-    const int dec = (i == 1 % mod) + (i == 0);
-    for (auto key : result[0].fKeys())
-      result[i][key] = (key + mod - i) / mod - dec;
-  }
-  for (int i = 0;; ++i) {
-    const int64 p = plist[i];
-    const int64 p2 = p * p;
-    if (p2 > n) break;
-    for (auto key : result[0].bKeys()) {
-      if (key < p2) break;
-      const int rp = p % mod;
-      for (int j = 0; j < mod; ++j) {
-        const int next = rp * j % mod;
-        result[next][key] -= result[j][key / p] - result[j][p - 1];
-      }
-    }
-  }
-  return result;
-}
-
-template <typename T>
-SL vector<DVA<T>> prime_s0_pmod(int64 n, int mod) {
-  return mod & 1 ? prime_s0_pmod_odd<T>(n, mod) : prime_s0_pmod_even<T>(n, mod);
-}
-
-template <typename T>
-SL vector<DVA<T>> prime_s1_pmod_even(int64 n, int mod) {
-  vector<DVA<T>> result;
-  for (int i = 0; i < mod; ++i) result.emplace_back(n);
-
-  for (int i = 1; i < mod; i += 2) {
-    auto& target = result[i];
-    const int dec = i == 1;
-    for (auto key : result[0].fKeys()) {
-#if PE_HAS_INT128
-      const int128 c = (key + mod - i) / mod;
-#else
-      const int64 c = (key + mod - i) / mod;
-#endif
-      target[key] = c * (c - 1) / 2 * mod + c * i - dec;
-    }
-  }
-  for (int i = 1;; ++i) {
-    const int64 p = plist[i];
-    const int64 p2 = p * p;
-    if (p2 > n) break;
-    for (auto key : result[0].bKeys()) {
-      if (key < p2) break;
-      const int rp = p % mod;
-      for (int j = 1; j < mod; j += 2) {
-        const int next = rp * j % mod;
-        result[next][key] -= (result[j][key / p] - result[j][p - 1]) * p;
-      }
-    }
-  }
-
-  auto& target = result[2 % mod];
-  for (auto key : result[0].fKeys()) {
-    target[key] += key >= 2 ? 2 : 0;
-  }
-  return result;
-}
-
-template <typename T>
-SL vector<DVA<T>> prime_s1_pmod_odd(int64 n, int mod) {
-  vector<DVA<T>> result;
-  for (int i = 0; i < mod; ++i) result.emplace_back(n);
-
-  for (int i = 0; i < mod; ++i) {
-    auto& target = result[i];
-    const int dec = i == 1 % mod;
-    for (auto key : result[0].fKeys()) {
-#if PE_HAS_INT128
-      const int128 c = (key + mod - i) / mod;
-#else
-      const int64 c = (key + mod - i) / mod;
-#endif
-      target[key] = c * (c - 1) / 2 * mod + c * i - dec;
-    }
-  }
-
-  for (int i = 0;; ++i) {
-    const int64 p = plist[i];
-    const int64 p2 = p * p;
-    if (p2 > n) break;
-    for (auto key : result[0].bKeys()) {
-      if (key < p2) break;
-      const int rp = p % mod;
-      for (int j = 0; j < mod; ++j) {
-        const int next = rp * j % mod;
-        result[next][key] -= (result[j][key / p] - result[j][p - 1]) * p;
-      }
-    }
-  }
-
-  return result;
-}
-
-template <typename T>
-SL vector<DVA<T>> prime_s1_pmod(int64 n, int mod) {
-  return mod & 1 ? prime_s1_pmod_odd<T>(n, mod) : prime_s1_pmod_even<T>(n, mod);
-}
-
 template <typename TreeType>
 SL void prime_sk_ex_impl(const int64 /*n*/, int /*k*/, int64* PK,
                          TreeType& tree, DVA<int64>& dva, int64 mod) {
@@ -1587,6 +1444,7 @@ SL void prime_sk_ex_impl(const int64 /*n*/, int /*k*/, int64* PK,
 SL DVA<int64> prime_sk_ex(const int64 n, int k, int64* PK, int64 mod) {
   PowerSumModerB psm(mod);
 
+  PE_ASSERT(DefaultMod::mod() != 1);
   PE_ASSERT(n >= 1);
   DVA<int64> dva(n);
 
@@ -1688,6 +1546,240 @@ SL DVA<int64> prime_sk_ex(const int64 n, int k) {
   prime_sk_ex_impl(n, k, tree, dva, mod);
 
   return dva;
+}
+
+template <typename T>
+SL vector<DVA<T>> prime_s0_pmod_even(int64 n, int pmod) {
+  vector<DVA<T>> result;
+  result.reserve(pmod);
+  for (int i = 0; i < pmod; ++i) result.emplace_back(n);
+
+  for (int i = 1; i < pmod; i += 2) {
+    auto& target = result[i];
+    const int dec = i == 1;
+    for (auto key : result[0].fKeys())
+      target[key] = (key + pmod - i) / pmod - dec;
+  }
+  for (int i = 1;; ++i) {
+    const int64 p = plist[i];
+    const int64 p2 = p * p;
+    if (p2 > n) break;
+    for (auto key : result[0].bKeys()) {
+      if (key < p2) break;
+      const int rp = p % pmod;
+      for (int j = 1; j < pmod; j += 2) {
+        const int next = rp * j % pmod;
+        result[next][key] -= result[j][key / p] - result[j][p - 1];
+      }
+    }
+  }
+
+  auto& target = result[2 % pmod];
+  for (auto key : result[0].fKeys()) {
+    target[key] += key >= 2 ? 1 : 0;
+  }
+  return result;
+}
+
+template <typename T>
+SL vector<DVA<T>> prime_s0_pmod_odd(int64 n, int pmod) {
+  vector<DVA<T>> result;
+  result.reserve(pmod);
+  for (int i = 0; i < pmod; ++i) result.emplace_back(n);
+
+  for (int i = 0; i < pmod; ++i) {
+    const int dec = (i == 1 % pmod) + (i == 0);
+    for (auto key : result[0].fKeys())
+      result[i][key] = (key + pmod - i) / pmod - dec;
+  }
+  for (int i = 0;; ++i) {
+    const int64 p = plist[i];
+    const int64 p2 = p * p;
+    if (p2 > n) break;
+    for (auto key : result[0].bKeys()) {
+      if (key < p2) break;
+      const int rp = p % pmod;
+      for (int j = 0; j < pmod; ++j) {
+        const int next = rp * j % pmod;
+        result[next][key] -= result[j][key / p] - result[j][p - 1];
+      }
+    }
+  }
+  return result;
+}
+
+template <typename T>
+SL vector<DVA<T>> prime_s0_pmod(int64 n, int pmod) {
+  return pmod & 1 ? prime_s0_pmod_odd<T>(n, pmod)
+                  : prime_s0_pmod_even<T>(n, pmod);
+}
+
+template <typename T>
+SL vector<DVA<T>> prime_s1_pmod_even(int64 n, int pmod) {
+  vector<DVA<T>> result;
+  for (int i = 0; i < pmod; ++i) result.emplace_back(n);
+
+  for (int i = 1; i < pmod; i += 2) {
+    auto& target = result[i];
+    const int dec = i == 1;
+    for (auto key : result[0].fKeys()) {
+#if PE_HAS_INT128
+      const int128 c = (key + pmod - i) / pmod;
+#else
+      const int64 c = (key + pmod - i) / pmod;
+#endif
+      target[key] = c * (c - 1) / 2 * pmod + c * i - dec;
+    }
+  }
+  for (int i = 1;; ++i) {
+    const int64 p = plist[i];
+    const int64 p2 = p * p;
+    if (p2 > n) break;
+    for (auto key : result[0].bKeys()) {
+      if (key < p2) break;
+      const int rp = p % pmod;
+      for (int j = 1; j < pmod; j += 2) {
+        const int next = rp * j % pmod;
+        result[next][key] -= (result[j][key / p] - result[j][p - 1]) * p;
+      }
+    }
+  }
+
+  auto& target = result[2 % pmod];
+  for (auto key : result[0].fKeys()) {
+    target[key] += key >= 2 ? 2 : 0;
+  }
+  return result;
+}
+
+template <typename T>
+SL vector<DVA<T>> prime_s1_pmod_odd(int64 n, int pmod) {
+  vector<DVA<T>> result;
+  for (int i = 0; i < pmod; ++i) result.emplace_back(n);
+
+  for (int i = 0; i < pmod; ++i) {
+    auto& target = result[i];
+    const int dec = i == 1 % pmod;
+    for (auto key : result[0].fKeys()) {
+#if PE_HAS_INT128
+      const int128 c = (key + pmod - i) / pmod;
+#else
+      const int64 c = (key + pmod - i) / pmod;
+#endif
+      target[key] = c * (c - 1) / 2 * pmod + c * i - dec;
+    }
+  }
+
+  for (int i = 0;; ++i) {
+    const int64 p = plist[i];
+    const int64 p2 = p * p;
+    if (p2 > n) break;
+    for (auto key : result[0].bKeys()) {
+      if (key < p2) break;
+      const int rp = p % pmod;
+      for (int j = 0; j < pmod; ++j) {
+        const int next = rp * j % pmod;
+        result[next][key] -= (result[j][key / p] - result[j][p - 1]) * p;
+      }
+    }
+  }
+
+  return result;
+}
+
+template <typename T>
+SL vector<DVA<T>> prime_s1_pmod(int64 n, int pmod) {
+  return pmod & 1 ? prime_s1_pmod_odd<T>(n, pmod)
+                  : prime_s1_pmod_even<T>(n, pmod);
+}
+
+template <int64 mod>
+SL vector<DVA<int64>> prime_sk_pmod(const int64 n, int k, int pmod) {
+  vector<DVA<NModNumber<CCMod64<mod>>>> result;
+  for (int i = 0; i < pmod; ++i) result.emplace_back(n);
+
+  PowerSumModerB psm(mod);
+
+  PE_ASSERT(n >= 1);
+  DVA<int64> dva(n);
+
+  const int keySize = dva.keySize;
+  RUBit<NModNumber<CCMod64<mod>>> tree(keySize);
+
+  vector<int64> vec;
+  NModNumber<CCMod64<mod>> powerPmod = 1;
+  // (pmod * x + i) ^ k
+  for (int c = 0; c <= k; ++c, powerPmod *= pmod) {
+    // C(k, c) (pmod * x)^c i^(k - c)
+    NModNumber<CCMod64<mod>> coe = 1;
+    if (c > 0) {
+      vec.push_back(k - c + 1);
+      int64 it = c;
+      const int size = vec.size();
+      for (int i = 0; i < size; ++i) {
+        if (it > 1 && vec[i] > 1) {
+          auto t = gcd(it, vec[i]);
+          vec[i] /= t;
+          it /= t;
+        }
+        if (vec[i] > 1) {
+          coe *= vec[i];
+        }
+      }
+    }
+    for (int i = 1; i < pmod; ++i) {
+      auto t = coe * powerPmod * power_mod_ex(i, k - c, mod);
+      for (auto& key : dva.fKeys()) {
+        if (key < i) continue;
+        const int64 maxn = (key - i) / pmod;
+        result[i][key] += t * psm.cal(maxn, c);
+      }
+    }
+  }
+  NModNumber<CCMod64<mod>> x = power_mod_ex(pmod, k, mod);
+  for (auto& key : dva.fKeys()) {
+    const int64 maxn = key / pmod;
+    result[0][key] += x * psm.cal(maxn, k);
+  }
+  for (int i = 1; i < pmod; ++i) {
+    const int64 t = power_mod(i, k, mod);
+    for (auto& key : dva.fKeys()) {
+      if (key >= i) {
+        result[i][key] += t;
+      }
+    }
+  }
+  for (int i = 0; i < pmod; ++i) {
+    if (1 % pmod == i) {
+      for (auto& key : dva.fKeys()) {
+        result[i][key] -= 1;
+      }
+      break;
+    }
+  }
+
+  for (int i = 0;; ++i) {
+    const int64 p = plist[i];
+    const int64 p2 = p * p;
+    if (p2 > n) break;
+    for (auto key : result[0].bKeys()) {
+      if (key < p2) break;
+      const int64 coe = power_mod_ex(p, k, mod);
+      const int rp = p % pmod;
+      for (int j = 0; j < pmod; ++j) {
+        const int next = rp * j % pmod;
+        result[next][key] -= (result[j][key / p] - result[j][p - 1]) * coe;
+      }
+    }
+  }
+
+  vector<DVA<int64>> resulti;
+  for (int i = 0; i < pmod; ++i) resulti.emplace_back(n);
+  for (int i = 0; i < pmod; ++i)
+    for (int j = 0; j < keySize; ++j)
+      resulti[i].values[j] = result[i].values[j].value();
+
+  return resulti;
 }
 
 struct CachedPi {

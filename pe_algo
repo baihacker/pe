@@ -1694,8 +1694,10 @@ SL vector<DVA<T>> prime_s1_pmod(int64 n, int pmod) {
 }
 
 template <int64 mod>
-SL vector<DVA<int64>> prime_sk_pmod(const int64 n, int k, int pmod) {
-  vector<DVA<NModNumber<CCMod64<mod>>>> result;
+SL vector<DVA<NModNumber<CCMod64<mod>>>> prime_sk_pmod(const int64 n, int k,
+                                                       int pmod) {
+  using MT = NModNumber<CCMod64<mod>>;
+  vector<DVA<MT>> result;
   for (int i = 0; i < pmod; ++i) result.emplace_back(n);
 
   PowerSumModerB psm(mod);
@@ -1704,14 +1706,14 @@ SL vector<DVA<int64>> prime_sk_pmod(const int64 n, int k, int pmod) {
   DVA<int64> dva(n);
 
   const int keySize = dva.keySize;
-  RUBit<NModNumber<CCMod64<mod>>> tree(keySize);
+  RUBit<MT> tree(keySize);
 
   vector<int64> vec;
-  NModNumber<CCMod64<mod>> powerPmod = 1;
-  // (pmod * x + i) ^ k
+  MT powerPmod = 1;
+  // Expand (pmod * x + i) ^ k
   for (int c = 0; c <= k; ++c, powerPmod *= pmod) {
     // C(k, c) (pmod * x)^c i^(k - c)
-    NModNumber<CCMod64<mod>> coe = 1;
+    MT coe = 1;
     if (c > 0) {
       vec.push_back(k - c + 1);
       int64 it = c;
@@ -1729,25 +1731,20 @@ SL vector<DVA<int64>> prime_sk_pmod(const int64 n, int k, int pmod) {
     }
     for (int i = 1; i < pmod; ++i) {
       auto t = coe * powerPmod * power_mod_ex(i, k - c, mod);
+      // psm.cal() doesn't count x == 0, i.e x^c is 0.
+      // If c = 0, we need i^k, so 1 is added.
+      // If c > 0, the behavior is expected.
+      const int inc = c == 0;
       for (auto& key : dva.fKeys()) {
-        if (key < i) continue;
-        const int64 maxn = (key - i) / pmod;
-        result[i][key] += t * psm.cal(maxn, c);
+        if (key >= i) {
+          result[i][key] += t * (psm.cal((key - i) / pmod, c) + inc);
+        }
       }
     }
   }
-  NModNumber<CCMod64<mod>> x = power_mod_ex(pmod, k, mod);
+  MT y = power_mod_ex(pmod, k, mod);
   for (auto& key : dva.fKeys()) {
-    const int64 maxn = key / pmod;
-    result[0][key] += x * psm.cal(maxn, k);
-  }
-  for (int i = 1; i < pmod; ++i) {
-    const int64 t = power_mod(i, k, mod);
-    for (auto& key : dva.fKeys()) {
-      if (key >= i) {
-        result[i][key] += t;
-      }
-    }
+    result[0][key] += y * psm.cal(key / pmod, k);
   }
   for (int i = 0; i < pmod; ++i) {
     if (1 % pmod == i) {
@@ -1773,13 +1770,7 @@ SL vector<DVA<int64>> prime_sk_pmod(const int64 n, int k, int pmod) {
     }
   }
 
-  vector<DVA<int64>> resulti;
-  for (int i = 0; i < pmod; ++i) resulti.emplace_back(n);
-  for (int i = 0; i < pmod; ++i)
-    for (int j = 0; j < keySize; ++j)
-      resulti[i].values[j] = result[i].values[j].value();
-
-  return resulti;
+  return result;
 }
 
 struct CachedPi {

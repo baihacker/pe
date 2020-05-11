@@ -43,11 +43,38 @@ SL void mpz_fact_ppower_mod_test() {
     N >>= 1;
   }
 
-  ans = ans * (power(Mpz(2), to_int<int>(v % 4))) % mod;
+  ans = ans * (power(Mpz(2), lower_bits(v) % 4)) % mod;
 
   assert(to_int<int64>(ans) == 21171469991580LL);
 }
 
-PE_REGISTER_TEST(&mpz_fact_ppower_mod_test, "mpz_fact_ppower_mod_test", SMALL);
+PE_REGISTER_TEST(&mpz_fact_ppower_mod_test, "mpz_fact_ppower_mod_test", SPECIFIED);
+#endif
+
+#if ENABLE_GMP
+SL void mp_integer_fact_ppower_mod_test() {
+  MpInteger N = 1;
+  for (int i = 1; i <= 20; ++i) N *= i;
+
+  MpInteger v = 0;
+  for (MpInteger n = N; !is_zero(n); n >>= 1, v += n)
+    ;
+
+  MpInteger mod = power(MpInteger(2), 48);
+  MpInteger ans = 1;
+  FactPPowerModer<MpInteger> moder(2, 48);
+  int i = 0;
+  while (N > 1) {
+    ans = ans * moder.cal(N) % mod;
+    N >>= 1;
+  }
+
+  ans = ans * (power(MpInteger(2), to_int<int>(v % 4))) % mod;
+
+  assert(to_int<int64>(ans) == 21171469991580LL);
+}
+
+PE_REGISTER_TEST(&mp_integer_fact_ppower_mod_test,
+                 "mp_integer_fact_ppower_mod_test", SMALL);
 #endif
 }  // namespace fact_ppower_mod_test

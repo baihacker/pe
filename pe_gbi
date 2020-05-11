@@ -21,6 +21,19 @@ SL REQUIRES((is_gbi<GBI>::value)) RETURN(int) is_even(const GBI& x);
 template <typename GBI>
 SL REQUIRES((is_gbi<GBI>::value)) RETURN(int) is_odd(const GBI& x);
 
+template <typename GBI>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(unsigned int) lower_bits(const GBI& x);
+
+template <typename GBI>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(tuple<GBI, GBI>)
+    div(const GBI& l, const GBI& r);
+
+template <typename T, typename GBI>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(T) to_int(const GBI& x);
+
+template <typename T, typename GBI>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(T) to_float(const GBI& x);
+
 template <typename T0, typename T1>
 SL REQUIRES((is_gbi<T0>::value && is_gbi<T1>::value)) RETURN(int)
     same_parity(const T0& v0, const T1& v1) {
@@ -36,12 +49,6 @@ template <typename GBI>
 SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI) abs(const GBI& n) {
   return int_sign(n) >= 0 ? n : -n;
 }
-
-template <typename T, typename GBI>
-SL REQUIRES((is_gbi<GBI>::value)) RETURN(T) to_int(const GBI& x);
-
-template <typename T, typename GBI>
-SL REQUIRES((is_gbi<GBI>::value)) RETURN(T) to_float(const GBI& x);
 
 template <typename GBI, typename T>
 SL REQUIRES((is_gbi<GBI>::value && is_native_integer<T>::value)) RETURN(GBI)
@@ -390,4 +397,83 @@ SL vector<GBI> to_continued_fraction(int64 p, int64 q, int n) {
 
 template <typename GBI>
 struct FactPPowerModer;
+
+// Compute n! mod p^e
+// Note: if i % p == 0, then the contribution of i is 1.
+// The complexity is at least max(e*e, p*e)
+// It is slow if N is very big, e.g. N = 10^10000. ((10^10000)! mod p^e)
+template <typename GBI>
+struct FactPPowerModer {
+  static_assert(is_gbi<GBI>::value);
+
+  std::vector<GBI> F;
+  int64 p;
+  int64 e;
+  GBI mod;
+  GBI phi;
+
+  FactPPowerModer(const int64 p, const int64 e) : p(p), e(e) {
+    int64 pe = p * e;
+    mod = power(GBI(p), e);
+    phi = power(GBI(p), (e - 1)) * (p - 1);
+    F.resize(pe + 1, 1);
+    for (int i = 1; i <= pe; ++i) {
+      if (i % p == 0)
+        F[i] = F[i - 1];
+      else
+        F[i] = F[i - 1] * i % mod;
+    }
+  }
+
+  GBI cal(const GBI& N) {
+    GBI u;
+    GBI v;
+    tie(u, v) = div(N, p);
+    auto vv = to_int<int64>(v);
+    int64 r = (e + 1) >> 1;
+
+    GBI ret = 1;
+    // F(up, p)
+    const GBI u2 = u * u;
+
+    for (int j = 1; j <= r; ++j) {
+      GBI beta_numer = u;
+      GBI beta_denom = j;
+      const int j2 = j * j;
+      for (int i = 1; i <= r; ++i)
+        if (i != j) beta_numer *= u2 - i * i, beta_denom *= j2 - i * i;
+      auto beta = beta_numer / beta_denom % phi;
+      if (int_sign(beta) < 0) beta += phi;
+      ret = ret * power_mod(F[j * p], beta, mod) % mod;
+    }
+
+    if (p == 2) {
+      int64 left_mod4 = ((lower_bits(u * p + 1) & 4) >> 1) + 1;
+      int64 right_mod4 = lower_bits(ret) & 3;
+      if (left_mod4 != right_mod4) {
+        ret = (mod - ret) % mod;
+      }
+    }
+
+    // F(v, p)
+    ret = ret * F[vv] % mod;
+
+    // (p + v, v)_p
+    for (int j = 1; j < e; ++j) {
+      auto base = F[j * p + vv] * mod_inv(F[vv] * F[j * p], mod) % mod;
+      GBI alpha_numer = u;
+      GBI alpha_denom = j;
+      for (int i = 1; i < e; ++i)
+        if (i != j) {
+          alpha_numer *= u - i;
+          alpha_denom *= j - i;
+        }
+      auto alpha = alpha_numer / alpha_denom % phi;
+      if (int_sign(alpha) < 0) alpha += phi;
+      ret = ret * power_mod(base, alpha, mod) % mod;
+    }
+
+    return ret;
+  }
+};
 #endif

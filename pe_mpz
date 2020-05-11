@@ -47,6 +47,10 @@ SL int is_zero(const Mpz& x) { return mpz_sgn(x.get_mpz_t()) == 0; }
 SL int int_sign(const Mpz& x) { return mpz_sgn(x.get_mpz_t()); }
 SL int is_odd(const Mpz& x) { return mpz_odd_p(x.get_mpz_t()); }
 SL int is_even(const Mpz& x) { return mpz_even_p(x.get_mpz_t()); }
+SL unsigned int lower_bits(const Mpz& x) { return x.get_mpz_t()[0]._mp_d[0]; }
+SL tuple<Mpz, Mpz> div(const Mpz& l, const Mpz& r) {
+  return {Mpz(l / r), Mpz(l % r)};
+}
 
 template <typename T>
 SL T to_int(const Mpz& x) {
@@ -139,8 +143,8 @@ struct FactPPowerModer<Mpz> {
     }
 
     if (p == 2) {
-      int64 left_mod4 = ((to_int<int>(Mpz((u * mpzP + 1) % 8)) & 4) >> 1) + 1;
-      int64 right_mod4 = to_int<int>(Mpz(ret % 8)) % 4;
+      int64 left_mod4 = ((lower_bits(u * mpzP + 1) & 4) >> 1) + 1;
+      int64 right_mod4 = lower_bits(ret) & 3;
       if (left_mod4 != right_mod4) {
         ret = (mod - ret) % mod;
       }
@@ -858,6 +862,12 @@ SL int is_zero(const MpInteger& x) { return x.isZero(); }
 SL int int_sign(const MpInteger& x) { return x.getSign(); }
 SL int is_even(const MpInteger& x) { return x.isEven(); }
 SL int is_odd(const MpInteger& x) { return x.isOdd(); }
+SL unsigned int lower_bits(const MpInteger& x) {
+  return static_cast<unsigned int>(x[0]);
+}
+SL tuple<MpInteger, MpInteger> div(const MpInteger& l, const MpInteger& r) {
+  return {l / r, l % r};
+}
 
 template <typename T>
 SL T to_int(const MpInteger& x) {
@@ -916,81 +926,6 @@ inline MpInteger operator"" _mpi(const char* sv, size_t /*sc*/) {
 
 inline MpInteger operator"" _mpi(unsigned long long v) { return MpInteger(v); }
 
-// Compute n! mod p^e
-// Note: if i % p == 0, then the contribution of i is 1.
-// The complexity is at least max(e*e, p*e)
-// It is slow if N is very big, e.g. N = 10^10000. ((10^10000)! mod p^e)
-template <>
-struct FactPPowerModer<MpInteger> {
-  std::vector<MpInteger> F;
-  int64 p;
-  int64 e;
-  MpInteger mod;
-  MpInteger phi;
-
-  FactPPowerModer(const int64 p, const int64 e) : p(p), e(e) {
-    int64 pe = p * e;
-    mod = power(MpInteger(p), e);
-    phi = power(MpInteger(p), (e - 1)) * (p - 1);
-    F.resize(pe + 1, 1);
-    for (int i = 1; i <= pe; ++i) {
-      if (i % p == 0)
-        F[i] = F[i - 1];
-      else
-        F[i] = F[i - 1] * i % mod;
-    }
-  }
-
-  MpInteger cal(const MpInteger& N) {
-    MpInteger u = N / p;
-    MpInteger v = N % p;
-    auto vv = to_int<int64>(v);
-    int64 r = (e + 1) >> 1;
-
-    MpInteger ret = 1;
-    // F(up, p)
-    const MpInteger u2 = u * u;
-
-    for (int j = 1; j <= r; ++j) {
-      MpInteger beta_numer = u;
-      MpInteger beta_denom = j;
-      const int j2 = j * j;
-      for (int i = 1; i <= r; ++i)
-        if (i != j) beta_numer *= u2 - i * i, beta_denom *= j2 - i * i;
-      auto beta = beta_numer / beta_denom % phi;
-      if (int_sign(beta) < 0) beta += phi;
-      ret = ret * power_mod(F[j * p], beta, mod) % mod;
-    }
-
-    if (p == 2) {
-      int64 left_mod4 = (((u * p + 1)[0] & 4) >> 1) + 1;
-      int64 right_mod4 = ret[0] & 3;
-      if (left_mod4 != right_mod4) {
-        ret = (mod - ret) % mod;
-      }
-    }
-
-    // F(v, p)
-    ret = ret * F[vv] % mod;
-
-    // (p + v, v)_p
-    for (int j = 1; j < e; ++j) {
-      auto base = F[j * p + vv] * mod_inv(F[vv] * F[j * p], mod) % mod;
-      MpInteger alpha_numer = u;
-      MpInteger alpha_denom = j;
-      for (int i = 1; i < e; ++i)
-        if (i != j) {
-          alpha_numer *= u - i;
-          alpha_denom *= j - i;
-        }
-      auto alpha = alpha_numer / alpha_denom % phi;
-      if (int_sign(alpha) < 0) alpha += phi;
-      ret = ret * power_mod(base, alpha, mod) % mod;
-    }
-
-    return ret;
-  }
-};
 #endif  // end ENABLE_GMP
 
 #endif

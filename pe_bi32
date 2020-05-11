@@ -742,15 +742,15 @@ class BigInteger {
        sizeof(T) <= 8)) RETURN(BigInteger)
   operator/(const BigInteger& l, T r);
 
-  friend inline tuple<BigInteger, BigInteger> div(const BigInteger& l,
-                                                  const BigInteger& r);
+  friend inline tuple<BigInteger, BigInteger> div_internal(const BigInteger& l,
+                                                           const BigInteger& r);
 
   template <typename T>
   friend inline REQUIRES(
       (is_native_integer<T>::value &&
        !is_same<typename remove_cvref<T>::type, BigInteger>::value &&
        sizeof(T) <= 8)) RETURN(tuple<BigInteger, T>)
-      div(const BigInteger& l, T r);
+      div_internal(const BigInteger& l, T r);
 
   template <typename T>
   friend inline REQUIRES(
@@ -1328,7 +1328,7 @@ inline REQUIRES((is_native_integer<T>::value &&
 
 inline BigInteger operator/(const BigInteger& l, const BigInteger& r) {
   BigInteger u, v;
-  tie(u, v) = div(l, r);
+  tie(u, v) = div_internal(l, r);
   return u;
 }
 
@@ -1339,12 +1339,12 @@ inline REQUIRES((is_native_integer<T>::value &&
 operator/(const BigInteger& l, T r) {
   BigInteger u;
   T v;
-  tie(u, v) = div(l, r);
+  tie(u, v) = div_internal(l, r);
   return u;
 }
 
-inline tuple<BigInteger, BigInteger> div(const BigInteger& l,
-                                         const BigInteger& r) {
+inline tuple<BigInteger, BigInteger> div_internal(const BigInteger& l,
+                                                  const BigInteger& r) {
   if (l.isZero() && r.isZero()) {
     return make_tuple(1, 0);
   }
@@ -1383,7 +1383,7 @@ template <typename T>
 inline REQUIRES((is_native_integer<T>::value &&
                  !is_same<typename remove_cvref<T>::type, BigInteger>::value &&
                  sizeof(T) <= 8)) RETURN(tuple<BigInteger, T>)
-    div(const BigInteger& l, T r) {
+    div_internal(const BigInteger& l, T r) {
   if (l.isZero() && r == 0) {
     return make_tuple(1, 0);
   }
@@ -1442,7 +1442,7 @@ inline REQUIRES((is_native_integer<T>::value &&
 
 inline BigInteger operator%(const BigInteger& l, const BigInteger& r) {
   BigInteger u, v;
-  tie(u, v) = div(l, r);
+  tie(u, v) = div_internal(l, r);
   return v;
 }
 
@@ -1453,7 +1453,7 @@ inline REQUIRES((is_native_integer<T>::value &&
 operator%(const BigInteger& l, T r) {
   BigInteger u;
   T v;
-  tie(u, v) = div(l, r);
+  tie(u, v) = div_internal(l, r);
   if (l.getSign() < 0) {
     v = BigInteger::getNegValue(v);
   }
@@ -1597,6 +1597,12 @@ SL int is_zero(const BigInteger& x) { return x.isZero(); }
 SL int int_sign(const BigInteger& x) { return x.getSign(); }
 SL int is_even(const BigInteger& x) { return x.isEven(); }
 SL int is_odd(const BigInteger& x) { return x.isOdd(); }
+SL unsigned int lower_bits(const BigInteger& x) {
+  return static_cast<unsigned int>(x[0]);
+}
+SL tuple<BigInteger, BigInteger> div(const BigInteger& l, const BigInteger& r) {
+  return div_internal(l, r);
+}
 
 template <typename T>
 SL T to_int(const BigInteger& x) {
@@ -1607,81 +1613,4 @@ template <typename T>
 SL T to_float(const BigInteger& x) {
   return x.toFloat<T>();
 }
-
-// Compute n! mod p^e
-// Note: if i % p == 0, then the contribution of i is 1.
-// The complexity is at least max(e*e, p*e)
-// It is slow if N is very big, e.g. N = 10^10000. ((10^10000)! mod p^e)
-template <>
-struct FactPPowerModer<bi> {
-  std::vector<bi> F;
-  int64 p;
-  int64 e;
-  bi mod;
-  bi phi;
-
-  FactPPowerModer(const int64 p, const int64 e) : p(p), e(e) {
-    int64 pe = p * e;
-    mod = power(bi(p), e);
-    phi = power(bi(p), (e - 1)) * (p - 1);
-    F.resize(pe + 1, 1);
-    for (int i = 1; i <= pe; ++i) {
-      if (i % p == 0)
-        F[i] = F[i - 1];
-      else
-        F[i] = F[i - 1] * i % mod;
-    }
-  }
-
-  bi cal(const bi& N) {
-    bi u;
-    bi v;
-    tie(u, v) = div(N, p);
-    auto vv = to_int<int64>(v);
-    int64 r = (e + 1) >> 1;
-
-    bi ret = 1;
-    // F(up, p)
-    const bi u2 = u * u;
-
-    for (int j = 1; j <= r; ++j) {
-      bi beta_numer = u;
-      bi beta_denom = j;
-      const int j2 = j * j;
-      for (int i = 1; i <= r; ++i)
-        if (i != j) beta_numer *= u2 - i * i, beta_denom *= j2 - i * i;
-      auto beta = beta_numer / beta_denom % phi;
-      if (int_sign(beta) < 0) beta += phi;
-      ret = ret * power_mod(F[j * p], beta, mod) % mod;
-    }
-
-    if (p == 2) {
-      int64 left_mod4 = (((u * p + 1)[0] & 4) >> 1) + 1;
-      int64 right_mod4 = ret[0] & 3;
-      if (left_mod4 != right_mod4) {
-        ret = (mod - ret) % mod;
-      }
-    }
-
-    // F(v, p)
-    ret = ret * F[vv] % mod;
-
-    // (p + v, v)_p
-    for (int j = 1; j < e; ++j) {
-      auto base = F[j * p + vv] * mod_inv(F[vv] * F[j * p], mod) % mod;
-      bi alpha_numer = u;
-      bi alpha_denom = j;
-      for (int i = 1; i < e; ++i)
-        if (i != j) {
-          alpha_numer *= u - i;
-          alpha_denom *= j - i;
-        }
-      auto alpha = alpha_numer / alpha_denom % phi;
-      if (int_sign(alpha) < 0) alpha += phi;
-      ret = ret * power_mod(base, alpha, mod) % mod;
-    }
-
-    return ret;
-  }
-};
 #endif

@@ -25,7 +25,7 @@ SL void fact_ppower_mod_test() {
 
 PE_REGISTER_TEST(&fact_ppower_mod_test, "fact_ppower_mod_test", SMALL);
 
-#if HAS_MPZ
+#if HAS_MPZ && 0
 SL void mpz_fact_ppower_mod_test() {
   Mpz N = 1;
   for (int i = 1; i <= 20; ++i) N *= i;

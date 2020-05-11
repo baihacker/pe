@@ -36,6 +36,75 @@ SL REQUIRES((is_gbi<GBI>::value)) RETURN(T) to_float(const GBI& x);
 
 #if PE_HAS_CPP20
 template <class T>
+concept PeGbiArithmeticOperation = requires(T v) {
+  v + 1;
+  v - 1;
+  v * 1;
+  v / 1;
+  v % 1;
+  1 - v;
+  1 * v;
+  1 + v;
+  1 / v;
+  1 % v;
+  v + 1LL;
+  v - 1LL;
+  v * 1LL;
+  v / 1LL;
+  v % 1LL;
+  1LL + v;
+  1LL - v;
+  1LL * v;
+  1LL / v;
+  1LL % v;
+#if PE_HAS_INT128
+  v + (int128)1;
+  v - (int128)1;
+  v*(int128)1;
+  v / (int128)1;
+  v % (int128)1;
+  (int128)1 + v;
+  (int128)1 - v;
+  (int128)1 * v;
+  (int128)1 / v;
+  (int128)1 % v;
+#endif
+  v + v;
+  v - v;
+  v* v;
+  v / v;
+  v % v;
+};
+template <class T>
+concept PeGbiSelfOperation = requires(T v) {
+  v += 1;
+  v -= 1;
+  v *= 1;
+  v /= 1;
+  v %= 1;
+  v += 1LL;
+  v -= 1LL;
+  v *= 1LL;
+  v /= 1LL;
+  v %= 1LL;
+#if PE_HAS_INT128
+  v += (int128)1;
+  v -= (int128)1;
+  v *= (int128)1;
+  v /= (int128)1;
+  v %= (int128)1;
+#endif
+  v += v;
+  v -= v;
+  v *= v;
+  v /= v;
+  v %= v;
+  ++v;
+  --v;
+  v++;
+  v--;
+};
+template <class T>
 concept PeGbi = requires(T v) {
   is_zero(v);
   int_sign(v);
@@ -44,8 +113,14 @@ concept PeGbi = requires(T v) {
   lower_bits(v);
   div(v, v);
   to_int<int>(v);
+  to_int<unsigned int>(v);
+  to_int<long long>(v);
+  to_int<unsigned long long>(v);
+  to_float<float>(v);
   to_float<double>(v);
-  is_gbi<T>::value;
+  requires static_cast<bool>(is_gbi<T>::value);
+  requires PeGbiArithmeticOperation<T>;
+  requires PeGbiSelfOperation<T>;
 };
 #endif
 

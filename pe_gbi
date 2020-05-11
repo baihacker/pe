@@ -34,6 +34,21 @@ SL REQUIRES((is_gbi<GBI>::value)) RETURN(T) to_int(const GBI& x);
 template <typename T, typename GBI>
 SL REQUIRES((is_gbi<GBI>::value)) RETURN(T) to_float(const GBI& x);
 
+#if PE_HAS_CPP20
+template <class T>
+concept PeGbi = requires(T v) {
+  is_zero(v);
+  int_sign(v);
+  is_even(v);
+  is_odd(v);
+  lower_bits(v);
+  div(v, v);
+  to_int<int>(v);
+  to_float<double>(v);
+  is_gbi<T>::value;
+};
+#endif
+
 template <typename T0, typename T1>
 SL REQUIRES((is_gbi<T0>::value && is_gbi<T1>::value)) RETURN(int)
     same_parity(const T0& v0, const T1& v1) {
@@ -395,14 +410,15 @@ SL vector<GBI> to_continued_fraction(int64 p, int64 q, int n) {
 #define from_cf from_continued_fraction
 #define to_cf to_continued_fraction
 
-template <typename GBI>
-struct FactPPowerModer;
-
 // Compute n! mod p^e
 // Note: if i % p == 0, then the contribution of i is 1.
 // The complexity is at least max(e*e, p*e)
 // It is slow if N is very big, e.g. N = 10^10000. ((10^10000)! mod p^e)
+#if PE_HAS_CPP20
+template <PeGbi GBI>
+#else
 template <typename GBI>
+#endif
 struct FactPPowerModer {
   static_assert(is_gbi<GBI>::value);
 

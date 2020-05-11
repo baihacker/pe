@@ -48,7 +48,7 @@ SL void mpz_fact_ppower_mod_test() {
   assert(to_int<int64>(ans) == 21171469991580LL);
 }
 
-PE_REGISTER_TEST(&mpz_fact_ppower_mod_test, "mpz_fact_ppower_mod_test", SPECIFIED);
+PE_REGISTER_TEST(&mpz_fact_ppower_mod_test, "mpz_fact_ppower_mod_test", SMALL);
 #endif
 
 #if ENABLE_GMP

@@ -10,7 +10,7 @@ int64 lresult[n + 1];
 SL void init_inv_test() {
   init_inv(sresult, n, mod);
   init_inv(lresult, n, mod);
-  for (int i = 1; i < n; ++i) {
+  for (int i = 1; i <= n; ++i) {
     assert((int64)i * sresult[i] % mod == 1);
     assert(sresult[i] == lresult[i]);
   }

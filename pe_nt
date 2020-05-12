@@ -414,25 +414,26 @@ SL int is_square_free(int64 n) {
  * dest[1] = 1
  * dest[2] = 1 / 2
  * dest[n-1] = 1 / (n-1)
+ * dest[n] = 1 / n
  *
- * n can be greater than mod
+ * n can be greater than or equal to mod
  */
 template <typename T, typename M>
 SL void init_inv(T* dest, int64 n, M mod) {
   PE_ASSERT(n >= 1);
   dest[0] = 0;
-  if (n > 1) {
+  if (n >= 1) {
     dest[1] = 1;
   }
-  auto maxi = min(n, (int64)mod);
-  for (int i = 2; i < maxi; ++i) {
+  auto maxi = min(n, (int64)mod - 1);
+  for (int i = 2; i <= maxi; ++i) {
     const auto t = mod / i;
     const auto k = mod % i;
     const auto v = mul_mod_ex(t, t, mod);
     const auto u = mul_mod_ex(dest[k], dest[k], mod);
     dest[i] = (T)mul_mod_ex(i, mul_mod_ex(v, u, mod), mod);
   }
-  for (auto i = mod; i < n; ++i) {
+  for (auto i = mod; i <= n; ++i) {
     dest[i] = dest[i - mod];
   }
 }

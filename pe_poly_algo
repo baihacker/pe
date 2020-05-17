@@ -270,4 +270,23 @@ SL int64 nth_element(const vector<int64>& s, const int64 mod, int64 n) {
   }
   return -1;
 }
+
+// given init = {a0,a1,a2,...}
+// with recurrence a[i] = a[i-1] * rec[0] + a[i-2] * rec[1] ...
+// returns a[n]
+SL int64 linear_recurrence(const vector<int64>& rec, const vector<int64>& init,
+                           const int64 mod, int64 n) {
+  if (n < static_cast<int>(init.size())) {
+    return init[static_cast<int>(n)];
+  }
+
+  PE_ASSERT(init.size() >= rec.size());
+
+  const int m = static_cast<int>(rec.size());
+  vector<int64> data(m + 1, 0);
+  for (int i = 0; i < m; ++i) data[m - 1 - i] = regulate_mod(-rec[i], mod);
+  data[m] = 1;
+
+  return nth_element(NModPoly(init, mod), n, NModPoly(std::move(data), mod));
+}
 #endif

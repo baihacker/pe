@@ -286,7 +286,43 @@ SL int64 linear_recurrence(const vector<int64>& rec, const vector<int64>& init,
   vector<int64> data(m + 1, 0);
   for (int i = 0; i < m; ++i) data[m - 1 - i] = regulate_mod(-rec[i], mod);
   data[m] = 1;
-
   return nth_element(NModPoly(init, mod), n, NModPoly(std::move(data), mod));
+}
+
+// given init = {a0,a1,a2,...}
+// with recurrence a[i] = a[i-1] * rec[0] + a[i-2] * rec[1] ...
+// returns a[0] + a[1] + a[2] + a3 + ... + a[n]
+SL int64 linear_recurrence_sum(const vector<int64>& rec,
+                               const vector<int64>& init, const int64 mod,
+                               int64 n) {
+  if (n < static_cast<int>(init.size())) {
+    int64 ret = 0;
+    for (int i = 0; i <= n; ++i) {
+      ret = add_mod(ret, init[i], mod);
+    }
+    return ret;
+  }
+
+  PE_ASSERT(init.size() >= rec.size());
+
+  const int m = static_cast<int>(rec.size());
+  auto each = init;
+  vector<int64> sum(2 * (m + 2), 0);
+  sum[0] = each[0];
+  for (int i = 1; i < 2 * m + 4; ++i) {
+    if (i < m) {
+      sum[i] = add_mod(sum[i - 1], each[i], mod);
+    } else {
+      int64 t = 0;
+      for (int j = 0; j < m; ++j) {
+        if (rec[j]) {
+          t = add_mod(t, mul_mod_ex(each[i - j - 1], rec[j], mod), mod);
+        }
+      }
+      each.push_back(t);
+      sum[i] = add_mod(sum[i - 1], t, mod);
+    }
+  }
+  return nth_element(sum, mod, n);
 }
 #endif

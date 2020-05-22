@@ -107,11 +107,11 @@ struct FactModer {
   }
 
  private:
+  uint64 p_;
+  uint64 q_;
   vector<uint64> pre_fact_, pre_fact_inv_;
   vector<uint64> g0_, g1_, g2_, g3_;
   vector<uint64> v_;
-  uint64 p_;
-  uint64 q_;
 };
 
 /**
@@ -222,21 +222,21 @@ struct comb_moder {
       if (n & 1) result = result * x % P;
     return result;
   }
-  static int64* fac;
+  static int64* fac_;
   static void init() {
-    if (fac == nullptr) {
-      fac = new int64[F];
-      fac[0] = 1;
-      for (int i = 1; i < F; ++i) fac[i] = fac[i - 1] * i % P;
+    if (fac_ == nullptr) {
+      fac_ = new int64[F];
+      fac_[0] = 1;
+      for (int i = 1; i < F; ++i) fac_[i] = fac_[i - 1] * i % P;
     }
   }
   static void destroy_fac() {
-    delete[] fac;
-    fac = nullptr;
+    delete[] fac_;
+    fac_ = nullptr;
   }
   static int64 s(int64 x) { return x & 1 ? -1 : 1; }
   static int64 comb(int64 m, int64 n) {
-    PE_ASSERT(fac);
+    PE_ASSERT(fac_);
 
     if (m < 0 || n > m) return 0;
 
@@ -251,15 +251,15 @@ struct comb_moder {
     int64 l = 1, r = 1;
     for (int64 x = m; x; x /= P) {
       PE_ASSERT(x % P < F);
-      l = l * s(x / P) * fac[x % P] % P;
+      l = l * s(x / P) * fac_[x % P] % P;
     }
     for (int64 x = n; x; x /= P) {
       PE_ASSERT(x % P < F);
-      r = r * s(x / P) * fac[x % P] % P;
+      r = r * s(x / P) * fac_[x % P] % P;
     }
     for (int64 x = dist; x; x /= P) {
       PE_ASSERT(x % P < F);
-      r = r * s(x / P) * fac[x % P] % P;
+      r = r * s(x / P) * fac_[x % P] % P;
     }
     l = (l + P) % P;
     r = (r + P) % P;
@@ -268,7 +268,7 @@ struct comb_moder {
   }
 };
 template <int64 P, int64 F>
-int64* comb_moder<P, F>::fac;
+int64* comb_moder<P, F>::fac_;
 
 /**
  * Calculates C(n, m) % P where P is prime
@@ -748,8 +748,8 @@ struct SFCounter {
   }
 
  private:
-  vector<int64> pre_;
   int64 pivot_;
+  vector<int64> pre_;
   unordered_map<int64, int64> mem_;
 };
 
@@ -793,7 +793,6 @@ struct MuSummer {
 
  private:
   int64 pivot_;
-
   vector<T> pre_;
   unordered_map<int64, T> mem_;
 };
@@ -1014,7 +1013,7 @@ struct MuPhiSumModer {
 };
 
 struct Sigma0SumModer {
-  Sigma0SumModer(int64 mod, int64 pivot_ = ::maxp) : mod_(mod), pivot_(pivot_) {
+  Sigma0SumModer(int64 mod, int64 pivot = ::maxp) : mod_(mod), pivot_(pivot) {
     if (::maxp > 0) {
       init(pivot_);
     }
@@ -1815,9 +1814,9 @@ struct CachedPi {
 
   int64 cal(int64 n) {
     if (n <= pivot_) return prepi_[n];
-    auto where = pic_cache_.find(n);
-    if (where != pic_cache_.end()) return where->second;
-    return pic_cache_[n] = prime_s0_ex<int64>(n)[n];
+    auto where = pi_cache_.find(n);
+    if (where != pi_cache_.end()) return where->second;
+    return pi_cache_[n] = prime_s0_ex<int64>(n)[n];
   }
 
   int64 operator()(int64 n) { return cal(n); }
@@ -1825,7 +1824,7 @@ struct CachedPi {
  private:
   int* prepi_{nullptr};
   int pivot_;
-  unordered_map<int64, int64> pic_cache_;
+  unordered_map<int64, int64> pi_cache_;
 };
 
 #if PE_HAS_INT128
@@ -2355,21 +2354,21 @@ struct NotDivCounter {
  */
 template <typename CT>
 struct DfaCounter {
-  DfaCounter& setCountEachLen(int countEachLen) {
-    this->count_each_len_ = countEachLen;
+  DfaCounter& setCountEachLen(int count_each_len) {
+    this->count_each_len_ = count_each_len;
     return *this;
   }
 
-  DfaCounter& init(int stateCount, int transCount, int maxLen) {
-    this->state_count_ = stateCount;
-    this->trans_count_ = transCount;
-    this->max_len_ = maxLen;
+  DfaCounter& init(int state_count, int trans_count, int max_len) {
+    this->state_count_ = state_count;
+    this->trans_count_ = trans_count;
+    this->max_len_ = max_len;
 
-    dfa_.reset({stateCount, transCount});
+    dfa_.reset({state_count, trans_count});
 
-    dp_.reset({maxLen + 1, stateCount});
+    dp_.reset({max_len + 1, state_count});
 
-    to_count_.resize(stateCount);
+    to_count_.resize(state_count);
     fill(to_count_.begin(), to_count_.end(), 0);
 
     prepared_ = 0;
@@ -2431,8 +2430,8 @@ struct DfaCounter {
   }
 
   template <typename U>
-  CT findKth(CT k, U maxV) {
-    U l = 1, r = maxV;
+  CT findKth(CT k, U max_v) {
+    U l = 1, r = max_v;
     while (l <= r) {
       U mid = (l + r) / 2;
       if (count(mid) >= k)
@@ -2444,13 +2443,13 @@ struct DfaCounter {
   }
 
  private:
-  DArray<int, 2> dfa_;
-  DArray<CT, 2> dp_;
-  vector<int> to_count_;
   int count_each_len_ = 0;
   int state_count_ = 0;
   int trans_count_ = 0;
   int prepared_ = 0;
   int max_len_ = 0;
+  DArray<int, 2> dfa_;
+  DArray<CT, 2> dp_;
+  vector<int> to_count_;
 };
 #endif

@@ -1,5 +1,5 @@
-#ifndef __PE_HPP__
-#define __PE_HPP__
+#ifndef PE_HPP_
+#define PE_HPP_
 
 // Use
 // g++ -xc++-header "pe.hpp" --std=c++11 -O3 -march=native -fopenmp

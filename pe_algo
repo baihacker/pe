@@ -119,11 +119,11 @@ struct FactModer {
  * f(4e8)%99999999907 = 16815920030
  */
 struct FactSumModer {
-  FactSumModer(uint64 p) : p(p) { init(); }
+  FactSumModer(uint64 p) : p_(p) { init(); }
 
   int64 cal(uint64 n) {
-    if (n >= p) n = p - 1;
-    if (n < q) return preFactSum[n];
+    if (n >= p_) n = p_ - 1;
+    if (n < q_) return preFactSum_[n];
 
     auto m = static_cast<int64>(sqrt(n));
     uint64 ret = 1;
@@ -142,25 +142,25 @@ struct FactSumModer {
 
     // Compute P
     vector<uint64> YQ;
-    auto YP = poly_batch_mul_acc(X, 0, static_cast<int>(m - 1), YQ, p);
-    YP[0] = add_mod(YP[0], 1, p);
-    auto P = poly_multipoint_evaluate(YP, V, p);
+    auto YP = poly_batch_mul_acc(X, 0, static_cast<int>(m - 1), YQ, p_);
+    YP[0] = add_mod(YP[0], 1, p_);
+    auto P = poly_multipoint_evaluate(YP, V, p_);
 
     // Prepare data for computing Q
     // YQ *= (m + xm)
     YQ.resize(m + 1);
     YQ[m] = YQ[m - 1];
     for (int i = static_cast<int>(m - 1); i >= 1; --i)
-      YQ[i] = add_mod(YQ[i], YQ[i - 1], p);
-    for (auto& i : YQ) i = mul_mod_ex(i, m, p);
+      YQ[i] = add_mod(YQ[i], YQ[i - 1], p_);
+    for (auto& i : YQ) i = mul_mod_ex(i, m, p_);
 
     // V.extend(m)
     V.push_back(m);
 
     // Compute Q
-    auto Q = poly_multipoint_evaluate(YQ, V, p);
+    auto Q = poly_multipoint_evaluate(YQ, V, p_);
     for (int i = 1; i <= m; ++i) {
-      Q[i] = mul_mod_ex(Q[i], Q[i - 1], p);
+      Q[i] = mul_mod_ex(Q[i], Q[i - 1], p_);
     }
 
     // Compute P
@@ -171,35 +171,37 @@ struct FactSumModer {
     // Compute result
     int64 result = P[0];
     for (int i = 1; i < m; ++i) {
-      uint64 t = mul_mod_ex(P[i], Q[i - 1], p);
-      result = add_mod(result, t, p);
+      uint64 t = mul_mod_ex(P[i], Q[i - 1], p_);
+      result = add_mod(result, t, p_);
     }
 
     uint64 last = Q[m - 1];
     for (int64 i = m * m; i <= static_cast<int64>(n); ++i) {
-      result = add_mod(result, last, p);
-      last = mul_mod_ex(last, i + 1, p);
+      result = add_mod(result, last, p_);
+      last = mul_mod_ex(last, i + 1, p_);
     }
     return result;
   }
 
   void init() {
-    q = static_cast<uint64>(sqrt(p));
-    while (q * q < p) ++q;
-    q <<= 1;
-    q += 1;
-    preFact.resize(q);
-    preFactSum.resize(q);
-    init_seq_prod2<uint64>(&preFact[0], nullptr, q - 1, p);
-    preFactSum[0] = preFact[0];
-    for (int i = 1; i < q; ++i) {
-      preFactSum[i] = add_mod(preFactSum[i - 1], preFact[i], p);
+    q_ = static_cast<uint64>(sqrt(p_));
+    while (q_ * q_ < p_) ++q_;
+    q_ <<= 1;
+    q_ += 1;
+    preFact_.resize(q_);
+    preFactSum_.resize(q_);
+    init_seq_prod2<uint64>(&preFact_[0], nullptr, q_ - 1, p_);
+    preFactSum_[0] = preFact_[0];
+    for (int i = 1; i < q_; ++i) {
+      preFactSum_[i] = add_mod(preFactSum_[i - 1], preFact_[i], p_);
     }
   }
 
-  vector<uint64> preFact, preFactSum;
-  uint64 p;
-  uint64 q;
+private:
+  uint64 p_;
+  uint64 q_;
+  vector<uint64> preFact_;
+  vector<uint64> preFactSum_;
 };
 
 /**

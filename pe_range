@@ -62,7 +62,7 @@ struct MappedRange;
 
 template <typename IT, typename DERIVED, typename IIT>
 struct RangeBase {
-  RangeBase(IT b, IT e) : b(b), e(e) {}
+  RangeBase(IT b, IT e) : b_(b), e_(e) {}
 
   using reference = typename IIT::reference;
   using rvalue_reference =
@@ -313,8 +313,8 @@ struct RangeBase {
     return ret;
   }
 
-  IT b;
-  IT e;
+  IT b_;
+  IT e_;
 };
 
 template <typename T>
@@ -322,27 +322,27 @@ struct NumberIter {
   using reference = const T;
   using value_type = T;
 
-  T operator*() const { return i; }
+  T operator*() const { return i_; }
 
-  int operator==(const NumberIter& o) const { return i == o.i; }
+  int operator==(const NumberIter& o) const { return i_ == o.i_; }
 
   int operator!=(const NumberIter& o) const { return !(this->operator==(o)); }
 
   NumberIter& operator++() {
-    ++i;
+    ++i_;
     return *this;
   }
 
-  NumberIter operator++(int) { return NumberIter{i++}; }
+  NumberIter operator++(int) { return NumberIter{i_++}; }
 
   NumberIter& operator--() {
-    --i;
+    --i_;
     return *this;
   }
 
-  NumberIter operator--(int) { return NumberIter{i--}; }
+  NumberIter operator--(int) { return NumberIter{i_--}; }
 
-  T i;
+  T i_;
 };
 
 template <typename T>
@@ -355,8 +355,8 @@ struct NumberRange : public RangeBase<T, NumberRange<T>, NumberIter<T>> {
 
   NumberRange(T b, T e) : base(b, e) {}
 
-  NumberIter<T> begin() const { return NumberIter<T>{base::b}; }
-  NumberIter<T> end() const { return NumberIter<T>{base::e}; }
+  NumberIter<T> begin() const { return NumberIter<T>{base::b_}; }
+  NumberIter<T> end() const { return NumberIter<T>{base::e_}; }
 };
 
 template <typename T>
@@ -364,37 +364,37 @@ struct NumberIterD {
   using reference = const T;
   using value_type = T;
 
-  T operator*() const { return i; }
+  T operator*() const { return i_; }
 
-  int operator==(const NumberIterD& o) const { return i == o.i; }
+  int operator==(const NumberIterD& o) const { return i_ == o.i_; }
 
   int operator!=(const NumberIterD& o) const { return !(this->operator==(o)); }
 
   NumberIterD& operator++() {
-    i += delta;
+    i_ += delta_;
     return *this;
   }
 
   NumberIterD operator++(int) {
-    T x = i;
-    i += delta;
+    T x = i_;
+    i_ += delta_;
     return NumberIterD{x};
   }
 
   NumberIterD& operator--() {
-    i -= delta;
+    i_ -= delta_;
     return *this;
   }
 
   NumberIterD operator--(int) {
-    T x = i;
-    i -= delta;
+    T x = i_;
+    i_ -= delta_;
     return NumberIterD{x};
   }
 
-  T i;
-  T e;
-  T delta;
+  T i_;
+  T e_;
+  T delta_;
 };
 
 template <typename T>
@@ -405,23 +405,25 @@ struct NumberRangeD : public RangeBase<T, NumberRangeD<T>, NumberIter<T>> {
 
   using base = RangeBase<T, NumberRangeD<T>, NumberIter<T>>;
 
-  NumberRangeD(T b, T n, T delta) : base(b, n), n(n), delta(delta) {
-    T d = abs(delta);
+  NumberRangeD(T b, T n, T delta_) : base(b, n), n_(n), delta_(delta_) {
+    T d = abs(delta_);
     T r = abs(n - b);
     T s = r / d;
-    base::e = b + s * delta;
+    base::e_ = b + s * delta_;
     if (r % d) {
-      base::e += delta;
+      base::e_ += delta_;
     }
   }
 
   NumberIterD<T> begin() const {
-    return NumberIterD<T>{base::b, base::e, delta};
+    return NumberIterD<T>{base::b_, base::e_, delta_};
   }
-  NumberIterD<T> end() const { return NumberIterD<T>{base::e, base::e, delta}; }
+  NumberIterD<T> end() const {
+    return NumberIterD<T>{base::e_, base::e_, delta_};
+  }
 
-  T delta;
-  T n;
+  T delta_;
+  T n_;
 };
 
 template <typename T>
@@ -433,13 +435,13 @@ SL REQUIRES(is_native_integer<T>::value) RETURN(NumberRange<int64>)
 
 template <typename T>
 SL REQUIRES(is_native_integer<T>::value) RETURN(NumberRangeD<int64>)
-    range(T s, T e, T delta) {
+    range(T s, T e, T delta_) {
   if (s < e) {
-    PE_ASSERT(delta > 0);
+    PE_ASSERT(delta_ > 0);
   } else if (s > e) {
-    PE_ASSERT(delta < 0);
+    PE_ASSERT(delta_ < 0);
   }
-  return NumberRangeD<int64>{s, e, delta};
+  return NumberRangeD<int64>{s, e, delta_};
 }
 
 template <typename IT>
@@ -447,27 +449,27 @@ struct RangeIter {
   using reference = typename IT::reference;
   using value_type = typename IT::value_type;
 
-  reference operator*() { return *iter; }
+  reference operator*() { return *iter_; }
 
-  int operator==(const RangeIter& o) const { return iter == o.iter; }
+  int operator==(const RangeIter& o) const { return iter_ == o.iter_; }
 
   int operator!=(const RangeIter& o) const { return !(this->operator==(o)); }
 
   RangeIter& operator++() {
-    ++iter;
+    ++iter_;
     return *this;
   }
 
-  RangeIter operator++(int) { return RangeIter{iter++}; }
+  RangeIter operator++(int) { return RangeIter{iter_++}; }
 
   RangeIter& operator--() {
-    --iter;
+    --iter_;
     return *this;
   }
 
-  RangeIter operator--(int) { return RangeIter{iter--}; }
+  RangeIter operator--(int) { return RangeIter{iter_--}; }
 
-  IT iter;
+  IT iter_;
 };
 
 template <typename IT>
@@ -480,8 +482,8 @@ struct Range : public RangeBase<IT, Range<IT>, RangeIter<IT>> {
 
   Range(IT b, IT e) : base(b, e) {}
 
-  RangeIter<IT> begin() const { return RangeIter<IT>{base::b}; }
-  RangeIter<IT> end() const { return RangeIter<IT>{base::e}; }
+  RangeIter<IT> begin() const { return RangeIter<IT>{base::b_}; }
+  RangeIter<IT> end() const { return RangeIter<IT>{base::e_}; }
 };
 
 template <typename CT>
@@ -504,29 +506,29 @@ struct ArrayRangeIter {
   using reference = IT&;
   using value_type = IT;
 
-  reference operator*() { return *iter; }
+  reference operator*() { return *iter_; }
 
-  int operator==(const ArrayRangeIter& o) const { return iter == o.iter; }
+  int operator==(const ArrayRangeIter& o) const { return iter_ == o.iter_; }
 
   int operator!=(const ArrayRangeIter& o) const {
     return !(this->operator==(o));
   }
 
   ArrayRangeIter& operator++() {
-    ++iter;
+    ++iter_;
     return *this;
   }
 
-  ArrayRangeIter operator++(int) { return ArrayRangeIter{iter++}; }
+  ArrayRangeIter operator++(int) { return ArrayRangeIter{iter_++}; }
 
   ArrayRangeIter& operator--() {
-    --iter;
+    --iter_;
     return *this;
   }
 
-  ArrayRangeIter operator--(int) { return ArrayRangeIter{iter--}; }
+  ArrayRangeIter operator--(int) { return ArrayRangeIter{iter_--}; }
 
-  IT* iter;
+  IT* iter_;
 };
 
 template <typename IT>
@@ -539,8 +541,8 @@ struct ArrayRange : public RangeBase<IT*, ArrayRange<IT>, ArrayRangeIter<IT>> {
 
   ArrayRange(IT* b, IT* e) : base(b, e) {}
 
-  ArrayRangeIter<IT> begin() const { return ArrayRangeIter<IT>{base::b}; }
-  ArrayRangeIter<IT> end() const { return ArrayRangeIter<IT>{base::e}; }
+  ArrayRangeIter<IT> begin() const { return ArrayRangeIter<IT>{base::b_}; }
+  ArrayRangeIter<IT> end() const { return ArrayRangeIter<IT>{base::e_}; }
 };
 
 template <typename T>
@@ -565,29 +567,29 @@ struct MappedRangeIter {
   using reference = typename IT::value_type;
   using value_type = typename IT::value_type;
 
-  reference operator*() { return mapper(*iter); }
+  reference operator*() { return mapper(*iter_); }
 
-  int operator==(const MappedRangeIter& o) const { return iter == o.iter; }
+  int operator==(const MappedRangeIter& o) const { return iter_ == o.iter_; }
 
   int operator!=(const MappedRangeIter& o) const {
     return !(this->operator==(o));
   }
 
   MappedRangeIter& operator++() {
-    ++iter;
+    ++iter_;
     return *this;
   }
 
-  MappedRangeIter operator++(int) { return MappedRangeIter{iter++, mapper}; }
+  MappedRangeIter operator++(int) { return MappedRangeIter{iter_++, mapper}; }
 
   MappedRangeIter& operator--() {
-    --iter;
+    --iter_;
     return *this;
   }
 
-  MappedRangeIter operator--(int) { return MappedRangeIter{iter--, mapper}; }
+  MappedRangeIter operator--(int) { return MappedRangeIter{iter_--, mapper}; }
 
-  IT iter;
+  IT iter_;
   const std::function<value_type(const value_type& v)>& mapper;
 };
 
@@ -606,10 +608,10 @@ struct MappedRange
       : base(b, e), mapper(mapper) {}
 
   MappedRangeIter<IT> begin() const {
-    return MappedRangeIter<IT>{base::b, mapper};
+    return MappedRangeIter<IT>{base::b_, mapper};
   }
   MappedRangeIter<IT> end() const {
-    return MappedRangeIter<IT>{base::e, mapper};
+    return MappedRangeIter<IT>{base::e_, mapper};
   }
 
   const std::function<typename MappedRangeIter<IT>::value_type(
@@ -622,31 +624,31 @@ struct FilterRangeIter {
   using reference = typename IT::reference;
   using value_type = typename IT::value_type;
 
-  reference operator*() { return *iter; }
+  reference operator*() { return *iter_; }
 
-  int operator==(const FilterRangeIter& o) const { return iter == o.iter; }
+  int operator==(const FilterRangeIter& o) const { return iter_ == o.iter_; }
 
   int operator!=(const FilterRangeIter& o) const {
     return !(this->operator==(o));
   }
 
   FilterRangeIter& operator++() {
-    while (iter != e) {
-      ++iter;
-      if (iter == e) break;
-      if (filter(*iter)) break;
+    while (iter_ != e_) {
+      ++iter_;
+      if (iter_ == e_) break;
+      if (filter(*iter_)) break;
     }
     return *this;
   }
 
   FilterRangeIter operator++(int) {
-    IT x = iter;
+    IT x = iter_;
     this->operator++();
-    return FilterRangeIter{x, e, filter};
+    return FilterRangeIter{x, e_, filter};
   }
 
-  IT iter;
-  IT e;
+  IT iter_;
+  IT e_;
   const std::function<int(const typename IT::value_type&)>& filter;
 };
 
@@ -662,19 +664,19 @@ struct FilterRange
   FilterRange(
       IT b, IT e,
       const std::function<int(const typename IT::value_type&)>& filterImpl)
-      : base(b, e), filterImpl(filterImpl) {}
+      : base(b, e), filter_impl_(filterImpl) {}
 
   FilterRangeIter<IT> begin() const {
-    auto now = base::b;
-    while (now != base::e && !filterImpl(*now)) ++now;
-    return FilterRangeIter<IT>{now, base::e, filterImpl};
+    auto now = base::b_;
+    while (now != base::e_ && !filter_impl_(*now)) ++now;
+    return FilterRangeIter<IT>{now, base::e_, filter_impl_};
   }
 
   FilterRangeIter<IT> end() const {
-    return FilterRangeIter<IT>{base::e, base::e, filterImpl};
+    return FilterRangeIter<IT>{base::e_, base::e_, filter_impl_};
   }
 
-  const std::function<int(const typename IT::value_type&)> filterImpl;
+  const std::function<int(const typename IT::value_type&)> filter_impl_;
 };
 
 // irange support. i = index.
@@ -687,32 +689,32 @@ struct ContainerIterI {
 
   using reference = ContainerItemI;
 
-  ContainerItemI operator*() { return ContainerItemI{idx, *iter}; }
+  ContainerItemI operator*() { return ContainerItemI{idx_, *iter_}; }
 
-  int operator==(const ContainerIterI& o) const { return iter == o.iter; }
+  int operator==(const ContainerIterI& o) const { return iter_ == o.iter_; }
 
   int operator!=(const ContainerIterI& o) const {
     return !(this->operator==(o));
   }
 
   ContainerIterI& operator++() {
-    ++idx;
-    ++iter;
+    ++idx_;
+    ++iter_;
     return *this;
   }
 
-  ContainerIterI operator++(int) { return ContainerIterI{iter++, idx++}; }
+  ContainerIterI operator++(int) { return ContainerIterI{iter_++, idx_++}; }
 
   ContainerIterI& operator--() {
-    --idx;
-    --iter;
+    --idx_;
+    --iter_;
     return *this;
   }
 
-  ContainerIterI operator--(int) { return ContainerIterI{iter--, idx--}; }
+  ContainerIterI operator--(int) { return ContainerIterI{iter_--, idx_--}; }
 
-  IT iter;
-  int64 idx;
+  IT iter_;
+  int64 idx_;
 };
 
 template <typename IT>
@@ -720,11 +722,11 @@ struct ContainerRangeI {
   using iterator = ContainerIterI<IT>;
   using const_iterator = ContainerIterI<IT>;
 
-  ContainerIterI<IT> begin() const { return ContainerIterI<IT>{b, 0}; }
-  ContainerIterI<IT> end() const { return ContainerIterI<IT>{e, 0}; }
+  ContainerIterI<IT> begin() const { return ContainerIterI<IT>{b_, 0}; }
+  ContainerIterI<IT> end() const { return ContainerIterI<IT>{e_, 0}; }
 
-  IT b;
-  IT e;
+  IT b_;
+  IT e_;
 };
 
 template <typename T>
@@ -736,30 +738,30 @@ struct ArrayIterI {
 
   using reference = ContainerItemI;
 
-  ContainerItemI operator*() { return ContainerItemI{idx, start[idx]}; }
+  ContainerItemI operator*() { return ContainerItemI{idx_, start_[idx_]}; }
 
   int operator==(const ArrayIterI& o) const {
-    return idx == o.idx && start == o.start;
+    return idx_ == o.idx_ && start_ == o.start_;
   }
 
   int operator!=(const ArrayIterI& o) const { return !(this->operator==(o)); }
 
   ArrayIterI& operator++() {
-    ++idx;
+    ++idx_;
     return *this;
   }
 
-  ArrayIterI operator++(int) { return ArrayIterI{start, idx++}; }
+  ArrayIterI operator++(int) { return ArrayIterI{start_, idx_++}; }
 
   ArrayIterI& operator--() {
-    --idx;
+    --idx_;
     return *this;
   }
 
-  ArrayIterI operator--(int) { return ArrayIterI{start, idx--}; }
+  ArrayIterI operator--(int) { return ArrayIterI{start_, idx_--}; }
 
-  T* start;
-  int64 idx;
+  T* start_;
+  int64 idx_;
 };
 
 template <typename T>
@@ -767,11 +769,11 @@ struct ArrayRangeI {
   using iterator = ArrayIterI<T>;
   using const_iterator = ArrayIterI<T>;
 
-  ArrayIterI<T> begin() const { return ArrayIterI<T>{start, 0}; }
-  ArrayIterI<T> end() const { return ArrayIterI<T>{start, cnt}; }
+  ArrayIterI<T> begin() const { return ArrayIterI<T>{start_, 0}; }
+  ArrayIterI<T> end() const { return ArrayIterI<T>{start_, cnt_}; }
 
-  T* start;
-  int64 cnt;
+  T* start_;
+  int64 cnt_;
 };
 
 template <typename T>

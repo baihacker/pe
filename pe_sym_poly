@@ -21,42 +21,42 @@ template <typename CT>
 struct SymPoly {
   SymPoly() = default;
 
-  SymPoly(const std::map<TermKey, CT>& terms) : terms(terms) {
+  SymPoly(const std::map<TermKey, CT>& terms) : terms_(terms) {
     fixCoefficient();
   }
 
-  SymPoly(std::map<TermKey, CT>&& terms) : terms(terms) { fixCoefficient(); }
+  SymPoly(std::map<TermKey, CT>&& terms) : terms_(terms) { fixCoefficient(); }
 
-  SymPoly(const SymPoly& o) : terms(o.terms) {}
+  SymPoly(const SymPoly& o) : terms_(o.terms_) {}
 
-  SymPoly(SymPoly&& o) noexcept : terms(std::move(o.terms)) {}
+  SymPoly(SymPoly&& o) noexcept : terms_(std::move(o.terms_)) {}
 
-  SymPoly(const string& str) : terms(parseSymPolyTerms<CT>(str)) {
+  SymPoly(const string& str) : terms_(parseSymPolyTerms<CT>(str)) {
     fixCoefficient();
   }
 
   SymPoly(CT v) {
     if (v != 0) {
-      terms[{}] = v;
+      terms_[{}] = v;
     }
   }
 
   SymPoly& operator=(const SymPoly& o) {
-    terms = o.terms;
+    terms_ = o.terms_;
     return *this;
   }
 
   SymPoly& operator=(SymPoly&& o) noexcept {
-    terms = std::move(o.terms);
+    terms_ = std::move(o.terms_);
     return *this;
   }
 
   void fixCoefficient() {
-    auto now = std::begin(terms);
-    auto end = std::end(terms);
+    auto now = std::begin(terms_);
+    auto end = std::end(terms_);
     while (now != end) {
       if (now->second == 0) {
-        terms.erase(now++);
+        terms_.erase(now++);
       } else {
         ++now;
       }
@@ -65,8 +65,8 @@ struct SymPoly {
 
   SymPoly power(int n) const {
     SymPoly<CT> t;
-    t.terms[{}] = 1;
-    SymPoly<CT> x(this->terms);
+    t.terms_[{}] = 1;
+    SymPoly<CT> x(this->terms_);
     for (; n; n >>= 1) {
       if (n & 1) t = t * x;
       if (n > 1) x = x * x;
@@ -76,7 +76,7 @@ struct SymPoly {
 
   SymPoly replace(string var, const SymPoly<CT>& target) const {
     std::map<TermKey, CT> resultTerms;
-    for (const auto& iter : terms) {
+    for (const auto& iter : terms_) {
       int found = 0;
       const int size = sz(iter.first);
       for (int i = 0; i < size; ++i)
@@ -88,8 +88,8 @@ struct SymPoly {
             if (j != i) {
               others.pb(iter.first[j]);
             }
-          k.terms[others] = iter.second;
-          for (const auto& i : (k * t).terms) {
+          k.terms_[others] = iter.second;
+          for (const auto& i : (k * t).terms_) {
             resultTerms[i.first] += i.second;
           }
           found = 1;
@@ -112,17 +112,20 @@ struct SymPoly {
     return ss.str();
   }
 
+  const std::map<TermKey, CT>& terms() const { return terms_; }
+
+ private:
   // TermKey -> coefficient.
-  // terms.size() == 0: value
-  std::map<TermKey, CT> terms;
+  // terms_.size() == 0: value
+  std::map<TermKey, CT> terms_;
 };
 
 using SymPoly64 = SymPoly<int64>;
 
 template <typename CT>
 SL SymPoly<CT> operator+(const SymPoly<CT>& a, const SymPoly<CT>& b) {
-  auto terms = a.terms;
-  for (const auto& iter : b.terms) {
+  auto terms = a.terms_;
+  for (const auto& iter : b.terms_) {
     terms[iter.first] += iter.second;
   }
   return SymPoly<CT>(terms);
@@ -130,8 +133,8 @@ SL SymPoly<CT> operator+(const SymPoly<CT>& a, const SymPoly<CT>& b) {
 
 template <typename CT>
 SL SymPoly<CT> operator-(const SymPoly<CT>& a, const SymPoly<CT>& b) {
-  auto terms = a.terms;
-  for (const auto& iter : b.terms) {
+  auto terms = a.terms_;
+  for (const auto& iter : b.terms_) {
     terms[iter.first] -= iter.second;
   }
   return SymPoly<CT>(terms);
@@ -152,9 +155,9 @@ SL TermKey mergeTermKey(const TermKey& a, const TermKey& b) {
 
 template <typename CT>
 SL SymPoly<CT> operator*(const SymPoly<CT>& a, const SymPoly<CT>& b) {
-  decltype(a.terms) terms;
-  for (const auto& iter1 : a.terms)
-    for (const auto& iter2 : b.terms) {
+  std::map<TermKey, CT> terms;
+  for (const auto& iter1 : a.terms())
+    for (const auto& iter2 : b.terms()) {
       terms[mergeTermKey<CT>(iter1.first, iter2.first)] +=
           iter1.second * iter2.second;
     }
@@ -326,7 +329,7 @@ SL ostream& to_string(const SymPoly<CT>& sp, ostream& o, int cstyle,
                       int showMul) {
   if (cstyle) showMul = 1;
   int idx = 0;
-  for (const auto& iter : sp.terms) {
+  for (const auto& iter : sp.terms()) {
     if (iter.second == 0) continue;
     ++idx;
     int out = idx == 1 ? 0 : 1;

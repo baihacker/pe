@@ -343,7 +343,7 @@ int64 short_comb_mod(int64 n, int64 m, int64 mod) {
     }
   }
   int64 ret = 1;
-  for (int i = 0; i < size; ++i) ret = ret * data[i] % mod;
+  for (int i = 0; i < size; ++i) ret = mul_mod_ex(ret, data[i], mod);
   return ret;
 }
 
@@ -691,6 +691,7 @@ SL int64 power_sum_safe(int64 n, int64 k, int64 mod) {
 /**
  * Computes (1^k+2^k+...+n^k)%mod and store it in result[k].
  * comb[i][j] is Binomial coefficient.
+ * Complex: O(k^2)
  */
 template <typename T, int D>
 SL void init_power_sum_mod(int64 n, const int maxk, int* result, T (*comb)[D],
@@ -698,7 +699,7 @@ SL void init_power_sum_mod(int64 n, const int maxk, int* result, T (*comb)[D],
   PE_ASSERT(maxk < D);
   result[0] = n % mod;
   for (int i = 1; i <= maxk; ++i) {
-    int64 tmp = power_mod(n, i + 1, mod);
+    int64 tmp = power_mod_ex(n, i + 1, mod);
     for (int j = 1; j <= i + 1; ++j) {
       if (j & 1) {
         tmp = sub_mod(tmp, mul_mod_ex(comb[i + 1][j], result[i + 1 - j], mod),

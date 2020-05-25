@@ -497,34 +497,34 @@ template <typename GBI>
 struct FactPPowerModer {
   static_assert(is_gbi<GBI>::value);
 
-  std::vector<GBI> F;
-  int64 p;
-  int64 e;
-  GBI mod;
-  GBI phi;
+  std::vector<GBI> f_;
+  int64 p_;
+  int64 e_;
+  GBI mod_;
+  GBI phi_;
 
-  FactPPowerModer(const int64 p, const int64 e) : p(p), e(e) {
-    int64 pe = p * e;
-    mod = power(GBI(p), e);
-    phi = power(GBI(p), (e - 1)) * (p - 1);
-    F.resize(pe + 1, 1);
+  FactPPowerModer(const int64 p, const int64 e) : p_(p), e_(e) {
+    int64 pe = p_ * e_;
+    mod_ = power(GBI(p_), e_);
+    phi_ = power(GBI(p_), (e_ - 1)) * (p_ - 1);
+    f_.resize(pe + 1, 1);
     for (int i = 1; i <= pe; ++i) {
-      if (i % p == 0)
-        F[i] = F[i - 1];
+      if (i % p_ == 0)
+        f_[i] = f_[i - 1];
       else
-        F[i] = F[i - 1] * i % mod;
+        f_[i] = f_[i - 1] * i % mod_;
     }
   }
 
-  GBI cal(const GBI& N) {
+  GBI cal(const GBI& n) {
     GBI u;
     GBI v;
-    tie(u, v) = div(N, p);
+    tie(u, v) = div(n, p_);
     auto vv = to_int<int64>(v);
-    int64 r = (e + 1) >> 1;
+    int64 r = (e_ + 1) >> 1;
 
     GBI ret = 1;
-    // F(up, p)
+    // f_(up, p_)
     const GBI u2 = u * u;
 
     for (int j = 1; j <= r; ++j) {
@@ -533,35 +533,35 @@ struct FactPPowerModer {
       const int j2 = j * j;
       for (int i = 1; i <= r; ++i)
         if (i != j) beta_numer *= u2 - i * i, beta_denom *= j2 - i * i;
-      auto beta = beta_numer / beta_denom % phi;
-      if (int_sign(beta) < 0) beta += phi;
-      ret = ret * power_mod(F[j * p], beta, mod) % mod;
+      auto beta = beta_numer / beta_denom % phi_;
+      if (int_sign(beta) < 0) beta += phi_;
+      ret = ret * power_mod(f_[j * p_], beta, mod_) % mod_;
     }
 
-    if (p == 2) {
-      int64 left_mod4 = ((lower_bits(u * p + 1) & 4) >> 1) + 1;
+    if (p_ == 2) {
+      int64 left_mod4 = ((lower_bits(u * p_ + 1) & 4) >> 1) + 1;
       int64 right_mod4 = lower_bits(ret) & 3;
       if (left_mod4 != right_mod4) {
-        ret = (mod - ret) % mod;
+        ret = (mod_ - ret) % mod_;
       }
     }
 
-    // F(v, p)
-    ret = ret * F[vv] % mod;
+    // f_(v, p_)
+    ret = ret * f_[vv] % mod_;
 
-    // (p + v, v)_p
-    for (int j = 1; j < e; ++j) {
-      auto base = F[j * p + vv] * mod_inv(F[vv] * F[j * p], mod) % mod;
+    // (p_ + v, v)_p
+    for (int j = 1; j < e_; ++j) {
+      auto base = f_[j * p_ + vv] * mod_inv(f_[vv] * f_[j * p_], mod_) % mod_;
       GBI alpha_numer = u;
       GBI alpha_denom = j;
-      for (int i = 1; i < e; ++i)
+      for (int i = 1; i < e_; ++i)
         if (i != j) {
           alpha_numer *= u - i;
           alpha_denom *= j - i;
         }
-      auto alpha = alpha_numer / alpha_denom % phi;
-      if (int_sign(alpha) < 0) alpha += phi;
-      ret = ret * power_mod(base, alpha, mod) % mod;
+      auto alpha = alpha_numer / alpha_denom % phi_;
+      if (int_sign(alpha) < 0) alpha += phi_;
+      ret = ret * power_mod(base, alpha, mod_) % mod_;
     }
 
     return ret;

@@ -168,7 +168,7 @@ class BigInteger {
   }
 
   BigInteger(const BigInteger& other) : BigInteger(zero_initialize_tag) {
-    reserve(other.bufferLength_);
+    reserve(other.buffer_length_);
     sign_ = other.sign_;
     pos_ = other.pos_;
     copy(other.data_, other.data_ + other.pos_ + 1, data_);
@@ -176,7 +176,7 @@ class BigInteger {
 
   BigInteger(BigInteger&& other) noexcept : BigInteger(zero_initialize_tag) {
     std::swap(data_, other.data_);
-    std::swap(bufferLength_, other.bufferLength_);
+    std::swap(buffer_length_, other.buffer_length_);
     std::swap(sign_, other.sign_);
     std::swap(pos_, other.pos_);
   }
@@ -193,7 +193,7 @@ class BigInteger {
 
   BigInteger& operator=(BigInteger&& other) noexcept {
     std::swap(data_, other.data_);
-    std::swap(bufferLength_, other.bufferLength_);
+    std::swap(buffer_length_, other.buffer_length_);
     std::swap(sign_, other.sign_);
     std::swap(pos_, other.pos_);
     return *this;
@@ -239,14 +239,14 @@ class BigInteger {
 
   BigInteger(const BigInteger& other, int minBuffer)
       : BigInteger(zero_initialize_tag) {
-    reserve(max(other.bufferLength_, minBuffer));
+    reserve(max(other.buffer_length_, minBuffer));
     sign_ = other.sign_;
     pos_ = other.pos_;
     copy(other.data_, other.data_ + other.pos_ + 1, data_);
   }
 
   BigInteger(zero_initialize)
-      : data_(nullptr), bufferLength_(0), sign_(0), pos_(0) {}
+      : data_(nullptr), buffer_length_(0), sign_(0), pos_(0) {}
 
  private:
   void resetAbs(uint64 v) {
@@ -982,7 +982,7 @@ class BigInteger {
     PE_ASSERT(newSize > 0);
     unsigned int* oldData = nullptr;
     if (data_) {
-      if (newSize > bufferLength_) {
+      if (newSize > buffer_length_) {
         oldData = data_;
       } else {
         return;
@@ -995,7 +995,7 @@ class BigInteger {
       copy(oldData, oldData + pos_ + 1, data_);
       bi_allocator::deallocate(oldData);
     }
-    bufferLength_ = newSize;
+    buffer_length_ = newSize;
   }
 
  public:
@@ -1084,7 +1084,7 @@ class BigInteger {
   void dump() const {
     dbg(sign_);
     dbg(pos_);
-    dbg(bufferLength_);
+    dbg(buffer_length_);
     for (int i = 0; i <= pos_; ++i) cerr << data_[i] << ",";
     cerr << endl;
   }
@@ -1139,10 +1139,11 @@ class BigInteger {
 
  private:
   unsigned int* data_;
-  int bufferLength_;
+  int buffer_length_;
   mutable int pos_;
   mutable int sign_;
 };
+
 template <typename T>
 REQUIRES((is_native_integer<T>::value && is_signed<T>::value))
 RETURN(void) __init_big_integer(BigInteger& b, T value) {

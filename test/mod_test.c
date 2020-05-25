@@ -153,7 +153,7 @@ SL void pk_sum_mod_test() {
   };
   function<int64(int64, int64)> them[]{p1_impl,     p1_impl,     &p2_sum_mod,
                                        &p3_sum_mod, &p4_sum_mod, &p5_sum_mod,
-                                       &p6_sum_mod};
+                                       &p6_sum_mod, &p7_sum_mod};
   for (int k = 1; k <= 7; ++k)
     for (int offset = -100; offset < 100; ++offset) {
       const int64 n = mod + offset;
@@ -166,5 +166,5 @@ SL void pk_sum_mod_test() {
     }
 }
 
-PE_REGISTER_TEST(&pk_sum_mod_test, "pk_sum_mod_test", SPECIFIED);
+PE_REGISTER_TEST(&pk_sum_mod_test, "pk_sum_mod_test", SMALL);
 }  // namespace mod_test

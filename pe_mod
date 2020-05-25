@@ -537,7 +537,7 @@ SL int64 square_sum_mod(int64 n, int64 mod) {
       b /= 6;
       break;
   }
-  return mul_mod_ex(a, mul_mod_ex(b, c, mod), mod);
+  return mul_mod_ex(a % mod, mul_mod_ex(b % mod, c % mod, mod), mod);
 }
 
 // Sum of 1^3 + 2^3 + 3^3 + ... + n^3
@@ -579,7 +579,7 @@ SL int64 quad_sum_mod(int64 n, int64 mod) {
   if (!done && a % 5 == 0) a /= 5, done = 1;
   if (!done && b % 5 == 0) b /= 5, done = 1;
   if (!done && c % 5 == 0) c /= 5, done = 1;
-  const int64 d = mul_mod_ex(a, mul_mod_ex(b, c, mod), mod);
+  const int64 d = mul_mod_ex(a % mod, mul_mod_ex(b % mod, c % mod, mod), mod);
   if (done) {
     const int64 t0 = mul_mod_ex(n % mod, (n + 1) % mod, mod);
     const int64 t1 = sub_mod(mul_mod_ex(3LL, t0, mod), 1, mod);
@@ -629,7 +629,8 @@ SL int64 pent_sum_mod(int64 n, int64 mod) {
   int done = 0;
   if (!done && a % 3 == 0) a /= 3, done = 1;
   if (!done && c % 3 == 0) c /= 3, done = 1;
-  const int64 e = mul_mod_ex(mul_mod_ex(a, b, mod), mul_mod_ex(c, d, mod), mod);
+  const int64 e = mul_mod_ex(mul_mod_ex(a % mod, b % mod, mod),
+                             mul_mod_ex(c % mod, d % mod, mod), mod);
   if (done) {
     const int64 t0 = add_mod(n, n, mod);
     const int64 t1 = mul_mod_ex(t0, n, mod);
@@ -644,11 +645,148 @@ SL int64 pent_sum_mod(int64 n, int64 mod) {
   return mul_mod_ex(e, t1, mod);
 }
 
+// Sum of 1^6 + 2^6 + 3^6 + ... + n^6
+// Assume no overflow for 2 * n
+SL int64 hexa_sum_mod(int64 n, int64 mod) {
+  if (n <= 0) return 0;
+  // n*(1 + n)*(1 + 2*n)*(1 - 3*n + 6*n^3 + 3*n^4)/42
+  // Handle n*(1 + n)*(1 + 2*n)/6
+  // n*(n + 1)*(2*n + 1)/6
+  int64 a = n, b = n + 1, c = 2 * n + 1;
+  switch (n % 6) {
+    case 0:
+      a /= 6;
+      break;
+    case 1:
+      b >>= 1, c /= 3;
+      break;
+    case 2:
+      a >>= 1, b /= 3;
+      break;
+    case 3:
+      a /= 3, b >>= 1;
+      break;
+    case 4:
+      a >>= 1, c /= 3;
+      break;
+    case 5:
+      b /= 6;
+      break;
+  }
+  int done = 0;
+  if (!done && a % 7 == 0) a /= 7, done = 1;
+  if (!done && b % 7 == 0) b /= 7, done = 1;
+  if (!done && c % 7 == 0) c /= 7, done = 1;
+  const int64 d = mul_mod_ex(a % mod, mul_mod_ex(b % mod, c % mod, mod), mod);
+  if (done) {
+    const int64 n1 = n % mod;
+    const int64 n2 = mul_mod_ex(n1, n1, mod);
+    const int64 n3 = mul_mod_ex(n1, n2, mod);
+    const int64 n4 = mul_mod_ex(n2, n2, mod);
+    const int64 t0 = sub_mod(add_mod(n4, 2 * n3 % mod, mod), n1, mod);
+    const int64 t1 = add_mod(mul_mod_ex(3, t0, mod), 1, mod);
+    return mul_mod_ex(d, t1, mod);
+  }
+  // Handle (1 - 3*n + 6*n^3 + 3*n^4)/7
+  const int64 n1 = n % mod;
+  const int64 n2 = mul_mod_ex(n1, n1, mod);
+  const int64 n3 = mul_mod_ex(n1, n2, mod);
+  switch (n % 7) {
+    // 3*(2 + 3*n + 3*n^2 + n^3)*(n - 1) + 7
+    case 1: {
+      const int64 t0 = add_mod(2LL, mul_mod_ex(3LL, n1, mod), mod);
+      const int64 t1 = add_mod(mul_mod_ex(3LL, n2, mod), n3, mod);
+      const int64 t2 = mul_mod_ex(mul_mod_ex(3LL, add_mod(t0, t1, mod), mod),
+                                  (n - 1) / 7 % mod, mod);
+      const int64 t3 = add_mod(t2, 1, mod);
+      return mul_mod_ex(d, t3, mod);
+    }
+    // 3*(15 + 8*n + 4*n^2 + n^3)*(n - 2) + 91
+    case 2: {
+      const int64 t0 = add_mod(15LL, mul_mod_ex(8LL, n1, mod), mod);
+      const int64 t1 = add_mod(mul_mod_ex(4LL, n2, mod), n3, mod);
+      const int64 t2 = mul_mod_ex(mul_mod_ex(3LL, add_mod(t0, t1, mod), mod),
+                                  (n - 2) / 7 % mod, mod);
+      const int64 t3 = add_mod(t2, 13LL, mod);
+      return mul_mod_ex(d, t3, mod);
+    }
+    // 3*(-10 + 3 n - n^2 + n^3)*(n + 3) + 91
+    case 4: {
+      const int64 t0 = sub_mod(mul_mod_ex(3LL, n1, mod), 10LL, mod);
+      const int64 t1 = sub_mod(n3, n2, mod);
+      const int64 t2 = mul_mod_ex(mul_mod_ex(3LL, add_mod(t0, t1, mod), mod),
+                                  (n + 3) / 7 % mod, mod);
+      const int64 t3 = add_mod(t2, 13LL, mod);
+      return mul_mod_ex(d, t3, mod);
+    }
+    // 3*(-1 + n^3)*(n + 2) + 7
+    case 5: {
+      const int64 t0 = mul_mod_ex(3LL, sub_mod(n3, 1LL, mod), mod);
+      const int64 t1 = mul_mod_ex(t0, (n + 2) / 7 % mod, mod);
+      const int64 t2 = add_mod(t1, 1LL, mod);
+      return mul_mod_ex(d, t2, mod);
+    }
+    default:
+      PE_ASSERT(0);
+  }
+  return 0;
+}
+
+// Sum of 1^7 + 2^7 + 3^7 + ... + n^7
+// Assume no overflow for 2 * n
+SL int64 hept_sum_mod(int64 n, int64 mod) {
+  if (n <= 0) return 0;
+  // n^2 * (1 + n)^2 * (2 - 4 n - n^2 + 6 n^3 + 3 n^4)/24
+  // Handle (n (n + 1))^2/4
+  int64 a = n, b = n, c = n + 1, d = n + 1;
+  if (n % 2 == 0) {
+    a >>= 1, b >>= 1;
+  } else {
+    c >>= 1, d >>= 1;
+  }
+  int done3 = 0;
+  if (!done3 && a % 3 == 0) a /= 3, done3 = 1;
+  if (!done3 && c % 3 == 0) c /= 3, done3 = 1;
+  // Handle (2 - 4 n - n^2 + 6 n^3 + 3 n^4)/6
+  // Expand[1/6 (2 - 4 n - n^2 + 6 n^3 + 3 n^4) /. {n -> 6 k + f}]
+  // 1/3 - (2 f)/3 - f^2/6 + f^3 + f^4/2 - 4 k - 2 f k + 18 f^2 k +
+  // 12 f^3 k - 6 k^2 + 108 f k^2 + 108 f^2 k^2 + 216 k^3 + 432 f k^3 +
+  // 648 k^4
+  const int64 k = n / 6;
+  const int64 k1 = k % mod;
+  const int64 k2 = mul_mod_ex(k1, k1, mod);
+  const int64 k3 = mul_mod_ex(k2, k1, mod);
+  const int64 k4 = mul_mod_ex(k2, k2, mod);
+  const int64 f1 = n % 6;
+  const int64 f2 = f1 * f1;
+  const int64 f3 = f2 * f1;
+  const int64 f4 = f2 * f2;
+  int64 t0 = sub_mod(0LL, mul_mod_ex(4LL, k1, mod), mod);
+  t0 = sub_mod(t0, mul_mod_ex(2LL, mul_mod_ex(f1, k1, mod), mod), mod);
+  t0 = add_mod(t0, mul_mod_ex(18LL, mul_mod_ex(f2, k1, mod), mod), mod);
+  t0 = add_mod(t0, mul_mod_ex(12LL, mul_mod_ex(f3, k1, mod), mod), mod);
+  t0 = sub_mod(t0, mul_mod_ex(6LL, k2, mod), mod);
+  t0 = add_mod(t0, mul_mod_ex(108LL, mul_mod_ex(f1, k2, mod), mod), mod);
+  t0 = add_mod(t0, mul_mod_ex(108LL, mul_mod_ex(f2, k2, mod), mod), mod);
+  t0 = add_mod(t0, mul_mod_ex(216LL, k3, mod), mod);
+  t0 = add_mod(t0, mul_mod_ex(432LL, mul_mod_ex(f1, k3, mod), mod), mod);
+  t0 = add_mod(t0, mul_mod_ex(648LL, k4, mod), mod);
+  if (done3) {
+    t0 = mul_mod_ex(3LL, t0, mod);
+  }
+  const int64 t1 = (3 * f4 + 6 * f3 - f2 - 4 * f1 + 2) / (done3 ? 2 : 6) % mod;
+  const int64 t2 = mul_mod_ex(mul_mod_ex(a % mod, b % mod, mod),
+                              mul_mod_ex(c % mod, d % mod, mod), mod);
+  return mul_mod_ex(add_mod(t0, t1, mod), t2, mod);
+}
+
 #define p1_sum_mod ap_sum_mod
 #define p2_sum_mod square_sum_mod
 #define p3_sum_mod cube_sum_mod
 #define p4_sum_mod quad_sum_mod
 #define p5_sum_mod pent_sum_mod
+#define p6_sum_mod hexa_sum_mod
+#define p7_sum_mod hept_sum_mod
 
 #if 0
 // Sum of geometric progression

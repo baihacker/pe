@@ -147,15 +147,15 @@ PE_REGISTER_TEST(&gp_sum_mod_test, "gp_sum_mod_test", SMALL);
 SL void pk_sum_mod_test() {
   // 4e18 + 37
   const int64 mod = 4000000000000000037;
-  PowerSumModerB moder(mod, 5);
+  PowerSumModerB moder(mod, 7);
   auto p1_impl = [=](int64 n, int64 mod) -> int64 {
     return p1_sum_mod(n, mod);
   };
-  function<int64(int64, int64)> them[]{
-      p1_impl, p1_impl, &p2_sum_mod, &p3_sum_mod, &p4_sum_mod, &p5_sum_mod,
-  };
-  for (int k = 1; k <= 5; ++k)
-    for (int offset = 0; offset < 100; ++offset) {
+  function<int64(int64, int64)> them[]{p1_impl,     p1_impl,     &p2_sum_mod,
+                                       &p3_sum_mod, &p4_sum_mod, &p5_sum_mod,
+                                       &p6_sum_mod};
+  for (int k = 1; k <= 7; ++k)
+    for (int offset = -100; offset < 100; ++offset) {
       const int64 n = mod + offset;
       const int64 ans1 = (them[k])(n, mod);
       const int64 ans2 = moder.cal(n, k);
@@ -166,5 +166,5 @@ SL void pk_sum_mod_test() {
     }
 }
 
-PE_REGISTER_TEST(&pk_sum_mod_test, "pk_sum_mod_test", SMALL);
+PE_REGISTER_TEST(&pk_sum_mod_test, "pk_sum_mod_test", SPECIFIED);
 }  // namespace mod_test

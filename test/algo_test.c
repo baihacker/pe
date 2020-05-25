@@ -127,30 +127,4 @@ SL void count_pythagorean_triple_test() {
 
 PE_REGISTER_TEST(&count_pythagorean_triple_test,
                  "count_pythagorean_triple_test", SMALL);
-
-SL void gp_sum_mod_test() {
-  const int64 mod = 1000000007;
-  assert(gp_sum_mod(0, 1, 2, mod) == 0);
-  assert(gp_sum_mod(0, 1, 1, mod) == 0);
-  assert(gp_sum_mod(0, 1, 0, mod) == 0);
-  assert(gp_sum_mod(0, 0, 0, mod) == 1);
-  assert(gp_sum_mod(0, 0, 0, mod, 0) == 0);
-  assert(gp_sum_mod(0, 0, 0, mod, 100) == 100);
-
-  assert(gp_sum_mod(1, 1, 2, mod) == 2);
-  assert(gp_sum_mod(1, 1, 1, mod) == 1);
-  assert(gp_sum_mod(1, 1, 0, mod) == 0);
-  assert(gp_sum_mod(1, 0, 0, mod) == 1);
-  assert(gp_sum_mod(1, 0, 0, mod, 0) == 1);
-  assert(gp_sum_mod(1, 0, 0, mod, 100) == 1);
-
-  assert(gp_sum_mod(2, 1, 2, mod) == 6);
-  assert(gp_sum_mod(2, 1, 1, mod) == 2);
-  assert(gp_sum_mod(2, 1, 0, mod) == 0);
-  assert(gp_sum_mod(2, 0, 0, mod) == 1);
-  assert(gp_sum_mod(2, 0, 0, mod, 0) == 1);
-  assert(gp_sum_mod(2, 0, 0, mod, 100) == 1);
-}
-
-PE_REGISTER_TEST(&gp_sum_mod_test, "gp_sum_mod_test", SMALL);
 }  // namespace algo_test

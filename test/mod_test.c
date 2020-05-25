@@ -117,4 +117,54 @@ SL void frac_mod_test() {
 
 PE_REGISTER_TEST(&frac_mod_test, "frac_mod_test", SMALL);
 #endif
+
+SL void gp_sum_mod_test() {
+  const int64 mod = 1000000007;
+  assert(gp_sum_mod(0, 1, 2, mod) == 0);
+  assert(gp_sum_mod(0, 1, 1, mod) == 0);
+  assert(gp_sum_mod(0, 1, 0, mod) == 0);
+  assert(gp_sum_mod(0, 0, 0, mod) == 1);
+  assert(gp_sum_mod(0, 0, 0, mod, 0) == 0);
+  assert(gp_sum_mod(0, 0, 0, mod, 100) == 100);
+
+  assert(gp_sum_mod(1, 1, 2, mod) == 2);
+  assert(gp_sum_mod(1, 1, 1, mod) == 1);
+  assert(gp_sum_mod(1, 1, 0, mod) == 0);
+  assert(gp_sum_mod(1, 0, 0, mod) == 1);
+  assert(gp_sum_mod(1, 0, 0, mod, 0) == 1);
+  assert(gp_sum_mod(1, 0, 0, mod, 100) == 1);
+
+  assert(gp_sum_mod(2, 1, 2, mod) == 6);
+  assert(gp_sum_mod(2, 1, 1, mod) == 2);
+  assert(gp_sum_mod(2, 1, 0, mod) == 0);
+  assert(gp_sum_mod(2, 0, 0, mod) == 1);
+  assert(gp_sum_mod(2, 0, 0, mod, 0) == 1);
+  assert(gp_sum_mod(2, 0, 0, mod, 100) == 1);
+}
+
+PE_REGISTER_TEST(&gp_sum_mod_test, "gp_sum_mod_test", SMALL);
+
+SL void pk_sum_mod_test() {
+  // 4e18 + 37
+  const int64 mod = 4000000000000000037;
+  PowerSumModerB moder(mod, 5);
+  auto p1_impl = [=](int64 n, int64 mod) -> int64 {
+    return p1_sum_mod(n, mod);
+  };
+  function<int64(int64, int64)> them[]{
+      p1_impl, p1_impl, &p2_sum_mod, &p3_sum_mod, &p4_sum_mod, &p5_sum_mod,
+  };
+  for (int k = 1; k <= 5; ++k)
+    for (int offset = 0; offset < 100; ++offset) {
+      const int64 n = mod + offset;
+      const int64 ans1 = (them[k])(n, mod);
+      const int64 ans2 = moder.cal(n, k);
+      if (ans1 != ans2) {
+        cout << n << " " << k << " " << ans1 << " " << ans2 << endl;
+      }
+      assert(ans1 == ans2);
+    }
+}
+
+PE_REGISTER_TEST(&pk_sum_mod_test, "pk_sum_mod_test", SMALL);
 }  // namespace mod_test

@@ -399,40 +399,6 @@ SL REQUIRES(is_native_integer<T>::value) RETURN(T)
   return ret;
 }
 
-// It's expected that all elements in b are prime.
-// The behavior is undefined if it's not satisified.
-template <typename T, typename M>
-SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
-    RETURN_T(IntPromotionT(T, M))
-        frac_mod_impl(const std::vector<T>& a, std::vector<T> b, M mod) {
-  using ResultType = typename BiggerIntegralN<T, M>::type;
-  ResultType ret = 1;
-  const int size = b.size();
-  int remain = size;
-  for (auto iter : a) {
-    for (int i = 0; remain > 0 && i < size; ++i)
-      if (b[i] != 1 && (iter % b[i] == 0)) {
-        iter /= b[i];
-        b[i] = 1;
-        --remain;
-      }
-    ret = mul_mod(ret, iter % mod, mod);
-  }
-  return ret;
-}
-
-template <typename T1, typename T2 = T1, typename M>
-SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
-             is_native_integer<M>::value))
-    RETURN_T(IntPromotionT(T1, T2, int64, M))
-        frac_mod(const std::vector<T1>& a, const std::vector<T2>& b, M mod) {
-  using T = typename BiggerIntegralN<T1, T2>::type;
-  using atLeastInt64T = typename AtLeastInt64<T>::type;
-  return frac_mod_impl<atLeastInt64T, M>(
-      vector<atLeastInt64T>(a.begin(), a.end()),
-      vector<atLeastInt64T>(b.begin(), b.end()), mod);
-}
-
 template <typename T1, typename T2, typename M>
 SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
              is_native_integer<M>::value)) RETURN_T(IntPromotionT(T1, M))
@@ -479,6 +445,326 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
     power_mod_ex(T1 x, T2 n, M mod) {
   using atLeastInt64T1 = typename AtLeastInt64<T1>::type;
   return power_mod_ex_impl<atLeastInt64T1, T2, M>(x, n, mod);
+}
+
+template <typename T, typename M>
+SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
+    RETURN_T(IntPromotionT(T, M))
+        frac_mod_impl(const std::vector<T>& a, std::vector<T> b, M mod) {
+  using ResultType = typename BiggerIntegralN<T, M>::type;
+  ResultType ret = 1;
+  const int size = b.size();
+  int remain = size;
+  for (auto iter : a) {
+    for (int i = 0; iter > 1 && remain > 0 && i < size; ++i) {
+      if (b[i] == 1) continue;
+      while (b[i] != 1 && iter != 1) {
+        ResultType d = gcd(iter, b[i]);
+        iter /= d;
+        b[i] /= d;
+      }
+      if (b[i] == 1) {
+        --remain;
+      }
+    }
+    ret = mul_mod(ret, iter % mod, mod);
+  }
+  return ret;
+}
+
+template <typename T1, typename T2 = T1, typename M>
+SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
+             is_native_integer<M>::value))
+    RETURN_T(IntPromotionT(T1, T2, int64, M))
+        frac_mod(const std::vector<T1>& a, const std::vector<T2>& b, M mod) {
+  using T = typename BiggerIntegralN<T1, T2>::type;
+  using atLeastInt64T = typename AtLeastInt64<T>::type;
+  return frac_mod_impl<atLeastInt64T, M>(
+      vector<atLeastInt64T>(a.begin(), a.end()),
+      vector<atLeastInt64T>(b.begin(), b.end()), mod);
+}
+
+// Sum of 1 + 2 + 3 + ... + n
+SL int64 ap_sum_mod(int64 n, int64 mod) {
+  if (n == 0) return 0;
+  if (n < 0) return regulate_mod(-ap_sum_mod(-n, mod), mod);
+  return n & 1 ? mul_mod_ex(((n + 1) >> 1) % mod, n, mod)
+               : mul_mod_ex((n >> 1) % mod, (n + 1) % mod, mod);
+}
+
+// Sum of arithmetic progression
+// a <= a, a + delta, a + 2 delta, ..., a + maxk detla <= b for delta >= 0 or
+// a >= a, a + delta, a + 2 delta, ..., a + maxk delta >= b for delta < 0
+SL int64 ap_sum_mod(int64 a, int64 b, int64 mod, int64 delta = 1) {
+  if (delta == 0) {
+    PE_ASSERT(a == b);
+    return a;
+  }
+  if (delta > 0 && a > b) return 0;
+  if (delta < 0 && a < b) return 0;
+  const int64 maxk = (b - a) / delta;
+  PE_ASSERT(maxk >= 0);
+  const int64 t0 = mul_mod_ex((maxk + 1) % mod, regulate_mod(a, mod), mod);
+  // delta, 2 delta, maxk delta
+  const int64 t1 =
+      mul_mod_ex(regulate_mod(delta, mod), ap_sum_mod(maxk, mod), mod);
+  return add_mod(t0, t1, mod);
+}
+
+// Sum of 1^2 + 2^2 + 3^2 + ... + n^2
+// Assume no overflow for 2 * n + 1
+SL int64 square_sum_mod(int64 n, int64 mod) {
+  if (n <= 0) return 0;
+  // n*(n + 1)*(2 n + 1)/6
+  int64 a = n, b = n + 1, c = 2 * n + 1;
+  switch (n % 6) {
+    case 0:
+      a /= 6;
+      break;
+    case 1:
+      b >>= 1, c /= 3;
+      break;
+    case 2:
+      a >>= 1, b /= 3;
+      break;
+    case 3:
+      a /= 3, b >>= 1;
+      break;
+    case 4:
+      a >>= 1, c /= 3;
+      break;
+    case 5:
+      b /= 6;
+      break;
+  }
+  return mul_mod_ex(a, mul_mod_ex(b, c, mod), mod);
+}
+
+// Sum of 1^3 + 2^3 + 3^3 + ... + n^3
+SL int64 cube_sum_mod(int64 n, int64 mod) {
+  if (n <= 0) return 0;
+  // (n*(n + 1)/2)^2
+  const int64 a = ap_sum_mod(n, mod);
+  return mul_mod_ex(a, a, mod);
+}
+
+// Sum of 1^4 + 2^4 + 3^4 + ... + n^4
+// Assume no overflow for 2 * n
+SL int64 quad_sum_mod(int64 n, int64 mod) {
+  if (n <= 0) return 0;
+  // (3*n*(n + 1) - 1)*(2*n + 1)*(n + 1)*n/30
+  // Handle (2*n + 1)*(n + 1)*n/6
+  int64 a = n, b = n + 1, c = 2 * n + 1;
+  switch (n % 6) {
+    case 0:
+      a /= 6;
+      break;
+    case 1:
+      b >>= 1, c /= 3;
+      break;
+    case 2:
+      a >>= 1, b /= 3;
+      break;
+    case 3:
+      a /= 3, b >>= 1;
+      break;
+    case 4:
+      a >>= 1, c /= 3;
+      break;
+    case 5:
+      b /= 6;
+      break;
+  }
+  int done = 0;
+  if (!done && a % 5 == 0) a /= 5, done = 1;
+  if (!done && b % 5 == 0) b /= 5, done = 1;
+  if (!done && c % 5 == 0) c /= 5, done = 1;
+  const int64 d = mul_mod_ex(a, mul_mod_ex(b, c, mod), mod);
+  if (done) {
+    const int64 t0 = mul_mod_ex(n % mod, (n + 1) % mod, mod);
+    const int64 t1 = sub_mod(mul_mod_ex(3LL, t0, mod), 1, mod);
+    return mul_mod_ex(d, t1, mod);
+  }
+  // Handle (3*n*n + 3*n - 1)/5
+  switch (n % 5) {
+    // 3*n*n + 3*n - 1 =
+    // 3*(n - 1)*(n - 1) + 5*n + 4*(n - 1)
+    // (n - 1)*(3*(n - 1) + 4) + 5*n
+    // (n - 1)*(3 n + 1) + 5*n
+    case 1: {
+      const int64 t0 = add_mod(mul_mod_ex(3LL, n, mod), 1, mod);
+      const int64 t1 =
+          add_mod(mul_mod_ex((n - 1) / 5 % mod, t0, mod), n % mod, mod);
+      return mul_mod_ex(d, t1, mod);
+    }
+    // 3*n*n + 3*n - 1 =
+    // 3*(n - 3)*(n - 3) + 7*(3*n - 4)
+    // 3*(n - 3)*(n - 3) + 7*(3*(n - 3) + 5)
+    // 3*(n - 3)*(n - 3) + 7*3*(n - 3) + 35
+    // 3*(n - 3)*(n + 4) + 35
+    case 3: {
+      const int64 t0 = mul_mod_ex(
+          3LL, mul_mod_ex((n - 3) / 5 % mod, (n + 4) % mod, mod), mod);
+      const int64 t1 = add_mod(t0, 7, mod);
+      return mul_mod_ex(d, t1, mod);
+    }
+    default:
+      PE_ASSERT(0);
+  }
+  return 0;
+}
+
+// Sum of 1^5 + 2^5 + 3^5 + ... + n^5
+// Assume no overflow for 2 * n
+SL int64 pent_sum_mod(int64 n, int64 mod) {
+  if (n <= 0) return 0;
+  // n^2*(n + 1)^2*(2*n^2 + 2*n - 1)/12
+  // Handle (n (n + 1))^2/4
+  int64 a = n, b = n, c = n + 1, d = n + 1;
+  if (n % 2 == 0) {
+    a >>= 1, b >>= 1;
+  } else {
+    c >>= 1, d >>= 1;
+  }
+  int done = 0;
+  if (!done && a % 3 == 0) a /= 3, done = 1;
+  if (!done && c % 3 == 0) c /= 3, done = 1;
+  const int64 e = mul_mod_ex(mul_mod_ex(a, b, mod), mul_mod_ex(c, d, mod), mod);
+  if (done) {
+    const int64 t0 = add_mod(n, n, mod);
+    const int64 t1 = mul_mod_ex(t0, n, mod);
+    const int64 t2 = sub_mod(add_mod(t0, t1, mod), 1, mod);
+    return mul_mod_ex(e, t2, mod);
+  }
+  // Handle (2*n^2 + 2*n - 1)/3
+  // We have n%3 = 1
+  // 2*n^2 + 2*n - 1 = 2*(n-1)^2 + 6n - 3
+  const int64 t0 = mul_mod_ex((n - 1) / 3 % mod, (n - 1) % mod, mod);
+  const int64 t1 = add_mod(add_mod(t0, t0, mod), (2 * n - 1) % mod, mod);
+  return mul_mod_ex(e, t1, mod);
+}
+
+#define p1_sum_mod ap_sum_mod
+#define p2_sum_mod square_sum_mod
+#define p3_sum_mod cube_sum_mod
+#define p4_sum_mod quad_sum_mod
+#define p5_sum_mod pent_sum_mod
+
+#if 0
+// Sum of geometric progression
+// (x^a+x^(a+1)+x^(a+2)+...+x^b) % mod
+// a >= 0
+// zeroPzero: 0^0
+// if b < a: return 0
+SL int64 gp_sum_mod(int64 x, int64 a, int64 b, int64 mod, int64 zeroPzero = 1) {
+  if (mod == 1) return 0;
+  if (b < a) return 0;
+  x %= mod;
+  if (a > 0 || x > 0) {
+    if (x == 0) return 0;
+    if (x == 1) return (b - a + 1) % mod;
+    // (x^(b+1)-x^a) / (x - 1)
+    const int64 u = power_mod_ex(x, b + 1, mod);
+    const int64 v = power_mod_ex(x, a, mod);
+    const int64 w = sub_mod(u, v, mod);
+    const int64 t = inv_of(sub_mod(x, 1, mod), mod);
+    return mul_mod_ex(w, t, mod);
+  }
+  // a == 0 and x == 0
+  return zeroPzero % mod;
+}
+
+SL int64 gp_sum_mod_ivx1(int64 x, int64 invXSub1, int64 a, int64 b, int64 mod,
+                         int64 zeroPzero = 1) {
+  if (mod == 1) return 0;
+  if (b < a) return 0;
+  x %= mod;
+  if (a > 0 || x > 0) {
+    if (x == 0) return 0;
+    if (x == 1) return (b - a + 1) % mod;
+    // (x^(b+1)-x^a) / (x - 1)
+    const int64 u = power_mod_ex(x, b + 1, mod);
+    const int64 v = power_mod_ex(x, a, mod);
+    const int64 w = sub_mod(u, v, mod);
+    return mul_mod_ex(w, invXSub1, mod);
+  }
+  // a == 0 and x == 0
+  return zeroPzero % mod;
+}
+
+// Sum of geometric progression
+// (x^a+x^(a+1)+x^(a+2)+...+x^b) % mod
+// a >= 0
+// zeroPzero: 0^0
+// if b < a: return 0
+SL int64 gp_sum_mod(int64 x, int64 a, int64 b, int64 mod,
+                    int64 zero_p_zero = 1) {
+  if (mod == 1 || b < a) return 0;
+  if (b < a) return 0;
+  x %= mod;
+  // |x 0|^(b-a) x^a
+  // |x 1|       x^a
+  int64 data[3][2][2] = {0};
+  auto* m = data[0];
+  auto* r = data[1];
+  auto* t = data[2];
+  m[0][0] = x;
+  m[1][0] = x;
+  m[1][1] = 1;
+  r[0][0] = a == 0 && x == 0 ? zero_p_zero : power_mod_ex(x, a, mod);
+  r[1][0] = r[0][0];
+  for (int64 n = b - a; n > 0; n >>= 1) {
+    if (n & 1) {
+      for (int i = 0; i < 2; ++i) {
+        int64 s = 0;
+        for (int k = 0; k < 2; ++k) {
+          s = add_mod(s, mul_mod_ex(m[i][k], r[k][0], mod), mod);
+        }
+        t[i][0] = s;
+      }
+      swap(t, r);
+    }
+    if (n > 1) {
+      for (int i = 0; i < 2; ++i)
+        for (int j = 0; j < 2; ++j) {
+          int64 s = 0;
+          for (int k = 0; k < 2; ++k) {
+            s = add_mod(s, mul_mod_ex(m[i][k], m[k][j], mod), mod);
+          }
+          t[i][j] = s;
+        }
+      swap(t, m);
+    }
+  }
+  return r[1][0];
+}
+#endif
+
+// Sum of geometric progression
+// (x^a+x^(a+1)+x^(a+2)+...+x^b) % mod
+// a >= 0
+// zero_p_zero: 0^0
+// if b < a: return 0
+SL int64 gp_sum_mod(int64 x, int64 a, int64 b, int64 mod,
+                    int64 zero_p_zero = 1) {
+  if (mod == 1 || b < a) return 0;
+  if (b < a) return 0;
+  x %= mod;
+  // |x 0|^(b-a) x^a
+  // |x 1|       x^a
+  int64 u = x;
+  int64 v1 = a == 0 && x == 0 ? zero_p_zero : power_mod_ex(x, a, mod);
+  int64 v2 = v1;
+  for (int64 n = b - a; n > 0; n >>= 1) {
+    if (n & 1) {
+      v1 = mul_mod_ex(u, v1, mod);
+      v2 = add_mod(v1, v2, mod);
+    }
+    if (n > 1) {
+      u = mul_mod_ex(u, u, mod);
+    }
+  }
+  return v2;
 }
 
 struct init_direct_t {};

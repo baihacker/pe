@@ -225,9 +225,10 @@ SL int64 nth_element(const NModPoly& s, int64 n, const NModPoly& min_poly) {
   return ans;
 }
 
-SL NModPoly find_linear_recurrence(const NModPoly& s) {
+SL NModPoly find_linear_recurrence(const NModPoly& s, int min_use = 2) {
   const int len = static_cast<int>(s.data.size());
-  for (int n = 2; n < len; n += 2) {
+  for (int n = (max(min_use, 2) + 1) / 2 * 2; n < len; n += 2) {
+    cout << n << " " << len << endl;
     auto use = s.lowerTerms(n, 0);
     auto min_poly = find_minimal_poly(use);
     int ok = 1;
@@ -245,26 +246,26 @@ SL NModPoly find_linear_recurrence(const NModPoly& s) {
   return NModPoly();
 }
 
-SL int64 nth_element(const NModPoly& s, int64 n) {
+SL int64 nth_element(const NModPoly& s, int64 n, int min_use = 2) {
   if (n <= s.deg()) {
     return s[static_cast<int>(n)];
   }
 
-  auto min_poly = find_linear_recurrence(s);
+  auto min_poly = find_linear_recurrence(s, min_use);
   if (min_poly.deg() > 0) {
     return nth_element(s, n, min_poly);
   }
   return -1;
 }
 
-SL int64 nth_element(const vector<int64>& s, const int64 mod, int64 n) {
+SL int64 nth_element(const vector<int64>& s, const int64 mod, int64 n, int min_use = 2) {
   if (n < static_cast<int>(s.size())) {
     return s[static_cast<int>(n)];
   }
 
   NModPoly p(s, mod);
 
-  auto min_poly = find_linear_recurrence(p);
+  auto min_poly = find_linear_recurrence(p, min_use);
   if (min_poly.deg() > 0) {
     return nth_element(p, n, min_poly);
   }

@@ -2407,7 +2407,7 @@ struct Solver : public MValueBaseTP<Solver, RT, 8> {
     }
     if (val > 1) {
       // handle val * vmp
-      ret += now / (emp + 1) * (emp + 2);
+      ret += now / tmp[tid()] * each(vmp, emp + 1);
     } else {
       // handle f(1)
       ret += 1;
@@ -2415,7 +2415,51 @@ struct Solver : public MValueBaseTP<Solver, RT, 8> {
     return ret;
   }
   RT each(int64 p, int e) { return e + 1; }
+  void visitMaxPrime(int64 vmp, int emp, RT now) {
+    tmp[tid()] = each(vmp, emp);
+  }
+  RT tmp[64];
 };
+
+MVVHistory history_[128];
+int top_;
+RT dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, RT now) {
+  RT ret = 0;{
+    int64 remain = n / val;
+    // we have remain >= vmp
+    // handle val * q where q > vmp
+    if (remain > vmp) {
+      ret += now * (dva[remain] - (imp + 1)) * 2;
+    }
+    if (val > 1) {
+      // handle val * vmp
+      ret += now / (history_[0].e + 1) * (emp + 2);
+    } else {
+      // handle f(1)
+      ret += 1;
+    }
+  }
+  for (int i = 0; i < limit; ++i) {
+    const int64 p = plist[i];
+    const int nextimp = imp == -1 ? i : imp;
+    const int64 nextvmp = imp == -1 ? p : vmp;
+    const int64 valLimit = n / p / nextvmp;
+    if (val > valLimit) break;
+    history_[top_].ip = i;
+    history_[top_].p = p;
+    history_[top_].e = 1;
+    int& e = history_[top_++].e;
+    for (int64 nextval = val * p;; ++e) {
+      RT tmp = now * (e + 1);
+      ret += dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp, tmp);
+      if (nextval > valLimit) break;
+      nextval *= p;
+    }
+    --top_;
+  }
+  return ret;
+}
+dfs(pcnt, n, 1, -1, 1, 0, 1)
 */
 
 template <typename D, typename T = int64>

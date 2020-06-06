@@ -190,6 +190,7 @@ template <typename IT, typename DERIVED, typename IIT>
 struct RangeBase {
   RangeBase(IT b, IT e) : b_(b), e_(e) {}
 
+  using self_type = RangeBase<IT, DERIVED, IIT>;
   using reference = typename IIT::reference;
   using rvalue_reference =
       typename add_rvalue_reference<const typename IIT::value_type>::type;
@@ -464,6 +465,36 @@ struct RangeBase {
           mapper) const {
     return MappedRange<IIT>{static_cast<const DERIVED&>(*this).begin(),
                             static_cast<const DERIVED&>(*this).end(), mapper};
+  }
+
+  template <typename T>
+  self_type& forEach(const T& action) {
+    auto now = static_cast<const DERIVED&>(*this).begin();
+    auto x = static_cast<const DERIVED&>(*this).end();
+    while (now != x) {
+      action(std::move(*now++));
+    }
+    return *this;
+  }
+
+  template <typename T>
+  self_type& pforEach(const T& action, const int thread_number = 8) {
+#if ENABLE_OPENMP
+    auto data = toVector();
+    const int size = sz(data);
+    if (size == 0) {
+      return *this;
+    }
+
+#pragma omp parallel for schedule(dynamic) num_threads(thread_number)
+    for (int i = 0; i < size; ++i) {
+      action(std::move(data[i]));
+    }
+
+    return *this;
+#else
+    return pforEach(action);
+#endif
   }
 
   std::vector<value_type> toVector() const {

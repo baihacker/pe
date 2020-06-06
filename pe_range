@@ -206,6 +206,35 @@ struct RangeBase {
                             static_cast<const DERIVED&>(*this).end(), filter};
   }
 
+  VectorRange<value_type> pfilter(
+      std::function<int(const typename IIT::value_type&)> filter,
+      const int thread_number = 8) const {
+    auto data = toVector();
+    const int size = sz(data);
+    if (size == 0) {
+      return vector<value_type>{};
+    }
+
+    vector<vector<value_type>> tmp(thread_number);
+#if ENABLE_OPENMP
+#pragma omp parallel for schedule(dynamic) num_threads(thread_number)
+#endif
+    for (int i = 0; i < size; ++i) {
+      if (filter(data[i])) {
+        const auto tid = ::tid();
+        tmp[tid].push_back(std::move(data[i]));
+      }
+    }
+
+    vector<value_type> vec;
+    for (int i = 0; i < thread_number; ++i) {
+      for (auto& iter : tmp[i]) {
+        vec.push_back(std::move(iter));
+      }
+    }
+    return VectorRange<value_type>(std::move(vec));
+  }
+
   // Recommendation:
   // 1. Use the template version and specify the result type (VT).
   // 2. Sepecify the return type of accumulator.
@@ -491,7 +520,7 @@ struct RangeBase {
       vec[i] = mapper(std::move(data[i]));
     }
 
-    return VectorRange<TT>(vec);
+    return VectorRange<TT>(std::move(vec));
   }
 
   template <typename T>

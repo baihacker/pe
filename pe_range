@@ -6,13 +6,15 @@
 
 // range utility
 namespace ru {
+SL int64 id(int64 a) { return a; }
+
 SL int64 mul(int64 a, int64 b) { return a * b; }
 
 SL int64 add(int64 a, int64 b) { return a + b; }
 
 template <int64 M>
 SL int64 mul_mod(int64 a, int64 b) {
-  return ::mul_mod(a, b, M);
+  return ::mul_mod_ex(a, b, M);
 }
 
 template <int64 M>
@@ -21,11 +23,35 @@ SL int64 add_mod(int64 a, int64 b) {
 }
 
 SL std::function<int64(int64, int64)> mul_mod(int64 mod) {
-  return [=](int64 a, int64 b) { return ::mul_mod(a, b, mod); };
+  return [=](int64 a, int64 b) { return ::mul_mod_ex(a, b, mod); };
 }
 
 SL std::function<int64(int64, int64)> add_mod(int64 mod) {
   return [=](int64 a, int64 b) { return ::add_mod(a, b, mod); };
+}
+
+SL std::function<int64(int64, int64)> add_f(
+    const std::function<int64(int64)>& f) {
+  return [=](int64 a, int64 b) -> int64 { return add(a, f(b)); };
+}
+
+SL std::function<int64(int64, int64)> mul_f(
+    const std::function<int64(int64)>& f) {
+  return [=](int64 a, int64 b) -> int64 { return mul(a, f(b)); };
+}
+
+SL std::function<int64(int64, int64)> add_mod_f(
+    const std::function<int64(int64)>& f, int64 mod) {
+  return [=](int64 a, int64 b) -> int64 {
+    return ::add_mod(a % mod, f(b) % mod, mod);
+  };
+}
+
+SL std::function<int64(int64, int64)> mul_mod_f(
+    const std::function<int64(int64)>& f, int64 mod) {
+  return [=](int64 a, int64 b) -> int64 {
+    return ::mul_mod_ex(a % mod, f(b) % mod, mod);
+  };
 }
 
 SL void imul(int64& a, int64 b) { a *= b; }
@@ -34,7 +60,7 @@ SL void iadd(int64& a, int64 b) { a += b; }
 
 template <int64 M>
 SL void imul_mod(int64& a, int64 b) {
-  a = ::mul_mod(a, b, M);
+  a = ::mul_mod_ex(a, b, M);
 }
 
 template <int64 M>
@@ -43,11 +69,26 @@ SL void iadd_mod(int64& a, int64 b) {
 }
 
 SL std::function<void(int64&, int64)> imul_mod(int64 mod) {
-  return [=](int64& a, int64 b) { a = ::mul_mod(a, b, mod); };
+  return [=](int64& a, int64 b) { a = ::mul_mod_ex(a, b, mod); };
 }
 
 SL std::function<void(int64&, int64)> iadd_mod(int64 mod) {
   return [=](int64& a, int64 b) { a = ::add_mod(a, b, mod); };
+}
+
+SL std::function<void(int64&, int64)> iadd_f(
+    const std::function<int64(int64)>& f) {
+  return [=](int64& a, int64 b) { imul(a, f(b)); };
+}
+
+SL std::function<void(int64&, int64)> imul_mod_f(
+    const std::function<int64(int64)>& f, int64 mod) {
+  return [=](int64& a, int64 b) { a = ::mul_mod_ex(a % mod, f(b) % mod, mod); };
+}
+
+SL std::function<void(int64&, int64)> iadd_mod_f(
+    const std::function<int64(int64)>& f, int64 mod) {
+  return [=](int64& a, int64 b) { a = ::add_mod(a % mod, f(b) % mod, mod); };
 }
 }  // namespace ru
 

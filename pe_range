@@ -90,6 +90,91 @@ SL std::function<void(int64&, int64)> iadd_mod_f(
     const std::function<int64(int64)>& f, int64 mod) {
   return [=](int64& a, int64 b) { a = ::add_mod(a % mod, f(b) % mod, mod); };
 }
+
+template <typename T>
+struct Reducer {
+  using VT = typename T::VT;
+  VT init_value() { return 0; }
+  void accumulate(VT& v, VT a) {}
+  void combine(VT& v, VT a) {}
+};
+
+template <typename T, typename U>
+SL T id_map(U a) {
+  return a;
+}
+
+template <typename T = int64, typename U = T>
+struct Add {
+  using VT = T;
+  using IT = U;
+
+  Add(const std::function<VT(IT)>& mapper = id_map<T, U>) : mapper_(mapper) {}
+
+  VT init_value() const { return 0; }
+
+  void accumulate(VT& v, U&& a) const { v += mapper_(std::move(a)); }
+
+  void combine(VT& v, VT a) const { v += a; }
+
+  std::function<VT(IT)> mapper_;
+};
+
+template <typename T = int64, typename U = T>
+struct AddMod {
+  using VT = T;
+  using IT = U;
+
+  AddMod(VT mod, const std::function<VT(IT)>& mapper = id_map<T, U>)
+      : mod_(mod), mapper_(mapper) {}
+
+  VT init_value() const { return 0; }
+
+  void accumulate(VT& v, U&& a) const {
+    v = ::add_mod<VT>(v, mapper_(std::move(a)) % mod_, mod_);
+  }
+
+  void combine(VT& v, VT a) const { v = ::add_mod<VT>(v, a, mod_); }
+
+  const VT mod_;
+  std::function<VT(IT)> mapper_;
+};
+
+template <typename T = int64, typename U = T>
+struct Mul {
+  using VT = T;
+  using IT = U;
+
+  Mul(const std::function<VT(IT)>& mapper = id_map<T, U>) : mapper_(mapper) {}
+
+  VT init_value() const { return 1; }
+
+  void accumulate(VT& v, U&& a) const { v *= mapper_(std::move(a)); }
+
+  void combine(VT& v, VT a) const { v *= a; }
+
+  std::function<VT(IT)> mapper_;
+};
+
+template <typename T = int64, typename U = T>
+struct MulMod {
+  using VT = T;
+  using IT = U;
+
+  MulMod(VT mod, const std::function<VT(IT)>& mapper = id_map<T, U>)
+      : mod_(mod), mapper_(mapper) {}
+
+  VT init_value() const { return 1; }
+
+  void accumulate(VT& v, U&& a) const {
+    v = ::mul_mod_ex<VT>(v, mapper_(std::move(a)) % mod_, mod_);
+  }
+
+  void combine(VT& v, VT a) const { v = ::mul_mod_ex<VT>(v, a, mod_); }
+
+  const VT mod_;
+  std::function<VT(IT)> mapper_;
+};
 }  // namespace ru
 
 template <typename IT>
@@ -126,7 +211,49 @@ struct RangeBase {
   // i: inplace reduce
   // p: parallel reduce
 
+  // Reducer versions.
+  template <typename T>
+  auto reduce(const T& reducer) const -> typename T::VT {
+    using VT = typename T::VT;
+    VT ret = reducer.init_value();
+    auto now = static_cast<const DERIVED&>(*this).begin();
+    auto x = static_cast<const DERIVED&>(*this).end();
+    while (now != x) {
+      reducer.accumulate(ret, std::move(*now++));
+    }
+    return ret;
+  }
+
+  template <typename T>
+  auto preduce(const T& reducer, const int thread_number = 8) const ->
+      typename T::VT {
+#if ENABLE_OPENMP
+    using VT = typename T::VT;
+    auto data = toVector();
+    const int size = sz(data);
+    if (size == 0) {
+      return reducer.init_value();
+    }
+
+    vector<VT> tmp(thread_number, reducer.init_value());
+#pragma omp parallel for schedule(dynamic) num_threads(thread_number)
+    for (int i = 0; i < size; ++i) {
+      const auto tid = ::tid();
+      reducer.accumulate(tmp[tid], std::move(data[i]));
+    }
+
+    VT ret = tmp[0];
+    for (int i = 1; i < thread_number; ++i) {
+      reducer.combine(ret, std::move(tmp[i]));
+    }
+    return ret;
+#else
+    return reduce(reducer);
+#endif
+  }
+
   // Sequential reduce
+  // Template return value
   template <typename VT = value_type>
   VT reduce(
       const VT& v,
@@ -153,6 +280,7 @@ struct RangeBase {
     return ret;
   }
 
+  // Non-template return value
   value_type reduce(
       const value_type& v,
       const std::function<value_type(const value_type&, rvalue_reference)>&
@@ -179,6 +307,7 @@ struct RangeBase {
   }
 
   // Parallel reduce
+  // Template return value, accumulator + combiner
   template <typename VT>
   VT preduce(const VT& v,
              const std::function<VT(const VT&, rvalue_reference)>& accumulator,
@@ -237,6 +366,7 @@ struct RangeBase {
 #endif
   }
 
+  // Non-template return value, accumulator + combiner
   value_type preduce(
       const value_type& v,
       const std::function<value_type(const value_type&, rvalue_reference)>&
@@ -298,6 +428,7 @@ struct RangeBase {
   }
 
 #if PE_HAS_CPP14
+  // Template return value, combiner
   template <typename VT>
   VT preduce(const VT& v,
              const std::function<VT(const VT&, const VT&)>& combiner,
@@ -313,6 +444,7 @@ struct RangeBase {
     return preduce(v, combiner, combiner, thread_number);
   }
 
+  // Non-template return value, combiner
   template <typename VT>
   VT pireduce(const VT& v, const std::function<void(VT&, const VT&)>& combiner,
               const int thread_number = 8) const {

@@ -530,7 +530,7 @@ struct RangeBase {
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
-      action(std::move(*now++));
+      action(*now++);
     }
     return *this;
   }
@@ -553,6 +553,163 @@ struct RangeBase {
 #else
     return pforEach(action);
 #endif
+  }
+
+  template <typename VT = int64>
+  VT sum() const {
+    VT ret = 0;
+    auto now = static_cast<const DERIVED&>(*this).begin();
+    auto x = static_cast<const DERIVED&>(*this).end();
+    while (now != x) {
+      ret += *now++;
+    }
+    return ret;
+  }
+
+  template <typename VT = int64>
+  VT sumMod(VT mod) const {
+    VT ret = 0;
+    auto now = static_cast<const DERIVED&>(*this).begin();
+    auto x = static_cast<const DERIVED&>(*this).end();
+    while (now != x) {
+      ret = ::add_mod(ret, *now++, mod);
+    }
+    return ret;
+  }
+
+  template <typename VT = int64>
+  VT prod() const {
+    VT ret = 1;
+    auto now = static_cast<const DERIVED&>(*this).begin();
+    auto x = static_cast<const DERIVED&>(*this).end();
+    while (now != x) {
+      ret *= *now++;
+    }
+    return ret;
+  }
+
+  template <typename VT = int64>
+  VT prodMod(VT mod) const {
+    VT ret = 1;
+    auto now = static_cast<const DERIVED&>(*this).begin();
+    auto x = static_cast<const DERIVED&>(*this).end();
+    while (now != x) {
+      ret = ::mul_mod_ex(ret, *now++, mod);
+    }
+    return ret;
+  }
+
+  int isEmpty() const {
+    auto now = static_cast<const DERIVED&>(*this).begin();
+    auto x = static_cast<const DERIVED&>(*this).end();
+    return now == x ? 1 : 0;
+  }
+
+  optional<value_type> max() const {
+    auto now = static_cast<const DERIVED&>(*this).begin();
+    auto x = static_cast<const DERIVED&>(*this).end();
+    if (now == x) {
+      return {};
+    }
+    value_type r = *now++;
+    while (now != x) {
+      r = std::max(r, *now++);
+    }
+    return r;
+  }
+
+  optional<value_type> min() const {
+    auto now = static_cast<const DERIVED&>(*this).begin();
+    auto x = static_cast<const DERIVED&>(*this).end();
+    if (now == x) {
+      return {};
+    }
+    value_type r = *now++;
+    while (now != x) {
+      r = std::min(r, *now++);
+    }
+    return r;
+  }
+
+  VectorRange<value_type> sorted() const {
+    auto data = toVector();
+    std::sort(data.begin(), data.end());
+    return VectorRange<value_type>(std::move(data));
+  }
+
+  VectorRange<value_type> distinct() const {
+    auto data = toVector();
+    std::sort(data.begin(), data.end());
+    data.resize(std::unique(data.begin(), data.end()) - data.begin());
+    return VectorRange<value_type>(std::move(data));
+  }
+
+  VectorRange<value_type> reversed() const {
+    auto data = toVector();
+    std::reverse(data.begin(), data.end());
+    return VectorRange<value_type>(std::move(data));
+  }
+
+  VectorRange<value_type> skip(int64 n) const {
+    auto now = static_cast<const DERIVED&>(*this).begin();
+    auto x = static_cast<const DERIVED&>(*this).end();
+    while (n > 0 && now != x) {
+      --n;
+      ++now;
+    }
+
+    std::vector<value_type> data;
+    while (now != x) {
+      data.emplace_back(*now++);
+    }
+    return VectorRange<value_type>(std::move(data));
+  }
+
+  VectorRange<value_type> limit(int64 n) const {
+    auto now = static_cast<const DERIVED&>(*this).begin();
+    auto x = static_cast<const DERIVED&>(*this).end();
+    std::vector<value_type> data;
+    while (n > 0 && now != x) {
+      --n;
+      data.emplace_back(*now++);
+    }
+    return VectorRange<value_type>(std::move(data));
+  }
+
+  int anyMatch(
+      std::function<int(const typename IIT::value_type&)> filter) const {
+    auto now = static_cast<const DERIVED&>(*this).begin();
+    auto x = static_cast<const DERIVED&>(*this).end();
+    while (now != x) {
+      if (filter(*now++)) {
+        return 1;
+      }
+    }
+    return 0;
+  }
+
+  int allMatch(
+      std::function<int(const typename IIT::value_type&)> filter) const {
+    auto now = static_cast<const DERIVED&>(*this).begin();
+    auto x = static_cast<const DERIVED&>(*this).end();
+    while (now != x) {
+      if (!filter(*now++)) {
+        return 0;
+      }
+    }
+    return 1;
+  }
+
+  int noneMatch(
+      std::function<int(const typename IIT::value_type&)> filter) const {
+    auto now = static_cast<const DERIVED&>(*this).begin();
+    auto x = static_cast<const DERIVED&>(*this).end();
+    while (now != x) {
+      if (filter(*now++)) {
+        return 0;
+      }
+    }
+    return 1;
   }
 
   std::vector<value_type> toVector() const {

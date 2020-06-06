@@ -183,12 +183,16 @@ struct Range;
 template <typename IT>
 struct FilterRange;
 
-template <typename IT>
+template <typename IT, typename ET>
 struct MappedRange;
+
+template <typename ET>
+struct VectorRange;
 
 template <typename IT, typename DERIVED, typename IIT>
 struct RangeBase {
   RangeBase(IT b, IT e) : b_(b), e_(e) {}
+  RangeBase() = default;
 
   using self_type = RangeBase<IT, DERIVED, IIT>;
   using reference = typename IIT::reference;
@@ -460,11 +464,34 @@ struct RangeBase {
   }
 #endif
 
-  MappedRange<IIT> map(
-      std::function<typename IIT::value_type(const typename IIT::value_type&)>
-          mapper) const {
-    return MappedRange<IIT>{static_cast<const DERIVED&>(*this).begin(),
-                            static_cast<const DERIVED&>(*this).end(), mapper};
+  template <typename TT>
+  MappedRange<IIT, TT> map(
+      std::function<TT(const typename IIT::value_type&)> mapper) const {
+    return MappedRange<IIT, TT>{static_cast<const DERIVED&>(*this).begin(),
+                                static_cast<const DERIVED&>(*this).end(),
+                                mapper};
+  }
+
+  template <typename TT>
+  VectorRange<TT> pmap(
+      std::function<TT(const typename IIT::value_type&)> mapper,
+      const int thread_number = 8) const {
+    auto data = toVector();
+    const int size = sz(data);
+    if (size == 0) {
+      return vector<TT>{};
+    }
+
+    vector<TT> vec(size);
+#if ENABLE_OPENMP
+#pragma omp parallel for schedule(dynamic) num_threads(thread_number)
+#endif
+    for (int i = 0; i < size; ++i) {
+      const auto tid = ::tid();
+      vec[i] = mapper(std::move(data[i]));
+    }
+
+    return VectorRange<TT>(vec);
   }
 
   template <typename T>
@@ -690,6 +717,33 @@ struct Range : public RangeBase<IT, Range<IT>, RangeIter<IT>> {
   RangeIter<IT> end() const { return RangeIter<IT>{base::e_}; }
 };
 
+template <typename ET>
+struct VectorRange
+    : public RangeBase<typename vector<ET>::iterator, VectorRange<ET>,
+                       RangeIter<typename vector<ET>::iterator>> {
+  using IT = typename vector<ET>::iterator;
+  using iterator = RangeIter<IT>;
+  using const_iterator = RangeIter<IT>;
+  using value_type = typename iterator::value_type;
+
+  using base = RangeBase<IT, VectorRange<ET>, RangeIter<IT>>;
+
+  VectorRange(const vector<ET>& vec) : vec_(vec) {
+    base::b_ = vec_.begin();
+    base::e_ = vec_.end();
+  }
+
+  VectorRange(vector<ET>&& vec) : vec_(std::move(vec)) {
+    base::b_ = vec_.begin();
+    base::e_ = vec_.end();
+  }
+
+  RangeIter<IT> begin() const { return RangeIter<IT>{base::b_}; }
+  RangeIter<IT> end() const { return RangeIter<IT>{base::e_}; }
+
+  vector<ET> vec_;
+};
+
 template <typename CT>
 SL auto range(CT& v) -> Range<typename CT::iterator> {
   return Range<typename CT::iterator>{v.begin(), v.end()};
@@ -766,10 +820,13 @@ SL ArrayRange<T> range(T (&a)[N]) {
   return ArrayRange<T>{a, a + N};
 }
 
-template <typename IT>
+// IT: iterator type of source
+// TT: type of the mapped result
+template <typename IT, typename TT>
 struct MappedRangeIter {
-  using reference = typename IT::value_type;
-  using value_type = typename IT::value_type;
+  using reference = TT;
+  using value_type = TT;
+  using src_type = typename IT::value_type;
 
   reference operator*() { return mapper(*iter_); }
 
@@ -794,32 +851,31 @@ struct MappedRangeIter {
   MappedRangeIter operator--(int) { return MappedRangeIter{iter_--, mapper}; }
 
   IT iter_;
-  const std::function<value_type(const value_type& v)>& mapper;
+  const std::function<TT(const src_type& v)>& mapper;
 };
 
-template <typename IT>
+template <typename IT, typename TT>
 struct MappedRange
-    : public RangeBase<IT, MappedRange<IT>, MappedRangeIter<IT>> {
-  using iterator = MappedRangeIter<IT>;
-  using const_iterator = MappedRangeIter<IT>;
+    : public RangeBase<IT, MappedRange<IT, TT>, MappedRangeIter<IT, TT>> {
+  using iterator = MappedRangeIter<IT, TT>;
+  using const_iterator = MappedRangeIter<IT, TT>;
   using value_type = typename iterator::value_type;
 
-  using base = RangeBase<IT, MappedRange<IT>, MappedRangeIter<IT>>;
+  using base = RangeBase<IT, MappedRange<IT, TT>, MappedRangeIter<IT, TT>>;
 
   MappedRange(IT b, IT e,
-              const std::function<typename MappedRangeIter<IT>::value_type(
-                  const typename MappedRangeIter<IT>::value_type&)>& mapper)
+              const std::function<TT(
+                  const typename MappedRangeIter<IT, TT>::src_type&)>& mapper)
       : base(b, e), mapper(mapper) {}
 
-  MappedRangeIter<IT> begin() const {
-    return MappedRangeIter<IT>{base::b_, mapper};
+  MappedRangeIter<IT, TT> begin() const {
+    return MappedRangeIter<IT, TT>{base::b_, mapper};
   }
-  MappedRangeIter<IT> end() const {
-    return MappedRangeIter<IT>{base::e_, mapper};
+  MappedRangeIter<IT, TT> end() const {
+    return MappedRangeIter<IT, TT>{base::e_, mapper};
   }
 
-  const std::function<typename MappedRangeIter<IT>::value_type(
-      const typename MappedRangeIter<IT>::value_type&)>
+  const std::function<TT(const typename MappedRangeIter<IT, TT>::src_type&)>
       mapper;
 };
 

@@ -629,8 +629,8 @@ void range_general_example() {
   cout << range(1, 10)
               .filter([](auto v) { return v % 2 == 0; })
               .filter([](auto v) { return v % 3 == 0; })
-              .map([](auto v) { return v * 3; })
-              .map([](auto v) { return v * 3; })
+              .map<int64>([](auto v) { return v * 3; })
+              .map<int64>([](auto v) { return v * 3; })
               .reduce(0, [](auto a, auto b) { return a + b; })
        << endl;
   cout << range(1, 10).filter([](auto v) { return v % 2 == 0; }).toVector()
@@ -689,7 +689,7 @@ void range_general_example() {
 
   // Count prime.
   cout << range(1, 10000000 + 1)
-              .map([](auto a) { return is_prime(a); })
+              .map<int64>([](auto a) { return is_prime(a); })
               .reduce(0, &ru::add)
        << endl;
   cout << range(1, 10000000 + 1).reduce(0, [](auto a, auto b) {

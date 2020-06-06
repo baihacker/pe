@@ -109,11 +109,11 @@ struct Add {
   using VT = T;
   using IT = U;
 
-  Add(const std::function<VT(IT)>& mapper = id_map<T, U>) : mapper_(mapper) {}
+  Add(const std::function<VT(IT)>& mapper = id_map<VT, IT>) : mapper_(mapper) {}
 
   VT init_value() const { return 0; }
 
-  void accumulate(VT& v, U&& a) const { v += mapper_(std::move(a)); }
+  void accumulate(VT& v, const IT& a) const { v += mapper_(a); }
 
   void combine(VT& v, VT a) const { v += a; }
 
@@ -125,13 +125,13 @@ struct AddMod {
   using VT = T;
   using IT = U;
 
-  AddMod(VT mod, const std::function<VT(IT)>& mapper = id_map<T, U>)
+  AddMod(VT mod, const std::function<VT(IT)>& mapper = id_map<VT, IT>)
       : mod_(mod), mapper_(mapper) {}
 
   VT init_value() const { return 0; }
 
-  void accumulate(VT& v, U&& a) const {
-    v = ::add_mod<VT>(v, mapper_(std::move(a)) % mod_, mod_);
+  void accumulate(VT& v, const IT& a) const {
+    v = ::add_mod<VT>(v, mapper_(a) % mod_, mod_);
   }
 
   void combine(VT& v, VT a) const { v = ::add_mod<VT>(v, a, mod_); }
@@ -145,11 +145,11 @@ struct Mul {
   using VT = T;
   using IT = U;
 
-  Mul(const std::function<VT(IT)>& mapper = id_map<T, U>) : mapper_(mapper) {}
+  Mul(const std::function<VT(IT)>& mapper = id_map<VT, IT>) : mapper_(mapper) {}
 
   VT init_value() const { return 1; }
 
-  void accumulate(VT& v, U&& a) const { v *= mapper_(std::move(a)); }
+  void accumulate(VT& v, const IT& a) const { v *= mapper_(a); }
 
   void combine(VT& v, VT a) const { v *= a; }
 
@@ -161,13 +161,13 @@ struct MulMod {
   using VT = T;
   using IT = U;
 
-  MulMod(VT mod, const std::function<VT(IT)>& mapper = id_map<T, U>)
+  MulMod(VT mod, const std::function<VT(IT)>& mapper = id_map<VT, IT>)
       : mod_(mod), mapper_(mapper) {}
 
   VT init_value() const { return 1; }
 
-  void accumulate(VT& v, U&& a) const {
-    v = ::mul_mod_ex<VT>(v, mapper_(std::move(a)) % mod_, mod_);
+  void accumulate(VT& v, const IT& a) const {
+    v = ::mul_mod_ex<VT>(v, mapper_(a) % mod_, mod_);
   }
 
   void combine(VT& v, VT a) const { v = ::mul_mod_ex<VT>(v, a, mod_); }
@@ -1015,5 +1015,22 @@ SL auto irange(CT& v) -> ContainerRangeI<typename CT::iterator> {
 template <typename CT>
 SL auto irange(const CT& v) -> ContainerRangeI<typename CT::const_iterator> {
   return ContainerRangeI<typename CT::const_iterator>{v.begin(), v.end()};
+}
+
+SL vector<pair<int64, int64>> make_segment(int64 s, int64 e, int64 b) {
+  if (s > e) {
+    return vector<pair<int64, int64>>();
+  }
+  int64 cnt = (e - s + 1 + b - 1) / b;
+  vector<pair<int64, int64>> ret(cnt);
+  int64 x = 0, y = s - 1;
+  for (int64 i = 0; i < cnt; ++i) {
+    x = y + 1;
+    y += b;
+    if (y > e) y = e;
+    ret[i].first = x;
+    ret[i].second = y;
+  }
+  return ret;
 }
 #endif

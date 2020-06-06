@@ -216,22 +216,25 @@ struct RangeBase {
     }
 
     vector<vector<value_type>> tmp(thread_number);
+    vector<value_type> vec;
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic) num_threads(thread_number)
-#endif
     for (int i = 0; i < size; ++i) {
       if (filter(data[i])) {
         const auto tid = ::tid();
         tmp[tid].push_back(std::move(data[i]));
       }
     }
-
-    vector<value_type> vec;
     for (int i = 0; i < thread_number; ++i) {
       for (auto& iter : tmp[i]) {
         vec.push_back(std::move(iter));
       }
     }
+#else
+    for (int i = 0; i < size; ++i) {
+      vec.push_back(std::move(data[i]));
+    }
+#endif
     return VectorRange<value_type>(std::move(vec));
   }
 
@@ -516,7 +519,6 @@ struct RangeBase {
 #pragma omp parallel for schedule(dynamic) num_threads(thread_number)
 #endif
     for (int i = 0; i < size; ++i) {
-      const auto tid = ::tid();
       vec[i] = mapper(std::move(data[i]));
     }
 

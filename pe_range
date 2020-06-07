@@ -178,7 +178,7 @@ struct MulMod {
 }  // namespace ru
 
 template <typename IT>
-struct Range;
+struct ContainerRange;
 
 template <typename IT>
 struct FilterRange;
@@ -189,26 +189,20 @@ struct MappedRange;
 template <typename ET>
 struct VectorRange;
 
-template <typename IT, typename DERIVED, typename IIT>
+template <typename DERIVED, typename IT>
 struct RangeBase {
-  RangeBase(IT b, IT e) : b_(b), e_(e) {}
-  RangeBase() = default;
+  using self_type = RangeBase<DERIVED, IT>;
+  using value_type = typename IT::value_type;
+  using reference = typename IT::reference;
+  using arg_type = typename IT::arg_type;
 
-  using self_type = RangeBase<IT, DERIVED, IIT>;
-  using reference = typename IIT::reference;
-  using rvalue_reference =
-      typename add_rvalue_reference<const typename IIT::value_type>::type;
-  using value_type = typename std::remove_cv<typename IIT::value_type>::type;
-
-  FilterRange<IIT> filter(
-      std::function<int(const typename IIT::value_type&)> filter) const {
-    return FilterRange<IIT>{static_cast<const DERIVED&>(*this).begin(),
-                            static_cast<const DERIVED&>(*this).end(), filter};
+  FilterRange<IT> filter(std::function<int(arg_type)> filter) const {
+    return FilterRange<IT>{static_cast<const DERIVED&>(*this).begin(),
+                           static_cast<const DERIVED&>(*this).end(), filter};
   }
 
-  VectorRange<value_type> pfilter(
-      std::function<int(const typename IIT::value_type&)> filter,
-      const int thread_number = 8) const {
+  VectorRange<value_type> pfilter(std::function<int(arg_type)> filter,
+                                  const int thread_number = 8) const {
     auto data = toVector();
     const int size = sz(data);
     if (size == 0) {
@@ -256,7 +250,7 @@ struct RangeBase {
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
-      reducer.accumulate(ret, std::move(*now++));
+      reducer.accumulate(ret, *now++);
     }
     return ret;
   }
@@ -292,27 +286,25 @@ struct RangeBase {
   // Sequential reduce
   // Template return value
   template <typename VT = value_type>
-  VT reduce(
-      const VT& v,
-      const std::function<VT(const VT&, rvalue_reference)>& accumulator) const {
+  VT reduce(const VT& v,
+            const std::function<VT(const VT&, arg_type)>& accumulator) const {
     VT ret = v;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
-      ret = accumulator(ret, std::move(*now++));
+      ret = accumulator(ret, *now++);
     }
     return ret;
   }
 
   template <typename VT = value_type>
-  VT ireduce(
-      const VT& v,
-      const std::function<void(VT&, rvalue_reference)>& accumulator) const {
+  VT ireduce(const VT& v,
+             const std::function<void(VT&, arg_type)>& accumulator) const {
     VT ret = v;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
-      accumulator(ret, std::move(*now++));
+      accumulator(ret, *now++);
     }
     return ret;
   }
@@ -320,25 +312,25 @@ struct RangeBase {
   // Non-template return value
   value_type reduce(
       const value_type& v,
-      const std::function<value_type(const value_type&, rvalue_reference)>&
-          accumulator) const {
+      const std::function<value_type(const value_type&, arg_type)>& accumulator)
+      const {
     value_type ret = v;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
-      ret = accumulator(ret, std::move(*now++));
+      ret = accumulator(ret, *now++);
     }
     return ret;
   }
 
-  value_type ireduce(const value_type& v,
-                     const std::function<void(value_type&, rvalue_reference)>&
-                         accumulator) const {
+  value_type ireduce(
+      const value_type& v,
+      const std::function<void(value_type&, arg_type)>& accumulator) const {
     value_type ret = v;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
-      accumulator(ret, std::move(*now++));
+      accumulator(ret, *now++);
     }
     return ret;
   }
@@ -347,7 +339,7 @@ struct RangeBase {
   // Template return value, accumulator + combiner
   template <typename VT>
   VT preduce(const VT& v,
-             const std::function<VT(const VT&, rvalue_reference)>& accumulator,
+             const std::function<VT(const VT&, arg_type)>& accumulator,
              const std::function<VT(const VT&, const VT&)>& combiner,
              const int thread_number = 8) const {
 #if ENABLE_OPENMP
@@ -361,7 +353,7 @@ struct RangeBase {
 #pragma omp parallel for schedule(dynamic) num_threads(thread_number)
     for (int i = 0; i < size; ++i) {
       const auto tid = ::tid();
-      tmp[tid] = accumulator(tmp[tid], std::move(data[i]));
+      tmp[tid] = accumulator(tmp[tid], data[i]);
     }
 
     VT ret = tmp[0];
@@ -376,7 +368,7 @@ struct RangeBase {
 
   template <typename VT>
   VT pireduce(const VT& v,
-              const std::function<void(VT&, rvalue_reference)>& accumulator,
+              const std::function<void(VT&, arg_type)>& accumulator,
               const std::function<void(VT&, const VT&)>& combiner,
               const int thread_number = 8) const {
 #if ENABLE_OPENMP
@@ -406,10 +398,8 @@ struct RangeBase {
   // Non-template return value, accumulator + combiner
   value_type preduce(
       const value_type& v,
-      const std::function<value_type(const value_type&, rvalue_reference)>&
-          accumulator,
-      const std::function<value_type(const value_type&, rvalue_reference)>&
-          combiner,
+      const std::function<value_type(const value_type&, arg_type)>& accumulator,
+      const std::function<value_type(const value_type&, arg_type)>& combiner,
       const int thread_number = 8) const {
 #if ENABLE_OPENMP
     auto data = toVector();
@@ -437,8 +427,8 @@ struct RangeBase {
 
   value_type pireduce(
       const value_type& v,
-      const std::function<void(value_type&, rvalue_reference)>& accumulator,
-      const std::function<void(value_type&, rvalue_reference)>& combiner,
+      const std::function<void(value_type&, arg_type)>& accumulator,
+      const std::function<void(value_type&, arg_type)>& combiner,
       const int thread_number = 8) const {
 #if ENABLE_OPENMP
     auto data = toVector();
@@ -497,17 +487,15 @@ struct RangeBase {
 #endif
 
   template <typename TT>
-  MappedRange<IIT, TT> map(
-      std::function<TT(const typename IIT::value_type&)> mapper) const {
-    return MappedRange<IIT, TT>{static_cast<const DERIVED&>(*this).begin(),
-                                static_cast<const DERIVED&>(*this).end(),
-                                mapper};
+  MappedRange<IT, TT> map(const std::function<TT(arg_type)> mapper) const {
+    return MappedRange<IT, TT>{static_cast<const DERIVED&>(*this).begin(),
+                               static_cast<const DERIVED&>(*this).end(),
+                               mapper};
   }
 
   template <typename TT>
-  VectorRange<TT> pmap(
-      std::function<TT(const typename IIT::value_type&)> mapper,
-      const int thread_number = 8) const {
+  VectorRange<TT> pmap(std::function<TT(arg_type)> mapper,
+                       const int thread_number = 8) const {
     auto data = toVector();
     const int size = sz(data);
     if (size == 0) {
@@ -676,8 +664,7 @@ struct RangeBase {
     return VectorRange<value_type>(std::move(data));
   }
 
-  int anyMatch(
-      std::function<int(const typename IIT::value_type&)> filter) const {
+  int anyMatch(std::function<int(arg_type)> filter) const {
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
@@ -688,8 +675,7 @@ struct RangeBase {
     return 0;
   }
 
-  int allMatch(
-      std::function<int(const typename IIT::value_type&)> filter) const {
+  int allMatch(std::function<int(arg_type)> filter) const {
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
@@ -700,8 +686,7 @@ struct RangeBase {
     return 1;
   }
 
-  int noneMatch(
-      std::function<int(const typename IIT::value_type&)> filter) const {
+  int noneMatch(std::function<int(arg_type)> filter) const {
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
@@ -731,17 +716,15 @@ struct RangeBase {
     }
     return ret;
   }
-
-  IT b_;
-  IT e_;
 };
 
-template <typename T>
+template <typename ET>
 struct NumberIter {
-  using reference = const T;
-  using value_type = T;
+  using value_type = typename std::remove_cv<ET>::type;
+  using reference = value_type;
+  using arg_type = const value_type;
 
-  T operator*() const { return i_; }
+  reference operator*() const { return i_; }
 
   int operator==(const NumberIter& o) const { return i_ == o.i_; }
 
@@ -761,29 +744,31 @@ struct NumberIter {
 
   NumberIter operator--(int) { return NumberIter{i_--}; }
 
-  T i_;
+  value_type i_;
 };
 
-template <typename T>
-struct NumberRange : public RangeBase<T, NumberRange<T>, NumberIter<T>> {
-  using iterator = NumberIter<T>;
-  using const_iterator = NumberIter<T>;
-  using value_type = T;
+template <typename ET>
+struct NumberRange : public RangeBase<NumberRange<ET>, NumberIter<ET>> {
+  using iterator = NumberIter<ET>;
+  using const_iterator = iterator;
+  using value_type = typename iterator::value_type;
 
-  using base = RangeBase<T, NumberRange<T>, NumberIter<T>>;
+  NumberRange(value_type b, value_type e) : b_(b), e_(e) {}
 
-  NumberRange(T b, T e) : base(b, e) {}
+  NumberIter<ET> begin() const { return NumberIter<ET>{b_}; }
+  NumberIter<ET> end() const { return NumberIter<ET>{e_}; }
 
-  NumberIter<T> begin() const { return NumberIter<T>{base::b_}; }
-  NumberIter<T> end() const { return NumberIter<T>{base::e_}; }
+  const value_type b_;
+  const value_type e_;
 };
 
-template <typename T>
+template <typename ET>
 struct NumberIterD {
-  using reference = const T;
-  using value_type = T;
+  using value_type = typename std::remove_cv<ET>::type;
+  using reference = value_type;
+  using arg_type = const value_type;
 
-  T operator*() const { return i_; }
+  reference operator*() const { return i_; }
 
   int operator==(const NumberIterD& o) const { return i_ == o.i_; }
 
@@ -795,7 +780,7 @@ struct NumberIterD {
   }
 
   NumberIterD operator++(int) {
-    T x = i_;
+    value_type x = i_;
     i_ += delta_;
     return NumberIterD{x};
   }
@@ -806,43 +791,40 @@ struct NumberIterD {
   }
 
   NumberIterD operator--(int) {
-    T x = i_;
+    value_type x = i_;
     i_ -= delta_;
     return NumberIterD{x};
   }
 
-  T i_;
-  T e_;
-  T delta_;
+  value_type i_;
+  value_type e_;
+  const value_type delta_;
 };
 
-template <typename T>
-struct NumberRangeD : public RangeBase<T, NumberRangeD<T>, NumberIter<T>> {
-  using iterator = NumberIterD<T>;
-  using const_iterator = NumberIterD<T>;
-  using value_type = T;
+template <typename ET>
+struct NumberRangeD : public RangeBase<NumberRangeD<ET>, NumberIterD<ET>> {
+  using iterator = NumberIterD<ET>;
+  using const_iterator = iterator;
+  using value_type = typename iterator::value_type;
 
-  using base = RangeBase<T, NumberRangeD<T>, NumberIter<T>>;
-
-  NumberRangeD(T b, T n, T delta_) : base(b, n), n_(n), delta_(delta_) {
-    T d = abs(delta_);
-    T r = abs(n - b);
-    T s = r / d;
-    base::e_ = b + s * delta_;
+  NumberRangeD(value_type b, value_type n, value_type delta_)
+      : b_(b), e_(n), n_(n), delta_(delta_) {
+    value_type d = abs(delta_);
+    value_type r = abs(n - b);
+    value_type s = r / d;
+    e_ = b + s * delta_;
     if (r % d) {
-      base::e_ += delta_;
+      e_ += delta_;
     }
   }
 
-  NumberIterD<T> begin() const {
-    return NumberIterD<T>{base::b_, base::e_, delta_};
-  }
-  NumberIterD<T> end() const {
-    return NumberIterD<T>{base::e_, base::e_, delta_};
-  }
+  NumberIterD<ET> begin() const { return NumberIterD<ET>{b_, e_, delta_}; }
+  NumberIterD<ET> end() const { return NumberIterD<ET>{e_, e_, delta_}; }
 
-  T delta_;
-  T n_;
+  value_type b_;
+  value_type e_;
+  value_type delta_;
+  value_type n_;
 };
 
 template <typename T>
@@ -864,93 +846,102 @@ SL REQUIRES(is_native_integer<T>::value) RETURN(NumberRangeD<int64>)
 }
 
 template <typename IT>
-struct RangeIter {
+struct ContainerRangeIter {
+  using value_type = typename std::remove_cv<typename IT::value_type>::type;
   using reference = typename IT::reference;
-  using value_type = typename IT::value_type;
+  using arg_type = const value_type&;
 
   reference operator*() { return *iter_; }
 
-  int operator==(const RangeIter& o) const { return iter_ == o.iter_; }
+  int operator==(const ContainerRangeIter& o) const { return iter_ == o.iter_; }
 
-  int operator!=(const RangeIter& o) const { return !(this->operator==(o)); }
+  int operator!=(const ContainerRangeIter& o) const {
+    return !(this->operator==(o));
+  }
 
-  RangeIter& operator++() {
+  ContainerRangeIter& operator++() {
     ++iter_;
     return *this;
   }
 
-  RangeIter operator++(int) { return RangeIter{iter_++}; }
+  ContainerRangeIter operator++(int) { return ContainerRangeIter{iter_++}; }
 
-  RangeIter& operator--() {
+  ContainerRangeIter& operator--() {
     --iter_;
     return *this;
   }
 
-  RangeIter operator--(int) { return RangeIter{iter_--}; }
+  ContainerRangeIter operator--(int) { return ContainerRangeIter{iter_--}; }
 
   IT iter_;
 };
 
 template <typename IT>
-struct Range : public RangeBase<IT, Range<IT>, RangeIter<IT>> {
-  using iterator = RangeIter<IT>;
-  using const_iterator = RangeIter<IT>;
+struct ContainerRange
+    : public RangeBase<ContainerRange<IT>, ContainerRangeIter<IT>> {
+  using iterator = ContainerRangeIter<IT>;
+  using const_iterator = iterator;
   using value_type = typename iterator::value_type;
 
-  using base = RangeBase<IT, Range<IT>, RangeIter<IT>>;
+  using base = RangeBase<ContainerRange<IT>, ContainerRangeIter<IT>>;
 
-  Range(IT b, IT e) : base(b, e) {}
+  ContainerRange(IT b, IT e) : b_(b), e_(e) {}
 
-  RangeIter<IT> begin() const { return RangeIter<IT>{base::b_}; }
-  RangeIter<IT> end() const { return RangeIter<IT>{base::e_}; }
+  ContainerRangeIter<IT> begin() const { return ContainerRangeIter<IT>{b_}; }
+  ContainerRangeIter<IT> end() const { return ContainerRangeIter<IT>{e_}; }
+
+  IT b_;
+  IT e_;
 };
 
 template <typename ET>
 struct VectorRange
-    : public RangeBase<typename vector<ET>::iterator, VectorRange<ET>,
-                       RangeIter<typename vector<ET>::iterator>> {
-  using IT = typename vector<ET>::iterator;
-  using iterator = RangeIter<IT>;
-  using const_iterator = RangeIter<IT>;
+    : public RangeBase<
+          VectorRange<ET>,
+          ContainerRangeIter<typename vector<ET>::const_iterator>> {
+  using IT = typename vector<ET>::const_iterator;
+  using iterator = ContainerRangeIter<IT>;
+  using const_iterator = iterator;
   using value_type = typename iterator::value_type;
 
-  using base = RangeBase<IT, VectorRange<ET>, RangeIter<IT>>;
+  using base = RangeBase<VectorRange<ET>,
+                         ContainerRangeIter<typename vector<ET>::iterator>>;
 
-  VectorRange(const vector<ET>& vec) : vec_(vec) {
-    base::b_ = vec_.begin();
-    base::e_ = vec_.end();
+  VectorRange(const vector<ET>& vec) : vec_(vec) {}
+
+  VectorRange(vector<ET>&& vec) : vec_(std::move(vec)) {}
+
+  ContainerRangeIter<IT> begin() const {
+    return ContainerRangeIter<IT>{vec_.begin()};
   }
-
-  VectorRange(vector<ET>&& vec) : vec_(std::move(vec)) {
-    base::b_ = vec_.begin();
-    base::e_ = vec_.end();
+  ContainerRangeIter<IT> end() const {
+    return ContainerRangeIter<IT>{vec_.end()};
   }
-
-  RangeIter<IT> begin() const { return RangeIter<IT>{base::b_}; }
-  RangeIter<IT> end() const { return RangeIter<IT>{base::e_}; }
 
   vector<ET> vec_;
 };
 
 template <typename CT>
-SL auto range(CT& v) -> Range<typename CT::iterator> {
-  return Range<typename CT::iterator>{v.begin(), v.end()};
+SL auto range(CT& v) -> ContainerRange<typename CT::iterator> {
+  return ContainerRange<typename CT::iterator>{v.begin(), v.end()};
 }
 
 template <typename CT>
-SL auto range(const CT& v) -> Range<typename CT::const_iterator> {
-  return Range<typename CT::const_iterator>{v.begin(), v.end()};
+SL auto range(const CT& v) -> ContainerRange<typename CT::const_iterator> {
+  return ContainerRange<typename CT::const_iterator>{v.begin(), v.end()};
 }
 
 template <typename T>
-SL REQUIRES(!is_native_integer<T>::value) RETURN(Range<T>) range(T s, T e) {
-  return Range<T>{s, e};
+SL REQUIRES(!is_native_integer<T>::value) RETURN(ContainerRange<T>)
+    range(T s, T e) {
+  return ContainerRange<T>{s, e};
 }
 
-template <typename IT>
+template <typename ET>
 struct ArrayRangeIter {
-  using reference = IT&;
-  using value_type = IT;
+  using value_type = typename std::remove_cv<ET>::type;
+  using reference = const value_type&;
+  using arg_type = const value_type&;
 
   reference operator*() { return *iter_; }
 
@@ -974,21 +965,22 @@ struct ArrayRangeIter {
 
   ArrayRangeIter operator--(int) { return ArrayRangeIter{iter_--}; }
 
-  IT* iter_;
+  const value_type* iter_;
 };
 
-template <typename IT>
-struct ArrayRange : public RangeBase<IT*, ArrayRange<IT>, ArrayRangeIter<IT>> {
-  using iterator = ArrayRangeIter<IT>;
-  using const_iterator = ArrayRangeIter<IT>;
+template <typename ET>
+struct ArrayRange : public RangeBase<ArrayRange<ET>, ArrayRangeIter<ET>> {
+  using iterator = ArrayRangeIter<ET>;
+  using const_iterator = iterator;
   using value_type = typename iterator::value_type;
 
-  using base = RangeBase<IT*, ArrayRange<IT>, ArrayRangeIter<IT>>;
+  ArrayRange(const value_type* b, const value_type* e) : b_(b), e_(e) {}
 
-  ArrayRange(IT* b, IT* e) : base(b, e) {}
+  ArrayRangeIter<ET> begin() const { return ArrayRangeIter<ET>{b_}; }
+  ArrayRangeIter<ET> end() const { return ArrayRangeIter<ET>{e_}; }
 
-  ArrayRangeIter<IT> begin() const { return ArrayRangeIter<IT>{base::b_}; }
-  ArrayRangeIter<IT> end() const { return ArrayRangeIter<IT>{base::e_}; }
+  const value_type* b_;
+  const value_type* e_;
 };
 
 template <typename T>
@@ -1012,9 +1004,10 @@ SL ArrayRange<T> range(T (&a)[N]) {
 // TT: type of the mapped result
 template <typename IT, typename TT>
 struct MappedRangeIter {
-  using reference = TT;
-  using value_type = TT;
-  using src_type = typename IT::value_type;
+  using value_type = typename std::remove_cv<TT>::type;
+  using reference = value_type;
+  using arg_type = const value_type&;
+  using src_arg_type = typename IT::arg_type;
 
   reference operator*() { return mapper(*iter_); }
 
@@ -1039,38 +1032,38 @@ struct MappedRangeIter {
   MappedRangeIter operator--(int) { return MappedRangeIter{iter_--, mapper}; }
 
   IT iter_;
-  const std::function<TT(const src_type& v)>& mapper;
+  const std::function<TT(src_arg_type)>& mapper;
 };
 
 template <typename IT, typename TT>
 struct MappedRange
-    : public RangeBase<IT, MappedRange<IT, TT>, MappedRangeIter<IT, TT>> {
+    : public RangeBase<MappedRange<IT, TT>, MappedRangeIter<IT, TT>> {
   using iterator = MappedRangeIter<IT, TT>;
-  using const_iterator = MappedRangeIter<IT, TT>;
+  using const_iterator = iterator;
   using value_type = typename iterator::value_type;
 
-  using base = RangeBase<IT, MappedRange<IT, TT>, MappedRangeIter<IT, TT>>;
-
   MappedRange(IT b, IT e,
-              const std::function<TT(
-                  const typename MappedRangeIter<IT, TT>::src_type&)>& mapper)
-      : base(b, e), mapper(mapper) {}
+              const std::function<TT(typename iterator::src_arg_type)>& mapper)
+      : b_(b), e_(e), mapper(mapper) {}
 
   MappedRangeIter<IT, TT> begin() const {
-    return MappedRangeIter<IT, TT>{base::b_, mapper};
+    return MappedRangeIter<IT, TT>{b_, mapper};
   }
   MappedRangeIter<IT, TT> end() const {
-    return MappedRangeIter<IT, TT>{base::e_, mapper};
+    return MappedRangeIter<IT, TT>{e_, mapper};
   }
 
-  const std::function<TT(const typename MappedRangeIter<IT, TT>::src_type&)>
-      mapper;
+  IT b_;
+  IT e_;
+  const std::function<TT(typename iterator::src_arg_type)> mapper;
 };
 
 template <typename IT>
 struct FilterRangeIter {
-  using reference = typename IT::reference;
   using value_type = typename IT::value_type;
+  using reference = typename IT::reference;
+  using arg_type = typename IT::arg_type;
+  using src_arg_type = typename IT::arg_type;
 
   reference operator*() { return *iter_; }
 
@@ -1097,34 +1090,33 @@ struct FilterRangeIter {
 
   IT iter_;
   IT e_;
-  const std::function<int(const typename IT::value_type&)>& filter;
+  const std::function<int(src_arg_type)>& filter;
 };
 
 template <typename IT>
-struct FilterRange
-    : public RangeBase<IT, FilterRange<IT>, FilterRangeIter<IT>> {
+struct FilterRange : public RangeBase<FilterRange<IT>, FilterRangeIter<IT>> {
   using iterator = FilterRangeIter<IT>;
-  using const_iterator = FilterRangeIter<IT>;
+  using const_iterator = iterator;
   using value_type = typename FilterRangeIter<IT>::value_type;
-
-  using base = RangeBase<IT, FilterRange<IT>, FilterRangeIter<IT>>;
 
   FilterRange(
       IT b, IT e,
       const std::function<int(const typename IT::value_type&)>& filterImpl)
-      : base(b, e), filter_impl_(filterImpl) {}
+      : b_(b), e_(e), filter_impl_(filterImpl) {}
 
   FilterRangeIter<IT> begin() const {
-    auto now = base::b_;
-    while (now != base::e_ && !filter_impl_(*now)) ++now;
-    return FilterRangeIter<IT>{now, base::e_, filter_impl_};
+    auto now = b_;
+    while (now != e_ && !filter_impl_(*now)) ++now;
+    return FilterRangeIter<IT>{now, e_, filter_impl_};
   }
 
   FilterRangeIter<IT> end() const {
-    return FilterRangeIter<IT>{base::e_, base::e_, filter_impl_};
+    return FilterRangeIter<IT>{e_, e_, filter_impl_};
   }
 
-  const std::function<int(const typename IT::value_type&)> filter_impl_;
+  IT b_;
+  IT e_;
+  const std::function<int(typename iterator::src_arg_type)> filter_impl_;
 };
 
 // irange support. i = index.
@@ -1132,10 +1124,10 @@ template <typename IT>
 struct ContainerIterI {
   struct ContainerItemI {
     const int64 i;
-    typename IT::reference v;
+    typename IT::value_type v;
   };
 
-  using reference = ContainerItemI;
+  using value_type = ContainerItemI;
 
   ContainerItemI operator*() { return ContainerItemI{idx_, *iter_}; }
 
@@ -1184,7 +1176,7 @@ struct ArrayIterI {
     T& v;
   };
 
-  using reference = ContainerItemI;
+  using value_type = ContainerItemI;
 
   ContainerItemI operator*() { return ContainerItemI{idx_, start_[idx_]}; }
 

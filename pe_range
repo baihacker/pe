@@ -196,12 +196,12 @@ struct RangeBase {
   using reference = typename IT::reference;
   using arg_type = typename IT::arg_type;
 
-  FilterRange<IT> filter(std::function<int(arg_type)> filter) const {
+  FilterRange<IT> filter(const std::function<int(arg_type)>& filter) const {
     return FilterRange<IT>{static_cast<const DERIVED&>(*this).begin(),
                            static_cast<const DERIVED&>(*this).end(), filter};
   }
 
-  VectorRange<value_type> pfilter(std::function<int(arg_type)> filter,
+  VectorRange<value_type> pfilter(const std::function<int(arg_type)>& filter,
                                   const int thread_number = 8) const {
     auto data = toVector();
     const int size = sz(data);
@@ -487,14 +487,14 @@ struct RangeBase {
 #endif
 
   template <typename TT>
-  MappedRange<IT, TT> map(const std::function<TT(arg_type)> mapper) const {
+  MappedRange<IT, TT> map(const std::function<TT(arg_type)>& mapper) const {
     return MappedRange<IT, TT>{static_cast<const DERIVED&>(*this).begin(),
                                static_cast<const DERIVED&>(*this).end(),
                                mapper};
   }
 
   template <typename TT>
-  VectorRange<TT> pmap(std::function<TT(arg_type)> mapper,
+  VectorRange<TT> pmap(const std::function<TT(arg_type)>& mapper,
                        const int thread_number = 8) const {
     auto data = toVector();
     const int size = sz(data);
@@ -664,7 +664,7 @@ struct RangeBase {
     return VectorRange<value_type>(std::move(data));
   }
 
-  int anyMatch(std::function<int(arg_type)> filter) const {
+  int anyMatch(const std::function<int(arg_type)>& filter) const {
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
@@ -675,7 +675,7 @@ struct RangeBase {
     return 0;
   }
 
-  int allMatch(std::function<int(arg_type)> filter) const {
+  int allMatch(const std::function<int(arg_type)>& filter) const {
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
@@ -686,7 +686,7 @@ struct RangeBase {
     return 1;
   }
 
-  int noneMatch(std::function<int(arg_type)> filter) const {
+  int noneMatch(const std::function<int(arg_type)>& filter) const {
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
@@ -704,7 +704,7 @@ struct RangeBase {
     while (now != x) {
       ret.emplace_back(*now++);
     }
-    return ret;
+    return std::move(ret);
   }
 
   std::set<value_type> toSet() const {
@@ -714,7 +714,7 @@ struct RangeBase {
     while (now != x) {
       ret.insert(*now++);
     }
-    return ret;
+    return std::move(ret);
   }
 };
 
@@ -1009,7 +1009,7 @@ struct MappedRangeIter {
   using arg_type = const value_type&;
   using src_arg_type = typename IT::arg_type;
 
-  reference operator*() { return mapper(*iter_); }
+  reference operator*() { return mapper_(*iter_); }
 
   int operator==(const MappedRangeIter& o) const { return iter_ == o.iter_; }
 
@@ -1022,17 +1022,17 @@ struct MappedRangeIter {
     return *this;
   }
 
-  MappedRangeIter operator++(int) { return MappedRangeIter{iter_++, mapper}; }
+  MappedRangeIter operator++(int) { return MappedRangeIter{iter_++, mapper_}; }
 
   MappedRangeIter& operator--() {
     --iter_;
     return *this;
   }
 
-  MappedRangeIter operator--(int) { return MappedRangeIter{iter_--, mapper}; }
+  MappedRangeIter operator--(int) { return MappedRangeIter{iter_--, mapper_}; }
 
   IT iter_;
-  const std::function<TT(src_arg_type)>& mapper;
+  const std::function<TT(src_arg_type)>& mapper_;
 };
 
 template <typename IT, typename TT>
@@ -1044,18 +1044,18 @@ struct MappedRange
 
   MappedRange(IT b, IT e,
               const std::function<TT(typename iterator::src_arg_type)>& mapper)
-      : b_(b), e_(e), mapper(mapper) {}
+      : b_(b), e_(e), mapper_(mapper) {}
 
   MappedRangeIter<IT, TT> begin() const {
-    return MappedRangeIter<IT, TT>{b_, mapper};
+    return MappedRangeIter<IT, TT>{b_, mapper_};
   }
   MappedRangeIter<IT, TT> end() const {
-    return MappedRangeIter<IT, TT>{e_, mapper};
+    return MappedRangeIter<IT, TT>{e_, mapper_};
   }
 
   IT b_;
   IT e_;
-  const std::function<TT(typename iterator::src_arg_type)> mapper;
+  const std::function<TT(typename iterator::src_arg_type)> mapper_;
 };
 
 template <typename IT>
@@ -1077,7 +1077,7 @@ struct FilterRangeIter {
     while (iter_ != e_) {
       ++iter_;
       if (iter_ == e_) break;
-      if (filter(*iter_)) break;
+      if (filter_(*iter_)) break;
     }
     return *this;
   }
@@ -1085,12 +1085,12 @@ struct FilterRangeIter {
   FilterRangeIter operator++(int) {
     IT x = iter_;
     this->operator++();
-    return FilterRangeIter{x, e_, filter};
+    return FilterRangeIter{x, e_, filter_};
   }
 
   IT iter_;
   IT e_;
-  const std::function<int(src_arg_type)>& filter;
+  const std::function<int(src_arg_type)>& filter_;
 };
 
 template <typename IT>
@@ -1101,22 +1101,22 @@ struct FilterRange : public RangeBase<FilterRange<IT>, FilterRangeIter<IT>> {
 
   FilterRange(
       IT b, IT e,
-      const std::function<int(const typename IT::value_type&)>& filterImpl)
-      : b_(b), e_(e), filter_impl_(filterImpl) {}
+      const std::function<int(const typename IT::value_type&)>& filter)
+      : b_(b), e_(e), filter_(filter) {}
 
   FilterRangeIter<IT> begin() const {
     auto now = b_;
-    while (now != e_ && !filter_impl_(*now)) ++now;
-    return FilterRangeIter<IT>{now, e_, filter_impl_};
+    while (now != e_ && !filter_(*now)) ++now;
+    return FilterRangeIter<IT>{now, e_, filter_};
   }
 
   FilterRangeIter<IT> end() const {
-    return FilterRangeIter<IT>{e_, e_, filter_impl_};
+    return FilterRangeIter<IT>{e_, e_, filter_};
   }
 
   IT b_;
   IT e_;
-  const std::function<int(typename iterator::src_arg_type)> filter_impl_;
+  const std::function<int(typename iterator::src_arg_type)> filter_;
 };
 
 // irange support. i = index.

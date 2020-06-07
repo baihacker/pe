@@ -782,7 +782,7 @@ struct NumberIterD {
   NumberIterD operator++(int) {
     value_type x = i_;
     i_ += delta_;
-    return NumberIterD{x};
+    return NumberIterD{x, e_, delta_};
   }
 
   NumberIterD& operator--() {
@@ -793,11 +793,11 @@ struct NumberIterD {
   NumberIterD operator--(int) {
     value_type x = i_;
     i_ -= delta_;
-    return NumberIterD{x};
+    return NumberIterD{x, e_, delta_};
   }
 
   value_type i_;
-  value_type e_;
+  const value_type e_;
   const value_type delta_;
 };
 
@@ -823,8 +823,8 @@ struct NumberRangeD : public RangeBase<NumberRangeD<ET>, NumberIterD<ET>> {
 
   value_type b_;
   value_type e_;
-  value_type delta_;
-  value_type n_;
+  const value_type delta_;
+  const value_type n_;
 };
 
 template <typename T>
@@ -835,14 +835,34 @@ SL REQUIRES(is_native_integer<T>::value) RETURN(NumberRange<int64>)
 }
 
 template <typename T>
+SL REQUIRES(is_native_integer<T>::value) RETURN(NumberRange<int64>)
+    xrange(T s, T e) {
+  return NumberRange<int64>{s, e + 1};
+}
+
+template <typename T>
 SL REQUIRES(is_native_integer<T>::value) RETURN(NumberRangeD<int64>)
-    range(T s, T e, T delta_) {
+    range(T s, T e, T delta) {
   if (s < e) {
-    PE_ASSERT(delta_ > 0);
+    PE_ASSERT(delta > 0);
   } else if (s > e) {
-    PE_ASSERT(delta_ < 0);
+    PE_ASSERT(delta < 0);
   }
-  return NumberRangeD<int64>{s, e, delta_};
+  return NumberRangeD<int64>{s, e, delta};
+}
+
+template <typename T>
+SL REQUIRES(is_native_integer<T>::value) RETURN(NumberRangeD<int64>)
+    xrange(T s, T e, T delta) {
+  if (s < e) {
+    PE_ASSERT(delta > 0);
+  } else if (s > e) {
+    PE_ASSERT(delta < 0);
+  } else {
+    PE_ASSERT(delta != 0);
+  }
+  T off_by_one = delta >= 0 ? 1 : -1;
+  return NumberRangeD<int64>{s, e + off_by_one, delta};
 }
 
 template <typename IT>
@@ -883,8 +903,6 @@ struct ContainerRange
   using const_iterator = iterator;
   using value_type = typename iterator::value_type;
 
-  using base = RangeBase<ContainerRange<IT>, ContainerRangeIter<IT>>;
-
   ContainerRange(IT b, IT e) : b_(b), e_(e) {}
 
   ContainerRangeIter<IT> begin() const { return ContainerRangeIter<IT>{b_}; }
@@ -903,9 +921,6 @@ struct VectorRange
   using iterator = ContainerRangeIter<IT>;
   using const_iterator = iterator;
   using value_type = typename iterator::value_type;
-
-  using base = RangeBase<VectorRange<ET>,
-                         ContainerRangeIter<typename vector<ET>::iterator>>;
 
   VectorRange(const vector<ET>& vec) : vec_(vec) {}
 
@@ -1099,9 +1114,8 @@ struct FilterRange : public RangeBase<FilterRange<IT>, FilterRangeIter<IT>> {
   using const_iterator = iterator;
   using value_type = typename FilterRangeIter<IT>::value_type;
 
-  FilterRange(
-      IT b, IT e,
-      const std::function<int(const typename IT::value_type&)>& filter)
+  FilterRange(IT b, IT e,
+              const std::function<int(const typename IT::value_type&)>& filter)
       : b_(b), e_(e), filter_(filter) {}
 
   FilterRangeIter<IT> begin() const {

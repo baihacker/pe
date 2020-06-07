@@ -593,6 +593,21 @@ struct RangeBase {
     return now == x ? 1 : 0;
   }
 
+  int64 count() const {
+    return static_cast<const DERIVED&>(*this).countImpl();
+  }
+
+  int64 countImpl() const {
+    int64 ret = 0;
+    auto now = static_cast<const DERIVED&>(*this).begin();
+    auto x = static_cast<const DERIVED&>(*this).end();
+    while (now != x) {
+      ++now;
+      ++ret;
+    }
+    return ret;
+  }
+
   optional<value_type> max() const {
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
@@ -758,6 +773,10 @@ struct NumberRange : public RangeBase<NumberRange<ET>, NumberIter<ET>> {
   NumberIter<ET> begin() const { return NumberIter<ET>{b_}; }
   NumberIter<ET> end() const { return NumberIter<ET>{e_}; }
 
+  int64 countImpl() const {
+    return static_cast<int64>(e_ - b_);
+  }
+
   const value_type b_;
   const value_type e_;
 };
@@ -807,8 +826,8 @@ struct NumberRangeD : public RangeBase<NumberRangeD<ET>, NumberIterD<ET>> {
   using const_iterator = iterator;
   using value_type = typename iterator::value_type;
 
-  NumberRangeD(value_type b, value_type n, value_type delta_)
-      : b_(b), e_(n), n_(n), delta_(delta_) {
+  NumberRangeD(value_type b, value_type n, value_type delta)
+      : b_(b), e_(n), n_(n), delta_(delta) {
     value_type d = abs(delta_);
     value_type r = abs(n - b);
     value_type s = r / d;
@@ -820,6 +839,10 @@ struct NumberRangeD : public RangeBase<NumberRangeD<ET>, NumberIterD<ET>> {
 
   NumberIterD<ET> begin() const { return NumberIterD<ET>{b_, e_, delta_}; }
   NumberIterD<ET> end() const { return NumberIterD<ET>{e_, e_, delta_}; }
+
+  int64 countImpl() const {
+    return e_ == b_ ? 0LL : static_cast<int64>((e_ - b_) / delta_);
+  }
 
   value_type b_;
   value_type e_;
@@ -933,6 +956,10 @@ struct VectorRange
     return ContainerRangeIter<IT>{vec_.end()};
   }
 
+  int64 countImpl() const {
+    return static_cast<int64>(vec_.size());
+  }
+
   vector<ET> vec_;
 };
 
@@ -993,6 +1020,10 @@ struct ArrayRange : public RangeBase<ArrayRange<ET>, ArrayRangeIter<ET>> {
 
   ArrayRangeIter<ET> begin() const { return ArrayRangeIter<ET>{b_}; }
   ArrayRangeIter<ET> end() const { return ArrayRangeIter<ET>{e_}; }
+
+  int64 countImpl() const {
+    return static_cast<int64>(e_ - b_);
+  }
 
   const value_type* b_;
   const value_type* e_;

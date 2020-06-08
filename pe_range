@@ -593,9 +593,7 @@ struct RangeBase {
     return now == x ? 1 : 0;
   }
 
-  int64 count() const {
-    return static_cast<const DERIVED&>(*this).countImpl();
-  }
+  int64 count() const { return static_cast<const DERIVED&>(*this).countImpl(); }
 
   int64 countImpl() const {
     int64 ret = 0;
@@ -712,7 +710,7 @@ struct RangeBase {
     return 1;
   }
 
-  template<typename T>
+  template <typename T>
   void fill(T iter) const {
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
@@ -782,9 +780,7 @@ struct NumberRange : public RangeBase<NumberRange<ET>, NumberIter<ET>> {
   NumberIter<ET> begin() const { return NumberIter<ET>{b_}; }
   NumberIter<ET> end() const { return NumberIter<ET>{e_}; }
 
-  int64 countImpl() const {
-    return static_cast<int64>(e_ - b_);
-  }
+  int64 countImpl() const { return static_cast<int64>(e_ - b_); }
 
   const value_type b_;
   const value_type e_;
@@ -901,7 +897,7 @@ template <typename IT>
 struct ContainerRangeIter {
   using value_type = typename std::remove_cvref<typename IT::value_type>::type;
   using reference = typename IT::reference;
-  using arg_type = const value_type&;
+  using arg_type = typename make_const_arg_type<value_type>::type;
 
   reference operator*() { return *iter_; }
 
@@ -965,9 +961,7 @@ struct VectorRange
     return ContainerRangeIter<IT>{vec_.end()};
   }
 
-  int64 countImpl() const {
-    return static_cast<int64>(vec_.size());
-  }
+  int64 countImpl() const { return static_cast<int64>(vec_.size()); }
 
   vector<ET> vec_;
 };
@@ -992,7 +986,7 @@ template <typename ET>
 struct ArrayRangeIter {
   using value_type = typename std::remove_cvref<ET>::type;
   using reference = const value_type&;
-  using arg_type = const value_type&;
+  using arg_type = typename make_const_arg_type<value_type>::type;
 
   reference operator*() { return *iter_; }
 
@@ -1030,9 +1024,7 @@ struct ArrayRange : public RangeBase<ArrayRange<ET>, ArrayRangeIter<ET>> {
   ArrayRangeIter<ET> begin() const { return ArrayRangeIter<ET>{b_}; }
   ArrayRangeIter<ET> end() const { return ArrayRangeIter<ET>{e_}; }
 
-  int64 countImpl() const {
-    return static_cast<int64>(e_ - b_);
-  }
+  int64 countImpl() const { return static_cast<int64>(e_ - b_); }
 
   const value_type* b_;
   const value_type* e_;
@@ -1061,7 +1053,7 @@ template <typename IT, typename TT>
 struct MappedRangeIter {
   using value_type = typename std::remove_cvref<TT>::type;
   using reference = value_type;
-  using arg_type = const value_type&;
+  using arg_type = typename make_const_arg_type<value_type>::type;
   using src_arg_type = typename IT::arg_type;
 
   reference operator*() { return mapper_(*iter_); }

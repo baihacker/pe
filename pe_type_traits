@@ -167,6 +167,24 @@ struct is_gbi<const mpz_class&> {
 };
 #endif
 
+template <typename T, int is_arithmetic_type>
+struct make_const_arg_type_impl {
+  using type = const T;
+};
+
+template <typename T>
+struct make_const_arg_type_impl<T, 0> {
+  using type = const T&;
+};
+
+template <typename T>
+struct make_const_arg_type {
+  using no_cvref_type = typename std::remove_cvref<T>::type;
+  using type = typename make_const_arg_type_impl<
+      no_cvref_type,
+      static_cast<int>(is_arithmetic<no_cvref_type>::value)>::type;
+};
+
 // Integer type promotion
 template <typename T1, typename T2, bool ge, bool same>
 struct BiggerIntegralImpl {

@@ -36,6 +36,80 @@ SL void init_bernoulli_number(int64* dest, int64 n, int64 mod) {
   init_bernoulli_number(dest, n, reinterpret_cast<int64*>(&invs[0]), mod);
 }
 
+// Returns [n, 0], [n, 1], ..., [n, n]
+// The nth row of the stirling number of the first kind.
+// Formula: x^(n) rising factorial
+SL vector<int64> gen_stirling1(int n, int64 mod, int has_sign = 0) {
+  PE_ASSERT(n > 0);
+  vector<int64> t(2 * n);
+  if (has_sign) {
+    for (int i = 0, j = 0; i < 2 * n; i += 2, ++j) {
+      t[i] = j == 0 ? 0 : mod - j;
+      t[i + 1] = 1;
+    }
+  } else {
+    for (int i = 0, j = 0; i < 2 * n; i += 2, ++j) {
+      t[i] = j;
+      t[i + 1] = 1;
+    }
+  }
+  return poly_batch_mul(t, mod);
+}
+
+// Returns [0, n], [1, n], ..., [cnt, n]
+// The nth column of the stirling number of the first kind.
+// Formula: ((-log(1-x))^m)/m!
+// http://oeis.org/A008275
+SL vector<int64> gen_stirling1_column(int n, int m, int64 mod) {
+  vector<int64> a = poly_log(vector<int64>{1, mod - 1}, m + 1, mod);
+  for (auto& i : a) i = i == 0 ? 0 : mod - i;
+  vector<int64> b{1};
+  for (int t = n; t > 0; t >>= 1) {
+    if (t & 1) {
+      b = poly_mul(b, a, mod);
+      if (b.size() > m + 1) b.resize(m + 1);
+    }
+    if (t > 1) {
+      a = poly_mul(a, a, mod);
+      if (a.size() > m + 1) a.resize(m + 1);
+    }
+  }
+  int64 t = 1;
+  for (int i = 1; i <= n; ++i) t = mul_mod_ex(t, i, mod);
+  t = mod_inv(t, mod);
+  int64 now = 1;
+  const int limit = min(static_cast<int>(b.size()), m + 1);
+  for (int64 i = 0; i < limit; ++i) {
+    b[i] = mul_mod_ex(b[i], now, mod);
+    b[i] = mul_mod_ex(b[i], t, mod);
+    now = mul_mod_ex(now, i + 1, mod);
+  }
+  for (int i = limit; i <= m; ++i) {
+    b.push_back(0);
+  }
+  return b;
+}
+
+// Returns {n, 0}, {n, 1}, ..., {n, n}
+// The nth row of the stirling number of the second kind.
+// Formula: (the point value egf of x^n) * (e^(-x))
+SL vector<int64> gen_stirling2(int n, int64 mod) {
+  // x^n at {0, 1, 2, ..., n}
+  vector<int64> a(n + 1);
+  int64 now = 1;
+  for (int i = 1; i <= n; ++i) now = mul_mod_ex(now, i, mod);
+  now = mod_inv(now, mod);
+  for (int i = n; i >= 0; --i) {
+    a[i] = mul_mod_ex(now, power_mod_ex(i, n, mod), mod);
+    if (i > 0) now = mul_mod_ex(now, i, mod);
+  }
+  // e^(-x)
+  vector<int64> b = poly_exp(vector<int64>{0, mod - 1}, n + 1, mod);
+  vector<int64> c = poly_mul(a, b, mod);
+  c.resize(n + 1);
+  return c;
+}
+
 // gf_first, gf_at is good for the case size(A) is small.
 // Otherwise, A.inv(n) * B is better.
 

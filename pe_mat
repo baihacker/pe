@@ -125,32 +125,55 @@ template <typename T>
 using MatT = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
 
 template <typename _Scalar>
-SL MatT<_Scalar> power_mod_impl(const MatT<_Scalar>& x, int64 n, int64 mod,
-                                NModNumberIndicator<0>) {
-  using MatrixT = MatT<_Scalar>;
-  auto fixmod = [=](MatrixT& m) {
+struct NormalMatrixModFixer {
+  static void fix(MatT<_Scalar>& m, const int64 mod) {
     const auto r = m.rows();
     const auto c = m.cols();
     for (int i = 0; i < r; ++i)
       for (int j = 0; j < c; ++j) {
         m(i, j) = regulate_mod(m(i, j), mod);
       }
-  };
+  }
+};
+
+template <typename _Scalar>
+struct NModMatrixModFixer {
+  static void fix(MatT<_Scalar>& m) {}
+};
+
+template <typename MC, typename S>
+struct NModMatrixModFixer<NModNumber<MC, APSBL<S>>> {
+  static void fix(MatT<NModNumber<MC, APSBL<S>>>& m) {
+    const auto r = m.rows();
+    const auto c = m.cols();
+    for (int i = 0; i < r; ++i)
+      for (int j = 0; j < c; ++j) {
+        m(i, j).fix_value();
+      }
+  }
+};
+
+template <typename _Scalar>
+SL MatT<_Scalar> power_mod_impl(const MatT<_Scalar>& x, int64 n, int64 mod,
+                                NModNumberIndicator<0>) {
+  using MatrixT = MatT<_Scalar>;
+
   const int K = x.rows();
 
   MatrixT e = MatrixT::Identity(K, K);
 
   MatrixT y = x;
-  fixmod(y);
+  NormalMatrixModFixer<_Scalar>::fix(y, mod);
+
   for (; n; n >>= 1) {
     // cout << "n = " << n << endl;
     if (n & 1) {
       e *= y;
-      fixmod(e);
+      NormalMatrixModFixer<_Scalar>::fix(e, mod);
     }
     if (n > 1) {
       y *= y;
-      fixmod(y);
+      NormalMatrixModFixer<_Scalar>::fix(y, mod);
     }
   }
   return e;
@@ -163,15 +186,6 @@ SL MatT<_Scalar> power_mod_impl(const MatT<_Scalar>& x, int64 n, int64 mod,
 
   PE_ASSERT(mod == _Scalar().mod());
 
-  auto fixmod = [=](MatrixT& m) {
-    const auto r = m.rows();
-    const auto c = m.cols();
-    for (int i = 0; i < r; ++i)
-      for (int j = 0; j < c; ++j) {
-        m(i, j).fix_value();
-      }
-  };
-
   const int K = static_cast<int>(x.rows());
 
   MatrixT e = MatrixT::Identity(K, K);
@@ -181,11 +195,11 @@ SL MatT<_Scalar> power_mod_impl(const MatT<_Scalar>& x, int64 n, int64 mod,
     // cout << "n = " << n << endl;
     if (n & 1) {
       e *= y;
-      fixmod(e);
+      NModMatrixModFixer<_Scalar>::fix(e);
     }
     if (n > 1) {
       y *= y;
-      fixmod(y);
+      NModMatrixModFixer<_Scalar>::fix(y);
     }
   }
   return e;
@@ -202,25 +216,19 @@ SL vector<_Scalar> power_mod_impl(const MatT<_Scalar>& x, int64 n,
                                   const vector<_Scalar>& v, int64 mod,
                                   NModNumberIndicator<0>) {
   using MatrixT = MatT<_Scalar>;
-  auto fixmod = [=](MatrixT& m) {
-    const auto r = m.rows();
-    const auto c = m.cols();
-    for (int i = 0; i < r; ++i)
-      for (int j = 0; j < c; ++j) {
-        m(i, j) = regulate_mod(m(i, j), mod);
-      }
-  };
   const int K = x.rows();
 
   vector<_Scalar> result(v);
   for (auto& i : result) i = regulate_mod(i, mod);
 
   MatrixT y = x;
-  fixmod(y);
+  NormalMatrixModFixer<_Scalar>::fix(y, mod);
+
+  vector<_Scalar> temp(K, 0);
+
   for (; n; n >>= 1) {
     // cout << "n = " << n << endl;
     if (n & 1) {
-      vector<_Scalar> temp(K, 0);
       for (int i = 0; i < K; ++i) {
         _Scalar s = 0;
         for (int j = 0; j < K; ++j) {
@@ -228,11 +236,11 @@ SL vector<_Scalar> power_mod_impl(const MatT<_Scalar>& x, int64 n,
         }
         temp[i] = s % mod;
       }
-      result = std::move(temp);
+      swap(result, temp);
     }
     if (n > 1) {
       y *= y;
-      fixmod(y);
+      NormalMatrixModFixer<_Scalar>::fix(y, mod);
     }
   }
   return result;
@@ -246,24 +254,16 @@ SL vector<_Scalar> power_mod_impl(const MatT<_Scalar>& x, int64 n,
 
   PE_ASSERT(mod == _Scalar().mod());
 
-  auto fixmod = [=](MatrixT& m) {
-    const auto r = m.rows();
-    const auto c = m.cols();
-    for (int i = 0; i < r; ++i)
-      for (int j = 0; j < c; ++j) {
-        m(i, j).fix_value();
-      }
-  };
-
   const int K = static_cast<int>(x.rows());
 
   vector<_Scalar> result(v);
   MatrixT y = x;
 
+  vector<_Scalar> temp(K, 0);
+
   for (; n; n >>= 1) {
     // cout << "n = " << n << endl;
     if (n & 1) {
-      vector<_Scalar> temp(K, 0);
       for (int i = 0; i < K; ++i) {
         _Scalar s = 0;
         for (int j = 0; j < K; ++j) {
@@ -272,11 +272,11 @@ SL vector<_Scalar> power_mod_impl(const MatT<_Scalar>& x, int64 n,
         s.fix_value();
         temp[i] = s;
       }
-      result = std::move(temp);
+      swap(result, temp);
     }
     if (n > 1) {
       y *= y;
-      fixmod(y);
+      NModMatrixModFixer<_Scalar>::fix(y);
     }
   }
   return result;

@@ -130,6 +130,28 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 
   4. make install
 
+* The latest msys (msys2-x86_64-20200602) is not compatible with gmp6.2.0, the corresponding erro is *
+```
+../gmp-impl.h:146:10: fatal error: ../gmp-mparam.h: Invalid argument
+  146 | #include "gmp-mparam.h"
+```
+
+*I guess it is caused by the ln.exe in msys2, the fix is: in ./configure, change*
+
+```
+    ln -s "$ac_rel_source" "$ac_file" 2>/dev/null ||
+      ln "$ac_source" "$ac_file" 2>/dev/null ||
+      cp -p "$ac_source" "$ac_file" ||
+      as_fn_error $? "cannot link or copy $ac_source to $ac_file" "$LINENO" 5
+```
+
+*to*
+
+```
+      cp -p "$ac_source" "$ac_file" ||
+      as_fn_error $? "cannot link or copy $ac_source to $ac_file" "$LINENO" 5
+```
+
 * mpir
 
   1. Make sure yasm.exe is in the PATH

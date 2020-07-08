@@ -1628,13 +1628,17 @@ class DVA {
     }
     key_size = (int)keys.size();
     values.resize(keys.size());
-    fill(values.begin(), values.end(), element);
+    fill(element);
   }
 
   DVA(const DVA& other) = default;
   DVA(DVA&& other) noexcept = default;
   DVA& operator=(const DVA& other) = default;
   DVA& operator=(DVA&& other) noexcept = default;
+
+  void resize(int64 n, T element = 0) { *this = std::move(DVA<T>(n, element)); }
+
+  void fill(T element) { std::fill(values.begin(), values.end(), element); }
 
   int idxOfValue(int64 v) const { return (int)(v <= m ? v : key_size - n / v); }
 
@@ -1655,6 +1659,7 @@ class DVA {
   DVARange<DVARIterator> bItems() const { return makeRange(rbegin(), rend()); }
 
   DVAIterator begin() const { return DVAIterator(keys, values, 1, key_size); }
+
   DVAIterator end() const {
     return DVAIterator(keys, values, key_size, key_size);
   }
@@ -1662,6 +1667,7 @@ class DVA {
   DVARIterator rbegin() const {
     return DVARIterator(keys, values, key_size - 1, key_size);
   }
+
   DVARIterator rend() const { return DVARIterator(keys, values, 0, key_size); }
 };
 

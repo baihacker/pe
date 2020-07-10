@@ -356,7 +356,7 @@ template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_inv(const T* x, int m, int n, T* result, int64 mod) {
   using unsignedT = typename std::make_unsigned<T>::type;
-#if ENABLE_FLINT
+#if HAS_POLY_FLINT
   poly_inv_flint<unsignedT>((const unsignedT*)x, m, n, (unsignedT*)result, mod);
 #else
   poly_inv_doubling<unsignedT>((const unsignedT*)x, m, n, (unsignedT*)result,
@@ -439,9 +439,9 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   vector<T> tmp(X, X + n);
   int64 t = inv_of(Y[m - 1], mod);
   for (int i = n - 1; i >= m - 1; --i) {
-    int64 u = tmp[i] * t % mod;
+    int64 u = mul_mod_ex(tmp[i], t, mod);
     for (int j = i, k = m - 1; k >= 0; --j, --k) {
-      tmp[j] = sub_mod(tmp[j], u * Y[k] % mod, mod);
+      tmp[j] = sub_mod(tmp[j], mul_mod_ex(u, Y[k], mod), mod);
     }
     if (q) {
       q[top++] = u;
@@ -525,6 +525,11 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_div_and_mod(const T* X, const int n, const T* Y, const int m, T* q,
                      T* r, int64 mod) {
   using unsignedT = typename std::make_unsigned<T>::type;
+#if HAS_POLY_FLINT
+  poly_div_and_mod_flint_internal<unsignedT>((const unsignedT*)X, n,
+                                             (const unsignedT*)Y, m,
+                                             (unsignedT*)q, (unsignedT*)r, mod);
+#else
   // This condition also includes the case n < m;
   if ((n - m) * m <= 1000) {
     poly_div_and_mod_normal_internal<unsignedT>(
@@ -535,6 +540,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
                                             (const unsignedT*)Y, m,
                                             (unsignedT*)q, (unsignedT*)r, mod);
   }
+#endif
 }
 
 template <typename T>
@@ -559,6 +565,12 @@ POLY_MOD_IMPL(poly_mod_dc, poly_div_and_mod_dc)
 POLY_DIV_AND_MOD_IMPL(poly_div_and_mod_normal, poly_div_and_mod_normal_internal)
 POLY_DIV_IMPL(poly_div_normal, poly_div_and_mod_normal)
 POLY_MOD_IMPL(poly_mod_normal, poly_div_and_mod_normal)
+
+#if HAS_POLY_FLINT
+POLY_DIV_AND_MOD_IMPL(poly_div_and_mod_flint, poly_div_and_mod_flint_internal)
+POLY_DIV_IMPL(poly_div_flint, poly_div_and_mod_flint)
+POLY_MOD_IMPL(poly_mod_flint, poly_div_and_mod_flint)
+#endif
 
 POLY_DIV_IMPL(poly_div, poly_div_and_mod)
 POLY_MOD_IMPL(poly_mod, poly_div_and_mod)
@@ -731,7 +743,7 @@ template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_log(const T* x, int m, int n, T* result, int64 mod) {
   using unsignedT = typename std::make_unsigned<T>::type;
-#if ENABLE_FLINT
+#if HAS_POLY_FLINT
   poly_log_flint<unsignedT>((const unsignedT*)x, m, n, (unsignedT*)result, mod);
 #else
   poly_log_normal<unsignedT>((const unsignedT*)x, m, n, (unsignedT*)result,
@@ -758,7 +770,7 @@ template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_exp(const T* x, int m, int n, T* result, int64 mod) {
   using unsignedT = typename std::make_unsigned<T>::type;
-#if ENABLE_FLINT
+#if HAS_POLY_FLINT
   poly_exp_flint<unsignedT>((const unsignedT*)x, m, n, (unsignedT*)result, mod);
 #else
   poly_exp_normal<unsignedT>((const unsignedT*)x, m, n, (unsignedT*)result,
@@ -1018,7 +1030,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_multipoint_evaluate(const T* X, const int n, const T* V, T* result,
                              int64 mod) {
   using unsignedT = typename std::make_unsigned<T>::type;
-#if ENABLE_FLINT
+#if HAS_POLY_FLINT
   poly_multipoint_evaluate_flint<unsignedT>(
       (const unsignedT*)X, n, (const unsignedT*)V, (unsignedT*)result, mod);
 #else

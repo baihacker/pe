@@ -12,6 +12,8 @@
 // Online documentation of flint
 // http://flintlib.org/sphinx/nmod_poly.html
 
+#define HAS_POLY_FLINT 1
+
 // size result >= n
 #if 0
 // This implementation is for general mod polynomial
@@ -43,6 +45,19 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   nmod_poly_clear(w);
 }
 #else
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    copy_nmod_poly(nmod_poly_t src, T* dest, int destSize) {
+  const int size = static_cast<int>(src[0].length);
+  for (int i = 0; i < size; ++i) {
+    auto v = src[0].coeffs[i];
+    dest[i] = v;
+  }
+  for (int i = size; i < destSize; ++i) {
+    dest[i] = 0;
+  }
+}
+
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_inv_flint_internal(const T* x, int m, int n, T* result, int64 mod) {
@@ -254,6 +269,70 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
   poly_multipoint_evaluate_flint(&X[0], n, &V[0], m, &result[0], mod);
   return result;
 }
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_div_and_mod_flint_internal(const T* X, int n, const T* Y, int m, T* q,
+                                    T* r, int64 mod) {
+  static_assert(std::is_unsigned<T>::value, "T must be unsigned");
+
+  if (m > n) {
+    if (r) {
+      copy(X, X + n, r);
+      fill(r + n, r + m, 0);
+    }
+    if (q) {
+      q[0] = 0;
+    }
+    return;
+  }
+
+  nmod_poly_t a, b;
+  nmod_poly_init2(a, mod, n);
+  nmod_poly_init2(b, mod, m);
+
+  for (int i = 0; i < n; ++i) {
+    nmod_poly_set_coeff_ui(a, i, X[i]);
+  }
+  for (int i = 0; i < m; ++i) {
+    nmod_poly_set_coeff_ui(b, i, Y[i]);
+  }
+
+  if (q && r) {
+    nmod_poly_t u, v;
+    nmod_poly_init(u, mod);
+    nmod_poly_init(v, mod);
+
+    nmod_poly_divrem(u, v, a, b);
+
+    copy_nmod_poly(u, q, n - m + 1);
+    copy_nmod_poly(v, r, m);
+
+    nmod_poly_clear(u);
+    nmod_poly_clear(v);
+  } else if (q) {
+    nmod_poly_t u;
+    nmod_poly_init(u, mod);
+
+    nmod_poly_div(u, a, b);
+
+    copy_nmod_poly(u, q, n - m + 1);
+    nmod_poly_clear(u);
+  } else if (r) {
+    nmod_poly_t v;
+    nmod_poly_init(v, mod);
+
+    nmod_poly_rem(v, a, b);
+
+    copy_nmod_poly(v, r, m);
+    nmod_poly_clear(v);
+  }
+
+  nmod_poly_clear(a);
+  nmod_poly_clear(b);
+}
+#else
+#define HAS_POLY_FLINT 0
 #endif
 
 #endif

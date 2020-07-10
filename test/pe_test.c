@@ -66,6 +66,26 @@ int main() {
     if (!isEnabledTestSize(item.testSize)) {
       continue;
     }
+    #ifdef NO_SMALL_TEST
+      if (item.testSize == SMALL) {
+        continue;
+      }
+    #endif
+    #ifdef NO_MEDIUM_TEST
+      if (item.testSize == MEDIUM) {
+        continue;
+      }
+    #endif
+    #ifdef NO_BIG_TEST
+      if (item.testSize == BIG) {
+        continue;
+      }
+    #endif
+    #ifdef NO_SUPER_TEST
+      if (item.testSize == SUPER) {
+        continue;
+      }
+    #endif
     if (!isFirstTest) {
       cout << endl;
     }

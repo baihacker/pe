@@ -69,7 +69,7 @@ SL void poly_div_test() {
         test_impl(dp, n > 2048, n, mod);
       }
 }
-PE_REGISTER_TEST(&poly_div_test, "poly_div_test", BIG);
+PE_REGISTER_TEST(&poly_div_test, "poly_div_test", SUPER);
 
 SL void poly_div_performance_test() {
   uint64 mods[5] = {100019, 1000003, 1000000007, 100000000003, 316227766016779};
@@ -122,5 +122,5 @@ SL void poly_div_performance_test() {
 }
 
 PE_REGISTER_TEST(&poly_div_performance_test, "poly_div_performance_test",
-                 BIG);
+                 SUPER);
 }  // namespace poly_div_test

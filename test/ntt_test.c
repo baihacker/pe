@@ -108,7 +108,7 @@ SL void ntt_test() {
   // 1e35
   test_impl(2, 4, 1000000, 316227766016779);
 }
-PE_REGISTER_TEST(&ntt_test, "ntt_test", BIG);
+PE_REGISTER_TEST(&ntt_test, "ntt_test", SUPER);
 
 SL void ntt_performance_test() {
   uint64 mods[5] = {100019, 1000003, 1000000007, 100000000003, 316227766016779};
@@ -157,6 +157,6 @@ SL void ntt_performance_test() {
   }
 }
 
-PE_REGISTER_TEST(&ntt_performance_test, "ntt_performance_test", BIG);
+PE_REGISTER_TEST(&ntt_performance_test, "ntt_performance_test", SUPER);
 #endif
 }  // namespace ntt_test

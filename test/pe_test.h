@@ -10,7 +10,8 @@ enum TestSize {
   SMALL = 0,
   MEDIUM = 1,
   BIG = 2,
-  SPECIFIED = 3,
+  SUPER = 3,
+  SPECIFIED = 4,
 };
 
 struct TestItem {

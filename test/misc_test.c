@@ -71,7 +71,7 @@ SL void count_pt_in_circle_test() {
   }
 }
 
-PE_REGISTER_TEST(&count_pt_in_circle_test, "count_pt_in_circle_test", BIG);
+PE_REGISTER_TEST(&count_pt_in_circle_test, "count_pt_in_circle_test", SUPER);
 
 #if PE_HAS_INT128
 SL void sum_sigma0_test() {
@@ -100,6 +100,6 @@ SL void sum_sigma0_test() {
   }
 }
 
-PE_REGISTER_TEST(&sum_sigma0_test, "sum_sigma0_test", BIG);
+PE_REGISTER_TEST(&sum_sigma0_test, "sum_sigma0_test", SUPER);
 #endif
 }  // namespace misc_test

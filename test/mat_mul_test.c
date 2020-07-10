@@ -168,6 +168,6 @@ SL void mat_mul_test() {
   test_helper_method();
 }
 
-PE_REGISTER_TEST(&mat_mul_test, "mat_mul_test", MEDIUM);
+PE_REGISTER_TEST(&mat_mul_test, "mat_mul_test", SUPER);
 #endif
 }  // namespace mat_mul_test

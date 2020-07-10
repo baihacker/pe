@@ -40,8 +40,8 @@ SL void prime_pi_sum_test() {
   assert((prime_pi<int64>(100000000))[100000000] == pmpi[8]);
   assert((prime_pi<int64>(1000000000))[1000000000] == pmpi[9]);
   assert((prime_pi<int64>(10000000000))[10000000000] == pmpi[10]);
-  assert((prime_pi<int64>(100000000000))[100000000000] == pmpi[11]);
-  assert((prime_pi<int64>(1000000000000))[1000000000000] == pmpi[12]);
+  // assert((prime_pi<int64>(100000000000))[100000000000] == pmpi[11]);
+  // assert((prime_pi<int64>(1000000000000))[1000000000000] == pmpi[12]);
 }
 
 PE_REGISTER_TEST(&prime_pi_sum_test, "prime_pi_sum_test", BIG);

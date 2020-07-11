@@ -105,10 +105,10 @@ SL void poly_multipoint_evaluation_test() {
       assert(p.valueAt(i % 10007) == result[i - 1]);
     }
   }
-#if ENABLE_FLINT && GMP_LIMB_BITS == 64
+#if HAS_POLY_FLINT
   {
     TimeRecorder tr;
-    auto result = poly_multipoint_evaluate_flint(p.data, v, p.mod);
+    auto result = poly_flint::poly_multipoint_evaluate(p.data, v, p.mod);
     cout << tr.elapsed().format() << endl;
     for (int i = 1; i <= n; ++i) {
       assert(p.valueAt(i % 10007) == result[i - 1]);

@@ -1,14 +1,17 @@
-#ifndef PE_NTT_MIN_25_
-#define PE_NTT_MIN_25_
+#ifndef PE_POLY_BASE_MIN_25_
+#define PE_POLY_BASE_MIN_25_
 
 #if PE_HAS_INT128
 
-#define HAS_POLY_MUL_MIN25_NTT 1
-#define HAS_POLY_MUL_MIN25_NTT_SMALL 1
+#include "pe_poly_base_common"
+
+#define HAS_POLY_MIN25 1
+#define HAS_POLY_MUL_MIN25 1
+#define HAS_POLY_MUL_MIN25_SMALL 1
 
 // ntt authored by Min_25
 // https://yukicoder.me/submissions/217430
-namespace ntt_min25 {
+namespace poly_min25 {
 
 using word_t = uint64;
 using dword_t = uint128;
@@ -179,8 +182,8 @@ using m64_2 = UnsafeMod<1128298388379402241, 23>;  // <= 1.14e18 (sub.D = 3)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_ntt_internal(const T* f, int n, const T* g, int m, T* result,
-                          int64 mod) {
+    poly_mul_internal(const T* f, int n, const T* g, int m, T* result,
+                      int64 mod) {
   const int alignedSize = 1 << pe_lg(2 * (n + m - 1) - 1);
 
   const int ntt_size = alignedSize;
@@ -228,30 +231,30 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_ntt(const T* X, const int n, const T* Y, const int m, T* result,
-                 int64 mod) {
+    poly_mul(const T* X, const int n, const T* Y, const int m, T* result,
+             int64 mod) {
   using unsignedT = typename std::make_unsigned<T>::type;
   poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m,
                               (unsignedT*)result, mod,
-                              &poly_mul_ntt_internal<unsignedT>);
+                              &poly_mul_internal<unsignedT>);
 }
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
-    poly_mul_ntt(const vector<T>& X, const vector<T>& Y, int64 mod) {
+    poly_mul(const vector<T>& X, const vector<T>& Y, int64 mod) {
   const int n = (int)X.size() - 1;
   const int m = (int)Y.size() - 1;
 
   vector<T> result(n + m + 1);
-  poly_mul_ntt(&X[0], n + 1, &Y[0], m + 1, &result[0], mod);
+  poly_mul(&X[0], n + 1, &Y[0], m + 1, &result[0], mod);
 
   return result;
 }
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_ntt_small_internal(const T* f, int n, const T* g, int m, T* result,
-                                int64 mod) {
+    poly_mul_small_internal(const T* f, int n, const T* g, int m, T* result,
+                            int64 mod) {
   const int alignedSize = 1 << pe_lg(2 * (n + m - 1) - 1);
 
   const int ntt_size = alignedSize;
@@ -275,29 +278,30 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_ntt_small(const T* X, const int n, const T* Y, const int m,
-                       T* result, int64 mod) {
+    poly_mul_small(const T* X, const int n, const T* Y, const int m, T* result,
+                   int64 mod) {
   using unsignedT = typename std::make_unsigned<T>::type;
   poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m,
                               (unsignedT*)result, mod,
-                              &poly_mul_ntt_small_internal<unsignedT>);
+                              &poly_mul_small_internal<unsignedT>);
 }
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
-    poly_mul_ntt_small(const vector<T>& X, const vector<T>& Y, int64 mod) {
+    poly_mul_small(const vector<T>& X, const vector<T>& Y, int64 mod) {
   const int n = (int)X.size();
   const int m = (int)Y.size();
 
   vector<T> result(n + m - 1);
-  poly_mul_ntt_small(&X[0], n, &Y[0], m, &result[0], mod);
+  poly_mul_small(&X[0], n, &Y[0], m, &result[0], mod);
 
   return result;
 }
-}  // namespace ntt_min25
+}  // namespace poly_min25
 #else
-#define HAS_POLY_MUL_MIN25_NTT 0
-#define HAS_POLY_MUL_MIN25_NTT_SMALL 0
+#define HAS_POLY_MIN25 0
+#define HAS_POLY_MUL_MIN25 0
+#define HAS_POLY_MUL_MIN25_SMALL 0
 #endif
 
 #endif

@@ -11,34 +11,34 @@ struct MulImpl {
 };
 MulImpl mulImpl[] = {
 #if HAS_POLY_MUL_FLINT
-    {&ntt_flint::poly_mul_flint<uint64>, 4, "flint n"},
-    {&ntt_flint::poly_mul_flint_prime<uint64>, 4, "flint p"},
+    {&poly_flint::poly_mul<uint64>, 4, "flint n"},
+    {&poly_flint::poly_mul_prime<uint64>, 4, "flint p"},
 #else
-    {&ntt64::poly_mul_ntt<uint64>, 4, "ntt64 l"},
+    {&ntt64::poly_mul<uint64>, 4, "ntt64 l"},
 #endif
 #if HAS_POLY_MUL_NTT32_SMALL
-    {&ntt32::poly_mul_ntt_small<uint64>, 1, "ntt32 s"},
+    {&ntt32::poly_mul_small<uint64>, 1, "ntt32 s"},
 #endif
 #if HAS_POLY_MUL_NTT32
-    {&ntt32::poly_mul_ntt<uint64>, 3, "ntt32 l"},
+    {&ntt32::poly_mul<uint64>, 3, "ntt32 l"},
 #endif
 #if HAS_POLY_MUL_NTT64_SMALL
-    {&ntt64::poly_mul_ntt_small<uint64>, 1, "ntt64 s"},
+    {&ntt64::poly_mul_small<uint64>, 1, "ntt64 s"},
 #endif
 #if HAS_POLY_MUL_FLINT && HAS_POLY_MUL_NTT64
-    {&ntt64::poly_mul_ntt<uint64>, 4, "ntt64 l"},
+    {&ntt64::poly_mul<uint64>, 4, "ntt64 l"},
 #endif
 #if HAS_POLY_MUL_MIN25_NTT_SMALL
-    {&ntt_min25::poly_mul_ntt_small<uint64>, 1, "Min_25 s"},
+    {&poly_min25::poly_mul_small<uint64>, 1, "Min_25 s"},
 #endif
 #if HAS_POLY_MUL_MIN25_NTT
-    {&ntt_min25::poly_mul_ntt<uint64>, 4, "Min_25 l"},
+    {&poly_min25::poly_mul<uint64>, 4, "Min_25 l"},
 #endif
 #if HAS_POLY_MUL_LIBBF
-    {&ntt_libbf::poly_mul_ntt<uint64>, 4, "libbf"},
+    {&poly_libbf::poly_mul<uint64>, 4, "libbf"},
 #endif
 #if HAS_POLY_MUL_NTL
-    {&ntt_ntl::poly_mul_ntt<uint64>, 4, "ntl"},
+    {&poly_ntl::poly_mul<uint64>, 4, "ntl"},
 #endif
 };
 

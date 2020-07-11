@@ -1,16 +1,17 @@
-#ifndef PE_NTT_NTL_
-#define PE_NTT_NTL_
+#ifndef PE_POLY_BASE_NTL_
+#define PE_POLY_BASE_NTL_
 
 #if ENABLE_NTL
 
+#include "pe_poly_base_common"
+
+#define HAS_POLY_NTL 1
 #define HAS_POLY_MUL_NTL 1
 
-#include "pe_base"
-
-namespace ntt_ntl {
+namespace poly_ntl {
 template <typename T>
-SL void poly_mul_ntt_internal(const T* X, int n, const T* Y, int m, T* result,
-                              int64 mod) {
+SL void poly_mul_internal(const T* X, int n, const T* Y, int m, T* result,
+                          int64 mod) {
   NTL::ZZ tmp(0);
   ZZFromBytes(tmp, reinterpret_cast<const unsigned char*>(&mod), sizeof(T));
   NTL::ZZ_p::init(tmp);
@@ -57,23 +58,23 @@ SL void poly_mul_ntt_internal(const T* X, int n, const T* Y, int m, T* result,
 }
 
 template <typename T>
-SL void poly_mul_ntt(const T* X, int n, const T* Y, int m, T* result,
-                     int64 mod) {
-  poly_mul_wrapper(X, n, Y, m, result, mod, &poly_mul_ntt_internal<T>);
+SL void poly_mul(const T* X, int n, const T* Y, int m, T* result, int64 mod) {
+  poly_mul_wrapper(X, n, Y, m, result, mod, &poly_mul_internal<T>);
 }
 
 template <typename T>
-SL vector<T> poly_mul_ntt(const vector<T>& X, const vector<T>& Y, int64 mod) {
+SL vector<T> poly_mul(const vector<T>& X, const vector<T>& Y, int64 mod) {
   const int n = (int)X.size();
   const int m = (int)Y.size();
   const int retSize = n + m - 1;
   vector<T> result(retSize);
-  poly_mul_ntt(&X[0], n, &Y[0], m, &result[0], mod);
+  poly_mul(&X[0], n, &Y[0], m, &result[0], mod);
   return result;
 }
 
-}  // namespace ntt_ntl
+}  // namespace poly_ntl
 #else
+#define HAS_POLY_NTL 0
 #define HAS_POLY_MUL_NTL 0
 #endif
 

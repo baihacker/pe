@@ -13,7 +13,7 @@ DivImpl divImpl[] = {
     {&poly_div_dc<uint64>, 1, "dc"},
     {&poly_div_normal<uint64>, 0, "normal"},
 #if HAS_POLY_FLINT
-    {&poly_div_flint<uint64>, 1, "flint"},
+    {&poly_flint::poly_div<uint64>, 1, "flint"},
 #endif
 };
 

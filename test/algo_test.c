@@ -104,7 +104,7 @@ SL void gp_sum_mod_test() {
   assert(gp_sum_mod(2, 0, 0, mod, 100) == 1);
 }
 
-PE_REGISTER_TEST(&gp_sum_mod_test, "gp_sum_mod_test", SPECIFIED);
+PE_REGISTER_TEST(&gp_sum_mod_test, "gp_sum_mod_test", SMALL);
 
 SL void pk_sum_mod_test() {
   // 4e18 + 37

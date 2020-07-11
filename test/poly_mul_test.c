@@ -40,7 +40,7 @@ MulImpl mulImpl[] = {
 #if HAS_POLY_MUL_NTL
     {&poly_ntl::poly_mul<uint64>, 4, "ntl"},
 #endif
-//    {&poly_mul<uint64>, 4, "default"},
+    //    {&poly_mul<uint64>, 4, "default"},
 };
 
 const char* dataPolicy[3] = {
@@ -50,8 +50,8 @@ const char* dataPolicy[3] = {
 };
 
 SL void test_impl(int dp, int size, int n, int64 mod) {
-  fprintf(stderr, "%-8s : data = %s, size = %d, n = %d, mod = %lld\n",
-          "config", dataPolicy[dp], size, n, (long long)mod);
+  fprintf(stderr, "%-8s : data = %s, size = %d, n = %d, mod = %lld\n", "config",
+          dataPolicy[dp], size, n, (long long)mod);
 
   vector<uint64> x, y;
   srand(123456789);

@@ -10,6 +10,42 @@
 
 namespace poly_ntl {
 template <typename T>
+SL void init_nmod_poly(NTL::ZZ_pX& p, const T* x, int n, int64 mod) {
+  NTL::ZZ tmp(0);
+  p.SetLength(n);
+  if (mod >> 32) {
+    for (int i = 0; i < n; ++i) {
+      ZZFromBytes(tmp, (const unsigned char*)&x[i], sizeof(T));
+      p[i] = to_ZZ_p(tmp);
+    }
+  } else {
+    for (int i = 0; i < n; ++i) {
+      p[i] = x[i];
+    }
+  }
+}
+
+template <typename T>
+SL void copy_nmod_poly(NTL::ZZ_pX& p, T* x, int n, int64 mod) {
+  const int d = deg(p);
+  const int m = min(d, n - 1);
+  if (mod >> 32) {
+    for (int i = 0; i <= m; ++i) {
+      T a;
+      BytesFromZZ((unsigned char*)&a, (NTL::ZZ&)p[i], sizeof(T));
+      x[i] = a;
+    }
+  } else {
+    for (int i = 0; i <= m; ++i) {
+      x[i] = static_cast<T>(to_int((NTL::ZZ&)p[i]));
+    }
+  }
+  for (int i = m + 1; i < n; ++i) {
+    x[i] = 0;
+  }
+}
+
+template <typename T>
 SL void poly_mul_internal(const T* X, int n, const T* Y, int m, T* result,
                           int64 mod) {
   NTL::ZZ tmp(0);
@@ -17,44 +53,12 @@ SL void poly_mul_internal(const T* X, int n, const T* Y, int m, T* result,
   NTL::ZZ_p::init(tmp);
 
   NTL::ZZ_pX x, y, z;
-  x.SetLength(n);
-  y.SetLength(m);
-  if (mod >> 32) {
-    for (int i = 0; i < n; ++i) {
-      ZZFromBytes(tmp, (const unsigned char*)&X[i], sizeof(T));
-      x[i] = to_ZZ_p(tmp);
-    }
-    for (int i = 0; i < m; ++i) {
-      ZZFromBytes(tmp, (const unsigned char*)&Y[i], sizeof(T));
-      y[i] = to_ZZ_p(tmp);
-    }
-  } else {
-    for (int i = 0; i < n; ++i) {
-      x[i] = X[i];
-    }
-    for (int i = 0; i < m; ++i) {
-      y[i] = Y[i];
-    }
-  }
+  init_nmod_poly(x, X, n, mod);
+  init_nmod_poly(y, Y, m, mod);
 
   mul(z, x, y);
 
-  const int d = deg(z);
-  if (mod >> 32) {
-    for (int i = 0; i <= d; ++i) {
-      T x;
-      BytesFromZZ((unsigned char*)&x, (NTL::ZZ&)z[i], sizeof(T));
-      result[i] = x;
-    }
-  } else {
-    for (int i = 0; i <= d; ++i) {
-      result[i] = static_cast<T>(to_int((NTL::ZZ&)z[i]));
-    }
-  }
-  const int retSize = n + m - 1;
-  for (int i = d + 1; i < retSize; ++i) {
-    result[i] = 0;
-  }
+  copy_nmod_poly(z, result, n + m - 1, mod);
 }
 
 template <typename T>
@@ -71,6 +75,54 @@ SL vector<T> poly_mul(const vector<T>& X, const vector<T>& Y, int64 mod) {
   poly_mul(&X[0], n, &Y[0], m, &result[0], mod);
   return result;
 }
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_div_and_mod_internal(const T* X, int n, const T* Y, int m, T* q, T* r,
+                              int64 mod) {
+  if (m > n) {
+    if (r) {
+      copy(X, X + n, r);
+      fill(r + n, r + m, 0);
+    }
+    if (q) {
+      q[0] = 0;
+    }
+    return;
+  }
+
+  NTL::ZZ tmp(0);
+  ZZFromBytes(tmp, reinterpret_cast<const unsigned char*>(&mod), sizeof(T));
+  NTL::ZZ_p::init(tmp);
+
+  NTL::ZZ_pX x, y;
+  init_nmod_poly(x, X, n, mod);
+  init_nmod_poly(y, Y, m, mod);
+
+  if (q && r) {
+    NTL::ZZ_pX u, v;
+
+    NTL::DivRem(u, v, x, y);
+
+    copy_nmod_poly(u, q, n - m + 1, mod);
+    copy_nmod_poly(v, r, m, mod);
+  } else if (q) {
+    NTL::ZZ_pX u;
+
+    NTL::div(u, x, y);
+
+    copy_nmod_poly(u, q, n - m + 1, mod);
+  } else if (r) {
+    NTL::ZZ_pX v;
+
+    NTL::rem(v, x, y);
+    copy_nmod_poly(v, r, m, mod);
+  }
+}
+
+POLY_DIV_AND_MOD_IMPL(poly_div_and_mod, poly_div_and_mod_internal)
+POLY_DIV_IMPL(poly_div, poly_div_and_mod)
+POLY_MOD_IMPL(poly_mod, poly_div_and_mod)
 
 }  // namespace poly_ntl
 #else

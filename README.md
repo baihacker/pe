@@ -77,11 +77,6 @@ C++17 or above
 * pe_mod: Modular arithmetic.
 * pe_nt: Basic code of number theory.
 * pe_nt_base: Generate prime list, factorize integer, prime test, compute phi and mu.
-* pe_ntt: Number theoretic transform and polynomial multiplication.
-* pe_ntt_flint: An adapter which makes use of flint to implement ntt.
-* pe_ntt_libbf: An adapter which makes use of libbf to implement ntt.
-* pe_ntt_min_25: [Min_25](https://github.com/min-25)'s ntt implementation. The fastest one for mod polynomials integrated into pe.
-* pe_ntt_ntl: ntl based ntt implementation.
 * pe_parallel: A simple framework to solve problem with multi-threads. (windows only)
 * pe_parallel_algo: Parallel algorithms.
 * pe_persistance: KVPersistance. (it may support linux but we need change the generated cmdline and check the other codes)
@@ -89,6 +84,9 @@ C++17 or above
 * pe_poly_algo: Polynomial algorithms.
 * pe_poly_base: Polynomial basic algorithms.
 * pe_poly_base_flint: Flint based polynomial basic algorithms.
+* pe_poly_base_libbf: Libbf based polynomial basic algorithms.
+* pe_poly_base_min_25: [Min_25](https://github.com/min-25)'s polynomial basic algorithms. The polynomial multiplication implementation is the fastest one among mod polynomials integrated into pe.
+* pe_poly_base_ntl: Ntl based polynomial basic algorithms.
 * pe_rand: Random number.
 * pe_range: generate an range of numbers, iterate a container with index.
 * pe_sym_poly: Symbolic polynomial.

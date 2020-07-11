@@ -913,6 +913,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     ntt64::poly_mul(&X[0], n, &Y[0], m, result, mod);
 #else
 
+// ntl implementation is not here since it may not be thread safe.
+
 #if defined(COMPILER_GNU)
 #warning "poly_mul may be very slow."
 #else
@@ -1942,4 +1944,61 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 }
 #endif
 
+/**
+ * Name convention:
+ *   [implementation namespace ::]poly_mul[implementation suffix][suffix]
+ *
+ *   implementation namespace is one of:
+ *     ntt32 (32 bit mod), ntt64 (64 bit mod), poly_min25, poly_libbf, poly_flint
+ *
+ *   suffix is:
+ *      _small at least support (p-1)^2*n < 1e18
+ *      <empty string> at least support (p-1)^2*n < 1e28
+ *
+ *   implementation suffix:
+ *     dc: divide and conquer
+ *
+ * Template parameters:
+ *   T:
+ *     native integer which can be promoted to uint64
+ *
+ * Availability
+ * ntt32 small : always available
+ * ntt32 large : always available
+ * ntt64 small : always available
+ * ntt64 large : always available
+ * min25 small : requires int128
+ * min25 large : requires int128
+ * libbf       : enable libbf && LIMB_BITS >= 64
+ * flint p     : enable flint && GMP_LIMB_BITS >= 64
+ * flint n     : enable flint && GMP_LIMB_BITS >= 64
+ *
+ * Limitations
+ * ntt32 small
+ * (p-1)^2*n < 4593671624212873217                              4.5e18
+ *
+ * ntt32 large
+ * (p-1)^2*n < 14797252050511790781119856641                    1.4e28
+ *
+ * ntt64 small
+ * (p-1)^2*n < 1945555039024054273                              1.9e18
+ *
+ * ntt64 large
+ * (p-1)^2*n < 350480037951100867051507526341230593             3.5e35
+ *
+ * min25 ntt small
+ * (p-1)^2*n < 1128298388379402241                              1.1e18
+ *
+ * min25 ntt large
+ * (p-1)^2*n < 1265198875113262859862934516672757761            1.2e36
+ *
+ * flint
+ * (p-1)^2*n < oo                                               3.4e38
+ *
+ * libbf
+ * (p-1)^2*n < 340282366920938463463374607431768211456 (2^128)  3.4e38
+ *
+ * ntl
+ * (p-1)^2*n < oo                                               3.4e38
+ */
 #endif

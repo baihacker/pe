@@ -25,7 +25,7 @@ const char* dataPolicy[3] = {
 
 SL void test_impl(int dp, int size, int n, int64 mod) {
   fprintf(stderr, "%-8s : data = %s, size = %d, n = %d, mod = %lld\n",
-          "poly div test", dataPolicy[dp], size, n, (long long)mod);
+          "config", dataPolicy[dp], size, n, (long long)mod);
 
   vector<uint64> x, y;
   srand(123456789);

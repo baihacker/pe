@@ -10,6 +10,7 @@
 * Compiler: gcc version 10.1.0 (Rev3, Built by MSYS2 project)
 * Msys2: msys2-x86_64-20200602
 * Test code: [Ntt test](https://github.com/baihacker/pe/blob/master/test/ntt_test.c)
+  * ntt_test.c is moved to poly_mul_test.c
 * Build:
   * [Build and use third party library in pe](https://github.com/baihacker/pe/blob/master/libraries_on_win64.md#build-and-use-third-party-library-in-pe)
   * Build test target:

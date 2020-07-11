@@ -1,6 +1,6 @@
 #include "pe_test.h"
 
-namespace ntt_test {
+namespace poly_mul_test {
 #if HAS_POLY_MUL_FLINT || HAS_POLY_MUL_NTT64
 typedef vector<uint64> (*poly_mul_t)(const vector<uint64>& X,
                                      const vector<uint64>& Y, int64 mod);
@@ -28,10 +28,10 @@ MulImpl mulImpl[] = {
 #if HAS_POLY_MUL_FLINT && HAS_POLY_MUL_NTT64
     {&ntt64::poly_mul<uint64>, 4, "ntt64 l"},
 #endif
-#if HAS_POLY_MUL_MIN25_NTT_SMALL
+#if HAS_POLY_MUL_MIN25_SMALL
     {&poly_min25::poly_mul_small<uint64>, 1, "Min_25 s"},
 #endif
-#if HAS_POLY_MUL_MIN25_NTT
+#if HAS_POLY_MUL_MIN25
     {&poly_min25::poly_mul<uint64>, 4, "Min_25 l"},
 #endif
 #if HAS_POLY_MUL_LIBBF
@@ -50,7 +50,7 @@ const char* dataPolicy[3] = {
 
 SL void test_impl(int dp, int size, int n, int64 mod) {
   fprintf(stderr, "%-8s : data = %s, size = %d, n = %d, mod = %lld\n",
-          "ntt test", dataPolicy[dp], size, n, (long long)mod);
+          "poly mul test", dataPolicy[dp], size, n, (long long)mod);
 
   vector<uint64> x, y;
   srand(123456789);
@@ -88,7 +88,7 @@ SL void test_impl(int dp, int size, int n, int64 mod) {
   }
 }
 
-SL void ntt_test() {
+SL void poly_mul_test() {
   // uint128 target = 2655355665167707426;
   // target = target * 100000000000000000 + 92721528518903091;
   // cerr << mod128_64(target, 100000000003) << endl;
@@ -108,9 +108,9 @@ SL void ntt_test() {
   // 1e35
   test_impl(2, 4, 1000000, 316227766016779);
 }
-PE_REGISTER_TEST(&ntt_test, "ntt_test", SUPER);
+PE_REGISTER_TEST(&poly_mul_test, "poly_mul_test", SUPER);
 
-SL void ntt_performance_test() {
+SL void poly_mul_performance_test() {
   uint64 mods[5] = {100019, 1000003, 1000000007, 100000000003, 316227766016779};
 
   for (int level = 0; level <= 4; ++level) {
@@ -157,6 +157,7 @@ SL void ntt_performance_test() {
   }
 }
 
-PE_REGISTER_TEST(&ntt_performance_test, "ntt_performance_test", SUPER);
+PE_REGISTER_TEST(&poly_mul_performance_test, "poly_mul_performance_test",
+                 SUPER);
 #endif
-}  // namespace ntt_test
+}  // namespace poly_mul_test

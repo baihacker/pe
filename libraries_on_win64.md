@@ -123,8 +123,8 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 
   2. Customized flags:
 
-     * CFLAGS = -O3 -pedantic -fomit-frame-pointer -m64 -mtune=k8-sse3 -march=skylake
-     * CXXFLAGS = -O3 -pedantic -fomit-frame-pointer -m64 -mtune=k8-sse3 -march=skylake
+     * CFLAGS="-O3 -pedantic -fomit-frame-pointer -m64 -mtune=k8-sse3 -march=skylake"
+     * CXXFLAGS="-O3 -pedantic -fomit-frame-pointer -m64 -mtune=k8-sse3 -march=skylake"
 
   3. make
 
@@ -158,8 +158,8 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 
   2. Customized flags:
 
-     * CFLAGS = -m64 -O3 -march=k8-sse3 -mtune=skylake
-     * CXXFLAGS = -O3 -march=k8-sse3 -mtune=skylake
+     * CFLAGS="-m64 -O3 -march=k8-sse3 -mtune=skylake"
+     * CXXFLAGS="-O3 -march=k8-sse3 -mtune=skylake"
 
   3. ./configure --disable-shared --enable-static --prefix=/usr
 
@@ -173,7 +173,7 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 
   2. Customized flags:
 
-     * CFLAGS = -Wall -Wmissing-prototypes -Wc++-compat -Wpointer-arith -O3 -fomit-frame-pointer -m64 -mtune=skylake -march=k8-sse3
+     * CFLAGS="-Wall -Wmissing-prototypes -Wc++-compat -Wpointer-arith -O3 -fomit-frame-pointer -m64 -mtune=skylake -march=k8-sse3"
 
   3. Fix error in makefile
 
@@ -189,8 +189,9 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 
   2. Customized flags:
 
-     * CFLAGS=-ansi -pedantic -Wall -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3
-     * CXXFLAGS=-ansi -pedantic -Wall -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3
+     * CFLAGS="-ansi -pedantic -Wall -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3"
+     * CXXFLAGS="-ansi -pedantic -Wall -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3"
+     * --disable-pthread
 
   3. Fix error in make file
 
@@ -269,8 +270,8 @@ clean:
 
   2. Customized flags
 
-     * CXXFLAGS=-O3 --std=c++14
-     * CXXAUTOFLAGS= -pthread -march=k8-sse3 -mtune=skylake
+     * CXXFLAGS="-O3 --std=c++14"
+     * CXXAUTOFLAGS="-pthread -march=k8-sse3 -mtune=skylake"
 
   3. make
 

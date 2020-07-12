@@ -189,8 +189,8 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 
   2. Customized flags:
 
-     * CFLAGS="-ansi -pedantic -Wall -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3"
-     * CXXFLAGS="-ansi -pedantic -Wall -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3"
+     * CFLAGS="-ansi -pedantic -Wno-long-long -Wno-declaration-after-statement -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3"
+     * CXXFLAGS="-ansi -pedantic -Wno-long-long -Wno-declaration-after-statement -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3"
      * --disable-pthread
 
   3. Fix error in make file

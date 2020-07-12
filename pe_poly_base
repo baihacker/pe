@@ -172,8 +172,8 @@ struct ntt_constant {
 // Make sure the length of result is at least: n + m - 1
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_internal(const T* X, int n, const T* Y, int m, T* result,
-                      int64 mod) {
+    poly_mul_large_internal(const T* X, int n, const T* Y, int m, T* result,
+                            int64 mod) {
   static_assert(std::is_unsigned<T>::value, "T must be unsigned");
 
   const int alignedSize = 1 << pe_lg(2 * (n + m - 1) - 1);
@@ -253,22 +253,22 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 // The length of result is at least n + m - 1.
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul(const T* X, const int n, const T* Y, const int m, T* result,
-             int64 mod) {
+    poly_mul_large(const T* X, const int n, const T* Y, const int m, T* result,
+                   int64 mod) {
   using unsignedT = typename std::make_unsigned<T>::type;
   poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m,
                               (unsignedT*)result, mod,
-                              &poly_mul_internal<unsignedT>);
+                              &poly_mul_large_internal<unsignedT>);
 }
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
-    poly_mul(const vector<T>& X, const vector<T>& Y, int64 mod) {
+    poly_mul_large(const vector<T>& X, const vector<T>& Y, int64 mod) {
   const int n = (int)X.size();
   const int m = (int)Y.size();
 
   vector<T> result(n + m - 1);
-  poly_mul(&X[0], n, &Y[0], m, &result[0], mod);
+  poly_mul_large(&X[0], n, &Y[0], m, &result[0], mod);
 
   return result;
 }
@@ -511,8 +511,8 @@ struct ntt_constant {
 // Make sure the length of result is at least: n + m - 1
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_internal(const T* X, int n, const T* Y, int m, T* result,
-                      int64 mod) {
+    poly_mul_large_internal(const T* X, int n, const T* Y, int m, T* result,
+                            int64 mod) {
   static_assert(std::is_unsigned<T>::value, "T must be unsigned");
 
   const int alignedSize = 1 << pe_lg(2 * (n + m - 1) - 1);
@@ -582,22 +582,22 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 // The length of result is at least n + m - 1.
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul(const T* X, const int n, const T* Y, const int m, T* result,
-             int64 mod) {
+    poly_mul_large(const T* X, const int n, const T* Y, const int m, T* result,
+                   int64 mod) {
   using unsignedT = typename std::make_unsigned<T>::type;
   poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m,
                               (unsignedT*)result, mod,
-                              &poly_mul_internal<unsignedT>);
+                              &poly_mul_large_internal<unsignedT>);
 }
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
-    poly_mul(const vector<T>& X, const vector<T>& Y, int64 mod) {
+    poly_mul_large(const vector<T>& X, const vector<T>& Y, int64 mod) {
   const int n = (int)X.size();
   const int m = (int)Y.size();
 
   vector<T> result(n + m - 1);
-  poly_mul(&X[0], n, &Y[0], m, &result[0], mod);
+  poly_mul_large(&X[0], n, &Y[0], m, &result[0], mod);
 
   return result;
 }
@@ -904,13 +904,13 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   const int isBig = max(n, m) >= 50;
   if (isBig) {
 #if HAS_POLY_MUL_FLINT
-    poly_flint::poly_mul(&X[0], n, &Y[0], m, result, mod);
+    poly_flint::poly_mul_nmod(&X[0], n, &Y[0], m, result, mod);
 #elif HAS_POLY_MUL_MIN25
-    poly_min25::poly_mul(&X[0], n, &Y[0], m, result, mod);
+    poly_min25::poly_mul_large(&X[0], n, &Y[0], m, result, mod);
 #elif HAS_POLY_MUL_NTT32
-    ntt32::poly_mul(&X[0], n, &Y[0], m, result, mod);
+    ntt32::poly_mul_large(&X[0], n, &Y[0], m, result, mod);
 #elif HAS_POLY_MUL_NTT64
-    ntt64::poly_mul(&X[0], n, &Y[0], m, result, mod);
+    ntt64::poly_mul_large(&X[0], n, &Y[0], m, result, mod);
 #else
 
 #if defined(COMPILER_GNU)
@@ -1944,15 +1944,17 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 
 /**
  * Name convention:
- *   [implementation namespace ::]poly_mul[implementation suffix][suffix]
+ *   [implementation namespace ::]poly_mul[implementation suffix][scalability
+ * suffix]
  *
  *   implementation namespace is one of:
- *     ntt32 (32 bit mod), ntt64 (64 bit mod), poly_min25, poly_libbf,
- * poly_flint
+ *     ntt32 (32 bit internal mod)
+ *     ntt64 (64 bit internal mod)
+ *     poly_min25
+ *     poly_libbf
+ *     poly_flint
  *
- *   suffix is:
- *      _small at least support (p-1)^2*n < 1e18
- *      <empty string> at least support (p-1)^2*n < 1e28
+ *   scalability uffix: see the contstraints
  *
  *   implementation suffix:
  *     dc: divide and conquer
@@ -1969,35 +1971,46 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
  * min25 small : requires int128
  * min25 large : requires int128
  * libbf       : enable libbf && LIMB_BITS >= 64
- * flint p     : enable flint && GMP_LIMB_BITS >= 64
- * flint n     : enable flint && GMP_LIMB_BITS >= 64
+ * flint prime : enable flint && GMP_LIMB_BITS >= 64
+ * flint nmod  : enable flint && GMP_LIMB_BITS >= 64
+ * ntl small   : enable ntl
+ * ntl large   : enable ntl
  *
- * Limitations
+ * Constraints
+ * mod < 2^62 in all implementation.
+ *
  * ntt32 small
- * (p-1)^2*n < 4593671624212873217                              4.5e18
+ * (mod-1)^2*n < 4593671624212873217                              4.5e18
  *
  * ntt32 large
- * (p-1)^2*n < 14797252050511790781119856641                    1.4e28
+ * (mod-1)^2*n < 14797252050511790781119856641                    1.4e28
  *
  * ntt64 small
- * (p-1)^2*n < 1945555039024054273                              1.9e18
+ * (mod-1)^2*n < 1945555039024054273                              1.9e18
  *
  * ntt64 large
- * (p-1)^2*n < 350480037951100867051507526341230593             3.5e35
+ * (mod-1)^2*n < 350480037951100867051507526341230593             3.5e35
  *
- * min25 ntt small
- * (p-1)^2*n < 1128298388379402241                              1.1e18
+ * min25 small
+ * (mod-1)^2*n < 1128298388379402241                              1.1e18
  *
- * min25 ntt large
- * (p-1)^2*n < 1265198875113262859862934516672757761            1.2e36
+ * min25 large
+ * (mod-1)^2*n < 1265198875113262859862934516672757761            1.2e36
  *
- * flint
- * (p-1)^2*n < oo                                               3.4e38
+ * flint prime
+ * mod is a word size prime
+ *
+ * flint nmod
+ * mod is word size
  *
  * libbf
- * (p-1)^2*n < 340282366920938463463374607431768211456 (2^128)  3.4e38
+ * (mod-1)^2*n < 340282366920938463463374607431768211456 (2^128)  3.4e38
  *
- * ntl
- * (p-1)^2*n < oo                                               3.4e38
+ * ntl small mod
+ * mod < 2^30 if sizeof(long) = 4
+ * mod < 2^50 if sizeof(long) = 8
+ *
+ * ntl large mod
+ * no constraints
  */
 #endif

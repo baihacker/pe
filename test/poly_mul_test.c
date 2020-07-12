@@ -11,33 +11,34 @@ struct MulImpl {
 };
 MulImpl mulImpl[] = {
 #if HAS_POLY_MUL_FLINT
-    {&poly_flint::poly_mul<uint64>, 4, "flint n"},
+    {&poly_flint::poly_mul_nmod<uint64>, 4, "flint n"},
     {&poly_flint::poly_mul_prime<uint64>, 4, "flint p"},
 #else
-    {&ntt64::poly_mul<uint64>, 4, "ntt64 l"},
+    {&ntt64::poly_mul_large<uint64>, 4, "ntt64 l"},
 #endif
 #if HAS_POLY_MUL_NTT32_SMALL
     {&ntt32::poly_mul_small<uint64>, 1, "ntt32 s"},
 #endif
 #if HAS_POLY_MUL_NTT32
-    {&ntt32::poly_mul<uint64>, 3, "ntt32 l"},
+    {&ntt32::poly_mul_large<uint64>, 3, "ntt32 l"},
 #endif
 #if HAS_POLY_MUL_NTT64_SMALL
     {&ntt64::poly_mul_small<uint64>, 1, "ntt64 s"},
 #endif
 #if HAS_POLY_MUL_FLINT && HAS_POLY_MUL_NTT64
-    {&ntt64::poly_mul<uint64>, 4, "ntt64 l"},
+    {&ntt64::poly_mul_large<uint64>, 4, "ntt64 l"},
 #endif
 #if HAS_POLY_MUL_MIN25_SMALL
     {&poly_min25::poly_mul_small<uint64>, 1, "Min_25 s"},
 #endif
 #if HAS_POLY_MUL_MIN25
-    {&poly_min25::poly_mul<uint64>, 4, "Min_25 l"},
+    {&poly_min25::poly_mul_large<uint64>, 4, "Min_25 l"},
 #endif
 #if HAS_POLY_MUL_LIBBF
     {&poly_libbf::poly_mul<uint64>, 4, "libbf"},
 #endif
 #if HAS_POLY_MUL_NTL
+    {&poly_ntl::poly_mul_large_mod<uint64>, 4, "ntl lm"},
     {&poly_ntl::poly_mul<uint64>, 4, "ntl"},
 #endif
     //    {&poly_mul<uint64>, 4, "default"},
@@ -109,7 +110,7 @@ SL void poly_mul_test() {
   // 1e35
   test_impl(2, 4, 1000000, 316227766016779);
 }
-PE_REGISTER_TEST(&poly_mul_test, "poly_mul_test", SUPER);
+PE_REGISTER_TEST(&poly_mul_test, "poly_mul_test", SPECIFIED);
 
 SL void poly_mul_performance_test() {
   uint64 mods[5] = {100019, 1000003, 1000000007, 100000000003, 316227766016779};
@@ -159,6 +160,6 @@ SL void poly_mul_performance_test() {
 }
 
 PE_REGISTER_TEST(&poly_mul_performance_test, "poly_mul_performance_test",
-                 SUPER);
+                 SPECIFIED);
 #endif
 }  // namespace poly_mul_test

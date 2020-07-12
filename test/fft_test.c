@@ -14,7 +14,7 @@ SL void random_test() {
           y.push_back((uint64)crand63() % mod);
 
     int t0 = clock();
-    auto ans0 = poly_flint::poly_mul(x, y, mod);
+    auto ans0 = poly_flint::poly_mul_nmod(x, y, mod);
     int t1 = clock();
     auto ans1 = fft::poly_mul_fft(x, y, mod);
     int t2 = clock();
@@ -36,7 +36,7 @@ SL void random_test() {
           y.push_back((uint64)crand63() % mod);
 
     int t0 = clock();
-    auto ans0 = poly_flint::poly_mul(x, y, mod);
+    auto ans0 = poly_flint::poly_mul_nmod(x, y, mod);
     int t1 = clock();
     auto ans1 = fft::poly_mul_fft(x, y, mod);
     int t2 = clock();
@@ -54,7 +54,7 @@ SL void random_test() {
           y.push_back((uint64)crand63() % mod);
 
     int t0 = clock();
-    auto ans0 = poly_flint::poly_mul(x, y, mod);
+    auto ans0 = poly_flint::poly_mul_nmod(x, y, mod);
     int t1 = clock();
     auto ans1 = fft::poly_mul_fft(x, y, mod);
     int t2 = clock();
@@ -73,7 +73,7 @@ SL void limit_test() {
     for (int i = 0; i < 2048; ++i) x.push_back(mod - 1), y.push_back(mod - 1);
 
     int t0 = clock();
-    auto ans0 = poly_flint::poly_mul(x, y, mod);
+    auto ans0 = poly_flint::poly_mul_nmod(x, y, mod);
     int t1 = clock();
     auto ans1 = fft::poly_mul_fft(x, y, mod);
     int t2 = clock();
@@ -93,7 +93,7 @@ SL void limit_test() {
     for (int i = 0; i < 339750; ++i) x.push_back(mod - 1), y.push_back(mod - 1);
 
     int t0 = clock();
-    auto ans0 = poly_flint::poly_mul(x, y, mod);
+    auto ans0 = poly_flint::poly_mul_nmod(x, y, mod);
     int t1 = clock();
     auto ans1 = fft::poly_mul_fft(x, y, mod);
     int t2 = clock();
@@ -108,7 +108,7 @@ SL void limit_test() {
     for (int i = 0; i < 44064; ++i) x.push_back(mod - 1), y.push_back(mod - 1);
 
     int t0 = clock();
-    auto ans0 = poly_flint::poly_mul(x, y, mod);
+    auto ans0 = poly_flint::poly_mul_nmod(x, y, mod);
     int t1 = clock();
     auto ans1 = fft::poly_mul_fft(x, y, mod);
     int t2 = clock();

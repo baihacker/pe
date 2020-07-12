@@ -66,30 +66,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_prime(const T* X, const int n, const T* Y, const int m, T* result,
-                   int64 mod) {
-  using unsignedT = typename std::make_unsigned<T>::type;
-  poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m,
-                              (unsignedT*)result, mod,
-                              &poly_mul_prime_internal<unsignedT>);
-}
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
-    poly_mul_prime(const vector<T>& X, const vector<T>& Y, int64 mod) {
-  const int n = (int)X.size();
-  const int m = (int)Y.size();
-
-  vector<T> result(n + m - 1);
-  poly_mul_prime(&X[0], n, &Y[0], m, &result[0], mod);
-
-  return result;
-}
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_internal(const T* X, const int n, const T* Y, const int m,
-                      T* result, int64 mod) {
+    poly_mul_nmod_internal(const T* X, const int n, const T* Y, const int m,
+                           T* result, int64 mod) {
   nmod_poly_t a, b;
   nmod_poly_init2(a, mod, n);
   nmod_poly_init2(b, mod, m);
@@ -117,27 +95,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   nmod_poly_clear(b);
 }
 
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul(const T* X, const int n, const T* Y, const int m, T* result,
-             int64 mod) {
-  using unsignedT = typename std::make_unsigned<T>::type;
-  poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m,
-                              (unsignedT*)result, mod,
-                              &poly_mul_internal<unsignedT>);
-}
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
-    poly_mul(const vector<T>& X, const vector<T>& Y, int64 mod) {
-  const int n = (int)X.size();
-  const int m = (int)Y.size();
-
-  vector<T> result(n + m - 1);
-  poly_mul(&X[0], n, &Y[0], m, &result[0], mod);
-
-  return result;
-}
+POLY_MUL_IMPL(poly_mul_prime, poly_flint::poly_mul_prime_internal)
+POLY_MUL_IMPL(poly_mul_nmod, poly_flint::poly_mul_nmod_internal)
 
 // size result >= n
 #if 0

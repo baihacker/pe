@@ -182,6 +182,31 @@ using m64_2 = UnsafeMod<1128298388379402241, 23>;  // <= 1.14e18 (sub.D = 3)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_mul_small_internal(const T* f, int n, const T* g, int m, T* result,
+                            int64 mod) {
+  const int alignedSize = 1 << pe_lg(2 * (n + m - 1) - 1);
+
+  const int ntt_size = alignedSize;
+
+  vector<m64_2> f1(ntt_size), g1(ntt_size);
+
+  for (int i = 0; i < n; ++i) f1[i] = f[i];
+  for (int i = 0; i < m; ++i) g1[i] = g[i];
+  convolve(f1.data(), n, g1.data(), m, false);
+
+  const int retSize = n + m - 1;
+
+#if ENABLE_OPENMP
+#pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
+#endif
+  for (int i = 0; i < retSize; ++i) {
+    const uint64 a = f1[i].get();
+    result[i] = mod > 0 ? a % mod : a;
+  }
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     poly_mul_large_internal(const T* f, int n, const T* g, int m, T* result,
                             int64 mod) {
   const int alignedSize = 1 << pe_lg(2 * (n + m - 1) - 1);
@@ -229,74 +254,9 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   }
 }
 
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_large(const T* X, const int n, const T* Y, const int m, T* result,
-                   int64 mod) {
-  using unsignedT = typename std::make_unsigned<T>::type;
-  poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m,
-                              (unsignedT*)result, mod,
-                              &poly_mul_large_internal<unsignedT>);
-}
+POLY_MUL_IMPL(poly_mul_small, poly_ntl::poly_mul_small_mod_internal)
+POLY_MUL_IMPL(poly_mul_large, poly_min25::poly_mul_large_internal)
 
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
-    poly_mul_large(const vector<T>& X, const vector<T>& Y, int64 mod) {
-  const int n = (int)X.size() - 1;
-  const int m = (int)Y.size() - 1;
-
-  vector<T> result(n + m + 1);
-  poly_mul_large(&X[0], n + 1, &Y[0], m + 1, &result[0], mod);
-
-  return result;
-}
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_small_internal(const T* f, int n, const T* g, int m, T* result,
-                            int64 mod) {
-  const int alignedSize = 1 << pe_lg(2 * (n + m - 1) - 1);
-
-  const int ntt_size = alignedSize;
-
-  vector<m64_2> f1(ntt_size), g1(ntt_size);
-
-  for (int i = 0; i < n; ++i) f1[i] = f[i];
-  for (int i = 0; i < m; ++i) g1[i] = g[i];
-  convolve(f1.data(), n, g1.data(), m, false);
-
-  const int retSize = n + m - 1;
-
-#if ENABLE_OPENMP
-#pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
-#endif
-  for (int i = 0; i < retSize; ++i) {
-    const uint64 a = f1[i].get();
-    result[i] = mod > 0 ? a % mod : a;
-  }
-}
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_small(const T* X, const int n, const T* Y, const int m, T* result,
-                   int64 mod) {
-  using unsignedT = typename std::make_unsigned<T>::type;
-  poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m,
-                              (unsignedT*)result, mod,
-                              &poly_mul_small_internal<unsignedT>);
-}
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
-    poly_mul_small(const vector<T>& X, const vector<T>& Y, int64 mod) {
-  const int n = (int)X.size();
-  const int m = (int)Y.size();
-
-  vector<T> result(n + m - 1);
-  poly_mul_small(&X[0], n, &Y[0], m, &result[0], mod);
-
-  return result;
-}
 }  // namespace poly_min25
 #else
 #define HAS_POLY_MIN25 0

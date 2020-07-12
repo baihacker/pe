@@ -31,7 +31,7 @@ SL void poly_mul_wrapper(const T* X, int n, const T* Y, int m, T* result,
 
 template <typename T>
 SL void adjust_poly_leading_zero(vector<T>& v) {
-  int now = (int)v.size() - 1;
+  int now = static_cast<int>(v.size()) - 1;
   while (now > 0 && v[now] == 0) --now;
   v.resize(now + 1);
 }
@@ -40,13 +40,16 @@ SL void adjust_poly_leading_zero(vector<T>& v) {
   template <typename T>                                                      \
   SL void poly_mul(const T* X, int n, const T* Y, int m, T* result,          \
                    int64 mod) {                                              \
-    poly_mul_wrapper(X, n, Y, m, result, mod, &poly_mul_internal<T>);        \
+    using unsignedT = typename std::make_unsigned<T>::type;                  \
+    poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, \
+                                m, (unsignedT*)result, mod,                  \
+                                &poly_mul_internal<unsignedT>);              \
   }                                                                          \
                                                                              \
   template <typename T>                                                      \
   SL vector<T> poly_mul(const vector<T>& X, const vector<T>& Y, int64 mod) { \
-    const int n = (int)X.size();                                             \
-    const int m = (int)Y.size();                                             \
+    const int n = static_cast<int>(X.size());                                \
+    const int m = static_cast<int>(Y.size());                                \
     const int retSize = n + m - 1;                                           \
     vector<T> result(retSize);                                               \
     poly_mul(&X[0], n, &Y[0], m, &result[0], mod);                           \
@@ -65,7 +68,7 @@ SL void adjust_poly_leading_zero(vector<T>& v) {
   SL REQUIRES((is_native_integer<T>::value)) RETURN(void)                      \
       poly_div_and_mod(const T* X, const int n, const T* Y, const int m, T* q, \
                        T* r, int64 mod) {                                      \
-    typedef typename std::make_unsigned<T>::type unsignedT;                    \
+    using unsignedT = typename std::make_unsigned<T>::type;                    \
     poly_div_and_mod_internal<unsignedT>((const unsignedT*)X, n,               \
                                          (const unsignedT*)Y, m,               \
                                          (unsignedT*)q, (unsignedT*)r, mod);   \
@@ -75,8 +78,8 @@ SL void adjust_poly_leading_zero(vector<T>& v) {
   SL REQUIRES((is_native_integer<T>::value))                                   \
       RETURN(tuple<vector<T>, vector<T>>) poly_div_and_mod(                    \
           const vector<T>& X, const vector<T>& Y, int64 mod) {                 \
-    const int n = (int)X.size() - 1;                                           \
-    const int m = (int)Y.size() - 1;                                           \
+    const int n = static_cast<int>(X.size()) - 1;                              \
+    const int m = static_cast<int>(Y.size()) - 1;                              \
                                                                                \
     vector<T> q(max(n - m + 1, 1));                                            \
     vector<T> r(m + 1);                                                        \

@@ -120,15 +120,12 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 * gmp
 
   1. ./configure --disable-shared --enable-static --prefix=/usr --enable-cxx --host=x86_64-w64-mingw32
-
-  2. Customized flags:
-
      * CFLAGS="-O3 -pedantic -fomit-frame-pointer -m64 -mtune=k8-sse3 -march=skylake"
      * CXXFLAGS="-O3 -pedantic -fomit-frame-pointer -m64 -mtune=k8-sse3 -march=skylake"
 
-  3. make
+  2. make
 
-  4. make install
+  3. make install
 
 * The latest msys (msys2-x86_64-20200602) is not compatible with gmp6.2.0, the corresponding erro is *
 ```
@@ -156,53 +153,49 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 
   1. Make sure yasm.exe is in the PATH
 
-  2. Customized flags:
-
+  2. ./configure --disable-shared --enable-static --prefix=/usr
      * CFLAGS="-m64 -O3 -march=k8-sse3 -mtune=skylake"
      * CXXFLAGS="-O3 -march=k8-sse3 -mtune=skylake"
 
-  3. ./configure --disable-shared --enable-static --prefix=/usr
+  3. make
 
-  4. make
-
-  5. make install
+  4. make install
 
 * mpfr
 
   1. ./configure --with-gmp=/usr --enable-static --disable-shared --prefix=/usr
-
-  2. Customized flags:
-
      * CFLAGS="-Wall -Wmissing-prototypes -Wc++-compat -Wpointer-arith -O3 -fomit-frame-pointer -m64 -mtune=skylake -march=k8-sse3"
 
-  3. Fix error in makefile
-
+  2. Fix error in makefile
      * "rm: unknown option -- c": caused by argument passing when sh.exe is executing libtool. Please replace -DLT_OBJDIR=\".libs/\" in variable DEFS by -DLT_OBJDIR=.libs Meanwhile, -DMPFR_PRINTF_MAXLM=\"ll\" is replaced by -DMPFR_PRINTF_MAXLM=ll (ll may be other value, like j)
 
-  4. make
+  3. make
 
-  5. make install
+  4. make install
 
 * flint
 
   1. ./configure --disable-shared --enable-static --prefix=/usr --with-gmp=/usr --with-mpfr=/usr
-
-  2. Customized flags:
-
      * CFLAGS="-ansi -pedantic -Wno-long-long -Wno-declaration-after-statement -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3"
      * CXXFLAGS="-ansi -pedantic -Wno-long-long -Wno-declaration-after-statement -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3"
      * --disable-pthread
 
-  3. Fix error in make file
+  2. Build object files
+     * make libflint.a
+     * If any failure
+        * change BUILD_DIRS in makefileremove successful built module. if BUILD_DIRS=1 2 3 4 5 and 4 5 are not built, the new value is BUILD_DIRS=4 5 (my guess is that the build environment can not process too many modules).
+	* remove libflint.a if it exists
+	* repeat step 2 again.
+  3. Recover BUILD_DIRS which is modified in step 2.
+  
+  4. Remove libflint.a if it is generated.
+  
+  5. Remove object building commands
+     * target = libflint.a
+     * command = $(AT)$(foreach dir, $(BUILD_DIRS), mkdir -p build/$(dir); BUILD_DIR=../build/$(dir); export BUILD_DIR; MOD_DIR=$(dir); export MOD_DIR; $(MAKE) -f ../Makefile.subdirs -C $(dir) static || exit $$?;)
 
-     * Replace BUILD_DIR=../build/$(dir); by BUILD_DIR=$(CURDIR)/build/$(dir); in the build command of target libflint.a.
-
-  4. make
-
-  5. The previous make may be failed: some object file can not be found because the corresponding module is not built. The corresponding fold has no object file. Please modify BUILD_DIRS to build **those missing module** only (if the dir list is 1 2 3 4 5 and folder 3 has no object files you can keep 3 4 5), and use make -B to build these modules.
-
-  6. Revert the change in makefile in the previous step and try to make -B again. If the error specified in the previous step occurs again, use repeat the fix step.
-
+  6. Execute make libflint.a again to generate libflint.a
+  
   7. make install
 
 * libbf. Use the following makefile which will generate libbf.avx2.a and libbf.generic.a, please choose one and rename it to libbf.a

@@ -31,7 +31,7 @@ SL void poly_mul_wrapper(const T* X, int64 n, const T* Y, int64 m, T* result,
 
 template <typename T>
 SL void adjust_poly_leading_zero(vector<T>& v) {
-  int now = static_cast<ssize>(v.size()) - 1;
+  int64 now = static_cast<ssize>(v.size()) - 1;
   while (now > 0 && v[now] == 0) --now;
   v.resize(now + 1);
 }
@@ -90,22 +90,22 @@ SL void adjust_poly_leading_zero(vector<T>& v) {
     return make_tuple(std::move(q), std::move(r));                           \
   }
 
-#define POLY_DIV_IMPL(poly_div, poly_div_and_mod)                            \
-  template <typename T>                                                      \
-  SL REQUIRES((is_native_integer<T>::value)) RETURN(void) poly_div(          \
-      const T* X, const int n, const T* Y, const int64 m, T* q, int64 mod) { \
-    poly_div_and_mod(X, n, Y, m, q, (T*)NULL, mod);                          \
-  }                                                                          \
-                                                                             \
-  template <typename T>                                                      \
-  SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)               \
-      poly_div(const vector<T>& X, const vector<T>& Y, int64 mod) {          \
-    const int64 n = static_cast<ssize>(X.size());                            \
-    const int64 m = static_cast<ssize>(Y.size());                            \
-                                                                             \
-    vector<T> q(max<int64>(n - m + 1, 1LL));                                 \
-    poly_div(&X[0], n, &Y[0], m, &q[0], mod);                                \
-    return std::move(q);                                                     \
+#define POLY_DIV_IMPL(poly_div, poly_div_and_mod)                              \
+  template <typename T>                                                        \
+  SL REQUIRES((is_native_integer<T>::value)) RETURN(void) poly_div(            \
+      const T* X, const int64 n, const T* Y, const int64 m, T* q, int64 mod) { \
+    poly_div_and_mod(X, n, Y, m, q, (T*)NULL, mod);                            \
+  }                                                                            \
+                                                                               \
+  template <typename T>                                                        \
+  SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)                 \
+      poly_div(const vector<T>& X, const vector<T>& Y, int64 mod) {            \
+    const int64 n = static_cast<ssize>(X.size());                              \
+    const int64 m = static_cast<ssize>(Y.size());                              \
+                                                                               \
+    vector<T> q(max<int64>(n - m + 1, 1LL));                                   \
+    poly_div(&X[0], n, &Y[0], m, &q[0], mod);                                  \
+    return std::move(q);                                                       \
   }
 
 #define POLY_MOD_IMPL(poly_mod, poly_div_and_mod)                              \

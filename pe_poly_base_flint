@@ -14,21 +14,21 @@
 namespace poly_flint {
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    copy_nmod_poly(nmod_poly_t src, T* dest, int destSize) {
-  const int size = static_cast<int>(src[0].length);
-  for (int i = 0; i < size; ++i) {
+    copy_nmod_poly(nmod_poly_t src, T* dest, int64 destSize) {
+  const int64 size = static_cast<int64>(src[0].length);
+  for (int64 i = 0; i < size; ++i) {
     auto v = src[0].coeffs[i];
     dest[i] = v;
   }
-  for (int i = size; i < destSize; ++i) {
+  for (int64 i = size; i < destSize; ++i) {
     dest[i] = 0;
   }
 }
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_prime_internal(const T* X, const int n, const T* Y, const int m,
-                            T* result, int64 mod) {
+    poly_mul_prime_internal(const T* X, const int64 n, const T* Y,
+                            const int64 m, T* result, int64 mod) {
   fmpz_t xmod;
   fmpz_init_set_ui(xmod, mod);
 
@@ -41,19 +41,19 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
   fmpz_t c;
   fmpz_init(c);
-  for (int i = 0; i < n; ++i) {
+  for (int64 i = 0; i < n; ++i) {
     fmpz_set_si(c, X[i]);
     fq_nmod_poly_set_coeff_fmpz(a, i, c, ctx);
   }
-  for (int i = 0; i < m; ++i) {
+  for (int64 i = 0; i < m; ++i) {
     fmpz_set_si(c, Y[i]);
     fq_nmod_poly_set_coeff_fmpz(b, i, c, ctx);
   }
   fq_nmod_poly_mul(a, a, b, ctx);
 
-  const int size = static_cast<int>(a[0].length);
+  const int64 size = static_cast<int64>(a[0].length);
 
-  for (int i = 0; i < size; ++i) {
+  for (int64 i = 0; i < size; ++i) {
     auto v = nmod_poly_get_coeff_ui(a[0].coeffs + i, 0);
     result[i] = v;
   }
@@ -66,29 +66,29 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_nmod_internal(const T* X, const int n, const T* Y, const int m,
+    poly_mul_nmod_internal(const T* X, const int64 n, const T* Y, const int64 m,
                            T* result, int64 mod) {
   nmod_poly_t a, b;
   nmod_poly_init2(a, mod, n);
   nmod_poly_init2(b, mod, m);
 
-  for (int i = 0; i < n; ++i) {
+  for (int64 i = 0; i < n; ++i) {
     nmod_poly_set_coeff_ui(a, i, X[i]);
   }
-  for (int i = 0; i < m; ++i) {
+  for (int64 i = 0; i < m; ++i) {
     nmod_poly_set_coeff_ui(b, i, Y[i]);
   }
   nmod_poly_mul(a, a, b);
 
-  const int size = static_cast<int>(a[0].length);
+  const int64 size = static_cast<int64>(a[0].length);
 
-  for (int i = 0; i < size; ++i) {
+  for (int64 i = 0; i < size; ++i) {
     auto v = a[0].coeffs[i];
     result[i] = v;
   }
 
-  const int allSize = n + m - 1;
-  for (int i = size; i < allSize; ++i) {
+  const int64 allSize = n + m - 1;
+  for (int64 i = size; i < allSize; ++i) {
     result[i] = 0;
   }
   nmod_poly_clear(a);
@@ -103,14 +103,14 @@ POLY_MUL_IMPL(poly_mul_nmod, poly_flint::poly_mul_nmod_internal)
 // This implementation is for general mod polynomial
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_inv_internal(const T* x, int m, int n, T* result, int64 mod) {
+    poly_inv_internal(const T* x, int64 m, int64 n, T* result, int64 mod) {
   if (n == 1) {
     result[0] = inv_of(x[0], mod);
     return;
   }
   nmod_poly_t u, v, w;
   nmod_poly_init2(u, mod, m);
-  for (int i = 0; i < m; ++i) {
+  for (int64 i = 0; i < m; ++i) {
     nmod_poly_set_coeff_ui(u, i, x[i]);
   }
 
@@ -120,7 +120,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   nmod_poly_init2(v, mod, n);
 
   nmod_poly_invmod(v, u, w);
-  for (int i = 0; i < n; ++i) {
+  for (int64 i = 0; i < n; ++i) {
     result[i] = nmod_poly_get_coeff_ui(v, i);
   }
 
@@ -131,21 +131,21 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 #else
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_inv_internal(const T* x, int m, int n, T* result, int64 mod) {
+    poly_inv_internal(const T* x, int64 m, int64 n, T* result, int64 mod) {
   if (n == 1) {
     result[0] = inv_of(x[0], mod);
     return;
   }
   nmod_poly_t u, v;
   nmod_poly_init2(u, mod, m);
-  for (int i = 0; i < m; ++i) {
+  for (int64 i = 0; i < m; ++i) {
     nmod_poly_set_coeff_ui(u, i, x[i]);
   }
 
   nmod_poly_init2(v, mod, n + 1);
 
   nmod_poly_inv_series(v, u, n);
-  for (int i = 0; i < n; ++i) {
+  for (int64 i = 0; i < n; ++i) {
     result[i] = nmod_poly_get_coeff_ui(v, i);
   }
 
@@ -157,7 +157,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 // size result >= n
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_inv(const T* x, int m, int n, T* result, int64 mod) {
+    poly_inv(const T* x, int64 m, int64 n, T* result, int64 mod) {
   using unsignedT = typename std::make_unsigned<T>::type;
   poly_inv_internal<unsignedT>((const unsignedT*)x, m, n, (unsignedT*)result,
                                mod);
@@ -165,9 +165,9 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
-    poly_inv(const vector<T>& x, int n, int64 mod) {
+    poly_inv(const vector<T>& x, int64 n, int64 mod) {
   // It is assumed that mod is a prime
-  const int m = static_cast<int>(x.size());
+  const int64 m = static_cast<ssize>(x.size());
 
   // b
   vector<T> b(n);
@@ -179,8 +179,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_div_and_mod_internal(const T* X, int n, const T* Y, int m, T* q, T* r,
-                              int64 mod) {
+    poly_div_and_mod_internal(const T* X, int64 n, const T* Y, int64 m, T* q,
+                              T* r, int64 mod) {
   static_assert(std::is_unsigned<T>::value, "T must be unsigned");
 
   if (m > n) {
@@ -198,10 +198,10 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   nmod_poly_init2(a, mod, n);
   nmod_poly_init2(b, mod, m);
 
-  for (int i = 0; i < n; ++i) {
+  for (int64 i = 0; i < n; ++i) {
     nmod_poly_set_coeff_ui(a, i, X[i]);
   }
-  for (int i = 0; i < m; ++i) {
+  for (int64 i = 0; i < m; ++i) {
     nmod_poly_set_coeff_ui(b, i, Y[i]);
   }
 
@@ -252,17 +252,17 @@ using nmod_poly_series_t = void (*)(nmod_poly_struct*, const nmod_poly_struct*,
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_series_internal(const T* x, int m, int n, T* result, int64 mod,
+    poly_series_internal(const T* x, int64 m, int64 n, T* result, int64 mod,
                          nmod_poly_series_t trans) {
   nmod_poly_t u, v;
   nmod_poly_init2(u, mod, m);
-  for (int i = 0; i < m; ++i) {
+  for (int64 i = 0; i < m; ++i) {
     nmod_poly_set_coeff_ui(u, i, x[i]);
   }
 
   nmod_poly_init2(v, mod, n);
   trans(v, u, n);
-  for (int i = 0; i < n; ++i) {
+  for (int64 i = 0; i < n; ++i) {
     result[i] = nmod_poly_get_coeff_ui(v, i);
   }
 
@@ -273,7 +273,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 // size result == n
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_series(const T* x, int m, int n, T* result, int64 mod,
+    poly_series(const T* x, int64 m, int64 n, T* result, int64 mod,
                 nmod_poly_series_t trans) {
   using unsignedT = typename std::make_unsigned<T>::type;
   poly_series_internal<unsignedT>((const unsignedT*)x, m, n, (unsignedT*)result,
@@ -282,10 +282,10 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
-    poly_series(const vector<T>& x, int n, int64 mod,
+    poly_series(const vector<T>& x, int64 n, int64 mod,
                 nmod_poly_series_t trans) {
   // It is assumed that mod is a prime
-  const int m = static_cast<int>(x.size());
+  const int64 m = static_cast<ssize>(x.size());
 
   // b
   vector<T> b(n);
@@ -298,14 +298,14 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 // size result == n
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_log_internal(const T* x, int m, int n, T* result, int64 mod) {
+    poly_log_internal(const T* x, int64 m, int64 n, T* result, int64 mod) {
   poly_series(x, m, n, result, mod, &nmod_poly_log_series);
 }
 
 // size result == n
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_log(const T* x, int m, int n, T* result, int64 mod) {
+    poly_log(const T* x, int64 m, int64 n, T* result, int64 mod) {
   using unsignedT = typename std::make_unsigned<T>::type;
   poly_log_internal<unsignedT>((const unsignedT*)x, m, n, (unsignedT*)result,
                                mod);
@@ -313,9 +313,9 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
-    poly_log(const vector<T>& x, int n, int64 mod) {
+    poly_log(const vector<T>& x, int64 n, int64 mod) {
   // It is assumed that mod is a prime
-  const int m = static_cast<int>(x.size());
+  const int64 m = static_cast<ssize>(x.size());
 
   // b
   vector<T> b(n);
@@ -328,7 +328,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 // size result == n
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_exp_internal(const T* x, int m, int n, T* result, int64 mod) {
+    poly_exp_internal(const T* x, int64 m, int64 n, T* result, int64 mod) {
   PE_ASSERT(x[0] == 0);
   poly_series(x, m, n, result, mod, &nmod_poly_exp_series);
 }
@@ -336,7 +336,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 // size result == n
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_exp(const T* x, int m, int n, T* result, int64 mod) {
+    poly_exp(const T* x, int64 m, int64 n, T* result, int64 mod) {
   using unsignedT = typename std::make_unsigned<T>::type;
   poly_exp_internal<unsignedT>((const unsignedT*)x, m, n, (unsignedT*)result,
                                mod);
@@ -344,9 +344,9 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
-    poly_exp(const vector<T>& x, int n, int64 mod) {
+    poly_exp(const vector<T>& x, int64 n, int64 mod) {
   // It is assumed that mod is a prime
-  const int m = static_cast<int>(x.size());
+  const int64 m = static_cast<ssize>(x.size());
 
   // b
   vector<T> b(n);
@@ -358,11 +358,11 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_multipoint_evaluate_internal(const T* X, int n, const T* V,
-                                      const int m, T* result, int64 mod) {
+    poly_multipoint_evaluate_internal(const T* X, int64 n, const T* V,
+                                      const int64 m, T* result, int64 mod) {
   nmod_poly_t u;
   nmod_poly_init2(u, mod, n);
-  for (int i = 0; i < n; ++i) {
+  for (int64 i = 0; i < n; ++i) {
     nmod_poly_set_coeff_ui(u, i, X[i]);
   }
 
@@ -370,17 +370,17 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     nmod_poly_evaluate_nmod_vec_fast(result, u, V, m);
   } else {
     vector<mp_limb_t> x(m), y(m);
-    for (int i = 0; i < m; ++i) x[i] = V[i];
+    for (int64 i = 0; i < m; ++i) x[i] = V[i];
     nmod_poly_evaluate_nmod_vec_fast(&y[0], u, &x[0], m);
-    for (int i = 0; i < m; ++i) result[i] = y[i];
+    for (int64 i = 0; i < m; ++i) result[i] = y[i];
   }
   nmod_poly_clear(u);
 }
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_multipoint_evaluate(const T* X, const int n, const T* V, const int m,
-                             T* result, int64 mod) {
+    poly_multipoint_evaluate(const T* X, const int64 n, const T* V,
+                             const int64 m, T* result, int64 mod) {
   using unsignedT = typename std::make_unsigned<T>::type;
   poly_multipoint_evaluate_internal<unsignedT>(
       (const unsignedT*)X, n, (const unsignedT*)V, m, (unsignedT*)result, mod);
@@ -389,7 +389,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 // size(V) = n
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_multipoint_evaluate(const T* X, const int n, const T* V, T* result,
+    poly_multipoint_evaluate(const T* X, const int64 n, const T* V, T* result,
                              int64 mod) {
   using unsignedT = typename std::make_unsigned<T>::type;
   poly_multipoint_evaluate_internal<unsignedT>(
@@ -400,8 +400,8 @@ template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
     poly_multipoint_evaluate(const vector<T>& X, const vector<T>& V,
                              int64 mod) {
-  const int n = static_cast<int>(X.size());
-  const int m = static_cast<int>(V.size());
+  const int64 n = static_cast<ssize>(X.size());
+  const int64 m = static_cast<ssize>(V.size());
   vector<T> result(m);
   poly_multipoint_evaluate(&X[0], n, &V[0], m, &result[0], mod);
   return result;

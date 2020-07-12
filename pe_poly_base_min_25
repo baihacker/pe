@@ -76,28 +76,28 @@ class UnsafeMod {
 };
 
 template <typename mod_t>
-void transform(mod_t* A, int n, const mod_t* roots, const mod_t* iroots) {
-  const int logn = pe_ctz(n), nh = n >> 1, lv = mod_t::level;
+void transform(mod_t* A, int64 n, const mod_t* roots, const mod_t* iroots) {
+  const int logn = pe_ctzll(n), nh = n >> 1, lv = mod_t::level;
   const mod_t one = mod_t(1), imag = roots[lv - 2];
 
   mod_t dw[lv - 1];
   dw[0] = roots[lv - 3];
-  for (int i = 1; i < lv - 2; ++i)
+  for (int64 i = 1; i < lv - 2; ++i)
     dw[i] = dw[i - 1] * iroots[lv - 1 - i] * roots[lv - 3 - i];
   dw[lv - 2] = dw[lv - 3] * iroots[1];
 
   if (logn & 1)
-    for (int i = 0; i < nh; ++i) {
+    for (int64 i = 0; i < nh; ++i) {
       mod_t a = A[i], b = A[i + nh];
       A[i] = a + b;
       A[i + nh] = a - b;
     }
   for (int e = logn & ~1; e >= 2; e -= 2) {
-    const int m = 1 << e, m4 = m >> 2;
+    const int64 m = 1LL << e, m4 = m >> 2;
     mod_t w2 = one;
-    for (int i = 0; i < n; i += m) {
+    for (int64 i = 0; i < n; i += m) {
       const mod_t w1 = w2 * w2, w3 = w1 * w2;
-      for (int j = i; j < i + m4; ++j) {
+      for (int64 j = i; j < i + m4; ++j) {
         mod_t a0 = A[j + m4 * 0] * one, a1 = A[j + m4 * 1] * w2;
         mod_t a2 = A[j + m4 * 2] * w1, a3 = A[j + m4 * 3] * w3;
         mod_t t02p = a0 + a2, t13p = a1 + a3;
@@ -107,28 +107,28 @@ void transform(mod_t* A, int n, const mod_t* roots, const mod_t* iroots) {
         A[j + m4 * 2] = t02m + t13m;
         A[j + m4 * 3] = t02m - t13m;
       }
-      w2 *= dw[pe_ctz(~(i >> e))];
+      w2 *= dw[pe_ctzll(~(i >> e))];
     }
   }
 }
 
 template <typename mod_t>
-void itransform(mod_t* A, int n, const mod_t* roots, const mod_t* iroots) {
-  const int logn = pe_ctz(n), nh = n >> 1, lv = mod_t::level;
+void itransform(mod_t* A, int64 n, const mod_t* roots, const mod_t* iroots) {
+  const int64 logn = pe_ctzll(n), nh = n >> 1, lv = mod_t::level;
   const mod_t one = mod_t(1), imag = iroots[lv - 2];
 
   mod_t dw[lv - 1];
   dw[0] = iroots[lv - 3];
-  for (int i = 1; i < lv - 2; ++i)
+  for (int64 i = 1; i < lv - 2; ++i)
     dw[i] = dw[i - 1] * roots[lv - 1 - i] * iroots[lv - 3 - i];
   dw[lv - 2] = dw[lv - 3] * roots[1];
 
   for (int e = 2; e <= logn; e += 2) {
-    const int m = 1 << e, m4 = m >> 2;
+    const int64 m = 1 << e, m4 = m >> 2;
     mod_t w2 = one;
-    for (int i = 0; i < n; i += m) {
+    for (int64 i = 0; i < n; i += m) {
       const mod_t w1 = w2 * w2, w3 = w1 * w2;
-      for (int j = i; j < i + m4; ++j) {
+      for (int64 j = i; j < i + m4; ++j) {
         mod_t a0 = A[j + m4 * 0], a1 = A[j + m4 * 1];
         mod_t a2 = A[j + m4 * 2], a3 = A[j + m4 * 3];
         mod_t t01p = a0 + a1, t23p = a2 + a3;
@@ -138,11 +138,11 @@ void itransform(mod_t* A, int n, const mod_t* roots, const mod_t* iroots) {
         A[j + m4 * 1] = (t01m + t23m) * w2;
         A[j + m4 * 3] = (t01m - t23m) * w3;
       }
-      w2 *= dw[pe_ctz(~(i >> e))];
+      w2 *= dw[pe_ctzll(~(i >> e))];
     }
   }
   if (logn & 1)
-    for (int i = 0; i < nh; ++i) {
+    for (int64 i = 0; i < nh; ++i) {
       mod_t a = A[i], b = A[i + nh];
       A[i] = a + b;
       A[i + nh] = a - b;
@@ -150,28 +150,29 @@ void itransform(mod_t* A, int n, const mod_t* roots, const mod_t* iroots) {
 }
 
 template <typename mod_t>
-void convolve(mod_t* A, int s1, mod_t* B, int s2, bool cyclic = false) {
-  const int s = cyclic ? max(s1, s2) : s1 + s2 - 1;
-  const int size = 1 << (31 - pe_clz(2 * s - 1));
+void convolve(mod_t* A, int64 s1, mod_t* B, int64 s2, bool cyclic = false) {
+  const int64 s = cyclic ? max(s1, s2) : s1 + s2 - 1;
+  const int64 size = 1LL << (63 - pe_clzll(2 * s - 1));
   assert(size <= (int64(1) << mod_t::level));
 
   mod_t roots[mod_t::level], iroots[mod_t::level];
   roots[0] = mod_t::omega();
-  for (int i = 1; i < mod_t::level; ++i) roots[i] = roots[i - 1] * roots[i - 1];
+  for (int64 i = 1; i < mod_t::level; ++i)
+    roots[i] = roots[i - 1] * roots[i - 1];
   iroots[0] = roots[0].inverse();
-  for (int i = 1; i < mod_t::level; ++i)
+  for (int64 i = 1; i < mod_t::level; ++i)
     iroots[i] = iroots[i - 1] * iroots[i - 1];
 
   fill(A + s1, A + size, 0);
   transform(A, size, roots, iroots);
   const mod_t inv = mod_t(size).inverse();
   if (A == B && s1 == s2) {
-    for (int i = 0; i < size; ++i)
+    for (int64 i = 0; i < size; ++i)
       (A[i] *= A[i]) *= inv;  // not A[i] *= A[i] * inv;
   } else {
     fill(B + s2, B + size, 0);
     transform(B, size, roots, iroots);
-    for (int i = 0; i < size; ++i)
+    for (int64 i = 0; i < size; ++i)
       (A[i] *= B[i]) *= inv;  // not A[i] *= B[i] * inv;
   }
   itransform(A, size, roots, iroots);
@@ -182,24 +183,24 @@ using m64_2 = UnsafeMod<1128298388379402241, 23>;  // <= 1.14e18 (sub.D = 3)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_small_internal(const T* f, int n, const T* g, int m, T* result,
+    poly_mul_small_internal(const T* f, int64 n, const T* g, int64 m, T* result,
                             int64 mod) {
-  const int alignedSize = 1 << pe_lg(2 * (n + m - 1) - 1);
+  const int64 alignedSize = 1LL << pe_lgll(2 * (n + m - 1) - 1);
 
-  const int ntt_size = alignedSize;
+  const int64 ntt_size = alignedSize;
 
   vector<m64_2> f1(ntt_size), g1(ntt_size);
 
-  for (int i = 0; i < n; ++i) f1[i] = f[i];
-  for (int i = 0; i < m; ++i) g1[i] = g[i];
+  for (int64 i = 0; i < n; ++i) f1[i] = f[i];
+  for (int64 i = 0; i < m; ++i) g1[i] = g[i];
   convolve(f1.data(), n, g1.data(), m, false);
 
-  const int retSize = n + m - 1;
+  const int64 retSize = n + m - 1;
 
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
 #endif
-  for (int i = 0; i < retSize; ++i) {
+  for (int64 i = 0; i < retSize; ++i) {
     const uint64 a = f1[i].get();
     result[i] = mod > 0 ? a % mod : a;
   }
@@ -207,11 +208,11 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_large_internal(const T* f, int n, const T* g, int m, T* result,
+    poly_mul_large_internal(const T* f, int64 n, const T* g, int64 m, T* result,
                             int64 mod) {
-  const int alignedSize = 1 << pe_lg(2 * (n + m - 1) - 1);
+  const int64 alignedSize = 1LL << pe_lgll(2 * (n + m - 1) - 1);
 
-  const int ntt_size = alignedSize;
+  const int64 ntt_size = alignedSize;
 
   vector<m64_1> f1(ntt_size), g1(ntt_size);
   vector<m64_2> f2(ntt_size), g2(ntt_size);
@@ -224,28 +225,28 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 #pragma omp section
 #endif
     {
-      for (int i = 0; i < n; ++i) f1[i] = f[i];
-      for (int i = 0; i < m; ++i) g1[i] = g[i];
+      for (int64 i = 0; i < n; ++i) f1[i] = f[i];
+      for (int64 i = 0; i < m; ++i) g1[i] = g[i];
       convolve(f1.data(), n, g1.data(), m, false);
     }
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
     {
-      for (int i = 0; i < n; ++i) f2[i] = f[i];
-      for (int i = 0; i < m; ++i) g2[i] = g[i];
+      for (int64 i = 0; i < n; ++i) f2[i] = f[i];
+      for (int64 i = 0; i < m; ++i) g2[i] = g[i];
       convolve(f2.data(), n, g2.data(), m, false);
     }
   }
 
-  const int retSize = n + m - 1;
+  const int64 retSize = n + m - 1;
   const uint64 mod1 = m64_1::modulus(), mod2 = m64_2::modulus();
   const uint64 inv = 162;
 
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
 #endif
-  for (int i = 0; i < retSize; ++i) {
+  for (int64 i = 0; i < retSize; ++i) {
     const uint64 r1 = f1[i].get(), r2 = f2[i].get();
     const uint64 x = r2 >= r1 ? r2 - r1 : mod2 - r1 + r2;
     const uint64 y = static_cast<uint128>(x) * inv % mod2;

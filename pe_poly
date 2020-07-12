@@ -57,31 +57,31 @@ struct NModPoly {
     return *this;
   }
 
-  int deg() const { return static_cast<int>(data.size() - 1); }
-  int size() const { return static_cast<int>(data.size()); }
+  int64 deg() const { return static_cast<ssize>(data.size() - 1); }
+  int64 size() const { return static_cast<ssize>(data.size()); }
 
-  NModPoly& resize(int n) {
-    const int m = static_cast<int>(data.size());
+  NModPoly& resize(int64 n) {
+    const int64 m = static_cast<ssize>(data.size());
     data.resize(n);
-    for (int i = m; i < n; ++i) {
+    for (int64 i = m; i < n; ++i) {
       data[i] = 0;
     }
     return *this;
   }
 
-  NModPoly& redeg(int n) { return resize(n + 1); }
+  NModPoly& redeg(int64 n) { return resize(n + 1); }
 
-  int64& operator[](int idx) {
+  int64& operator[](int64 idx) {
     PE_ASSERT(idx >= 0 && idx < data.size());
     return data[idx];
   }
 
-  int64 operator[](int idx) const {
+  int64 operator[](int64 idx) const {
     PE_ASSERT(idx >= 0 && idx < data.size());
     return data[idx];
   }
 
-  int64 at(int idx) const {
+  int64 at(int64 idx) const {
     return idx >= 0 && idx < data.size() ? data[idx] : 0;
   }
 
@@ -89,20 +89,20 @@ struct NModPoly {
 
   int64 valueAt(int64 v) const {
     int64 ret = 0;
-    for (int i = deg(); i >= 0; --i) {
+    for (int64 i = deg(); i >= 0; --i) {
       ret = ret * v % mod + data[i];
       if (ret >= mod) ret -= mod;
     }
     return ret;
   }
 
-  NModPoly lowerTerms(int n, int adjustLeadingZero = 1) const {
-    const int m = min(n, static_cast<int>(data.size()));
+  NModPoly lowerTerms(int64 n, int adjustLeadingZero = 1) const {
+    const int64 m = min(n, static_cast<ssize>(data.size()));
     return NModPoly(std::vector<int64>(data.begin(), data.begin() + m), mod,
                     adjustLeadingZero);
   }
 
-  NModPoly inv(int n) const;
+  NModPoly inv(int64 n) const;
 };
 
 template <int64 M>
@@ -121,7 +121,7 @@ SL NModPoly poly_mul(const NModPoly& X, const NModPoly& Y) {
   return NModPoly{poly_mul(X.data, Y.data, X.mod), X.mod};
 }
 
-SL NModPoly poly_inv(const NModPoly& x, int n) {
+SL NModPoly poly_inv(const NModPoly& x, int64 n) {
   // It is assumed that mod is a prime
   return NModPoly(poly_inv(x.data, n, x.mod), x.mod);
 }
@@ -165,7 +165,7 @@ PPOLY_MOD_IMPL(poly_mod_normal, poly_div_and_mod_normal)
 PPOLY_DIV_IMPL(poly_div, poly_div_and_mod)
 PPOLY_MOD_IMPL(poly_mod, poly_div_and_mod)
 
-inline NModPoly NModPoly::inv(int n) const {
+inline NModPoly NModPoly::inv(int64 n) const {
   // It is assumed that mod is a prime
   auto t = poly_inv(data, n, mod);
   return NModPoly(std::vector<int64>(static_cast<int64*>(&t[0]),
@@ -173,15 +173,15 @@ inline NModPoly NModPoly::inv(int n) const {
                   mod);
 }
 
-NModPoly operator<<(const NModPoly& p, int m) {
+NModPoly operator<<(const NModPoly& p, int64 m) {
   if (m == 0) {
     return p;
   }
   std::vector<int64> new_data(p.data.size() + m);
-  for (int i = static_cast<int>(p.data.size()) + m - 1; i >= m; --i) {
+  for (int64 i = static_cast<ssize>(p.data.size()) + m - 1; i >= m; --i) {
     new_data[i] = p.data[i - m];
   }
-  for (int i = 0; i < m; ++i) {
+  for (int64 i = 0; i < m; ++i) {
     new_data[i] = 0;
   }
   return NModPoly(std::move(new_data), p.mod);
@@ -239,8 +239,8 @@ SL NModPoly operator%(int64 n, const NModPoly& mod) {
 }
 
 SL ostream& operator<<(ostream& o, const NModPoly& p) {
-  const int n = static_cast<int>(p.data.size());
-  for (int i = 0; i < n - 1; ++i) {
+  const int64 n = static_cast<ssize>(p.data.size());
+  for (int64 i = 0; i < n - 1; ++i) {
     o << p.data[i] << ", ";
   }
   return o << p.data[n - 1];

@@ -16,7 +16,7 @@ void* pe_bf_realloc(void*, void* ptr, size_t size) {
 
 namespace poly_libbf {
 template <typename T>
-SL void bf_ntt_init(const T* X, int n, bf_context_t* context, bf_t* target) {
+SL void bf_ntt_init(const T* X, int64 n, bf_context_t* context, bf_t* target) {
   bf_init(context, target);
 
   bf_set_ui(target, 1);
@@ -24,9 +24,9 @@ SL void bf_ntt_init(const T* X, int n, bf_context_t* context, bf_t* target) {
   bf_resize(target, 2 * n);
   target->expn = pe_clzll(X[n - 1]);
 
-  const int len = target->len;
+  const int64 len = target->len;
   auto* data = target->tab;
-  for (int i = 0; i < n; ++i) {
+  for (int64 i = 0; i < n; ++i) {
     data[i << 1] = (limb_t)X[i];
     data[(i << 1) | 1] = 0;
   }
@@ -35,7 +35,7 @@ SL void bf_ntt_init(const T* X, int n, bf_context_t* context, bf_t* target) {
 SL void bf_ntt_deinit(bf_t* target) { bf_delete(target); }
 
 template <typename T>
-SL void poly_mul_internal(const T* X, int n, const T* Y, int m, T* result,
+SL void poly_mul_internal(const T* X, int64 n, const T* Y, int64 m, T* result,
                           int64 mod) {
   bf_t x, y;
   bf_context_t bf_context;
@@ -57,13 +57,13 @@ SL void poly_mul_internal(const T* X, int n, const T* Y, int m, T* result,
   bf_mul(&z0, &x, &y, BF_PREC_MAX, 0);
   bf_add(&z1, &z0, &toadd, BF_PREC_MAX, 0);
 
-  const int size = n + m - 1;
+  const int64 size = n + m - 1;
   const auto* data = z1.tab;
 #if !PE_HAS_INT128
   const auto magic1 = (1LL << 32) % mod;
   const auto magic2 = mul_mod_ex(magic1, magic1, mod);
 #endif
-  for (int i = 0; i < size; ++i) {
+  for (int64 i = 0; i < size; ++i) {
     const uint64 low = data[i << 1];
     const uint64 hi = data[(i << 1) | 1];
     if (hi == 0) {

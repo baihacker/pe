@@ -16,6 +16,7 @@ DivImpl divImpl[] = {
     {&poly_flint::poly_div<uint64>, 1, "flint"},
 #endif
 #if HAS_POLY_NTL
+    {&poly_ntl::poly_div_large_mod<uint64>, 1, "ntl lm"},
     {&poly_ntl::poly_div<uint64>, 1, "ntl"},
 #endif
 };

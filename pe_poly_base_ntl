@@ -95,34 +95,66 @@ SL void poly_mul_large_mod_internal(const T* X, int n, const T* Y, int m,
   copy_nmod_poly(z, result, n + m - 1, mod);
 }
 
+template <typename T>
+SL void poly_mul_internal(const T* X, int n, const T* Y, int m, T* result,
+                          int64 mod) {
+  if (mod < NTL_SP_BOUND) {
+    poly_mul_small_mod_internal(X, n, Y, m, result, modf);
+  } else {
+    poly_mul_large_mod_internal(X, n, Y, m, result, mod);
+  }
+}
+
 POLY_MUL_IMPL(poly_mul_small_mod, poly_ntl::poly_mul_small_mod_internal)
 POLY_MUL_IMPL(poly_mul_large_mod, poly_ntl::poly_mul_large_mod_internal)
+POLY_MUL_IMPL(poly_mul, poly_ntl::poly_mul_internal)
 
 template <typename T>
-SL void poly_mul(const T* X, int n, const T* Y, int m, T* result, int64 mod) {
-  if (mod < NTL_SP_BOUND) {
-    poly_mul_wrapper(X, n, Y, m, result, mod,
-                     &poly_ntl::poly_mul_small_mod_internal<T>);
-  } else {
-    poly_mul_wrapper(X, n, Y, m, result, mod,
-                     &poly_ntl::poly_mul_large_mod_internal<T>);
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_div_and_mod_small_mod_internal(const T* X, int n, const T* Y, int m,
+                                        T* q, T* r, int64 mod) {
+  if (m > n) {
+    if (r) {
+      copy(X, X + n, r);
+      fill(r + n, r + m, 0);
+    }
+    if (q) {
+      q[0] = 0;
+    }
+    return;
+  }
+
+  NTL::zz_p::init(static_cast<long>(mod));
+
+  NTL::zz_pX x, y;
+  init_nmod_poly(x, X, n, mod);
+  init_nmod_poly(y, Y, m, mod);
+
+  if (q && r) {
+    NTL::zz_pX u, v;
+
+    NTL::DivRem(u, v, x, y);
+
+    copy_nmod_poly(u, q, n - m + 1, mod);
+    copy_nmod_poly(v, r, m, mod);
+  } else if (q) {
+    NTL::zz_pX u;
+
+    NTL::div(u, x, y);
+
+    copy_nmod_poly(u, q, n - m + 1, mod);
+  } else if (r) {
+    NTL::zz_pX v;
+
+    NTL::rem(v, x, y);
+    copy_nmod_poly(v, r, m, mod);
   }
 }
 
 template <typename T>
-SL vector<T> poly_mul(const vector<T>& X, const vector<T>& Y, int64 mod) {
-  const int n = (int)X.size();
-  const int m = (int)Y.size();
-  const int retSize = n + m - 1;
-  vector<T> result(retSize);
-  poly_mul(&X[0], n, &Y[0], m, &result[0], mod);
-  return result;
-}
-
-template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_div_and_mod_internal(const T* X, int n, const T* Y, int m, T* q, T* r,
-                              int64 mod) {
+    poly_div_and_mod_large_mod_internal(const T* X, int n, const T* Y, int m,
+                                        T* q, T* r, int64 mod) {
   if (m > n) {
     if (r) {
       copy(X, X + n, r);
@@ -163,10 +195,30 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   }
 }
 
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
+    poly_div_and_mod_internal(const T* X, int n, const T* Y, int m, T* q, T* r,
+                              int64 mod) {
+  if (mod < NTL_SP_BOUND) {
+    poly_div_and_mod_small_mod_internal<T>(X, n, Y, m, q, r, mod);
+  } else {
+    poly_div_and_mod_large_mod_internal<T>(X, n, Y, m, q, r, mod);
+  }
+}
+
+POLY_DIV_AND_MOD_IMPL(poly_div_and_mod_small_mod,
+                      poly_div_and_mod_small_mod_internal)
+POLY_DIV_IMPL(poly_div_small_mod, poly_div_and_mod_small_mod)
+POLY_MOD_IMPL(poly_mod_small_mod, poly_div_and_mod_small_mod)
+
+POLY_DIV_AND_MOD_IMPL(poly_div_and_mod_large_mod,
+                      poly_div_and_mod_large_mod_internal)
+POLY_DIV_IMPL(poly_div_large_mod, poly_div_and_mod_large_mod)
+POLY_MOD_IMPL(poly_mod_large_mod, poly_div_and_mod_large_mod)
+
 POLY_DIV_AND_MOD_IMPL(poly_div_and_mod, poly_div_and_mod_internal)
 POLY_DIV_IMPL(poly_div, poly_div_and_mod)
 POLY_MOD_IMPL(poly_mod, poly_div_and_mod)
-
 }  // namespace poly_ntl
 #else
 #define HAS_POLY_NTL 0

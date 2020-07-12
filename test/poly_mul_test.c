@@ -110,7 +110,7 @@ SL void poly_mul_test() {
   // 1e35
   test_impl(2, 4, 1000000, 316227766016779);
 }
-PE_REGISTER_TEST(&poly_mul_test, "poly_mul_test", SPECIFIED);
+PE_REGISTER_TEST(&poly_mul_test, "poly_mul_test", SUPER);
 
 SL void poly_mul_performance_test() {
   uint64 mods[5] = {100019, 1000003, 1000000007, 100000000003, 316227766016779};
@@ -160,6 +160,6 @@ SL void poly_mul_performance_test() {
 }
 
 PE_REGISTER_TEST(&poly_mul_performance_test, "poly_mul_performance_test",
-                 SPECIFIED);
+                 SUPER);
 #endif
 }  // namespace poly_mul_test

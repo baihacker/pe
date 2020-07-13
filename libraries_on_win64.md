@@ -190,7 +190,7 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 
   2. Build object files
   
-     * make libflint.a
+     * make -j8
      * If any failure
 
        * change BUILD_DIRS in makefile by removing successful built module. If BUILD_DIRS=1 2 3 4 5 and 4 5 are not built, the new value is BUILD_DIRS=4 5 (my guess is that the build environment can not process too many modules).

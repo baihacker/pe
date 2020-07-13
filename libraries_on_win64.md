@@ -127,7 +127,7 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 
   3. make install
 
-* The latest msys (msys2-x86_64-20200602) is not compatible with gmp6.2.0, the corresponding erro is *
+  * The latest msys (msys2-x86_64-20200602) is not compatible with gmp6.2.0, the corresponding erro is
 ```
 ../gmp-impl.h:146:10: fatal error: ../gmp-mparam.h: Invalid argument
   146 | #include "gmp-mparam.h"

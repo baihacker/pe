@@ -123,8 +123,8 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 
   1. ./configure --disable-shared --enable-static --prefix=/usr --enable-cxx --host=x86_64-w64-mingw32
 
-     * CFLAGS="-O3 -pedantic -fomit-frame-pointer -m64 -mtune=k8-sse3 -march=skylake -D__USE_MINGW_ANSI_STDIO=0"
-     * CXXFLAGS="-O3 -pedantic -fomit-frame-pointer -m64 -mtune=k8-sse3 -march=skylake -D__USE_MINGW_ANSI_STDIO=0"
+     * CFLAGS="-O3 -pedantic -fomit-frame-pointer -m64 -march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0"
+     * CXXFLAGS="-O3 -pedantic -fomit-frame-pointer -m64 -march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0"
 
   2. make
 

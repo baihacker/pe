@@ -120,6 +120,7 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 * gmp
 
   1. ./configure --disable-shared --enable-static --prefix=/usr --enable-cxx --host=x86_64-w64-mingw32
+
      * CFLAGS="-O3 -pedantic -fomit-frame-pointer -m64 -mtune=k8-sse3 -march=skylake"
      * CXXFLAGS="-O3 -pedantic -fomit-frame-pointer -m64 -mtune=k8-sse3 -march=skylake"
 
@@ -127,7 +128,7 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 
   3. make install
 
-  * The latest msys (msys2-x86_64-20200602) is not compatible with gmp6.2.0, the corresponding erro is
+*The latest msys (msys2-x86_64-20200602) is not compatible with gmp6.2.0, the corresponding erro is*
 ```
 ../gmp-impl.h:146:10: fatal error: ../gmp-mparam.h: Invalid argument
   146 | #include "gmp-mparam.h"
@@ -154,6 +155,7 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
   1. Make sure yasm.exe is in the PATH
 
   2. ./configure --disable-shared --enable-static --prefix=/usr
+
      * CFLAGS="-m64 -O3 -march=k8-sse3 -mtune=skylake"
      * CXXFLAGS="-O3 -march=k8-sse3 -mtune=skylake"
 
@@ -164,9 +166,11 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 * mpfr
 
   1. ./configure --with-gmp=/usr --enable-static --disable-shared --prefix=/usr
+
      * CFLAGS="-Wall -Wmissing-prototypes -Wc++-compat -Wpointer-arith -O3 -fomit-frame-pointer -m64 -mtune=skylake -march=k8-sse3"
 
   2. Fix error in makefile
+
      * "rm: unknown option -- c": caused by argument passing when sh.exe is executing libtool. Please replace -DLT_OBJDIR=\".libs/\" in variable DEFS by -DLT_OBJDIR=.libs Meanwhile, -DMPFR_PRINTF_MAXLM=\"ll\" is replaced by -DMPFR_PRINTF_MAXLM=ll (ll may be other value, like j)
 
   3. make
@@ -176,22 +180,26 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 * flint
 
   1. ./configure --disable-shared --enable-static --prefix=/usr --with-gmp=/usr --with-mpfr=/usr
+
      * CFLAGS="-ansi -pedantic -Wno-long-long -Wno-declaration-after-statement -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3"
      * CXXFLAGS="-ansi -pedantic -Wno-long-long -Wno-declaration-after-statement -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3"
      * --disable-pthread
 
   2. Build object files
+  
      * make libflint.a
      * If any failure
-        * change BUILD_DIRS in makefile by removing successful built module. If BUILD_DIRS=1 2 3 4 5 and 4 5 are not built, the new value is BUILD_DIRS=4 5 (my guess is that the build environment can not process too many modules).
-	* remove libflint.a if it exists
-	* repeat step 2 again.
+
+       * change BUILD_DIRS in makefile by removing successful built module. If BUILD_DIRS=1 2 3 4 5 and 4 5 are not built, the new value is BUILD_DIRS=4 5 (my guess is that the build environment can not process too many modules).
+       * remove libflint.a if it exists
+       * repeat step 2 again.
 
   3. Recover BUILD_DIRS which is modified in step 2.
   
   4. Remove libflint.a if it is generated.
   
   5. Remove object building commands
+
      * target = libflint.a
      * command = $(AT)$(foreach dir, $(BUILD_DIRS), mkdir -p build/$(dir); BUILD_DIR=../build/$(dir); export BUILD_DIR; MOD_DIR=$(dir); export MOD_DIR; $(MAKE) -f ../Makefile.subdirs -C $(dir) static || exit $$?;)
 

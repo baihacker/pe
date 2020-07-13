@@ -184,6 +184,7 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 
   1. ./configure --disable-shared --enable-static --prefix=/usr --with-gmp=/usr --with-mpfr=/usr
 
+     * --disable-pthread
      * CFLAGS="-ansi -pedantic -Wno-long-long -Wno-declaration-after-statement -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3 -D__USE_MINGW_ANSI_STDIO=0"
      * CXXFLAGS="-ansi -pedantic -Wno-long-long -Wno-declaration-after-statement -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3 -D__USE_MINGW_ANSI_STDIO=0"
 

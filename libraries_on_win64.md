@@ -46,6 +46,8 @@ Please read the README or INSTALL doc of the target library before building it, 
   * "--enable-cxx" gmp specified option to support c++ wrapper.
 
   * "--host=x86_64-w64-mingw32" required for building gmp on win64.
+  
+  * -D__USE_MINGW_ANSI_STDIO=0 in C or CXX flags to avoid mingw dependencies.
 
   * "make check" is optional but some libraries have this option in their makefile to check the build result.
 
@@ -121,8 +123,8 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 
   1. ./configure --disable-shared --enable-static --prefix=/usr --enable-cxx --host=x86_64-w64-mingw32
 
-     * CFLAGS="-O3 -pedantic -fomit-frame-pointer -m64 -mtune=k8-sse3 -march=skylake"
-     * CXXFLAGS="-O3 -pedantic -fomit-frame-pointer -m64 -mtune=k8-sse3 -march=skylake"
+     * CFLAGS="-O3 -pedantic -fomit-frame-pointer -m64 -mtune=k8-sse3 -march=skylake -D__USE_MINGW_ANSI_STDIO=0"
+     * CXXFLAGS="-O3 -pedantic -fomit-frame-pointer -m64 -mtune=k8-sse3 -march=skylake -D__USE_MINGW_ANSI_STDIO=0"
 
   2. make
 
@@ -156,8 +158,8 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 
   2. ./configure --disable-shared --enable-static --prefix=/usr
 
-     * CFLAGS="-m64 -O3 -march=k8-sse3 -mtune=skylake"
-     * CXXFLAGS="-O3 -march=k8-sse3 -mtune=skylake"
+     * CFLAGS="-m64 -O3 -march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0"
+     * CXXFLAGS="-O3 -march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0"
 
   3. make
 
@@ -167,7 +169,7 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 
   1. ./configure --with-gmp=/usr --enable-static --disable-shared --prefix=/usr
 
-     * CFLAGS="-Wall -Wmissing-prototypes -Wc++-compat -Wpointer-arith -O3 -fomit-frame-pointer -m64 -mtune=skylake -march=k8-sse3"
+     * CFLAGS="-Wall -Wmissing-prototypes -Wc++-compat -Wpointer-arith -O3 -fomit-frame-pointer -m64 -mtune=skylake -march=k8-sse3 -D__USE_MINGW_ANSI_STDIO=0"
 
   2. Fix error in makefile
 
@@ -181,8 +183,8 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 
   1. ./configure --disable-shared --enable-static --prefix=/usr --with-gmp=/usr --with-mpfr=/usr
 
-     * CFLAGS="-ansi -pedantic -Wno-long-long -Wno-declaration-after-statement -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3"
-     * CXXFLAGS="-ansi -pedantic -Wno-long-long -Wno-declaration-after-statement -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3"
+     * CFLAGS="-ansi -pedantic -Wno-long-long -Wno-declaration-after-statement -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3 -D__USE_MINGW_ANSI_STDIO=0"
+     * CXXFLAGS="-ansi -pedantic -Wno-long-long -Wno-declaration-after-statement -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3 -D__USE_MINGW_ANSI_STDIO=0"
 
   2. Build object files
   
@@ -212,7 +214,7 @@ CC=$(CROSS_PREFIX)gcc
 CFLAGS=-Wall
 CFLAGS+=-O3
 CFLAGS+=-D__MSVCRT_VERSION__=0x1400
-CFLAGS+=-march=k8-sse3 -mtune=skylake
+CFLAGS+=-march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0
 LDFLAGS=
 
 PROGS+=libbf.generic.a libbf.avx2.a
@@ -245,7 +247,7 @@ CFLAGS+=-O3
 CFLAGS+=-D__MSVCRT_VERSION__=0x1400
 CFLAGS+=-I../include
 CFLAGS+=--std=c++14
-CFLAGS+=-march=k8-sse3 -mtune=skylake
+CFLAGS+=-march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0
 LDFLAGS=
 
 SOURCE = $(wildcard *.cpp)
@@ -269,10 +271,8 @@ clean:
 
   1. ./configure
 
-  2. Customized flags
-
      * CXXFLAGS="-O3 --std=c++14"
-     * CXXAUTOFLAGS="-pthread -march=k8-sse3 -mtune=skylake"
+     * CXXAUTOFLAGS="-pthread -march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0"
 
   3. make
 

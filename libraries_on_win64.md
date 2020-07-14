@@ -245,7 +245,7 @@ clean:
 -include $(wildcard *.d)
 ```
 
-  * ntl (windows)
+  * ntl (windows) (Change config.h to enable c++14 and move assignment before running the script."
 ```cpp
 CC=$(CROSS_PREFIX)gcc
 CFLAGS=-Wall

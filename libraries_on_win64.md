@@ -121,16 +121,9 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 
 * gmp
 
-  1. ./configure --disable-shared --enable-static --prefix=/usr --enable-cxx --host=x86_64-w64-mingw32
+  1. Fix configure file if you are using msys2.
 
-     * CFLAGS="-O3 -pedantic -fomit-frame-pointer -m64 -march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0"
-     * CXXFLAGS="-O3 -pedantic -fomit-frame-pointer -m64 -march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0"
-
-  2. make
-
-  3. make install
-
-*The latest msys (msys2-x86_64-20200602) is not compatible with gmp6.2.0, the corresponding erro is*
+  *The latest msys (msys2-x86_64-20200602) is not compatible with gmp6.2.0, the corresponding erro is*
 ```
 ../gmp-impl.h:146:10: fatal error: ../gmp-mparam.h: Invalid argument
   146 | #include "gmp-mparam.h"
@@ -152,18 +145,29 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
       as_fn_error $? "cannot link or copy $ac_source to $ac_file" "$LINENO" 5
 ```
 
-* mpir
+  2. ./configure --disable-shared --enable-static --prefix=/usr --enable-cxx --host=x86_64-w64-mingw32
 
-  1. Make sure yasm.exe is in the PATH
-
-  2. ./configure --disable-shared --enable-static --prefix=/usr
-
-     * CFLAGS="-m64 -O3 -march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0"
-     * CXXFLAGS="-O3 -march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0"
+     * CFLAGS="-O3 -pedantic -fomit-frame-pointer -m64 -march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0"
+     * CXXFLAGS="-O3 -pedantic -fomit-frame-pointer -m64 -march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0"
 
   3. make
 
   4. make install
+
+* mpir
+
+  1. Make sure yasm.exe is in the PATH
+  
+  2. Fix configure file if you are using msys2. (Similar to that of gmp)
+
+  3. ./configure --disable-shared --enable-static --prefix=/usr
+
+     * CFLAGS="-m64 -O3 -march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0"
+     * CXXFLAGS="-O3 -march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0"
+
+  4. make
+
+  5. make install
 
 * mpfr
 
@@ -188,27 +192,27 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
      * CFLAGS="-ansi -pedantic -Wno-long-long -Wno-declaration-after-statement -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3 -D__USE_MINGW_ANSI_STDIO=0"
      * CXXFLAGS="-ansi -pedantic -Wno-long-long -Wno-declaration-after-statement -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3 -D__USE_MINGW_ANSI_STDIO=0"
 
-  2. Build object files
-  
-     * make
-     * If any failure
+  2. Fix building script
 
-       * change BUILD_DIRS in makefile by removing successful built module. If BUILD_DIRS=1 2 3 4 5 and 4 5 are not built, the new value is BUILD_DIRS=4 5 (my guess is that the build environment can not process too many modules).
-       * remove libflint.a if it exists
-       * repeat step 2 again.
+     * The following command of building libflint.a will fail because the return result is too long
 
-  3. Recover BUILD_DIRS which is modified in step 2.
-  
-  4. Remove libflint.a if it is generated.
-  
-  5. Remove object building commands
+       * $(AT)$(foreach dir, $(BUILD_DIRS), mkdir -p build/$(dir); BUILD_DIR=../build/$(dir); export BUILD_DIR; MOD_DIR=$(dir); export MOD_DIR; $(MAKE) -f ../Makefile.subdirs -C $(dir) static || exit $$?;)
 
-     * target = libflint.a
-     * command = $(AT)$(foreach dir, $(BUILD_DIRS), mkdir -p build/$(dir); BUILD_DIR=../build/$(dir); export BUILD_DIR; MOD_DIR=$(dir); export MOD_DIR; $(MAKE) -f ../Makefile.subdirs -C $(dir) static || exit $$?;)
+     * Fix Makefile
 
-  6. Execute make libflint.a again to generate libflint.a
+       1. Insert "$(AT)$(foreach dir, $(BUILD_DIRS), mkdir -p build/$(dir))" as the first command of building libflint.a (don't forget leading tab)
+
+       2. Replace the failure command to "$(AT)$(foreach dir, $(BUILD_DIRS), export MOD=$(dir); $(MAKE) -f ../Makefile.subdirs -C $(dir) static || exit $$?;)"
+
+     * Fix Makefile.subdirs
+
+       1. Insert "MOD_DIR = ${MOD}" "BUILD_DIR = ../build/${MOD}" as the first two lines.
+
+  3. make -j8
+
+     * Some test targets will fail to build due to the same reason. It is safe to ignore them.
   
-  7. make install
+  4. make install
 
 * libbf. Use the following makefile which will generate libbf.avx2.a and libbf.generic.a, please choose one and rename it to libbf.a
 ```cpp

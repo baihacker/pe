@@ -583,6 +583,17 @@ struct MultiSet {
     data_.emplace_back();
     data_.back().size = 0;
   }
+  Iterator begin() {
+    auto t = end();
+    return ++t;
+  }
+  Iterator end() { return Iterator(0, data_); }
+
+  Iterator rbegin() {
+    auto t = end();
+    return --t;
+  }
+  Iterator rend() { return Iterator(0, data_); }
 
   int less_equal(T a, T b) { return a <= b; }
 
@@ -613,17 +624,80 @@ struct MultiSet {
     splay(data_.size() - 1, 0);
   }
 
-  Iterator begin() {
-    auto t = end();
-    return ++t;
-  }
-  Iterator end() { return Iterator(0, data_); }
+  void erase(Iterator iter) {
+    if (iter == end()) {
+      return;
+    }
+    --data_[0].size;
 
-  Iterator rbegin() {
-    auto t = end();
-    return --t;
+    int64 p = iter->pre;
+    if (iter->ch[0] == 0 && iter->ch[1] == 0) {
+      if (iter.idx_ == data_[p].ch[0]) {
+        data_[p].ch[0] = 0;
+      } else {
+        data_[p].ch[1] = 0;
+      }
+      update(p);
+      return;
+    }
+    if (iter->ch[0] == 0) {
+      int64 t = iter->ch[1];
+      if (iter.idx_ == data_[p].ch[0]) {
+        data_[p].ch[0] = t;
+      } else {
+        data_[p].ch[1] = t;
+      }
+      data_[t].pre = p;
+      update(p);
+      return;
+    }
+    if (iter->ch[1] == 0) {
+      int64 t = iter->ch[0];
+      if (iter.idx_ == data_[p].ch[0]) {
+        data_[p].ch[0] = t;
+      } else {
+        data_[p].ch[1] = t;
+      }
+      data_[t].pre = p;
+      update(p);
+      return;
+    }
+    auto x = iter;
+    --x;
+    splay(x.idx_, 0);
+    int64 t = iter->ch[1];
+    data_[x.idx_].ch[1] = t;
+    data_[t].pre = x.idx_;
+    update(x.idx_);
   }
-  Iterator rend() { return Iterator(0, data_); }
+
+  void erase(T value) {
+#if 0
+    for (;;) {
+      auto where = find_one(value);
+      if (where == end()) break;
+      erase(where);
+    }
+#endif
+    auto last = find_last(value);
+    if (last == end()) {
+      return;
+    }
+    auto first = find_first(value);
+    if (first == last) {
+      erase(first);
+      return;
+    }
+    // note: first is at root position.
+    splay(last.idx_, first.idx_);
+    int64 t = data_[last.idx_].ch[0];
+    if (t != 0) {
+      data_[0].size -= data_[t].size;
+      data_[last.idx_].ch[0] = 0;
+    }
+    erase(last);
+    erase(first);
+  }
 
   Iterator find_one(T value) {
     int64 curr = data_[0].ch[0], p = 0;

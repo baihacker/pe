@@ -699,6 +699,31 @@ struct MultiSet {
     erase(first);
   }
 
+  Iterator kth(int64 k) {
+    if (k > size() || k <= 0) {
+      return end();
+    }
+    int64 curr = data_[0].ch[0];
+    for (;;) {
+      int64 c = data_[curr].ch[0];
+      int64 cnt = 0;
+      if (c) {
+        cnt = data_[c].size;
+      }
+      if (cnt + 1 == k) {
+        break;
+      }
+      if (k <= cnt) {
+        curr = c;
+      } else {
+        k -= cnt + 1;
+        curr = data_[curr].ch[1];
+      }
+    }
+    splay(curr, 0);
+    return Iterator(curr, data_);
+  }
+
   Iterator find_one(T value) {
     int64 curr = data_[0].ch[0], p = 0;
     for (p = 0; curr;) {

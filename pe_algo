@@ -2903,4 +2903,70 @@ struct DfaCounter {
   DArray<CT, 2> dp_;
   vector<int> to_count_;
 };
+
+// Counting words with Laguerre series
+// https://arxiv.org/pdf/1306.6232.pdf
+struct CarlitzWordsCounter {
+  CarlitzWordsCounter(int64 mod, int64 maxf) { init(mod, maxf); }
+
+  void init(const int64 mod, const int64 maxf) {
+    mod_ = mod;
+    maxf_ = maxf;
+    fac_.resize(maxf_ + 1);
+    ifac_.resize(maxf_ + 1);
+    init_seq_prod2<int64>(&fac_[0], &ifac_[0], 1, maxf_, mod_);
+  }
+
+  int64 comb(int64 a, int64 b) {
+    if (a < 0 || b < 0 || b > a) return 0;
+    int64 t = mul_mod_ex(fac_[a], ifac_[b], mod_);
+    return mul_mod_ex(t, ifac_[a - b], mod_);
+  }
+
+  int64 cal(vector<int64> vec) {
+    vec = toInternal(vec);
+    auto where = cache_.find(vec);
+    if (where != cache_.end()) {
+      return where->second;
+    }
+    vector<int64> it{1};
+    const ssize vsize = sz(vec);
+    for (int64 i = 0; i < vsize; i += 2) {
+      auto L = makeLaguerrePoly(vec[i], is_even(vec[i]) ? 1 : -1);
+      for (int j = 0; j < vec[i + 1]; ++j) it = poly_mul(it, L, mod_);
+    }
+    int64 ret = 0;
+    const ssize size = sz(it);
+    for (ssize i = 0; i < size; ++i) {
+      ret = add_mod(ret, mul_mod_ex(fac_[i], it[i], mod_), mod_);
+    }
+    return cache_[vec] = ret;
+  }
+
+  vector<int64> makeLaguerrePoly(int64 n, int sgn = 1) {
+    vector<int64> ret(n + 1, 0);
+    for (int i = 1; i <= n; ++i) {
+      int64 curr = regulate_mod(is_even(i) ? sgn : -sgn, mod_);
+      curr = mul_mod_ex(curr, comb(n - 1, n - i), mod_);
+      curr = mul_mod_ex(curr, ifac_[i], mod_);
+      ret[i] = curr;
+    }
+    return ret;
+  }
+
+  vector<int64> toInternal(vector<int64> v) {
+    map<int64, int64> m;
+    for (auto& iter : v) m[iter]++;
+    vector<int64> t;
+    for (auto& iter : m) t.push_back(iter.first), t.push_back(iter.second);
+    return t;
+  }
+
+private:
+  int64 maxf_;
+  int64 mod_;
+  map<vector<int64>, int64> cache_;
+  vector<int64> fac_;
+  vector<int64> ifac_;
+};
 #endif

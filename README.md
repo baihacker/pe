@@ -6,8 +6,6 @@
 
 It is my basic code for solving problem on project euler.
 
-Latest release: [Pe4.0](https://github.com/baihacker/pe/releases)
-
 ## Installation:
 * Put all the files in a folder (directory). For example, we put them in the directory D:\usr\include.
 * Make sure the environment variable CPLUS_INCLUDE_PATH contain D:\usr\include.

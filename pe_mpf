@@ -4,6 +4,107 @@
 #if ENABLE_GMP
 
 #include "pe_mpz"
+#if PE_HAS_CPP20
+template <class T>
+concept PeFloatArithmeticOperation = requires(T v) {
+  v + 1;
+  v - 1;
+  v * 1;
+  v / 1;
+  1 - v;
+  1 * v;
+  1 + v;
+  1 / v;
+  v + 1LL;
+  v - 1LL;
+  v * 1LL;
+  v / 1LL;
+  1LL + v;
+  1LL - v;
+  1LL * v;
+  1LL / v;
+#if PE_HAS_INT128
+  v + (int128)1;
+  v - (int128)1;
+  v * (int128)1;
+  v / (int128)1;
+  (int128)1 + v;
+  (int128)1 - v;
+  (int128)1 * v;
+  (int128)1 / v;
+#endif
+  v + MpInteger(1);
+  v - MpInteger(1);
+  v * MpInteger(1);
+  v / MpInteger(1);
+  MpInteger(1) + v;
+  MpInteger(1) - v;
+  MpInteger(1) * v;
+  MpInteger(1) / v;
+  v + 1.;
+  v - 1.;
+  v * 1.;
+  v / 1.;
+  1. + v;
+  1. - v;
+  1. * v;
+  1. / v;
+  v + (long double)1.;
+  v - (long double)1.;
+  v * (long double)1.;
+  v / (long double)1.;
+  (long double)1. + v;
+  (long double)1. - v;
+  (long double)1. * v;
+  (long double)1. / v;
+  v + v;
+  v - v;
+  v * v;
+  v / v;
+};
+template <class T>
+concept PeFloatSelfOperation = requires(T v) {
+  v += 1;
+  v -= 1;
+  v *= 1;
+  v /= 1;
+  v += 1LL;
+  v -= 1LL;
+  v *= 1LL;
+  v /= 1LL;
+#if PE_HAS_INT128
+  v += (int128)1;
+  v -= (int128)1;
+  v *= (int128)1;
+  v /= (int128)1;
+#endif
+  v += MpInteger(1);
+  v -= MpInteger(1);
+  v *= MpInteger(1);
+  v /= MpInteger(1);
+  v += 1.;
+  v -= 1.;
+  v *= 1.;
+  v /= 1.;
+  v += (long double)1.;
+  v -= (long double)1.;
+  v *= (long double)1.;
+  v /= (long double)1.;
+  v += v;
+  v -= v;
+  v *= v;
+  v /= v;
+  ++v;
+  --v;
+  v++;
+  v--;
+};
+template <class T>
+concept PeFloat = requires(T v) {
+  requires PeFloatArithmeticOperation<T>;
+  requires PeFloatSelfOperation<T>;
+};
+#endif
 
 #define HAS_MPF 1
 class Mpf {
@@ -13,11 +114,13 @@ class Mpf {
 
   Mpf() { mpf_init_set_si(f, 0); }
 
-  Mpf(int t) : Mpf(static_cast<long>(t)) {}
+  Mpf(int t) : Mpf((long)t) {}
 
   Mpf(long t) { mpf_init_set_si(f, t); }
 
   Mpf(double t) { mpf_init_set_d(f, t); }
+
+  Mpf(long double t) : Mpf(to_string(t)) {}
 
   Mpf(const string& s) : Mpf(s.c_str()) {}
 
@@ -25,7 +128,7 @@ class Mpf {
 
   Mpf(const mpf_t o) { mpf_init_set(f, o); }
 
-  explicit Mpf(const MpInteger& mp) {
+  Mpf(const MpInteger& mp) {
     mpf_init(f);
     mpf_set_z(f, mp.mpz());
   }
@@ -53,37 +156,6 @@ class Mpf {
     return *this;
   }
 
-  Mpf& operator=(int o) { return this->operator=(static_cast<long>(o)); }
-
-  Mpf& operator=(long o) {
-    mpf_set_si(f, o);
-    return *this;
-  }
-
-  Mpf& operator=(unsigned int o) {
-    return this->operator=(static_cast<unsigned long>(o));
-  }
-
-  Mpf& operator=(unsigned long o) {
-    mpf_set_ui(f, o);
-    return *this;
-  }
-
-  Mpf& operator=(double o) {
-    mpf_set_d(f, o);
-    return *this;
-  }
-
-  Mpf& operator=(const mpf_t o) {
-    mpf_set(f, o);
-    return *this;
-  }
-
-  Mpf& operator=(const MpInteger& o) {
-    mpf_set_z(f, o.mpz());
-    return *this;
-  }
-
   template <typename T,
             typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
   Mpf& operator=(T value) {
@@ -96,33 +168,37 @@ class Mpf {
     mpf_add(f, f, a.f);
     return *this;
   }
-  Mpf& operator+=(unsigned long a) {
-    mpf_add_ui(f, f, a);
-    return *this;
-  }
   Mpf& operator-=(const Mpf& a) {
     mpf_sub(f, f, a.f);
-    return *this;
-  }
-  Mpf& operator-=(unsigned long a) {
-    mpf_sub_ui(f, f, a);
     return *this;
   }
   Mpf& operator*=(const Mpf& a) {
     mpf_mul(f, f, a.f);
     return *this;
   }
-  Mpf& operator*=(unsigned long a) {
-    mpf_mul_ui(f, f, a);
-    return *this;
-  }
   Mpf& operator/=(const Mpf& a) {
     mpf_div(f, f, a.f);
     return *this;
   }
-  Mpf& operator/=(unsigned long a) {
-    mpf_div_ui(f, f, a);
+  Mpf& operator++() {
+    *this += 1;
     return *this;
+  }
+  Mpf operator++(int) {
+    Mpf ret(*this);
+    mpf_add_ui(f, f, 1);
+    return ret;
+  }
+  Mpf& operator--() {
+    *this -= 1;
+    return *this;
+  }
+  const Mpf& operator+() const { return *this; }
+  const Mpf& operator-() const { return neg(); }
+  Mpf operator--(int) {
+    Mpf ret(*this);
+    mpf_sub_ui(f, f, 1);
+    return ret;
   }
   Mpf sqrt() const {
     Mpf t;
@@ -188,6 +264,12 @@ class Mpf {
     return result;
   }
 
+  MpInteger toMpInteger() {
+    MpInteger z;
+    mpz_set_f(z.mpz(), mpf());
+    return z;
+  }
+
   __mpf_struct* mpf() { return f; }
   const __mpf_struct* mpf() const { return f; }
 
@@ -200,30 +282,10 @@ SL Mpf operator+(const Mpf& a, const Mpf& b) {
   mpf_add(t.f, a.f, b.f);
   return t;
 }
-SL Mpf operator+(const Mpf& a, unsigned long b) {
-  Mpf t;
-  mpf_add_ui(t.f, a.f, b);
-  return t;
-}
-SL Mpf operator+(unsigned long a, const Mpf& b) {
-  Mpf t;
-  mpf_add_ui(t.f, b.f, a);
-  return t;
-}
 SL Mpf operator-(const Mpf& a) { return a.neg(); }
 SL Mpf operator-(const Mpf& a, const Mpf& b) {
   Mpf t;
   mpf_sub(t.f, a.f, b.f);
-  return t;
-}
-SL Mpf operator-(const Mpf& a, unsigned long b) {
-  Mpf t;
-  mpf_sub_ui(t.f, a.f, b);
-  return t;
-}
-SL Mpf operator-(unsigned long a, const Mpf& b) {
-  Mpf t;
-  mpf_ui_sub(t.f, a, b.f);
   return t;
 }
 SL Mpf operator*(const Mpf& a, const Mpf& b) {
@@ -231,29 +293,9 @@ SL Mpf operator*(const Mpf& a, const Mpf& b) {
   mpf_mul(t.f, a.f, b.f);
   return t;
 }
-SL Mpf operator*(const Mpf& a, unsigned long b) {
-  Mpf t;
-  mpf_mul_ui(t.f, a.f, b);
-  return t;
-}
-SL Mpf operator*(unsigned long a, const Mpf& b) {
-  Mpf t;
-  mpf_mul_ui(t.f, b.f, a);
-  return t;
-}
 SL Mpf operator/(const Mpf& a, const Mpf& b) {
   Mpf t;
   mpf_div(t.f, a.f, b.f);
-  return t;
-}
-SL Mpf operator/(const Mpf& a, unsigned long b) {
-  Mpf t;
-  mpf_div_ui(t.f, a.f, b);
-  return t;
-}
-SL Mpf operator/(unsigned long a, const Mpf& b) {
-  Mpf t;
-  mpf_div_ui(t.f, b.f, a);
   return t;
 }
 SL int compare(const Mpf& a, const Mpf& b) { return mpf_cmp(a.f, b.f); }
@@ -267,14 +309,13 @@ SL ostream& operator<<(ostream& o, const Mpf& v) { return o << v.toString(20); }
 SL Mpf ceil(const Mpf& f) { return f.ceil(); }
 SL Mpf floor(const Mpf& f) { return f.floor(); }
 SL Mpf trunc(const Mpf& f) { return f.trunc(); }
-MpInteger::MpInteger(const Mpf& o) {
-  mpz_init(z);
-  mpz_set_f(z, o.mpf());
-}
 MpInteger& MpInteger::operator=(const Mpf& o) {
   mpz_set_f(z, o.mpf());
   return *this;
 }
+#if PE_HAS_CPP20
+static_assert(PeFloat<Mpf>);
+#endif
 #else
 #define HAS_MPF 0
 #endif

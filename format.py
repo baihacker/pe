@@ -11,7 +11,7 @@ compile_commands_template='[{ "directory": "$(CURRENT_DIRECTORY)", "file": "pe",
 def tidy():
   with open('compile_commands.json', 'wb') as tempf:
     tempf.write(compile_commands_template.replace('$(CURRENT_DIRECTORY)', CURRENT_DIRECTORY.replace('\\','\\\\')))
-  os.system('run-clang-tidy.py -checks=-*,google-readability-casting,google-readability-namespace-comments,hicpp-use-auto,performance-*,modernize-use-*,-modernize-use-trailing-return-type,-modernize-use-nodiscard,misc-unused-parameters -header-filter=pe.* -export-fixes=format-fixes.yaml -fix pe')
+  os.system('run-clang-tidy.py -checks=-*,google-readability-casting,google-readability-namespace-comments,performance-*,modernize-use-*,-modernize-use-trailing-return-type,-modernize-use-nodiscard,misc-unused-parameters -header-filter=pe.* -export-fixes=format-fixes.yaml -fix pe')
   os.remove('compile_commands.json')
   os.remove('format-fixes.yaml')
 

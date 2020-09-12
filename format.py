@@ -30,4 +30,4 @@ def format():
 
 if __name__ == "__main__":
   tidy()
-  format()
+  #format()

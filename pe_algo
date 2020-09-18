@@ -2422,6 +2422,28 @@ T for_m_values(
 }
 
 /**
+Version 1:
+struct Solver : public MValueBaseExLite<Solver, RT, 8> {
+  RT F(int64 p, int64 e) {
+    return e + 1;
+  }
+};
+
+Version 2:
+struct Solver : public MValueBaseEx<Solver, RT, 8> {
+  RT F(int64 p, int64 e) {
+    return e + 1;
+  }
+  RT batchF(int imp, int64 vmp, int64 remain) {
+    return F(2, 1) * RT(dva[remain] - (imp + 1));
+  }
+  void init(int64 n) {
+    dva = prime_s0_ex<int64>(n);
+  }
+  DVA<int64> dva;
+};
+
+Version 3:
 DVA<int64> dva(1);
 using RT = int64;
 struct Solver : public MValueBaseTP<Solver, RT, 8> {
@@ -2449,6 +2471,7 @@ struct Solver : public MValueBaseTP<Solver, RT, 8> {
   RT tmp[64];
 };
 
+Version 4:
 MVVHistory history_[128];
 int top_;
 RT dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, RT now) {
@@ -2583,6 +2606,93 @@ struct MValueBaseTP {
 
   void visitMaxPrime(int64 vmp, int emp, T now) {}
   T solve(int64 n) { return dfs(find_prime_idx_sg(n), n, 1, -1, 1, 0, 1); }
+};
+
+template <typename D, typename T = int64, int TN = 1>
+struct MValueBaseEx {
+  T batch(int64 n, int64 val, int imp, int64 vmp, int emp, T now, T now1) {
+    T ret = 0;
+    int64 remain = n / val;
+    // we have remain >= vmp
+    // handle val * q where q > vmp
+    if (remain > vmp) {
+      ret += now * static_cast<D&>(*this).batchF(imp, vmp, remain);
+    }
+    if (val > 1) {
+      // handle val * vmp
+      ret += now1 * static_cast<D&>(*this).F(vmp, emp + 1);
+    } else {
+      // handle f(1)
+      ret += 1;
+    }
+    return ret;
+  }
+
+  T dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, T now, T now1) {
+    T ret = static_cast<D&>(*this).batch(n, val, imp, vmp, emp, now, now1);
+#if ENABLE_OPENMP
+    if (val == 1 && TN > 1) {
+      PSum<T> sumHelper;
+#pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
+      for (int i = 0; i < limit; ++i) {
+        const int64 p = plist[i];
+        const int nextimp = imp == -1 ? i : imp;
+        const int64 nextvmp = imp == -1 ? p : vmp;
+        const int64 valLimit = n / p / nextvmp;
+        int e = 1;
+        for (int64 nextval = val * p;; ++e) {
+          T t = static_cast<D&>(*this).F(p, e);
+          sumHelper +=
+              dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp, now * t, imp == -1 ? 1 : now1 * t);
+          if (nextval > valLimit) break;
+          nextval *= p;
+        }
+      }
+      ret += sumHelper.value();
+    } else {
+#endif
+      for (int i = 0; i < limit; ++i) {
+        const int64 p = plist[i];
+        const int nextimp = imp == -1 ? i : imp;
+        const int64 nextvmp = imp == -1 ? p : vmp;
+        const int64 valLimit = n / p / nextvmp;
+        if (val > valLimit) break;
+        int e = 1;
+        for (int64 nextval = val * p;; ++e) {
+          T t = static_cast<D&>(*this).F(p, e);
+          ret += dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp, now * t, imp == -1 ? 1 : now1 * t);
+          if (nextval > valLimit) break;
+          nextval *= p;
+        }
+      }
+#if ENABLE_OPENMP
+    }
+#endif
+    return ret;
+  }
+
+  T F(int64  /*p*/, int64  /*e*/) {
+    return 1;
+  }
+  T batchF(int  /*imp*/, int64  /*vmp*/, int64  /*remain*/) {
+    return 1;
+  }
+  void init(int64 n){}
+  T solve(int64 n) {
+    static_cast<D&>(*this).init(n);
+    return dfs(find_prime_idx_sg(n), n, 1, -1, 1, 0, 1, 1);
+  }
+};
+
+template <typename D, typename T = int64, int TN = 1>
+struct MValueBaseExLite : public MValueBaseEx<D, T, TN> {
+  T batchF(int imp, int64  /*vmp*/, int64 remain) {
+    return static_cast<D&>(*this).F(2, 1) * T(dva[remain] - (imp + 1));
+  }
+  void init(int64 n) {
+    dva = prime_s0_ex<int64>(n);
+  }
+  DVA<int64> dva;
 };
 
 // Returns the number of integer solutions of

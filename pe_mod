@@ -622,34 +622,6 @@ struct NModNumber;
 template <typename MC,
           typename AP = APSB<typename MC::mod_type, typename MC::mod_type>>
 struct NModNumber {
-  friend NModNumber operator+(const NModNumber& x, const NModNumber& y) {
-    return NModNumber(AP::add(x.value_, y.value_, MC::mod()), __init_direct);
-  }
-
-  template <typename T>
-  friend REQUIRES((is_native_integer<T>::value)) RETURN(NModNumber) operator+(
-      const NModNumber& x, T y) {
-    return x + NModNumber(y);
-  }
-
-  template <typename T>
-  friend REQUIRES((is_native_integer<T>::value)) RETURN(NModNumber) operator+(
-      T x, const NModNumber& y) {
-    return NModNumber(x) + y;
-  }
-
-  friend NModNumber operator-(const NModNumber& x, const NModNumber& y) {
-    return NModNumber(AP::sub(x.value_, y.value_, MC::mod()), __init_direct);
-  }
-
-  friend NModNumber operator*(const NModNumber& x, const NModNumber& y) {
-    return NModNumber(AP::mul(x.value_, y.value_, MC::mod()), __init_direct);
-  }
-
-  friend ostream& operator<<(ostream& o, const NModNumber& m) {
-    return o << m.value_;
-  }
-
   using ints = typename AP::ints;
 
   NModNumber(ints value = 0) {
@@ -670,12 +642,12 @@ struct NModNumber {
   static constexpr ints mod() { return MC::mod(); }
 
   NModNumber& operator+=(const NModNumber& y) {
-    value_ = AP::add(value_, y.value_, MC::mod());
+    value_ = AP::add(value_, y.value_, mod());
     return *this;
   }
 
   NModNumber& operator++() {
-    value_ = AP::add(value_, 1, MC::mod());
+    value_ = AP::add(value_, 1, mod());
     return *this;
   }
 
@@ -686,12 +658,12 @@ struct NModNumber {
   }
 
   NModNumber& operator-=(const NModNumber& y) {
-    value_ = AP::sub(value_, y.value_, MC::mod());
+    value_ = AP::sub(value_, y.value_, mod());
     return *this;
   }
 
   NModNumber& operator--() {
-    value_ = AP::sub(value_, 1, MC::mod());
+    value_ = AP::sub(value_, 1, mod());
     return *this;
   }
 
@@ -704,24 +676,53 @@ struct NModNumber {
   NModNumber operator+() const { return NModNumber(value_, __init_direct); }
 
   NModNumber operator-() const {
-    return NModNumber(AP::sub(0, value_, MC::mod()), __init_direct);
+    return NModNumber(AP::sub(0, value_, mod()), __init_direct);
   }
 
   NModNumber& operator*=(const NModNumber& y) {
-    value_ = AP::mul(value_, y.value_, MC::mod());
+    value_ = AP::mul(value_, y.value_, mod());
     return *this;
   }
 
   ints value() const { return value_; }
 
   const NModNumber& fix_value() const {
-    AP::fix_value(value_, MC::mod());
+    AP::fix_value(value_, mod());
     return *this;
   }
 
   NModNumber& fix_value() {
-    AP::fix_value(value_, MC::mod());
+    AP::fix_value(value_, mod());
     return *this;
+  }
+
+ public:
+  friend NModNumber operator+(const NModNumber& x, const NModNumber& y) {
+    return NModNumber(AP::add(x.value_, y.value_, MC::mod()), __init_direct);
+  }
+
+  template <typename T>
+  friend REQUIRES((is_native_integer<T>::value)) RETURN(NModNumber) operator+(
+      const NModNumber& x, T y) {
+    return x + NModNumber(y);
+  }
+
+  template <typename T>
+  friend REQUIRES((is_native_integer<T>::value)) RETURN(NModNumber) operator+(
+      T x, const NModNumber& y) {
+    return NModNumber(x) + y;
+  }
+
+  friend NModNumber operator-(const NModNumber& x, const NModNumber& y) {
+    return NModNumber(AP::sub(x.value_, y.value_, mod()), __init_direct);
+  }
+
+  friend NModNumber operator*(const NModNumber& x, const NModNumber& y) {
+    return NModNumber(AP::mul(x.value_, y.value_, mod()), __init_direct);
+  }
+
+  friend ostream& operator<<(ostream& o, const NModNumber& m) {
+    return o << m.value_;
   }
 
  private:
@@ -786,61 +787,6 @@ struct NModNumberM;
 template <typename MC,
           typename AP = APSB<typename MC::mod_type, typename MC::mod_type>>
 struct NModNumberM {
-  friend NModNumberM operator+(const NModNumberM& x, const NModNumberM& y) {
-    return NModNumberM(AP::add(x.value_, y.value_, x.mod()), x.mc,
-                       __init_direct);
-  }
-
-  template <typename T>
-  friend REQUIRES((is_native_integer<T>::value)) RETURN(NModNumberM) operator+(
-      const NModNumberM& x, T y) {
-    return x + NModNumberM(y, x.mc);
-  }
-
-  template <typename T>
-  friend REQUIRES((is_native_integer<T>::value)) RETURN(NModNumberM) operator+(
-      T x, const NModNumberM& y) {
-    return NModNumberM(x, y.mc) + y;
-  }
-
-  friend NModNumberM operator-(const NModNumberM& x, const NModNumberM& y) {
-    return NModNumberM(AP::sub(x.value_, y.value_, x.mod()), x.mc,
-                       __init_direct);
-  }
-
-  template <typename T>
-  friend REQUIRES((is_native_integer<T>::value)) RETURN(NModNumberM) operator-(
-      const NModNumberM& x, T y) {
-    return x - NModNumberM(y, x.mc);
-  }
-
-  template <typename T>
-  friend REQUIRES((is_native_integer<T>::value)) RETURN(NModNumberM) operator-(
-      T x, const NModNumberM& y) {
-    return NModNumberM(x, y.mc) - y;
-  }
-
-  friend NModNumberM operator*(const NModNumberM& x, const NModNumberM& y) {
-    return NModNumberM(AP::mul(x.value_, y.value_, x.mod()), x.mc,
-                       __init_direct);
-  }
-
-  template <typename T>
-  friend REQUIRES((is_native_integer<T>::value)) RETURN(NModNumberM) operator*(
-      const NModNumberM& x, T y) {
-    return x * NModNumberM(y, x.mc);
-  }
-
-  template <typename T>
-  friend REQUIRES((is_native_integer<T>::value)) RETURN(NModNumberM) operator*(
-      T x, const NModNumberM& y) {
-    return NModNumberM(x, y.mc) * y;
-  }
-
-  friend ostream& operator<<(ostream& o, const NModNumberM& m) {
-    return o << m.value_;
-  }
-
   using ints = typename AP::ints;
 
   NModNumberM(ints value = 0, const MC& mc = MC()) : mc(mc) {
@@ -917,6 +863,62 @@ struct NModNumberM {
   NModNumberM& fix_value() {
     AP::fix_value(value_, mod());
     return *this;
+  }
+
+ public:
+  friend NModNumberM operator+(const NModNumberM& x, const NModNumberM& y) {
+    return NModNumberM(AP::add(x.value_, y.value_, x.mod()), x.mc,
+                       __init_direct);
+  }
+
+  template <typename T>
+  friend REQUIRES((is_native_integer<T>::value)) RETURN(NModNumberM) operator+(
+      const NModNumberM& x, T y) {
+    return x + NModNumberM(y, x.mc);
+  }
+
+  template <typename T>
+  friend REQUIRES((is_native_integer<T>::value)) RETURN(NModNumberM) operator+(
+      T x, const NModNumberM& y) {
+    return NModNumberM(x, y.mc) + y;
+  }
+
+  friend NModNumberM operator-(const NModNumberM& x, const NModNumberM& y) {
+    return NModNumberM(AP::sub(x.value_, y.value_, x.mod()), x.mc,
+                       __init_direct);
+  }
+
+  template <typename T>
+  friend REQUIRES((is_native_integer<T>::value)) RETURN(NModNumberM) operator-(
+      const NModNumberM& x, T y) {
+    return x - NModNumberM(y, x.mc);
+  }
+
+  template <typename T>
+  friend REQUIRES((is_native_integer<T>::value)) RETURN(NModNumberM) operator-(
+      T x, const NModNumberM& y) {
+    return NModNumberM(x, y.mc) - y;
+  }
+
+  friend NModNumberM operator*(const NModNumberM& x, const NModNumberM& y) {
+    return NModNumberM(AP::mul(x.value_, y.value_, x.mod()), x.mc,
+                       __init_direct);
+  }
+
+  template <typename T>
+  friend REQUIRES((is_native_integer<T>::value)) RETURN(NModNumberM) operator*(
+      const NModNumberM& x, T y) {
+    return x * NModNumberM(y, x.mc);
+  }
+
+  template <typename T>
+  friend REQUIRES((is_native_integer<T>::value)) RETURN(NModNumberM) operator*(
+      T x, const NModNumberM& y) {
+    return NModNumberM(x, y.mc) * y;
+  }
+
+  friend ostream& operator<<(ostream& o, const NModNumberM& m) {
+    return o << m.value_;
   }
 
  private:
@@ -1020,7 +1022,7 @@ concept PeModNumber = requires(T v) {
 #endif
   v + v;
   v - v;
-  v * v;
+  v* v;
   v += 1;
   v -= 1;
   v *= 1;

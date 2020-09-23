@@ -2628,7 +2628,8 @@ struct MValueBaseEx {
     return ret;
   }
 
-  T dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, T now, T now1) {
+  T dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, T now,
+        T now1) {
     T ret = static_cast<D&>(*this).batch(n, val, imp, vmp, emp, now, now1);
 #if ENABLE_OPENMP
     if (val == 1 && TN > 1) {
@@ -2642,8 +2643,8 @@ struct MValueBaseEx {
         int e = 1;
         for (int64 nextval = val * p;; ++e) {
           T t = static_cast<D&>(*this).F(p, e);
-          sumHelper +=
-              dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp, now * t, imp == -1 ? 1 : now1 * t);
+          sumHelper += dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp,
+                           now * t, imp == -1 ? 1 : now1 * t);
           if (nextval > valLimit) break;
           nextval *= p;
         }
@@ -2660,7 +2661,8 @@ struct MValueBaseEx {
         int e = 1;
         for (int64 nextval = val * p;; ++e) {
           T t = static_cast<D&>(*this).F(p, e);
-          ret += dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp, now * t, imp == -1 ? 1 : now1 * t);
+          ret += dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp,
+                     now * t, imp == -1 ? 1 : now1 * t);
           if (nextval > valLimit) break;
           nextval *= p;
         }
@@ -2671,13 +2673,9 @@ struct MValueBaseEx {
     return ret;
   }
 
-  T F(int64  /*p*/, int64  /*e*/) {
-    return 1;
-  }
-  T batchF(int  /*imp*/, int64  /*vmp*/, int64  /*remain*/) {
-    return 1;
-  }
-  void init(int64 n){}
+  T F(int64 /*p*/, int64 /*e*/) { return 1; }
+  T batchF(int /*imp*/, int64 /*vmp*/, int64 /*remain*/) { return 1; }
+  void init(int64 n) {}
   T solve(int64 n) {
     static_cast<D&>(*this).init(n);
     return dfs(find_prime_idx_sg(n), n, 1, -1, 1, 0, 1, 1);
@@ -2690,12 +2688,10 @@ struct MValueBaseEx {
  */
 template <typename D, typename T = int64, int TN = 1>
 struct MValueBaseExLite : public MValueBaseEx<D, T, TN> {
-  T batchF(int imp, int64  /*vmp*/, int64 remain) {
+  T batchF(int imp, int64 /*vmp*/, int64 remain) {
     return static_cast<D&>(*this).F(2, 1) * T(dva[remain] - (imp + 1));
   }
-  void init(int64 n) {
-    dva = prime_s0_ex<int64>(n);
-  }
+  void init(int64 n) { dva = prime_s0_ex<int64>(n); }
   DVA<int64> dva;
 };
 

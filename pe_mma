@@ -232,6 +232,8 @@ enum TokenOrNodeType {
   // END,
   LEFT_BRACKET,
   RIGHT_BRACKET,
+  LEFT_SQUARE_BRACKET,
+  RIGHT_SQUARE_BRACKET,
   EOI,
   // COMMA,
   UNKNOWN_TOKEN,
@@ -266,6 +268,8 @@ int priority[] = {
     // 200,
     400,
     400,
+    400,
+    400,
     65533,
     // 65534,
     65535,
@@ -278,10 +282,11 @@ struct MmaExpTree {
   string token;
   int64 value;
   int iid;  // internal id for removing duplicated tree.
+  int bracketFlag;
 
   MmaExpTree(MmaExpTree* p = nullptr, MmaExpTree* l = nullptr,
              MmaExpTree* r = nullptr)
-      : parent(p), left(l), right(r) {}
+      : parent(p), left(l), right(r), bracketFlag(0) {}
 
   ~MmaExpTree() = default;
 
@@ -306,27 +311,28 @@ struct MmaExpTree {
 
     return o << ")";
   }
+
+  int priority() { return mma_compiler::priority[nodeType]; }
 };
 
 struct MmaExpParser {
   map<string, int64> vars;
-  map<string, int64> funs;
+  map<string, string> funs;
 
   string expression;
   int lastcurr;
   int curr;
 
   MmaExpParser() {
-    /*
-      funs["min"] = 1;
-      funs["max"] = 1;
-      funs["sum"] = 1;
-      funs["print"] = 1;
-      funs["input"] = 1;
-      funs["while"] = 1;
-      funs["select"] = 1;
-      funs["sequence"] = 1;
-    */
+    funs["Sqrt"] = "sqrt";
+    /*funs["max"] = 1;
+    funs["sum"] = 1;
+    funs["print"] = 1;
+    funs["input"] = 1;
+    funs["while"] = 1;
+    funs["select"] = 1;
+    funs["sequence"] = 1;
+  */
   }
 
   int operatorNumber(int /*t*/) {
@@ -345,8 +351,10 @@ struct MmaExpParser {
       while (isdigit(expression[curr])) token += expression[curr++];
       return NUMBER;
     }
-    if (isalpha(expression[curr])) {
-      while (isalpha(expression[curr])) token += expression[curr++];
+    if (isalpha(expression[curr]) || expression[curr] == '_') {
+      while (isalpha(expression[curr]) || isdigit(expression[curr]) ||
+             expression[curr] == '_')
+        token += expression[curr++];
       if (funs.find(token) != funs.end()) return FUN;
       return VAR;
     }
@@ -380,6 +388,12 @@ struct MmaExpParser {
       case ')':
         token = expression[curr++];
         return RIGHT_BRACKET;
+      case '[':
+        token = expression[curr++];
+        return LEFT_SQUARE_BRACKET;
+      case ']':
+        token = expression[curr++];
+        return RIGHT_SQUARE_BRACKET;
       case '^':
         token = expression[curr++];
         return POW;
@@ -483,11 +497,12 @@ struct MmaExpParser {
            build->nodeType = REV;
            build->parent->right = build;
          }*/
-        else if (t == LEFT_BRACKET) {
+        else if (t == LEFT_BRACKET || t == LEFT_SQUARE_BRACKET) {
           MmaExpTree* x = parse();
           if (x) {
             x->parent = build;
             build->right = x;
+            x->bracketFlag = 1;
             if (build->nodeType != FUN) {
               build = x;
             }
@@ -680,6 +695,73 @@ struct MmaExpParser {
 };
 
 struct MmaExpCompiler {
+  string result;
+  int canSkipBracket(MmaExpTree* tree) {
+    return tree->nodeType == FUN || tree->nodeType == POW ||
+           tree->nodeType == VAR || tree->nodeType == NUMBER;
+  }
+  void compileImpl(MmaExpTree* tree) {
+    if (tree->bracketFlag) {
+      result.append("(");
+    }
+    switch (tree->nodeType) {
+      case NUMBER:
+      case VAR:
+        result.append(tree->token);
+        break;
+      case NEG:
+        result.append("-");
+        compileImpl(tree->right);
+        break;
+      case ADD:
+      case MUL: {
+        compileImpl(tree->left);
+        result.append(tree->nodeType == ADD ? " + " : " * ");
+        compileImpl(tree->right);
+        break;
+      }
+      case SUB:
+      case DIV: {
+        compileImpl(tree->left);
+        result.append(tree->nodeType == SUB ? " - " : " / ");
+        compileImpl(tree->right);
+        break;
+      }
+      case POW: {
+        if ((tree->left->nodeType == VAR || tree->left->nodeType == NUMBER) &&
+            (tree->right->token == "1" || tree->right->token == "2" ||
+             tree->right->token == "3" || tree->right->token == "4")) {
+          result.append(tree->left->token);
+          int cnt = atoi(tree->right->token.c_str()) - 1;
+          while (cnt-- > 0) {
+            result.append(" * ");
+            result.append(tree->left->token);
+          }
+        } else {
+          result.append("power(");
+          compileImpl(tree->left);
+          result.append(",");
+          compileImpl(tree->right);
+          result.append(")");
+        }
+        break;
+      }
+      case FUN: {
+        if (tree->token == "Sqrt") {
+          result.append("sqrt");
+        }
+        compileImpl(tree->right);
+      }
+    }
+    if (tree->bracketFlag) {
+      result.append(")");
+    }
+  }
+
+  void compile(MmaExpTree* tree) { compileImpl(tree); }
+};
+
+struct MmaModExpCompiler {
   map<string, int> expToId;
   set<string> varset;
   vector<string> vars;
@@ -729,6 +811,9 @@ struct MmaExpCompiler {
         }
         break;
       }
+      case FUN: {
+        sprintf(buff, "Unknown function %s", tree->token.c_str());
+      }
     }
     string myExpr = buff;
     if (tree->nodeType == VAR) {
@@ -774,13 +859,22 @@ struct MmaExpCompiler {
   }
 };
 
-vector<string> compile(const string& s, const string& funName = "foo") {
+vector<string> compile_mod(const string& s, const string& funName = "foo") {
   MmaExpParser parser;
   auto t = parser.parse(s);
-  MmaExpCompiler compiler;
+  MmaModExpCompiler compiler;
   compiler.compile(t, funName);
   MmaExpTree::destroyTree(t);
   return compiler.result;
+}
+
+vector<string> compile(const string& s) {
+  MmaExpParser parser;
+  auto t = parser.parse(s);
+  MmaExpCompiler compiler;
+  compiler.compile(t);
+  MmaExpTree::destroyTree(t);
+  return vector<string>{compiler.result};
 }
 }  // namespace mma_compiler
 #endif

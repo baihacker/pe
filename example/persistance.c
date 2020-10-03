@@ -1,8 +1,8 @@
 #include <pe.hpp>
 KVPersistance kv("fff.txt");
 int main() {
-  cerr << kv.Size() << endl;
-  cerr << kv.Storage()[1] << endl;
+  cerr << kv.size() << endl;
+  cerr << kv.storage()[1] << endl;
   kv.Set(8, 9);
   kv.Set(9, 10);
 

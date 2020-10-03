@@ -1343,7 +1343,7 @@ struct Sigma0Summer {
     }
   }
 
-  T get(const int64 n) {
+  T Cal(const int64 n) {
     if (n <= pivot_) return pre_[n];
 
     auto where = mem_.find(n);
@@ -1626,7 +1626,7 @@ class DVA {
     }
     key_size = static_cast<int64>(keys.size());
     values.resize(keys.size());
-    fill(element);
+    Fill(element);
   }
 
   DVA(const DVA& other) = default;
@@ -1634,9 +1634,9 @@ class DVA {
   DVA& operator=(const DVA& other) = default;
   DVA& operator=(DVA&& other) noexcept = default;
 
-  void resize(int64 n, T element = 0) { *this = std::move(DVA<T>(n, element)); }
+  void Resize(int64 n, T element = 0) { *this = std::move(DVA<T>(n, element)); }
 
-  void fill(T element) { std::fill(values.begin(), values.end(), element); }
+  void Fill(T element) { std::fill(values.begin(), values.end(), element); }
 
   int IdxOfValue(int64 v) const { return (int)(v <= m ? v : key_size - n / v); }
 
@@ -1887,13 +1887,13 @@ SL void PrimeSkExImpl(const int64 /*n*/, int /*k*/, int64* PK, TreeType& tree,
   int pid = 0;
   for (int64 p = 2; p <= dva.m; ++p)
     if (IsPrime(p)) {
-      const auto psum = tree.Query(static_cast<int>(p - 1)).Value();
+      const auto psum = tree.Query(static_cast<int>(p - 1)).value();
       const int64 p2 = p * p;
       const int a = keySize - 1;
       const int b = dva.IdxOfValue(p2);
       for (int i = a; i >= b;) {
         const auto delta = SubMod(
-            tree.Query(dva.IdxOfValue(dva.keys[i] / p)).Value(), psum, mod);
+            tree.Query(dva.IdxOfValue(dva.keys[i] / p)).value(), psum, mod);
         const int mini = max(dva.IdxOfValue(dva.keys[i] / p * p), b);
         tree.Update(mini, i, SubMod(0, MulModEx(delta, PK[pid], mod), mod));
         i = mini - 1;
@@ -1901,7 +1901,7 @@ SL void PrimeSkExImpl(const int64 /*n*/, int /*k*/, int64* PK, TreeType& tree,
       ++pid;
     }
 
-  for (int i = 1; i < keySize; ++i) dva[dva.keys[i]] = tree.Query(i).Value();
+  for (int i = 1; i < keySize; ++i) dva[dva.keys[i]] = tree.Query(i).value();
 }
 
 SL DVA<int64> PrimeSkEx(const int64 n, int k, int64* PK, int64 mod) {
@@ -1954,20 +1954,20 @@ SL void PrimeSkExImpl(const int64 /*n*/, int k, TreeType& tree, DVA<int64>& dva,
   for (int64 p = 2; p <= dva.m; ++p)
     if (IsPrime(p)) {
       const int64 pk = PowerModEx(p, k, mod);
-      const auto psum = tree.Query(static_cast<int>(p - 1)).Value();
+      const auto psum = tree.Query(static_cast<int>(p - 1)).value();
       const int64 p2 = p * p;
       const int a = keySize - 1;
       const int b = dva.IdxOfValue(p2);
       for (int i = a; i >= b;) {
         const auto delta = SubMod(
-            tree.Query(dva.IdxOfValue(dva.keys[i] / p)).Value(), psum, mod);
+            tree.Query(dva.IdxOfValue(dva.keys[i] / p)).value(), psum, mod);
         const int mini = max(dva.IdxOfValue(dva.keys[i] / p * p), b);
         tree.Update(mini, i, SubMod(0, MulModEx(delta, pk, mod), mod));
         i = mini - 1;
       }
     }
 
-  for (int i = 1; i < keySize; ++i) dva[dva.keys[i]] = tree.Query(i).Value();
+  for (int i = 1; i < keySize; ++i) dva[dva.keys[i]] = tree.Query(i).value();
 }
 
 SL DVA<int64> PrimeSkEx(const int64 n, int k, int64 mod) {
@@ -2260,14 +2260,14 @@ struct CachedPi {
     }
   }
 
-  int64 cal(int64 n) {
+  int64 Cal(int64 n) {
     if (n <= pivot_) return prepi_[n];
     auto where = pi_cache_.find(n);
     if (where != pi_cache_.end()) return where->second;
     return pi_cache_[n] = PrimeS0Ex<int64>(n)[n];
   }
 
-  int64 operator()(int64 n) { return cal(n); }
+  int64 operator()(int64 n) { return Cal(n); }
 
  private:
   int* prepi_{nullptr};
@@ -2311,7 +2311,7 @@ struct PatternNumberCounter {
                     const vi& pattern, const int128 remain) {
     int128 ret = 0;
     if (id == patternLength - 1) {
-      const int64 t = NRootI(remain, pattern[patternLength - 1]);
+      const int64 t = RootI(remain, pattern[patternLength - 1]);
       const int64 how_many = cached_pi_(t);
       const int64 idx = how_many - 1;
       if (idx < start) return 0;
@@ -2574,7 +2574,7 @@ struct MValueBaseTP {
           nextval *= p;
         }
       }
-      ret += sumHelper.Value();
+      ret += sumHelper.value();
     } else {
 #endif
       for (int i = 0; i < limit; ++i) {
@@ -2645,7 +2645,7 @@ struct MValueBaseEx {
           nextval *= p;
         }
       }
-      ret += sumHelper.Value();
+      ret += sumHelper.value();
     } else {
 #endif
       for (int i = 0; i < limit; ++i) {
@@ -2809,7 +2809,7 @@ struct PerfectPowerCounter {
       return mem_[key] = ret;
     }
 
-    return mem_[key] = Cal(NRootI<T>(n, d), 1);
+    return mem_[key] = Cal(RootI<T>(n, d), 1);
   }
 
  private:
@@ -2935,7 +2935,7 @@ return counter.Cal(n);
  */
 template <typename CT>
 struct DfaCounter {
-  DfaCounter& setCountEachLen(int count_each_len) {
+  DfaCounter& set_count_each_len(int count_each_len) {
     this->count_each_len_ = count_each_len;
     return *this;
   }
@@ -3011,7 +3011,7 @@ struct DfaCounter {
   }
 
   template <typename U>
-  CT FindKth(CT k, U max_v) {
+  CT CalKth(CT k, U max_v) {
     U l = 1, r = max_v;
     while (l <= r) {
       U mid = (l + r) / 2;

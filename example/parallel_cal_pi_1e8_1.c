@@ -17,7 +17,7 @@ int main() {
                      .DividedBy(10000000)
                      .SetThreadsCount(4)
                      .Start()
-                     .GetResult();
+                     .Result();
   cerr << "expected : " << pmpi[8] << endl;
   cerr << "received : " << result << endl;
   return 0;

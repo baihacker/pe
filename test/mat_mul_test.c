@@ -17,7 +17,7 @@ void test(const vector<int>& data, const vector<int>& V) {
   TimeRecorder tr;
   v = PowerMod(m, 4, v, mod);
   int64 s = 0;
-  for (auto i : v) s += i.Value();
+  for (auto i : v) s += i.value();
   // cout << s << endl;
   if (show) {
     cout << tr.Elapsed().Format() << endl;

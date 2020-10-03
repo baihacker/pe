@@ -208,25 +208,25 @@ class BigInteger {
 
   template <typename T>
   SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(T)
-      GetAbsValue(T x) {
+      AbsValue(T x) {
     return x >= 0 ? x : -x;
   }
 
   template <typename T>
   SL REQUIRES((is_native_integer<T>::value && is_unsigned<T>::value)) RETURN(T)
-      GetAbsValue(T x) {
+      AbsValue(T x) {
     return x;
   }
 
   template <typename T>
   SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(T)
-      GetNegValue(T x) {
+      NegValue(T x) {
     return -x;
   }
 
   template <typename T>
   SL REQUIRES((is_native_integer<T>::value && is_unsigned<T>::value)) RETURN(T)
-      GetNegValue(T x) {
+      NegValue(T x) {
     return x;
   }
 
@@ -265,7 +265,7 @@ class BigInteger {
 
  private:
   static int AbsCompare(const BigInteger& l, const BigInteger& r) {
-    if (l.GetSize() <= 2 && r.GetSize() <= 2) {
+    if (l.size() <= 2 && r.size() <= 2) {
       const uint64 a = l.ToInt<uint64>();
       const uint64 b = r.ToInt<uint64>();
       if (a == b) return 0;
@@ -286,19 +286,18 @@ class BigInteger {
   }
 
   static BigInteger AbsAdd(const BigInteger& l, const BigInteger& r) {
-    BigInteger ret(l, max(l.GetSize(), r.GetSize()) + 1);
+    BigInteger ret(l, max(l.size(), r.size()) + 1);
     AbsAddInplace(ret, r);
     return ret;
   }
 
   static void AbsAddInplace(BigInteger& l, const BigInteger& r) {
-    if (l.GetSize() <= 2 && r.GetSize() <= 1 ||
-        l.GetSize() <= 1 && r.GetSize() <= 2) {
+    if (l.size() <= 2 && r.size() <= 1 || l.size() <= 1 && r.size() <= 2) {
       l.ResetAbs(l.ToInt<uint64>() + r.ToInt<uint64>());
       return;
     }
 
-    l.Reserve(l.GetSize() + r.GetSize() + 1);
+    l.Reserve(l.size() + r.size() + 1);
 
     const int maxPos = max(l.pos_, r.pos_);
     const int minPos = min(l.pos_, r.pos_);
@@ -336,7 +335,7 @@ class BigInteger {
   static void AbsSubInplace(BigInteger& l, const BigInteger& r) {
     PE_ASSERT(BigInteger::AbsCompare(l, r) >= 0);
 
-    if (l.GetSize() <= 2 && r.GetSize() <= 2) {
+    if (l.size() <= 2 && r.size() <= 2) {
       l.ResetAbs(l.ToInt<uint64>() - r.ToInt<uint64>());
       return;
     }
@@ -370,8 +369,8 @@ class BigInteger {
 
 #if HAS_POLY_MUL_NTT32_SMALL
   static BigInteger AbsMulNtt(const BigInteger& l, const BigInteger& r) {
-    const int n = l.GetSize() << 1;
-    const int m = r.GetSize() << 1;
+    const int n = l.size() << 1;
+    const int m = r.size() << 1;
 
     std::vector<uint64> X(n), Y(m);
 
@@ -414,21 +413,21 @@ class BigInteger {
 #endif
 
   static BigInteger AbsMul(const BigInteger& l, const BigInteger& r) {
-    if (l.GetSize() <= 1 && r.GetSize() <= 1) {
+    if (l.size() <= 1 && r.size() <= 1) {
       return static_cast<uint64>(l[0]) * r[0];
     }
-    if (r.GetSize() <= 1) {
+    if (r.size() <= 1) {
       return AbsMul(l, r.ToInt<uint64>());
     }
-    if (l.GetSize() <= 1) {
+    if (l.size() <= 1) {
       return AbsMul(r, l.ToInt<uint64>());
     }
 
 #if HAS_POLY_MUL_NTT32_SMALL
     {
       // If the cost of ntt is less than normal multiplication, then use ntt.
-      const uint64 cost1 = static_cast<uint64>(l.GetSize()) * r.GetSize();
-      const uint64 len = (l.GetSize() + r.GetSize()) << 1;
+      const uint64 cost1 = static_cast<uint64>(l.size()) * r.size();
+      const uint64 len = (l.size() + r.size()) << 1;
       int64 alignedLen = 1;
       int bit = 1;
       while (alignedLen < static_cast<int64>(len)) alignedLen <<= 1, ++bit;
@@ -443,7 +442,7 @@ class BigInteger {
     const int posL = l.pos_;
     const int posR = r.pos_;
 
-    const int newSize = l.GetSize() + r.GetSize() + 1;
+    const int newSize = l.size() + r.size() + 1;
 
     BigInteger ret(newSize, alloc_mem_tag);
     fill(ret.data_, ret.data_ + newSize, 0);
@@ -472,7 +471,7 @@ class BigInteger {
     if (r > max_32bit_value) {
       return AbsMul(l, BigInteger(r));
     }
-    BigInteger ret(l, l.GetSize() + BigInteger(r).GetSize() + 1);
+    BigInteger ret(l, l.size() + BigInteger(r).size() + 1);
     AbsMulInplace(ret, r);
     return ret;
   }
@@ -485,12 +484,12 @@ class BigInteger {
       return;
     }
 
-    if (l.GetSize() <= 1) {
+    if (l.size() <= 1) {
       l.ResetAbs(static_cast<uint64>(l[0]) * r);
       return;
     }
 
-    l.Reserve(l.GetSize() + BigInteger(r).GetSize() + 1);
+    l.Reserve(l.size() + BigInteger(r).size() + 1);
 
     uint64 inc = 0;
     int top = 0;
@@ -511,7 +510,7 @@ class BigInteger {
 
   static BigInteger AbsDiv(const BigInteger& l, const BigInteger& r,
                            BigInteger& remain) {
-    if (l.GetSize() <= 2 && r.GetSize() <= 2) {
+    if (l.size() <= 2 && r.size() <= 2) {
       const uint64 a = l.ToInt<uint64>();
       const uint64 b = r.ToInt<uint64>();
       remain = a % b;
@@ -536,7 +535,7 @@ class BigInteger {
   }
 
   static BigInteger AbsDiv(const BigInteger& l, const BigInteger& r) {
-    if (l.GetSize() <= 2 && r.GetSize() <= 2) {
+    if (l.size() <= 2 && r.size() <= 2) {
       const uint64 a = l.ToInt<uint64>();
       const uint64 b = r.ToInt<uint64>();
       return a / b;
@@ -629,7 +628,7 @@ class BigInteger {
   static BigInteger AbsDiv(const BigInteger& l, T r, T& remain) {
     static_assert(is_unsigned<T>::value, "T must be unsigned");
     static_assert(sizeof(T) <= 8, "T must be at most 64-bit");
-    if (l.GetSize() <= 2) {
+    if (l.size() <= 2) {
       const uint64 a = l.ToInt<uint64>();
       const uint64 b = r;
       remain = a % b;
@@ -645,7 +644,7 @@ class BigInteger {
   static BigInteger AbsDiv(const BigInteger& l, T r) {
     static_assert(is_unsigned<T>::value, "T must be unsigned");
     static_assert(sizeof(T) <= 8, "T must be at most 64-bit");
-    if (l.GetSize() <= 2) {
+    if (l.size() <= 2) {
       const uint64 a = l.ToInt<uint64>();
       const uint64 b = r;
       return a / b;
@@ -663,7 +662,7 @@ class BigInteger {
     static_assert(sizeof(T) <= 8, "T must be at most 64-bit");
 
     l.FixPos();
-    if (l.GetSize() <= 2) {
+    if (l.size() <= 2) {
       const uint64 a = l.ToInt<uint64>();
       const uint64 b = r;
       remain = static_cast<T>(a % b);
@@ -816,7 +815,7 @@ class BigInteger {
       // Do nothing
     } else if (IsZero()) {
       *this = other;
-    } else if (GetSign() == other.GetSign()) {
+    } else if (sign() == other.sign()) {
       AbsAddInplace(*this, other);
     } else {
       int c = AbsCompare(*this, other);
@@ -841,7 +840,7 @@ class BigInteger {
     } else if (IsZero()) {
       *this = other;
       sign_ = -other.sign_;
-    } else if (GetSign() != other.GetSign()) {
+    } else if (sign() != other.sign()) {
       AbsAddInplace(*this, other);
     } else {
       int c = AbsCompare(*this, other);
@@ -879,7 +878,7 @@ class BigInteger {
       return *this;
     }
     using unsignedT = typename std::make_unsigned<T>::type;
-    unsignedT absValue = GetAbsValue(other);
+    unsignedT absValue = AbsValue(other);
     AbsMulInplace(*this, absValue);
     sign_ = sign_ * (other > 0 ? 1 : -1);
     return *this;
@@ -1001,11 +1000,11 @@ class BigInteger {
   }
 
  public:
-  const unsigned int* GetData() const { return data_; }
-  unsigned int* GetData() { return data_; }
-  int GetSize() const { return pos_ + 1; }
+  const unsigned int* data() const { return data_; }
+  unsigned int* data() { return data_; }
+  int size() const { return pos_ + 1; }
 
-  int GetSign() const { return sign_; }
+  int sign() const { return sign_; }
   bool IsZero() const { return sign_ == 0; }
   int IsEven() const { return data_[0] & 1 ? 0 : 1; }
   int IsOdd() const { return data_[0] & 1 ? 1 : 0; }
@@ -1036,13 +1035,13 @@ class BigInteger {
     data_[x] = ::RevBit(data_[x], y);
   }
 
-  int GetBitCount() const {
+  int BitCount() const {
     int ret = 0;
     for (int i = pos_; i >= 0; --i) ret += pe_popcount(data_[i]);
     return ret;
   }
 
-  int GetBitHeight() const {
+  int BitHeight() const {
     int ret = pos_ << div32_bit;
     int hiCnt = 0;
     unsigned int v = data_[pos_];
@@ -1108,7 +1107,7 @@ class BigInteger {
   RETURN(T) ToInt() const {
     using unsignedT = typename std::make_unsigned<T>::type;
     unsignedT v = ToInt<unsignedT>();
-    if (GetSign() < 0) {
+    if (sign() < 0) {
       v = ~v + 1;
     }
     return static_cast<T>(v);
@@ -1274,7 +1273,7 @@ inline BigInteger operator-(const BigInteger& l, const BigInteger& r) {
     return l;
   } else if (l.IsZero()) {
     return -r;
-  } else if (l.GetSign() != r.GetSign()) {
+  } else if (l.sign() != r.sign()) {
     BigInteger t(l);
     BigInteger::AbsAddInplace(t, r);
     return t;
@@ -1298,7 +1297,7 @@ inline BigInteger operator-(const BigInteger& l, const BigInteger& r) {
 inline BigInteger operator*(const BigInteger& l, const BigInteger& r) {
   if (l.IsZero() || r.IsZero()) return 0;
 
-  const int s = l.GetSign() * (r > 0 ? 1 : -1);
+  const int s = l.sign() * (r > 0 ? 1 : -1);
   BigInteger ret(BigInteger::AbsMul(l, r));
   ret.sign_ = s;
 
@@ -1313,8 +1312,8 @@ inline REQUIRES((is_native_integer<T>::value &&
   if (r == 0 || l.IsZero()) return 0;
 
   using unsignedT = typename std::make_unsigned<T>::type;
-  unsignedT absValue = BigInteger::GetAbsValue(r);
-  const int s = l.GetSign() * (r > 0 ? 1 : -1);
+  unsignedT absValue = BigInteger::AbsValue(r);
+  const int s = l.sign() * (r > 0 ? 1 : -1);
   BigInteger ret(BigInteger::AbsMul(l, absValue));
   ret.sign_ = s;
 
@@ -1355,7 +1354,7 @@ inline tuple<BigInteger, BigInteger> DivInternal(const BigInteger& l,
     return make_tuple(0, 0);
   }
 
-  if (r.GetSize() > 2) {
+  if (r.size() > 2) {
     BigInteger x;
     BigInteger ret(BigInteger::AbsDiv(l, r, x));
     ret.sign_ = l.sign_ * r.sign_;
@@ -1371,7 +1370,7 @@ inline tuple<BigInteger, BigInteger> DivInternal(const BigInteger& l,
     uint64 x;
     BigInteger ret(l);
     BigInteger::AbsDivInplace(ret, absValue, x);
-    ret.sign_ = l.GetSign() * (r.GetSign() > 0 ? 1 : -1);
+    ret.sign_ = l.sign() * (r.sign() > 0 ? 1 : -1);
     ret.FixPos();
 
     BigInteger remain(x);
@@ -1396,7 +1395,7 @@ inline REQUIRES((is_native_integer<T>::value &&
 
   const int signl = l.sign_;
   using unsignedT = typename std::make_unsigned<T>::type;
-  unsignedT absValue = BigInteger::GetAbsValue(r);
+  unsignedT absValue = BigInteger::AbsValue(r);
   unsignedT x;
   BigInteger ret(l);
   BigInteger::AbsDivInplace(ret, absValue, x);
@@ -1404,7 +1403,7 @@ inline REQUIRES((is_native_integer<T>::value &&
   ret.FixPos();
   if (l.sign_ < 0) {
     PE_ASSERT(x == 0 || !std::is_unsigned<T>::value);
-    x = BigInteger::GetAbsValue(x);
+    x = BigInteger::AbsValue(x);
   }
 
   return make_tuple(std::move(ret), (T)x);
@@ -1430,7 +1429,7 @@ inline REQUIRES((is_native_integer<T>::value &&
     return;
   }
   using unsignedT = typename std::make_unsigned<T>::type;
-  unsignedT absValue = BigInteger::GetAbsValue(r);
+  unsignedT absValue = BigInteger::AbsValue(r);
   unsignedT remainT;
   const int signl = l.sign_;
   BigInteger::AbsDivInplace(l, absValue, remainT);
@@ -1439,7 +1438,7 @@ inline REQUIRES((is_native_integer<T>::value &&
   remain = (T)remainT;
   if (signl < 0) {
     PE_ASSERT(remain == 0 || !std::is_unsigned<T>::value);
-    remain = BigInteger::GetNegValue(remain);
+    remain = BigInteger::NegValue(remain);
   }
 }
 
@@ -1457,14 +1456,14 @@ operator%(const BigInteger& l, T r) {
   BigInteger u;
   T v;
   tie(u, v) = DivInternal(l, r);
-  if (l.GetSign() < 0) {
-    v = BigInteger::GetNegValue(v);
+  if (l.sign() < 0) {
+    v = BigInteger::NegValue(v);
   }
   return v;
 }
 
 inline BigInteger operator&(const BigInteger& l, const BigInteger& r) {
-  if (l.GetSize() <= 2 && r.GetSize() <= 2) {
+  if (l.size() <= 2 && r.size() <= 2) {
     return l.ToInt<uint64>() & r.ToInt<uint64>();
   }
 
@@ -1480,7 +1479,7 @@ inline BigInteger operator&(const BigInteger& l, const BigInteger& r) {
 }
 
 inline BigInteger operator^(const BigInteger& l, const BigInteger& r) {
-  if (l.GetSize() <= 2 && r.GetSize() <= 2) {
+  if (l.size() <= 2 && r.size() <= 2) {
     return l.ToInt<uint64>() ^ r.ToInt<uint64>();
   }
 
@@ -1499,7 +1498,7 @@ inline BigInteger operator^(const BigInteger& l, const BigInteger& r) {
 }
 
 inline BigInteger operator|(const BigInteger& l, const BigInteger& r) {
-  if (l.GetSize() <= 2 && r.GetSize() <= 2) {
+  if (l.size() <= 2 && r.size() <= 2) {
     return l.ToInt<uint64>() | r.ToInt<uint64>();
   }
 
@@ -1522,13 +1521,13 @@ inline REQUIRES((is_native_integer<T>::value &&
                  !is_same<typename remove_cvref<T>::type, BigInteger>::value))
     RETURN(BigInteger)
     operator<<(const BigInteger& l, T n) {
-  if (l.GetSign() == 0) {
+  if (l.sign() == 0) {
     return 0;
   }
   if (n == 0) {
     return l;
   }
-  const int bitCnt = l.GetBitHeight();
+  const int bitCnt = l.BitHeight();
   vector<unsigned int> v(n + bitCnt, 0);
   for (int i = 0, j = n; i < bitCnt; ++i, ++j) {
     const int x = i >> BigInteger::div32_bit;
@@ -1546,13 +1545,13 @@ inline REQUIRES((is_native_integer<T>::value &&
                  !is_same<typename remove_cvref<T>::type, BigInteger>::value))
     RETURN(BigInteger)
     operator>>(const BigInteger& l, T n) {
-  if (l.GetSign() == 0) {
+  if (l.sign() == 0) {
     return 0;
   }
   if (n == 0) {
     return l;
   }
-  const int bitCnt = l.GetBitHeight();
+  const int bitCnt = l.BitHeight();
   if (n >= bitCnt) {
     return 0;
   }
@@ -1596,7 +1595,7 @@ struct Gbi<BigInteger> {
 
 SL string ToString(const BigInteger& x) { return x.ToString(); }
 SL int IsZero(const BigInteger& x) { return x.IsZero(); }
-SL int IntSign(const BigInteger& x) { return x.GetSign(); }
+SL int IntSign(const BigInteger& x) { return x.sign(); }
 SL int IsEven(const BigInteger& x) { return x.IsEven(); }
 SL int IsOdd(const BigInteger& x) { return x.IsOdd(); }
 SL unsigned int LowerBits(const BigInteger& x) {

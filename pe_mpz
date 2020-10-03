@@ -190,11 +190,11 @@ class MpInteger {
 
   template <typename T>
   friend REQUIRES((is_native_integer<T>::value && is_signed<T>::value))
-      RETURN(void) __init_mpz(mpz_t z, T value);
+      RETURN(void) __InitMpz(mpz_t z, T value);
 
   template <typename T>
   friend REQUIRES((is_native_integer<T>::value && is_unsigned<T>::value))
-      RETURN(void) __init_mpz(mpz_t z, T value);
+      RETURN(void) __InitMpz(mpz_t z, T value);
 
  public:
   MpInteger() {
@@ -218,7 +218,7 @@ class MpInteger {
   template <typename T,
             typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(void)>
   MpInteger(T value) {
-    __init_mpz(z, value);
+    __InitMpz(z, value);
   }
 
   MpInteger(const MpInteger& o) { mpz_init_set(z, o.z); }
@@ -506,20 +506,20 @@ class MpInteger {
   mp_limb_t* data() { return z[0]._mp_d; }
   const mp_limb_t* data() const { return z[0]._mp_d; }
 
-  int getSign() const { return mpz_sgn(z); }
-  int isZero() const { return getSign() == 0; }
-  int isEven() const { return mpz_even_p(z) ? 1 : 0; }
-  int isOdd() const { return mpz_odd_p(z) ? 1 : 0; }
+  int sign() const { return mpz_sgn(z); }
+  int IsZero() const { return sign() == 0; }
+  int IsEven() const { return mpz_even_p(z) ? 1 : 0; }
+  int IsOdd() const { return mpz_odd_p(z) ? 1 : 0; }
   mp_limb_t operator[](int idx) const { return data()[idx]; }
   mp_limb_t& operator[](int idx) { return data()[idx]; }
 
-  void setBit(int idx) { mpz_setbit(z, idx); }
-  void resetBit(int idx) { mpz_clrbit(z, idx); }
-  int getBit(int idx) const { return mpz_tstbit(z, idx); }
+  void SetBit(int idx) { mpz_setbit(z, idx); }
+  void ResetBit(int idx) { mpz_clrbit(z, idx); }
+  int GetBit(int idx) const { return mpz_tstbit(z, idx); }
   void revBit(int idx) { mpz_combit(z, idx); }
-  int bitCount() const { return mpz_popcount(z); }
+  int BitCount() const { return mpz_popcount(z); }
 
-  string toString(int base = 10) const {
+  string ToString(int base = 10) const {
     size_t sz = mpz_sizeinbase(z, base) + 1;
 
     char* buff = new char[sz + 1];
@@ -533,10 +533,10 @@ class MpInteger {
 
   template <typename T>
   REQUIRES(is_native_integer<T>::value&& std::is_signed<T>::value)
-  RETURN(T) toInt() const {
+  RETURN(T) ToInt() const {
     using unsignedT = typename std::make_unsigned<T>::type;
-    unsignedT v = toInt<unsignedT>();
-    if (getSign() < 0) {
+    unsignedT v = ToInt<unsignedT>();
+    if (sign() < 0) {
       v = ~v + 1;
     }
     return static_cast<T>(v);
@@ -544,7 +544,7 @@ class MpInteger {
 
   template <typename T>
   REQUIRES(is_native_integer<T>::value&& std::is_unsigned<T>::value)
-  RETURN(T) toInt() const {
+  RETURN(T) ToInt() const {
     T result = 0;
     const auto* buff = data();
     for (int i = size() - 1; i >= 0; --i) {
@@ -561,7 +561,7 @@ class MpInteger {
   }
 
   template <typename T>
-  T toFloat() const {
+  T ToFloat() const {
     T result = 0;
     const auto* buff = data();
     T each = 1;
@@ -570,7 +570,7 @@ class MpInteger {
     }
     for (int i = size() - 1; i >= 0; --i)
       result = result * 4294967296 + buff[i];
-    if (getSign() < 0) {
+    if (sign() < 0) {
       result = -result;
     }
     return result;
@@ -585,7 +585,7 @@ class MpInteger {
 
 template <typename T>
 REQUIRES((is_native_integer<T>::value && is_signed<T>::value))
-RETURN(void) __init_mpz(mpz_t z, T value) {
+RETURN(void) __InitMpz(mpz_t z, T value) {
   if (value == 0) {
     mpz_init(z);
     return;
@@ -593,17 +593,17 @@ RETURN(void) __init_mpz(mpz_t z, T value) {
 
   using unsignedT = typename std::make_unsigned<T>::type;
   if (value > 0) {
-    __init_mpz<unsignedT>(z, static_cast<unsignedT>(value));
+    __InitMpz<unsignedT>(z, static_cast<unsignedT>(value));
   } else {
     // Note: it works for value = T::min()
-    __init_mpz<unsignedT>(z, static_cast<unsignedT>(-value));
+    __InitMpz<unsignedT>(z, static_cast<unsignedT>(-value));
     z->_mp_size = -z->_mp_size;
   }
 }
 
 template <typename T>
 REQUIRES((is_native_integer<T>::value && is_unsigned<T>::value))
-RETURN(void) __init_mpz(mpz_t z, T value) {
+RETURN(void) __InitMpz(mpz_t z, T value) {
   if (value == 0) {
     mpz_init(z);
     return;
@@ -799,7 +799,7 @@ operator%(const MpInteger& l, T r) {
 
 MpInteger operator<<(const MpInteger& l, const MpInteger& cnt) {
   MpInteger ret;
-  mpz_mul_2exp(ret.z, l.z, cnt.toInt<int>());
+  mpz_mul_2exp(ret.z, l.z, cnt.ToInt<int>());
   return ret;
 }
 
@@ -811,7 +811,7 @@ MpInteger operator<<(const MpInteger& l, int cnt) {
 
 MpInteger operator>>(const MpInteger& l, const MpInteger& cnt) {
   MpInteger ret;
-  mpz_tdiv_q_2exp(ret.z, l.z, cnt.toInt<int>());
+  mpz_tdiv_q_2exp(ret.z, l.z, cnt.ToInt<int>());
   return ret;
 }
 
@@ -846,7 +846,7 @@ MpInteger operator~(const MpInteger& o) {
 }
 
 ostream& operator<<(ostream& o, const MpInteger& val) {
-  return o << val.toString();
+  return o << val.ToString();
 }
 
 inline MpInteger operator"" _mpi(const char* sv, size_t /*sc*/) {
@@ -874,11 +874,11 @@ struct Gbi<MpInteger> {
   static MpInteger Of(const string& s) { return MpInteger(s); }
 };
 
-SL string ToString(const MpInteger& x) { return x.toString(); }
-SL int IsZero(const MpInteger& x) { return x.isZero(); }
-SL int IntSign(const MpInteger& x) { return x.getSign(); }
-SL int IsEven(const MpInteger& x) { return x.isEven(); }
-SL int IsOdd(const MpInteger& x) { return x.isOdd(); }
+SL string ToString(const MpInteger& x) { return x.ToString(); }
+SL int IsZero(const MpInteger& x) { return x.IsZero(); }
+SL int IntSign(const MpInteger& x) { return x.sign(); }
+SL int IsEven(const MpInteger& x) { return x.IsEven(); }
+SL int IsOdd(const MpInteger& x) { return x.IsOdd(); }
 SL unsigned int LowerBits(const MpInteger& x) {
   return static_cast<unsigned int>(x[0]);
 }
@@ -888,12 +888,12 @@ SL tuple<MpInteger, MpInteger> Div(const MpInteger& l, const MpInteger& r) {
 
 template <typename T>
 SL T ToInt(const MpInteger& x) {
-  return x.toInt<T>();
+  return x.ToInt<T>();
 }
 
 template <typename T>
 SL T ToFloat(const MpInteger& x) {
-  return x.toFloat<T>();
+  return x.ToFloat<T>();
 }
 
 MpInteger PowerMod(const MpInteger& base, const MpInteger& n,

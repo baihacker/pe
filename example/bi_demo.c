@@ -31,7 +31,7 @@ void facTest() {
   for (int i = 1; i <= 100000; ++i) result = result * i;
   cout << tr.Elapsed().Format() << endl;
   cout << result.ToString().size() << endl;
-  cout << result.GetSize() << endl;
+  cout << result.size() << endl;
 }
 
 int main() {
@@ -91,7 +91,7 @@ int main() {
   for (int i = 1; i <= 100; ++i) result = result * i;
   cout << tr.Elapsed().Format() << endl;
   cout << result.ToString().size() << endl;
-  cout << result.GetSize() << endl;
+  cout << result.size() << endl;
   // cout << - "123"_bi << endl;
 
   // cout << BigInteger((int128)1000000000000 * (int128)999999999) << endl;

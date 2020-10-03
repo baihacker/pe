@@ -71,7 +71,7 @@ SL void prime_pi_sum_pmod_test() {
     for (int i = 0; i < pcnt && plist[i] <= N; ++i) ++result[plist[i] % mod];
     auto v = PrimeS0Pmod<NModNumber<CCMod64<M>>>(N, mod);
     for (int j = 0; j < mod; ++j) {
-      assert(result[j] % M == v[j][N].Value());
+      assert(result[j] % M == v[j][N].value());
     }
   }
   for (int mod = 1; mod <= 30; ++mod) {
@@ -80,7 +80,7 @@ SL void prime_pi_sum_pmod_test() {
       result[plist[i] % mod] += plist[i];
     auto v = PrimeS1Pmod<NModNumber<CCMod64<M>>>(N, mod);
     for (int j = 0; j < mod; ++j) {
-      assert(result[j] % M == v[j][N].Value());
+      assert(result[j] % M == v[j][N].value());
     }
   }
 }

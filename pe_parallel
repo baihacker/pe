@@ -79,7 +79,7 @@ class MultiThreadsTaskRunner {
     if (max_request > max_pending_tasks - 1)
       max_request = max_pending_tasks - 1;
     for (;;) {
-      if (GetRequestCount() < max_request) break;
+      if (RequestCount() < max_request) break;
       WaitForSingleObject(request_removed, static_cast<DWORD>(INFINITY));
     }
   }
@@ -114,7 +114,7 @@ class MultiThreadsTaskRunner {
 
  private:
   // inc = 0 or 1
-  bool GetNextRequest(TaskItem& item, int inc) {
+  bool NextRequest(TaskItem& item, int inc) {
     item.task_item_id = -1;
     int oldp = p;
     EnterCriticalSection(&request_access);
@@ -134,7 +134,7 @@ class MultiThreadsTaskRunner {
     return item.task_item_id != -1;
   }
 
-  int GetRequestCount() {
+  int RequestCount() {
     int ret = 0;
     EnterCriticalSection(&request_access);
     ret = q - p;
@@ -148,11 +148,11 @@ class MultiThreadsTaskRunner {
   void Work(ThreadContext thread_context) {
     for (;;) {
       TaskItem item;
-      if (GetNextRequest(item, 0) == false) {
+      if (NextRequest(item, 0) == false) {
         DWORD wait_result = WaitForSingleObject(has_new_request, INFINITE);
         if (wait_result != WAIT_OBJECT_0) continue;
       }
-      if (GetNextRequest(item, 1) == false) continue;
+      if (NextRequest(item, 1) == false) continue;
       if (item.is_stop_task) {
         SetEvent(has_new_request);
         break;
@@ -291,7 +291,7 @@ template <typename Derived>
 struct SupportCacheFileName {
   SupportCacheFileName(const char* /*file_name*/ = nullptr) {}
 
-  const char* GetCacheFileName() const { return file_name_; }
+  const char* CacheFileName() const { return file_name_; }
 
   Derived& SetCacheFileName(const char* file_name) {
     file_name_ = file_name;
@@ -303,7 +303,7 @@ struct SupportCacheFileName {
 
 template <typename CONTEXT, bool has_file_name>
 struct GetCacheFileNameHelper {
-  const char* Get(CONTEXT& context) { return context.GetCacheFileName(); }
+  const char* Get(CONTEXT& context) { return context.CacheFileName(); }
 };
 
 template <typename CONTEXT>
@@ -348,8 +348,8 @@ class ParallelRunner {
   bool OnStart(const TaskItem& task_item) {
     cerr << task_item.task.id << " begins" << endl;
     if (kv_) {
-      auto iter = kv_->Storage().find(task_item.task.id);
-      if (iter != kv_->Storage().end()) {
+      auto iter = kv_->storage().find(task_item.task.id);
+      if (iter != kv_->storage().end()) {
         const int64 old_value = iter->second;
         return context_ptr_->HandleCachedResult(task_item.task, old_value);
       }
@@ -363,7 +363,7 @@ class ParallelRunner {
     cerr << "local_result = " << local_result << endl;
     if (kv_) kv_->Set(task_item.task.id, local_result);
     context_ptr_->HandleResult(task_item.task, local_result);
-    cerr << "result = " << context_ptr_->GetResult() << endl;
+    cerr << "result = " << context_ptr_->Result() << endl;
     return true;
   }
 
@@ -409,7 +409,7 @@ class ParallelRunner {
     }
     context_ptr_ = nullptr;
 
-    return context.GetResult();
+    return context.Result();
   }
 
  private:
@@ -430,7 +430,7 @@ class ParallelRange : public RangeBasedTaskGenerator<ParallelRange>,
       : RangeBasedTaskGenerator(first, last, block_size),
         SupportCacheFileName(file_name) {}
 
-  int64 GetResult() const { return result_; }
+  int64 Result() const { return result_; }
 
   void OnFinished() { cerr << "result = " << result_ << endl; }
 
@@ -524,8 +524,8 @@ class ParallelRange : public RangeBasedTaskGenerator<ParallelRange>,
 #define BLOCK_MAP         )).BlockMap((  [=] (int64 first, int64 last, int64 worker)-> int64
 #define REDUCE            )).Reduce((     [=] (int64 result, int64 value)-> int64
 #define END_PARALLEL      )).Start()
-#define END_PARALLEL_WITH_RESULT      )).Start().GetResult()
-#define PARALLEL_RESULT(x) (x.GetResult())
+#define END_PARALLEL_WITH_RESULT      )).Start().Result()
+#define PARALLEL_RESULT(x) (x.Result())
 
 // The parallel interface that used to be inherited by sub-class.
 // It uses ParallelRunner to schedule taskes.
@@ -537,7 +537,7 @@ class ParallelRangeT : public RangeBasedTaskGenerator<ParallelRangeT<Derived>>,
  public:
   using Self = ParallelRangeT<Derived>;
   using Task = typename RangeBasedTaskGenerator<Self>::Task;
-  int64 GetResult() const { return result_; }
+  int64 Result() const { return result_; }
 
   void OnFinished() { cerr << "result = " << result_ << endl; }
 

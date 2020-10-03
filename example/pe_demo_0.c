@@ -13,7 +13,7 @@ int main() {
   auto f = Factorize(303741899);
   foreach (it, f)
     cerr << it.first << " " << it.second << endl;
-  auto fs = GetFactors(65700);
+  auto fs = Factors(65700);
   sort(all(fs));
   foreach (it, fs)
     cerr << it << endl;

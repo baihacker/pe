@@ -13,9 +13,9 @@ SL void test_constructor_internal() {
   cout << MpInteger(numeric_limits<T>::max()) << " " << numeric_limits<T>::max()
        << endl;*/
 
-  assert(MpInteger(numeric_limits<T>::min()).toInt<T>() ==
+  assert(MpInteger(numeric_limits<T>::min()).ToInt<T>() ==
          numeric_limits<T>::min());
-  assert(MpInteger(numeric_limits<T>::max()).toInt<T>() ==
+  assert(MpInteger(numeric_limits<T>::max()).ToInt<T>() ==
          numeric_limits<T>::max());
 
   // cout << endl;
@@ -48,13 +48,13 @@ template <typename T>
 SL void test_assignment_internal() {
   MpInteger x;
   x = T();
-  assert(x.toInt<T>() == T());
+  assert(x.ToInt<T>() == T());
 
   x = numeric_limits<T>::max();
-  assert(x.toInt<T>() == numeric_limits<T>::max());
+  assert(x.ToInt<T>() == numeric_limits<T>::max());
 
   x = numeric_limits<T>::min();
-  assert(x.toInt<T>() == numeric_limits<T>::min());
+  assert(x.ToInt<T>() == numeric_limits<T>::min());
 }
 
 SL void test_assignment_operator() {
@@ -80,7 +80,7 @@ SL void test_assignment_operator() {
   string s = "123456789123456789123456789";
   MpInteger x;
   x = s;
-  assert(x.toString() == s);
+  assert(x.ToString() == s);
 }
 
 template <typename T>
@@ -137,118 +137,118 @@ SL void test_asmd_operator() {
 
   for (int a = -10; a <= 10; ++a)
     for (int b = -10; b <= 10; ++b) {
-      assert((MpInteger(a) + MpInteger(b)).toInt<int>() == (a + b));
-      assert((MpInteger(a) += MpInteger(b)).toInt<int>() == (a + b));
-      assert((MpInteger(a) - MpInteger(b)).toInt<int>() == (a - b));
-      assert((MpInteger(a) -= MpInteger(b)).toInt<int>() == (a - b));
-      assert((MpInteger(a) * MpInteger(b)).toInt<int>() == (a * b));
-      assert((MpInteger(a) *= MpInteger(b)).toInt<int>() == (a * b));
+      assert((MpInteger(a) + MpInteger(b)).ToInt<int>() == (a + b));
+      assert((MpInteger(a) += MpInteger(b)).ToInt<int>() == (a + b));
+      assert((MpInteger(a) - MpInteger(b)).ToInt<int>() == (a - b));
+      assert((MpInteger(a) -= MpInteger(b)).ToInt<int>() == (a - b));
+      assert((MpInteger(a) * MpInteger(b)).ToInt<int>() == (a * b));
+      assert((MpInteger(a) *= MpInteger(b)).ToInt<int>() == (a * b));
       if (b != 0) {
-        assert((MpInteger(a) / MpInteger(b)).toInt<int>() == (a / b));
-        assert((MpInteger(a) /= MpInteger(b)).toInt<int>() == (a / b));
-        assert((MpInteger(a) % MpInteger(b)).toInt<int>() == (a % b));
-        assert((MpInteger(a) %= MpInteger(b)).toInt<int>() == (a % b));
+        assert((MpInteger(a) / MpInteger(b)).ToInt<int>() == (a / b));
+        assert((MpInteger(a) /= MpInteger(b)).ToInt<int>() == (a / b));
+        assert((MpInteger(a) % MpInteger(b)).ToInt<int>() == (a % b));
+        assert((MpInteger(a) %= MpInteger(b)).ToInt<int>() == (a % b));
       }
       if (a >= 0 && b >= 0) {
-        assert((MpInteger(a) | MpInteger(b)).toInt<int>() == (a | b));
-        assert((MpInteger(a) |= MpInteger(b)).toInt<int>() == (a | b));
-        assert((MpInteger(a) & MpInteger(b)).toInt<int>() == (a & b));
-        assert((MpInteger(a) &= MpInteger(b)).toInt<int>() == (a & b));
-        assert((MpInteger(a) ^ MpInteger(b)).toInt<int>() == (a ^ b));
-        assert((MpInteger(a) ^= MpInteger(b)).toInt<int>() == (a ^ b));
+        assert((MpInteger(a) | MpInteger(b)).ToInt<int>() == (a | b));
+        assert((MpInteger(a) |= MpInteger(b)).ToInt<int>() == (a | b));
+        assert((MpInteger(a) & MpInteger(b)).ToInt<int>() == (a & b));
+        assert((MpInteger(a) &= MpInteger(b)).ToInt<int>() == (a & b));
+        assert((MpInteger(a) ^ MpInteger(b)).ToInt<int>() == (a ^ b));
+        assert((MpInteger(a) ^= MpInteger(b)).ToInt<int>() == (a ^ b));
       }
 
-      assert((MpInteger(a) + b).toInt<int>() == (a + b));
-      assert((MpInteger(a) += b).toInt<int>() == (a + b));
-      assert((MpInteger(a) - b).toInt<int>() == (a - b));
-      assert((MpInteger(a) -= b).toInt<int>() == (a - b));
-      assert((MpInteger(a) * b).toInt<int>() == (a * b));
-      assert((MpInteger(a) *= b).toInt<int>() == (a * b));
+      assert((MpInteger(a) + b).ToInt<int>() == (a + b));
+      assert((MpInteger(a) += b).ToInt<int>() == (a + b));
+      assert((MpInteger(a) - b).ToInt<int>() == (a - b));
+      assert((MpInteger(a) -= b).ToInt<int>() == (a - b));
+      assert((MpInteger(a) * b).ToInt<int>() == (a * b));
+      assert((MpInteger(a) *= b).ToInt<int>() == (a * b));
       if (b != 0) {
-        assert((MpInteger(a) / b).toInt<int>() == (a / b));
-        assert((MpInteger(a) /= b).toInt<int>() == (a / b));
-        assert((MpInteger(a) % b).toInt<int>() == (a % b));
-        assert((MpInteger(a) %= b).toInt<int>() == (a % b));
+        assert((MpInteger(a) / b).ToInt<int>() == (a / b));
+        assert((MpInteger(a) /= b).ToInt<int>() == (a / b));
+        assert((MpInteger(a) % b).ToInt<int>() == (a % b));
+        assert((MpInteger(a) %= b).ToInt<int>() == (a % b));
       }
       if (a >= 0 && b >= 0) {
-        assert((MpInteger(a) | b).toInt<int>() == (a | b));
-        assert((MpInteger(a) |= b).toInt<int>() == (a | b));
-        assert((MpInteger(a) & b).toInt<int>() == (a & b));
-        assert((MpInteger(a) &= b).toInt<int>() == (a & b));
-        assert((MpInteger(a) ^ b).toInt<int>() == (a ^ b));
-        assert((MpInteger(a) ^= b).toInt<int>() == (a ^ b));
+        assert((MpInteger(a) | b).ToInt<int>() == (a | b));
+        assert((MpInteger(a) |= b).ToInt<int>() == (a | b));
+        assert((MpInteger(a) & b).ToInt<int>() == (a & b));
+        assert((MpInteger(a) &= b).ToInt<int>() == (a & b));
+        assert((MpInteger(a) ^ b).ToInt<int>() == (a ^ b));
+        assert((MpInteger(a) ^= b).ToInt<int>() == (a ^ b));
       }
 
-      assert((a + MpInteger(b)).toInt<int>() == (a + b));
-      assert((a - MpInteger(b)).toInt<int>() == (a - b));
-      assert((a * MpInteger(b)).toInt<int>() == (a * b));
+      assert((a + MpInteger(b)).ToInt<int>() == (a + b));
+      assert((a - MpInteger(b)).ToInt<int>() == (a - b));
+      assert((a * MpInteger(b)).ToInt<int>() == (a * b));
       if (b != 0) {
-        assert((a / MpInteger(b)).toInt<int>() == (a / b));
-        assert((a % MpInteger(b)).toInt<int>() == (a % b));
+        assert((a / MpInteger(b)).ToInt<int>() == (a / b));
+        assert((a % MpInteger(b)).ToInt<int>() == (a % b));
       }
       if (a >= 0 && b >= 0) {
-        assert((a | MpInteger(b)).toInt<int>() == (a | b));
-        assert((a & MpInteger(b)).toInt<int>() == (a & b));
-        assert((a ^ MpInteger(b)).toInt<int>() == (a ^ b));
+        assert((a | MpInteger(b)).ToInt<int>() == (a | b));
+        assert((a & MpInteger(b)).ToInt<int>() == (a & b));
+        assert((a ^ MpInteger(b)).ToInt<int>() == (a ^ b));
       }
     }
 
   for (int64 A : {-10000000000LL, -10000LL, 0LL, 10000LL, 10000000000LL})
     for (int64 a = A - 10; a <= A + 10; ++a)
       for (int64 b = -10; b <= 10; ++b) {
-        assert((MpInteger(a) + MpInteger(b)).toInt<int64>() == (a + b));
-        assert((MpInteger(a) += MpInteger(b)).toInt<int64>() == (a + b));
-        assert((MpInteger(a) - MpInteger(b)).toInt<int64>() == (a - b));
-        assert((MpInteger(a) -= MpInteger(b)).toInt<int64>() == (a - b));
-        assert((MpInteger(a) * MpInteger(b)).toInt<int64>() == (a * b));
-        assert((MpInteger(a) *= MpInteger(b)).toInt<int64>() == (a * b));
+        assert((MpInteger(a) + MpInteger(b)).ToInt<int64>() == (a + b));
+        assert((MpInteger(a) += MpInteger(b)).ToInt<int64>() == (a + b));
+        assert((MpInteger(a) - MpInteger(b)).ToInt<int64>() == (a - b));
+        assert((MpInteger(a) -= MpInteger(b)).ToInt<int64>() == (a - b));
+        assert((MpInteger(a) * MpInteger(b)).ToInt<int64>() == (a * b));
+        assert((MpInteger(a) *= MpInteger(b)).ToInt<int64>() == (a * b));
         if (b != 0) {
-          assert((MpInteger(a) / MpInteger(b)).toInt<int64>() == (a / b));
-          assert((MpInteger(a) /= MpInteger(b)).toInt<int64>() == (a / b));
-          assert((MpInteger(a) % MpInteger(b)).toInt<int64>() == (a % b));
-          assert((MpInteger(a) %= MpInteger(b)).toInt<int64>() == (a % b));
+          assert((MpInteger(a) / MpInteger(b)).ToInt<int64>() == (a / b));
+          assert((MpInteger(a) /= MpInteger(b)).ToInt<int64>() == (a / b));
+          assert((MpInteger(a) % MpInteger(b)).ToInt<int64>() == (a % b));
+          assert((MpInteger(a) %= MpInteger(b)).ToInt<int64>() == (a % b));
         }
         if (a >= 0 && b >= 0) {
-          assert((MpInteger(a) | MpInteger(b)).toInt<int64>() == (a | b));
-          assert((MpInteger(a) |= MpInteger(b)).toInt<int64>() == (a | b));
-          assert((MpInteger(a) & MpInteger(b)).toInt<int64>() == (a & b));
-          assert((MpInteger(a) &= MpInteger(b)).toInt<int64>() == (a & b));
-          assert((MpInteger(a) ^ MpInteger(b)).toInt<int64>() == (a ^ b));
-          assert((MpInteger(a) ^= MpInteger(b)).toInt<int64>() == (a ^ b));
+          assert((MpInteger(a) | MpInteger(b)).ToInt<int64>() == (a | b));
+          assert((MpInteger(a) |= MpInteger(b)).ToInt<int64>() == (a | b));
+          assert((MpInteger(a) & MpInteger(b)).ToInt<int64>() == (a & b));
+          assert((MpInteger(a) &= MpInteger(b)).ToInt<int64>() == (a & b));
+          assert((MpInteger(a) ^ MpInteger(b)).ToInt<int64>() == (a ^ b));
+          assert((MpInteger(a) ^= MpInteger(b)).ToInt<int64>() == (a ^ b));
         }
 
-        assert((MpInteger(a) + b).toInt<int64>() == (a + b));
-        assert((MpInteger(a) += b).toInt<int64>() == (a + b));
-        assert((MpInteger(a) - b).toInt<int64>() == (a - b));
-        assert((MpInteger(a) -= b).toInt<int64>() == (a - b));
-        assert((MpInteger(a) * b).toInt<int64>() == (a * b));
-        assert((MpInteger(a) *= b).toInt<int64>() == (a * b));
+        assert((MpInteger(a) + b).ToInt<int64>() == (a + b));
+        assert((MpInteger(a) += b).ToInt<int64>() == (a + b));
+        assert((MpInteger(a) - b).ToInt<int64>() == (a - b));
+        assert((MpInteger(a) -= b).ToInt<int64>() == (a - b));
+        assert((MpInteger(a) * b).ToInt<int64>() == (a * b));
+        assert((MpInteger(a) *= b).ToInt<int64>() == (a * b));
         if (b != 0) {
-          assert((MpInteger(a) / b).toInt<int64>() == (a / b));
-          assert((MpInteger(a) /= b).toInt<int64>() == (a / b));
-          assert((MpInteger(a) % b).toInt<int64>() == (a % b));
-          assert((MpInteger(a) %= b).toInt<int64>() == (a % b));
+          assert((MpInteger(a) / b).ToInt<int64>() == (a / b));
+          assert((MpInteger(a) /= b).ToInt<int64>() == (a / b));
+          assert((MpInteger(a) % b).ToInt<int64>() == (a % b));
+          assert((MpInteger(a) %= b).ToInt<int64>() == (a % b));
         }
         if (a >= 0 && b >= 0) {
-          assert((MpInteger(a) | b).toInt<int64>() == (a | b));
-          assert((MpInteger(a) |= b).toInt<int64>() == (a | b));
-          assert((MpInteger(a) & b).toInt<int64>() == (a & b));
-          assert((MpInteger(a) &= b).toInt<int64>() == (a & b));
-          assert((MpInteger(a) ^ b).toInt<int64>() == (a ^ b));
-          assert((MpInteger(a) ^= b).toInt<int64>() == (a ^ b));
+          assert((MpInteger(a) | b).ToInt<int64>() == (a | b));
+          assert((MpInteger(a) |= b).ToInt<int64>() == (a | b));
+          assert((MpInteger(a) & b).ToInt<int64>() == (a & b));
+          assert((MpInteger(a) &= b).ToInt<int64>() == (a & b));
+          assert((MpInteger(a) ^ b).ToInt<int64>() == (a ^ b));
+          assert((MpInteger(a) ^= b).ToInt<int64>() == (a ^ b));
         }
 
-        assert((a + MpInteger(b)).toInt<int64>() == (a + b));
-        assert((a - MpInteger(b)).toInt<int64>() == (a - b));
-        assert((a * MpInteger(b)).toInt<int64>() == (a * b));
+        assert((a + MpInteger(b)).ToInt<int64>() == (a + b));
+        assert((a - MpInteger(b)).ToInt<int64>() == (a - b));
+        assert((a * MpInteger(b)).ToInt<int64>() == (a * b));
         if (b != 0) {
-          assert((a / MpInteger(b)).toInt<int64>() == (a / b));
-          assert((a % MpInteger(b)).toInt<int64>() == (a % b));
+          assert((a / MpInteger(b)).ToInt<int64>() == (a / b));
+          assert((a % MpInteger(b)).ToInt<int64>() == (a % b));
         }
         if (a >= 0 && b >= 0) {
-          assert((a | MpInteger(b)).toInt<int64>() == (a | b));
-          assert((a & MpInteger(b)).toInt<int64>() == (a & b));
-          assert((a ^ MpInteger(b)).toInt<int64>() == (a ^ b));
+          assert((a | MpInteger(b)).ToInt<int64>() == (a | b));
+          assert((a & MpInteger(b)).ToInt<int64>() == (a & b));
+          assert((a ^ MpInteger(b)).ToInt<int64>() == (a ^ b));
         }
       }
 }
@@ -309,28 +309,28 @@ SL void test_compare_operator() {
 
 SL void test_bit_operator() {
   MpInteger x;
-  for (int i = 0; i <= 19; ++i) x.setBit(i);
-  assert(x.toInt<int>() == 1048575);
+  for (int i = 0; i <= 19; ++i) x.SetBit(i);
+  assert(x.ToInt<int>() == 1048575);
   x.revBit(0);
-  assert(x.toInt<int>() == 1048574);
-  x.resetBit(1);
-  assert(x.toInt<int>() == 1048572);
-  assert(x.bitCount() == 18);
+  assert(x.ToInt<int>() == 1048574);
+  x.ResetBit(1);
+  assert(x.ToInt<int>() == 1048572);
+  assert(x.BitCount() == 18);
 
   MpInteger y;
-  y.setBit(0);
+  y.SetBit(0);
 
   x = x | y;
-  assert(x.toInt<int>() == 1048573);
+  assert(x.ToInt<int>() == 1048573);
 
   x = x & MpInteger(1048575 - 4);
-  assert(x.toInt<int>() == 1048573 - 4);
+  assert(x.ToInt<int>() == 1048573 - 4);
 
   x = x ^ x;
-  assert(x.toInt<int>() == 0);
+  assert(x.ToInt<int>() == 0);
 
   x = x ^ y;
-  assert(x.toInt<int>() == 1);
+  assert(x.ToInt<int>() == 1);
 }
 
 SL void test_utilities() {

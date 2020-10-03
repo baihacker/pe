@@ -198,7 +198,7 @@ SL REQUIRES((is_gbi<GBI>::value && std::is_same<GBI, BigInteger>::value))
 
 template <typename GBI>
 SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI)
-    Exgcd(const GBI& a, const GBI& b, GBI& x, GBI& y) {
+    ExGcd(const GBI& a, const GBI& b, GBI& x, GBI& y) {
   if (IsZero(b)) {
     x = 1;
     y = 0;
@@ -206,7 +206,7 @@ SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI)
   }
 
   GBI x1 = 0, y1 = 0;
-  GBI ret = Exgcd(b, GBI(a % b), x1, y1);
+  GBI ret = ExGcd(b, GBI(a % b), x1, y1);
   // b * x1 + (a%b) * y1 = ret
   // b * x1 + (a - a / b * b) * y1 = ret
   // b * x1 + a * y1 - a / b * b * y1 = ret
@@ -218,10 +218,10 @@ SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI)
 
 template <typename GBI>
 SL REQUIRES((is_gbi<GBI>::value)) RETURN(tuple<GBI, GBI, GBI>)
-    Exgcd(const GBI& a, const GBI& b) {
+    ExGcd(const GBI& a, const GBI& b) {
   PE_ASSERT(!IsZero(a) || !IsZero(b));
   GBI x = 0, y = 0;
-  const GBI r = Exgcd(a, b, x, y);
+  const GBI r = ExGcd(a, b, x, y);
   PE_ASSERT(a * x + b * y == r);
   return tuple<GBI, GBI, GBI>{r, x, y};
 }
@@ -230,7 +230,7 @@ template <typename GBI>
 SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI)
     ModInv(const GBI& a, const GBI& mod) {
   GBI x, y;
-  Exgcd(a, mod, x, y);
+  ExGcd(a, mod, x, y);
   x %= mod;
   if (IntSign(x) < 0) {
     x += mod;
@@ -255,7 +255,7 @@ SL REQUIRES((is_gbi<GBI>::value)) RETURN(int)
   if (a < 0) a += m;
   if (b < 0) b += m;
 
-  GBI xx = 0, yy = 0, d = Exgcd(a, m, xx, yy);
+  GBI xx = 0, yy = 0, d = ExGcd(a, m, xx, yy);
 
   if (!(b % d).isZero()) return 0;
 
@@ -352,8 +352,8 @@ struct GbiFraction {
   GbiFraction operator/(const GbiFraction& o) const {
     return GbiFraction(a * o.b, b * o.a);
   }
-  double toDouble() { return 1. * ToFloat<double>(a) / ToFloat<double>(b); }
-  long double toLongDouble() {
+  double ToDouble() { return 1. * ToFloat<double>(a) / ToFloat<double>(b); }
+  long double ToLongDouble() {
     return static_cast<long double>(1.) * ToFloat<long double>(a) /
            ToFloat<long double>(b);
   }

@@ -775,7 +775,7 @@ void range_example() {
 }
 
 int main() {
-  pe().maxPrime(2000000).init();
+  pe().set_max_prime(2000000).Init();
   // irange_example();
   range_example();
   return 0;

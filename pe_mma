@@ -37,7 +37,7 @@ struct IntPoly {
         o << ", ";
       }
       o << "{";
-      pprint_vec(o, iter.first);
+      PPrintVec(o, iter.first);
       o << ", " << iter.second << "}";
     }
     o << "}, ";
@@ -49,7 +49,7 @@ struct IntPoly {
         var[i] = tmp;
       }
     }
-    pprint_vec(o, var);
+    PPrintVec(o, var);
 
     return o << "]";
   }
@@ -107,7 +107,7 @@ struct IntPoly2D {
     }
   }
 
-  int64 Eval(int64 v1, int64 v2, int a, int b) const {
+  int64 Evaluate(int64 v1, int64 v2, int a, int b) const {
     return Power(v1, a) * Power(v2, b);
   }
 
@@ -177,7 +177,7 @@ struct IntPoly2D {
             if (id > 0) {
               o << " + ";
             }
-            o << Eval(iter.first[0], iter.first[1], i, j) << " "
+            o << Evaluate(iter.first[0], iter.first[1], i, j) << " "
               << string("x") + ToString(id++);
           }
         }
@@ -188,7 +188,7 @@ struct IntPoly2D {
     vector<string> vars;
     vars.reserve(vcnt);
     for (int i = 0; i < vcnt; ++i) vars.pb(string("x") + ToString(i));
-    pprint_vec(o, vars);
+    PPrintVec(o, vars);
     return o << "]]";
   }
 
@@ -297,7 +297,7 @@ struct MmaExpTree {
     delete tree;
   }
 
-  ostream& display(ostream& o) {
+  ostream& Display(ostream& o) {
     if (nodeType == VAR || nodeType == NUMBER) {
       return o << token;
     }
@@ -305,14 +305,14 @@ struct MmaExpTree {
 
     o << token;
     o << ",";
-    if (left) left->display(o);
+    if (left) left->Display(o);
     o << ",";
-    if (right) right->display(o);
+    if (right) right->Display(o);
 
     return o << ")";
   }
 
-  int priority() { return mma_compiler::priority[nodeType]; }
+  int Priority() { return mma_compiler::priority[nodeType]; }
 };
 
 struct MmaExpParser {
@@ -573,10 +573,10 @@ struct MmaExpParser {
   }
 
   /**
-  void GetExpressionList(MmaExpTree* tree, vector<MmaExpTree*>& result) {
+  void ExpressionList(MmaExpTree* tree, vector<MmaExpTree*>& result) {
     if (!tree) return;
     if (tree->nodeType == COMMA) {
-      GetExpressionList(tree->left, result);
+      ExpressionList(tree->left, result);
       result.push_back(tree->right);
     } else {
       result.push_back(tree);
@@ -590,7 +590,7 @@ struct MmaExpParser {
       return tree->value = vars[tree->token];
     } else if (tree->nodeType == FUN) {
       vector<MmaExpTree*> para;
-      GetExpressionList(tree->right, para);
+      ExpressionList(tree->right, para);
       if (tree->token == "min") {
         if (para.size() == 0) return tree->value = 0;
         int ans = Evaluate(para[0]);

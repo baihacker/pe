@@ -141,7 +141,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
 }
 
 template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) NRootI(T v, int n) {
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) RootI(T v, int n) {
   PE_ASSERT(n >= 0);
   if (n == 0) {
     return 1;
@@ -231,7 +231,6 @@ SL IntPromotion(TH, TT...) Gcd(TH a, TT... b) {
 template <typename T>
 SL REQUIRES(is_native_integer<T>::value) RETURN(T)
     Gcd(std::initializer_list<T> init) {
-  cout << "now" << endl;
   T ret = 0;
   for (auto& v : init) {
     if (ret == 0) {
@@ -245,7 +244,7 @@ SL REQUIRES(is_native_integer<T>::value) RETURN(T)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(T)
-    ExgcdImpl(T a, T b, T& x, T& y) {
+    ExGcdImpl(T a, T b, T& x, T& y) {
   if (b == 0) {
     x = 1;
     y = 0;
@@ -253,7 +252,7 @@ SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(T)
   }
 
   T x1 = 0, y1 = 0;
-  const T ret = ExgcdImpl(b, a % b, x1, y1);
+  const T ret = ExGcdImpl(b, a % b, x1, y1);
   // b * x1 + (a%b) * y1 = ret
   // b * x1 + (a - a / b * b) * y1 = ret
   // b * x1 + a * y1 - a / b * b * y1 = ret
@@ -265,19 +264,19 @@ SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(T)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(T)
-    Exgcd(T a, T b, T& x, T& y) {
+    ExGcd(T a, T b, T& x, T& y) {
   PE_ASSERT(a != 0 || b != 0);
-  const T r = ExgcdImpl(a, b, x, y);
+  const T r = ExGcdImpl(a, b, x, y);
   PE_ASSERT(a * x + b * y == r);
   return r;
 }
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value))
-    RETURN(tuple<T, T, T>) Exgcd(T a, T b) {
+    RETURN(tuple<T, T, T>) ExGcd(T a, T b) {
   PE_ASSERT(a != 0 || b != 0);
   T x = 0, y = 0;
-  const T r = ExgcdImpl(a, b, x, y);
+  const T r = ExGcdImpl(a, b, x, y);
   PE_ASSERT(a * x + b * y == r);
   return tuple<T, T, T>{r, x, y};
 }
@@ -323,7 +322,7 @@ SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(int)
   if (a < 0) a += m;
   if (b < 0) b += m;
 
-  T xx = 0, yy = 0, d = Exgcd(a, m, xx, yy);
+  T xx = 0, yy = 0, d = ExGcd(a, m, xx, yy);
 
   if (b % d) return 0;
 
@@ -675,7 +674,7 @@ class IndSolver {
     return -1;
   }
 
-  int64 get_pr() const { return pr_; }
+  int64 pr() const { return pr_; }
 
  private:
   const int64 p_;
@@ -730,7 +729,7 @@ vector<int64> SquareRootMod(int64 n, int64 p) {
   }
 }
 
-vector<int64> NRootMod(int64 a, int64 n, int64 p, int64 retCnt = -1) {
+vector<int64> RootMod(int64 a, int64 n, int64 p, int64 retCnt = -1) {
   if (p == 2) {
     return vector<int64>{a};
   }
@@ -748,8 +747,8 @@ vector<int64> NRootMod(int64 a, int64 n, int64 p, int64 retCnt = -1) {
     return vector<int64>{};
   }
   vector<int64> result;
-  int64 coe = PowerModEx(sv.get_pr(), v, p);
-  int64 x = PowerModEx(sv.get_pr(), u, p);
+  int64 coe = PowerModEx(sv.pr(), v, p);
+  int64 x = PowerModEx(sv.pr(), u, p);
   int64 oldx = x;
   do {
     if (retCnt < 0 || static_cast<int64>(result.size()) < retCnt) {

@@ -78,8 +78,8 @@ void perf() {
   cerr << tr.Elapsed().Format() << endl;
 
   for (int i = 0; i <= N; ++i) {
-    assert(u[i].Value() == v[i].Value());
-    assert(u[i].Value() == w[i].Value());
+    assert(u[i].value() == v[i].value());
+    assert(u[i].value() == w[i].value());
   }
 }
 

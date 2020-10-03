@@ -1,7 +1,7 @@
 #include <pe.hpp>
 
 int main() {
-  pe().maxPrime(1000000).init();
+  pe().set_max_prime(1000000).Init();
 
   int64 result = PARALLEL_RESULT(
   BEGIN_PARALLEL

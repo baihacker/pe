@@ -8,7 +8,7 @@ SL void poly_general_test() {
 
   NModPolyT<31> q{1, 1};
   auto r = q * q;
-  assert(r.Deg() == 2);
+  assert(r.deg() == 2);
   assert(r[0] == 1);
   assert(r[1] == 2);
   assert(r[2] == 1);
@@ -23,7 +23,7 @@ SL void poly_general_test() {
   assert(r.IsZero());
 
   r = q + q;
-  assert(r.Deg() == 1);
+  assert(r.deg() == 1);
   assert(r[0] == 2);
   assert(r[1] == 2);
 
@@ -31,7 +31,7 @@ SL void poly_general_test() {
   assert(q * NModPoly({1}, 31) == q);
 
   assert(NModPoly({0, 0, 0}, 31).IsZero());
-  assert(NModPoly({0, 1, 0}, 31).Deg() == 1);
+  assert(NModPoly({0, 1, 0}, 31).deg() == 1);
 
   assert(q / NModPoly({1}, 31) == q);
 }

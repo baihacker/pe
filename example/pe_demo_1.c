@@ -2,7 +2,7 @@
 
 int main() {
   InitPrimes(true, true);
-  auto x = GetFactors(1);
+  auto x = Factors(1);
   for (auto i : x) cerr << i << endl;
   cerr << pr::FindPr(37) << endl;
   cerr << phi[3350] << endl;

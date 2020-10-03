@@ -51,7 +51,12 @@ SL bool isEnabledTestSize(TestSize size) {
 }
 
 int main() {
-  pe().SetCalPhi().SetCalMu().SetFftK().SetNtt32K().SetNtt64K().init();
+  pe().set_cal_phi()
+      .set_cal_mu()
+      .set_fft_k()
+      .set_ntt32_k()
+      .set_ntt64_k()
+      .Init();
 
   dbg(maxp);
   dbg(maxp2);

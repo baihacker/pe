@@ -314,7 +314,7 @@ SL void test_bit_operator() {
   assert(x.ToInt<int>() == 1048574);
   x.ResetBit(1);
   assert(x.ToInt<int>() == 1048572);
-  assert(x.GetBitCount() == 18);
+  assert(x.BitCount() == 18);
 
   BigInteger y;
   y.SetBit(0);

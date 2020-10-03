@@ -22,11 +22,11 @@ SL int64 AddMod(int64 a, int64 b) {
   return ::AddMod(a, b, M);
 }
 
-SL std::function<int64(int64, int64)> MulMod(int64 mod) {
+SL std::function<int64(int64, int64)> mul_mod(int64 mod) {
   return [=](int64 a, int64 b) { return ::MulModEx(a, b, mod); };
 }
 
-SL std::function<int64(int64, int64)> AddMod(int64 mod) {
+SL std::function<int64(int64, int64)> add_mod(int64 mod) {
   return [=](int64 a, int64 b) { return ::AddMod(a, b, mod); };
 }
 
@@ -196,14 +196,14 @@ struct RangeBase {
   using reference = typename IT::reference;
   using arg_type = typename IT::arg_type;
 
-  FilterRange<IT> filter(const std::function<int(arg_type)>& filter) const {
+  FilterRange<IT> Filter(const std::function<int(arg_type)>& filter) const {
     return FilterRange<IT>{static_cast<const DERIVED&>(*this).begin(),
                            static_cast<const DERIVED&>(*this).end(), filter};
   }
 
-  VectorRange<value_type> pfilter(const std::function<int(arg_type)>& filter,
+  VectorRange<value_type> PFilter(const std::function<int(arg_type)>& filter,
                                   const int thread_number = 8) const {
-    auto data = toVector();
+    auto data = ToVector();
     const int size = sz(data);
     if (size == 0) {
       return vector<value_type>{};
@@ -245,7 +245,7 @@ struct RangeBase {
 
   // Reducer versions.
   template <typename T>
-  auto reduce(const T& reducer) const -> typename T::VT {
+  auto Reduce(const T& reducer) const -> typename T::VT {
     using VT = typename T::VT;
     VT ret = reducer.init_value();
     auto now = static_cast<const DERIVED&>(*this).begin();
@@ -257,11 +257,11 @@ struct RangeBase {
   }
 
   template <typename T>
-  auto preduce(const T& reducer, const int thread_number = 8) const ->
+  auto PReduce(const T& reducer, const int thread_number = 8) const ->
       typename T::VT {
 #if ENABLE_OPENMP
     using VT = typename T::VT;
-    auto data = toVector();
+    auto data = ToVector();
     const int size = sz(data);
     if (size == 0) {
       return reducer.init_value();
@@ -287,7 +287,7 @@ struct RangeBase {
   // Sequential reduce
   // Template return value
   template <typename VT = value_type>
-  VT reduce(const VT& v,
+  VT Reduce(const VT& v,
             const std::function<VT(const VT&, arg_type)>& accumulator) const {
     VT ret = v;
     auto now = static_cast<const DERIVED&>(*this).begin();
@@ -299,7 +299,7 @@ struct RangeBase {
   }
 
   template <typename VT = value_type>
-  VT ireduce(const VT& v,
+  VT IReduce(const VT& v,
              const std::function<void(VT&, arg_type)>& accumulator) const {
     VT ret = v;
     auto now = static_cast<const DERIVED&>(*this).begin();
@@ -311,7 +311,7 @@ struct RangeBase {
   }
 
   // Non-template return value
-  value_type reduce(
+  value_type Reduce(
       const value_type& v,
       const std::function<value_type(const value_type&, arg_type)>& accumulator)
       const {
@@ -324,7 +324,7 @@ struct RangeBase {
     return ret;
   }
 
-  value_type ireduce(
+  value_type IReduce(
       const value_type& v,
       const std::function<void(value_type&, arg_type)>& accumulator) const {
     value_type ret = v;
@@ -339,12 +339,12 @@ struct RangeBase {
   // Parallel reduce
   // Template return value, accumulator + combiner
   template <typename VT>
-  VT preduce(const VT& v,
+  VT PReduce(const VT& v,
              const std::function<VT(const VT&, arg_type)>& accumulator,
              const std::function<VT(const VT&, const VT&)>& combiner,
              const int thread_number = 8) const {
 #if ENABLE_OPENMP
-    auto data = toVector();
+    auto data = ToVector();
     const int size = sz(data);
     if (size == 0) {
       return v;
@@ -368,12 +368,12 @@ struct RangeBase {
   }
 
   template <typename VT>
-  VT pireduce(const VT& v,
+  VT PIReduce(const VT& v,
               const std::function<void(VT&, arg_type)>& accumulator,
               const std::function<void(VT&, const VT&)>& combiner,
               const int thread_number = 8) const {
 #if ENABLE_OPENMP
-    auto data = toVector();
+    auto data = ToVector();
     const int size = sz(data);
     if (size == 0) {
       return v;
@@ -397,13 +397,13 @@ struct RangeBase {
   }
 
   // Non-template return value, accumulator + combiner
-  value_type preduce(
+  value_type PReduce(
       const value_type& v,
       const std::function<value_type(const value_type&, arg_type)>& accumulator,
       const std::function<value_type(const value_type&, arg_type)>& combiner,
       const int thread_number = 8) const {
 #if ENABLE_OPENMP
-    auto data = toVector();
+    auto data = ToVector();
     const int size = sz(data);
     if (size == 0) {
       return v;
@@ -426,13 +426,13 @@ struct RangeBase {
 #endif
   }
 
-  value_type pireduce(
+  value_type PIReduce(
       const value_type& v,
       const std::function<void(value_type&, arg_type)>& accumulator,
       const std::function<void(value_type&, arg_type)>& combiner,
       const int thread_number = 8) const {
 #if ENABLE_OPENMP
-    auto data = toVector();
+    auto data = ToVector();
     const int size = sz(data);
     if (size == 0) {
       return v;
@@ -458,46 +458,46 @@ struct RangeBase {
 #if PE_HAS_CPP14
   // Template return value, combiner
   template <typename VT>
-  VT preduce(const VT& v,
+  VT PReduce(const VT& v,
              const std::function<VT(const VT&, const VT&)>& combiner,
              const int thread_number = 8) const {
-    return preduce<VT>(v, combiner, combiner, thread_number);
+    return PReduce<VT>(v, combiner, combiner, thread_number);
   }
 
-  value_type preduce(
+  value_type PReduce(
       const value_type& v,
       const std::function<value_type(const value_type&, const value_type&)>&
           combiner,
       const int thread_number = 8) const {
-    return preduce(v, combiner, combiner, thread_number);
+    return PReduce(v, combiner, combiner, thread_number);
   }
 
   // Non-template return value, combiner
   template <typename VT>
-  VT pireduce(const VT& v, const std::function<void(VT&, const VT&)>& combiner,
+  VT PIReduce(const VT& v, const std::function<void(VT&, const VT&)>& combiner,
               const int thread_number = 8) const {
-    return pireduce<VT>(v, combiner, combiner, thread_number);
+    return PIReduce<VT>(v, combiner, combiner, thread_number);
   }
 
-  value_type pireduce(
+  value_type PIReduce(
       const value_type& v,
       const std::function<void(value_type&, const value_type&)>& combiner,
       const int thread_number = 8) const {
-    return pireduce(v, combiner, combiner, thread_number);
+    return PIReduce(v, combiner, combiner, thread_number);
   }
 #endif
 
   template <typename TT>
-  MappedRange<IT, TT> map(const std::function<TT(arg_type)>& mapper) const {
+  MappedRange<IT, TT> Map(const std::function<TT(arg_type)>& mapper) const {
     return MappedRange<IT, TT>{static_cast<const DERIVED&>(*this).begin(),
                                static_cast<const DERIVED&>(*this).end(),
                                mapper};
   }
 
   template <typename TT>
-  VectorRange<TT> pmap(const std::function<TT(arg_type)>& mapper,
+  VectorRange<TT> PMap(const std::function<TT(arg_type)>& mapper,
                        const int thread_number = 8) const {
-    auto data = toVector();
+    auto data = ToVector();
     const int size = sz(data);
     if (size == 0) {
       return vector<TT>{};
@@ -515,7 +515,7 @@ struct RangeBase {
   }
 
   template <typename T>
-  self_type& forEach(const T& action) {
+  self_type& ForEach(const T& action) {
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
@@ -525,9 +525,9 @@ struct RangeBase {
   }
 
   template <typename T>
-  self_type& pforEach(const T& action, const int thread_number = 8) {
+  self_type& PForEach(const T& action, const int thread_number = 8) {
 #if ENABLE_OPENMP
-    auto data = toVector();
+    auto data = ToVector();
     const int size = sz(data);
     if (size == 0) {
       return *this;
@@ -540,7 +540,7 @@ struct RangeBase {
 
     return *this;
 #else
-    return pforEach(action);
+    return PForEach(action);
 #endif
   }
 
@@ -556,7 +556,7 @@ struct RangeBase {
   }
 
   template <typename VT = int64>
-  VT sumMod(VT mod) const {
+  VT SumMod(VT mod) const {
     VT ret = 0;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
@@ -567,7 +567,7 @@ struct RangeBase {
   }
 
   template <typename VT = int64>
-  VT prod() const {
+  VT Prod() const {
     VT ret = 1;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
@@ -578,7 +578,7 @@ struct RangeBase {
   }
 
   template <typename VT = int64>
-  VT prodMod(VT mod) const {
+  VT ProdMod(VT mod) const {
     VT ret = 1;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
@@ -588,15 +588,15 @@ struct RangeBase {
     return ret;
   }
 
-  int isEmpty() const {
+  int IsEmpty() const {
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     return now == x ? 1 : 0;
   }
 
-  int64 count() const { return static_cast<const DERIVED&>(*this).countImpl(); }
+  int64 count() const { return static_cast<const DERIVED&>(*this).CountImpl(); }
 
-  int64 countImpl() const {
+  int64 CountImpl() const {
     int64 ret = 0;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
@@ -620,7 +620,7 @@ struct RangeBase {
     return r;
   }
 
-  optional<value_type> min() const {
+  optional<value_type> Min() const {
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     if (now == x) {
@@ -633,26 +633,26 @@ struct RangeBase {
     return r;
   }
 
-  VectorRange<value_type> sorted() const {
-    auto data = toVector();
+  VectorRange<value_type> Sort() const {
+    auto data = ToVector();
     std::sort(data.begin(), data.end());
     return VectorRange<value_type>(std::move(data));
   }
 
-  VectorRange<value_type> distinct() const {
-    auto data = toVector();
+  VectorRange<value_type> Distinct() const {
+    auto data = ToVector();
     std::sort(data.begin(), data.end());
     data.resize(std::unique(data.begin(), data.end()) - data.begin());
     return VectorRange<value_type>(std::move(data));
   }
 
-  VectorRange<value_type> reversed() const {
-    auto data = toVector();
+  VectorRange<value_type> Reverse() const {
+    auto data = ToVector();
     std::reverse(data.begin(), data.end());
     return VectorRange<value_type>(std::move(data));
   }
 
-  VectorRange<value_type> skip(int64 n) const {
+  VectorRange<value_type> Skip(int64 n) const {
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (n > 0 && now != x) {
@@ -667,7 +667,7 @@ struct RangeBase {
     return VectorRange<value_type>(std::move(data));
   }
 
-  VectorRange<value_type> limit(int64 n) const {
+  VectorRange<value_type> Limit(int64 n) const {
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     std::vector<value_type> data;
@@ -678,7 +678,7 @@ struct RangeBase {
     return VectorRange<value_type>(std::move(data));
   }
 
-  int anyMatch(const std::function<int(arg_type)>& filter) const {
+  int AnyMatch(const std::function<int(arg_type)>& filter) const {
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
@@ -689,7 +689,7 @@ struct RangeBase {
     return 0;
   }
 
-  int allMatch(const std::function<int(arg_type)>& filter) const {
+  int AllMatch(const std::function<int(arg_type)>& filter) const {
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
@@ -700,7 +700,7 @@ struct RangeBase {
     return 1;
   }
 
-  int noneMatch(const std::function<int(arg_type)>& filter) const {
+  int NoneMatch(const std::function<int(arg_type)>& filter) const {
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
@@ -712,7 +712,7 @@ struct RangeBase {
   }
 
   template <typename T>
-  void fill(T iter) const {
+  void Fill(T iter) const {
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
@@ -720,7 +720,7 @@ struct RangeBase {
     }
   }
 
-  std::vector<value_type> toVector() const {
+  std::vector<value_type> ToVector() const {
     std::vector<value_type> ret;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
@@ -730,7 +730,7 @@ struct RangeBase {
     return std::move(ret);
   }
 
-  std::set<value_type> toSet() const {
+  std::set<value_type> ToSet() const {
     std::set<value_type> ret;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
@@ -781,7 +781,7 @@ struct NumberRange : public RangeBase<NumberRange<ET>, NumberIter<ET>> {
   NumberIter<ET> begin() const { return NumberIter<ET>{b_}; }
   NumberIter<ET> end() const { return NumberIter<ET>{e_}; }
 
-  int64 countImpl() const { return static_cast<int64>(e_ - b_); }
+  int64 CountImpl() const { return static_cast<int64>(e_ - b_); }
 
   const value_type b_;
   const value_type e_;
@@ -846,7 +846,7 @@ struct NumberRangeD : public RangeBase<NumberRangeD<ET>, NumberIterD<ET>> {
   NumberIterD<ET> begin() const { return NumberIterD<ET>{b_, e_, delta_}; }
   NumberIterD<ET> end() const { return NumberIterD<ET>{e_, e_, delta_}; }
 
-  int64 countImpl() const {
+  int64 CountImpl() const {
     return e_ == b_ ? 0LL : static_cast<int64>((e_ - b_) / delta_);
   }
 
@@ -858,20 +858,20 @@ struct NumberRangeD : public RangeBase<NumberRangeD<ET>, NumberIterD<ET>> {
 
 template <typename T>
 SL REQUIRES(is_native_integer<T>::value) RETURN(NumberRange<int64>)
-    range(T s, T e) {
+    Range(T s, T e) {
   PE_ASSERT(s <= e);
   return NumberRange<int64>{s, e};
 }
 
 template <typename T>
 SL REQUIRES(is_native_integer<T>::value) RETURN(NumberRange<int64>)
-    xrange(T s, T e) {
+    XRange(T s, T e) {
   return NumberRange<int64>{s, e + 1};
 }
 
 template <typename T>
 SL REQUIRES(is_native_integer<T>::value) RETURN(NumberRangeD<int64>)
-    range(T s, T e, T delta) {
+    Range(T s, T e, T delta) {
   if (s < e) {
     PE_ASSERT(delta > 0);
   } else if (s > e) {
@@ -882,7 +882,7 @@ SL REQUIRES(is_native_integer<T>::value) RETURN(NumberRangeD<int64>)
 
 template <typename T>
 SL REQUIRES(is_native_integer<T>::value) RETURN(NumberRangeD<int64>)
-    xrange(T s, T e, T delta) {
+    XRange(T s, T e, T delta) {
   if (s < e) {
     PE_ASSERT(delta > 0);
   } else if (s > e) {
@@ -962,24 +962,24 @@ struct VectorRange
     return ContainerRangeIter<IT>{vec_.end()};
   }
 
-  int64 countImpl() const { return static_cast<int64>(vec_.size()); }
+  int64 CountImpl() const { return static_cast<int64>(vec_.size()); }
 
   vector<ET> vec_;
 };
 
 template <typename CT>
-SL auto range(CT& v) -> ContainerRange<typename CT::iterator> {
+SL auto Range(CT& v) -> ContainerRange<typename CT::iterator> {
   return ContainerRange<typename CT::iterator>{v.begin(), v.end()};
 }
 
 template <typename CT>
-SL auto range(const CT& v) -> ContainerRange<typename CT::const_iterator> {
+SL auto Range(const CT& v) -> ContainerRange<typename CT::const_iterator> {
   return ContainerRange<typename CT::const_iterator>{v.begin(), v.end()};
 }
 
 template <typename T>
 SL REQUIRES(!is_native_integer<T>::value) RETURN(ContainerRange<T>)
-    range(T s, T e) {
+    Range(T s, T e) {
   return ContainerRange<T>{s, e};
 }
 
@@ -1025,26 +1025,26 @@ struct ArrayRange : public RangeBase<ArrayRange<ET>, ArrayRangeIter<ET>> {
   ArrayRangeIter<ET> begin() const { return ArrayRangeIter<ET>{b_}; }
   ArrayRangeIter<ET> end() const { return ArrayRangeIter<ET>{e_}; }
 
-  int64 countImpl() const { return static_cast<int64>(e_ - b_); }
+  int64 CountImpl() const { return static_cast<int64>(e_ - b_); }
 
   const value_type* b_;
   const value_type* e_;
 };
 
 template <typename T>
-SL ArrayRange<T> range(T* s, T* e) {
+SL ArrayRange<T> Range(T* s, T* e) {
   PE_ASSERT(s <= e);
   return ArrayRange<T>{s, e};
 }
 
 template <typename T>
-SL ArrayRange<const T> range(const T* s, const T* e) {
+SL ArrayRange<const T> Range(const T* s, const T* e) {
   PE_ASSERT(s <= e);
   return ArrayRange<const T>{s, e};
 }
 
 template <typename T, int N>
-SL ArrayRange<T> range(T (&a)[N]) {
+SL ArrayRange<T> Range(T (&a)[N]) {
   return ArrayRange<T>{a, a + N};
 }
 
@@ -1166,7 +1166,7 @@ struct FilterRange : public RangeBase<FilterRange<IT>, FilterRangeIter<IT>> {
   const std::function<int(typename iterator::src_arg_type)> filter_;
 };
 
-// irange support. i = index.
+// IRange support. i = index.
 template <typename IT>
 struct ContainerIterI {
   struct ContainerItemI {
@@ -1266,43 +1266,43 @@ struct ArrayRangeI {
 };
 
 template <typename T>
-SL ArrayRangeI<T> irange(vector<T>& v) {
+SL ArrayRangeI<T> IRange(vector<T>& v) {
   return ArrayRangeI<T>{&v[0], sz(v)};
 }
 
 template <typename T>
-SL ArrayRangeI<const T> irange(const vector<T>& v) {
+SL ArrayRangeI<const T> IRange(const vector<T>& v) {
   return ArrayRangeI<const T>{&v[0], sz(v)};
 }
 
 template <typename T>
-SL ArrayRangeI<T> irange(T* s, T* e) {
+SL ArrayRangeI<T> IRange(T* s, T* e) {
   PE_ASSERT(s <= e);
   return ArrayRangeI<T>{s, e - s};
 }
 
 template <typename T>
-SL ArrayRangeI<const T> irange(const T* s, const T* e) {
+SL ArrayRangeI<const T> IRange(const T* s, const T* e) {
   PE_ASSERT(s <= e);
   return ArrayRangeI<const T>{s, e - s};
 }
 
 template <typename T, int N>
-SL ArrayRangeI<T> irange(T (&a)[N]) {
+SL ArrayRangeI<T> IRange(T (&a)[N]) {
   return ArrayRangeI<T>{a, N};
 }
 
 template <typename CT>
-SL auto irange(CT& v) -> ContainerRangeI<typename CT::iterator> {
+SL auto IRange(CT& v) -> ContainerRangeI<typename CT::iterator> {
   return ContainerRangeI<typename CT::iterator>{v.begin(), v.end()};
 }
 
 template <typename CT>
-SL auto irange(const CT& v) -> ContainerRangeI<typename CT::const_iterator> {
+SL auto IRange(const CT& v) -> ContainerRangeI<typename CT::const_iterator> {
   return ContainerRangeI<typename CT::const_iterator>{v.begin(), v.end()};
 }
 
-SL vector<pair<int64, int64>> make_segment(int64 s, int64 e, int64 b) {
+SL vector<pair<int64, int64>> MakeSegment(int64 s, int64 e, int64 b) {
   if (s > e) {
     return vector<pair<int64, int64>>();
   }

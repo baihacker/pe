@@ -39,24 +39,19 @@ struct Gbi<Mpz> {
   static Mpz Of(const string& s) { return MPZ(s); }
 };
 
-SL string ToString(const Mpz& x) {
-  stringstream ss;
-  ss << x;
-  return ss.str();
-}
-SL string to_string(const Mpz& x) {
-  return ToString(x);
-}
 SL int IsZero(const Mpz& x) { return mpz_sgn(x.get_mpz_t()) == 0; }
+
 SL int IntSign(const Mpz& x) { return mpz_sgn(x.get_mpz_t()); }
-SL int IsOdd(const Mpz& x) { return mpz_odd_p(x.get_mpz_t()); }
+
 SL int IsEven(const Mpz& x) { return mpz_even_p(x.get_mpz_t()); }
+
+SL int IsOdd(const Mpz& x) { return mpz_odd_p(x.get_mpz_t()); }
+
 SL unsigned int LowerBits(const Mpz& x) {
   return static_cast<unsigned int>(x.get_mpz_t()[0]._mp_d[0]);
 }
-SL tuple<Mpz, Mpz> Div(const Mpz& l, const Mpz& r) {
-  return {Mpz(l / r), Mpz(l % r)};
-}
+
+// Abs, Fabs is missing
 
 template <typename T>
 SL T ToInt(const Mpz& x) {
@@ -93,6 +88,20 @@ SL T ToFloat(const Mpz& x) {
   for (int i = size - 1; i >= 0; --i) r = r * each + data[i];
   return sgn > 0 ? r : -r;
 }
+
+SL string ToString(const Mpz& x) {
+  stringstream ss;
+  ss << x;
+  return ss.str();
+}
+
+SL string to_string(const Mpz& x) { return ToString(x); }
+
+SL tuple<Mpz, Mpz> Div(const Mpz& l, const Mpz& r) {
+  return {Mpz(l / r), Mpz(l % r)};
+}
+
+// Extra operations
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value && sizeof(T) > 4)) RETURN(T) operator%(
@@ -486,6 +495,7 @@ class MpInteger {
   }
 
   const MpInteger& operator+() const { return *this; }
+
   const MpInteger& operator-() const {
     MpInteger ret(*this);
     mpz_neg(ret.z, ret.z);
@@ -505,21 +515,38 @@ class MpInteger {
   }
 
  public:
-  int size() const { return Abs(z[0]._mp_size); }
+  int size() const { return ::Abs(z[0]._mp_size); }
+
   mp_limb_t* data() { return z[0]._mp_d; }
+
   const mp_limb_t* data() const { return z[0]._mp_d; }
 
   int sign() const { return mpz_sgn(z); }
+
   int IsZero() const { return sign() == 0; }
+
   int IsEven() const { return mpz_even_p(z) ? 1 : 0; }
+
   int IsOdd() const { return mpz_odd_p(z) ? 1 : 0; }
+
+  MpInteger Abs() const {
+    MpInteger t;
+    mpz_abs(t.z, z);
+    return t;
+  }
+
   mp_limb_t operator[](int idx) const { return data()[idx]; }
+
   mp_limb_t& operator[](int idx) { return data()[idx]; }
 
   void SetBit(int idx) { mpz_setbit(z, idx); }
+
   void ResetBit(int idx) { mpz_clrbit(z, idx); }
+
   int GetBit(int idx) const { return mpz_tstbit(z, idx); }
-  void revBit(int idx) { mpz_combit(z, idx); }
+
+  void RevBit(int idx) { mpz_combit(z, idx); }
+
   int BitCount() const { return mpz_popcount(z); }
 
   string ToString(int base = 10) const {
@@ -533,9 +560,8 @@ class MpInteger {
     delete[] buff;
     return ret;
   }
-  string to_string(int base = 10) const {
-    return ToString(base);
-  }
+
+  string to_string(int base = 10) const { return ToString(base); }
 
   template <typename T>
   REQUIRES(is_native_integer<T>::value&& std::is_signed<T>::value)
@@ -880,27 +906,37 @@ struct Gbi<MpInteger> {
   static MpInteger Of(const string& s) { return MpInteger(s); }
 };
 
-SL string ToString(const MpInteger& x) { return x.ToString(); }
-SL string to_string(const MpInteger& x) { return ToString(x); }
 SL int IsZero(const MpInteger& x) { return x.IsZero(); }
+
 SL int IntSign(const MpInteger& x) { return x.sign(); }
+
 SL int IsEven(const MpInteger& x) { return x.IsEven(); }
+
 SL int IsOdd(const MpInteger& x) { return x.IsOdd(); }
+
 SL unsigned int LowerBits(const MpInteger& x) {
   return static_cast<unsigned int>(x[0]);
 }
-SL tuple<MpInteger, MpInteger> Div(const MpInteger& l, const MpInteger& r) {
-  return {l / r, l % r};
-}
+
+SL MpInteger Abs(const MpInteger& x) { return x.Abs(); }
+
+SL MpInteger FAbs(const MpInteger& x) { return x.Abs(); }
 
 template <typename T>
 SL T ToInt(const MpInteger& x) {
   return x.ToInt<T>();
 }
-
 template <typename T>
 SL T ToFloat(const MpInteger& x) {
   return x.ToFloat<T>();
+}
+
+SL string ToString(const MpInteger& x) { return x.ToString(); }
+
+SL string to_string(const MpInteger& x) { return ToString(x); }
+
+SL tuple<MpInteger, MpInteger> Div(const MpInteger& l, const MpInteger& r) {
+  return {l / r, l % r};
 }
 
 MpInteger PowerMod(const MpInteger& base, const MpInteger& n,

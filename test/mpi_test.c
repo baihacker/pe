@@ -311,7 +311,7 @@ SL void test_bit_operator() {
   MpInteger x;
   for (int i = 0; i <= 19; ++i) x.SetBit(i);
   assert(x.ToInt<int>() == 1048575);
-  x.revBit(0);
+  x.RevBit(0);
   assert(x.ToInt<int>() == 1048574);
   x.ResetBit(1);
   assert(x.ToInt<int>() == 1048572);

@@ -21,8 +21,36 @@ SL REQUIRES((is_gbi<GBI>::value)) RETURN(int) IsEven(const GBI& x);
 template <typename GBI>
 SL REQUIRES((is_gbi<GBI>::value)) RETURN(int) IsOdd(const GBI& x);
 
+template <typename T0, typename T1>
+SL REQUIRES((is_gbi<T0>::value && is_gbi<T1>::value)) RETURN(int)
+    SameParity(const T0& v0, const T1& v1) {
+  return IsEven(v0) == IsEven(v1);
+}
+
 template <typename GBI>
 SL REQUIRES((is_gbi<GBI>::value)) RETURN(unsigned int) LowerBits(const GBI& x);
+
+template <typename GBI>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI) Abs(const GBI& n) {
+  return IntSign(n) >= 0 ? n : -n;
+}
+
+template <typename GBI>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI) FAbs(const GBI& n) {
+  return IntSign(n) >= 0 ? n : -n;
+}
+
+template <typename GBI, typename T>
+SL REQUIRES((is_gbi<GBI>::value && is_native_integer<T>::value)) RETURN(GBI)
+    Power(const GBI& l, T n) {
+  GBI ret(1);
+  GBI x(l);
+  for (; IntSign(n) > 0; n >>= 1) {
+    if (n & 1) ret = ret * x;
+    if (n > 1) x = x * x;
+  }
+  return ret;
+}
 
 template <typename GBI>
 SL REQUIRES((is_gbi<GBI>::value)) RETURN(tuple<GBI, GBI>)
@@ -33,6 +61,9 @@ SL REQUIRES((is_gbi<GBI>::value)) RETURN(T) ToInt(const GBI& x);
 
 template <typename T, typename GBI>
 SL REQUIRES((is_gbi<GBI>::value)) RETURN(T) ToFloat(const GBI& x);
+
+template <typename T, typename GBI>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(T) ToString(const GBI& x);
 
 #if PE_HAS_CPP20
 template <class T>
@@ -111,46 +142,21 @@ concept PeGbi = requires(T v) {
   IsEven(v);
   IsOdd(v);
   LowerBits(v);
-  Div(v, v);
+  Abs(v);
+  FAbs(v);
   ToInt<int>(v);
   ToInt<unsigned int>(v);
   ToInt<long long>(v);
   ToInt<unsigned long long>(v);
   ToFloat<float>(v);
   ToFloat<double>(v);
+  ToString(v);
+  Div(v, v);
   requires static_cast<bool>(is_gbi<T>::value);
   requires PeGbiArithmeticOperation<T>;
   requires PeGbiSelfOperation<T>;
 };
 #endif
-
-template <typename T0, typename T1>
-SL REQUIRES((is_gbi<T0>::value && is_gbi<T1>::value)) RETURN(int)
-    SameParity(const T0& v0, const T1& v1) {
-  return IsEven(v0) == IsEven(v1);
-}
-
-template <typename GBI>
-SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI) FAbs(const GBI& n) {
-  return IntSign(n) >= 0 ? n : -n;
-}
-
-template <typename GBI>
-SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI) Abs(const GBI& n) {
-  return IntSign(n) >= 0 ? n : -n;
-}
-
-template <typename GBI, typename T>
-SL REQUIRES((is_gbi<GBI>::value && is_native_integer<T>::value)) RETURN(GBI)
-    Power(const GBI& l, T n) {
-  GBI ret(1);
-  GBI x(l);
-  for (; n > 0; n >>= 1) {
-    if (n & 1) ret = ret * x;
-    if (n > 1) x = x * x;
-  }
-  return ret;
-}
 
 template <typename GBI, typename T>
 SL REQUIRES((is_gbi<GBI>::value && is_native_integer<T>::value)) RETURN(GBI)

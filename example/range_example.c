@@ -128,471 +128,127 @@ struct Pt {
   // operator int() const { return a; }
 };
 
+ostream& operator<<(ostream& o, const Pt& p) { return o << p.a << " " << p.b; }
+
 void range_array_reduce() {
-  // not inplace
+  // Sequential
   {
     int a[6] = {1, 2, 3, 4, 5, 6};
-    cout << Range(a).Reduce<int64>(0, &ru::add) << endl;
-    cout << Range(a).Reduce(0, &ru::add) << endl;
-    cout << Range(a).Reduce(0, [](auto a, auto b) { return a + b; }) << endl;
+    cout << Range(a).Reduce(ru::Add<int64>()) << endl;
+    cout << Range(a).Reduce(0, [](int& a, int b) -> void { a += b; }) << endl;
   }
 
-  // inplace
+  // Parallel
   {
     int a[6] = {1, 2, 3, 4, 5, 6};
-    cout << Range(a).IReduce<int64>(0, &ru::iadd) << endl;
-    cout << Range(a).IReduce(0, [](auto& a, auto b) { a += b; }) << endl;
-  }
-
-  // parallel, not inplace
-  {
-    int a[6] = {1, 2, 3, 4, 5, 6};
-    cout << Range(a).PReduce<int64>(0LL, &ru::add, &ru::add) << endl;
-    cout << Range(a).PReduce<int64>(0LL, &ru::add) << endl;
-    cout << Range(a).PReduce(0, &ru::add, &ru::add) << endl;
-    cout << Range(a).PReduce(0, &ru::add) << endl;
+    cout << Range(a).PReduce(ru::Add<int64>()) << endl;
+    cout << Range(a).PReduce(0, [](int& a, int b) -> void { a += b; }) << endl;
     cout << Range(a).PReduce(
-                0, [](auto a, auto b) { return a + b; },
-                [](auto a, auto b) { return a + b; })
+                0, [](int& a, int b) -> void { a += b; },
+                [](int& a, int b) -> void { a += b; })
          << endl;
-    cout << Range(a).PReduce(0, [](auto a, auto b) { return a + b; }) << endl;
-  }
-
-  // parallel, inplace
-  {
-    int a[6] = {1, 2, 3, 4, 5, 6};
-    cout << Range(a).PIReduce<int64>(0LL, &ru::iadd, &ru::iadd) << endl;
-    cout << Range(a).PIReduce<int64>(0LL, &ru::iadd) << endl;
-    cout << Range(a).PIReduce(
-                0, [](auto& a, auto b) { a += b; },
-                [](auto& a, auto b) { a += b; })
-         << endl;
-    cout << Range(a).PIReduce(0, [](auto& a, auto b) { a += b; }) << endl;
-  }
-
-  // not inplace
-  {
-    const int a[6] = {1, 2, 3, 4, 5, 6};
-    cout << Range(a).Reduce<int64>(0, &ru::add) << endl;
-    cout << Range(a).Reduce(0, &ru::add) << endl;
-    cout << Range(a).Reduce(0, [](auto a, auto b) { return a + b; }) << endl;
-  }
-
-  // inplace
-  {
-    const int a[6] = {1, 2, 3, 4, 5, 6};
-    cout << Range(a).IReduce<int64>(0, &ru::iadd) << endl;
-    cout << Range(a).IReduce(0, [](auto& a, auto b) { a += b; }) << endl;
-  }
-
-  // parallel, not inplace
-  {
-    const int a[6] = {1, 2, 3, 4, 5, 6};
-    cout << Range(a).PReduce<int64>(0LL, &ru::add, &ru::add) << endl;
-    cout << Range(a).PReduce<int64>(0LL, &ru::add) << endl;
-    cout << Range(a).PReduce(0, &ru::add, &ru::add) << endl;
-    cout << Range(a).PReduce(0, &ru::add) << endl;
-    cout << Range(a).PReduce(
-                0, [](auto a, auto b) { return a + b; },
-                [](auto a, auto b) { return a + b; })
-         << endl;
-    cout << Range(a).PReduce(0, [](auto a, auto b) { return a + b; }) << endl;
-  }
-
-  // parallel, inplace
-  {
-    const int a[6] = {1, 2, 3, 4, 5, 6};
-    cout << Range(a).PIReduce<int64>(0LL, &ru::iadd, &ru::iadd) << endl;
-    cout << Range(a).PIReduce<int64>(0LL, &ru::iadd) << endl;
-    cout << Range(a).PIReduce(
-                0, [](auto& a, auto b) { a += b; },
-                [](auto& a, auto b) { a += b; })
-         << endl;
-    cout << Range(a).PIReduce(0, [](auto& a, auto b) { a += b; }) << endl;
   }
 }
 
 void range_vector_reduce() {
-  // not inplace
+  // Sequential
   {
     vector<int> a{1, 2, 3, 4, 5, 6};
-    cout << Range(a).Reduce<int64>(0, &ru::add) << endl;
-    cout << Range(a).Reduce(0, &ru::add) << endl;
-    cout << Range(a).Reduce(0, [](auto a, auto b) { return a + b; }) << endl;
+    cout << Range(a).Reduce(ru::Add<int64>()) << endl;
+    cout << Range(a).Reduce(0, [](int& a, int b) -> void { a += b; }) << endl;
   }
 
-  // inplace
+  // Parallel
   {
     vector<int> a{1, 2, 3, 4, 5, 6};
-    cout << Range(a).IReduce<int64>(0, &ru::iadd) << endl;
-    cout << Range(a).IReduce(0, [](auto& a, auto b) { a += b; }) << endl;
-  }
-
-  // parallel, not inplace
-  {
-    vector<int> a{1, 2, 3, 4, 5, 6};
-    cout << Range(a).PReduce<int64>(0LL, &ru::add, &ru::add) << endl;
-    cout << Range(a).PReduce<int64>(0LL, &ru::add) << endl;
-    cout << Range(a).PReduce(0, &ru::add, &ru::add) << endl;
-    cout << Range(a).PReduce(0, &ru::add) << endl;
+    cout << Range(a).PReduce(ru::Add<int64>()) << endl;
+    cout << Range(a).PReduce(0, [](int& a, int b) -> void { a += b; }) << endl;
     cout << Range(a).PReduce(
-                0, [](auto a, auto b) { return a + b; },
-                [](auto a, auto b) { return a + b; })
+                0, [](int& a, int b) -> void { a += b; },
+                [](int& a, int b) -> void { a += b; })
          << endl;
-    cout << Range(a).PReduce(0, [](auto a, auto b) { return a + b; }) << endl;
-  }
-
-  // parallel, inplace
-  {
-    vector<int> a{1, 2, 3, 4, 5, 6};
-    cout << Range(a).PIReduce<int64>(0LL, &ru::iadd, &ru::iadd) << endl;
-    cout << Range(a).PIReduce<int64>(0LL, &ru::iadd) << endl;
-    cout << Range(a).PIReduce(
-                0, [](auto& a, auto b) { a += b; },
-                [](auto& a, auto b) { a += b; })
-         << endl;
-    cout << Range(a).PIReduce(0, [](auto& a, auto b) { a += b; }) << endl;
-  }
-
-  // not inplace
-  {
-    const vector<int> a{1, 2, 3, 4, 5, 6};
-    cout << Range(a).Reduce<int64>(0, &ru::add) << endl;
-    cout << Range(a).Reduce(0, &ru::add) << endl;
-    cout << Range(a).Reduce(0, [](auto a, auto b) { return a + b; }) << endl;
-  }
-
-  // inplace
-  {
-    const vector<int> a{1, 2, 3, 4, 5, 6};
-    cout << Range(a).IReduce<int64>(0, &ru::iadd) << endl;
-    cout << Range(a).IReduce(0, [](auto& a, auto b) { a += b; }) << endl;
-  }
-
-  // parallel, not inplace
-  {
-    const vector<int> a{1, 2, 3, 4, 5, 6};
-    cout << Range(a).PReduce<int64>(0LL, &ru::add, &ru::add) << endl;
-    cout << Range(a).PReduce<int64>(0LL, &ru::add) << endl;
-    cout << Range(a).PReduce(0, &ru::add, &ru::add) << endl;
-    cout << Range(a).PReduce(0, &ru::add) << endl;
-    cout << Range(a).PReduce(
-                0, [](auto a, auto b) { return a + b; },
-                [](auto a, auto b) { return a + b; })
-         << endl;
-    cout << Range(a).PReduce(0, [](auto a, auto b) { return a + b; }) << endl;
-  }
-
-  // parallel, inplace
-  {
-    const vector<int> a{1, 2, 3, 4, 5, 6};
-    cout << Range(a).PIReduce<int64>(0LL, &ru::iadd, &ru::iadd) << endl;
-    cout << Range(a).PIReduce<int64>(0LL, &ru::iadd) << endl;
-    cout << Range(a).PIReduce(
-                0, [](auto& a, auto b) { a += b; },
-                [](auto& a, auto b) { a += b; })
-         << endl;
-    cout << Range(a).PIReduce(0, [](auto& a, auto b) { a += b; }) << endl;
   }
 }
 
 void range_set_reduce() {
-  // not inplace
+  // Sequential
   {
     set<int> a{1, 2, 3, 4, 5, 6};
-    cout << Range(a).Reduce<int64>(0, &ru::add) << endl;
-    cout << Range(a).Reduce(0, &ru::add) << endl;
-    cout << Range(a).Reduce(0, [](auto a, auto b) { return a + b; }) << endl;
+    cout << Range(a).Reduce(ru::Add<int64>()) << endl;
+    cout << Range(a).Reduce(0, [](int& a, int b) -> void { a += b; }) << endl;
   }
 
-  // inplace
+  // Parallel
   {
     set<int> a{1, 2, 3, 4, 5, 6};
-    cout << Range(a).IReduce<int64>(0, &ru::iadd) << endl;
-    cout << Range(a).IReduce(0, [](auto& a, auto b) { a += b; }) << endl;
-  }
-
-  // parallel, not inplace
-  {
-    set<int> a{1, 2, 3, 4, 5, 6};
-    cout << Range(a).PReduce<int64>(0LL, &ru::add, &ru::add) << endl;
-    cout << Range(a).PReduce<int64>(0LL, &ru::add) << endl;
-    cout << Range(a).PReduce(0, &ru::add, &ru::add) << endl;
-    cout << Range(a).PReduce(0, &ru::add) << endl;
+    cout << Range(a).PReduce(ru::Add<int64>()) << endl;
+    cout << Range(a).PReduce(0, [](int& a, int b) -> void { a += b; }) << endl;
     cout << Range(a).PReduce(
-                0, [](auto a, auto b) { return a + b; },
-                [](auto a, auto b) { return a + b; })
+                0, [](int& a, int b) -> void { a += b; },
+                [](int& a, int b) -> void { a += b; })
          << endl;
-    cout << Range(a).PReduce(0, [](auto a, auto b) { return a + b; }) << endl;
-  }
-
-  // parallel, inplace
-  {
-    set<int> a{1, 2, 3, 4, 5, 6};
-    cout << Range(a).PIReduce<int64>(0LL, &ru::iadd, &ru::iadd) << endl;
-    cout << Range(a).PIReduce<int64>(0LL, &ru::iadd) << endl;
-    cout << Range(a).PIReduce(
-                0, [](auto& a, auto b) { a += b; },
-                [](auto& a, auto b) { a += b; })
-         << endl;
-    cout << Range(a).PIReduce(0, [](auto& a, auto b) { a += b; }) << endl;
-  }
-
-  // not inplace
-  {
-    const set<int> a{1, 2, 3, 4, 5, 6};
-    cout << Range(a).Reduce<int64>(0, &ru::add) << endl;
-    cout << Range(a).Reduce(0, &ru::add) << endl;
-    cout << Range(a).Reduce(0, [](auto a, auto b) { return a + b; }) << endl;
-  }
-
-  // inplace
-  {
-    const set<int> a{1, 2, 3, 4, 5, 6};
-    cout << Range(a).IReduce<int64>(0, &ru::iadd) << endl;
-    cout << Range(a).IReduce(0, [](auto& a, auto b) { a += b; }) << endl;
-  }
-
-  // parallel, not inplace
-  {
-    const set<int> a{1, 2, 3, 4, 5, 6};
-    cout << Range(a).PReduce<int64>(0LL, &ru::add, &ru::add) << endl;
-    cout << Range(a).PReduce<int64>(0LL, &ru::add) << endl;
-    cout << Range(a).PReduce(0, &ru::add, &ru::add) << endl;
-    cout << Range(a).PReduce(0, &ru::add) << endl;
-    cout << Range(a).PReduce(
-                0, [](auto a, auto b) { return a + b; },
-                [](auto a, auto b) { return a + b; })
-         << endl;
-    cout << Range(a).PReduce(0, [](auto a, auto b) { return a + b; }) << endl;
-  }
-
-  // parallel, inplace
-  {
-    const set<int> a{1, 2, 3, 4, 5, 6};
-    cout << Range(a).PIReduce<int64>(0LL, &ru::iadd, &ru::iadd) << endl;
-    cout << Range(a).PIReduce<int64>(0LL, &ru::iadd) << endl;
-    cout << Range(a).PIReduce(
-                0, [](auto& a, auto b) { a += b; },
-                [](auto& a, auto b) { a += b; })
-         << endl;
-    cout << Range(a).PIReduce(0, [](auto& a, auto b) { a += b; }) << endl;
   }
 }
 
 void range_map_reduce() {
-  // not inplace
+  // Sequential
   {
     map<int, int> a;
     a[1] = 2;
     a[2] = 3;
-    cout << Range(a).Reduce<int64>(0, [](auto a, auto b) {
-      return a + b.second;
-    }) << endl;
-    // Cannot reduce on pair<const int, int>
-    // Need to specify std::pair<int, int>
-    cout << Range(a).Reduce<std::pair<int, int>>(
-                {0, 0},
-                [](auto a, auto b) -> std::pair<int, int> {
-                  return {a.first + b.first, a.second + b.second};
-                })
+    cout << Range(a).Reduce(ru::Add<int64, pair<const int, int>>(
+                [=](pair<const int, int> x) -> int64 { return x.second; }))
          << endl;
+
+    cout << Range(a).Map<int64>([](auto& a) { return a.second; }).Sum() << endl;
   }
 
-  // inplace
+  // Parallel
   {
     map<int, int> a;
     a[1] = 2;
     a[2] = 3;
-    cout << Range(a).IReduce<int64>(0, [](auto& a, auto b) { a += b.second; })
+    cout << Range(a).PReduce(ru::Add<int64, pair<const int, int>>(
+                [=](pair<const int, int> x) -> int64 { return x.second; }))
          << endl;
-    // Cannot reduce on pair<const int, int>
-    // Need to specify std::pair<int, int>
-    cout << Range(a).IReduce<std::pair<int, int>>({0, 0}, [](auto& a, auto b) {
-      a.first += b.first;
-      a.second += b.second;
-    }) << endl;
-  }
-
-  // parallel, not inplace
-  {
-    map<int, int> a;
-    a[1] = 2;
-    a[2] = 3;
-    cout << Range(a).PReduce<int64>(
-                0, [](auto a, auto b) -> int64 { return a + b.second; },
-                [](auto a, auto b) { return a + b; })
+    cout << Range(a).PMap<int64>([](auto& a) { return a.second; }).Sum()
          << endl;
-    // Cannot reduce on pair<const int, int>
-    // Need to specify std::pair<int, int>
-    cout << Range(a).PReduce<std::pair<int, int>>(
-                {0, 0},
-                [](auto a, auto b) -> std::pair<int, int> {
-                  return {a.first + b.first, a.second + b.second};
-                },
-                [](auto a, auto b) -> std::pair<int, int> {
-                  return {a.first + b.first, a.second + b.second};
-                })
-         << endl;
-    cout << Range(a).PReduce<std::pair<int, int>>(
-                {0, 0},
-                [](auto a, auto b) -> std::pair<int, int> {
-                  return {a.first + b.first, a.second + b.second};
-                })
-         << endl;
-  }
-
-  // parallel, inplace
-  {
-    map<int, int> a;
-    a[1] = 2;
-    a[2] = 3;
-    cout << Range(a).PIReduce<int64>(
-                0, [](auto& a, auto b) -> void { a += b.second; },
-                [](auto& a, auto b) { a += b; })
-         << endl;
-    // Cannot reduce on pair<const int, int>
-    // Need to specify std::pair<int, int>
-    cout << Range(a).PIReduce<std::pair<int, int>>(
-                {0, 0},
-                [](auto& a, auto b) {
-                  a.first += b.first;
-                  a.second += b.second;
-                },
-                [](auto& a, auto b) {
-                  a.first += b.first;
-                  a.second += b.second;
-                })
-         << endl;
-    cout << Range(a).PIReduce<std::pair<int, int>>({0, 0}, [](auto& a, auto b) {
-      a.first += b.first;
-      a.second += b.second;
-    }) << endl;
-  }
-
-  // not inplace
-  {
-    map<int, int> t;
-    t[1] = 2;
-    t[2] = 3;
-    const map<int, int> a = t;
-    cout << Range(a).Reduce<int64>(0, [](auto a, auto b) {
-      return a + b.second;
-    }) << endl;
-    // Cannot reduce on pair<const int, int>
-    // Need to specify std::pair<int, int>
-    cout << Range(a).Reduce<std::pair<int, int>>(
-                {0, 0},
-                [](auto a, auto b) -> std::pair<int, int> {
-                  return {a.first + b.first, a.second + b.second};
-                })
-         << endl;
-  }
-
-  // inplace
-  {
-    map<int, int> t;
-    t[1] = 2;
-    t[2] = 3;
-    const map<int, int> a = t;
-    cout << Range(a).IReduce<int64>(0, [](auto& a, auto b) { a += b.second; })
-         << endl;
-    // Cannot reduce on pair<const int, int>
-    // Need to specify std::pair<int, int>
-    cout << Range(a).IReduce<std::pair<int, int>>({0, 0}, [](auto& a, auto b) {
-      a.first += b.first;
-      a.second += b.second;
-    }) << endl;
-  }
-
-  // parallel, not inplace
-  {
-    map<int, int> t;
-    t[1] = 2;
-    t[2] = 3;
-    const map<int, int> a = t;
-    cout << Range(a).PReduce<int64>(
-                0, [](auto a, auto b) -> int64 { return a + b.second; },
-                [](auto a, auto b) { return a + b; })
-         << endl;
-    // Cannot reduce on pair<const int, int>
-    // Need to specify std::pair<int, int>
-    cout << Range(a).PReduce<std::pair<int, int>>(
-                {0, 0},
-                [](auto a, auto b) -> std::pair<int, int> {
-                  return {a.first + b.first, a.second + b.second};
-                },
-                [](auto a, auto b) -> std::pair<int, int> {
-                  return {a.first + b.first, a.second + b.second};
-                })
-         << endl;
-    cout << Range(a).PReduce<std::pair<int, int>>(
-                {0, 0},
-                [](auto a, auto b) -> std::pair<int, int> {
-                  return {a.first + b.first, a.second + b.second};
-                })
-         << endl;
-  }
-
-  // parallel, inplace
-  {
-    map<int, int> t;
-    t[1] = 2;
-    t[2] = 3;
-    const map<int, int> a = t;
-    cout << Range(a).PIReduce<int64>(
-                0, [](auto& a, auto b) -> void { a += b.second; },
-                [](auto& a, auto b) { a += b; })
-         << endl;
-    // Cannot reduce on pair<const int, int>
-    // Need to specify std::pair<int, int>
-    cout << Range(a).PIReduce<std::pair<int, int>>(
-                {0, 0},
-                [](auto& a, auto b) {
-                  a.first += b.first;
-                  a.second += b.second;
-                },
-                [](auto& a, auto b) {
-                  a.first += b.first;
-                  a.second += b.second;
-                })
-         << endl;
-    cout << Range(a).PIReduce<std::pair<int, int>>({0, 0}, [](auto& a, auto b) {
-      a.first += b.first;
-      a.second += b.second;
-    }) << endl;
   }
 }
 
 void range_number_range_reduce() {
-  // not inplace
+  // Sequential
   {
-    cout << Range(Range(1, 20)).Reduce<int64>(1, &ru::mul) << endl;
-    cout << Range(Range(1, 20)).Reduce(1, &ru::mul) << endl;
-  }
-
-  // inplace
-  {
-    cout << Range(Range(1, 20)).IReduce<int64>(1, &ru::imul) << endl;
-    cout << Range(Range(1, 20)).IReduce(1, &ru::imul) << endl;
-  }
-
-  // parallel, not inplace
-  {
-    cout << Range(Range(1, 20)).PReduce<int64>(1LL, &ru::mul, &ru::mul) << endl;
-    cout << Range(Range(1, 20)).PReduce<int64>(1LL, &ru::mul) << endl;
-
-    cout << Range(Range(1, 20)).PReduce(1, &ru::mul, &ru::mul) << endl;
-    cout << Range(Range(1, 20)).PReduce(1, &ru::mul) << endl;
-  }
-
-  // parallel, inplace
-  {
-    cout << Range(Range(1, 20)).PIReduce<int64>(1LL, &ru::imul, &ru::imul)
+    cout << Range(Range(1, 20)).Reduce(ru::Add<int64>()) << endl;
+    cout << Range(Range(1, 20)).Reduce(0, [](int& a, int b) -> void { a += b; })
          << endl;
-    cout << Range(Range(1, 20)).PIReduce<int64>(1LL, &ru::imul) << endl;
-    cout << Range(Range(1, 20)).PIReduce(1LL, &ru::imul, &ru::imul) << endl;
-    cout << Range(Range(1, 20)).PIReduce(1LL, &ru::imul) << endl;
+    cout << Range(Range(1, 20)).Reduce(ru::Mul<int64>()) << endl;
+    cout << Range(Range(1, 20)).Reduce<int64>(1, [](int64& a, int b) -> void {
+      a *= b;
+    }) << endl;
+  }
+
+  // Parallel
+  {
+    cout << Range(Range(1, 20)).PReduce(ru::Add<int64>()) << endl;
+    cout << Range(Range(1, 20)).PReduce(0, [](int& a, int b) -> void {
+      a += b;
+    }) << endl;
+    cout << Range(Range(1, 20))
+                .PReduce(
+                    0, [](int& a, int b) -> void { a += b; },
+                    [](int& a, int b) -> void { a += b; })
+         << endl;
+
+    cout << Range(Range(1, 20)).PReduce(ru::Mul<int64>()) << endl;
+    cout << Range(Range(1, 20))
+                .PReduce<int64>(1, [](int64& a, int64 b) -> void { a *= b; })
+         << endl;
+    cout << Range(Range(1, 20))
+                .PReduce<int64>(
+                    1, [](int64& a, int64 b) -> void { a *= b; },
+                    [](int64& a, int64 b) -> void { a *= b; })
+         << endl;
   }
 }
 
@@ -624,14 +280,14 @@ void range_general_example() {
 
   cout << Range(1, 10)
               .Filter([](auto v) { return v % 2 == 0; })
-              .Reduce(0, [](auto a, auto b) { return a + b; })
+              .Reduce(ru::Add<int64>())
        << endl;
   cout << Range(1, 10)
               .Filter([](auto v) { return v % 2 == 0; })
               .Filter([](auto v) { return v % 3 == 0; })
               .Map<int64>([](auto v) { return v * 3; })
               .Map<int64>([](auto v) { return v * 3; })
-              .Reduce(0, [](auto a, auto b) { return a + b; })
+              .Reduce(ru::Add<int64>())
        << endl;
   cout << Range(1, 10).Filter([](auto v) { return v % 2 == 0; }).ToVector()
        << endl;
@@ -641,33 +297,26 @@ void range_general_example() {
   const int* a0 = a;
   const int* a1 = a + 6;
 
-  cout << Range(a0, a1).Reduce(1, [](auto a, auto b) { return a * b; }) << endl;
-  cout << Range(a, a + 6).Reduce(1, [](auto a, auto b) { return a * b; })
-       << endl;
-  cout << Range(a).Reduce(1, [](auto a, auto b) { return a + b; }) << endl;
+  cout << Range(a0, a1).Reduce(ru::Mul<int64>()) << endl;
+  cout << Range(a, a + 6).Reduce(ru::Mul<int64>()) << endl;
+  cout << Range(a).Reduce(ru::Add<int64>()) << endl;
 
   for (auto i : Range(x)) {
     cout << i << endl;
   }
 
-  cout << Range(static_cast<const vector<int>&>(x))
-              .Reduce(1, [](auto a, auto b) { return a + b; })
+  cout << Range(static_cast<const vector<int>&>(x)).Reduce(ru::Add<int64>())
        << endl;
 
-  cout << Range(x.begin(), x.end()).Reduce(1, [](auto a, auto b) {
-    return a + b;
-  }) << endl;
+  cout << Range(x.begin(), x.end()).Reduce(ru::Add<int64>()) << endl;
 
   for (auto i : Range(mem)) {
     cout << i.first << " " << i.second << endl;
   }
 
   // 1*2*3*...*9
-  cout << Range(1, 10).Reduce(1, [](auto a, auto b) { return a * b; }) << endl;
-  cout << Range(1, 10).Reduce(1, &ru::mul) << endl;
-
-  cout << Range(1, 10).PReduce(1, [](auto a, auto b) { return a * b; }) << endl;
-  cout << Range(1, 10).PReduce(1, &ru::mul) << endl;
+  cout << Range(1, 10).Reduce(ru::Mul<int64>()) << endl;
+  cout << Range(1, 10).PReduce(ru::Mul<int64>()) << endl;
 
   // 1*2*3*...*999999
   const int64 mod = 1000000007;
@@ -675,35 +324,29 @@ void range_general_example() {
   for (int i = 1; i < 1000000; ++i) t *= i;
   cout << t << endl;
 
-  cout << Range(1, 1000000).Reduce(1, [=](auto a, auto b) {
-    return a * b % mod;
-  }) << endl;
+  cout << Range(1, 1000000).Reduce(ru::MulMod<int64>(mod)) << endl;
 
-  cout << Range(1, 1000000).PReduce(1, [=](auto a, auto b) {
-    return a * b % mod;
-  }) << endl;
+  cout << Range(1, 1000000).PReduce(ru::MulMod<int64>(mod)) << endl;
 
   // Reduce on x
-  cout << Range(x).Reduce(1, [](auto a, auto b) { return a * b; }) << endl;
-  cout << Range(x).PReduce(1, [](auto a, auto b) { return a * b; }) << endl;
+  cout << Range(x).Reduce(ru::Mul<int64>()) << endl;
+  cout << Range(x).PReduce(ru::Mul<int64>()) << endl;
 
   // Count prime.
   cout << Range(1, 10000000 + 1)
               .Map<int64>([](auto a) { return IsPrime(a); })
-              .Reduce(0, &ru::add)
+              .Reduce(ru::Add<int64>())
        << endl;
-  cout << Range(1, 10000000 + 1).Reduce(0, [](auto a, auto b) {
-    return a + IsPrime(b);
-  }) << endl;
-  cout << Range(1, 10000000 + 1)
-              .PReduce(
-                  0, [](auto a, auto b) { return a + IsPrime(b); }, &ru::add)
-       << endl;
+  cout << Range(1, 10000000 + 1).PReduce(ru::Add<int64>()) << endl;
 
   // Reduce on mem
-  cout << Range(mem).PReduce<int64>(
-              0LL, [](int64 a, auto& b) -> int64 { return a + b.second; },
-              &ru::add)
+  cout << Range(mem).PReduce(ru::Add<int64, pair<const int, int>>(
+              [=](pair<const int, int> x) -> int64 { return x.second; }))
+       << endl;
+  cout << Range(1, 10000000 + 1)
+              .Map<int64>([](auto a) { return a; })
+              .Reduce(
+                  ru::Reducer<int64, int>(0, [=](int64& r, int v) { r += v; }))
        << endl;
   // Error
   // cout << range(mem).PReduce({0,0}, [](auto a, auto b) -> pair<const int,
@@ -711,48 +354,10 @@ void range_general_example() {
   vector<Pt> y;
   y.pb({1, 2});
   y.pb({3, 4});
-  Range(y).PReduce(
-      {0, 0},
-      [](auto a, auto b) -> Pt {
-        return {0, a.a + b.a};
-      },
-      2);
-
-  // Inplace reduce
-
-  cout << Range(1, 101).IReduce<int64>(0, [](auto& a, auto b) { a += b; })
-       << endl;
-  cout << Range(1, 101).IReduce(0, [](auto& a, auto b) { a += b; }) << endl;
-  cout << Range(1, 101).IReduce(0, &ru::iadd) << endl;
-
-  cout << Range(1, 101).PIReduce<int64>(
-              1, [](auto& a, auto b) { a *= b; },
-              [](auto& a, auto b) { a *= b; })
-       << endl;
-  cout << Range(1, 101).PIReduce(
-              1, [](auto& a, auto b) { a *= b; },
-              [](auto& a, auto b) { a *= b; })
-       << endl;
-  cout << Range(1, 101).PIReduce(1, [](auto& a, auto b) { a *= b; }) << endl;
-  cout << Range(1, 101).PIReduce(1, &ru::imul) << endl;
-
-  cout << Range(y).IReduce<int64>(0, [](auto& a, auto b) { a += b.a; }) << endl;
-  cout << Range(y).IReduce({0, 0}, [](auto& a, auto b) { a.a += b.a; }).a
-       << endl;
-
-  cout << Range(y).PIReduce<int64>(
-              0, [](auto& a, const Pt& b) { a += b.a; },
-              [](auto& a, auto b) { a += b; })
-       << endl;
-
-  cout << Range(y)
-              .PIReduce(
-                  {0, 0}, [](auto& a, auto b) { a.a += b.a; },
-                  [](auto& a, auto b) { a.a += b.a; })
-              .a
-       << endl;
-  cout << Range(y).PIReduce({0, 0}, [](auto& a, auto b) { a.a += b.a; }).a
-       << endl;
+  cout << Range(y).PReduce(ru::Reducer<Pt>({0, 0}, [=](Pt& r, Pt v) {
+    r.a += v.a;
+    r.b += v.b;
+  })) << endl;
 }
 
 void irange_example() {
@@ -776,7 +381,7 @@ void range_example() {
 
 int main() {
   pe().set_max_prime(2000000).Init();
-  // irange_example();
+  irange_example();
   range_example();
   return 0;
 }

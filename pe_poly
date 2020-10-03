@@ -14,19 +14,20 @@ struct NModPoly {
 
   NModPoly(int64 mod = 1) : mod(mod) {}
 
-  NModPoly(const std::vector<int64>& data, int64 mod, int adjustLeadingZero = 1)
+  NModPoly(const std::vector<int64>& data, int64 mod,
+           int adjust_leading_zero = 1)
       : data(data), mod(mod) {
-    adjust_mod();
-    if (adjustLeadingZero) {
-      adjust_leading_zeros();
+    AdjustMod();
+    if (adjust_leading_zero) {
+      AdjustLeadingZeros();
     }
   }
 
-  NModPoly(std::vector<int64>&& data, int64 mod, int adjustLeadingZero = 1)
+  NModPoly(std::vector<int64>&& data, int64 mod, int adjust_leading_zero = 1)
       : data(std::move(data)), mod(mod) {
-    adjust_mod();
-    if (adjustLeadingZero) {
-      adjust_leading_zeros();
+    AdjustMod();
+    if (adjust_leading_zero) {
+      AdjustLeadingZeros();
     }
   }
 
@@ -45,22 +46,22 @@ struct NModPoly {
   NModPoly& operator=(const NModPoly& other) = default;
   NModPoly& operator=(NModPoly&& other) = default;
 
-  NModPoly& adjust_leading_zeros() {
-    adjust_poly_leading_zero(data);
+  NModPoly& AdjustLeadingZeros() {
+    AdjustPolyLeadingZero(data);
     return *this;
   }
 
-  NModPoly& adjust_mod() {
+  NModPoly& AdjustMod() {
     for (auto& iter : data) {
-      iter = regulate_mod(iter, mod);
+      iter = RegulateMod(iter, mod);
     }
     return *this;
   }
 
-  int64 deg() const { return static_cast<int64>(data.size() - 1); }
-  int64 size() const { return static_cast<int64>(data.size()); }
+  int64 Deg() const { return static_cast<int64>(data.size() - 1); }
+  int64 Size() const { return static_cast<int64>(data.size()); }
 
-  NModPoly& resize(int64 n) {
+  NModPoly& Resize(int64 n) {
     const auto m = static_cast<int64>(data.size());
     data.resize(n);
     for (int64 i = m; i < n; ++i) {
@@ -69,7 +70,7 @@ struct NModPoly {
     return *this;
   }
 
-  NModPoly& redeg(int64 n) { return resize(n + 1); }
+  NModPoly& Redeg(int64 n) { return Resize(n + 1); }
 
   int64& operator[](int64 idx) {
     PE_ASSERT(idx >= 0 && idx < data.size());
@@ -81,28 +82,28 @@ struct NModPoly {
     return data[idx];
   }
 
-  int64 at(int64 idx) const {
+  int64 At(int64 idx) const {
     return idx >= 0 && idx < static_cast<int64>(data.size()) ? data[idx] : 0;
   }
 
-  bool isZero() const { return data.size() == 1 && data[0] == 0; }
+  bool IsZero() const { return data.size() == 1 && data[0] == 0; }
 
-  int64 valueAt(int64 v) const {
+  int64 ValueAt(int64 v) const {
     int64 ret = 0;
-    for (int64 i = deg(); i >= 0; --i) {
+    for (int64 i = Deg(); i >= 0; --i) {
       ret = ret * v % mod + data[i];
       if (ret >= mod) ret -= mod;
     }
     return ret;
   }
 
-  NModPoly lowerTerms(int64 n, int adjustLeadingZero = 1) const {
+  NModPoly LowerTerms(int64 n, int adjust_leading_zero = 1) const {
     const int64 m = min(n, static_cast<int64>(data.size()));
     return NModPoly(std::vector<int64>(data.begin(), data.begin() + m), mod,
-                    adjustLeadingZero);
+                    adjust_leading_zero);
   }
 
-  NModPoly inv(int64 n) const;
+  NModPoly Inv(int64 n) const;
 };
 
 template <int64 M>
@@ -117,57 +118,56 @@ struct NModPolyT : public NModPoly {
       : NModPolyT(std::vector<int64>(l)) {}
 };
 
-SL NModPoly poly_mul(const NModPoly& X, const NModPoly& Y) {
-  return NModPoly{poly_mul(X.data, Y.data, X.mod), X.mod};
+SL NModPoly PolyMul(const NModPoly& X, const NModPoly& Y) {
+  return NModPoly{PolyMul(X.data, Y.data, X.mod), X.mod};
 }
 
-SL NModPoly poly_inv(const NModPoly& x, int64 n) {
+SL NModPoly PolyInv(const NModPoly& x, int64 n) {
   // It is assumed that mod is a prime
-  return NModPoly(poly_inv(x.data, n, x.mod), x.mod);
+  return NModPoly(PolyInv(x.data, n, x.mod), x.mod);
 }
 
-SL tuple<NModPoly, NModPoly> poly_div_and_mod(const NModPoly& x,
-                                              const NModPoly& y) {
+SL tuple<NModPoly, NModPoly> PolyDivAndMod(const NModPoly& x,
+                                           const NModPoly& y) {
   vector<int64> q, r;
-  tie(q, r) = poly_div_and_mod(x.data, y.data, x.mod);
+  tie(q, r) = PolyDivAndMod(x.data, y.data, x.mod);
   return make_tuple(NModPoly(std::move(q), x.mod),
                     NModPoly(std::move(r), x.mod));
 }
 
-#define PPOLY_DIV_AND_MOD_IMPL(poly_div_and_mod, poly_div_and_mod_internal) \
-  SL tuple<NModPoly, NModPoly> poly_div_and_mod(const NModPoly& X,          \
-                                                const NModPoly& Y) {        \
-    vector<int64> q, r;                                                     \
-    tie(q, r) = poly_div_and_mod(X.data, Y.data, X.mod);                    \
-    return make_tuple(NModPoly(std::move(q), X.mod),                        \
-                      NModPoly(std::move(r), X.mod));                       \
+#define PPOLY_DIV_AND_MOD_IMPL(PolyDivAndMod, PolyDivAndModInternal) \
+  SL tuple<NModPoly, NModPoly> PolyDivAndMod(const NModPoly& X,      \
+                                             const NModPoly& Y) {    \
+    vector<int64> q, r;                                              \
+    tie(q, r) = PolyDivAndMod(X.data, Y.data, X.mod);                \
+    return make_tuple(NModPoly(std::move(q), X.mod),                 \
+                      NModPoly(std::move(r), X.mod));                \
   }
 
-#define PPOLY_DIV_IMPL(poly_div, poly_div_and_mod)             \
-  SL NModPoly poly_div(const NModPoly& X, const NModPoly& Y) { \
-    return NModPoly(poly_div(X.data, Y.data, X.mod), X.mod);   \
+#define PPOLY_DIV_IMPL(PolyDiv, PolyDivAndMod)                \
+  SL NModPoly PolyDiv(const NModPoly& X, const NModPoly& Y) { \
+    return NModPoly(PolyDiv(X.data, Y.data, X.mod), X.mod);   \
   }
 
-#define PPOLY_MOD_IMPL(poly_mod, poly_div_and_mod)             \
-  SL NModPoly poly_mod(const NModPoly& X, const NModPoly& Y) { \
-    return NModPoly(poly_mod(X.data, Y.data, X.mod), X.mod);   \
+#define PPOLY_MOD_IMPL(PolyMod, PolyDivAndMod)                \
+  SL NModPoly PolyMod(const NModPoly& X, const NModPoly& Y) { \
+    return NModPoly(PolyMod(X.data, Y.data, X.mod), X.mod);   \
   }
 
-PPOLY_DIV_AND_MOD_IMPL(poly_div_and_mod_dc, poly_div_and_mod_dc_internal)
-PPOLY_DIV_IMPL(poly_div_dc, poly_div_and_mod_dc)
-PPOLY_MOD_IMPL(poly_mod_dc, poly_div_and_mod_dc)
+PPOLY_DIV_AND_MOD_IMPL(PolyDivAndModDc, PolyDivAndModDcInternal)
+PPOLY_DIV_IMPL(PolyDivDc, PolyDivAndModDc)
+PPOLY_MOD_IMPL(PolyModDc, PolyDivAndModDc)
 
-PPOLY_DIV_AND_MOD_IMPL(poly_div_and_mod_normal,
-                       poly_div_and_mod_normal_internal)
-PPOLY_DIV_IMPL(poly_div_normal, poly_div_and_mod_normal)
-PPOLY_MOD_IMPL(poly_mod_normal, poly_div_and_mod_normal)
+PPOLY_DIV_AND_MOD_IMPL(PolyDivAndModNormal, PolyDivAndModNormalInternal)
+PPOLY_DIV_IMPL(PolyDivNormal, PolyDivAndModNormal)
+PPOLY_MOD_IMPL(PolyModNormal, PolyDivAndModNormal)
 
-PPOLY_DIV_IMPL(poly_div, poly_div_and_mod)
-PPOLY_MOD_IMPL(poly_mod, poly_div_and_mod)
+PPOLY_DIV_IMPL(PolyDiv, PolyDivAndMod)
+PPOLY_MOD_IMPL(PolyMod, PolyDivAndMod)
 
-inline NModPoly NModPoly::inv(int64 n) const {
+inline NModPoly NModPoly::Inv(int64 n) const {
   // It is assumed that mod is a prime
-  auto t = poly_inv(data, n, mod);
+  auto t = PolyInv(data, n, mod);
   return NModPoly(std::vector<int64>(static_cast<int64*>(&t[0]),
                                      static_cast<int64*>(&t[0]) + t.size()),
                   mod);
@@ -188,13 +188,11 @@ NModPoly operator<<(const NModPoly& p, int64 m) {
 }
 
 SL NModPoly operator-(const NModPoly& x, const NModPoly& y) {
-  return NModPoly(poly_sub(x.data, y.data, x.mod), x.mod)
-      .adjust_leading_zeros();
+  return NModPoly(PolySub(x.data, y.data, x.mod), x.mod).AdjustLeadingZeros();
 }
 
 SL NModPoly operator+(const NModPoly& x, const NModPoly& y) {
-  return NModPoly(poly_add(x.data, y.data, x.mod), x.mod)
-      .adjust_leading_zeros();
+  return NModPoly(PolyAdd(x.data, y.data, x.mod), x.mod).AdjustLeadingZeros();
 }
 
 SL NModPoly operator*(const NModPoly& x, int64 v) {
@@ -208,15 +206,15 @@ SL NModPoly operator*(const NModPoly& x, int64 v) {
 SL NModPoly operator*(int64 v, const NModPoly& x) { return x * v; }
 
 SL NModPoly operator*(const NModPoly& x, const NModPoly& y) {
-  return poly_mul(x, y);
+  return PolyMul(x, y);
 }
 
 SL NModPoly operator/(const NModPoly& x, const NModPoly& y) {
-  return poly_div(x, y);
+  return PolyDiv(x, y);
 }
 
 SL NModPoly operator%(const NModPoly& x, const NModPoly& y) {
-  return poly_mod(x, y);
+  return PolyMod(x, y);
 }
 
 SL int operator==(const NModPoly& x, const NModPoly& y) {
@@ -229,10 +227,10 @@ SL NModPoly operator%(int64 n, const NModPoly& mod) {
   NModPoly ret{{1}, mod.mod};
   for (; n > 0; n >>= 1) {
     if (n & 1) {
-      ret = poly_mod(x * ret, mod);
+      ret = PolyMod(x * ret, mod);
     }
     if (n > 1) {
-      x = poly_mod(x * x, mod);
+      x = PolyMod(x * x, mod);
     }
   }
   return ret;

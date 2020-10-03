@@ -39,8 +39,8 @@ class UnsafeMod {
     return word_t(w >> word_bits) + mod -
            word_t((dword_t(word_t(w) * inv) * mod) >> word_bits);
   }
-  static UnsafeMod omega() {
-    return UnsafeMod(prim_root).pow((mod - 1) >> level);
+  static UnsafeMod Omega() {
+    return UnsafeMod(prim_root).Power((mod - 1) >> level);
   }
   UnsafeMod& operator+=(UnsafeMod rhs) {
     x += rhs.x;
@@ -57,26 +57,26 @@ class UnsafeMod {
   UnsafeMod operator+(UnsafeMod rhs) const { return UnsafeMod(*this) += rhs; }
   UnsafeMod operator-(UnsafeMod rhs) const { return UnsafeMod(*this) -= rhs; }
   UnsafeMod operator*(UnsafeMod rhs) const { return UnsafeMod(*this) *= rhs; }
-  word_t get() const { return reduce(x) % mod; }
-  void set(word_t n) { x = n; }
-  UnsafeMod pow(word_t e) const {
+  word_t Get() const { return reduce(x) % mod; }
+  void Set(word_t n) { x = n; }
+  UnsafeMod Power(word_t e) const {
     UnsafeMod ret = UnsafeMod(1);
     for (UnsafeMod base = *this; e; e >>= 1, base *= base)
       if (e & 1) ret *= base;
     return ret;
   }
-  UnsafeMod inverse() const { return pow(mod - 2); }
+  UnsafeMod Inverse() const { return Power(mod - 2); }
   friend ostream& operator<<(ostream& os, const UnsafeMod& m) {
-    return os << m.get();
+    return os << m.Get();
   }
-  static void debug() {
-    printf("%llu %llu %llu %llu\n", mod, inv, r2, omega().get());
+  static void Debug() {
+    printf("%llu %llu %llu %llu\n", mod, inv, r2, Omega().Get());
   }
   word_t x;
 };
 
 template <typename mod_t>
-void transform(mod_t* A, int64 n, const mod_t* roots, const mod_t* iroots) {
+void Transform(mod_t* A, int64 n, const mod_t* roots, const mod_t* iroots) {
   const int logn = pe_ctzll(n), nh = n >> 1, lv = mod_t::level;
   const mod_t one = mod_t(1), imag = roots[lv - 2];
 
@@ -113,7 +113,7 @@ void transform(mod_t* A, int64 n, const mod_t* roots, const mod_t* iroots) {
 }
 
 template <typename mod_t>
-void itransform(mod_t* A, int64 n, const mod_t* roots, const mod_t* iroots) {
+void ITransform(mod_t* A, int64 n, const mod_t* roots, const mod_t* iroots) {
   const int64 logn = pe_ctzll(n), nh = n >> 1, lv = mod_t::level;
   const mod_t one = mod_t(1), imag = iroots[lv - 2];
 
@@ -150,32 +150,32 @@ void itransform(mod_t* A, int64 n, const mod_t* roots, const mod_t* iroots) {
 }
 
 template <typename mod_t>
-void convolve(mod_t* A, int64 s1, mod_t* B, int64 s2, bool cyclic = false) {
+void Convolve(mod_t* A, int64 s1, mod_t* B, int64 s2, bool cyclic = false) {
   const int64 s = cyclic ? max(s1, s2) : s1 + s2 - 1;
   const int64 size = 1LL << (63 - pe_clzll(2 * s - 1));
   assert(size <= (int64(1) << mod_t::level));
 
   mod_t roots[mod_t::level], iroots[mod_t::level];
-  roots[0] = mod_t::omega();
+  roots[0] = mod_t::Omega();
   for (int64 i = 1; i < mod_t::level; ++i)
     roots[i] = roots[i - 1] * roots[i - 1];
-  iroots[0] = roots[0].inverse();
+  iroots[0] = roots[0].Inverse();
   for (int64 i = 1; i < mod_t::level; ++i)
     iroots[i] = iroots[i - 1] * iroots[i - 1];
 
   fill(A + s1, A + size, 0);
-  transform(A, size, roots, iroots);
-  const mod_t inv = mod_t(size).inverse();
+  Transform(A, size, roots, iroots);
+  const mod_t inv = mod_t(size).Inverse();
   if (A == B && s1 == s2) {
     for (int64 i = 0; i < size; ++i)
       (A[i] *= A[i]) *= inv;  // not A[i] *= A[i] * inv;
   } else {
     fill(B + s2, B + size, 0);
-    transform(B, size, roots, iroots);
+    Transform(B, size, roots, iroots);
     for (int64 i = 0; i < size; ++i)
       (A[i] *= B[i]) *= inv;  // not A[i] *= B[i] * inv;
   }
-  itransform(A, size, roots, iroots);
+  ITransform(A, size, roots, iroots);
 }
 
 using m64_1 = UnsafeMod<1121333583512862721, 51>;
@@ -183,8 +183,8 @@ using m64_2 = UnsafeMod<1128298388379402241, 23>;  // <= 1.14e18 (sub.D = 3)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_small_internal(const T* f, int64 n, const T* g, int64 m, T* result,
-                            int64 mod) {
+    PolyMulSmallInternal(const T* f, int64 n, const T* g, int64 m, T* result,
+                         int64 mod) {
   const int64 alignedSize = 1LL << pe_lgll(2 * (n + m - 1) - 1);
 
   const int64 ntt_size = alignedSize;
@@ -193,7 +193,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
   for (int64 i = 0; i < n; ++i) f1[i] = f[i];
   for (int64 i = 0; i < m; ++i) g1[i] = g[i];
-  convolve(f1.data(), n, g1.data(), m, false);
+  Convolve(f1.data(), n, g1.data(), m, false);
 
   const int64 retSize = n + m - 1;
 
@@ -201,15 +201,15 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 #pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
 #endif
   for (int64 i = 0; i < retSize; ++i) {
-    const uint64 a = f1[i].get();
+    const uint64 a = f1[i].Get();
     result[i] = mod > 0 ? a % mod : a;
   }
 }
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_mul_large_internal(const T* f, int64 n, const T* g, int64 m, T* result,
-                            int64 mod) {
+    PolyMulLargeInternal(const T* f, int64 n, const T* g, int64 m, T* result,
+                         int64 mod) {
   const int64 alignedSize = 1LL << pe_lgll(2 * (n + m - 1) - 1);
 
   const int64 ntt_size = alignedSize;
@@ -227,7 +227,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     {
       for (int64 i = 0; i < n; ++i) f1[i] = f[i];
       for (int64 i = 0; i < m; ++i) g1[i] = g[i];
-      convolve(f1.data(), n, g1.data(), m, false);
+      Convolve(f1.data(), n, g1.data(), m, false);
     }
 #if ENABLE_OPENMP
 #pragma omp section
@@ -235,7 +235,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     {
       for (int64 i = 0; i < n; ++i) f2[i] = f[i];
       for (int64 i = 0; i < m; ++i) g2[i] = g[i];
-      convolve(f2.data(), n, g2.data(), m, false);
+      Convolve(f2.data(), n, g2.data(), m, false);
     }
   }
 
@@ -247,7 +247,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 #pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
 #endif
   for (int64 i = 0; i < retSize; ++i) {
-    const uint64 r1 = f1[i].get(), r2 = f2[i].get();
+    const uint64 r1 = f1[i].Get(), r2 = f2[i].Get();
     const uint64 x = r2 >= r1 ? r2 - r1 : mod2 - r1 + r2;
     const uint64 y = static_cast<uint128>(x) * inv % mod2;
     const uint128 tmp = static_cast<uint128>(y) * mod1 + r1;
@@ -255,8 +255,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   }
 }
 
-POLY_MUL_IMPL(poly_mul_small, poly_ntl::poly_mul_small_mod_internal)
-POLY_MUL_IMPL(poly_mul_large, poly_min25::poly_mul_large_internal)
+POLY_MUL_IMPL(PolyMulSmall, poly_ntl::PolyMulSmallModInternal)
+POLY_MUL_IMPL(PolyMulLarge, poly_min25::PolyMulLargeInternal)
 
 }  // namespace poly_min25
 #else

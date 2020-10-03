@@ -8,46 +8,71 @@
 #include "pe_type_traits"
 
 template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(int) is_zero(T v) {
+SL REQUIRES((is_native_integer<T>::value)) RETURN(int) IsZero(T v) {
   return v ? 0 : 1;
 }
 
 template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(int) int_sign(T v) {
+SL REQUIRES((is_native_integer<T>::value)) RETURN(int) IntSign(T v) {
   return v < 0 ? -1 : (v > 0);
 }
 
 template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(int) is_even(T v) {
+SL REQUIRES((is_native_integer<T>::value)) RETURN(int) IsEven(T v) {
   return (v & 1) == 0 ? 1 : 0;
 }
 
 template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(int) is_odd(T v) {
+SL REQUIRES((is_native_integer<T>::value)) RETURN(int) IsOdd(T v) {
   return (v & 1) == 0 ? 0 : 1;
 }
 
 template <typename T0, typename T1>
 SL REQUIRES((is_native_integer<T0>::value && is_native_integer<T1>::value))
-    RETURN(int) same_parity(T0 v0, T1 v1) {
+    RETURN(int) SameParity(T0 v0, T1 v1) {
   const int x = (int)(v0 & 1);
   const int y = (int)(v1 & 1);
   return x == y ? 1 : 0;
 }
 
 template <typename TARGET, typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(TARGET) to_int(T v) {
+SL REQUIRES((is_native_integer<T>::value)) RETURN(TARGET) ToInt(T v) {
   return static_cast<TARGET>(v);
 }
 
 template <typename TARGET, typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(TARGET) to_float(T v) {
+SL REQUIRES((is_native_integer<T>::value)) RETURN(TARGET) ToFloat(T v) {
   return static_cast<TARGET>(v);
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(string) ToString(T v) {
+  return std::to_string(v);
+}
+
+SL string ToString(double v) { return std::to_string(v); }
+
+SL string ToString(long double v) { return std::to_string(v); }
+
+SL string ToString(float v) { return std::to_string(v); }
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) FAbs(const T n) {
+  return n >= 0 ? n : -n;
+}
+
+SL double FAbs(const double n) { return fabs(n); }
+
+SL float FAbs(const float n) { return fabs(n); }
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) Abs(const T n) {
+  return n >= 0 ? n : -n;
 }
 
 template <typename T1, typename T2>
 SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value))
-    RETURN(T1) power(T1 x, T2 n) {
+    RETURN(T1) Power(T1 x, T2 n) {
   T1 ret = 1;
   for (; n; n >>= 1) {
     if (n & 1) ret = ret * x;
@@ -56,19 +81,19 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value))
   return ret;
 }
 
-// power_mod is in pe_mod
+// PowerMod is in pe_mod
 
 // 90000000599999991
 
 #if 0
 // Legacy implementation
-SL int64 sqrti(int64 d) {
+SL int64 SqrtI(int64 d) {
   const auto result = static_cast<int64>(sqrt(d));
   return result * result > d ? result - 1 : result;
 }
 
 #if PE_HAS_INT128
-SL int64 sqrti(int128 d) {
+SL int64 SqrtI(int128 d) {
   const int64 result = sqrt(static_cast<long double>(d));
   return static_cast<int128>(result) * result > d ? result - 1 : result;
 }
@@ -77,20 +102,20 @@ SL int64 sqrti(int128 d) {
 
 #if defined(COMPILER_MSVC)
 template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) sqrti(T d) {
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) SqrtI(T d) {
   const auto result = static_cast<T>(sqrt((long double)d));
   return result * result > d ? result - 1 : result;
 }
 #else
 template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) sqrti(T v) {
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) SqrtI(T v) {
   return static_cast<T>(sqrt((long double)v));
 }
 #endif
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
-    nrooti_internal(T v, int n) {
+    NRootIInternal(T v, int n) {
   // n > 2 && v > 1
   T r = static_cast<T>(pow((long double)v, static_cast<long double>(1.) / n));
 #if defined(COMPILER_MSVC)
@@ -116,7 +141,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
 }
 
 template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) nrooti(T v, int n) {
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) NRootI(T v, int n) {
   PE_ASSERT(n >= 0);
   if (n == 0) {
     return 1;
@@ -133,15 +158,15 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T) nrooti(T v, int n) {
   }
   if (n == 2) {
     PE_ASSERT(v > 0);
-    return sqrti(v);
+    return SqrtI(v);
   }
-  return v > 0 ? nrooti_internal(v, n) : -nrooti_internal(-v, n);
+  return v > 0 ? NRootIInternal(v, n) : -NRootIInternal(-v, n);
 }
 
-SL int64 square_root_safe(int64 n) {
+SL int64 SquareRootSafe(int64 n) {
   if (n <= 0) return 0;
   if (n == 1) return 1;
-  for (int64 test = sqrti(n);; ++test) {
+  for (int64 test = SqrtI(n);; ++test) {
     const int64 t = test * test;
     if (t == n) return test;
     if (t > n) return 0;
@@ -149,25 +174,25 @@ SL int64 square_root_safe(int64 n) {
   return 0;
 }
 
-SL int64 square_root_unsafe(int64 n) {
+SL int64 SquareRootUnsafe(int64 n) {
   if (n <= 0) return 0;
   if (n == 1) return 1;
-  int64 ret = sqrti(n);
+  int64 ret = SqrtI(n);
   return ret * ret == n ? ret : 0;
 }
 
-SL int64 square_root(int64 n) {
+SL int64 SquareRoot(int64 n) {
   if (n <= 0) return 0;
   if (n == 1) return 1;
   // see Donald L. Graham, Donald E. Knuth, Oren Patashnik, CONCRETE
   // MATHEMATICS, pp 70-72
   // int64 ret = static_cast<int64>(sqrt(n + 0.5));
-  int64 ret = sqrti(n);
+  int64 ret = SqrtI(n);
   return ret * ret == n ? ret : 0;
 }
 
 template <typename T1, typename T2>
-SL tuple<T1, int64> extract_factor(T1 A, T2 B) {
+SL tuple<T1, int64> ExtractFactor(T1 A, T2 B) {
   int64 c = 0;
   while (A && A % B == 0) A = (T1)(A / B), ++c;
   return tuple<T1, int64>{A, c};
@@ -175,7 +200,7 @@ SL tuple<T1, int64> extract_factor(T1 A, T2 B) {
 
 // Greatest common divisor and extend greatest common divisor
 template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) gcd(T __m, T __n) {
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) Gcd(T __m, T __n) {
   while (__n != 0) {
     T __t = __m % __n;
     __m = __n;
@@ -184,34 +209,35 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T) gcd(T __m, T __n) {
   return __m;
 }
 
-#if !defined(COMPILER_MSVC) && !PE_HAS_CPP17
+// #if !defined(COMPILER_MSVC) && !PE_HAS_CPP17
 template <typename T0, typename T1>
 SL REQUIRES((is_native_integer<T0>::value && is_native_integer<T1>::value))
-    RETURN_T(IntPromotionT(T0, T1)) gcd(T0 __m, T1 __n) {
-  typedef IntPromotion(T0, T1) ResultType;
-  return gcd((ResultType)__m, (ResultType)__n);
+    RETURN_T(IntPromotionT(T0, T1)) Gcd(T0 __m, T1 __n) {
+  using ResultType = typename BiggerIntegralN<T0, T1>::type;
+  return Gcd((ResultType)__m, (ResultType)__n);
 }
-#endif
+// #endif
 
 template <typename T>
-SL T gcd(T a) {
+SL T Gcd(T a) {
   return a;
 }
 
 template <typename TH, typename... TT>
-SL IntPromotion(TH, TT...) gcd(TH a, TT... b) {
-  return gcd(a, gcd(b...));
+SL IntPromotion(TH, TT...) Gcd(TH a, TT... b) {
+  return Gcd(a, Gcd(b...));
 }
 
 template <typename T>
 SL REQUIRES(is_native_integer<T>::value) RETURN(T)
-    gcd(std::initializer_list<T> init) {
+    Gcd(std::initializer_list<T> init) {
+  cout << "now" << endl;
   T ret = 0;
   for (auto& v : init) {
     if (ret == 0) {
       ret = v;
     } else {
-      ret = gcd(ret, v);
+      ret = Gcd(ret, v);
     }
   }
   return ret;
@@ -219,7 +245,7 @@ SL REQUIRES(is_native_integer<T>::value) RETURN(T)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(T)
-    exgcd_impl(T a, T b, T& x, T& y) {
+    ExgcdImpl(T a, T b, T& x, T& y) {
   if (b == 0) {
     x = 1;
     y = 0;
@@ -227,7 +253,7 @@ SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(T)
   }
 
   T x1 = 0, y1 = 0;
-  const T ret = exgcd_impl(b, a % b, x1, y1);
+  const T ret = ExgcdImpl(b, a % b, x1, y1);
   // b * x1 + (a%b) * y1 = ret
   // b * x1 + (a - a / b * b) * y1 = ret
   // b * x1 + a * y1 - a / b * b * y1 = ret
@@ -239,26 +265,26 @@ SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(T)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(T)
-    exgcd(T a, T b, T& x, T& y) {
+    Exgcd(T a, T b, T& x, T& y) {
   PE_ASSERT(a != 0 || b != 0);
-  const T r = exgcd_impl(a, b, x, y);
+  const T r = ExgcdImpl(a, b, x, y);
   PE_ASSERT(a * x + b * y == r);
   return r;
 }
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value))
-    RETURN(tuple<T, T, T>) exgcd(T a, T b) {
+    RETURN(tuple<T, T, T>) Exgcd(T a, T b) {
   PE_ASSERT(a != 0 || b != 0);
   T x = 0, y = 0;
-  const T r = exgcd_impl(a, b, x, y);
+  const T r = ExgcdImpl(a, b, x, y);
   PE_ASSERT(a * x + b * y == r);
   return tuple<T, T, T>{r, x, y};
 }
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(T)
-    mod_inv(T a, T mod) {
+    ModInv(T a, T mod) {
   T b = mod, s = 1, t = 0, old_a = a;
   while (b > 0) {
     swap(s -= t * (a / b), t);
@@ -272,14 +298,14 @@ SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(T)
 }
 
 // p is prime
-SL int64 inv_of(int64 x, int64 p) { return power_mod_ex(x, p - 2, p); }
+SL int64 InvOf(int64 x, int64 p) { return PowerModEx(x, p - 2, p); }
 
 // solve equation a x = b (mod m)
 // return 0 and set u = -1 and v = 0 if failed
 // return 1, x = v (mod u)
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(int)
-    solve_linear_equation(T a, T b, T m, T& v, T& u) {
+    SolveLinearEquation(T a, T b, T m, T& v, T& u) {
   v = 0;
   u = 0;
 
@@ -297,7 +323,7 @@ SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(int)
   if (a < 0) a += m;
   if (b < 0) b += m;
 
-  T xx = 0, yy = 0, d = exgcd(a, m, xx, yy);
+  T xx = 0, yy = 0, d = Exgcd(a, m, xx, yy);
 
   if (b % d) return 0;
 
@@ -315,7 +341,7 @@ SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(int)
 // return 1, x = v (mod u)
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(int)
-    crt2(T a, T m1, T b, T m2, T& v, T& u) {
+    Crt2(T a, T m1, T b, T m2, T& v, T& u) {
   v = 0;
   u = 0;
 
@@ -333,7 +359,7 @@ SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(int)
   if (b < 0) b = -b;
 
   T s = 0, t = 0;
-  if (!solve_linear_equation(m1, b - a, m2, t, s)) return 0;
+  if (!SolveLinearEquation(m1, b - a, m2, t, s)) return 0;
   // k0 = k1 * s + t
   // x = (k1 * s + t) * m1 + a
   // x = k1 * s * m1 + (a + t * m1)
@@ -345,20 +371,20 @@ SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(int)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value))
-    RETURN(tuple<int, T, T>) crt2(T a, T m1, T b, T m2) {
+    RETURN(tuple<int, T, T>) Crt2(T a, T m1, T b, T m2) {
   T v = 0, u = 0;
-  int r = crt2(a, m1, b, m2, v, u);
+  int r = Crt2(a, m1, b, m2, v, u);
   return tuple<int, T, T>{r, v, u};
 }
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value))
-    RETURN(tuple<int, T, T>) crtn(const T* val, const T* mod, int n) {
+    RETURN(tuple<int, T, T>) CrtN(const T* val, const T* mod, int n) {
   PE_ASSERT(val != NULL && mod != NULL);
   T v = 0, u = 1;
   int have = 1;
   for (int i = 0; i < n; ++i) {
-    tie(have, v, u) = crt2(v, u, val[i], mod[i]);
+    tie(have, v, u) = Crt2(v, u, val[i], mod[i]);
     if (!have) {
       return tuple<int, T, T>{0, 0, 0};
     }
@@ -368,19 +394,19 @@ SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value))
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value))
-    RETURN(tuple<int, T, T>) crtn(const vector<T>& val, const vector<T>& mod) {
-  return crtn<T>(&val[0], &mod[0], val.size());
+    RETURN(tuple<int, T, T>) CrtN(const vector<T>& val, const vector<T>& mod) {
+  return CrtN<T>(&val[0], &mod[0], val.size());
 }
 
-SL int is_square_free_normal(int64 n) {
-  for (auto& iter : factorize(n))
+SL int IsSquareFreeNormal(int64 n) {
+  for (auto& iter : Factorize(n))
     if (iter.second > 1) {
       return 0;
     }
   return 1;
 }
 
-SL int is_square_free_by_pmask(int64 n) {
+SL int IsSquareFreeByPmask(int64 n) {
   while (n != 1) {
     int now = pmask[n];
     int c = 0;
@@ -390,14 +416,14 @@ SL int is_square_free_by_pmask(int64 n) {
   return 1;
 }
 
-SL int is_square_free(int64 n) {
+SL int IsSquareFree(int64 n) {
   if (n <= 0) {
     return 0;
   }
 
   for (int i = 0; i < pcnt; ++i) {
     if (n <= maxp) {
-      return is_square_free_by_pmask(n);
+      return IsSquareFreeByPmask(n);
     }
     const int64 p = plist[i];
     const int64 test = p * p;
@@ -419,7 +445,7 @@ SL int is_square_free(int64 n) {
  * n can be greater than or equal to mod
  */
 template <typename T, typename M>
-SL void init_inv(T* dest, int64 n, M mod) {
+SL void InitInv(T* dest, int64 n, M mod) {
   PE_ASSERT(n >= 1);
   dest[0] = 0;
   if (n >= 1) {
@@ -429,9 +455,9 @@ SL void init_inv(T* dest, int64 n, M mod) {
   for (int i = 2; i <= maxi; ++i) {
     const auto t = mod / i;
     const auto k = mod % i;
-    const auto v = mul_mod_ex(t, t, mod);
-    const auto u = mul_mod_ex(dest[k], dest[k], mod);
-    dest[i] = (T)mul_mod_ex(i, mul_mod_ex(v, u, mod), mod);
+    const auto v = MulModEx(t, t, mod);
+    const auto u = MulModEx(dest[k], dest[k], mod);
+    dest[i] = (T)MulModEx(i, MulModEx(v, u, mod), mod);
   }
   for (auto i = mod; i <= n; ++i) {
     dest[i] = dest[i - mod];
@@ -446,19 +472,19 @@ SL void init_inv(T* dest, int64 n, M mod) {
  * dest[e-s+1]=s(s+1)...e
  */
 template <typename T>
-SL void init_seq_prod(T* dest, T s, T e, int64 mod) {
+SL void InitSeqProd(T* dest, T s, T e, int64 mod) {
   dest[0] = 1;
 
   const int cnt = (int)(e - s + 1);
   T i = s;
   for (int j = 1; j <= cnt; ++i, ++j) {
-    dest[j] = mul_mod_ex(dest[j - 1], i, mod);
+    dest[j] = MulModEx(dest[j - 1], i, mod);
   }
 }
 
 template <typename T>
-SL void init_seq_prod(T* dest, T e, int64 mod) {
-  init_seq_prod<T>(dest, 1, e, mod);
+SL void InitSeqProd(T* dest, T e, int64 mod) {
+  InitSeqProd<T>(dest, 1, e, mod);
 }
 
 /**
@@ -469,13 +495,13 @@ SL void init_seq_prod(T* dest, T e, int64 mod) {
  * lastv = 1/(s*(s+1)...e)
  */
 template <typename T>
-SL void init_seq_prod_inv_lastv(T* dest, T s, T e, T mod, T lastv = 0) {
+SL void InitSeqProdInvLastv(T* dest, T s, T e, T mod, T lastv = 0) {
   if (lastv == 0) {
     lastv = 1;
     for (T i = s; i <= e; ++i) {
-      lastv = mul_mod_ex(lastv, i, mod);
+      lastv = MulModEx(lastv, i, mod);
     }
-    lastv = power_mod_ex(lastv, mod - 2, mod);
+    lastv = PowerModEx(lastv, mod - 2, mod);
   }
   const int cnt = (int)(e - s + 1);
   dest[0] = 1;
@@ -483,18 +509,18 @@ SL void init_seq_prod_inv_lastv(T* dest, T s, T e, T mod, T lastv = 0) {
 
   T i = e;
   for (int j = cnt - 1; j > 0; --j) {
-    dest[j] = mul_mod_ex(dest[j + 1], i--, mod);
+    dest[j] = MulModEx(dest[j + 1], i--, mod);
   }
 }
 
 template <typename T>
-SL void init_seq_prod_inv(T* dest, T s, T e, T mod) {
-  init_seq_prod_inv_lastv<T>(dest, s, e, mod, 0);
+SL void InitSeqProdInv(T* dest, T s, T e, T mod) {
+  InitSeqProdInvLastv<T>(dest, s, e, mod, 0);
 }
 
 template <typename T>
-SL void init_seq_prod_inv(T* dest, T e, T mod) {
-  init_seq_prod_inv_lastv<T>(dest, 1, e, mod, 0);
+SL void InitSeqProdInv(T* dest, T e, T mod) {
+  InitSeqProdInvLastv<T>(dest, 1, e, mod, 0);
 }
 #endif
 
@@ -509,7 +535,7 @@ SL void init_seq_prod_inv(T* dest, T e, T mod) {
  * idest[e-s+1]=1/(s(s+1)...e)
  */
 template <typename T>
-SL void init_seq_prod2(T* dest, T* idest, T s, T e, T mod) {
+SL void InitSeqProd2(T* dest, T* idest, T s, T e, T mod) {
   if (dest == nullptr && idest == nullptr) {
     return;
   }
@@ -518,39 +544,39 @@ SL void init_seq_prod2(T* dest, T* idest, T s, T e, T mod) {
   if (dest == nullptr) {
     lastv = 1;
     for (T i = s; i <= e; ++i) {
-      lastv = mul_mod_ex(lastv, i, mod);
+      lastv = MulModEx(lastv, i, mod);
     }
   } else {
     dest[0] = lastv = 1;
     for (T i = s, j = 1; i <= e; ++i, ++j) {
-      dest[j] = lastv = mul_mod_ex(lastv, i, mod);
+      dest[j] = lastv = MulModEx(lastv, i, mod);
     }
   }
   if (idest == nullptr) {
     return;
   }
-  lastv = power_mod_ex(lastv, mod - 2, mod);
+  lastv = PowerModEx(lastv, mod - 2, mod);
   idest[0] = 1;
   idest[cnt] = lastv;
 
   T i = e;
   for (int j = cnt - 1; j > 0; --j) {
-    idest[j] = mul_mod_ex(idest[j + 1], i--, mod);
+    idest[j] = MulModEx(idest[j + 1], i--, mod);
   }
 }
 
 template <typename T>
-SL void init_seq_prod2(T* dest, T* idest, T e, T mod) {
-  init_seq_prod2<T>(dest, idest, 1, e, mod);
+SL void InitSeqProd2(T* dest, T* idest, T e, T mod) {
+  InitSeqProd2<T>(dest, idest, 1, e, mod);
 }
 
 template <typename T, int D>
-SL void init_comb(T (*comb)[D], int n, int64 mod) {
+SL void InitComb(T (*comb)[D], int n, int64 mod) {
   const int64 ONE = 1 % mod;
   for (int i = 0; i <= n; ++i) {
     for (int j = 1; j < i; ++j)
       comb[i][j] =
-          j == 0 ? ONE : add_mod(comb[i - 1][j - 1], comb[i - 1][j], mod);
+          j == 0 ? ONE : AddMod(comb[i - 1][j - 1], comb[i - 1][j], mod);
     comb[i][0] = comb[i][i] = ONE;
   }
 }
@@ -561,36 +587,36 @@ namespace pr {
 /*
   test, find the primitive of a prime
 */
-SL bool is_pr(int64 x, int64 p, const vector<pair<int64, int>>& f) {
+SL bool IsPr(int64 x, int64 p, const vector<pair<int64, int>>& f) {
   return std::none_of(std::begin(f), std::end(f),
                       [=](const pair<int64, int>& it) {
-                        return power_mod_ex(x, (p - 1) / it.first, p) == 1;
+                        return PowerModEx(x, (p - 1) / it.first, p) == 1;
                       });
 }
 
-SL bool is_pr(int64 x, int64 p) { return is_pr(x, p, factorize(p - 1)); }
+SL bool IsPr(int64 x, int64 p) { return IsPr(x, p, Factorize(p - 1)); }
 
-SL int64 find_pr(int64 p) {
+SL int64 FindPr(int64 p) {
   if (p <= 1) return -1;
   if (p == 2) return 1;
-  auto fp1 = factorize(p - 1);
+  auto fp1 = Factorize(p - 1);
   for (int64 i = 2;; ++i)
-    if (is_pr(i, p, fp1)) return i;
+    if (IsPr(i, p, fp1)) return i;
   return -1;
 }
 
-SL int64 find_pr(int64 p, const vector<pair<int64, int>>& fp1) {
+SL int64 FindPr(int64 p, const vector<pair<int64, int>>& fp1) {
   if (p <= 1) return -1;
   if (p == 2) return 1;
   for (int64 i = 2;; ++i)
-    if (is_pr(i, p, fp1)) return i;
+    if (IsPr(i, p, fp1)) return i;
   return -1;
 }
 
-SL int64 ind(int64 a, int64 pr, int64 p) {
+SL int64 Ind(int64 a, int64 pr, int64 p) {
   using map_t = unordered_map<int64, int>;
   PE_ASSERT(a > 0);
-  int64 inv_pr = inv_of(pr, p);
+  int64 inv_pr = InvOf(pr, p);
   auto mx = static_cast<int64>(sqrt(double(p - 1) + 0.5));
   if (mx * mx != p - 1) ++mx;
   map_t mem;
@@ -599,7 +625,7 @@ SL int64 ind(int64 a, int64 pr, int64 p) {
     mem[t2] = i;
     t2 = t2 * inv_pr % p;
   }
-  int64 temp = power_mod_ex(pr, mx, p);
+  int64 temp = PowerModEx(pr, mx, p);
   for (unsigned int i = 0; i <= mx - 1; ++i) {
     auto where = mem.find(t1);
     if (where != mem.end()) {
@@ -610,9 +636,9 @@ SL int64 ind(int64 a, int64 pr, int64 p) {
   return -1;
 }
 
-class ind_solver {
+class IndSolver {
   using map_t = unordered_map<int64, int>;
-  static int64 square_root_for_ind(int64 x) {
+  static int64 SquareRootForInd(int64 x) {
     auto ret = static_cast<int64>(sqrt(double(x)));
     if (ret * ret < x) ++ret;
     PE_ASSERT(ret * ret >= x);
@@ -620,9 +646,9 @@ class ind_solver {
   }
 
  public:
-  ind_solver(const int64 p, int64 pr = -1)
-      : p_(p), pr_(pr < 0 ? find_pr(p) : pr), mx_(square_root_for_ind(p_ - 1)) {
-    const int64 inv_pr = inv_of(pr_, p);
+  IndSolver(const int64 p, int64 pr = -1)
+      : p_(p), pr_(pr < 0 ? FindPr(p) : pr), mx_(SquareRootForInd(p_ - 1)) {
+    const int64 inv_pr = InvOf(pr_, p);
     int64 t = 1;
     for (int i = 0; i <= mx_ - 1; ++i) {
       mem_[t] = i;
@@ -634,12 +660,12 @@ class ind_solver {
     PE_ASSERT(a > 0);
     a %= p_;
 
-    const int64 temp = power_mod_ex(pr_, mx_, p_);
-    const int64 inv_a = inv_of(a, p_);
+    const int64 temp = PowerModEx(pr_, mx_, p_);
+    const int64 inv_a = InvOf(a, p_);
     int64 t = 1;
 
     for (int i = 0; i <= mx_ - 1; ++i) {
-      auto where = mem_.find(mul_mod(t, inv_a, p_));
+      auto where = mem_.find(MulMod(t, inv_a, p_));
       if (where != mem_.end()) {
         return i * mx_ + where->second;
       }
@@ -649,7 +675,7 @@ class ind_solver {
     return -1;
   }
 
-  int64 pr() const { return pr_; }
+  int64 get_pr() const { return pr_; }
 
  private:
   const int64 p_;
@@ -662,40 +688,40 @@ class ind_solver {
 // returns x where x^2 = n mod p
 // if no solution, return -1.
 // https://en.wikipedia.org/wiki/Tonelli%E2%80%93Shanks_algorithm
-int64 square_root_mod_impl(int64 n, int64 p) {
+int64 SquareRootModImpl(int64 n, int64 p) {
   if (p == 2) {
     return n;
   }
   if (n == 0) {
     return 0;
   }
-  if (power_mod_ex(n, (p - 1) / 2, p) == p - 1) {
+  if (PowerModEx(n, (p - 1) / 2, p) == p - 1) {
     return -1;
   }
   if (p % 4 == 3) {
-    return power_mod_ex(n, (p + 1) >> 2, p);
+    return PowerModEx(n, (p + 1) >> 2, p);
   }
   int64 Q = p - 1, S = 0;
   while (Q % 2 == 0) Q >>= 1, ++S;
   int64 z = 1;
-  while (power_mod_ex(z, (p - 1) >> 1, p) == 1) ++z;
-  int64 M = S, c = power_mod_ex(z, Q, p);
-  int64 t = power_mod_ex(n, Q, p), R = power_mod_ex(n, (Q + 1) >> 1, p);
+  while (PowerModEx(z, (p - 1) >> 1, p) == 1) ++z;
+  int64 M = S, c = PowerModEx(z, Q, p);
+  int64 t = PowerModEx(n, Q, p), R = PowerModEx(n, (Q + 1) >> 1, p);
   for (;;) {
     if (t == 0) return -1;
     if (t == 1) return R;
     int64 i = 0, tt = t;
-    while (tt != 1) tt = mul_mod_ex(tt, tt, p), ++i;
-    int64 b = power_mod_ex(c, 1 << (M - i - 1), p);
+    while (tt != 1) tt = MulModEx(tt, tt, p), ++i;
+    int64 b = PowerModEx(c, 1 << (M - i - 1), p);
     M = i;
-    c = mul_mod_ex(b, b, p);
-    t = mul_mod_ex(t, c, p);
-    R = mul_mod_ex(R, b, p);
+    c = MulModEx(b, b, p);
+    t = MulModEx(t, c, p);
+    R = MulModEx(R, b, p);
   }
 }
 
-vector<int64> square_root_mod(int64 n, int64 p) {
-  const int64 x = square_root_mod_impl(n, p);
+vector<int64> SquareRootMod(int64 n, int64 p) {
+  const int64 x = SquareRootModImpl(n, p);
   if (x != -1) {
     const int64 y = x == 0 ? 0 : p - x;
     return x == y ? vector<int64>{x} : vector<int64>{x, y};
@@ -704,26 +730,26 @@ vector<int64> square_root_mod(int64 n, int64 p) {
   }
 }
 
-vector<int64> nroot_mod(int64 a, int64 n, int64 p, int64 retCnt = -1) {
+vector<int64> NRootMod(int64 a, int64 n, int64 p, int64 retCnt = -1) {
   if (p == 2) {
     return vector<int64>{a};
   }
   if (a == 0) {
     return vector<int64>{0};
   }
-  pr::ind_solver sv(p);
+  pr::IndSolver sv(p);
   const int64 r = sv(a);
   if (r == -1) return vector<int64>{};
   // x^n = a mod p
   // n log_x = r mod q
   const int64 q = p - 1;
   int64 u, v;
-  if (solve_linear_equation(n % q, r % q, q, u, v) == 0) {
+  if (SolveLinearEquation(n % q, r % q, q, u, v) == 0) {
     return vector<int64>{};
   }
   vector<int64> result;
-  int64 coe = power_mod_ex(sv.pr(), v, p);
-  int64 x = power_mod_ex(sv.pr(), u, p);
+  int64 coe = PowerModEx(sv.get_pr(), v, p);
+  int64 x = PowerModEx(sv.get_pr(), u, p);
   int64 oldx = x;
   do {
     if (retCnt < 0 || static_cast<int64>(result.size()) < retCnt) {
@@ -731,21 +757,21 @@ vector<int64> nroot_mod(int64 a, int64 n, int64 p, int64 retCnt = -1) {
     } else {
       break;
     }
-    x = mul_mod_ex(x, coe, p);
+    x = MulModEx(x, coe, p);
   } while (oldx != x);
   return result;
 }
 
 #if PE_HAS_INT128
 namespace two_squares_internal {
-SL void factorize_by_pmask(int64 n, vector<pair<int64, int>>& ret) {
+SL void FactorizeByPmask(int64 n, vector<pair<int64, int>>& ret) {
   while (n != 1) {
     int now = pmask[n];
     int c = 0;
     while (n % now == 0) n /= now, ++c;
     if (c) {
       if ((now & 3) == 3) {
-        if (is_odd(c)) {
+        if (IsOdd(c)) {
           vector<pair<int64, int>>{}.swap(ret);
           return;
         }
@@ -756,18 +782,18 @@ SL void factorize_by_pmask(int64 n, vector<pair<int64, int>>& ret) {
 }
 
 // n > 2
-SL vector<pair<int64, int>> factorize(int64 n) {
+SL vector<pair<int64, int>> Factorize(int64 n) {
   vector<pair<int64, int>> ret;
 
   int p2 = 0;
-  while (is_even(n)) n >>= 1, ++p2;
+  while (IsEven(n)) n >>= 1, ++p2;
   if (p2 > 0) {
     ret.emplace_back(2LL, p2);
   }
 
   for (int i = 1; i < pcnt; ++i) {
     if (n <= maxp) {
-      two_squares_internal::factorize_by_pmask(n, ret);
+      two_squares_internal::FactorizeByPmask(n, ret);
       return ret;
     }
     const int64 p = plist[i];
@@ -777,7 +803,7 @@ SL vector<pair<int64, int>> factorize(int64 n) {
     while (n % p == 0) n /= p, ++c;
     if (c) {
       if ((p & 3) == 3) {
-        if (is_odd(c)) {
+        if (IsOdd(c)) {
           return vector<pair<int64, int>>();
         }
       }
@@ -794,7 +820,7 @@ SL vector<pair<int64, int>> factorize(int64 n) {
 }
 
 // (x+yi)(a+bi)
-SL void gauss_mul(int64& x, int64& y, int64 a, int64 b) {
+SL void GaussMul(int64& x, int64& y, int64 a, int64 b) {
   const int64 xx = x * a - b * y;
   const int64 yy = x * b + a * y;
   x = xx, y = yy;
@@ -804,7 +830,7 @@ SL void gauss_mul(int64& x, int64& y, int64 a, int64 b) {
 // 4k+1 primes p = x^2+y^2 (x >= 0, y >= 0)
 // 2 = 1^2 + 1^2
 // 0, 1 are handled as special case.
-SL vector<pair<int64, int64>> prime_two_squares(const int64 p) {
+SL vector<pair<int64, int64>> PrimeTwoSquares(const int64 p) {
   if (p == 0) {
     return vector<pair<int64, int64>>{{0LL, 0LL}};
   } else if (p == 1) {
@@ -816,9 +842,9 @@ SL vector<pair<int64, int64>> prime_two_squares(const int64 p) {
     return vector<pair<int64, int64>>{};
   }
   int128 y = 1, x = 2;
-  for (x = 2; power_mod_ex(x, (p - 1) >> 1, p) != p - 1; ++x)
+  for (x = 2; PowerModEx(x, (p - 1) >> 1, p) != p - 1; ++x)
     ;
-  x = power_mod_ex(x, (p - 1) >> 2, p);
+  x = PowerModEx(x, (p - 1) >> 2, p);
 
   for (int128 s = x * x + y * y; s != p;) {
     const int128 k = s / p, k2 = k >> 1;
@@ -836,72 +862,72 @@ SL vector<pair<int64, int64>> prime_two_squares(const int64 p) {
   return vector<pair<int64, int64>>{{x, y}};
 }
 
-SL void two_squares_impl(int now, const vector<pair<int64, int>>& f, int64 u,
-                         int64 v, vector<pair<int64, int64>>& result) {
+SL void TwoSquaresImpl(int now, const vector<pair<int64, int>>& f, int64 u,
+                       int64 v, vector<pair<int64, int64>>& result) {
   if (now == sz(f)) {
-    u = abs(u), v = abs(v);
+    u = Abs(u), v = Abs(v);
     if (u > v) swap(u, v);
     result.emplace_back(u, v);
   } else {
     const auto& item = f[now];
     if (item.first == 2) {
       for (int i = 0; i < item.second; ++i) {
-        two_squares_internal::gauss_mul(u, v, 1, 1);
+        two_squares_internal::GaussMul(u, v, 1, 1);
       }
-      two_squares_impl(now + 1, f, u, v, result);
+      TwoSquaresImpl(now + 1, f, u, v, result);
     } else if ((item.first & 3) == 3) {
       const int64 t = item.first;
       int64 me = 1;
       for (int i = 0, j = item.second >> 1; i < j; ++i) me *= t;
-      two_squares_impl(now + 1, f, u * me, v * me, result);
+      TwoSquaresImpl(now + 1, f, u * me, v * me, result);
     } else {
-      auto t = prime_two_squares(item.first);
+      auto t = PrimeTwoSquares(item.first);
       const int64 a = t[0].first, b = t[0].second;
       vector<pair<int64, int64>> U, V;
       {
         int64 x = 1, y = 0;
         for (int i = 0; i <= item.second; ++i) {
           U.emplace_back(x, y);
-          two_squares_internal::gauss_mul(x, y, a, b);
+          two_squares_internal::GaussMul(x, y, a, b);
         }
         x = 1, y = 0;
         for (int i = 0; i <= item.second; ++i) {
           V.emplace_back(x, y);
-          two_squares_internal::gauss_mul(x, y, a, -b);
+          two_squares_internal::GaussMul(x, y, a, -b);
         }
       }
       for (int i = 0, j = item.second; i <= item.second; ++i, --j) {
         int64 uu = u, vv = v;
-        two_squares_internal::gauss_mul(uu, vv, U[i].first, U[i].second);
-        two_squares_internal::gauss_mul(uu, vv, V[j].first, V[j].second);
-        two_squares_impl(now + 1, f, uu, vv, result);
+        two_squares_internal::GaussMul(uu, vv, U[i].first, U[i].second);
+        two_squares_internal::GaussMul(uu, vv, V[j].first, V[j].second);
+        TwoSquaresImpl(now + 1, f, uu, vv, result);
       }
     }
   }
 }
 
-SL vector<pair<int64, int64>> two_squares_impl(
+SL vector<pair<int64, int64>> TwoSquaresImpl(
     const vector<pair<int64, int>>& f) {
   vector<pair<int64, int64>> ret;
-  two_squares_impl(0, f, 1, 0, ret);
+  TwoSquaresImpl(0, f, 1, 0, ret);
   sort(all(ret));
   ret.resize(unique(ret.begin(), ret.end()) - ret.begin());
   return ret;
 }
 
-SL vector<pair<int64, int64>> two_squares(const vector<pair<int64, int>>& f) {
+SL vector<pair<int64, int64>> TwoSquares(const vector<pair<int64, int>>& f) {
   for (auto& iter : f) {
     if ((iter.first & 3) == 3) {
-      if (is_odd(iter.second)) {
+      if (IsOdd(iter.second)) {
         return vector<pair<int64, int64>>{};
       }
     }
   }
-  return two_squares_impl(f);
+  return TwoSquaresImpl(f);
 }
 
 // Represent n as two squares: n = x^2 + y^2 where 0 <= x <= y.
-SL vector<pair<int64, int64>> two_squares(const int64 n) {
+SL vector<pair<int64, int64>> TwoSquares(const int64 n) {
   if (n == 0) {
     return vector<pair<int64, int64>>{{0LL, 0LL}};
   } else if (n == 1) {
@@ -909,15 +935,15 @@ SL vector<pair<int64, int64>> two_squares(const int64 n) {
   } else if (n == 2) {
     return vector<pair<int64, int64>>{{1LL, 1LL}};
   }
-  auto f = two_squares_internal::factorize(n);
+  auto f = two_squares_internal::Factorize(n);
   if (sz(f) == 0) {
     return vector<pair<int64, int64>>{};
   }
-  return two_squares_impl(f);
+  return TwoSquaresImpl(f);
 }
 
-SL void expand_two_squares(vector<pair<int64, int64>>& ret,
-                           pair<int64, int64> p) {
+SL void ExpandTwoSquares(vector<pair<int64, int64>>& ret,
+                         pair<int64, int64> p) {
   ret.emplace_back(p.first, p.second);
   if (p.first != 0) {
     ret.emplace_back(-p.first, p.second);
@@ -930,17 +956,17 @@ SL void expand_two_squares(vector<pair<int64, int64>>& ret,
   }
 }
 
-SL vector<pair<int64, int64>> two_squares_full(const int64 n) {
+SL vector<pair<int64, int64>> TwoSquaresFull(const int64 n) {
   if (n == 0) {
     return vector<pair<int64, int64>>{{0LL, 0LL}};
   }
-  auto tmp = two_squares(n);
+  auto tmp = TwoSquares(n);
   vector<pair<int64, int64>> ret;
   ret.reserve(tmp.size() * 4);
   for (auto& iter : tmp) {
-    expand_two_squares(ret, iter);
+    ExpandTwoSquares(ret, iter);
     if (iter.first != iter.second) {
-      expand_two_squares(ret, {iter.second, iter.first});
+      ExpandTwoSquares(ret, {iter.second, iter.first});
     }
   }
   return ret;
@@ -948,12 +974,12 @@ SL vector<pair<int64, int64>> two_squares_full(const int64 n) {
 #endif
 
 template <typename T>
-SL std::vector<int> to_basek(T n, int k, int width = 0) {
+SL std::vector<int> ToBaseK(T n, int k, int width = 0) {
   if (n == 0) {
     return width <= 1 ? vector<int>{0} : vector<int>(width, 0);
   }
   PE_ASSERT(n >= 0 || k < 0);
-  PE_ASSERT(abs(k) >= 2);
+  PE_ASSERT(Abs(k) >= 2);
   if (width <= 0) {
     std::vector<int> ret;
     while (n != 0) {
@@ -982,7 +1008,7 @@ SL std::vector<int> to_basek(T n, int k, int width = 0) {
 }
 
 template <typename T>
-SL T from_basek(const std::vector<int>& vec, int k) {
+SL T FromBaseK(const std::vector<int>& vec, int k) {
   T ret = 0;
   const int size = static_cast<int>(vec.size());
   for (int i = size - 1; i >= 0; --i) ret = ret * k + vec[i];

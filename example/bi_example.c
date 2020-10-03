@@ -8,7 +8,7 @@ void performance_test() {
     for (int i = 1; i <= 50000; ++i) x *= i;
     s += x[0];
   }
-  cerr << s << " " << tr.elapsed().format() << endl;
+  cerr << s << " " << tr.Elapsed().Format() << endl;
 }
 
 int main() {

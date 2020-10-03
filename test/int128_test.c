@@ -5,13 +5,13 @@ namespace print_int128_test {
 SL void print_int128_test() {
   int128 x = 1;
   for (int i = 0; i < 127; ++i) {
-    assert(to_string(x) == bi(x).toString());
-    assert(to_string(-x) == bi(-x).toString());
+    assert(ToString(x) == bi(x).ToString());
+    assert(ToString(-x) == bi(-x).ToString());
     x <<= 1;
   }
   x = 0;
-  assert(to_string(x) == bi(x).toString());
-  assert(to_string(-x) == bi(-x).toString());
+  assert(ToString(x) == bi(x).ToString());
+  assert(ToString(-x) == bi(-x).ToString());
 }
 
 PE_REGISTER_TEST(&print_int128_test, "print_int128_test", SMALL);

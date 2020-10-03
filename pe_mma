@@ -10,11 +10,11 @@
 struct IntPoly {
   IntPoly() = default;
 
-  void reset(const vector<string>& variables) {
+  void Reset(const vector<string>& variables) {
     n = static_cast<int>(variables.size());
   }
 
-  void add(const vector<int64>& p, int64 v) {
+  void Add(const vector<int64>& p, int64 v) {
     const int len = static_cast<int>(p.size());
     if (n == 0) {
       n = len;
@@ -29,7 +29,7 @@ struct IntPoly {
     }
   }
 
-  ostream& to_stream(ostream& o) const {
+  ostream& ToStream(ostream& o) const {
     o << "InterpolatingPolynomial[{";
     int idx = 0;
     for (auto& iter : vals) {
@@ -59,16 +59,16 @@ struct IntPoly {
   int n = 0;
 };
 
-ostream& operator<<(ostream& o, const IntPoly& ip) { return ip.to_stream(o); }
+ostream& operator<<(ostream& o, const IntPoly& ip) { return ip.ToStream(o); }
 
 struct IntPoly2D {
-  IntPoly2D(int n1 = 1, int n2 = -1, int n3 = -1) { reset(n1, n2, n3); }
+  IntPoly2D(int n1 = 1, int n2 = -1, int n3 = -1) { Reset(n1, n2, n3); }
 
-  void reset(const vector<string>& vars, int n1, int n2 = -1, int n3 = -1) {
+  void Reset(const vector<string>& vars, int n1, int n2 = -1, int n3 = -1) {
     this->vars = vars;
-    reset(n1, n2, n3);
+    Reset(n1, n2, n3);
   }
-  void reset(int n1, int n2 = -1, int n3 = -1) {
+  void Reset(int n1, int n2 = -1, int n3 = -1) {
     PE_ASSERT(n1 >= 0);
     if (n2 == -1) {
       n2 = n1;
@@ -85,33 +85,33 @@ struct IntPoly2D {
       for (int j = 0; j <= n2; ++j) {
         if (i == 0 || j == 0 || i + j <= n3) {
           ++vcnt;
-          symbols.pb(format(i, j));
+          symbols.pb(Format(i, j));
         }
       }
     }
   }
 
-  string format(int a, int b) {
-    if (a == 0) return format(vars[1], b);
-    if (b == 0) return format(vars[0], a);
-    return format(vars[0], a) + " " + format(vars[1], b);
+  string Format(int a, int b) {
+    if (a == 0) return Format(vars[1], b);
+    if (b == 0) return Format(vars[0], a);
+    return Format(vars[0], a) + " " + Format(vars[1], b);
   }
 
-  string format(string s, int a) {
+  string Format(string s, int a) {
     if (a == 0) {
       return "1";
     } else if (a == 1) {
       return s;
     } else {
-      return s + "^" + to_string(a);
+      return s + "^" + ToString(a);
     }
   }
 
-  int64 eval(int64 v1, int64 v2, int a, int b) const {
-    return power(v1, a) * power(v2, b);
+  int64 Eval(int64 v1, int64 v2, int a, int b) const {
+    return Power(v1, a) * Power(v2, b);
   }
 
-  void add(const vector<int64>& p, int64 v) {
+  void Add(const vector<int64>& p, int64 v) {
     const int len = static_cast<int>(p.size());
     PE_ASSERT(len == 2);
     auto where = vals.find(p);
@@ -122,7 +122,7 @@ struct IntPoly2D {
     }
   }
 
-  ostream& show(ostream& o, const vector<int64>& v) {
+  ostream& Show(ostream& o, const vector<int64>& v) {
     const int len = static_cast<int>(v.size());
     PE_ASSERT(vcnt == len);
     int id = 0;
@@ -163,7 +163,7 @@ struct IntPoly2D {
     return o;
   }
 
-  ostream& to_stream(ostream& o) const {
+  ostream& ToStream(ostream& o) const {
     o << "Values[Solve[{";
     int idx = 0;
     for (auto& iter : vals) {
@@ -177,8 +177,8 @@ struct IntPoly2D {
             if (id > 0) {
               o << " + ";
             }
-            o << eval(iter.first[0], iter.first[1], i, j) << " "
-              << string("x") + to_string(id++);
+            o << Eval(iter.first[0], iter.first[1], i, j) << " "
+              << string("x") + ToString(id++);
           }
         }
       }
@@ -187,7 +187,7 @@ struct IntPoly2D {
     o << "}, ";
     vector<string> vars;
     vars.reserve(vcnt);
-    for (int i = 0; i < vcnt; ++i) vars.pb(string("x") + to_string(i));
+    for (int i = 0; i < vcnt; ++i) vars.pb(string("x") + ToString(i));
     pprint_vec(o, vars);
     return o << "]]";
   }
@@ -199,7 +199,7 @@ struct IntPoly2D {
   vector<string> symbols;
 };
 
-ostream& operator<<(ostream& o, const IntPoly2D& ip) { return ip.to_stream(o); }
+ostream& operator<<(ostream& o, const IntPoly2D& ip) { return ip.ToStream(o); }
 
 namespace mma_compiler {
 // Shared enum to indicate a token or a node type
@@ -282,18 +282,18 @@ struct MmaExpTree {
   string token;
   int64 value;
   int iid;  // internal id for removing duplicated tree.
-  int bracketFlag;
+  int bracketFlag{0};
 
   MmaExpTree(MmaExpTree* p = nullptr, MmaExpTree* l = nullptr,
              MmaExpTree* r = nullptr)
-      : parent(p), left(l), right(r), bracketFlag(0) {}
+      : parent(p), left(l), right(r) {}
 
   ~MmaExpTree() = default;
 
-  static void destroyTree(MmaExpTree* tree) {
+  static void DestroyTree(MmaExpTree* tree) {
     if (!tree) return;
-    destroyTree(tree->left);
-    destroyTree(tree->right);
+    DestroyTree(tree->left);
+    DestroyTree(tree->right);
     delete tree;
   }
 
@@ -335,13 +335,13 @@ struct MmaExpParser {
   */
   }
 
-  int operatorNumber(int /*t*/) {
+  int OperatorNumber(int /*t*/) {
     // if (t == FAC) return -1;
     // if (t == REV) return 1;
     return 2;
   }
 
-  int nextToken(string& token) {
+  int NextToken(string& token) {
     token = "";
     lastcurr = curr;
     while (expression[curr] != 0 && expression[curr] == ' ') ++curr;
@@ -457,7 +457,7 @@ struct MmaExpParser {
     }
   }
 
-  MmaExpTree* parse() {
+  MmaExpTree* Parse() {
     auto* vt = new MmaExpTree(nullptr, nullptr, nullptr);
     MmaExpTree* build = vt;
     vt->nodeType = ROOT;
@@ -470,8 +470,8 @@ struct MmaExpParser {
     // node corresponds to the operand of the last unary operator.
     int state = 0;
     string token;
-    for (int t = nextToken(token); token != ";" && token != ")" && token != "";
-         t = nextToken(token)) {
+    for (int t = NextToken(token); token != ";" && token != ")" && token != "";
+         t = NextToken(token)) {
       if (state == 0) {
         if (t == NUMBER) {
           build = new MmaExpTree(build, nullptr, nullptr);
@@ -498,7 +498,7 @@ struct MmaExpParser {
            build->parent->right = build;
          }*/
         else if (t == LEFT_BRACKET || t == LEFT_SQUARE_BRACKET) {
-          MmaExpTree* x = parse();
+          MmaExpTree* x = Parse();
           if (x) {
             x->parent = build;
             build->right = x;
@@ -566,51 +566,51 @@ struct MmaExpParser {
     return result;
   }
 
-  MmaExpTree* parse(const string& expression) {
+  MmaExpTree* Parse(const string& expression) {
     this->expression = expression;
     lastcurr = curr = 0;
-    return parse();
+    return Parse();
   }
 
   /**
-  void getExpressionList(MmaExpTree* tree, vector<MmaExpTree*>& result) {
+  void GetExpressionList(MmaExpTree* tree, vector<MmaExpTree*>& result) {
     if (!tree) return;
     if (tree->nodeType == COMMA) {
-      getExpressionList(tree->left, result);
+      GetExpressionList(tree->left, result);
       result.push_back(tree->right);
     } else {
       result.push_back(tree);
     }
   }
 
-  int evalue(MmaExpTree* tree) {
+  int Evaluate(MmaExpTree* tree) {
     if (tree->nodeType == NUMBER) {
       return tree->value;
     } else if (tree->nodeType == VAR) {
       return tree->value = vars[tree->token];
     } else if (tree->nodeType == FUN) {
       vector<MmaExpTree*> para;
-      getExpressionList(tree->right, para);
+      GetExpressionList(tree->right, para);
       if (tree->token == "min") {
         if (para.size() == 0) return tree->value = 0;
-        int ans = evalue(para[0]);
+        int ans = Evaluate(para[0]);
         for (int i = 1; i < para.size(); ++i) {
-          int t = evalue(para[i]);
+          int t = Evaluate(para[i]);
           if (t < ans) ans = t;
         }
         return tree->value = ans;
       } else if (tree->token == "max") {
         if (para.size() == 0) return tree->value = 0;
-        int ans = evalue(para[0]);
+        int ans = Evaluate(para[0]);
         for (int i = 1; i < para.size(); ++i) {
-          int t = evalue(para[i]);
+          int t = Evaluate(para[i]);
           if (t > ans) ans = t;
         }
         return tree->value = ans;
       } else if (tree->token == "sum") {
         int ans = 0;
         for (int i = 0; i < para.size(); ++i) {
-          ans += evalue(para[i]);
+          ans += Evaluate(para[i]);
         }
         return tree->value = ans;
       } else if (tree->token == "input") {
@@ -620,42 +620,42 @@ struct MmaExpParser {
         return tree->value = para.size();
       } else if (tree->token == "print") {
         for (int i = 0; i < para.size(); ++i) {
-          printf("%d\n", evalue(para[i]));
+          printf("%d\n", Evaluate(para[i]));
         }
         if (para.size() == 0) puts("");
         return tree->value = para.size();
       } else if (tree->token == "while") {
         int ans = 0;
-        while (evalue(para[0])) ans = evalue(para[1]);
+        while (Evaluate(para[0])) ans = Evaluate(para[1]);
         return tree->value = ans;
       } else if (tree->token == "select") {
-        int value = evalue(para[0]);
+        int value = Evaluate(para[0]);
         if (value)
-          return tree->value = evalue(para[1]);
+          return tree->value = Evaluate(para[1]);
         else
-          return tree->value = evalue(para[2]);
+          return tree->value = Evaluate(para[2]);
       } else if (tree->token == "sequence") {
         if (para.size() == 0) return tree->value = 0;
         int x;
-        for (int i = 0; i < para.size(); ++i) x = evalue(para[i]);
+        for (int i = 0; i < para.size(); ++i) x = Evaluate(para[i]);
         return tree->value = x;
       }
       cerr << "error 2" << endl;
     } else if (tree->nodeType == FAC) {
-      int value = evalue(tree->left);
+      int value = Evaluate(tree->left);
       int ans = 1;
       for (int i = 1; i <= value; ++i) ans *= i;
       return tree->value = ans;
     } else if (tree->nodeType == REV) {
-      int value = evalue(tree->right);
+      int value = Evaluate(tree->right);
       return tree->value = ~value;
     } else if (tree->nodeType == NEG) {
-      int value = evalue(tree->right);
+      int value = Evaluate(tree->right);
       return tree->value = -value;
     } else if (tree->nodeType == ASSIGN) {
-      return tree->value = vars[tree->left->token] = evalue(tree->right);
+      return tree->value = vars[tree->left->token] = Evaluate(tree->right);
     } else {
-      int x = evalue(tree->left), y = evalue(tree->right);
+      int x = Evaluate(tree->left), y = Evaluate(tree->right);
       switch (tree->nodeType) {
         case MUL:
           return tree->value = x * y;
@@ -696,11 +696,11 @@ struct MmaExpParser {
 
 struct MmaExpCompiler {
   string result;
-  int canSkipBracket(MmaExpTree* tree) {
+  int CanSkipBracket(MmaExpTree* tree) {
     return tree->nodeType == FUN || tree->nodeType == POW ||
            tree->nodeType == VAR || tree->nodeType == NUMBER;
   }
-  void compileImpl(MmaExpTree* tree) {
+  void CompileImpl(MmaExpTree* tree) {
     if (tree->bracketFlag) {
       result.append("(");
     }
@@ -711,20 +711,20 @@ struct MmaExpCompiler {
         break;
       case NEG:
         result.append("-");
-        compileImpl(tree->right);
+        CompileImpl(tree->right);
         break;
       case ADD:
       case MUL: {
-        compileImpl(tree->left);
+        CompileImpl(tree->left);
         result.append(tree->nodeType == ADD ? " + " : " * ");
-        compileImpl(tree->right);
+        CompileImpl(tree->right);
         break;
       }
       case SUB:
       case DIV: {
-        compileImpl(tree->left);
+        CompileImpl(tree->left);
         result.append(tree->nodeType == SUB ? " - " : " / ");
-        compileImpl(tree->right);
+        CompileImpl(tree->right);
         break;
       }
       case POW: {
@@ -738,10 +738,10 @@ struct MmaExpCompiler {
             result.append(tree->left->token);
           }
         } else {
-          result.append("power(");
-          compileImpl(tree->left);
+          result.append("Power(");
+          CompileImpl(tree->left);
           result.append(",");
-          compileImpl(tree->right);
+          CompileImpl(tree->right);
           result.append(")");
         }
         break;
@@ -750,7 +750,7 @@ struct MmaExpCompiler {
         if (tree->token == "Sqrt") {
           result.append("sqrt");
         }
-        compileImpl(tree->right);
+        CompileImpl(tree->right);
       }
     }
     if (tree->bracketFlag) {
@@ -758,7 +758,7 @@ struct MmaExpCompiler {
     }
   }
 
-  void compile(MmaExpTree* tree) { compileImpl(tree); }
+  void Compile(MmaExpTree* tree) { CompileImpl(tree); }
 };
 
 struct MmaModExpCompiler {
@@ -766,7 +766,7 @@ struct MmaModExpCompiler {
   set<string> varset;
   vector<string> vars;
   vector<string> result;
-  void compileImpl(MmaExpTree* tree, int has_mod = 1) {
+  void CompileImpl(MmaExpTree* tree, int has_mod = 1) {
     char buff[512];
     switch (tree->nodeType) {
       case NUMBER:
@@ -774,13 +774,13 @@ struct MmaModExpCompiler {
         sprintf(buff, "%s", tree->token.c_str());
         break;
       case NEG:
-        compileImpl(tree->right, has_mod);
+        CompileImpl(tree->right, has_mod);
         sprintf(buff, "(mod - t%d)", tree->right->iid);
         break;
       case ADD:
       case MUL: {
-        compileImpl(tree->left, has_mod);
-        compileImpl(tree->right, has_mod);
+        CompileImpl(tree->left, has_mod);
+        CompileImpl(tree->right, has_mod);
         int a = tree->left->iid;
         int b = tree->right->iid;
         if (a > b) swap(a, b);
@@ -794,20 +794,20 @@ struct MmaModExpCompiler {
       case SUB:
       case DIV:
       case POW: {
-        compileImpl(tree->left);
+        CompileImpl(tree->left);
         int a = tree->left->iid;
         if (tree->nodeType == SUB) {
-          compileImpl(tree->right, has_mod);
+          CompileImpl(tree->right, has_mod);
           int b = tree->right->iid;
           sprintf(buff, "(t%d - t%d)", a, b);
         } else if (tree->nodeType == DIV) {
-          compileImpl(tree->right, has_mod);
+          CompileImpl(tree->right, has_mod);
           int b = tree->right->iid;
-          sprintf(buff, "t%d * inv_of(t%d, mod)", a, b);
+          sprintf(buff, "t%d * InvOf(t%d, mod)", a, b);
         } else {
-          compileImpl(tree->right, 0);
+          CompileImpl(tree->right, 0);
           int b = tree->right->iid;
-          sprintf(buff, "power_mod_ex(t%d, t%d, mod)", a, b);
+          sprintf(buff, "PowerModEx(t%d, t%d, mod)", a, b);
         }
         break;
       }
@@ -841,8 +841,8 @@ struct MmaModExpCompiler {
     }
   }
 
-  void compile(MmaExpTree* tree, const string& funName) {
-    compileImpl(tree);
+  void Compile(MmaExpTree* tree, const string& funName) {
+    CompileImpl(tree);
     int iid = tree->iid;
     char buff[512];
     sprintf(buff, "  return t%d;", iid);
@@ -859,21 +859,21 @@ struct MmaModExpCompiler {
   }
 };
 
-vector<string> compile_mod(const string& s, const string& funName = "foo") {
+vector<string> CompileMod(const string& s, const string& funName = "foo") {
   MmaExpParser parser;
-  auto t = parser.parse(s);
+  auto t = parser.Parse(s);
   MmaModExpCompiler compiler;
-  compiler.compile(t, funName);
-  MmaExpTree::destroyTree(t);
+  compiler.Compile(t, funName);
+  MmaExpTree::DestroyTree(t);
   return compiler.result;
 }
 
-vector<string> compile(const string& s) {
+vector<string> Compile(const string& s) {
   MmaExpParser parser;
-  auto t = parser.parse(s);
+  auto t = parser.Parse(s);
   MmaExpCompiler compiler;
-  compiler.compile(t);
-  MmaExpTree::destroyTree(t);
+  compiler.Compile(t);
+  MmaExpTree::DestroyTree(t);
   return vector<string>{compiler.result};
 }
 }  // namespace mma_compiler

@@ -12,13 +12,13 @@ void demo(T a, T b) {
   cout << (a >= b) << endl;
   cout << (a == b) << endl;
   cout << (a != b) << endl;
-  a.print();
-  a.println();
-  cout << dot(a, b) << endl;
-  // cout << cross(a, b) << endl;
-  cout << norm(a) << endl;
-  cout << norm2(a) << endl;
-  cout << a.norm2() << endl;
+  a.Print();
+  a.PrintLn();
+  cout << Dot(a, b) << endl;
+  // cout << Cross(a, b) << endl;
+  cout << Norm(a) << endl;
+  cout << Norm2(a) << endl;
+  cout << a.Norm2() << endl;
 }
 
 int main() {

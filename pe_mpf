@@ -26,7 +26,7 @@ concept PeFloatArithmeticOperation = requires(T v) {
 #if PE_HAS_INT128
   v + (int128)1;
   v - (int128)1;
-  v * (int128)1;
+  v*(int128)1;
   v / (int128)1;
   (int128)1 + v;
   (int128)1 - v;
@@ -35,7 +35,7 @@ concept PeFloatArithmeticOperation = requires(T v) {
 #endif
   v + MpInteger(1);
   v - MpInteger(1);
-  v * MpInteger(1);
+  v* MpInteger(1);
   v / MpInteger(1);
   MpInteger(1) + v;
   MpInteger(1) - v;
@@ -51,7 +51,7 @@ concept PeFloatArithmeticOperation = requires(T v) {
   1. / v;
   v + (long double)1.;
   v - (long double)1.;
-  v * (long double)1.;
+  v*(long double)1.;
   v / (long double)1.;
   (long double)1. + v;
   (long double)1. - v;
@@ -59,7 +59,7 @@ concept PeFloatArithmeticOperation = requires(T v) {
   (long double)1. / v;
   v + v;
   v - v;
-  v * v;
+  v* v;
   v / v;
 };
 template <class T>
@@ -120,7 +120,7 @@ class Mpf {
 
   Mpf(double t) { mpf_init_set_d(f, t); }
 
-  Mpf(long double t) : Mpf(to_string(t)) {}
+  Mpf(long double t) : Mpf(ToString(t)) {}
 
   Mpf(const string& s) : Mpf(s.c_str()) {}
 
@@ -194,7 +194,7 @@ class Mpf {
     return *this;
   }
   const Mpf& operator+() const { return *this; }
-  const Mpf& operator-() const { return neg(); }
+  const Mpf& operator-() const { return Neg(); }
   Mpf operator--(int) {
     Mpf ret(*this);
     mpf_sub_ui(f, f, 1);
@@ -205,44 +205,44 @@ class Mpf {
     mpf_sqrt(t.f, f);
     return t;
   }
-  Mpf power(unsigned long p) const {
+  Mpf Power(unsigned long p) const {
     Mpf t;
     mpf_pow_ui(t.f, f, p);
     return t;
   }
-  Mpf neg() const {
+  Mpf Neg() const {
     Mpf t;
     mpf_neg(t.f, f);
     return t;
   }
-  Mpf abs() const {
+  Mpf Abs() const {
     Mpf t;
     mpf_abs(t.f, f);
     return t;
   }
-  Mpf ceil() const {
+  Mpf Ceil() const {
     Mpf t;
     mpf_ceil(t.f, f);
     return t;
   }
-  Mpf floor() const {
+  Mpf Floor() const {
     Mpf t;
     mpf_floor(t.f, f);
     return t;
   }
-  Mpf trunc() const {
+  Mpf Trunc() const {
     Mpf t;
     mpf_trunc(t.f, f);
     return t;
   }
-  int sgn() const { return mpf_sgn(f); }
-  void setPrec(int n) { mpf_set_prec(f, n); }
-  int getPrec() const { return mpf_get_prec(f); }
+  int Sgn() const { return mpf_sgn(f); }
+  void SetPrec(int n) { mpf_set_prec(f, n); }
+  int GetPrec() const { return mpf_get_prec(f); }
 
  public:
-  double toDouble() const { return mpf_get_d(f); }
-  string toString(int dig = 20) const {
-    const int s = sgn();
+  double ToDouble() const { return mpf_get_d(f); }
+  string ToString(int dig = 20) const {
+    const int s = Sgn();
     if (s == 0) {
       return "0";
     }
@@ -253,18 +253,18 @@ class Mpf {
     const int offset = buff[0] == '-' ? 2 : 1;
     string temp(buff);
     string t = temp.substr(0, offset) + string(".") + temp.substr(offset);
-    if (e - 1 != 0) t = t + "e" + to_string(e - 1);
+    if (e - 1 != 0) t = t + "e" + ToString(e - 1);
     return t;
   }
 
-  long double toLongDouble() const {
-    string t = toString(50);
+  long double ToLongDouble() const {
+    string t = ToString(50);
     long double result;
     sscanf(t.c_str(), "%Lf", &result);
     return result;
   }
 
-  MpInteger toMpInteger() {
+  MpInteger ToMpInteger() {
     MpInteger z;
     mpz_set_f(z.mpz(), mpf());
     return z;
@@ -282,7 +282,7 @@ SL Mpf operator+(const Mpf& a, const Mpf& b) {
   mpf_add(t.f, a.f, b.f);
   return t;
 }
-SL Mpf operator-(const Mpf& a) { return a.neg(); }
+SL Mpf operator-(const Mpf& a) { return a.Neg(); }
 SL Mpf operator-(const Mpf& a, const Mpf& b) {
   Mpf t;
   mpf_sub(t.f, a.f, b.f);
@@ -305,10 +305,10 @@ SL int operator>(const Mpf& a, const Mpf& b) { return compare(a, b) > 0; }
 SL int operator>=(const Mpf& a, const Mpf& b) { return compare(a, b) >= 0; }
 SL int operator==(const Mpf& a, const Mpf& b) { return compare(a, b) == 0; }
 SL int operator!=(const Mpf& a, const Mpf& b) { return compare(a, b) != 0; }
-SL ostream& operator<<(ostream& o, const Mpf& v) { return o << v.toString(20); }
-SL Mpf ceil(const Mpf& f) { return f.ceil(); }
-SL Mpf floor(const Mpf& f) { return f.floor(); }
-SL Mpf trunc(const Mpf& f) { return f.trunc(); }
+SL ostream& operator<<(ostream& o, const Mpf& v) { return o << v.ToString(20); }
+SL Mpf ceil(const Mpf& f) { return f.Ceil(); }
+SL Mpf floor(const Mpf& f) { return f.Floor(); }
+SL Mpf trunc(const Mpf& f) { return f.Trunc(); }
 MpInteger& MpInteger::operator=(const Mpf& o) {
   mpz_set_f(z, o.mpf());
   return *this;

@@ -57,26 +57,26 @@ constexpr int64 pmpi[] = {
     2220819602560918840LL,  // 1e20
 };
 
-SL int64 estimate_pmpi(int64 n) {
+SL int64 EstimatePmpi(int64 n) {
   if (n <= 1) return 0;
   auto ret = static_cast<int64>(1. * n / log(1. * n));
   return max(ret, static_cast<int64>(1LL));
 }
 
 template <int d1, int d2>
-SL void init_pmask_plist(int (&pmask)[d1], int (&plist)[d2]) {
+SL void InitPmaskPlist(int (&pmask)[d1], int (&plist)[d2]) {
   (void)pmask;
   (void)plist;
 }
 
-SL void init_pmask_plist(int*& pmask, int*& plist) {
+SL void InitPmaskPlist(int*& pmask, int*& plist) {
   pmask = new int[maxp + 1];
-  int64 size = max(static_cast<int64>((estimate_pmpi(maxp + 1) + 1) * 1.1),
+  int64 size = max(static_cast<int64>((EstimatePmpi(maxp + 1) + 1) * 1.1),
                    static_cast<int64>(100000LL));
   plist = new int[size];
 }
 
-SL void deinit_primes() {
+SL void DeinitPrimes() {
   pcnt = 0;
   maxp2 = maxp = 0;
   if (pmask) {
@@ -97,12 +97,12 @@ SL void deinit_primes() {
   }
 }
 
-SL void init_primes() {
+SL void InitPrimes() {
   if (maxp == 0) {
     INIT_MAXP(1000000);
   }
 
-  init_pmask_plist(pmask, plist);
+  InitPmaskPlist(pmask, plist);
 
   pcnt = 0;
   for (int i = 1; i <= maxp; ++i) pmask[i] = i;
@@ -121,16 +121,16 @@ SL void init_primes() {
   }
 }
 
-SL void init_primes(int cal_phi, int cal_mu) {
+SL void InitPrimes(int CalPhi, int CalMu) {
   if (maxp == 0) {
     INIT_MAXP(1000000);
   }
 
-  init_pmask_plist(pmask, plist);
+  InitPmaskPlist(pmask, plist);
 
   pcnt = 0;
-  if (cal_phi) phi = new int[maxp + 1];
-  if (cal_mu) mu = new int[maxp + 1];
+  if (CalPhi) phi = new int[maxp + 1];
+  if (CalMu) mu = new int[maxp + 1];
 
   for (int i = 1; i <= maxp; ++i) pmask[i] = i;
   if (phi) phi[0] = 0, phi[1] = 1;
@@ -158,7 +158,7 @@ SL void init_primes(int cal_phi, int cal_mu) {
   }
 }
 
-SL void factorize_by_pmask(int64 n, vector<pair<int64, int>>& ret) {
+SL void FactorizeByPmask(int64 n, vector<pair<int64, int>>& ret) {
   while (n != 1) {
     int now = pmask[n];
     int c = 0;
@@ -167,7 +167,7 @@ SL void factorize_by_pmask(int64 n, vector<pair<int64, int>>& ret) {
   }
 }
 
-SL vector<pair<int64, int>> factorize(int64 n) {
+SL vector<pair<int64, int>> Factorize(int64 n) {
   vector<pair<int64, int>> ret;
   if (n <= 1) {
     return ret;
@@ -175,7 +175,7 @@ SL vector<pair<int64, int>> factorize(int64 n) {
 
   for (int i = 0; i < pcnt; ++i) {
     if (n <= maxp) {
-      factorize_by_pmask(n, ret);
+      FactorizeByPmask(n, ret);
       return ret;
     }
     const int64 p = plist[i];
@@ -189,7 +189,7 @@ SL vector<pair<int64, int>> factorize(int64 n) {
   return ret;
 }
 
-SL int is_prime(int64 n) {
+SL int IsPrime(int64 n) {
   if (n <= 1) return 0;
   if (n <= maxp) return pmask[n] == n;
   PE_ASSERT(n <= maxp2);
@@ -231,30 +231,30 @@ constexpr int64 sopp[] = {
 };
 constexpr int64 sopp_size = sizeof(sopp) / sizeof(sopp[0]);
 
-SL int MR_test_impl(int s, int64 t, int64 n, int x) {
+SL int MrTestImpl(int s, int64 t, int64 n, int x) {
   // PE_ASSERT((n&1) == 0)
 
   if (n <= PE_SOI63) {
-    t = power_mod<int64>(x, t, n);
+    t = PowerMod<int64>(x, t, n);
     if (t == 1 || t == n - 1) return 1;
 
     for (int i = 1; i < s; ++i) {
-      t = mul_mod(t, t, n);
+      t = MulMod(t, t, n);
       if (t == n - 1) return 1;
     }
   } else {
-    t = power_mod_ex(x, t, n);
+    t = PowerModEx(x, t, n);
     if (t == 1 || t == n - 1) return 1;
 
     for (int i = 1; i < s; ++i) {
-      t = mul_mod_ex(t, t, n);
+      t = MulModEx(t, t, n);
       if (t == n - 1) return 1;
     }
   }
   return 0;
 }
 
-SL int MR_test(int64 n, int x) {
+SL int MrTest(int64 n, int x) {
   if (n <= 1) return 0;
   if ((n & 1) == 0) return 0;
 
@@ -262,10 +262,10 @@ SL int MR_test(int64 n, int x) {
   int64 t = n - 1;
   while ((t & 1) == 0) ++s, t >>= 1;
 
-  return MR_test_impl(s, t, n, x);
+  return MrTestImpl(s, t, n, x);
 }
 
-SL int is_prime_ex(int64 n) {
+SL int IsPrimeEx(int64 n) {
   if (n <= 1) return 0;
   if (n == 2) return 1;
   if ((n & 1) == 0) return 0;
@@ -281,14 +281,14 @@ SL int is_prime_ex(int64 n) {
   for (int i = 0; i < sopp_size; ++i) {
     const int64 val = sopp[i];
     if (n == val) return 0;
-    if (!MR_test_impl(s, t, n, plist[i])) return 0;
+    if (!MrTestImpl(s, t, n, plist[i])) return 0;
     if (n < val) break;
   }
   return 1;
 }
 
-SL vector<int64> get_factors_impl(const vector<pair<int64, int>>& f,
-                                  const int64 maxv) {
+SL vector<int64> GetFactorsImpl(const vector<pair<int64, int>>& f,
+                                const int64 maxv) {
   if (maxv == 0) {
     return vector<int64>();
   }
@@ -320,16 +320,16 @@ SL vector<int64> get_factors_impl(const vector<pair<int64, int>>& f,
   return std::move(result);
 }
 
-SL vector<int64> get_factors(const vector<pair<int64, int>>& f,
-                             int64 maxv = -1) {
-  return get_factors_impl(f, maxv);
+SL vector<int64> GetFactors(const vector<pair<int64, int>>& f,
+                            int64 maxv = -1) {
+  return GetFactorsImpl(f, maxv);
 }
 
-SL vector<int64> get_factors(int64 value, int64 maxv = -1) {
-  return get_factors_impl(factorize(value), maxv);
+SL vector<int64> GetFactors(int64 value, int64 maxv = -1) {
+  return GetFactorsImpl(Factorize(value), maxv);
 }
 
-SL int64 cal_phi(int64 n, const vector<pair<int64, int>>& fn) {
+SL int64 CalPhi(int64 n, const vector<pair<int64, int>>& fn) {
   if (n <= 0) return 0;
   if (phi && n <= maxp) return phi[n];
   int64 phi_n = n;
@@ -337,16 +337,16 @@ SL int64 cal_phi(int64 n, const vector<pair<int64, int>>& fn) {
   return phi_n;
 }
 
-SL int64 cal_phi(int64 n) {
+SL int64 CalPhi(int64 n) {
   if (n <= 0) return 0;
   if (phi && n <= maxp) return phi[n];
-  auto fn = factorize(n);
+  auto fn = Factorize(n);
   int64 phi_n = n;
   for (auto& it : fn) phi_n -= phi_n / it.first;
   return phi_n;
 }
 
-SL int64 cal_mu(int64 n, const vector<pair<int64, int>>& fn) {
+SL int64 CalMu(int64 n, const vector<pair<int64, int>>& fn) {
   if (n <= 0) return 0;
   if (n == 1) return 1;
   if (mu && n <= maxp) return mu[n];
@@ -358,7 +358,7 @@ SL int64 cal_mu(int64 n, const vector<pair<int64, int>>& fn) {
   return fn.size() & 1 ? -1 : 1;
 }
 
-SL int64 cal_mu_by_pmask(int64 n, int64 v = 1) {
+SL int64 CalMuByPmask(int64 n, int64 v = 1) {
   while (n != 1) {
     int now = pmask[n];
     int c = 0;
@@ -371,12 +371,12 @@ SL int64 cal_mu_by_pmask(int64 n, int64 v = 1) {
   return v;
 }
 
-SL int64 cal_mu_impl(int64 n) {
+SL int64 CalMuImpl(int64 n) {
   int64 v = 1;
 
   for (int i = 0; i < pcnt; ++i) {
     if (n <= maxp) {
-      return cal_mu_by_pmask(n, v);
+      return CalMuByPmask(n, v);
     }
     const int64 p = plist[i];
     const int64 test = p * p;
@@ -392,21 +392,21 @@ SL int64 cal_mu_impl(int64 n) {
   return v;
 }
 
-SL int64 cal_mu(int64 n) {
+SL int64 CalMu(int64 n) {
   if (n <= 0) return 0;
   if (n == 1) return 1;
   if (mu && n <= maxp) return mu[n];
-  return cal_mu_impl(n);
+  return CalMuImpl(n);
 }
 
-SL int find_prime_idx(const function<int(int64)>& f) {
+SL int FindPrimeIdx(const function<int(int64)>& f) {
   for (int i = 0; i < pcnt; ++i)
     if (f(plist[i])) return i;
   return pcnt;
 }
 
 // sg: square greater
-SL int find_prime_idx_sg(int64 n) {
+SL int FindPrimeIdxSg(int64 n) {
   int l = 0, r = pcnt - 1;
   while (l <= r) {
     const int mid = (l + r) >> 1;

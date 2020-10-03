@@ -10,29 +10,29 @@ template <typename GBI>
 struct Gbi;
 
 template <typename GBI>
-SL REQUIRES((is_gbi<GBI>::value)) RETURN(int) is_zero(const GBI& x);
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(int) IsZero(const GBI& x);
 
 template <typename GBI>
-SL REQUIRES((is_gbi<GBI>::value)) RETURN(int) int_sign(const GBI& x);
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(int) IntSign(const GBI& x);
 
 template <typename GBI>
-SL REQUIRES((is_gbi<GBI>::value)) RETURN(int) is_even(const GBI& x);
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(int) IsEven(const GBI& x);
 
 template <typename GBI>
-SL REQUIRES((is_gbi<GBI>::value)) RETURN(int) is_odd(const GBI& x);
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(int) IsOdd(const GBI& x);
 
 template <typename GBI>
-SL REQUIRES((is_gbi<GBI>::value)) RETURN(unsigned int) lower_bits(const GBI& x);
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(unsigned int) LowerBits(const GBI& x);
 
 template <typename GBI>
 SL REQUIRES((is_gbi<GBI>::value)) RETURN(tuple<GBI, GBI>)
-    div(const GBI& l, const GBI& r);
+    Div(const GBI& l, const GBI& r);
 
 template <typename T, typename GBI>
-SL REQUIRES((is_gbi<GBI>::value)) RETURN(T) to_int(const GBI& x);
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(T) ToInt(const GBI& x);
 
 template <typename T, typename GBI>
-SL REQUIRES((is_gbi<GBI>::value)) RETURN(T) to_float(const GBI& x);
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(T) ToFloat(const GBI& x);
 
 #if PE_HAS_CPP20
 template <class T>
@@ -60,7 +60,7 @@ concept PeGbiArithmeticOperation = requires(T v) {
 #if PE_HAS_INT128
   v + (int128)1;
   v - (int128)1;
-  v * (int128)1;
+  v*(int128)1;
   v / (int128)1;
   v % (int128)1;
   (int128)1 + v;
@@ -106,18 +106,18 @@ concept PeGbiSelfOperation = requires(T v) {
 };
 template <class T>
 concept PeGbi = requires(T v) {
-  is_zero(v);
-  int_sign(v);
-  is_even(v);
-  is_odd(v);
-  lower_bits(v);
-  div(v, v);
-  to_int<int>(v);
-  to_int<unsigned int>(v);
-  to_int<long long>(v);
-  to_int<unsigned long long>(v);
-  to_float<float>(v);
-  to_float<double>(v);
+  IsZero(v);
+  IntSign(v);
+  IsEven(v);
+  IsOdd(v);
+  LowerBits(v);
+  Div(v, v);
+  ToInt<int>(v);
+  ToInt<unsigned int>(v);
+  ToInt<long long>(v);
+  ToInt<unsigned long long>(v);
+  ToFloat<float>(v);
+  ToFloat<double>(v);
   requires static_cast<bool>(is_gbi<T>::value);
   requires PeGbiArithmeticOperation<T>;
   requires PeGbiSelfOperation<T>;
@@ -126,23 +126,23 @@ concept PeGbi = requires(T v) {
 
 template <typename T0, typename T1>
 SL REQUIRES((is_gbi<T0>::value && is_gbi<T1>::value)) RETURN(int)
-    same_parity(const T0& v0, const T1& v1) {
-  return is_even(v0) == is_even(v1);
+    SameParity(const T0& v0, const T1& v1) {
+  return IsEven(v0) == IsEven(v1);
 }
 
 template <typename GBI>
-SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI) fabs(const GBI& n) {
-  return int_sign(n) >= 0 ? n : -n;
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI) FAbs(const GBI& n) {
+  return IntSign(n) >= 0 ? n : -n;
 }
 
 template <typename GBI>
-SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI) abs(const GBI& n) {
-  return int_sign(n) >= 0 ? n : -n;
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI) Abs(const GBI& n) {
+  return IntSign(n) >= 0 ? n : -n;
 }
 
 template <typename GBI, typename T>
 SL REQUIRES((is_gbi<GBI>::value && is_native_integer<T>::value)) RETURN(GBI)
-    power(const GBI& l, T n) {
+    Power(const GBI& l, T n) {
   GBI ret(1);
   GBI x(l);
   for (; n > 0; n >>= 1) {
@@ -154,7 +154,7 @@ SL REQUIRES((is_gbi<GBI>::value && is_native_integer<T>::value)) RETURN(GBI)
 
 template <typename GBI, typename T>
 SL REQUIRES((is_gbi<GBI>::value && is_native_integer<T>::value)) RETURN(GBI)
-    power_mod(const GBI& l, T n, const GBI& mod) {
+    PowerMod(const GBI& l, T n, const GBI& mod) {
   if (mod == 1) {
     return 0;
   }
@@ -169,26 +169,26 @@ SL REQUIRES((is_gbi<GBI>::value && is_native_integer<T>::value)) RETURN(GBI)
 
 template <typename GBI>
 SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI)
-    power_mod(const GBI& l, const GBI& m, const GBI& mod) {
+    PowerMod(const GBI& l, const GBI& m, const GBI& mod) {
   if (mod == 1) {
     return 0;
   }
   GBI ret(1);
   GBI x(l % mod);
   GBI n(m);
-  for (; !is_zero(n);) {
-    if (is_odd(n)) ret = ret * x % mod;
+  for (; !IsZero(n);) {
+    if (IsOdd(n)) ret = ret * x % mod;
     n >>= 1;
-    if (!is_zero(n)) x = x * x % mod;
+    if (!IsZero(n)) x = x * x % mod;
   }
   return ret;
 }
 
-// gcd is only for BigInteger
+// Gcd is only for BigInteger
 template <typename GBI>
 SL REQUIRES((is_gbi<GBI>::value && std::is_same<GBI, BigInteger>::value))
-    RETURN(GBI) gcd(GBI m, GBI n) {
-  while (!is_zero(n)) {
+    RETURN(GBI) Gcd(GBI m, GBI n) {
+  while (!IsZero(n)) {
     GBI t = m % n;
     m = std::move(n);
     n = std::move(t);
@@ -198,15 +198,15 @@ SL REQUIRES((is_gbi<GBI>::value && std::is_same<GBI, BigInteger>::value))
 
 template <typename GBI>
 SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI)
-    exgcd(const GBI& a, const GBI& b, GBI& x, GBI& y) {
-  if (is_zero(b)) {
+    Exgcd(const GBI& a, const GBI& b, GBI& x, GBI& y) {
+  if (IsZero(b)) {
     x = 1;
     y = 0;
     return a;
   }
 
   GBI x1 = 0, y1 = 0;
-  GBI ret = exgcd(b, GBI(a % b), x1, y1);
+  GBI ret = Exgcd(b, GBI(a % b), x1, y1);
   // b * x1 + (a%b) * y1 = ret
   // b * x1 + (a - a / b * b) * y1 = ret
   // b * x1 + a * y1 - a / b * b * y1 = ret
@@ -218,21 +218,21 @@ SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI)
 
 template <typename GBI>
 SL REQUIRES((is_gbi<GBI>::value)) RETURN(tuple<GBI, GBI, GBI>)
-    exgcd(const GBI& a, const GBI& b) {
-  PE_ASSERT(!is_zero(a) || !is_zero(b));
+    Exgcd(const GBI& a, const GBI& b) {
+  PE_ASSERT(!IsZero(a) || !IsZero(b));
   GBI x = 0, y = 0;
-  const GBI r = exgcd(a, b, x, y);
+  const GBI r = Exgcd(a, b, x, y);
   PE_ASSERT(a * x + b * y == r);
   return tuple<GBI, GBI, GBI>{r, x, y};
 }
 
 template <typename GBI>
 SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI)
-    mod_inv(const GBI& a, const GBI& mod) {
+    ModInv(const GBI& a, const GBI& mod) {
   GBI x, y;
-  exgcd(a, mod, x, y);
+  Exgcd(a, mod, x, y);
   x %= mod;
-  if (int_sign(x) < 0) {
+  if (IntSign(x) < 0) {
     x += mod;
   }
   return x;
@@ -243,11 +243,11 @@ SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI)
 // return 1, x = v (mod u)
 template <typename GBI>
 SL REQUIRES((is_gbi<GBI>::value)) RETURN(int)
-    solve_linear_equation(GBI a, GBI b, const GBI& m, GBI& v, GBI& u) {
+    SolveLinearEquation(GBI a, GBI b, const GBI& m, GBI& v, GBI& u) {
   v = 0;
   u = 0;
 
-  PE_ASSERT(!is_zero(m));
+  PE_ASSERT(!IsZero(m));
 
   a %= m;
   b %= m;
@@ -255,7 +255,7 @@ SL REQUIRES((is_gbi<GBI>::value)) RETURN(int)
   if (a < 0) a += m;
   if (b < 0) b += m;
 
-  GBI xx = 0, yy = 0, d = exgcd(a, m, xx, yy);
+  GBI xx = 0, yy = 0, d = Exgcd(a, m, xx, yy);
 
   if (!(b % d).isZero()) return 0;
 
@@ -273,11 +273,11 @@ SL REQUIRES((is_gbi<GBI>::value)) RETURN(int)
 // return 1, x = v (mod u)
 template <typename GBI>
 SL REQUIRES((is_gbi<GBI>::value)) RETURN(int)
-    crt2(GBI a, const GBI& m1, GBI b, const GBI& m2, GBI& v, GBI& u) {
+    Crt2(GBI a, const GBI& m1, GBI b, const GBI& m2, GBI& v, GBI& u) {
   v = 0;
   u = 0;
 
-  PE_ASSERT(!is_zero(m1) && !is_zero(m2));
+  PE_ASSERT(!IsZero(m1) && !IsZero(m2));
   // x = a (mod m1)
   // x = b (mod m2)
   // x = k0 m1 + a
@@ -289,7 +289,7 @@ SL REQUIRES((is_gbi<GBI>::value)) RETURN(int)
   if (b < 0) b = -b;
 
   GBI s = 0, t = 0;
-  if (!solve_linear_equation(m1, b - a, m2, t, s)) return 0;
+  if (!SolveLinearEquation(m1, b - a, m2, t, s)) return 0;
   // k0 = k1 * s + t
   // x = (k1 * s + t) * m1 + a
   // x = k1 * s * m1 + (a + t * m1)
@@ -301,19 +301,19 @@ SL REQUIRES((is_gbi<GBI>::value)) RETURN(int)
 
 template <typename GBI>
 SL REQUIRES((is_gbi<GBI>::value)) RETURN(tuple<int, GBI, GBI>)
-    crt2(const GBI& a, const GBI& m1, const GBI& b, const GBI& m2) {
+    Crt2(const GBI& a, const GBI& m1, const GBI& b, const GBI& m2) {
   GBI v = 0, u = 0;
-  int r = crt2(a, m1, b, m2, v, u);
+  int r = Crt2(a, m1, b, m2, v, u);
   return tuple<int, GBI, GBI>{r, v, u};
 }
 
 template <typename GBI>
 SL REQUIRES((is_gbi<GBI>::value)) RETURN(tuple<int, GBI, GBI>)
-    crtn(const GBI* val, const GBI* mod, int n) {
+    CrtN(const GBI* val, const GBI* mod, int n) {
   GBI v = 0, u = 1;
   int have = 1;
   for (int i = 0; i < n; ++i) {
-    tie(have, v, u) = crt2(v, u, val[i], mod[i]);
+    tie(have, v, u) = Crt2(v, u, val[i], mod[i]);
     if (!have) {
       return tuple<int, GBI, GBI>{0, 0, 0};
     }
@@ -323,14 +323,14 @@ SL REQUIRES((is_gbi<GBI>::value)) RETURN(tuple<int, GBI, GBI>)
 
 template <typename GBI>
 SL REQUIRES((is_gbi<GBI>::value)) RETURN(tuple<int, GBI, GBI>)
-    crtn(const vector<GBI>& val, const vector<GBI>& mod) {
-  return crtn<GBI>(&val[0], &mod[0], val.size());
+    CrtN(const vector<GBI>& val, const vector<GBI>& mod) {
+  return CrtN<GBI>(&val[0], &mod[0], val.size());
 }
 
 template <typename GBI>
 struct GbiFraction {
   GbiFraction(const GBI& u = 0, const GBI& v = 1) : a(u), b(v) {
-    GBI d = gcd(abs(a), abs(b));
+    GBI d = Gcd(Abs(a), Abs(b));
     if (d > 1) a /= d, b /= d;
     if (b < 0) b = -b, a = -a;
   }
@@ -352,10 +352,10 @@ struct GbiFraction {
   GbiFraction operator/(const GbiFraction& o) const {
     return GbiFraction(a * o.b, b * o.a);
   }
-  double toDouble() { return 1. * to_float<double>(a) / to_float<double>(b); }
+  double toDouble() { return 1. * ToFloat<double>(a) / ToFloat<double>(b); }
   long double toLongDouble() {
-    return static_cast<long double>(1.) * to_float<long double>(a) /
-           to_float<long double>(b);
+    return static_cast<long double>(1.) * ToFloat<long double>(a) /
+           ToFloat<long double>(b);
   }
   GBI a, b;
 };
@@ -379,8 +379,8 @@ ostream& operator<<(ostream& o, const GbiFraction<T>& f) {
 // f[0], f[1], f[2], ..., f[data.size()-1]
 // https://en.wikipedia.org/wiki/Continued_fraction#Some_useful_theorems
 template <typename GBI, typename T>
-SL vector<GbiFraction<GBI>> from_continued_fraction_n(const vector<T>& data,
-                                                      int pos = -1) {
+SL vector<GbiFraction<GBI>> FromContinuedFractionN(const vector<T>& data,
+                                                   int pos = -1) {
   const int size = (int)data.size();
   const int n = pos < 0 ? size : min(size, pos + 1);
   if (n == 0) {
@@ -406,8 +406,7 @@ SL vector<GbiFraction<GBI>> from_continued_fraction_n(const vector<T>& data,
 
 // Find f[pos] if pos >= 0 else f[data.size()-1]
 template <typename GBI, typename T>
-SL GbiFraction<GBI> from_continued_fraction(const vector<T>& data,
-                                            int pos = -1) {
+SL GbiFraction<GBI> FromContinuedFraction(const vector<T>& data, int pos = -1) {
   const int size = (int)data.size();
   const int n = pos < 0 ? size - 1 : min(size - 1, pos);
   PE_ASSERT(n >= 0);
@@ -427,14 +426,12 @@ SL GbiFraction<GBI> from_continued_fraction(const vector<T>& data,
 }
 
 template <typename GBI>
-SL GBI find_integer_part(const GBI& a, const GBI& q, const GBI& b,
-                         const GBI& c) {
+SL GBI FindIntegerPart(const GBI& a, const GBI& q, const GBI& b, const GBI& c) {
   // a q^(1/2) + b >= c x
-  long double test =
-      (to_float<long double>(a) * sqrt(to_float<long double>(q)) +
-       to_float<long double>(b)) /
-      to_float<long double>(c);
-  GBI now(Gbi<GBI>::of(static_cast<int64>(test)));
+  long double test = (ToFloat<long double>(a) * sqrt(ToFloat<long double>(q)) +
+                      ToFloat<long double>(b)) /
+                     ToFloat<long double>(c);
+  GBI now(Gbi<GBI>::Of(static_cast<int64>(test)));
   const GBI target = a * a * q;
   for (;;) {
     GBI next = now + 1;
@@ -451,11 +448,11 @@ SL GBI find_integer_part(const GBI& a, const GBI& q, const GBI& b,
 // convert p sqrt(q) to continued fraction
 // q is square free
 template <typename GBI>
-SL vector<GBI> to_continued_fraction(int64 p, int64 q, int n) {
+SL vector<GBI> ToContinuedFraction(int64 p, int64 q, int n) {
   vector<GBI> result;
-  GBI a = Gbi<GBI>::of(p), f = Gbi<GBI>::of(q), b = 0, c = 1;
+  GBI a = Gbi<GBI>::Of(p), f = Gbi<GBI>::Of(q), b = 0, c = 1;
   // (a f^(1/2) + b) / c
-  GBI val = find_integer_part(a, f, b, c);
+  GBI val = FindIntegerPart(a, f, b, c);
   result.pb(val);
   b = b - val * c;
 
@@ -465,12 +462,12 @@ SL vector<GBI> to_continued_fraction(int64 p, int64 q, int n) {
     GBI cc = a * a * f - b * b;
     GBI aa = c * a;
     GBI bb = -c * b;
-    GBI val = find_integer_part(aa, f, bb, cc);
+    GBI val = FindIntegerPart(aa, f, bb, cc);
     result.pb(val);
     a = aa;
     b = bb - val * cc;
     c = cc;
-    GBI d = abs(gcd(GBI(gcd(a, b)), c));
+    GBI d = Abs(Gcd(GBI(Gcd(a, b)), c));
     if (d > 1) {
       a /= d;
       b /= d;
@@ -481,9 +478,9 @@ SL vector<GBI> to_continued_fraction(int64 p, int64 q, int n) {
   return result;
 }
 
-#define from_cf_n from_continued_fraction_n
-#define from_cf from_continued_fraction
-#define to_cf to_continued_fraction
+#define FromCfN FromContinuedFractionN
+#define FromCf FromContinuedFraction
+#define ToCf ToContinuedFraction
 
 // Compute n! mod p^e
 // Note: if i % p == 0, then the contribution of i is 1.
@@ -505,8 +502,8 @@ struct FactPPowerModer {
 
   FactPPowerModer(const int64 p, const int64 e) : p_(p), e_(e) {
     int64 pe = p_ * e_;
-    mod_ = power(GBI(p_), e_);
-    phi_ = power(GBI(p_), (e_ - 1)) * (p_ - 1);
+    mod_ = Power(GBI(p_), e_);
+    phi_ = Power(GBI(p_), (e_ - 1)) * (p_ - 1);
     f_.resize(pe + 1, 1);
     for (int i = 1; i <= pe; ++i) {
       if (i % p_ == 0)
@@ -516,11 +513,11 @@ struct FactPPowerModer {
     }
   }
 
-  GBI cal(const GBI& n) {
+  GBI Cal(const GBI& n) {
     GBI u;
     GBI v;
-    tie(u, v) = div(n, p_);
-    auto vv = to_int<int64>(v);
+    tie(u, v) = Div(n, p_);
+    auto vv = ToInt<int64>(v);
     int64 r = (e_ + 1) >> 1;
 
     GBI ret = 1;
@@ -534,13 +531,13 @@ struct FactPPowerModer {
       for (int i = 1; i <= r; ++i)
         if (i != j) beta_numer *= u2 - i * i, beta_denom *= j2 - i * i;
       auto beta = beta_numer / beta_denom % phi_;
-      if (int_sign(beta) < 0) beta += phi_;
-      ret = ret * power_mod(f_[j * p_], beta, mod_) % mod_;
+      if (IntSign(beta) < 0) beta += phi_;
+      ret = ret * PowerMod(f_[j * p_], beta, mod_) % mod_;
     }
 
     if (p_ == 2) {
-      int64 left_mod4 = ((lower_bits(u * p_ + 1) & 4) >> 1) + 1;
-      int64 right_mod4 = lower_bits(ret) & 3;
+      int64 left_mod4 = ((LowerBits(u * p_ + 1) & 4) >> 1) + 1;
+      int64 right_mod4 = LowerBits(ret) & 3;
       if (left_mod4 != right_mod4) {
         ret = (mod_ - ret) % mod_;
       }
@@ -551,7 +548,7 @@ struct FactPPowerModer {
 
     // (p_ + v, v)_p
     for (int j = 1; j < e_; ++j) {
-      auto base = f_[j * p_ + vv] * mod_inv(f_[vv] * f_[j * p_], mod_) % mod_;
+      auto base = f_[j * p_ + vv] * ModInv(f_[vv] * f_[j * p_], mod_) % mod_;
       GBI alpha_numer = u;
       GBI alpha_denom = j;
       for (int i = 1; i < e_; ++i)
@@ -560,8 +557,8 @@ struct FactPPowerModer {
           alpha_denom *= j - i;
         }
       auto alpha = alpha_numer / alpha_denom % phi_;
-      if (int_sign(alpha) < 0) alpha += phi_;
-      ret = ret * power_mod(base, alpha, mod_) % mod_;
+      if (IntSign(alpha) < 0) alpha += phi_;
+      ret = ret * PowerMod(base, alpha, mod_) % mod_;
     }
 
     return ret;

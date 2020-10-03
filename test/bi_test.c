@@ -11,9 +11,9 @@ SL void test_constructor_internal() {
   cout << BigInteger(numeric_limits<T>::max()) << " "
        << numeric_limits<T>::max() << endl;*/
 
-  assert(BigInteger(numeric_limits<T>::min()).toInt<T>() ==
+  assert(BigInteger(numeric_limits<T>::min()).ToInt<T>() ==
          numeric_limits<T>::min());
-  assert(BigInteger(numeric_limits<T>::max()).toInt<T>() ==
+  assert(BigInteger(numeric_limits<T>::max()).ToInt<T>() ==
          numeric_limits<T>::max());
 
   // cout << endl;
@@ -46,13 +46,13 @@ template <typename T>
 SL void test_assignment_internal() {
   BigInteger x;
   x = T();
-  assert(x.toInt<T>() == T());
+  assert(x.ToInt<T>() == T());
 
   x = numeric_limits<T>::max();
-  assert(x.toInt<T>() == numeric_limits<T>::max());
+  assert(x.ToInt<T>() == numeric_limits<T>::max());
 
   x = numeric_limits<T>::min();
-  assert(x.toInt<T>() == numeric_limits<T>::min());
+  assert(x.ToInt<T>() == numeric_limits<T>::min());
 }
 
 SL void test_assignment_operator() {
@@ -78,7 +78,7 @@ SL void test_assignment_operator() {
   string s = "123456789123456789123456789";
   BigInteger x;
   x = s;
-  assert(x.toString() == s);
+  assert(x.ToString() == s);
 }
 
 template <typename T>
@@ -136,118 +136,118 @@ SL void test_asmd_operator() {
   for (int A : {-10000, 0, 10000})
     for (int a = A - 10; a <= A + 10; ++a)
       for (int b = -10; b <= 10; ++b) {
-        assert((BigInteger(a) + BigInteger(b)).toInt<int>() == (a + b));
-        assert((BigInteger(a) += BigInteger(b)).toInt<int>() == (a + b));
-        assert((BigInteger(a) - BigInteger(b)).toInt<int>() == (a - b));
-        assert((BigInteger(a) -= BigInteger(b)).toInt<int>() == (a - b));
-        assert((BigInteger(a) * BigInteger(b)).toInt<int>() == (a * b));
-        assert((BigInteger(a) *= BigInteger(b)).toInt<int>() == (a * b));
+        assert((BigInteger(a) + BigInteger(b)).ToInt<int>() == (a + b));
+        assert((BigInteger(a) += BigInteger(b)).ToInt<int>() == (a + b));
+        assert((BigInteger(a) - BigInteger(b)).ToInt<int>() == (a - b));
+        assert((BigInteger(a) -= BigInteger(b)).ToInt<int>() == (a - b));
+        assert((BigInteger(a) * BigInteger(b)).ToInt<int>() == (a * b));
+        assert((BigInteger(a) *= BigInteger(b)).ToInt<int>() == (a * b));
         if (b != 0) {
-          assert((BigInteger(a) / BigInteger(b)).toInt<int>() == (a / b));
-          assert((BigInteger(a) /= BigInteger(b)).toInt<int>() == (a / b));
-          assert((BigInteger(a) % BigInteger(b)).toInt<int>() == (a % b));
-          assert((BigInteger(a) %= BigInteger(b)).toInt<int>() == (a % b));
+          assert((BigInteger(a) / BigInteger(b)).ToInt<int>() == (a / b));
+          assert((BigInteger(a) /= BigInteger(b)).ToInt<int>() == (a / b));
+          assert((BigInteger(a) % BigInteger(b)).ToInt<int>() == (a % b));
+          assert((BigInteger(a) %= BigInteger(b)).ToInt<int>() == (a % b));
         }
         if (a >= 0 && b >= 0) {
-          assert((BigInteger(a) | BigInteger(b)).toInt<int>() == (a | b));
-          assert((BigInteger(a) |= BigInteger(b)).toInt<int>() == (a | b));
-          assert((BigInteger(a) & BigInteger(b)).toInt<int>() == (a & b));
-          assert((BigInteger(a) &= BigInteger(b)).toInt<int>() == (a & b));
-          assert((BigInteger(a) ^ BigInteger(b)).toInt<int>() == (a ^ b));
-          assert((BigInteger(a) ^= BigInteger(b)).toInt<int>() == (a ^ b));
+          assert((BigInteger(a) | BigInteger(b)).ToInt<int>() == (a | b));
+          assert((BigInteger(a) |= BigInteger(b)).ToInt<int>() == (a | b));
+          assert((BigInteger(a) & BigInteger(b)).ToInt<int>() == (a & b));
+          assert((BigInteger(a) &= BigInteger(b)).ToInt<int>() == (a & b));
+          assert((BigInteger(a) ^ BigInteger(b)).ToInt<int>() == (a ^ b));
+          assert((BigInteger(a) ^= BigInteger(b)).ToInt<int>() == (a ^ b));
         }
 
-        assert((BigInteger(a) + b).toInt<int>() == (a + b));
-        assert((BigInteger(a) += b).toInt<int>() == (a + b));
-        assert((BigInteger(a) - b).toInt<int>() == (a - b));
-        assert((BigInteger(a) -= b).toInt<int>() == (a - b));
-        assert((BigInteger(a) * b).toInt<int>() == (a * b));
-        assert((BigInteger(a) *= b).toInt<int>() == (a * b));
+        assert((BigInteger(a) + b).ToInt<int>() == (a + b));
+        assert((BigInteger(a) += b).ToInt<int>() == (a + b));
+        assert((BigInteger(a) - b).ToInt<int>() == (a - b));
+        assert((BigInteger(a) -= b).ToInt<int>() == (a - b));
+        assert((BigInteger(a) * b).ToInt<int>() == (a * b));
+        assert((BigInteger(a) *= b).ToInt<int>() == (a * b));
         if (b != 0) {
-          assert((BigInteger(a) / b).toInt<int>() == (a / b));
-          assert((BigInteger(a) /= b).toInt<int>() == (a / b));
-          assert((BigInteger(a) % b).toInt<int>() == (a % b));
-          assert((BigInteger(a) %= b).toInt<int>() == (a % b));
+          assert((BigInteger(a) / b).ToInt<int>() == (a / b));
+          assert((BigInteger(a) /= b).ToInt<int>() == (a / b));
+          assert((BigInteger(a) % b).ToInt<int>() == (a % b));
+          assert((BigInteger(a) %= b).ToInt<int>() == (a % b));
         }
         if (a >= 0 && b >= 0) {
-          assert((BigInteger(a) | b).toInt<int>() == (a | b));
-          assert((BigInteger(a) |= b).toInt<int>() == (a | b));
-          assert((BigInteger(a) & b).toInt<int>() == (a & b));
-          assert((BigInteger(a) &= b).toInt<int>() == (a & b));
-          assert((BigInteger(a) ^ b).toInt<int>() == (a ^ b));
-          assert((BigInteger(a) ^= b).toInt<int>() == (a ^ b));
+          assert((BigInteger(a) | b).ToInt<int>() == (a | b));
+          assert((BigInteger(a) |= b).ToInt<int>() == (a | b));
+          assert((BigInteger(a) & b).ToInt<int>() == (a & b));
+          assert((BigInteger(a) &= b).ToInt<int>() == (a & b));
+          assert((BigInteger(a) ^ b).ToInt<int>() == (a ^ b));
+          assert((BigInteger(a) ^= b).ToInt<int>() == (a ^ b));
         }
 
-        assert((a + BigInteger(b)).toInt<int>() == (a + b));
-        assert((a - BigInteger(b)).toInt<int>() == (a - b));
-        assert((a * BigInteger(b)).toInt<int>() == (a * b));
+        assert((a + BigInteger(b)).ToInt<int>() == (a + b));
+        assert((a - BigInteger(b)).ToInt<int>() == (a - b));
+        assert((a * BigInteger(b)).ToInt<int>() == (a * b));
         if (b != 0) {
-          assert((a / BigInteger(b)).toInt<int>() == (a / b));
-          assert((a % BigInteger(b)).toInt<int>() == (a % b));
+          assert((a / BigInteger(b)).ToInt<int>() == (a / b));
+          assert((a % BigInteger(b)).ToInt<int>() == (a % b));
         }
         if (a >= 0 && b >= 0) {
-          assert((a | BigInteger(b)).toInt<int>() == (a | b));
-          assert((a & BigInteger(b)).toInt<int>() == (a & b));
-          assert((a ^ BigInteger(b)).toInt<int>() == (a ^ b));
+          assert((a | BigInteger(b)).ToInt<int>() == (a | b));
+          assert((a & BigInteger(b)).ToInt<int>() == (a & b));
+          assert((a ^ BigInteger(b)).ToInt<int>() == (a ^ b));
         }
       }
 
   for (int64 A : {-10000000000LL, -10000LL, 0LL, 10000LL, 10000000000LL})
     for (int64 a = A - 10; a <= A + 10; ++a)
       for (int64 b = -10; b <= 10; ++b) {
-        assert((BigInteger(a) + BigInteger(b)).toInt<int64>() == (a + b));
-        assert((BigInteger(a) += BigInteger(b)).toInt<int64>() == (a + b));
-        assert((BigInteger(a) - BigInteger(b)).toInt<int64>() == (a - b));
-        assert((BigInteger(a) -= BigInteger(b)).toInt<int64>() == (a - b));
-        assert((BigInteger(a) * BigInteger(b)).toInt<int64>() == (a * b));
-        assert((BigInteger(a) *= BigInteger(b)).toInt<int64>() == (a * b));
+        assert((BigInteger(a) + BigInteger(b)).ToInt<int64>() == (a + b));
+        assert((BigInteger(a) += BigInteger(b)).ToInt<int64>() == (a + b));
+        assert((BigInteger(a) - BigInteger(b)).ToInt<int64>() == (a - b));
+        assert((BigInteger(a) -= BigInteger(b)).ToInt<int64>() == (a - b));
+        assert((BigInteger(a) * BigInteger(b)).ToInt<int64>() == (a * b));
+        assert((BigInteger(a) *= BigInteger(b)).ToInt<int64>() == (a * b));
         if (b != 0) {
-          assert((BigInteger(a) / BigInteger(b)).toInt<int64>() == (a / b));
-          assert((BigInteger(a) /= BigInteger(b)).toInt<int64>() == (a / b));
-          assert((BigInteger(a) % BigInteger(b)).toInt<int64>() == (a % b));
-          assert((BigInteger(a) %= BigInteger(b)).toInt<int64>() == (a % b));
+          assert((BigInteger(a) / BigInteger(b)).ToInt<int64>() == (a / b));
+          assert((BigInteger(a) /= BigInteger(b)).ToInt<int64>() == (a / b));
+          assert((BigInteger(a) % BigInteger(b)).ToInt<int64>() == (a % b));
+          assert((BigInteger(a) %= BigInteger(b)).ToInt<int64>() == (a % b));
         }
         if (a >= 0 && b >= 0) {
-          assert((BigInteger(a) | BigInteger(b)).toInt<int64>() == (a | b));
-          assert((BigInteger(a) |= BigInteger(b)).toInt<int64>() == (a | b));
-          assert((BigInteger(a) & BigInteger(b)).toInt<int64>() == (a & b));
-          assert((BigInteger(a) &= BigInteger(b)).toInt<int64>() == (a & b));
-          assert((BigInteger(a) ^ BigInteger(b)).toInt<int64>() == (a ^ b));
-          assert((BigInteger(a) ^= BigInteger(b)).toInt<int64>() == (a ^ b));
+          assert((BigInteger(a) | BigInteger(b)).ToInt<int64>() == (a | b));
+          assert((BigInteger(a) |= BigInteger(b)).ToInt<int64>() == (a | b));
+          assert((BigInteger(a) & BigInteger(b)).ToInt<int64>() == (a & b));
+          assert((BigInteger(a) &= BigInteger(b)).ToInt<int64>() == (a & b));
+          assert((BigInteger(a) ^ BigInteger(b)).ToInt<int64>() == (a ^ b));
+          assert((BigInteger(a) ^= BigInteger(b)).ToInt<int64>() == (a ^ b));
         }
 
-        assert((BigInteger(a) + b).toInt<int64>() == (a + b));
-        assert((BigInteger(a) += b).toInt<int64>() == (a + b));
-        assert((BigInteger(a) - b).toInt<int64>() == (a - b));
-        assert((BigInteger(a) -= b).toInt<int64>() == (a - b));
-        assert((BigInteger(a) * b).toInt<int64>() == (a * b));
-        assert((BigInteger(a) *= b).toInt<int64>() == (a * b));
+        assert((BigInteger(a) + b).ToInt<int64>() == (a + b));
+        assert((BigInteger(a) += b).ToInt<int64>() == (a + b));
+        assert((BigInteger(a) - b).ToInt<int64>() == (a - b));
+        assert((BigInteger(a) -= b).ToInt<int64>() == (a - b));
+        assert((BigInteger(a) * b).ToInt<int64>() == (a * b));
+        assert((BigInteger(a) *= b).ToInt<int64>() == (a * b));
         if (b != 0) {
-          assert((BigInteger(a) / b).toInt<int64>() == (a / b));
-          assert((BigInteger(a) /= b).toInt<int64>() == (a / b));
-          assert((BigInteger(a) % b).toInt<int64>() == (a % b));
-          assert((BigInteger(a) %= b).toInt<int64>() == (a % b));
+          assert((BigInteger(a) / b).ToInt<int64>() == (a / b));
+          assert((BigInteger(a) /= b).ToInt<int64>() == (a / b));
+          assert((BigInteger(a) % b).ToInt<int64>() == (a % b));
+          assert((BigInteger(a) %= b).ToInt<int64>() == (a % b));
         }
         if (a >= 0 && b >= 0) {
-          assert((BigInteger(a) | b).toInt<int64>() == (a | b));
-          assert((BigInteger(a) |= b).toInt<int64>() == (a | b));
-          assert((BigInteger(a) & b).toInt<int64>() == (a & b));
-          assert((BigInteger(a) &= b).toInt<int64>() == (a & b));
-          assert((BigInteger(a) ^ b).toInt<int64>() == (a ^ b));
-          assert((BigInteger(a) ^= b).toInt<int64>() == (a ^ b));
+          assert((BigInteger(a) | b).ToInt<int64>() == (a | b));
+          assert((BigInteger(a) |= b).ToInt<int64>() == (a | b));
+          assert((BigInteger(a) & b).ToInt<int64>() == (a & b));
+          assert((BigInteger(a) &= b).ToInt<int64>() == (a & b));
+          assert((BigInteger(a) ^ b).ToInt<int64>() == (a ^ b));
+          assert((BigInteger(a) ^= b).ToInt<int64>() == (a ^ b));
         }
 
-        assert((a + BigInteger(b)).toInt<int64>() == (a + b));
-        assert((a - BigInteger(b)).toInt<int64>() == (a - b));
-        assert((a * BigInteger(b)).toInt<int64>() == (a * b));
+        assert((a + BigInteger(b)).ToInt<int64>() == (a + b));
+        assert((a - BigInteger(b)).ToInt<int64>() == (a - b));
+        assert((a * BigInteger(b)).ToInt<int64>() == (a * b));
         if (b != 0) {
-          assert((a / BigInteger(b)).toInt<int64>() == (a / b));
-          assert((a % BigInteger(b)).toInt<int64>() == (a % b));
+          assert((a / BigInteger(b)).ToInt<int64>() == (a / b));
+          assert((a % BigInteger(b)).ToInt<int64>() == (a % b));
         }
         if (a >= 0 && b >= 0) {
-          assert((a | BigInteger(b)).toInt<int64>() == (a | b));
-          assert((a & BigInteger(b)).toInt<int64>() == (a & b));
-          assert((a ^ BigInteger(b)).toInt<int64>() == (a ^ b));
+          assert((a | BigInteger(b)).ToInt<int64>() == (a | b));
+          assert((a & BigInteger(b)).ToInt<int64>() == (a & b));
+          assert((a ^ BigInteger(b)).ToInt<int64>() == (a ^ b));
         }
       }
 }
@@ -308,42 +308,42 @@ SL void test_compare_operator() {
 
 SL void test_bit_operator() {
   BigInteger x;
-  for (int i = 0; i <= 19; ++i) x.setBit(i);
-  assert(x.toInt<int>() == 1048575);
-  x.revBit(0);
-  assert(x.toInt<int>() == 1048574);
-  x.resetBit(1);
-  assert(x.toInt<int>() == 1048572);
-  assert(x.bitCount() == 18);
+  for (int i = 0; i <= 19; ++i) x.SetBit(i);
+  assert(x.ToInt<int>() == 1048575);
+  x.RevBit(0);
+  assert(x.ToInt<int>() == 1048574);
+  x.ResetBit(1);
+  assert(x.ToInt<int>() == 1048572);
+  assert(x.GetBitCount() == 18);
 
   BigInteger y;
-  y.setBit(0);
+  y.SetBit(0);
 
   x = x | y;
-  assert(x.toInt<int>() == 1048573);
+  assert(x.ToInt<int>() == 1048573);
 
   x = x & BigInteger(1048575 - 4);
-  assert(x.toInt<int>() == 1048573 - 4);
+  assert(x.ToInt<int>() == 1048573 - 4);
 
   x = x ^ x;
-  assert(x.toInt<int>() == 0);
+  assert(x.ToInt<int>() == 0);
 
   x = x ^ y;
-  assert(x.toInt<int>() == 1);
+  assert(x.ToInt<int>() == 1);
 }
 
 SL void test_utilities() {
-  power_mod(BigInteger(5), 10, BigInteger("123456789"));
-  power_mod(BigInteger(5), BigInteger(10), BigInteger("123456789"));
+  PowerMod(BigInteger(5), 10, BigInteger("123456789"));
+  PowerMod(BigInteger(5), BigInteger(10), BigInteger("123456789"));
 
-  power(BigInteger(2), 10u);
-  power(BigInteger(2), 10);
+  Power(BigInteger(2), 10u);
+  Power(BigInteger(2), 10);
 
-  gcd(12_bi, 8_bi);
+  Gcd(12_bi, 8_bi);
   123456789123456789_bi * 2 * 5_bi * "10"_bi;
 
-  power(BigInteger(2), 20);
-  power(BigInteger(2), 20LL);
+  Power(BigInteger(2), 20);
+  Power(BigInteger(2), 20LL);
 
   TimeRecorder tr;
   BigInteger v(1);

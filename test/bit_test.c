@@ -17,7 +17,7 @@ SL void bit_test() {
   assert(__pe_parity32(0) == __builtin_parity(0));
 
   for (int i = 0; i < 65536; ++i) {
-    uint64 target = crand63();
+    uint64 target = CRand63();
     if (target > 0) {
       assert(__pe_clz64(target) == __builtin_clzll(target));
       assert(__pe_ctz64(target) == __builtin_ctzll(target));
@@ -29,21 +29,21 @@ SL void bit_test() {
   }
 
   int x = 0;
-  x = bit_set(x, 20);
+  x = SetBit(x, 20);
   assert(x == (1 << 20));
-  assert(bit_get(x, 20) == 1);
+  assert(GetBit(x, 20) == 1);
 
-  x = bit_rev(x, 20);
+  x = RevBit(x, 20);
   assert(x == 0);
-  assert(bit_get(x, 20) == 0);
+  assert(GetBit(x, 20) == 0);
 
-  x = bit_rev(x, 21);
+  x = RevBit(x, 21);
   assert(x == (1 << 21));
-  assert(bit_get(x, 21) == 1);
+  assert(GetBit(x, 21) == 1);
 
-  x = bit_reset(x, 21);
+  x = ResetBit(x, 21);
   assert(x == 0);
-  assert(bit_get(x, 21) == 0);
+  assert(GetBit(x, 21) == 0);
 }
 
 PE_REGISTER_TEST(&bit_test, "bit_test", SMALL);

@@ -689,15 +689,15 @@ void range_general_example() {
 
   // Count prime.
   cout << range(1, 10000000 + 1)
-              .map<int64>([](auto a) { return is_prime(a); })
+              .map<int64>([](auto a) { return IsPrime(a); })
               .reduce(0, &ru::add)
        << endl;
   cout << range(1, 10000000 + 1).reduce(0, [](auto a, auto b) {
-    return a + is_prime(b);
+    return a + IsPrime(b);
   }) << endl;
   cout << range(1, 10000000 + 1)
               .preduce(
-                  0, [](auto a, auto b) { return a + is_prime(b); }, &ru::add)
+                  0, [](auto a, auto b) { return a + IsPrime(b); }, &ru::add)
        << endl;
 
   // Reduce on mem

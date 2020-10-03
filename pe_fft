@@ -8,60 +8,60 @@
 
 namespace fft {
 // http://uoj.ac/submission/49836
-struct comp {
+struct Complex {
   double x{0}, y{0};
-  comp() = default;
-  comp(const double& _x, const double& _y) : x(_x), y(_y) {}
+  Complex() = default;
+  Complex(const double& _x, const double& _y) : x(_x), y(_y) {}
 };
 
-SL comp operator+(const comp& a, const comp& b) {
-  return comp(a.x + b.x, a.y + b.y);
+SL Complex operator+(const Complex& a, const Complex& b) {
+  return Complex(a.x + b.x, a.y + b.y);
 }
 
-SL comp operator-(const comp& a, const comp& b) {
-  return comp(a.x - b.x, a.y - b.y);
+SL Complex operator-(const Complex& a, const Complex& b) {
+  return Complex(a.x - b.x, a.y - b.y);
 }
 
-SL comp operator*(const comp& a, const comp& b) {
-  return comp(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
+SL Complex operator*(const Complex& a, const Complex& b) {
+  return Complex(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
 }
 
-SL comp conj(const comp& a) { return comp(a.x, -a.y); }
+SL Complex conj(const Complex& a) { return Complex(a.x, -a.y); }
 
 const double PI = acos(-1);
-comp* w[64];
-comp* w1[64];
+Complex* w[64];
+Complex* w1[64];
 int* bitrev[64];
 
 // Init fft constants.
 // By default, it requires that the result size is no more than 1 << 21.
 // In another words, support two polynomials of size 1 << 20.
-SL void init_fft(int n = 22) {
+SL void InitFftK(int n = 22) {
   for (int j = 0; j < n; ++j) {
     const int N = 1 << j;
     if (w[j]) continue;
-    w[j] = new comp[N];
-    w1[j] = new comp[N];
+    w[j] = new Complex[N];
+    w1[j] = new Complex[N];
     bitrev[j] = new int[N];
     for (int i = 0; i < N; ++i) {
-      w[j][i] = comp(cos(2 * PI * i / N), sin(2 * PI * i / N));
-      w1[j][i] = comp(cos(2 * PI * i / N), -sin(2 * PI * i / N));
+      w[j][i] = Complex(cos(2 * PI * i / N), sin(2 * PI * i / N));
+      w1[j][i] = Complex(cos(2 * PI * i / N), -sin(2 * PI * i / N));
       bitrev[j][i] = i == 0 ? 0 : bitrev[j][i >> 1] >> 1 | ((i & 1) << (j - 1));
     }
   }
 }
 
-SL void fft(comp* a, const int n, int f = 0) {
+SL void Fft(Complex* a, const int n, int f = 0) {
   int id = 0;
   while ((1 << id) != n) ++id;
   for (int i = 0; i < n; ++i)
     if (i < bitrev[id][i]) swap(a[i], a[bitrev[id][i]]);
   for (int i = 2, lyc = n >> 1; i <= n; i <<= 1, lyc >>= 1)
     for (int j = 0; j < n; j += i) {
-      comp *l = a + j, *r = a + j + (i >> 1), *p = f ? w1[id] : w[id];
+      Complex *l = a + j, *r = a + j + (i >> 1), *p = f ? w1[id] : w[id];
       const int end = i >> 1;
       for (int k = 0; k < end; ++k) {
-        comp tmp = *r * *p;
+        Complex tmp = *r * *p;
         *r = *l - tmp, *l = *l + tmp;
         ++l, ++r, p += lyc;
       }
@@ -74,14 +74,16 @@ SL void fft(comp* a, const int n, int f = 0) {
   }
 }
 
-SL void poly_mul_fft_internal(uint64* x, uint64* y, uint64* z, const int n,
-                              int64 mod) {
+SL void PolyMulFftInternal(uint64* x, uint64* y, uint64* z, const int n,
+                           int64 mod) {
   auto m = static_cast<int64>(sqrt(mod));
   while (m * m < mod) ++m;
-  vector<comp> a(n), b(n);
-  vector<comp> dfta(n), dftb(n), dftc(n), dftd(n);
-  for (int i = 0; i < n; ++i) a[i] = comp(double(x[i] % m), double(x[i] / m));
-  for (int i = 0; i < n; ++i) b[i] = comp(double(y[i] % m), double(y[i] / m));
+  vector<Complex> a(n), b(n);
+  vector<Complex> dfta(n), dftb(n), dftc(n), dftd(n);
+  for (int i = 0; i < n; ++i)
+    a[i] = Complex(double(x[i] % m), double(x[i] / m));
+  for (int i = 0; i < n; ++i)
+    b[i] = Complex(double(y[i] % m), double(y[i] / m));
 #if ENABLE_OPENMP
 #pragma omp parallel sections if (n > 5000)
 #endif
@@ -89,26 +91,26 @@ SL void poly_mul_fft_internal(uint64* x, uint64* y, uint64* z, const int n,
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    fft(&a[0], n);
+    Fft(&a[0], n);
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    fft(&b[0], n);
+    Fft(&b[0], n);
   }
   for (int i = 0; i < n; ++i) {
     int j = (n - i) & (n - 1);
-    static comp da, db, dc, dd;
-    da = (a[i] + conj(a[j])) * comp(0.5, 0);
-    db = (a[i] - conj(a[j])) * comp(0, -0.5);
-    dc = (b[i] + conj(b[j])) * comp(0.5, 0);
-    dd = (b[i] - conj(b[j])) * comp(0, -0.5);
+    static Complex da, db, dc, dd;
+    da = (a[i] + conj(a[j])) * Complex(0.5, 0);
+    db = (a[i] - conj(a[j])) * Complex(0, -0.5);
+    dc = (b[i] + conj(b[j])) * Complex(0.5, 0);
+    dd = (b[i] - conj(b[j])) * Complex(0, -0.5);
     dfta[j] = da * dc;
     dftb[j] = da * dd;
     dftc[j] = db * dc;
     dftd[j] = db * dd;
   }
-  for (int i = 0; i < n; ++i) a[i] = dfta[i] + dftb[i] * comp(0, 1);
-  for (int i = 0; i < n; ++i) b[i] = dftc[i] + dftd[i] * comp(0, 1);
+  for (int i = 0; i < n; ++i) a[i] = dfta[i] + dftb[i] * Complex(0, 1);
+  for (int i = 0; i < n; ++i) b[i] = dftc[i] + dftd[i] * Complex(0, 1);
 #if ENABLE_OPENMP
 #pragma omp parallel sections if (n > 5000)
 #endif
@@ -116,11 +118,11 @@ SL void poly_mul_fft_internal(uint64* x, uint64* y, uint64* z, const int n,
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    fft(&a[0], n);
+    Fft(&a[0], n);
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    fft(&b[0], n);
+    Fft(&b[0], n);
   }
   for (int i = 0; i < n; ++i) {
     const uint64 da = static_cast<uint64>(a[i].x / n + 0.5) % mod;
@@ -132,11 +134,11 @@ SL void poly_mul_fft_internal(uint64* x, uint64* y, uint64* z, const int n,
   }
 }
 
-SL void poly_mul_fft_small_internal(uint64* x, uint64* y, uint64* z,
-                                    const int n, int64 mod) {
-  vector<comp> a(n), b(n);
-  for (int i = 0; i < n; ++i) a[i] = comp(double(x[i]), 0);
-  for (int i = 0; i < n; ++i) b[i] = comp(double(y[i]), 0);
+SL void PolyMulFftSmallInternal(uint64* x, uint64* y, uint64* z, const int n,
+                                int64 mod) {
+  vector<Complex> a(n), b(n);
+  for (int i = 0; i < n; ++i) a[i] = Complex(double(x[i]), 0);
+  for (int i = 0; i < n; ++i) b[i] = Complex(double(y[i]), 0);
 #if ENABLE_OPENMP
 #pragma omp parallel sections if (n > 5000)
 #endif
@@ -144,64 +146,63 @@ SL void poly_mul_fft_small_internal(uint64* x, uint64* y, uint64* z,
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    fft(&a[0], n);
+    Fft(&a[0], n);
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    fft(&b[0], n);
+    Fft(&b[0], n);
   }
 
   for (int i = 0; i < n; ++i) {
     a[i] = a[i] * b[i];
   }
 
-  fft(&a[0], n, 1);
+  Fft(&a[0], n, 1);
   const double coe = 1. / n;
   for (int i = 0; i < n; ++i) {
     z[i] = uint64(a[i].x + 0.01) % mod;
   }
 }
 
-#define POLY_MULL_FFT_IMPL(poly_mul_fft, poly_mul_fft_internal)          \
-  template <typename T>                                                  \
-  SL void poly_mul_fft(const T* x, const int n, const T* y, const int m, \
-                       T* result, int64 mod) {                           \
-    const int p = 1 << pe_lg(2 * (n + m - 1) - 1);                       \
-                                                                         \
-    vector<uint64> xx(p), yy(p), zz(p);                                  \
-                                                                         \
-    copy(x, x + n, &xx[0]);                                              \
-    fill(xx.begin() + n, xx.end(), 0);                                   \
-                                                                         \
-    copy(y, y + m, &yy[0]);                                              \
-    fill(yy.begin() + m, yy.end(), 0);                                   \
-                                                                         \
-    poly_mul_fft_internal(&xx[0], &yy[0], &zz[0], p, mod);               \
-                                                                         \
-    copy(zz.begin(), zz.begin() + n + m - 1, result);                    \
-  }                                                                      \
-                                                                         \
-  template <typename T>                                                  \
-  SL vector<T> poly_mul_fft(const vector<T>& x, const vector<T>& y,      \
-                            int64 mod) {                                 \
-    const int n = (int)x.size();                                         \
-    const int m = (int)y.size();                                         \
-    vector<T> z(n + m - 1);                                              \
-                                                                         \
-    poly_mul_fft(&x[0], n, &y[0], m, &z[0], mod);                        \
-                                                                         \
-    return std::move(z);                                                 \
+#define POLY_MULL_FFT_IMPL(PolyMulFft, PolyMulFftInternal)                     \
+  template <typename T>                                                        \
+  SL void PolyMulFft(const T* x, const int n, const T* y, const int m,         \
+                     T* result, int64 mod) {                                   \
+    const int p = 1 << pe_lg(2 * (n + m - 1) - 1);                             \
+                                                                               \
+    vector<uint64> xx(p), yy(p), zz(p);                                        \
+                                                                               \
+    copy(x, x + n, &xx[0]);                                                    \
+    fill(xx.begin() + n, xx.end(), 0);                                         \
+                                                                               \
+    copy(y, y + m, &yy[0]);                                                    \
+    fill(yy.begin() + m, yy.end(), 0);                                         \
+                                                                               \
+    PolyMulFftInternal(&xx[0], &yy[0], &zz[0], p, mod);                        \
+                                                                               \
+    copy(zz.begin(), zz.begin() + n + m - 1, result);                          \
+  }                                                                            \
+                                                                               \
+  template <typename T>                                                        \
+  SL vector<T> PolyMulFft(const vector<T>& x, const vector<T>& y, int64 mod) { \
+    const int n = (int)x.size();                                               \
+    const int m = (int)y.size();                                               \
+    vector<T> z(n + m - 1);                                                    \
+                                                                               \
+    PolyMulFft(&x[0], n, &y[0], m, &z[0], mod);                                \
+                                                                               \
+    return std::move(z);                                                       \
   }
 
-POLY_MULL_FFT_IMPL(poly_mul_fft, poly_mul_fft_internal)
-POLY_MULL_FFT_IMPL(poly_mul_fft_small, poly_mul_fft_small_internal)
+POLY_MULL_FFT_IMPL(PolyMulFft, PolyMulFftInternal)
+POLY_MULL_FFT_IMPL(PolyMulFftSmall, PolyMulFftSmallInternal)
 
 /**
  * Test result about the limitation of each method:
  *                       expr         random       limit
- * poly_mul_fft          mod^2*n      1e15         3.39e14
+ * PolyMulFft          mod^2*n      1e15         3.39e14
  *                                    8e14         4.40e14
- * poly_mul_fft_small    mod*n        7e13         2.06e11
+ * PolyMulFftSmall    mod*n        7e13         2.06e11
  */
 }  // namespace fft
 #endif

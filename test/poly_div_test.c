@@ -10,14 +10,14 @@ struct DivImpl {
 };
 
 DivImpl divImpl[] = {
-    {&poly_div_dc<uint64>, 1, "dc"},
-    {&poly_div_normal<uint64>, 0, "normal"},
+    {&PolyDivDc<uint64>, 1, "dc"},
+    {&PolyDivNormal<uint64>, 0, "normal"},
 #if HAS_POLY_FLINT
-    {&poly_flint::poly_div<uint64>, 1, "flint"},
+    {&poly_flint::PolyDiv<uint64>, 1, "flint"},
 #endif
 #if HAS_POLY_NTL
-    {&poly_ntl::poly_div_large_mod<uint64>, 1, "ntl lm"},
-    {&poly_ntl::poly_div<uint64>, 1, "ntl"},
+    {&poly_ntl::PolyDivLargeMod<uint64>, 1, "ntl lm"},
+    {&poly_ntl::PolyDiv<uint64>, 1, "ntl"},
 #endif
 };
 
@@ -34,8 +34,8 @@ SL void test_impl(int dp, int size, int n, int64 mod) {
   vector<uint64> x, y;
   srand(123456789);
   if (dp == 0) {
-    for (int i = 0; i < n; ++i) x.push_back((uint64)crand63() % mod);
-    for (int i = 0; i < n / 2; ++i) y.push_back((uint64)crand63() % mod);
+    for (int i = 0; i < n; ++i) x.push_back((uint64)CRand63() % mod);
+    for (int i = 0; i < n / 2; ++i) y.push_back((uint64)CRand63() % mod);
     x[n - 1] = y[n / 2 - 1] = 1;
   } else {
     for (int i = 0; i < n; ++i) x.push_back(dp == 1 ? 0 : mod - 1);
@@ -105,8 +105,8 @@ SL void poly_div_performance_test() {
         }
         const int size = 1 << n;
         vector<uint64> x, y;
-        for (int i = 0; i < size; ++i) x.push_back((uint64)crand63() % mod);
-        for (int i = 0; i < size / 2; ++i) y.push_back((uint64)crand63() % mod);
+        for (int i = 0; i < size; ++i) x.push_back((uint64)CRand63() % mod);
+        for (int i = 0; i < size / 2; ++i) y.push_back((uint64)CRand63() % mod);
         x[size - 1] = y[size / 2 - 1] = 1;
 
         auto start = clock();

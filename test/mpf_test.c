@@ -10,7 +10,7 @@ SL void mpf_test() {
   x /= 10;
 #if 0
   cout << x.toString(20) << endl;
-  x = -x.power(10);
+  x = -x.Power(10);
   cout << x.toString(20) << endl;
   cout << x.toLongDouble() << endl;
   cout << Mpf().toString(20) << endl;

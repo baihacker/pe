@@ -10,9 +10,9 @@ SL void gf_test() {
     vector<int64> B{0, 1};
     vector<int64> result{0, 1};
     for (int i = 2; i <= 30; ++i) {
-      result.push_back(add_mod(result[i - 2], result[i - 1], mod));
+      result.push_back(AddMod(result[i - 2], result[i - 1], mod));
     }
-    auto x = gf_first({A, mod}, {B, mod}, 30);
+    auto x = GfFirst({A, mod}, {B, mod}, 30);
     for (int i = 0; i <= 30; ++i) {
       assert(result[i] == x[i]);
     }
@@ -29,7 +29,7 @@ SL void gf_test() {
     for (auto each : can) {
       for (int j = 0; j + each <= 10000; ++j)
         if (dp[j]) {
-          dp[j + each] = add_mod(dp[j + each], dp[j], mod);
+          dp[j + each] = AddMod(dp[j + each], dp[j], mod);
         }
     }
 
@@ -45,12 +45,12 @@ SL void gf_test() {
         ++coe[s];
     }
     auto gfresult =
-        gf_first({vector<int64>(coe, coe + 92), mod}, {{1}, mod}, 10000);
+        GfFirst({vector<int64>(coe, coe + 92), mod}, {{1}, mod}, 10000);
     for (int i = 0; i <= 10000; ++i) assert(dp[i] == gfresult[i]);
 
-    string mine = to_string(
-        gf_at({vector<int64>(coe, coe + 92), mod}, {{1}, mod}, 100000000));
-    string expected = to_string("66666793333412666685000001"_bi % mod);
+    string mine = ToString(
+        GfAt({vector<int64>(coe, coe + 92), mod}, {{1}, mod}, 100000000));
+    string expected = ToString("66666793333412666685000001"_bi % mod);
     assert(mine == expected);
   }
 }
@@ -59,24 +59,24 @@ PE_REGISTER_TEST(&gf_test, "gf_test", SMALL);
 SL void minimal_polynomial_test() {
   const int64 P = 1000000009;
   NModPoly s{{0, 1, 1, 2, 3, 5}, P};
-  auto v = find_minimal_poly(s);
+  auto v = FindMinimalPoly(s);
   assert(v[0] == P - 1);
   assert(v[1] == P - 1);
   assert(v[2] == 1);
   const int n = (int)v.data.size();
   int64 ans = 0;
-  for (int i = 0; i < n; ++i) ans += v.at(i) * s.at(i);
+  for (int i = 0; i < n; ++i) ans += v.At(i) * s.At(i);
   assert(ans == P);
 
-  ans = nth_element(s, 38, v);
+  ans = NthElement(s, 38, v);
   assert(ans == 39088169LL);
 
-  auto t = find_linear_recurrence({{0, 1, 1, 2, 3, 5, 8, 13}, 31});
+  auto t = FindLinearRecurrence({{0, 1, 1, 2, 3, 5, 8, 13}, 31});
   assert(t[0] == 30);
   assert(t[1] == 30);
   assert(t[2] == 1);
-  assert(nth_element({{0, 1, 1, 2, 3, 5, 8, 13}, P}, 38) == 39088169);
-  assert(nth_element({0, 1, 1, 2, 3, 5, 8, 13}, P, 38) == 39088169);
+  assert(NthElement({{0, 1, 1, 2, 3, 5, 8, 13}, P}, 38) == 39088169);
+  assert(NthElement({0, 1, 1, 2, 3, 5, 8, 13}, P, 38) == 39088169);
 }
 PE_REGISTER_TEST(&minimal_polynomial_test, "minimal_polynomial_test", SMALL);
 
@@ -91,27 +91,27 @@ SL void poly_multipoint_evaluation_test() {
   for (int i = 1; i <= n; ++i) v.push_back(i % 10007);
   {
     TimeRecorder tr;
-    auto result = poly_multipoint_evaluate_normal(p.data, v, p.mod);
-    cout << tr.elapsed().format() << endl;
+    auto result = PolyMultipointEvaluateNormal(p.data, v, p.mod);
+    cout << tr.Elapsed().Format() << endl;
     for (int i = 1; i <= n; ++i) {
-      assert(p.valueAt(i % 10007) == result[i - 1]);
+      assert(p.ValueAt(i % 10007) == result[i - 1]);
     }
   }
   {
     TimeRecorder tr;
-    auto result = poly_multipoint_evaluate_bls(p.data, v, p.mod);
-    cout << tr.elapsed().format() << endl;
+    auto result = PolyMultipointEvaluateBls(p.data, v, p.mod);
+    cout << tr.Elapsed().Format() << endl;
     for (int i = 1; i <= n; ++i) {
-      assert(p.valueAt(i % 10007) == result[i - 1]);
+      assert(p.ValueAt(i % 10007) == result[i - 1]);
     }
   }
 #if HAS_POLY_FLINT
   {
     TimeRecorder tr;
-    auto result = poly_flint::poly_multipoint_evaluate(p.data, v, p.mod);
-    cout << tr.elapsed().format() << endl;
+    auto result = poly_flint::PolyMultipointEvaluate(p.data, v, p.mod);
+    cout << tr.Elapsed().Format() << endl;
     for (int i = 1; i <= n; ++i) {
-      assert(p.valueAt(i % 10007) == result[i - 1]);
+      assert(p.ValueAt(i % 10007) == result[i - 1]);
     }
   }
 #endif
@@ -122,7 +122,7 @@ PE_REGISTER_TEST(&poly_multipoint_evaluation_test,
 SL void poly_batch_mul_test() {
   const int mod = 10007;
   vector<int64> data{1, 1, 2, 1, 3, 1};
-  auto result = poly_batch_mul(data, mod);
+  auto result = PolyBatchMul(data, mod);
 
   vector<int64> expected{6, 11, 6, 1};
   assert(expected == result);

@@ -21,13 +21,13 @@ struct DArray : public DArrayRef<T, D> {
   template <class... Args>
   DArray(const vector<int64>& dimension, Args&&... arg)
       : dimension(dimension), base(NULL, 0, NULL, NULL) {
-    init(arg...);
+    Init(arg...);
     PE_ASSERT(dimension.size() == D);
   }
 
   DArray() : base(NULL, 0, NULL, NULL) {
     dimension = vector<int64>(D, 1);
-    init();
+    Init();
     PE_ASSERT(dimension.size() == D);
   }
 
@@ -37,17 +37,17 @@ struct DArray : public DArrayRef<T, D> {
   DArray& operator=(const DArray&) = delete;
   DArray& operator=(DArray&&) = delete;
 
-  ~DArray() { clear(); }
+  ~DArray() { Clear(); }
 
   template <class... Args>
-  void reset(const vector<int64>& dimension, Args&&... arg) {
-    clear();
+  void Reset(const vector<int64>& dimension, Args&&... arg) {
+    Clear();
     this->dimension = dimension;
-    init(arg...);
+    Init(arg...);
   }
 
   template <class... Args>
-  void init(Args&&... arg) {
+  void Init(Args&&... arg) {
     const int d = (int)dimension.size();
     elementCounts.clear();
     elementCounts.push_back(1);
@@ -58,22 +58,22 @@ struct DArray : public DArrayRef<T, D> {
     elementCount = elementCounts[0];
     base::dimension = &dimension[0];
     base::elementCounts = &elementCounts[0];
-    base::data_ = (T*)A::allocate(elementCount * sizeof(T));
+    base::data_ = (T*)A::Allocate(elementCount * sizeof(T));
     for (int64 i = 0; i < elementCount; ++i) {
       new (base::data_ + i) T(arg...);
     }
   }
 
-  void clear() {
+  void Clear() {
     for (int64 i = 0; i < elementCount; ++i) {
       (base::data_ + i)->~T();
     }
-    A::deallocate(base::data_);
+    A::Deallocate(base::data_);
   }
 
-  T* getData() { return base::data_; }
+  T* GetData() { return base::data_; }
 
-  DArrayRef<T, D> ref() {
+  DArrayRef<T, D> Ref() {
     return DArrayRef<T, D>(base::data_, 0, base::dimension,
                            base::elementCounts);
   }
@@ -160,7 +160,7 @@ struct FArray : public FArrayRef<T, S> {
 
   template <class... Args>
   FArray(Args&&... arg) : base(NULL) {
-    init(arg...);
+    Init(arg...);
   }
 
   FArray(const FArray&) = delete;
@@ -169,26 +169,26 @@ struct FArray : public FArrayRef<T, S> {
   FArray& operator=(const FArray&) = delete;
   FArray& operator=(FArray&&) = delete;
 
-  ~FArray() { clear(); }
+  ~FArray() { Clear(); }
 
   template <class... Args>
-  void init(Args&&... arg) {
-    base::data_ = (T*)A::allocate(S::EC * sizeof(T));
+  void Init(Args&&... arg) {
+    base::data_ = (T*)A::Allocate(S::EC * sizeof(T));
     for (int64 i = 0; i < S::EC; ++i) {
       new (base::data_ + i) T(arg...);
     }
   }
 
-  void clear() {
+  void Clear() {
     for (int64 i = 0; i < S::EC; ++i) {
       (base::data_ + i)->~T();
     }
-    A::deallocate(base::data_);
+    A::Deallocate(base::data_);
   }
 
-  T* getData() { return base::data_; }
+  T* GetData() { return base::data_; }
 
-  FArrayRef<T, S> ref() { return FArrayRef<T, S>(base::data_); }
+  FArrayRef<T, S> Ref() { return FArrayRef<T, S>(base::data_); }
 };
 
 template <typename T, typename S>

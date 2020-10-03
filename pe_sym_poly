@@ -8,31 +8,31 @@
 using TermKey = std::vector<std::pair<std::string, int>>;
 
 template <typename CT>
-SL std::map<TermKey, CT> parseSymPolyTerms(const string& s);
+SL std::map<TermKey, CT> ParseSymPolyTerms(const string& s);
 
 template <typename CT>
 struct SymPoly;
 
 template <typename CT>
-SL ostream& to_string(const SymPoly<CT>& sp, ostream& o, int cstyle = 0,
-                      int showMul = 0);
+SL ostream& ToString(const SymPoly<CT>& sp, ostream& o, int cstyle = 0,
+                     int showMul = 0);
 
 template <typename CT>
 struct SymPoly {
   SymPoly() = default;
 
   SymPoly(const std::map<TermKey, CT>& terms) : terms_(terms) {
-    fixCoefficient();
+    FixCoefficient();
   }
 
-  SymPoly(std::map<TermKey, CT>&& terms) : terms_(terms) { fixCoefficient(); }
+  SymPoly(std::map<TermKey, CT>&& terms) : terms_(terms) { FixCoefficient(); }
 
   SymPoly(const SymPoly& o) : terms_(o.terms_) {}
 
   SymPoly(SymPoly&& o) noexcept : terms_(std::move(o.terms_)) {}
 
-  SymPoly(const string& str) : terms_(parseSymPolyTerms<CT>(str)) {
-    fixCoefficient();
+  SymPoly(const string& str) : terms_(ParseSymPolyTerms<CT>(str)) {
+    FixCoefficient();
   }
 
   SymPoly(CT v) {
@@ -51,7 +51,7 @@ struct SymPoly {
     return *this;
   }
 
-  void fixCoefficient() {
+  void FixCoefficient() {
     auto now = std::begin(terms_);
     auto end = std::end(terms_);
     while (now != end) {
@@ -63,7 +63,7 @@ struct SymPoly {
     }
   }
 
-  SymPoly power(int n) const {
+  SymPoly Power(int n) const {
     SymPoly<CT> t;
     t.terms_[{}] = 1;
     SymPoly<CT> x(this->terms_);
@@ -74,14 +74,14 @@ struct SymPoly {
     return t;
   }
 
-  SymPoly replace(string var, const SymPoly<CT>& target) const {
+  SymPoly Replace(string var, const SymPoly<CT>& target) const {
     std::map<TermKey, CT> resultTerms;
     for (const auto& iter : terms_) {
       int found = 0;
       const int size = sz(iter.first);
       for (int i = 0; i < size; ++i)
         if (iter.first[i].first == var) {
-          SymPoly t = target.power(iter.first[i].second);
+          SymPoly t = target.Power(iter.first[i].second);
           SymPoly k;
           TermKey others;
           for (int j = 0; j < size; ++j)
@@ -102,13 +102,13 @@ struct SymPoly {
     return SymPoly(resultTerms);
   }
 
-  SymPoly replace(string var, const string& target) const {
-    return replace(var, SymPoly(target));
+  SymPoly Replace(string var, const string& target) const {
+    return Replace(var, SymPoly(target));
   }
 
-  string to_string(int cstyle = 1, int showMul = 0) const {
+  string ToString(int cstyle = 1, int showMul = 0) const {
     stringstream ss;
-    ::to_string(*this, ss, cstyle, showMul);
+    ::ToString(*this, ss, cstyle, showMul);
     return ss.str();
   }
 
@@ -141,7 +141,7 @@ SL SymPoly<CT> operator-(const SymPoly<CT>& a, const SymPoly<CT>& b) {
 }
 
 template <typename CT>
-SL TermKey mergeTermKey(const TermKey& a, const TermKey& b) {
+SL TermKey MergeTermKey(const TermKey& a, const TermKey& b) {
   if (a.size() == 0) return b;
   if (b.size() == 0) return a;
   std::map<std::string, int> terms;
@@ -158,14 +158,14 @@ SL SymPoly<CT> operator*(const SymPoly<CT>& a, const SymPoly<CT>& b) {
   std::map<TermKey, CT> terms;
   for (const auto& iter1 : a.terms())
     for (const auto& iter2 : b.terms()) {
-      terms[mergeTermKey<CT>(iter1.first, iter2.first)] +=
+      terms[MergeTermKey<CT>(iter1.first, iter2.first)] +=
           iter1.second * iter2.second;
     }
   return SymPoly<CT>(terms);
 }
 
 // [+- ]*
-SL vector<int> parseSgnList(const string& s, int& i) {
+SL vector<int> ParseSgnList(const string& s, int& i) {
   const int size = static_cast<int>(s.size());
   vector<int> sgns;
   for (;;) {
@@ -179,7 +179,7 @@ SL vector<int> parseSgnList(const string& s, int& i) {
   }
 }
 
-SL string parseDigList(const string& s, int& i) {
+SL string ParseDigList(const string& s, int& i) {
   const int size = static_cast<int>(s.size());
   while (i < size && std::isspace(s[i])) ++i;
   if (i < size && std::isdigit(s[i])) {
@@ -192,7 +192,7 @@ SL string parseDigList(const string& s, int& i) {
   return "";
 }
 
-SL string parseIdentifier(const string& s, int& i) {
+SL string ParseIdentifier(const string& s, int& i) {
   const int size = static_cast<int>(s.size());
   while (i < size && std::isspace(s[i])) ++i;
   if (i < size && (s[i] == '_' || std::isalpha(s[i]))) {
@@ -206,7 +206,7 @@ SL string parseIdentifier(const string& s, int& i) {
   return "";
 }
 
-SL std::vector<std::pair<string, string>> parseSingleTermList(const string& s,
+SL std::vector<std::pair<string, string>> ParseSingleTermList(const string& s,
                                                               int& i) {
   std::vector<std::pair<string, string>> result;
   const int size = static_cast<int>(s.size());
@@ -216,13 +216,13 @@ SL std::vector<std::pair<string, string>> parseSingleTermList(const string& s,
       ++i;
       while (i < size && std::isspace(s[i])) ++i;
     }
-    string variable = parseIdentifier(s, i);
-    if (variable.empty()) variable = parseDigList(s, i);
+    string variable = ParseIdentifier(s, i);
+    if (variable.empty()) variable = ParseDigList(s, i);
     if (variable.empty()) return result;
     while (i < size && std::isspace(s[i])) ++i;
     if (i < size && (s[i] == '^' && !std::isdigit(variable[0]))) {
       ++i;
-      string e = parseDigList(s, i);
+      string e = ParseDigList(s, i);
       result.emplace_back(variable, e);
     } else {
       result.emplace_back(variable, "");
@@ -231,7 +231,8 @@ SL std::vector<std::pair<string, string>> parseSingleTermList(const string& s,
 }
 
 template <typename CT>
-SL CT evalDigs(const vector<int>& sgns, const string& digs, CT defaultVal = 0) {
+SL CT EvaluateDigs(const vector<int>& sgns, const string& digs,
+                   CT defaultVal = 0) {
   int s = 1;
   for (const auto& iter : sgns)
     if (iter == -1) s = -s;
@@ -242,15 +243,15 @@ SL CT evalDigs(const vector<int>& sgns, const string& digs, CT defaultVal = 0) {
 }
 
 template <typename CT>
-SL std::pair<TermKey, CT> evalSingleTermList(
+SL std::pair<TermKey, CT> EvaluateSingleTermList(
     const std::vector<std::pair<string, string>>& singleTerms) {
   std::map<std::string, int> t;
   CT c = 1;
   for (const auto& iter : singleTerms) {
     if (std::isdigit(iter.first[0])) {
-      c *= evalDigs<int>({}, iter.first, 1);
+      c *= EvaluateDigs<int>({}, iter.first, 1);
     } else {
-      t[iter.first] += evalDigs<int>({}, iter.second, 1);
+      t[iter.first] += EvaluateDigs<int>({}, iter.second, 1);
     }
   }
   TermKey key;
@@ -259,30 +260,30 @@ SL std::pair<TermKey, CT> evalSingleTermList(
 }
 
 template <typename CT>
-SL std::pair<TermKey, CT> parseTerm(const string& s, int& i) {
-  auto sgns = parseSgnList(s, i);
-  auto singleTerms = parseSingleTermList(s, i);
-  auto t = evalSingleTermList<CT>(singleTerms);
-  auto sgn = evalDigs<CT>(sgns, "", 1);
+SL std::pair<TermKey, CT> ParseTerm(const string& s, int& i) {
+  auto sgns = ParseSgnList(s, i);
+  auto singleTerms = ParseSingleTermList(s, i);
+  auto t = EvaluateSingleTermList<CT>(singleTerms);
+  auto sgn = EvaluateDigs<CT>(sgns, "", 1);
   return {t.first,
           singleTerms.empty() ? CT(0) : (sgn == 1 ? t.second : -t.second)};
 }
 
 template <typename CT>
-SL std::pair<TermKey, CT> parseTerm(const string& s) {
+SL std::pair<TermKey, CT> ParseTerm(const string& s) {
   int i = 0;
-  return parseTerm<CT>(s, i);
+  return ParseTerm<CT>(s, i);
 }
 
 template <typename CT>
-SL std::map<TermKey, CT> parseSymPolyTerms(const string& s) {
+SL std::map<TermKey, CT> ParseSymPolyTerms(const string& s) {
   const int size = sz(s);
   int i = 0;
   std::map<TermKey, CT> terms;
   for (;;) {
     while (i < size && std::isspace(s[i])) ++i;
     int j = i;
-    auto t = parseTerm<CT>(s, i);
+    auto t = ParseTerm<CT>(s, i);
     if (j == i) {
       if (i < size) {
         cerr << "Unknown: " << s.substr(i) << endl;
@@ -295,17 +296,17 @@ SL std::map<TermKey, CT> parseSymPolyTerms(const string& s) {
 }
 
 template <typename CT>
-SL SymPoly<CT> parseSymPoly(const string& s) {
-  return SymPoly<CT>(parseSymPolyTerms<CT>(s));
+SL SymPoly<CT> ParseSymPoly(const string& s) {
+  return SymPoly<CT>(ParseSymPolyTerms<CT>(s));
 }
 
-SL TermKey termKey(const string& s) {
+SL TermKey ToTermKey(const string& s) {
   int i = 0;
-  return parseTerm<int64>(s, i).first;
+  return ParseTerm<int64>(s, i).first;
 }
 
-SL ostream& to_string(const TermKey& vpv, ostream& o, int cstyle = 1,
-                      int showMul = 0) {
+SL ostream& ToString(const TermKey& vpv, ostream& o, int cstyle = 1,
+                     int showMul = 0) {
   int idx = 0;
   for (const auto& iter : vpv) {
     if (++idx > 1) {
@@ -315,7 +316,7 @@ SL ostream& to_string(const TermKey& vpv, ostream& o, int cstyle = 1,
       o << iter.first;
     } else {
       if (cstyle) {
-        o << "power(" << iter.first << ", " << iter.second << ")";
+        o << "Power(" << iter.first << ", " << iter.second << ")";
       } else {
         o << iter.first << "^" << iter.second;
       }
@@ -325,8 +326,8 @@ SL ostream& to_string(const TermKey& vpv, ostream& o, int cstyle = 1,
 }
 
 template <typename CT>
-SL ostream& to_string(const SymPoly<CT>& sp, ostream& o, int cstyle,
-                      int showMul) {
+SL ostream& ToString(const SymPoly<CT>& sp, ostream& o, int cstyle,
+                     int showMul) {
   if (cstyle) showMul = 1;
   int idx = 0;
   for (const auto& iter : sp.terms()) {
@@ -345,15 +346,15 @@ SL ostream& to_string(const SymPoly<CT>& sp, ostream& o, int cstyle,
       o << "-";
       out = 1;
     }
-    if (abs(iter.second) != 1 || iter.first.empty()) {
+    if (Abs(iter.second) != 1 || iter.first.empty()) {
       if (out) o << " ";
-      o << abs(iter.second);
+      o << Abs(iter.second);
       out = 1;
       hasNum = 1;
     }
     if (iter.first.size() > 0) {
       if (out) o << (showMul && hasNum ? " * " : " ");
-      to_string(iter.first, o, cstyle, showMul);
+      ToString(iter.first, o, cstyle, showMul);
       out = 1;
     }
   }
@@ -365,7 +366,7 @@ SL ostream& to_string(const SymPoly<CT>& sp, ostream& o, int cstyle,
 
 template <typename CT>
 SL ostream& operator<<(ostream& o, const SymPoly<CT>& sp) {
-  return to_string(sp, o);
+  return ToString(sp, o);
 }
 
 #endif

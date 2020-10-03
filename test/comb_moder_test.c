@@ -8,7 +8,7 @@ SL void comb_moder_test() {
   for (int i = 0; i < 10000; ++i) {
     const int n = rand() % mod;
     const int m = rand() % mod;
-    assert(m1.comb(n, m) == m2.comb(n, m));
+    assert(m1.Comb(n, m) == m2.Comb(n, m));
   }
 #if PE_HAS_INT128
   {
@@ -16,7 +16,7 @@ SL void comb_moder_test() {
     CombModerEx moder(mod);
     const int64 n = 66666666604;
     const int64 m = 33333333302;
-    auto result = moder.comb(n, m);
+    auto result = moder.Comb(n, m);
 
     assert(result == 99999410307);
   }

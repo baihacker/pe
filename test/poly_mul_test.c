@@ -11,37 +11,37 @@ struct MulImpl {
 };
 MulImpl mulImpl[] = {
 #if HAS_POLY_MUL_FLINT
-    {&poly_flint::poly_mul_nmod<uint64>, 4, "flint n"},
+    {&poly_flint::PolyMulNmod<uint64>, 4, "flint n"},
     {&poly_flint::poly_mul_prime<uint64>, 4, "flint p"},
 #else
-    {&ntt64::poly_mul_large<uint64>, 4, "ntt64 l"},
+    {&ntt64::PolyMulLarge<uint64>, 4, "ntt64 l"},
 #endif
 #if HAS_POLY_MUL_NTT32_SMALL
-    {&ntt32::poly_mul_small<uint64>, 1, "ntt32 s"},
+    {&ntt32::PolyMulSmall<uint64>, 1, "ntt32 s"},
 #endif
 #if HAS_POLY_MUL_NTT32
-    {&ntt32::poly_mul_large<uint64>, 3, "ntt32 l"},
+    {&ntt32::PolyMulLarge<uint64>, 3, "ntt32 l"},
 #endif
 #if HAS_POLY_MUL_NTT64_SMALL
-    {&ntt64::poly_mul_small<uint64>, 1, "ntt64 s"},
+    {&ntt64::PolyMulSmall<uint64>, 1, "ntt64 s"},
 #endif
 #if HAS_POLY_MUL_FLINT && HAS_POLY_MUL_NTT64
-    {&ntt64::poly_mul_large<uint64>, 4, "ntt64 l"},
+    {&ntt64::PolyMulLarge<uint64>, 4, "ntt64 l"},
 #endif
 #if HAS_POLY_MUL_MIN25_SMALL
-    {&poly_min25::poly_mul_small<uint64>, 1, "Min_25 s"},
+    {&poly_min25::PolyMulSmall<uint64>, 1, "Min_25 s"},
 #endif
 #if HAS_POLY_MUL_MIN25
-    {&poly_min25::poly_mul_large<uint64>, 4, "Min_25 l"},
+    {&poly_min25::PolyMulLarge<uint64>, 4, "Min_25 l"},
 #endif
 #if HAS_POLY_MUL_LIBBF
-    {&poly_libbf::poly_mul<uint64>, 4, "libbf"},
+    {&poly_libbf::PolyMul<uint64>, 4, "libbf"},
 #endif
 #if HAS_POLY_MUL_NTL
-    {&poly_ntl::poly_mul_large_mod<uint64>, 4, "ntl lm"},
-    {&poly_ntl::poly_mul<uint64>, 4, "ntl"},
+    {&poly_ntl::PolyMulLargeMod<uint64>, 4, "ntl lm"},
+    {&poly_ntl::PolyMul<uint64>, 4, "ntl"},
 #endif
-    //    {&poly_mul<uint64>, 4, "default"},
+    //    {&PolyMul<uint64>, 4, "default"},
 };
 
 const char* dataPolicy[3] = {
@@ -58,8 +58,8 @@ SL void test_impl(int dp, int size, int n, int64 mod) {
   srand(123456789);
   if (dp == 0) {
     for (int i = 0; i < n; ++i) {
-      x.push_back((uint64)crand63() % mod),
-          y.push_back((uint64)crand63() % mod);
+      x.push_back((uint64)CRand63() % mod),
+          y.push_back((uint64)CRand63() % mod);
     }
   } else {
     for (int i = 0; i < n; ++i) {
@@ -93,7 +93,7 @@ SL void test_impl(int dp, int size, int n, int64 mod) {
 SL void poly_mul_test() {
   // uint128 target = 2655355665167707426;
   // target = target * 100000000000000000 + 92721528518903091;
-  // cerr << mod128_64(target, 100000000003) << endl;
+  // cerr << Mod128And64(target, 100000000003) << endl;
 
   test_impl(0, 1, 1000000, 100019);
   test_impl(0, 3, 1479725, 100000000003);
@@ -140,8 +140,8 @@ SL void poly_mul_performance_test() {
         const int size = 1 << n;
         vector<uint64> x, y;
         for (int i = 0; i < size; ++i)
-          x.push_back((uint64)crand63() % mod),
-              y.push_back((uint64)crand63() % mod);
+          x.push_back((uint64)CRand63() % mod),
+              y.push_back((uint64)CRand63() % mod);
 
         auto start = clock();
         who.impl(x, y, mod);

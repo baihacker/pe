@@ -9,14 +9,12 @@
 #define HAS_POLY_MUL_LIBBF 1
 
 extern "C" {
-void* pe_bf_realloc(void*, void* ptr, size_t size) {
-  return realloc(ptr, size);
-}
+void* PeBfRealloc(void*, void* ptr, size_t size) { return realloc(ptr, size); }
 }
 
 namespace poly_libbf {
 template <typename T>
-SL void bf_ntt_init(const T* X, int64 n, bf_context_t* context, bf_t* target) {
+SL void BfNttInit(const T* X, int64 n, bf_context_t* context, bf_t* target) {
   bf_init(context, target);
 
   bf_set_ui(target, 1);
@@ -32,17 +30,17 @@ SL void bf_ntt_init(const T* X, int64 n, bf_context_t* context, bf_t* target) {
   }
 }
 
-SL void bf_ntt_deinit(bf_t* target) { bf_delete(target); }
+SL void BfNttDeinit(bf_t* target) { bf_delete(target); }
 
 template <typename T>
-SL void poly_mul_internal(const T* X, int64 n, const T* Y, int64 m, T* result,
-                          int64 mod) {
+SL void PolyMulInternal(const T* X, int64 n, const T* Y, int64 m, T* result,
+                        int64 mod) {
   bf_t x, y;
   bf_context_t bf_context;
-  bf_context_init(&bf_context, pe_bf_realloc, nullptr);
+  bf_context_init(&bf_context, PeBfRealloc, nullptr);
 
-  bf_ntt_init(X, n, &bf_context, &x);
-  bf_ntt_init(Y, m, &bf_context, &y);
+  BfNttInit(X, n, &bf_context, &x);
+  BfNttInit(Y, m, &bf_context, &y);
 
   bf_t z0, z1, toadd;
   bf_init(&bf_context, &z0);
@@ -61,7 +59,7 @@ SL void poly_mul_internal(const T* X, int64 n, const T* Y, int64 m, T* result,
   const auto* data = z1.tab;
 #if !PE_HAS_INT128
   const auto magic1 = (1LL << 32) % mod;
-  const auto magic2 = mul_mod_ex(magic1, magic1, mod);
+  const auto magic2 = MulModEx(magic1, magic1, mod);
 #endif
   for (int64 i = 0; i < size; ++i) {
     const uint64 low = data[i << 1];
@@ -74,8 +72,8 @@ SL void poly_mul_internal(const T* X, int64 n, const T* Y, int64 m, T* result,
       result[i] = mod > 0 ? t % mod : t;
 #else
       PE_ASSERT(mod > 0);
-      const auto A = mul_mod_ex(hi % mod, magic2, mod);
-      result[i] = add_mod(A, low % mod, mod);
+      const auto A = MulModEx(hi % mod, magic2, mod);
+      result[i] = AddMod(A, low % mod, mod);
 #endif
     }
   }
@@ -83,13 +81,13 @@ SL void poly_mul_internal(const T* X, int64 n, const T* Y, int64 m, T* result,
   bf_delete(&toadd);
   bf_delete(&z1);
   bf_delete(&z0);
-  bf_ntt_deinit(&y);
-  bf_ntt_deinit(&x);
+  BfNttDeinit(&y);
+  BfNttDeinit(&x);
 
   bf_context_end(&bf_context);
 }
 
-POLY_MUL_IMPL(poly_mul, poly_libbf::poly_mul_internal)
+POLY_MUL_IMPL(PolyMul, poly_libbf::PolyMulInternal)
 
 }  // namespace poly_libbf
 #else

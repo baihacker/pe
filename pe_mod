@@ -9,7 +9,7 @@
 template <typename T, typename M>
 SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value &&
              std::is_signed<T>::value && std::is_signed<M>::value))
-    RETURN_T(IntPromotionT(T, M)) regulate_mod(T a, M mod) {
+    RETURN_T(IntPromotionT(T, M)) RegulateMod(T a, M mod) {
   PE_ASSERT(mod >= 1);
   if (a >= 0) {
     return a >= mod ? a % mod : a;
@@ -23,7 +23,7 @@ SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value &&
 template <typename T, typename M>
 SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value &&
              std::is_signed<T>::value && std::is_unsigned<M>::value))
-    RETURN_T(IntPromotionT(T, M)) regulate_mod(T a, M mod) {
+    RETURN_T(IntPromotionT(T, M)) RegulateMod(T a, M mod) {
   PE_ASSERT(mod >= 1);
   if (a >= 0) {
     return a >= mod ? a % mod : a;
@@ -37,7 +37,7 @@ SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value &&
 template <typename T, typename M>
 SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value &&
              std::is_unsigned<T>::value)) RETURN_T(IntPromotionT(T, M))
-    regulate_mod(T a, M mod) {
+    RegulateMod(T a, M mod) {
   PE_ASSERT(mod >= 1);
   using ResultType = typename BiggerIntegralN<T, M>::type;
   ResultType b = a, m = mod;
@@ -46,13 +46,13 @@ SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value &&
 }
 
 template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) regulate_mod(T a, T mod) {
-  return regulate_mod<T, T>(a, mod);
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) RegulateMod(T a, T mod) {
+  return RegulateMod<T, T>(a, mod);
 }
 
 template <typename T, typename M>
 SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
-    RETURN_T(IntPromotionT(T, M)) add_mod_impl(T a, T b, M mod) {
+    RETURN_T(IntPromotionT(T, M)) AddModImpl(T a, T b, M mod) {
   using ResultType = typename BiggerIntegralN<T, M>::type;
 #if 0
   auto t0 = a;
@@ -71,33 +71,33 @@ SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
 template <typename T1, typename T2, typename M>
 SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
              is_native_integer<M>::value)) RETURN_T(IntPromotionT(T1, T2, M))
-    add_mod(T1 a, T2 b, M mod) {
+    AddMod(T1 a, T2 b, M mod) {
   using T = typename BiggerIntegralN<T1, T2>::type;
-  return add_mod_impl<T, M>(a, b, mod);
+  return AddModImpl<T, M>(a, b, mod);
 }
 
 template <typename T, typename M>
 SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
-    RETURN(IntPromotion(T, M)) sub_mod_impl(T a, T b, M mod) {
+    RETURN(IntPromotion(T, M)) SubModImpl(T a, T b, M mod) {
   return a >= b ? a - b : mod - b + a;
 }
 
 template <typename M, typename T>
-SL T sum_mod(M /*mod*/, T a) {
+SL T SumMod(M /*mod*/, T a) {
   return a;
 }
 
 template <typename M, typename TH, typename... TT>
-SL IntPromotion(TH, TT...) sum_mod(M mod, TH a, TT... b) {
-  return add_mod(a, sum_mod(mod, b...), mod);
+SL IntPromotion(TH, TT...) SumMod(M mod, TH a, TT... b) {
+  return AddMod(a, SumMod(mod, b...), mod);
 }
 
 template <typename M, typename T>
 SL REQUIRES(is_native_integer<T>::value) RETURN(T)
-    sum_mod(M mod, std::initializer_list<T> init) {
+    SumMod(M mod, std::initializer_list<T> init) {
   T ret = 0;
   for (auto& v : init) {
-    ret = add_mod(ret, v, mod);
+    ret = AddMod(ret, v, mod);
   }
   return ret;
 }
@@ -105,51 +105,51 @@ SL REQUIRES(is_native_integer<T>::value) RETURN(T)
 template <typename T1, typename T2, typename M>
 SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
              is_native_integer<M>::value)) RETURN_T(IntPromotionT(T1, T2, M))
-    sub_mod(T1 a, T2 b, M mod) {
+    SubMod(T1 a, T2 b, M mod) {
   using T = typename BiggerIntegralN<T1, T2>::type;
-  return sub_mod_impl<T, M>(a, b, mod);
+  return SubModImpl<T, M>(a, b, mod);
 }
 
 template <typename T, typename M>
 SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
-    RETURN_T(IntPromotionT(T, M)) mul_mod_impl(T a, T b, M mod) {
+    RETURN_T(IntPromotionT(T, M)) MulModImpl(T a, T b, M mod) {
   return a * b % mod;
 }
 
 template <typename T1, typename T2, typename M>
 SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
              is_native_integer<M>::value))
-    RETURN_T(IntPromotionT(T1, T2, int64, M)) mul_mod(T1 a, T2 b, M mod) {
+    RETURN_T(IntPromotionT(T1, T2, int64, M)) MulMod(T1 a, T2 b, M mod) {
   using T = typename BiggerIntegralN<T1, T2>::type;
   using atLeastInt64T = typename AtLeastInt64<T>::type;
-  return mul_mod_impl<atLeastInt64T, M>(a, b, mod);
+  return MulModImpl<atLeastInt64T, M>(a, b, mod);
 }
 
 template <typename M, typename T>
-SL T prod_mod(M /*mod*/, T a) {
+SL T ProdMod(M /*mod*/, T a) {
   return a;
 }
 
 template <typename M, typename TH, typename... TT>
-SL IntPromotion(TH, TT...) prod_mod(M mod, TH a, TT... b) {
-  return mul_mod(a, prod_mod(mod, b...), mod);
+SL IntPromotion(TH, TT...) ProdMod(M mod, TH a, TT... b) {
+  return MulMod(a, ProdMod(mod, b...), mod);
 }
 
 template <typename M, typename T>
 SL REQUIRES(is_native_integer<T>::value) RETURN(T)
-    prod_mod(M mod, std::initializer_list<T> init) {
+    ProdMod(M mod, std::initializer_list<T> init) {
   T ret = 1;
   if (mod == 1) {
     return 0;
   }
   for (auto& v : init) {
-    ret = mul_mod(ret, v, mod);
+    ret = MulMod(ret, v, mod);
   }
   return ret;
 }
 
 #if PE_HAS_INT128
-SL uint64 mod128_64(uint128 a, uint64 b) {
+SL uint64 Mod128And64(uint128 a, uint64 b) {
 #if defined(COMPILER_GNU) && PE_X86_64
   // Note: if a / b > uint64_max, an exception is thrown.
   uint64 q, r;
@@ -166,7 +166,7 @@ SL uint64 mod128_64(uint128 a, uint64 b) {
 #if defined(COMPILER_GNU) && PE_X86_64
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value && is_unsigned<T>::value))
-    RETURN(uint64) mul_mod_ex_dis(uint64 a, uint64 b, uint64 mod) {
+    RETURN(uint64) MulModExDis(uint64 a, uint64 b, uint64 mod) {
   if (mod >> 32) {
     uint64 q, r;
     __asm__(
@@ -190,7 +190,7 @@ SL REQUIRES((is_native_integer<T>::value && is_unsigned<T>::value))
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(int64)
-    mul_mod_ex_dis(int64 a, int64 b, int64 mod) {
+    MulModExDis(int64 a, int64 b, int64 mod) {
   if (static_cast<uint64>(mod) >> 31) {
     int64 q, r;
     __asm__(
@@ -213,10 +213,10 @@ SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(int64)
 }
 #endif
 
-SL void mul_mod_ex_slow_warning_once() {
+SL void MulModExSlowWarningOnce() {
   static atomic_int WARNING_ONCE_FLAG{0};
   if (WARNING_ONCE_FLAG.exchange(1) == 0) {
-    fprintf(stderr, "mul_mod_ex may be very slow.\n");
+    fprintf(stderr, "MulModEx may be very slow.\n");
   }
 }
 
@@ -232,7 +232,7 @@ typedef uint64 (*MulModFunctionPointerType)(uint64, uint64, uint64);
 MulModShellCode PROC
 	mov rax, rcx
 	mul rdx
-    div r8
+    Div r8
 	mov rax, rdx
     ret
 MulModShellCode ENDP
@@ -253,20 +253,20 @@ const static int __init_code_data_once = __MakeMulModShellCodeExecutable();
 template <typename T1, typename T2, typename M>
 SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
              is_native_integer<M>::value))
-    RETURN_T(IntPromotionT(T1, T2, int64, M)) mul_mod_ex(T1 a, T2 b, M mod) {
+    RETURN_T(IntPromotionT(T1, T2, int64, M)) MulModEx(T1 a, T2 b, M mod) {
   using T = typename BiggerIntegralN<T1, T2>::type;
   using atLeastInt64T = typename AtLeastInt64<T>::type;
   using ResultType = typename BiggerIntegralN<atLeastInt64T, T>::type;
 
 #if defined(COMPILER_GNU) && PE_X86_64
   // We have a disassembly version
-  return (ResultType)mul_mod_ex_dis<ResultType>(a, b, mod);
+  return (ResultType)MulModExDis<ResultType>(a, b, mod);
 #else
   if (mod <= PE_SOI63) {
-    return mul_mod_impl<atLeastInt64T, M>(a, b, mod);
+    return MulModImpl<atLeastInt64T, M>(a, b, mod);
   }
 #if PE_HAS_INT128
-  return (ResultType)mul_mod_impl<int128, M>(a, b, mod);
+  return (ResultType)MulModImpl<int128, M>(a, b, mod);
 #else
 
   // The openmp has issue about long double on windows.
@@ -293,7 +293,7 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
       unsigned char*)__MulModShellCode)((uint64)a, (uint64)b, (uint64)mod);
 #endif
 
-  mul_mod_ex_slow_warning_once();
+  MulModExSlowWarningOnce();
 // 3 other implementations
 #if 0
   // Mpz based implementation
@@ -377,24 +377,24 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
 }
 
 template <typename M, typename T>
-SL T prod_mod_ex(M /*mod*/, T a) {
+SL T PowerModEx(M /*mod*/, T a) {
   return a;
 }
 
 template <typename M, typename TH, typename... TT>
-SL IntPromotion(TH, TT...) prod_mod_ex(M mod, TH a, TT... b) {
-  return mul_mod_ex(a, prod_mod_ex(mod, b...), mod);
+SL IntPromotion(TH, TT...) PowerModEx(M mod, TH a, TT... b) {
+  return MulModEx(a, PowerModEx(mod, b...), mod);
 }
 
 template <typename M, typename T>
 SL REQUIRES(is_native_integer<T>::value) RETURN(T)
-    prod_mod_ex(M mod, std::initializer_list<T> init) {
+    PowerModEx(M mod, std::initializer_list<T> init) {
   T ret = 1;
   if (mod == 1) {
     return 0;
   }
   for (auto& v : init) {
-    ret = mul_mod_ex(ret, v, mod);
+    ret = MulModEx(ret, v, mod);
   }
   return ret;
 }
@@ -402,15 +402,15 @@ SL REQUIRES(is_native_integer<T>::value) RETURN(T)
 template <typename T1, typename T2, typename M>
 SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
              is_native_integer<M>::value)) RETURN_T(IntPromotionT(T1, M))
-    power_mod_impl(T1 x, T2 n, M mod) {
+    PowerModImpl(T1 x, T2 n, M mod) {
   if (mod == 1) return 0;
   using ResultType = typename BiggerIntegralN<T1, M>::type;
 
   ResultType ret = 1;
-  auto y = regulate_mod(x, mod);
+  auto y = RegulateMod(x, mod);
   for (; n; n >>= 1) {
-    if (n & 1) ret = mul_mod(ret, y, mod);
-    y = mul_mod(y, y, mod);
+    if (n & 1) ret = MulMod(ret, y, mod);
+    y = MulMod(y, y, mod);
   }
   return ret;
 }
@@ -418,23 +418,23 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
 template <typename T1, typename T2, typename M>
 SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
              is_native_integer<M>::value)) RETURN_T(IntPromotionT(T1, int64, M))
-    power_mod(T1 x, T2 n, M mod) {
+    PowerMod(T1 x, T2 n, M mod) {
   using atLeastInt64T1 = typename AtLeastInt64<T1>::type;
-  return power_mod_impl<atLeastInt64T1, T2, M>(x, n, mod);
+  return PowerModImpl<atLeastInt64T1, T2, M>(x, n, mod);
 }
 
 template <typename T1, typename T2, typename M>
 SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
              is_native_integer<M>::value)) RETURN_T(IntPromotionT(T1, M))
-    power_mod_ex_impl(T1 x, T2 n, M mod) {
+    PowerModExImpl(T1 x, T2 n, M mod) {
   if (mod == 1) return 0;
   using ResultType = typename BiggerIntegralN<T1, M>::type;
 
   ResultType ret = 1;
-  auto y = regulate_mod(x, mod);
+  auto y = RegulateMod(x, mod);
   for (; n; n >>= 1) {
-    if (n & 1) ret = mul_mod_ex(ret, y, mod);
-    y = mul_mod_ex(y, y, mod);
+    if (n & 1) ret = MulModEx(ret, y, mod);
+    y = MulModEx(y, y, mod);
   }
   return ret;
 }
@@ -442,15 +442,21 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
 template <typename T1, typename T2, typename M>
 SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
              is_native_integer<M>::value)) RETURN_T(IntPromotionT(T1, int64, M))
-    power_mod_ex(T1 x, T2 n, M mod) {
+    PowerModEx(T1 x, T2 n, M mod) {
   using atLeastInt64T1 = typename AtLeastInt64<T1>::type;
-  return power_mod_ex_impl<atLeastInt64T1, T2, M>(x, n, mod);
+  return PowerModExImpl<atLeastInt64T1, T2, M>(x, n, mod);
 }
+
+template <typename T>
+SL T Gcd(T a);
+
+template <typename TH, typename... TT>
+SL IntPromotion(TH, TT...) Gcd(TH a, TT... b);
 
 template <typename T, typename M>
 SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
     RETURN_T(IntPromotionT(T, M))
-        frac_mod_impl(const std::vector<T>& a, std::vector<T> b, M mod) {
+        FracModImpl(const std::vector<T>& a, std::vector<T> b, M mod) {
   using ResultType = typename BiggerIntegralN<T, M>::type;
   ResultType ret = 1;
   const int size = b.size();
@@ -459,7 +465,7 @@ SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
     for (int i = 0; iter > 1 && remain > 0 && i < size; ++i) {
       if (b[i] == 1) continue;
       while (b[i] != 1 && iter != 1) {
-        ResultType d = gcd(iter, b[i]);
+        ResultType d = Gcd(iter, b[i]);
         if (d == 1) {
           break;
         }
@@ -470,7 +476,7 @@ SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
         --remain;
       }
     }
-    ret = mul_mod(ret, iter % mod, mod);
+    ret = MulMod(ret, iter % mod, mod);
   }
   return ret;
 }
@@ -479,10 +485,10 @@ template <typename T1, typename T2 = T1, typename M>
 SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
              is_native_integer<M>::value))
     RETURN_T(IntPromotionT(T1, T2, int64, M))
-        frac_mod(const std::vector<T1>& a, const std::vector<T2>& b, M mod) {
+        FracMod(const std::vector<T1>& a, const std::vector<T2>& b, M mod) {
   using T = typename BiggerIntegralN<T1, T2>::type;
   using atLeastInt64T = typename AtLeastInt64<T>::type;
-  return frac_mod_impl<atLeastInt64T, M>(
+  return FracModImpl<atLeastInt64T, M>(
       vector<atLeastInt64T>(a.begin(), a.end()),
       vector<atLeastInt64T>(b.begin(), b.end()), mod);
 }
@@ -496,15 +502,15 @@ int64 DEFAULT_MOD = 1;
 // The modulo is a global variable
 struct DefaultMod {
   using mod_type = int64;
-  static int64 mod() { return ::DEFAULT_MOD; }
-  static void set(int64 v) { ::DEFAULT_MOD = v; }
+  static int64 Mod() { return ::DEFAULT_MOD; }
+  static void Set(int64 v) { ::DEFAULT_MOD = v; }
 };
 
 // The modulo is a compiling time constant
 template <typename M, M mod_value = 0>
 struct CCMod {
   using mod_type = M;
-  constexpr static int64 mod() { return mod_value; }
+  constexpr static int64 Mod() { return mod_value; }
 };
 
 template <int64 mod_value>
@@ -514,8 +520,8 @@ using CCMod64 = CCMod<int64, mod_value>;
 template <typename T>
 struct TLMod {
   using mod_type = T;
-  static T mod() { return mod_value; }
-  static void set(T v) { mod_value = v; }
+  static T Mod() { return mod_value; }
+  static void Set(T v) { mod_value = v; }
   static thread_local T mod_value;
 };
 
@@ -529,7 +535,7 @@ template <typename T>
 struct MemMod {
   using mod_type = T;
   MemMod(T mod_value = ::DEFAULT_MOD) : mod_value(mod_value) {}
-  T mod() const { return mod_value; }
+  T Mod() const { return mod_value; }
   T mod_value;
 };
 
@@ -540,21 +546,21 @@ template <typename S, typename B>
 struct APSB {
   using ints = S;
   using intb = B;
-  static ints add(ints a, ints b, ints mod) {
+  static ints Add(ints a, ints b, ints mod) {
     intb c = (intb)a + b;
     if (c >= mod) c -= mod;
     return static_cast<ints>(c);
   }
-  static ints sub(ints a, ints b, ints mod) {
+  static ints Sub(ints a, ints b, ints mod) {
     intb c = (intb)a - b;
     if (c < 0) c += mod;
     return static_cast<ints>(c);
   }
-  static ints mul(ints a, ints b, ints mod) {
+  static ints Mul(ints a, ints b, ints mod) {
     intb c = (intb)a * b % mod;
     return static_cast<ints>(c);
   }
-  static void fix_value(ints& v, ints mod) {
+  static void FixValue(ints& v, ints mod) {
     // Do nothing
   }
 };
@@ -563,21 +569,21 @@ template <typename S>
 struct APSB<S, S> {
   using ints = S;
   using intb = S;
-  static ints add(ints a, ints b, ints mod) {
+  static ints Add(ints a, ints b, ints mod) {
     a += b;
     if (a >= mod) a -= mod;
     return a;
   }
-  static ints sub(ints a, ints b, ints mod) {
+  static ints Sub(ints a, ints b, ints mod) {
     a -= b;
     if (a < 0) a += mod;
     return a;
   }
-  static ints mul(ints a, ints b, ints mod) {
+  static ints Mul(ints a, ints b, ints mod) {
     a = a * b % mod;
     return a;
   }
-  static void fix_value(ints& v, ints mod) {
+  static void FixValue(ints& v, ints mod) {
     // Do nothing
   }
 };
@@ -586,18 +592,18 @@ template <typename S>
 struct APSB<S, fake_int128> {
   using ints = S;
   using intb = fake_int128;
-  static ints add(ints a, ints b, ints mod) {
+  static ints Add(ints a, ints b, ints mod) {
     a += b;
     if (a >= mod) a -= mod;
     return a;
   }
-  static ints sub(ints a, ints b, ints mod) {
+  static ints Sub(ints a, ints b, ints mod) {
     a -= b;
     if (a < 0) a += mod;
     return a;
   }
-  static ints mul(ints a, ints b, ints mod) { return mul_mod_ex(a, b, mod); }
-  static void fix_value(ints& v, ints mod) {
+  static ints Mul(ints a, ints b, ints mod) { return MulModEx(a, b, mod); }
+  static void FixValue(ints& v, ints mod) {
     // Do nothing
   }
 };
@@ -606,10 +612,10 @@ template <typename S>
 struct APSBL {
   using ints = S;
   using intb = fake_int128;
-  static ints add(ints a, ints b, ints /*mod*/) { return a + b; }
-  static ints sub(ints a, ints b, ints /*mod*/) { return a - b; }
-  static ints mul(ints a, ints b, ints /*mod*/) { return a * b; }
-  static void fix_value(ints& v, ints mod) { v = regulate_mod(v, mod); }
+  static ints Add(ints a, ints b, ints /*mod*/) { return a + b; }
+  static ints Sub(ints a, ints b, ints /*mod*/) { return a - b; }
+  static ints Mul(ints a, ints b, ints /*mod*/) { return a * b; }
+  static void FixValue(ints& v, ints mod) { v = RegulateMod(v, mod); }
 };
 
 // Forward declarations related to NModNumber;
@@ -625,7 +631,7 @@ struct NModNumber {
   using ints = typename AP::ints;
 
   NModNumber(ints value = 0) {
-    const ints M = MC::mod();
+    const ints M = MC::Mod();
     if (value >= 0) {
       value_ = value >= M ? value % M : value;
     } else {
@@ -635,19 +641,19 @@ struct NModNumber {
 
   template <typename T,
             typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
-  NModNumber(T value) : NModNumber(static_cast<ints>(value % MC::mod())) {}
+  NModNumber(T value) : NModNumber(static_cast<ints>(value % MC::Mod())) {}
 
   NModNumber(ints value, init_direct_t) : value_(value) {}
 
-  static constexpr ints mod() { return MC::mod(); }
+  static constexpr ints Mod() { return MC::Mod(); }
 
   NModNumber& operator+=(const NModNumber& y) {
-    value_ = AP::add(value_, y.value_, mod());
+    value_ = AP::Add(value_, y.value_, Mod());
     return *this;
   }
 
   NModNumber& operator++() {
-    value_ = AP::add(value_, 1, mod());
+    value_ = AP::Add(value_, 1, Mod());
     return *this;
   }
 
@@ -658,12 +664,12 @@ struct NModNumber {
   }
 
   NModNumber& operator-=(const NModNumber& y) {
-    value_ = AP::sub(value_, y.value_, mod());
+    value_ = AP::Sub(value_, y.value_, Mod());
     return *this;
   }
 
   NModNumber& operator--() {
-    value_ = AP::sub(value_, 1, mod());
+    value_ = AP::Sub(value_, 1, Mod());
     return *this;
   }
 
@@ -676,29 +682,29 @@ struct NModNumber {
   NModNumber operator+() const { return NModNumber(value_, __init_direct); }
 
   NModNumber operator-() const {
-    return NModNumber(AP::sub(0, value_, mod()), __init_direct);
+    return NModNumber(AP::Sub(0, value_, Mod()), __init_direct);
   }
 
   NModNumber& operator*=(const NModNumber& y) {
-    value_ = AP::mul(value_, y.value_, mod());
+    value_ = AP::Mul(value_, y.value_, Mod());
     return *this;
   }
 
-  ints value() const { return value_; }
+  ints Value() const { return value_; }
 
-  const NModNumber& fix_value() const {
-    AP::fix_value(value_, mod());
+  const NModNumber& FixValue() const {
+    AP::FixValue(value_, Mod());
     return *this;
   }
 
-  NModNumber& fix_value() {
-    AP::fix_value(value_, mod());
+  NModNumber& FixValue() {
+    AP::FixValue(value_, Mod());
     return *this;
   }
 
  public:
   friend NModNumber operator+(const NModNumber& x, const NModNumber& y) {
-    return NModNumber(AP::add(x.value_, y.value_, MC::mod()), __init_direct);
+    return NModNumber(AP::Add(x.value_, y.value_, MC::Mod()), __init_direct);
   }
 
   template <typename T>
@@ -714,11 +720,11 @@ struct NModNumber {
   }
 
   friend NModNumber operator-(const NModNumber& x, const NModNumber& y) {
-    return NModNumber(AP::sub(x.value_, y.value_, mod()), __init_direct);
+    return NModNumber(AP::Sub(x.value_, y.value_, Mod()), __init_direct);
   }
 
   friend NModNumber operator*(const NModNumber& x, const NModNumber& y) {
-    return NModNumber(AP::mul(x.value_, y.value_, mod()), __init_direct);
+    return NModNumber(AP::Mul(x.value_, y.value_, Mod()), __init_direct);
   }
 
   friend ostream& operator<<(ostream& o, const NModNumber& m) {
@@ -731,32 +737,32 @@ struct NModNumber {
 
 template <typename MC, typename AP>
 int operator==(const NModNumber<MC, AP>& x, const NModNumber<MC, AP>& y) {
-  return x.fix_value().value() == y.fix_value().value();
+  return x.FixValue().Value() == y.FixValue().Value();
 }
 
 template <typename MC, typename AP>
 int operator!=(const NModNumber<MC, AP>& x, const NModNumber<MC, AP>& y) {
-  return x.fix_value().value() != y.fix_value().value();
+  return x.FixValue().Value() != y.FixValue().Value();
 }
 
 template <typename MC, typename AP>
 int operator<(const NModNumber<MC, AP>& x, const NModNumber<MC, AP>& y) {
-  return x.fix_value().value() < y.fix_value().value();
+  return x.FixValue().Value() < y.FixValue().Value();
 }
 
 template <typename MC, typename AP>
 int operator<=(const NModNumber<MC, AP>& x, const NModNumber<MC, AP>& y) {
-  return x.fix_value().value() <= y.fix_value().value();
+  return x.FixValue().Value() <= y.FixValue().Value();
 }
 
 template <typename MC, typename AP>
 int operator>(const NModNumber<MC, AP>& x, const NModNumber<MC, AP>& y) {
-  return x.fix_value().value() > y.fix_value().value();
+  return x.FixValue().Value() > y.FixValue().Value();
 }
 
 template <typename MC, typename AP>
 int operator>=(const NModNumber<MC, AP>& x, const NModNumber<MC, AP>& y) {
-  return x.fix_value().value() >= y.fix_value().value();
+  return x.FixValue().Value() >= y.FixValue().Value();
 }
 
 template <typename M, M mod_value, typename AP = APSB<M, M>>
@@ -790,7 +796,7 @@ struct NModNumberM {
   using ints = typename AP::ints;
 
   NModNumberM(ints value = 0, const MC& mc = MC()) : mc(mc) {
-    const ints M = mod();
+    const ints M = Mod();
     if (value >= 0) {
       value_ = value >= M ? value % M : value;
     } else {
@@ -801,20 +807,20 @@ struct NModNumberM {
   template <typename T,
             typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
   NModNumberM(T value, const MC& mc = MC())
-      : NModNumberM(static_cast<ints>(value % mc.mod()), mc) {}
+      : NModNumberM(static_cast<ints>(value % mc.Mod()), mc) {}
 
   NModNumberM(ints value, const MC& mc, init_direct_t)
       : value_(value), mc(mc) {}
 
-  ints mod() const { return mc.mod(); }
+  ints Mod() const { return mc.Mod(); }
 
   NModNumberM& operator+=(const NModNumberM& y) {
-    value_ = AP::add(value_, y.value_, mod());
+    value_ = AP::Add(value_, y.value_, Mod());
     return *this;
   }
 
   NModNumberM& operator++() {
-    value_ = AP::add(value_, 1, mod());
+    value_ = AP::Add(value_, 1, Mod());
     return *this;
   }
 
@@ -825,12 +831,12 @@ struct NModNumberM {
   }
 
   NModNumberM& operator-=(const NModNumberM& y) {
-    value_ = AP::sub(value_, y.value_, mod());
+    value_ = AP::Sub(value_, y.value_, Mod());
     return *this;
   }
 
   NModNumberM& operator--() {
-    value_ = AP::sub(value_, 1, mod());
+    value_ = AP::Sub(value_, 1, Mod());
     return *this;
   }
 
@@ -845,29 +851,29 @@ struct NModNumberM {
   }
 
   NModNumberM operator-() const {
-    return NModNumberM(AP::sub(0, value_, mod()), mc, __init_direct);
+    return NModNumberM(AP::Sub(0, value_, Mod()), mc, __init_direct);
   }
 
   NModNumberM& operator*=(const NModNumberM& y) {
-    value_ = AP::mul(value_, y.value_, mod());
+    value_ = AP::Mul(value_, y.value_, Mod());
     return *this;
   }
 
-  ints value() const { return value_; }
+  ints Value() const { return value_; }
 
-  const NModNumberM& fix_value() const {
-    AP::fix_value(value_, mod());
+  const NModNumberM& FixValue() const {
+    AP::FixValue(value_, Mod());
     return *this;
   }
 
-  NModNumberM& fix_value() {
-    AP::fix_value(value_, mod());
+  NModNumberM& FixValue() {
+    AP::FixValue(value_, Mod());
     return *this;
   }
 
  public:
   friend NModNumberM operator+(const NModNumberM& x, const NModNumberM& y) {
-    return NModNumberM(AP::add(x.value_, y.value_, x.mod()), x.mc,
+    return NModNumberM(AP::Add(x.value_, y.value_, x.Mod()), x.mc,
                        __init_direct);
   }
 
@@ -884,7 +890,7 @@ struct NModNumberM {
   }
 
   friend NModNumberM operator-(const NModNumberM& x, const NModNumberM& y) {
-    return NModNumberM(AP::sub(x.value_, y.value_, x.mod()), x.mc,
+    return NModNumberM(AP::Sub(x.value_, y.value_, x.Mod()), x.mc,
                        __init_direct);
   }
 
@@ -901,7 +907,7 @@ struct NModNumberM {
   }
 
   friend NModNumberM operator*(const NModNumberM& x, const NModNumberM& y) {
-    return NModNumberM(AP::mul(x.value_, y.value_, x.mod()), x.mc,
+    return NModNumberM(AP::Mul(x.value_, y.value_, x.Mod()), x.mc,
                        __init_direct);
   }
 
@@ -928,32 +934,32 @@ struct NModNumberM {
 
 template <typename MC, typename AP>
 int operator==(const NModNumberM<MC, AP>& x, const NModNumberM<MC, AP>& y) {
-  return x.fix_value().value() == y.fix_value().value();
+  return x.FixValue().Value() == y.FixValue().Value();
 }
 
 template <typename MC, typename AP>
 int operator!=(const NModNumberM<MC, AP>& x, const NModNumberM<MC, AP>& y) {
-  return x.fix_value().value() != y.fix_value().value();
+  return x.FixValue().Value() != y.FixValue().Value();
 }
 
 template <typename MC, typename AP>
 int operator<(const NModNumberM<MC, AP>& x, const NModNumberM<MC, AP>& y) {
-  return x.fix_value().value() < y.fix_value().value();
+  return x.FixValue().Value() < y.FixValue().Value();
 }
 
 template <typename MC, typename AP>
 int operator<=(const NModNumberM<MC, AP>& x, const NModNumberM<MC, AP>& y) {
-  return x.fix_value().value() <= y.fix_value().value();
+  return x.FixValue().Value() <= y.FixValue().Value();
 }
 
 template <typename MC, typename AP>
 int operator>(const NModNumberM<MC, AP>& x, const NModNumberM<MC, AP>& y) {
-  return x.fix_value().value() > y.fix_value().value();
+  return x.FixValue().Value() > y.FixValue().Value();
 }
 
 template <typename MC, typename AP>
 int operator>=(const NModNumberM<MC, AP>& x, const NModNumberM<MC, AP>& y) {
-  return x.fix_value().value() >= y.fix_value().value();
+  return x.FixValue().Value() >= y.FixValue().Value();
 }
 
 template <typename M, M mod_value, typename AP = APSB<M, M>>
@@ -989,9 +995,9 @@ struct IsNModNumber {
   template <typename MC, typename AP>
   static constexpr NModNumberIndicator<1> NModNumberMatch(NModNumberM<MC, AP>);
 
-  static X makeX();
+  static X MakeX();
 
-  using result_type = decltype(NModNumberMatch(makeX()));
+  using result_type = decltype(NModNumberMatch(MakeX()));
 
   enum { result = result_type::value };
 };

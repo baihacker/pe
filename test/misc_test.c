@@ -3,16 +3,16 @@
 namespace misc_test {
 SL void misc_test() {
   GaussianEliminationSolver solver;
-  solver.init(10, 10);
+  solver.Init(10, 10);
   for (int i = 0; i < 10; ++i) {
-    solver.at(i, 10) = 10 - i;
+    solver.At(i, 10) = 10 - i;
     for (int j = i; j < 10; ++j) {
-      solver.at(i, j) = 1;
+      solver.At(i, j) = 1;
     }
   }
-  auto v = solver.solve();
+  auto v = solver.Solve();
   for (int i = 0; i < 10; ++i) {
-    assert(fabs(v[i] - 1) < 1e-10);
+    assert(FAbs(v[i] - 1) < 1e-10);
   }
 
   auto vtos = [=](const vector<int64>& vec) {
@@ -38,10 +38,10 @@ PE_REGISTER_TEST(&misc_test, "misc_test", SMALL);
 
 SL void count_pt_in_circle_test() {
   for (int64 n = 0; n <= 100; ++n) {
-    int64 u = count_pt_in_circle(n);
-    int64 v = count_pt_in_circle_bf(n);
+    int64 u = CountPtInCircle(n);
+    int64 v = CountPtInCircleBf(n);
     int64 ans = 0;
-    const int t = (int)sqrti(n);
+    const int t = (int)SqrtI(n);
     for (int x = -t; x <= t; ++x)
       for (int y = -t; y <= t; ++y) ans += sq(x) + sq(y) <= n;
     assert(u == ans);
@@ -49,8 +49,8 @@ SL void count_pt_in_circle_test() {
   }
 #if 1
   for (int64 i = 1; i <= 10000; ++i) {
-    int64 u = count_pt_in_circle_q1(i);
-    int64 v = count_pt_in_circle_q1_bf(i);
+    int64 u = CountPtInCircleQ1(i);
+    int64 v = CountPtInCircleQ1Bf(i);
     if (u != v) {
       cerr << i << " " << u << " " << v << endl;
     }
@@ -61,8 +61,8 @@ SL void count_pt_in_circle_test() {
   for (int64 i = 10000; i <= 100000000000000000; i = i * 10) {
     for (int64 j = -3; j <= 3; ++j) {
       int64 target = i + j;
-      int64 u = count_pt_in_circle_q1(target);
-      int64 v = count_pt_in_circle_q1_bf(target);
+      int64 u = CountPtInCircleQ1(target);
+      int64 v = CountPtInCircleQ1Bf(target);
       if (u != v) {
         cerr << target << " " << u << " " << v << endl;
       }
@@ -77,8 +77,8 @@ PE_REGISTER_TEST(&count_pt_in_circle_test, "count_pt_in_circle_test", SUPER);
 SL void sum_sigma0_test() {
 #if 1
   for (int64 i = 1; i <= 10000; ++i) {
-    int64 u = sum_sigma0(i);
-    int64 v = sum_sigma0_bf(i);
+    int64 u = SumSigma0(i);
+    int64 v = SumSigma0Bf(i);
     if (u != v) {
       cerr << i << " " << u << " " << v << endl;
     }
@@ -90,8 +90,8 @@ SL void sum_sigma0_test() {
   for (int64 i = 10000; i <= 100000000000000000; i = i * 10) {
     for (int64 j = -3; j <= 3; ++j) {
       int64 target = i + j;
-      int64 u = sum_sigma0(target);
-      int64 v = sum_sigma0_bf(target);
+      int64 u = SumSigma0(target);
+      int64 v = SumSigma0Bf(target);
       if (u != v) {
         cerr << target << " " << u << " " << v << endl;
       }

@@ -5,33 +5,33 @@ void test() {
   for (int i = 1; i <= 20; ++i) N = N * i;
 
   bi v = 0;
-  for (bi n = N; !n.isZero(); v = v + n, n = n / 2)
+  for (bi n = N; !n.IsZero(); v = v + n, n = n / 2)
     ;
   dbg(v);
-  bi mod = power(2_bi, 48);
+  bi mod = Power(2_bi, 48);
   bi ans = 1;
   FactPPowerModer<bi> moder(2, 48);
   int i = 0;
   while (N > 1) {
-    ans = ans * moder.cal(N) % mod;
+    ans = ans * moder.Cal(N) % mod;
     N = N / 2;
   }
   v = v % 4;
   dbg(ans);
-  ans = ans * power(2_bi, v[0]) % mod;
+  ans = ans * Power(2_bi, v[0]) % mod;
 
   cout << ans << endl;
-  cout << ans.toInt<int64>() << endl;
-  printf("%llx\n", (unsigned long long)ans.toInt<unsigned long long>());
+  cout << ans.ToInt<int64>() << endl;
+  printf("%llx\n", (unsigned long long)ans.ToInt<unsigned long long>());
 }
 
 void facTest() {
   TimeRecorder tr;
   BigInteger result = 1;
   for (int i = 1; i <= 100000; ++i) result = result * i;
-  cout << tr.elapsed().format() << endl;
-  cout << result.toString().size() << endl;
-  cout << result.size() << endl;
+  cout << tr.Elapsed().Format() << endl;
+  cout << result.ToString().size() << endl;
+  cout << result.GetSize() << endl;
 }
 
 int main() {
@@ -77,7 +77,7 @@ int main() {
   BigInteger a = 123456789;
   BigInteger b = a * a;
 
-  for (auto& iter : a.toBinVector<int>()) cerr << (int)iter;
+  for (auto& iter : a.ToBinVector<int>()) cerr << (int)iter;
   cerr << endl;
   cout << a << endl;
   cout << b << endl;
@@ -89,13 +89,13 @@ int main() {
   TimeRecorder tr;
   BigInteger result = 1;
   for (int i = 1; i <= 100; ++i) result = result * i;
-  cout << tr.elapsed().format() << endl;
-  cout << result.toString().size() << endl;
-  cout << result.size() << endl;
+  cout << tr.Elapsed().Format() << endl;
+  cout << result.ToString().size() << endl;
+  cout << result.GetSize() << endl;
   // cout << - "123"_bi << endl;
 
   // cout << BigInteger((int128)1000000000000 * (int128)999999999) << endl;
-  tie(a, b) = div("1234"_bi, "5"_bi);
+  tie(a, b) = Div("1234"_bi, "5"_bi);
   cout << a << " " << b << endl;
 
   cout << a / 123 << endl;
@@ -103,10 +103,10 @@ int main() {
   cout << a / 2 << endl;
   cout << a / 5 << endl;
 
-  tie(a, b) = div("12340000000000000000000"_bi, 5);
+  tie(a, b) = Div("12340000000000000000000"_bi, 5);
   cout << a << " " << b << endl;
   cout << "12340000000000000000000"_bi % 5 << endl;
-  //  cout << div("1234"_bi, "5"_bi) << endl;
+  //  cout << Div("1234"_bi, "5"_bi) << endl;
 
   facTest();
 

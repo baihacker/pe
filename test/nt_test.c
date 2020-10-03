@@ -2,66 +2,66 @@
 
 namespace nt_test {
 SL void parity_test() {
-  assert(is_even(0) == 1);
-  assert(is_even(1) == 0);
-  assert(is_even(2) == 1);
-  assert(is_even(3) == 0);
+  assert(IsEven(0) == 1);
+  assert(IsEven(1) == 0);
+  assert(IsEven(2) == 1);
+  assert(IsEven(3) == 0);
 
-  assert(is_odd(0) == 0);
-  assert(is_odd(1) == 1);
-  assert(is_odd(2) == 0);
-  assert(is_odd(3) == 1);
+  assert(IsOdd(0) == 0);
+  assert(IsOdd(1) == 1);
+  assert(IsOdd(2) == 0);
+  assert(IsOdd(3) == 1);
 
-  assert(same_parity(0, 0) == 1);
-  assert(same_parity(0, 1) == 0);
-  assert(same_parity(0, 2) == 1);
-  assert(same_parity(0, 3) == 0);
+  assert(SameParity(0, 0) == 1);
+  assert(SameParity(0, 1) == 0);
+  assert(SameParity(0, 2) == 1);
+  assert(SameParity(0, 3) == 0);
 
-  assert(same_parity(1, 0) == 0);
-  assert(same_parity(1, 1) == 1);
-  assert(same_parity(1, 2) == 0);
-  assert(same_parity(1, 3) == 1);
+  assert(SameParity(1, 0) == 0);
+  assert(SameParity(1, 1) == 1);
+  assert(SameParity(1, 2) == 0);
+  assert(SameParity(1, 3) == 1);
 
-  assert(same_parity(2, 0) == 1);
-  assert(same_parity(2, 1) == 0);
-  assert(same_parity(2, 2) == 1);
-  assert(same_parity(2, 3) == 0);
+  assert(SameParity(2, 0) == 1);
+  assert(SameParity(2, 1) == 0);
+  assert(SameParity(2, 2) == 1);
+  assert(SameParity(2, 3) == 0);
 
-  assert(same_parity(3, 0) == 0);
-  assert(same_parity(3, 1) == 1);
-  assert(same_parity(3, 2) == 0);
-  assert(same_parity(3, 3) == 1);
+  assert(SameParity(3, 0) == 0);
+  assert(SameParity(3, 1) == 1);
+  assert(SameParity(3, 2) == 0);
+  assert(SameParity(3, 3) == 1);
 
-  for (int i = -100; i <= 100; ++i) assert(is_even(i) + is_odd(i) == 1);
+  for (int i = -100; i <= 100; ++i) assert(IsEven(i) + IsOdd(i) == 1);
 }
 PE_REGISTER_TEST(&parity_test, "parity_test", SMALL);
 
 SL void gcd_test() {
-  assert(gcd({2, 4, 6}) == 2);
-  assert(gcd(2, 4, 6) == 2);
-  assert(gcd(2L, 4LL, 6ULL) == 2);
+  assert(Gcd({2, 4, 6}) == 2);
+  assert(Gcd(2, 4, 6) == 2);
+  assert(Gcd(2L, 4LL, 6ULL) == 2);
 }
 PE_REGISTER_TEST(&gcd_test, "gcd_test", SMALL);
 
 SL void get_factors_test() {
-  auto result = get_factors(1);
+  auto result = GetFactors(1);
   assert(result == vector<int64>{1});
 
-  result = get_factors(2);
+  result = GetFactors(2);
   assert(result == vector<int64>({1, 2}));
 
-  result = get_factors(3);
+  result = GetFactors(3);
   assert(result == vector<int64>({1, 3}));
 
-  result = get_factors(4);
+  result = GetFactors(4);
   assert(result == vector<int64>({1, 2, 4}));
 
-  result = get_factors(12);
+  result = GetFactors(12);
   sort(all(result));
   assert(result == vector<int64>({1, 2, 3, 4, 6, 12}));
 
   for (int64 limit = -1; limit <= 20; ++limit) {
-    auto result = get_factors(12, limit);
+    auto result = GetFactors(12, limit);
     sort(all(result));
     vector<int64> expected;
     for (auto iter : {1, 2, 3, 4, 6, 12})
@@ -79,13 +79,13 @@ SL void is_square_free_test() {
   int64 ans1 = 0;
   {
     TimeRecorder tr;
-    for (int i = 1; i <= n; ++i) ans1 += is_square_free(i);
+    for (int i = 1; i <= n; ++i) ans1 += IsSquareFree(i);
     // cerr << tr.elapsed().format() << endl;
   }
   int64 ans2 = 0;
   {
     TimeRecorder tr;
-    for (int i = 1; i <= n; ++i) ans2 += is_square_free_normal(i);
+    for (int i = 1; i <= n; ++i) ans2 += IsSquareFreeNormal(i);
     // cerr << tr.elapsed().format() << endl;
   }
   assert(ans1 == ans2);
@@ -98,7 +98,7 @@ SL void square_root_mod_test() {
     const int64 p = plist[i];
     int cnt = 0;
     for (int n = 0; n < p; ++n) {
-      vector<int64> ans = square_root_mod(n, p);
+      vector<int64> ans = SquareRootMod(n, p);
       for (auto x : ans) {
         assert(x * x % p == n);
       }
@@ -116,7 +116,7 @@ PE_REGISTER_TEST(&square_root_mod_test, "square_root_mod_test", SMALL);
 #if PE_HAS_INT128
 SL void test_n_two_squares(int64 n, int64 expected) {
   int64 real = 0;
-  auto f = two_squares(n);
+  auto f = TwoSquares(n);
   for (auto& iter : f) {
     if (iter.first == 0) {
       real += 4;
@@ -131,10 +131,10 @@ SL void test_n_two_squares(int64 n, int64 expected) {
 SL void two_squares_test() {
   auto num_solutions = [=](int64 n) -> int64 {
     int64 ret = 1;
-    for (auto& iter : factorize(n)) {
+    for (auto& iter : Factorize(n)) {
       int mod4 = iter.first & 3;
       if (mod4 == 3) {
-        if (is_odd(iter.second)) return 0;
+        if (IsOdd(iter.second)) return 0;
       } else if (mod4 == 1) {
         ret *= iter.second + 1;
       }
@@ -158,18 +158,18 @@ PE_REGISTER_TEST(&two_squares_test, "two_squares_test", SMALL);
 SL void basek_converstion_test() {
   for (int64 n = 0; n <= 100; ++n)
     for (int k = -200; k <= 200; ++k)
-      if (abs(k) >= 2) {
-        assert(from_basek<int64>(to_basek(n, k), k) == n);
+      if (Abs(k) >= 2) {
+        assert(FromBaseK<int64>(ToBaseK(n, k), k) == n);
       }
   for (int64 n = 0; n <= 10000; ++n)
     for (int k = -16; k <= 16; ++k)
-      if (abs(k) >= 2) {
-        assert(from_basek<int64>(to_basek(n, k), k) == n);
+      if (Abs(k) >= 2) {
+        assert(FromBaseK<int64>(ToBaseK(n, k), k) == n);
       }
   for (int64 n = -100; n <= 100; ++n)
     for (int k = -200; k <= -2; ++k)
-      if (abs(k) >= 2) {
-        assert(from_basek<int64>(to_basek(n, k), k) == n);
+      if (Abs(k) >= 2) {
+        assert(FromBaseK<int64>(ToBaseK(n, k), k) == n);
       }
 }
 PE_REGISTER_TEST(&basek_converstion_test, "basek_converstion_test", SMALL);

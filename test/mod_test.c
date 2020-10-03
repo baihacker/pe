@@ -67,7 +67,7 @@ SL void mod_test() {
       int128 y = m;                        \
       x %= y;                              \
       if (x < 0) x += y;                   \
-      auto ans = regulate_mod(v, m);       \
+      auto ans = RegulateMod(v, m);        \
       if (ans != x) {                      \
         dbg(v);                            \
         dbg(m);                            \
@@ -102,14 +102,14 @@ PE_REGISTER_TEST(&mod_test, "mod_test", SMALL);
 SL void frac_mod_test() {
   const int mod = 1000000007;
   for (int64 n = 1; n <= 10; ++n) {
-    auto v = frac_mod<int64>({n, n + 1, 2 * n + 1}, {2, 3}, mod);
+    auto v = FracMod<int64>({n, n + 1, 2 * n + 1}, {2, 3}, mod);
     auto expected = (int128)n * (n + 1) * (2 * n + 1) / 6 % mod;
     assert(v == expected);
   }
 
   for (int i = 1; i <= 10; ++i) {
     const int64 n = 100000000000 + i;
-    auto v = frac_mod<int64>({n, n + 1, 2 * n + 1}, {2, 3}, mod);
+    auto v = FracMod<int64>({n, n + 1, 2 * n + 1}, {2, 3}, mod);
     auto expected = (int128)n * (n + 1) * (2 * n + 1) / 6 % mod;
     assert(v == expected);
   }

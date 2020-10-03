@@ -18,46 +18,46 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(Mpz) MPZ(const T& v) {
 
 SL Mpz MPZ(const string& s) { return Mpz(s.c_str(), 10); }
 
-SL Mpz MPZ(int64 v) { return v == 0 ? 0 : Mpz(to_string(v).c_str(), 10); }
+SL Mpz MPZ(int64 v) { return v == 0 ? 0 : Mpz(ToString(v).c_str(), 10); }
 
-SL Mpz MPZ(uint64 v) { return v == 0 ? 0 : Mpz(to_string(v).c_str(), 10); }
+SL Mpz MPZ(uint64 v) { return v == 0 ? 0 : Mpz(ToString(v).c_str(), 10); }
 
 #if PE_HAS_INT128
-SL Mpz MPZ(int128 v) { return v == 0 ? 0 : Mpz(to_string(v).c_str(), 10); }
+SL Mpz MPZ(int128 v) { return v == 0 ? 0 : Mpz(ToString(v).c_str(), 10); }
 
-SL Mpz MPZ(uint128 v) { return v == 0 ? 0 : Mpz(to_string(v).c_str(), 10); }
+SL Mpz MPZ(uint128 v) { return v == 0 ? 0 : Mpz(ToString(v).c_str(), 10); }
 #endif
 
 template <>
 struct Gbi<Mpz> {
   template <typename T,
             typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
-  static Mpz of(T value) {
+  static Mpz Of(T value) {
     return MPZ(value);
   }
 
-  static Mpz of(const string& s) { return MPZ(s); }
+  static Mpz Of(const string& s) { return MPZ(s); }
 };
 
-SL string to_string(const Mpz& x) {
+SL string ToString(const Mpz& x) {
   stringstream ss;
   ss << x;
   return ss.str();
 }
-SL int is_zero(const Mpz& x) { return mpz_sgn(x.get_mpz_t()) == 0; }
-SL int int_sign(const Mpz& x) { return mpz_sgn(x.get_mpz_t()); }
-SL int is_odd(const Mpz& x) { return mpz_odd_p(x.get_mpz_t()); }
-SL int is_even(const Mpz& x) { return mpz_even_p(x.get_mpz_t()); }
-SL unsigned int lower_bits(const Mpz& x) {
+SL int IsZero(const Mpz& x) { return mpz_sgn(x.get_mpz_t()) == 0; }
+SL int IntSign(const Mpz& x) { return mpz_sgn(x.get_mpz_t()); }
+SL int IsOdd(const Mpz& x) { return mpz_odd_p(x.get_mpz_t()); }
+SL int IsEven(const Mpz& x) { return mpz_even_p(x.get_mpz_t()); }
+SL unsigned int LowerBits(const Mpz& x) {
   return static_cast<unsigned int>(x.get_mpz_t()[0]._mp_d[0]);
 }
-SL tuple<Mpz, Mpz> div(const Mpz& l, const Mpz& r) {
+SL tuple<Mpz, Mpz> Div(const Mpz& l, const Mpz& r) {
   return {Mpz(l / r), Mpz(l % r)};
 }
 
 template <typename T>
-SL T to_int(const Mpz& x) {
-  if (is_zero(x)) return 0;
+SL T ToInt(const Mpz& x) {
+  if (IsZero(x)) return 0;
 
   const auto val = x.get_mpz_t();
 
@@ -74,8 +74,8 @@ SL T to_int(const Mpz& x) {
 }
 
 template <typename T>
-SL T to_float(const Mpz& x) {
-  if (is_zero(x)) return 0;
+SL T ToFloat(const Mpz& x) {
+  if (IsZero(x)) return 0;
 
   const auto val = x.get_mpz_t();
 
@@ -94,7 +94,7 @@ SL T to_float(const Mpz& x) {
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value && sizeof(T) > 4)) RETURN(T) operator%(
     const Mpz& v, const T& mod) {
-  return to_int<T>(v % MPZ(mod));
+  return ToInt<T>(v % MPZ(mod));
 }
 
 #if 0
@@ -114,8 +114,8 @@ struct FactPPowerModer<Mpz> {
   FactPPowerModer(const int64 p, const int64 e) : p(p), e(e) {
     int64 pe = p * e;
     mpzP = MPZ(p);
-    mod = power(mpzP, e);
-    phi = power(mpzP, (e - 1)) * MPZ(p - 1);
+    mod = Power(mpzP, e);
+    phi = Power(mpzP, (e - 1)) * MPZ(p - 1);
     F.resize(pe + 1, 1);
     for (int i = 1; i <= pe; ++i) {
       if (i % p == 0)
@@ -125,10 +125,10 @@ struct FactPPowerModer<Mpz> {
     }
   }
 
-  Mpz cal(const Mpz& N) {
+  Mpz Cal(const Mpz& N) {
     Mpz u(N / mpzP);
     Mpz v(N % mpzP);
-    auto vv = to_int<int64>(v);
+    auto vv = ToInt<int64>(v);
     int64 r = (e + 1) >> 1;
 
     Mpz ret = 1;
@@ -142,13 +142,13 @@ struct FactPPowerModer<Mpz> {
       for (int i = 1; i <= r; ++i)
         if (i != j) beta_numer *= u2 - i * i, beta_denom *= j2 - i * i;
       Mpz beta = beta_numer / beta_denom % phi;
-      if (int_sign(beta) < 0) beta += phi;
-      ret = ret * power_mod(F[j * p], beta, mod) % mod;
+      if (IntSign(beta) < 0) beta += phi;
+      ret = ret * PowerMod(F[j * p], beta, mod) % mod;
     }
 
     if (p == 2) {
-      int64 left_mod4 = ((lower_bits(u * mpzP + 1) & 4) >> 1) + 1;
-      int64 right_mod4 = lower_bits(ret) & 3;
+      int64 left_mod4 = ((LowerBits(u * mpzP + 1) & 4) >> 1) + 1;
+      int64 right_mod4 = LowerBits(ret) & 3;
       if (left_mod4 != right_mod4) {
         ret = (mod - ret) % mod;
       }
@@ -159,7 +159,7 @@ struct FactPPowerModer<Mpz> {
 
     // (p + v, v)_p
     for (int j = 1; j < e; ++j) {
-      Mpz base = F[j * p + vv] * mod_inv(Mpz(F[vv] * F[j * p]), mod) % mod;
+      Mpz base = F[j * p + vv] * ModInv(Mpz(F[vv] * F[j * p]), mod) % mod;
       Mpz alpha_numer = u;
       Mpz alpha_denom = j;
       for (int i = 1; i < e; ++i)
@@ -168,8 +168,8 @@ struct FactPPowerModer<Mpz> {
           alpha_denom *= j - i;
         }
       Mpz alpha = alpha_numer / alpha_denom % phi;
-      if (int_sign(alpha) < 0) alpha += phi;
-      ret = ret * power_mod(base, alpha, mod) % mod;
+      if (IntSign(alpha) < 0) alpha += phi;
+      ret = ret * PowerMod(base, alpha, mod) % mod;
     }
 
     return ret;
@@ -495,14 +495,14 @@ class MpInteger {
     return std::move(ret);
   }
 
-  MpInteger sqrti() const {
+  MpInteger SqrtI() const {
     MpInteger ret;
     mpz_sqrt(ret.mpz(), mpz());
     return std::move(ret);
   }
 
  public:
-  int size() const { return abs(z[0]._mp_size); }
+  int size() const { return Abs(z[0]._mp_size); }
   mp_limb_t* data() { return z[0]._mp_d; }
   const mp_limb_t* data() const { return z[0]._mp_d; }
 
@@ -867,37 +867,37 @@ template <>
 struct Gbi<MpInteger> {
   template <typename T,
             typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
-  static MpInteger of(T value) {
+  static MpInteger Of(T value) {
     return MpInteger(value);
   }
 
-  static MpInteger of(const string& s) { return MpInteger(s); }
+  static MpInteger Of(const string& s) { return MpInteger(s); }
 };
 
-SL string to_string(const MpInteger& x) { return x.toString(); }
-SL int is_zero(const MpInteger& x) { return x.isZero(); }
-SL int int_sign(const MpInteger& x) { return x.getSign(); }
-SL int is_even(const MpInteger& x) { return x.isEven(); }
-SL int is_odd(const MpInteger& x) { return x.isOdd(); }
-SL unsigned int lower_bits(const MpInteger& x) {
+SL string ToString(const MpInteger& x) { return x.toString(); }
+SL int IsZero(const MpInteger& x) { return x.isZero(); }
+SL int IntSign(const MpInteger& x) { return x.getSign(); }
+SL int IsEven(const MpInteger& x) { return x.isEven(); }
+SL int IsOdd(const MpInteger& x) { return x.isOdd(); }
+SL unsigned int LowerBits(const MpInteger& x) {
   return static_cast<unsigned int>(x[0]);
 }
-SL tuple<MpInteger, MpInteger> div(const MpInteger& l, const MpInteger& r) {
+SL tuple<MpInteger, MpInteger> Div(const MpInteger& l, const MpInteger& r) {
   return {l / r, l % r};
 }
 
 template <typename T>
-SL T to_int(const MpInteger& x) {
+SL T ToInt(const MpInteger& x) {
   return x.toInt<T>();
 }
 
 template <typename T>
-SL T to_float(const MpInteger& x) {
+SL T ToFloat(const MpInteger& x) {
   return x.toFloat<T>();
 }
 
-MpInteger power_mod(const MpInteger& base, const MpInteger& n,
-                    const MpInteger& mod) {
+MpInteger PowerMod(const MpInteger& base, const MpInteger& n,
+                   const MpInteger& mod) {
   MpInteger ret;
   mpz_powm(ret.mpz(), base.mpz(), n.mpz(), mod.mpz());
   return ret;
@@ -906,7 +906,7 @@ MpInteger power_mod(const MpInteger& base, const MpInteger& n,
 template <typename T>
 REQUIRES((is_native_integer<T>::value && (is_same<T, unsigned int>::value ||
                                           is_same<T, unsigned long>::value)))
-RETURN(MpInteger) power_mod(const MpInteger& base, T n, const MpInteger& mod) {
+RETURN(MpInteger) PowerMod(const MpInteger& base, T n, const MpInteger& mod) {
   MpInteger ret;
   mpz_powm(ret.mpz(), base.mpz(), n, mod.mpz());
   return ret;
@@ -915,7 +915,7 @@ RETURN(MpInteger) power_mod(const MpInteger& base, T n, const MpInteger& mod) {
 template <typename T>
 REQUIRES((is_native_integer<T>::value && (is_same<T, unsigned int>::value ||
                                           is_same<T, unsigned long>::value)))
-RETURN(MpInteger) power(const MpInteger& base, T n) {
+RETURN(MpInteger) Power(const MpInteger& base, T n) {
   MpInteger ret;
   mpz_pow_ui(ret.mpz(), base.mpz(), n);
   return ret;
@@ -924,14 +924,14 @@ RETURN(MpInteger) power(const MpInteger& base, T n) {
 template <typename T>
 REQUIRES((is_native_integer<T>::value &&
           (is_same<T, int>::value || is_same<T, long>::value)))
-RETURN(MpInteger) power(const MpInteger& base, T n) {
+RETURN(MpInteger) Power(const MpInteger& base, T n) {
   using unsignedT = typename std::make_unsigned<T>::type;
   MpInteger ret;
   mpz_pow_ui(ret.mpz(), base.mpz(), static_cast<unsignedT>(n));
   return ret;
 }
 
-MpInteger gcd(const MpInteger& l, const MpInteger& r) {
+MpInteger Gcd(const MpInteger& l, const MpInteger& r) {
   MpInteger ret;
   mpz_gcd(ret.mpz(), l.mpz(), r.mpz());
   return ret;

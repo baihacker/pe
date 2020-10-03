@@ -8,7 +8,7 @@ int main() {
     FROM 1 TO 100000000 EACH_BLOCK_IS 10000000 CACHE ""
     THREADS 10
     MAP {
-        return is_prime_ex(key);
+        return IsPrimeEx(key);
       }
     REDUCE {
         result += value;

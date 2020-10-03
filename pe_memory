@@ -16,10 +16,10 @@ struct LargeMemory {
       vec.push_back(iter->first);
 
     const auto size = static_cast<int64>(vec.size());
-    for (int i = 0; i < size; ++i) deallocate(vec[i]);
+    for (int i = 0; i < size; ++i) Deallocate(vec[i]);
   }
 
-  void* allocate(int64 size) {
+  void* Allocate(int64 size) {
     HANDLE hMapFile = ::CreateFileMapping(
         INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE | SEC_COMMIT, size >> 32,
         size % (1LL << 32), nullptr);
@@ -32,7 +32,7 @@ struct LargeMemory {
     return ptr;
   }
 
-  void deallocate(void* ptr) {
+  void Deallocate(void* ptr) {
     auto where = allocated_.find(ptr);
     if (where == allocated_.end()) return;
 
@@ -45,31 +45,29 @@ struct LargeMemory {
   map<void*, HANDLE> allocated_;
 };
 
-SL LargeMemory& get_lm_allocator() {
+SL LargeMemory& GetLmAllocator() {
   static LargeMemory __lm;
   return __lm;
 }
 
 struct LmAllocator {
-  static void* allocate(int64 size) {
-    return get_lm_allocator().allocate(size);
-  }
+  static void* Allocate(int64 size) { return GetLmAllocator().Allocate(size); }
 
-  static void deallocate(void* ptr) { get_lm_allocator().deallocate(ptr); }
+  static void Deallocate(void* ptr) { GetLmAllocator().Deallocate(ptr); }
 };
 
-SL void* lm_allocate(int64 size) { return LmAllocator::allocate(size); }
+SL void* LmAllocate(int64 size) { return LmAllocator::Allocate(size); }
 
-SL void lm_deallocate(void* ptr) { LmAllocator::deallocate(ptr); }
+SL void LmDeallocate(void* ptr) { LmAllocator::Deallocate(ptr); }
 #endif
 
-SL void* std_allocate(int64 size) { return new char[size]; }
+SL void* StdAllocate(int64 size) { return new char[size]; }
 
-SL void std_deallocate(void* ptr) { delete[] ptr; }
+SL void StdDeallocate(void* ptr) { delete[] ptr; }
 
 struct StdAllocator {
-  static void* allocate(int64 size) { return new char[size]; }
-  static void deallocate(void* ptr) { delete[] ptr; }
+  static void* Allocate(int64 size) { return new char[size]; }
+  static void Deallocate(void* ptr) { delete[] ptr; }
 };
 
 #endif

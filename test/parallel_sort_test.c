@@ -7,8 +7,8 @@ int arr[n];
 SL void parallel_sort_test() {
   for (int i = 0; i < n; ++i) arr[i] = rand();
   TimeRecorder tr;
-  parallel_sort<8>(arr, arr + n);
-  cerr << tr.elapsed().format() << endl;
+  ParallelSort<8>(arr, arr + n);
+  cerr << tr.Elapsed().Format() << endl;
   for (int i = 1; i < n; ++i) {
     assert(arr[i - 1] <= arr[i]);
   }

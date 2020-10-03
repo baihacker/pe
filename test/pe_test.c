@@ -26,7 +26,7 @@
 #include "square_root_test.c"
 #include "tree_test.c"
 
-static time_usage __time_usage;
+static TimeUsage __time_usage;
 
 PeTest& getTester() {
   static PeTest tester;
@@ -51,7 +51,7 @@ SL bool isEnabledTestSize(TestSize size) {
 }
 
 int main() {
-  pe().calPhi().calMu().fft().ntt32().ntt64().init();
+  pe().SetCalPhi().SetCalMu().SetFftK().SetNtt32K().SetNtt64K().init();
 
   dbg(maxp);
   dbg(maxp2);
@@ -93,7 +93,7 @@ int main() {
     TimeRecorder tr;
     item.test();
     cout << "End " << item.description << endl;
-    cout << "Time usage " << tr.elapsed().format() << endl;
+    cout << "Time usage " << tr.Elapsed().Format() << endl;
     isFirstTest = false;
   }
   return 0;

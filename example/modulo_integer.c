@@ -17,7 +17,7 @@ void test0() {
   orz += orz;
   orz -= orz;
   orz *= orz;
-  orz.fix_value();
+  orz.FixValue();
   cout << orz << endl;
   dbg(orz == orz);
   dbg(orz != orz);
@@ -44,7 +44,7 @@ void test1() {
   orz += orz;
   orz -= orz;
   orz *= orz;
-  orz.fix_value();
+  orz.FixValue();
   cout << orz << endl;
   dbg(orz == orz);
   dbg(orz != orz);
@@ -65,21 +65,21 @@ void perf() {
 
   u[0] = 1;
   for (int i = 1; i <= N; ++i) u[i] = u[i - 1] * i;
-  cerr << tr.elapsed().format() << endl;
+  cerr << tr.Elapsed().Format() << endl;
 
-  tr.record();
+  tr.Record();
   v[0] = 1;
   for (int i = 1; i <= N; ++i) v[i] = v[i - 1] * i;
-  cerr << tr.elapsed().format() << endl;
+  cerr << tr.Elapsed().Format() << endl;
 
-  tr.record();
+  tr.Record();
   w[0] = 1;
   for (int i = 1; i <= N; ++i) w[i] = w[i - 1] * i;
-  cerr << tr.elapsed().format() << endl;
+  cerr << tr.Elapsed().Format() << endl;
 
   for (int i = 0; i <= N; ++i) {
-    assert(u[i].value() == v[i].value());
-    assert(u[i].value() == w[i].value());
+    assert(u[i].Value() == v[i].Value());
+    assert(u[i].Value() == w[i].Value());
   }
 }
 

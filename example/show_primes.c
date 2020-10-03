@@ -1,7 +1,7 @@
 #include <pe.hpp>
 
 int main() {
-  init_primes();
+  InitPrimes();
 
   int total = 0;
   for (int i = 0; i < pcnt; ++i) {

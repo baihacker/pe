@@ -15,12 +15,12 @@ void test(const vector<int>& data, const vector<int>& V) {
   rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j * K + i];
 
   TimeRecorder tr;
-  v = power_mod(m, 4, v, mod);
+  v = PowerMod(m, 4, v, mod);
   int64 s = 0;
-  for (auto i : v) s += i.value();
+  for (auto i : v) s += i.Value();
   // cout << s << endl;
   if (show) {
-    cout << tr.elapsed().format() << endl;
+    cout << tr.Elapsed().Format() << endl;
   }
   assert(s == 247446585411LL);
   sort(all(v));
@@ -28,14 +28,14 @@ void test(const vector<int>& data, const vector<int>& V) {
 
 SL void test_helper_method() {
   {
-    auto res0 = power_mod<1000000007>(
+    auto res0 = PowerMod<1000000007>(
         [=](auto& m) {
           m(0, 0) = 1;
           m(0, 1) = 1;
           m(1, 0) = 1;
         },
         2, 100000);
-    auto res1 = power_mod<1000000007>(
+    auto res1 = PowerMod<1000000007>(
         [=](auto& m, auto& v) {
           m(0, 0) = 1;
           m(0, 1) = 1;
@@ -47,14 +47,14 @@ SL void test_helper_method() {
   }
 
   {
-    auto res0 = power_mod<NMod64<1000000007>>(
+    auto res0 = PowerMod<NMod64<1000000007>>(
         [=](auto& m) {
           m(0, 0) = 1;
           m(0, 1) = 1;
           m(1, 0) = 1;
         },
         2, 100000);
-    auto res1 = power_mod<NMod64<1000000007>>(
+    auto res1 = PowerMod<NMod64<1000000007>>(
         [=](auto& m, auto& v) {
           m(0, 0) = 1;
           m(0, 1) = 1;
@@ -66,14 +66,14 @@ SL void test_helper_method() {
   }
 
   {
-    auto res0 = power_mod(
+    auto res0 = PowerMod(
         [=](auto& m) {
           m(0, 0) = 1;
           m(0, 1) = 1;
           m(1, 0) = 1;
         },
         2, 100000, 1000000007);
-    auto res1 = power_mod(
+    auto res1 = PowerMod(
         [=](auto& m, auto& v) {
           m(0, 0) = 1;
           m(0, 1) = 1;
@@ -101,12 +101,12 @@ SL void mat_mul_test() {
     rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j * K + i];
 
     TimeRecorder tr;
-    v = power_mod(m, 4, v, mod);
+    v = PowerMod(m, 4, v, mod);
     int64 s = 0;
     for (auto i : v) s += i;
     // cout << s << endl;
     if (show) {
-      cout << tr.elapsed().format() << endl;
+      cout << tr.Elapsed().Format() << endl;
     }
     assert(s == 256670487618LL);
     sort(all(v));
@@ -120,12 +120,12 @@ SL void mat_mul_test() {
     rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j * K + i];
 
     TimeRecorder tr;
-    v = power_mod(m, 4, v, mod);
+    v = PowerMod(m, 4, v, mod);
     int64 s = 0;
     for (auto i : v) s += i;
     // cout << s << endl;
     if (show) {
-      cout << tr.elapsed().format() << endl;
+      cout << tr.Elapsed().Format() << endl;
     }
     assert(s == 247446585411LL);
     sort(all(v));

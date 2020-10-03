@@ -11,12 +11,12 @@ SL void rubit_test() {
         int u = rand() % n + 1, v = rand() % n + 1;
         int w = rand() % n - 50;
         if (u > v) swap(u, v);
-        tree.update(u, v, w);
+        tree.Update(u, v, w);
         for (int j = u; j <= v; ++j) data[j] += w;
       }
     } else {
       for (int i = 1; i <= 100; ++i) {
-        assert(tree.query(i) == data[i]);
+        assert(tree.Query(i) == data[i]);
       }
     }
   }
@@ -33,13 +33,13 @@ SL void rsqbit_test() {
         if (u > v) swap(u, v);
         int s = 0;
         for (int j = u; j <= v; ++j) s += data[j];
-        assert(tree.query(u, v) == s);
+        assert(tree.Query(u, v) == s);
       }
     } else {
       for (int i = 1; i <= 100; ++i) {
         int w = rand() % n - 50;
         data[i] += w;
-        tree.update(i, w);
+        tree.Update(i, w);
       }
     }
   }

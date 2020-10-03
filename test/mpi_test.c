@@ -334,17 +334,17 @@ SL void test_bit_operator() {
 }
 
 SL void test_utilities() {
-  power_mod(MpInteger(5), 10, MpInteger("123456789"));
-  power_mod(MpInteger(5), MpInteger(10), MpInteger("123456789"));
+  PowerMod(MpInteger(5), 10, MpInteger("123456789"));
+  PowerMod(MpInteger(5), MpInteger(10), MpInteger("123456789"));
 
-  power(MpInteger(2), 10u);
-  power(MpInteger(2), 10);
+  Power(MpInteger(2), 10u);
+  Power(MpInteger(2), 10);
 
-  gcd(12_mpi, 8_mpi);
+  Gcd(12_mpi, 8_mpi);
   123456789123456789_mpi * 2 * 5_mpi * "10"_mpi;
 
-  power(MpInteger(2), 20);
-  power(MpInteger(2), 20LL);
+  Power(MpInteger(2), 20);
+  Power(MpInteger(2), 20LL);
 
   TimeRecorder tr;
   MpInteger v(1);

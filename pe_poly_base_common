@@ -8,10 +8,10 @@
 #include "pe_nt"
 
 template <typename T>
-SL void poly_mul_wrapper(const T* X, int64 n, const T* Y, int64 m, T* result,
-                         int64 mod,
-                         void (*impl)(const T*, int64, const T*, int64, T*,
-                                      int64)) {
+SL void PolyMulWrapper(const T* X, int64 n, const T* Y, int64 m, T* result,
+                       int64 mod,
+                       void (*impl)(const T*, int64, const T*, int64, T*,
+                                    int64)) {
   int64 s1 = 0, s2 = 0;
   int64 e1 = n, e2 = m;
   while (s1 < e1 && X[s1] == 0) ++s1;
@@ -30,30 +30,30 @@ SL void poly_mul_wrapper(const T* X, int64 n, const T* Y, int64 m, T* result,
 }
 
 template <typename T>
-SL void adjust_poly_leading_zero(vector<T>& v) {
+SL void AdjustPolyLeadingZero(vector<T>& v) {
   int64 now = static_cast<int64>(v.size()) - 1;
   while (now > 0 && v[now] == 0) --now;
   v.resize(now + 1);
 }
 
-#define POLY_MUL_IMPL(poly_mul, poly_mul_internal)                           \
-  template <typename T>                                                      \
-  SL void poly_mul(const T* X, int64 n, const T* Y, int64 m, T* result,      \
-                   int64 mod) {                                              \
-    using unsignedT = typename std::make_unsigned<T>::type;                  \
-    poly_mul_wrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, \
-                                m, (unsignedT*)result, mod,                  \
-                                &poly_mul_internal<unsignedT>);              \
-  }                                                                          \
-                                                                             \
-  template <typename T>                                                      \
-  SL vector<T> poly_mul(const vector<T>& X, const vector<T>& Y, int64 mod) { \
-    const int64 n = static_cast<int64>(X.size());                            \
-    const int64 m = static_cast<int64>(Y.size());                            \
-    const int64 retSize = n + m - 1;                                         \
-    vector<T> result(retSize);                                               \
-    poly_mul(&X[0], n, &Y[0], m, &result[0], mod);                           \
-    return result;                                                           \
+#define POLY_MUL_IMPL(PolyMul, PolyMulInternal)                               \
+  template <typename T>                                                       \
+  SL void PolyMul(const T* X, int64 n, const T* Y, int64 m, T* result,        \
+                  int64 mod) {                                                \
+    using unsignedT = typename std::make_unsigned<T>::type;                   \
+    PolyMulWrapper<unsignedT>((const unsignedT*)X, n, (const unsignedT*)Y, m, \
+                              (unsignedT*)result, mod,                        \
+                              &PolyMulInternal<unsignedT>);                   \
+  }                                                                           \
+                                                                              \
+  template <typename T>                                                       \
+  SL vector<T> PolyMul(const vector<T>& X, const vector<T>& Y, int64 mod) {   \
+    const int64 n = static_cast<int64>(X.size());                             \
+    const int64 m = static_cast<int64>(Y.size());                             \
+    const int64 retSize = n + m - 1;                                          \
+    vector<T> result(retSize);                                                \
+    PolyMul(&X[0], n, &Y[0], m, &result[0], mod);                             \
+    return result;                                                            \
   }
 
 // For input:
@@ -63,67 +63,67 @@ SL void adjust_poly_leading_zero(vector<T>& v) {
 // deg q = max(deg X - deg Y + 1, 1)
 // For C-style method: deg r = deg Y (with possible leading zeros)
 // For C++ style method: deg r <= deg Y (the leading zeros are ignored)
-#define POLY_DIV_AND_MOD_IMPL(poly_div_and_mod, poly_div_and_mod_internal)   \
+#define POLY_DIV_AND_MOD_IMPL(PolyDivAndMod, PolyDivAndModInternal)          \
   template <typename T>                                                      \
   SL REQUIRES((is_native_integer<T>::value)) RETURN(void)                    \
-      poly_div_and_mod(const T* X, const int64 n, const T* Y, const int64 m, \
-                       T* q, T* r, int64 mod) {                              \
+      PolyDivAndMod(const T* X, const int64 n, const T* Y, const int64 m,    \
+                    T* q, T* r, int64 mod) {                                 \
     using unsignedT = typename std::make_unsigned<T>::type;                  \
-    poly_div_and_mod_internal<unsignedT>((const unsignedT*)X, n,             \
-                                         (const unsignedT*)Y, m,             \
-                                         (unsignedT*)q, (unsignedT*)r, mod); \
+    PolyDivAndModInternal<unsignedT>((const unsignedT*)X, n,                 \
+                                     (const unsignedT*)Y, m, (unsignedT*)q,  \
+                                     (unsignedT*)r, mod);                    \
   }                                                                          \
                                                                              \
   template <typename T>                                                      \
   SL REQUIRES((is_native_integer<T>::value))                                 \
-      RETURN(tuple<vector<T>, vector<T>>) poly_div_and_mod(                  \
-          const vector<T>& X, const vector<T>& Y, int64 mod) {               \
+      RETURN(tuple<vector<T>, vector<T>>)                                    \
+          PolyDivAndMod(const vector<T>& X, const vector<T>& Y, int64 mod) { \
     const int64 n = static_cast<int64>(X.size());                            \
     const int64 m = static_cast<int64>(Y.size());                            \
                                                                              \
     vector<T> q(max<int64>(n - m + 1, 1LL));                                 \
     vector<T> r(m);                                                          \
-    poly_div_and_mod(&X[0], n, &Y[0], m, &q[0], &r[0], mod);                 \
+    PolyDivAndMod(&X[0], n, &Y[0], m, &q[0], &r[0], mod);                    \
                                                                              \
     r[m] = 0;                                                                \
-    adjust_poly_leading_zero(r);                                             \
+    AdjustPolyLeadingZero(r);                                                \
     return make_tuple(std::move(q), std::move(r));                           \
   }
 
-#define POLY_DIV_IMPL(poly_div, poly_div_and_mod)                              \
+#define POLY_DIV_IMPL(PolyDiv, PolyDivAndMod)                                  \
   template <typename T>                                                        \
-  SL REQUIRES((is_native_integer<T>::value)) RETURN(void) poly_div(            \
+  SL REQUIRES((is_native_integer<T>::value)) RETURN(void) PolyDiv(             \
       const T* X, const int64 n, const T* Y, const int64 m, T* q, int64 mod) { \
-    poly_div_and_mod(X, n, Y, m, q, (T*)NULL, mod);                            \
+    PolyDivAndMod(X, n, Y, m, q, (T*)NULL, mod);                               \
   }                                                                            \
                                                                                \
   template <typename T>                                                        \
   SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)                 \
-      poly_div(const vector<T>& X, const vector<T>& Y, int64 mod) {            \
+      PolyDiv(const vector<T>& X, const vector<T>& Y, int64 mod) {             \
     const int64 n = static_cast<int64>(X.size());                              \
     const int64 m = static_cast<int64>(Y.size());                              \
                                                                                \
     vector<T> q(max<int64>(n - m + 1, 1LL));                                   \
-    poly_div(&X[0], n, &Y[0], m, &q[0], mod);                                  \
+    PolyDiv(&X[0], n, &Y[0], m, &q[0], mod);                                   \
     return std::move(q);                                                       \
   }
 
-#define POLY_MOD_IMPL(poly_mod, poly_div_and_mod)                              \
+#define POLY_MOD_IMPL(PolyMod, PolyDivAndMod)                                  \
   template <typename T>                                                        \
-  SL REQUIRES((is_native_integer<T>::value)) RETURN(void) poly_mod(            \
+  SL REQUIRES((is_native_integer<T>::value)) RETURN(void) PolyMod(             \
       const T* X, const int64 n, const T* Y, const int64 m, T* r, int64 mod) { \
-    poly_div_and_mod(X, n, Y, m, (T*)NULL, r, mod);                            \
+    PolyDivAndMod(X, n, Y, m, (T*)NULL, r, mod);                               \
   }                                                                            \
                                                                                \
   template <typename T>                                                        \
   SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)                 \
-      poly_mod(const vector<T>& X, const vector<T>& Y, int64 mod) {            \
+      PolyMod(const vector<T>& X, const vector<T>& Y, int64 mod) {             \
     const int64 n = static_cast<int64>(X.size());                              \
     const int64 m = static_cast<int64>(Y.size());                              \
                                                                                \
     vector<T> r(m);                                                            \
-    poly_mod(&X[0], n, &Y[0], m, &r[0], mod);                                  \
-    adjust_poly_leading_zero(r);                                               \
+    PolyMod(&X[0], n, &Y[0], m, &r[0], mod);                                   \
+    AdjustPolyLeadingZero(r);                                                  \
     return std::move(r);                                                       \
   }
 

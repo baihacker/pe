@@ -10,7 +10,7 @@
 
 namespace poly_ntl {
 template <typename T>
-SL void init_nmod_poly(NTL::ZZ_pX& p, const T* x, int64 n, int64 mod) {
+SL void InitNmodPoly(NTL::ZZ_pX& p, const T* x, int64 n, int64 mod) {
   NTL::ZZ tmp(0);
   p.SetLength(n);
   if (mod >> 32) {
@@ -26,7 +26,7 @@ SL void init_nmod_poly(NTL::ZZ_pX& p, const T* x, int64 n, int64 mod) {
 }
 
 template <typename T>
-SL void copy_nmod_poly(NTL::ZZ_pX& p, T* x, int64 n, int64 mod) {
+SL void CopyNmodPoly(NTL::ZZ_pX& p, T* x, int64 n, int64 mod) {
   const int64 d = deg(p);
   const int64 m = min(d, n - 1);
   if (mod >> 32) {
@@ -46,7 +46,7 @@ SL void copy_nmod_poly(NTL::ZZ_pX& p, T* x, int64 n, int64 mod) {
 }
 
 template <typename T>
-SL void init_nmod_poly(NTL::zz_pX& p, const T* x, int64 n, long /*mod*/) {
+SL void InitNmodPoly(NTL::zz_pX& p, const T* x, int64 n, long /*mod*/) {
   p.SetLength(n);
   for (int64 i = 0; i < n; ++i) {
     p[i]._zz_p__rep = static_cast<long>(x[i]);
@@ -54,7 +54,7 @@ SL void init_nmod_poly(NTL::zz_pX& p, const T* x, int64 n, long /*mod*/) {
 }
 
 template <typename T>
-SL void copy_nmod_poly(NTL::zz_pX& p, T* x, int64 n, long /*mod*/) {
+SL void CopyNmodPoly(NTL::zz_pX& p, T* x, int64 n, long /*mod*/) {
   const int64 d = deg(p);
   const int64 m = min(d, n - 1);
   for (int64 i = 0; i <= m; ++i) {
@@ -66,53 +66,53 @@ SL void copy_nmod_poly(NTL::zz_pX& p, T* x, int64 n, long /*mod*/) {
 }
 
 template <typename T>
-SL void poly_mul_small_mod_internal(const T* X, int64 n, const T* Y, int64 m,
-                                    T* result, int64 mod) {
+SL void PolyMulSmallModInternal(const T* X, int64 n, const T* Y, int64 m,
+                                T* result, int64 mod) {
   NTL::zz_p::init(static_cast<long>(mod));
 
   NTL::zz_pX x, y, z;
-  init_nmod_poly(x, X, n, static_cast<long>(mod));
-  init_nmod_poly(y, Y, m, static_cast<long>(mod));
+  InitNmodPoly(x, X, n, static_cast<long>(mod));
+  InitNmodPoly(y, Y, m, static_cast<long>(mod));
 
   NTL::mul(z, x, y);
 
-  copy_nmod_poly(z, result, n + m - 1, static_cast<long>(mod));
+  CopyNmodPoly(z, result, n + m - 1, static_cast<long>(mod));
 }
 
 template <typename T>
-SL void poly_mul_large_mod_internal(const T* X, int64 n, const T* Y, int64 m,
-                                    T* result, int64 mod) {
+SL void PolyMulLargeModInternal(const T* X, int64 n, const T* Y, int64 m,
+                                T* result, int64 mod) {
   NTL::ZZ tmp(0);
   ZZFromBytes(tmp, reinterpret_cast<const unsigned char*>(&mod), sizeof(T));
   NTL::ZZ_p::init(tmp);
 
   NTL::ZZ_pX x, y, z;
-  init_nmod_poly(x, X, n, mod);
-  init_nmod_poly(y, Y, m, mod);
+  InitNmodPoly(x, X, n, mod);
+  InitNmodPoly(y, Y, m, mod);
 
   NTL::mul(z, x, y);
 
-  copy_nmod_poly(z, result, n + m - 1, mod);
+  CopyNmodPoly(z, result, n + m - 1, mod);
 }
 
 template <typename T>
-SL void poly_mul_internal(const T* X, int64 n, const T* Y, int64 m, T* result,
-                          int64 mod) {
+SL void PolyMulInternal(const T* X, int64 n, const T* Y, int64 m, T* result,
+                        int64 mod) {
   if (mod < NTL_SP_BOUND) {
-    poly_mul_small_mod_internal(X, n, Y, m, result, mod);
+    PolyMulSmallModInternal(X, n, Y, m, result, mod);
   } else {
-    poly_mul_large_mod_internal(X, n, Y, m, result, mod);
+    PolyMulLargeModInternal(X, n, Y, m, result, mod);
   }
 }
 
-POLY_MUL_IMPL(poly_mul_small_mod, poly_ntl::poly_mul_small_mod_internal)
-POLY_MUL_IMPL(poly_mul_large_mod, poly_ntl::poly_mul_large_mod_internal)
-POLY_MUL_IMPL(poly_mul, poly_ntl::poly_mul_internal)
+POLY_MUL_IMPL(PolyMulSmallMod, poly_ntl::PolyMulSmallModInternal)
+POLY_MUL_IMPL(PolyMulLargeMod, poly_ntl::PolyMulLargeModInternal)
+POLY_MUL_IMPL(PolyMul, poly_ntl::PolyMulInternal)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_div_and_mod_small_mod_internal(const T* X, int64 n, const T* Y,
-                                        int64 m, T* q, T* r, int64 mod) {
+    PolyDivAndModSmallModInternal(const T* X, int64 n, const T* Y, int64 m,
+                                  T* q, T* r, int64 mod) {
   if (m > n) {
     if (r) {
       copy(X, X + n, r);
@@ -127,34 +127,34 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   NTL::zz_p::init(static_cast<long>(mod));
 
   NTL::zz_pX x, y;
-  init_nmod_poly(x, X, n, mod);
-  init_nmod_poly(y, Y, m, mod);
+  InitNmodPoly(x, X, n, mod);
+  InitNmodPoly(y, Y, m, mod);
 
   if (q && r) {
     NTL::zz_pX u, v;
 
     NTL::DivRem(u, v, x, y);
 
-    copy_nmod_poly(u, q, n - m + 1, mod);
-    copy_nmod_poly(v, r, m, mod);
+    CopyNmodPoly(u, q, n - m + 1, mod);
+    CopyNmodPoly(v, r, m, mod);
   } else if (q) {
     NTL::zz_pX u;
 
     NTL::div(u, x, y);
 
-    copy_nmod_poly(u, q, n - m + 1, mod);
+    CopyNmodPoly(u, q, n - m + 1, mod);
   } else if (r) {
     NTL::zz_pX v;
 
     NTL::rem(v, x, y);
-    copy_nmod_poly(v, r, m, mod);
+    CopyNmodPoly(v, r, m, mod);
   }
 }
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_div_and_mod_large_mod_internal(const T* X, int64 n, const T* Y,
-                                        int64 m, T* q, T* r, int64 mod) {
+    PolyDivAndModLargeModInternal(const T* X, int64 n, const T* Y, int64 m,
+                                  T* q, T* r, int64 mod) {
   if (m > n) {
     if (r) {
       copy(X, X + n, r);
@@ -171,54 +171,54 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   NTL::ZZ_p::init(tmp);
 
   NTL::ZZ_pX x, y;
-  init_nmod_poly(x, X, n, mod);
-  init_nmod_poly(y, Y, m, mod);
+  InitNmodPoly(x, X, n, mod);
+  InitNmodPoly(y, Y, m, mod);
 
   if (q && r) {
     NTL::ZZ_pX u, v;
 
     NTL::DivRem(u, v, x, y);
 
-    copy_nmod_poly(u, q, n - m + 1, mod);
-    copy_nmod_poly(v, r, m, mod);
+    CopyNmodPoly(u, q, n - m + 1, mod);
+    CopyNmodPoly(v, r, m, mod);
   } else if (q) {
     NTL::ZZ_pX u;
 
     NTL::div(u, x, y);
 
-    copy_nmod_poly(u, q, n - m + 1, mod);
+    CopyNmodPoly(u, q, n - m + 1, mod);
   } else if (r) {
     NTL::ZZ_pX v;
 
     NTL::rem(v, x, y);
-    copy_nmod_poly(v, r, m, mod);
+    CopyNmodPoly(v, r, m, mod);
   }
 }
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    poly_div_and_mod_internal(const T* X, int64 n, const T* Y, int64 m, T* q,
-                              T* r, int64 mod) {
+    PolyDivAndModInternal(const T* X, int64 n, const T* Y, int64 m, T* q, T* r,
+                          int64 mod) {
   if (mod < NTL_SP_BOUND) {
-    poly_div_and_mod_small_mod_internal<T>(X, n, Y, m, q, r, mod);
+    PolyDivAndModSmallModInternal<T>(X, n, Y, m, q, r, mod);
   } else {
-    poly_div_and_mod_large_mod_internal<T>(X, n, Y, m, q, r, mod);
+    PolyDivAndModLargeModInternal<T>(X, n, Y, m, q, r, mod);
   }
 }
 
-POLY_DIV_AND_MOD_IMPL(poly_div_and_mod_small_mod,
-                      poly_ntl::poly_div_and_mod_small_mod_internal)
-POLY_DIV_IMPL(poly_div_small_mod, poly_ntl::poly_div_and_mod_small_mod)
-POLY_MOD_IMPL(poly_mod_small_mod, poly_ntl::poly_div_and_mod_small_mod)
+POLY_DIV_AND_MOD_IMPL(PolyDivAndModSmallMod,
+                      poly_ntl::PolyDivAndModSmallModInternal)
+POLY_DIV_IMPL(PolyDivSmallMod, poly_ntl::PolyDivAndModSmallMod)
+POLY_MOD_IMPL(PolyModSmallMod, poly_ntl::PolyDivAndModSmallMod)
 
-POLY_DIV_AND_MOD_IMPL(poly_div_and_mod_large_mod,
-                      poly_ntl::poly_div_and_mod_large_mod_internal)
-POLY_DIV_IMPL(poly_div_large_mod, poly_ntl::poly_div_and_mod_large_mod)
-POLY_MOD_IMPL(poly_mod_large_mod, poly_ntl::poly_div_and_mod_large_mod)
+POLY_DIV_AND_MOD_IMPL(PolyDivAndModLargeMod,
+                      poly_ntl::PolyDivAndModLargeModInternal)
+POLY_DIV_IMPL(PolyDivLargeMod, poly_ntl::PolyDivAndModLargeMod)
+POLY_MOD_IMPL(PolyModLargeMod, poly_ntl::PolyDivAndModLargeMod)
 
-POLY_DIV_AND_MOD_IMPL(poly_div_and_mod, poly_ntl::poly_div_and_mod_internal)
-POLY_DIV_IMPL(poly_div, poly_ntl::poly_div_and_mod)
-POLY_MOD_IMPL(poly_mod, poly_ntl::poly_div_and_mod)
+POLY_DIV_AND_MOD_IMPL(PolyDivAndMod, poly_ntl::PolyDivAndModInternal)
+POLY_DIV_IMPL(PolyDiv, poly_ntl::PolyDivAndMod)
+POLY_MOD_IMPL(PolyMod, poly_ntl::PolyDivAndMod)
 }  // namespace poly_ntl
 #else
 #define HAS_POLY_NTL 0

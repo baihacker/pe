@@ -7,36 +7,36 @@
 template <typename T>
 class SavePolicy {
  public:
-  SavePolicy() : time_limit_(TimeDelta::from_second(10)) { on_saved(); }
+  SavePolicy() : time_limit_(TimeDelta::FromSecond(10)) { OnSaved(); }
 
   ~SavePolicy() = default;
 
-  void enable_auto_save(bool enable = true) { auto_save_ = enable; }
+  void EnableAutoSave(bool enable = true) { auto_save_ = enable; }
 
-  void set_dirty_limit(int d) { dirty_limit_ = d; }
+  void SetDirtyLimit(int d) { dirty_limit_ = d; }
 
-  void disable_dirty_limit() { dirty_limit_ = 2000000000; }
+  void DisableDirtyLimit() { dirty_limit_ = 2000000000; }
 
-  void set_time_limit(TimeDelta t) { time_limit_ = t; }
+  void SetTimeLimit(TimeDelta t) { time_limit_ = t; }
 
-  void disable_time_limit() { time_limit_ = TimeDelta::from_day(10); }
+  void DisableTimeLimit() { time_limit_ = TimeDelta::FromDay(10); }
 
-  void on_closing() {
+  void OnClosing() {
     if (dirty_ > 0) {
-      static_cast<T&>(*this).save();
+      static_cast<T&>(*this).Save();
     }
   }
 
-  void on_updated() {
+  void OnUpdated() {
     ++dirty_;
     if (auto_save_ &&
-        (tr_.elapsed() >= time_limit_ || dirty_ >= dirty_limit_)) {
-      static_cast<T&>(*this).save();
+        (tr_.Elapsed() >= time_limit_ || dirty_ >= dirty_limit_)) {
+      static_cast<T&>(*this).Save();
     }
   }
 
-  void on_saved() {
-    tr_.record();
+  void OnSaved() {
+    tr_.Record();
     dirty_ = 0;
   }
 
@@ -52,13 +52,13 @@ class KVPersistance : public SavePolicy<KVPersistance> {
  public:
   KVPersistance(const string& path, bool check = false)
       : path_(path), check_(check) {
-    load();
+    Load();
   }
 
-  ~KVPersistance() { on_closing(); }
+  ~KVPersistance() { OnClosing(); }
 
-  void load(bool check = false) {
-    on_saved();
+  void Load(bool check = false) {
+    OnSaved();
 
     FILE* fp = fopen(path_.c_str(), "r");
     if (!fp) return;
@@ -83,7 +83,7 @@ class KVPersistance : public SavePolicy<KVPersistance> {
     kv_ = std::move(map<int64, int64>(vec.begin(), vec.end()));
   }
 
-  void save() {
+  void Save() {
     FILE* fp = fopen(path_.c_str(), "w");
     if (!fp) return;
     for (auto& iter : kv_) {
@@ -92,10 +92,10 @@ class KVPersistance : public SavePolicy<KVPersistance> {
     fclose(fp);
     string cmd = "copy " + path_ + " " + path_ + ".bak /Y";
     system(cmd.c_str());
-    on_saved();
+    OnSaved();
   }
 
-  void set(int64 key, int64 v) {
+  void Set(int64 key, int64 v) {
     bool skip = false;
     if (check_) {
       auto where = kv_.find(key);
@@ -113,14 +113,14 @@ class KVPersistance : public SavePolicy<KVPersistance> {
 
     kv_[key] = v;
 
-    on_updated();
+    OnUpdated();
   }
 
-  map<int64, int64>& storage() { return kv_; }
+  map<int64, int64>& Storage() { return kv_; }
 
-  int64 size() const { return kv_.size(); }
+  int64 Size() const { return kv_.size(); }
 
-  void visit(const function<bool(int64, int64)>& f) {
+  void Visit(const function<bool(int64, int64)>& f) {
     for (auto& iter : kv_) {
       if (!f(iter.first, iter.second)) break;
     }

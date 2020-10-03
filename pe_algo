@@ -14,10 +14,10 @@
  * Complexity is M(p^(1/2))
  */
 struct FactModer {
-  FactModer(uint64 p) : p_(p) { init(); }
+  FactModer(uint64 p) : p_(p) { Init(); }
 
   // Evaluate (x+v*0+1)*(x+v*1+1)*(x+v*2+1)*...*(x+v*(d-1)+1) at 0, 1, 2, ..., d
-  void evaluate(int d, uint64* result, uint64 v) {
+  void Evaluate(int d, uint64* result, uint64 v) {
     if (d == 1) {
       result[0] = 1;
       result[1] = p_ == 2 ? 0 : 2;
@@ -25,7 +25,7 @@ struct FactModer {
     }
 
     const int halfD = d >> 1;
-    evaluate(halfD, result, v);
+    Evaluate(halfD, result, v);
     copy(result, result + halfD + 1, &g0_[0]);
 #if ENABLE_OPENMP
 #pragma omp parallel sections if (d >= 10000)
@@ -34,37 +34,37 @@ struct FactModer {
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-      poly_offset_evaluate<uint64>(halfD, result, &g1_[0], halfD + 1,
-                                   &pre_fact_inv_[0], p_);
+      PolyOffsetEvaluate<uint64>(halfD, result, &g1_[0], halfD + 1,
+                                 &pre_fact_inv_[0], p_);
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-      poly_offset_evaluate<uint64>(halfD, result, &g2_[0], v * halfD,
-                                   &pre_fact_inv_[0], p_);
+      PolyOffsetEvaluate<uint64>(halfD, result, &g2_[0], v * halfD,
+                                 &pre_fact_inv_[0], p_);
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-      poly_offset_evaluate<uint64>(halfD, result, &g3_[0], v * halfD + halfD,
-                                   &pre_fact_inv_[0], p_);
+      PolyOffsetEvaluate<uint64>(halfD, result, &g3_[0], v * halfD + halfD,
+                                 &pre_fact_inv_[0], p_);
     }
 
     for (int i = 0; i <= halfD; ++i) {
-      result[i] = mul_mod_ex(g0_[i], g2_[i], p_);
+      result[i] = MulModEx(g0_[i], g2_[i], p_);
     }
     for (int i = halfD + 1, j = 0; i <= halfD * 2; ++i, ++j) {
-      result[i] = mul_mod_ex(g1_[j], g3_[j + 1], p_);
+      result[i] = MulModEx(g1_[j], g3_[j + 1], p_);
     }
 
     if (d & 1) {
       uint64 tmp = (v * (d - 1) + 1) % p_;
       for (int i = 0; i <= 2 * halfD; ++i) {
-        result[i] = mul_mod_ex(result[i], tmp++, p_);
+        result[i] = MulModEx(result[i], tmp++, p_);
         if (tmp >= p_) tmp -= p_;
       }
       uint64 t = 1;
       uint64 c = d + 1;
       for (int i = 0; i < d; ++i) {
-        t = mul_mod_ex(t, c, p_);
+        t = MulModEx(t, c, p_);
         c += v;
         if (c >= p_) c -= p_;
       }
@@ -72,7 +72,7 @@ struct FactModer {
     }
   }
 
-  int64 cal(uint64 n) {
+  int64 Cal(uint64 n) {
     if (n >= p_) return 0;
     if (n < q_) return pre_fact_[n];
 
@@ -80,25 +80,25 @@ struct FactModer {
     uint64 ret = 1;
 
     for (uint64 i = m * m + 1; i <= n; ++i) {
-      ret = mul_mod_ex(ret, i, p_);
+      ret = MulModEx(ret, i, p_);
     }
 
-    evaluate(static_cast<int>(m), static_cast<uint64*>(&v_[0]), m);
+    Evaluate(static_cast<int>(m), static_cast<uint64*>(&v_[0]), m);
 
     for (int i = 0; i < m; ++i) {
-      ret = mul_mod_ex(ret, v_[i], p_);
+      ret = MulModEx(ret, v_[i], p_);
     }
     return static_cast<int64>(ret);
   }
 
-  void init() {
+  void Init() {
     q_ = static_cast<uint64>(sqrt(p_));
     while (q_ * q_ < p_) ++q_;
     q_ <<= 1;
     q_ += 1;
     pre_fact_.resize(q_);
     pre_fact_inv_.resize(q_);
-    init_seq_prod2<uint64>(&pre_fact_[0], &pre_fact_inv_[0], 1, q_ - 1, p_);
+    InitSeqProd2<uint64>(&pre_fact_[0], &pre_fact_inv_[0], 1, q_ - 1, p_);
     g0_.resize(q_);
     g1_.resize(q_);
     g2_.resize(q_);
@@ -120,9 +120,9 @@ struct FactModer {
  * f(4e8)%99999999907 = 16815920030
  */
 struct FactSumModer {
-  FactSumModer(uint64 p) : p_(p) { init(); }
+  FactSumModer(uint64 p) : p_(p) { Init(); }
 
-  int64 cal(uint64 n) {
+  int64 Cal(uint64 n) {
     if (n >= p_) n = p_ - 1;
     if (n < q_) return preFactSum_[n];
 
@@ -143,25 +143,25 @@ struct FactSumModer {
 
     // Compute P
     vector<uint64> YQ;
-    auto YP = poly_batch_mul_acc(X, 0, static_cast<int>(m - 1), YQ, p_);
-    YP[0] = add_mod(YP[0], 1, p_);
-    auto P = poly_multipoint_evaluate(YP, V, p_);
+    auto YP = PolyBatchMulAcc(X, 0, static_cast<int>(m - 1), YQ, p_);
+    YP[0] = AddMod(YP[0], 1, p_);
+    auto P = PolyMultipointEvaluate(YP, V, p_);
 
     // Prepare data for computing Q
     // YQ *= (m + xm)
     YQ.resize(m + 1);
     YQ[m] = YQ[m - 1];
     for (int i = static_cast<int>(m - 1); i >= 1; --i)
-      YQ[i] = add_mod(YQ[i], YQ[i - 1], p_);
-    for (auto& i : YQ) i = mul_mod_ex(i, m, p_);
+      YQ[i] = AddMod(YQ[i], YQ[i - 1], p_);
+    for (auto& i : YQ) i = MulModEx(i, m, p_);
 
     // V.extend(m)
     V.push_back(m);
 
     // Compute Q
-    auto Q = poly_multipoint_evaluate(YQ, V, p_);
+    auto Q = PolyMultipointEvaluate(YQ, V, p_);
     for (int i = 1; i <= m; ++i) {
-      Q[i] = mul_mod_ex(Q[i], Q[i - 1], p_);
+      Q[i] = MulModEx(Q[i], Q[i - 1], p_);
     }
 
     // Compute P
@@ -172,29 +172,29 @@ struct FactSumModer {
     // Compute result
     int64 result = P[0];
     for (int i = 1; i < m; ++i) {
-      uint64 t = mul_mod_ex(P[i], Q[i - 1], p_);
-      result = add_mod(result, t, p_);
+      uint64 t = MulModEx(P[i], Q[i - 1], p_);
+      result = AddMod(result, t, p_);
     }
 
     uint64 last = Q[m - 1];
     for (int64 i = m * m; i <= static_cast<int64>(n); ++i) {
-      result = add_mod(result, last, p_);
-      last = mul_mod_ex(last, i + 1, p_);
+      result = AddMod(result, last, p_);
+      last = MulModEx(last, i + 1, p_);
     }
     return result;
   }
 
-  void init() {
+  void Init() {
     q_ = static_cast<uint64>(sqrt(p_));
     while (q_ * q_ < p_) ++q_;
     q_ <<= 1;
     q_ += 1;
     preFact_.resize(q_);
     preFactSum_.resize(q_);
-    init_seq_prod2<uint64>(&preFact_[0], nullptr, q_ - 1, p_);
+    InitSeqProd2<uint64>(&preFact_[0], nullptr, q_ - 1, p_);
     preFactSum_[0] = preFact_[0];
     for (int i = 1; i < q_; ++i) {
-      preFactSum_[i] = add_mod(preFactSum_[i - 1], preFact_[i], p_);
+      preFactSum_[i] = AddMod(preFactSum_[i - 1], preFact_[i], p_);
     }
   }
 
@@ -210,11 +210,11 @@ struct FactSumModer {
  * Deprecated
  */
 template <int64 P, int64 F = P>
-struct comb_moder {
+struct CombModerOld {
   static_assert(P <= PE_SOI63, "P <= PE_SOI63");
   static_assert(F > 0, "F > 0");
-  comb_moder() { init(); }
-  static int64 inv(int64 x) {
+  CombModerOld() { Init(); }
+  static int64 Inv(int64 x) {
     int64 result = 1;
     int n = P - 2;
     x %= P;
@@ -223,19 +223,19 @@ struct comb_moder {
     return result;
   }
   static int64* fac_;
-  static void init() {
+  static void Init() {
     if (fac_ == nullptr) {
       fac_ = new int64[F];
       fac_[0] = 1;
       for (int i = 1; i < F; ++i) fac_[i] = fac_[i - 1] * i % P;
     }
   }
-  static void destroy_fac() {
+  static void DestroyFac() {
     delete[] fac_;
     fac_ = nullptr;
   }
-  static int64 s(int64 x) { return x & 1 ? -1 : 1; }
-  static int64 comb(int64 m, int64 n) {
+  static int64 Sign(int64 x) { return x & 1 ? -1 : 1; }
+  static int64 Comb(int64 m, int64 n) {
     PE_ASSERT(fac_);
 
     if (m < 0 || n > m) return 0;
@@ -251,47 +251,47 @@ struct comb_moder {
     int64 l = 1, r = 1;
     for (int64 x = m; x; x /= P) {
       PE_ASSERT(x % P < F);
-      l = l * s(x / P) * fac_[x % P] % P;
+      l = l * Sign(x / P) * fac_[x % P] % P;
     }
     for (int64 x = n; x; x /= P) {
       PE_ASSERT(x % P < F);
-      r = r * s(x / P) * fac_[x % P] % P;
+      r = r * Sign(x / P) * fac_[x % P] % P;
     }
     for (int64 x = dist; x; x /= P) {
       PE_ASSERT(x % P < F);
-      r = r * s(x / P) * fac_[x % P] % P;
+      r = r * Sign(x / P) * fac_[x % P] % P;
     }
     l = (l + P) % P;
     r = (r + P) % P;
-    int64 t = (inv(r) * l % P + P) % P;
+    int64 t = (Inv(r) * l % P + P) % P;
     return t;
   }
 };
 template <int64 P, int64 F>
-int64* comb_moder<P, F>::fac_;
+int64* CombModerOld<P, F>::fac_;
 
 /**
  * Calculates C(n, m) % P where P is prime
  */
 struct CombModer {
   CombModer(uint64 p, uint64 f = 0) : p_(p), f_(f == 0 ? p : f) {
-    init(this->f_);
+    Init(this->f_);
   }
 
   ~CombModer() = default;
 
-  void init(uint64 F) {
+  void Init(uint64 F) {
     this->f_ = F;
 
     vector<uint64>(F).swap(fac_);
     fac_[0] = 1;
     for (int i = 1; i < F; ++i) {
-      fac_[i] = mul_mod_ex(fac_[i - 1], i, p_);
+      fac_[i] = MulModEx(fac_[i - 1], i, p_);
     }
   }
 
-  uint64 s(int64 x) { return x & 1 ? p_ - 1 : 1; }
-  uint64 comb(int64 m, int64 n) {
+  uint64 Sign(int64 x) { return x & 1 ? p_ - 1 : 1; }
+  uint64 Comb(int64 m, int64 n) {
     if (m < 0 || n > m) return 0;
     if (n == m || n == 0) return 1;
     if (n == 1 || n == m - 1) return m % p_;
@@ -306,18 +306,18 @@ struct CombModer {
     if (pp) return 0;
     uint64 l = 1, r = 1;
     for (uint64 x = m; x; x /= p_) {
-      l = mul_mod_ex(l, s(x / p_), p_);
-      l = mul_mod_ex(l, fac_[x % p_], p_);
+      l = MulModEx(l, Sign(x / p_), p_);
+      l = MulModEx(l, fac_[x % p_], p_);
     }
     for (uint64 x = n; x; x /= p_) {
-      r = mul_mod_ex(r, s(x / p_), p_);
-      r = mul_mod_ex(r, fac_[x % p_], p_);
+      r = MulModEx(r, Sign(x / p_), p_);
+      r = MulModEx(r, fac_[x % p_], p_);
     }
     for (uint64 x = dist; x; x /= p_) {
-      r = mul_mod_ex(r, s(x / p_), p_);
-      r = mul_mod_ex(r, fac_[x % p_], p_);
+      r = MulModEx(r, Sign(x / p_), p_);
+      r = MulModEx(r, fac_[x % p_], p_);
     }
-    return mul_mod_ex(inv_of(r, p_), l, p_);
+    return MulModEx(InvOf(r, p_), l, p_);
   }
 
  private:
@@ -325,7 +325,7 @@ struct CombModer {
   vector<uint64> fac_;
 };
 
-int64 short_comb_mod(int64 n, int64 m, int64 mod) {
+int64 ShortCombMod(int64 n, int64 m, int64 mod) {
   if (m > n || m < 0) return 0;
   if (n - m < m) m = n - m;
   vector<int64> data;
@@ -335,7 +335,7 @@ int64 short_comb_mod(int64 n, int64 m, int64 mod) {
     int64 a = i;
     for (int j = 0; j < size && a > 1; ++j) {
       for (;;) {
-        int64 t = gcd(a, data[j]);
+        int64 t = Gcd(a, data[j]);
         if (t == 1) break;
         a /= t;
         data[j] /= t;
@@ -343,7 +343,7 @@ int64 short_comb_mod(int64 n, int64 m, int64 mod) {
     }
   }
   int64 ret = 1;
-  for (int i = 0; i < size; ++i) ret = mul_mod_ex(ret, data[i], mod);
+  for (int i = 0; i < size; ++i) ret = MulModEx(ret, data[i], mod);
   return ret;
 }
 
@@ -353,8 +353,8 @@ int64 short_comb_mod(int64 n, int64 m, int64 mod) {
  */
 struct CombModerEx {
   CombModerEx(uint64 p) : p_(p), fmoder_(p) {}
-  int64 s(int64 x) { return x & 1 ? p_ - 1 : 1; }
-  int64 comb(int64 m, int64 n) {
+  int64 Sign(int64 x) { return x & 1 ? p_ - 1 : 1; }
+  int64 Comb(int64 m, int64 n) {
     if (m < 0 || n > m) return 0;
     if (n == m || n == 0) return 1;
     if (n == 1 || n == m - 1) return m % p_;
@@ -369,19 +369,19 @@ struct CombModerEx {
     if (pp) return 0;
     int64 l = 1, r = 1;
     for (int64 x = m; x; x /= p_) {
-      l = mul_mod_ex(l, s(x / p_), p_);
-      l = mul_mod_ex(l, fmoder_.cal(x % p_), p_);
+      l = MulModEx(l, Sign(x / p_), p_);
+      l = MulModEx(l, fmoder_.Cal(x % p_), p_);
     }
     for (int64 x = n; x; x /= p_) {
-      r = mul_mod_ex(r, s(x / p_), p_);
-      r = mul_mod_ex(r, fmoder_.cal(x % p_), p_);
+      r = MulModEx(r, Sign(x / p_), p_);
+      r = MulModEx(r, fmoder_.Cal(x % p_), p_);
     }
     for (int64 x = dist; x; x /= p_) {
-      r = mul_mod_ex(r, s(x / p_), p_);
-      r = mul_mod_ex(r, fmoder_.cal(x % p_), p_);
+      r = MulModEx(r, Sign(x / p_), p_);
+      r = MulModEx(r, fmoder_.Cal(x % p_), p_);
     }
 
-    return mul_mod_ex(inv_of(r, p_), l, p_);
+    return MulModEx(InvOf(r, p_), l, p_);
   }
 
  private:
@@ -397,12 +397,12 @@ struct CombModerEx {
  */
 struct PowerSumModer {
   PowerSumModer(int64 mod, int maxk = 128) : mod_(mod), maxk_(maxk) {
-    init(maxk);
+    Init(maxk);
   }
 
   ~PowerSumModer() = default;
 
-  void init(int maxk = 128) {
+  void Init(int maxk = 128) {
     this->maxk_ = maxk;
 
     vector<vector<int64>>(maxk + 1).swap(p_);
@@ -412,7 +412,7 @@ struct PowerSumModer {
 
     vector<int64>(maxk + 2).swap(invs_);
 
-    init_inv(&invs_[0], maxk + 1, mod_);
+    InitInv(&invs_[0], maxk + 1, mod_);
     for (int i = 0; i <= maxk; ++i)
       for (int j = 0; j <= maxk; ++j) {
         p_[i][j] = 0;
@@ -422,18 +422,18 @@ struct PowerSumModer {
       for (int j = 1; j < i; ++j) {
         int64 t = p_[i - 1][j - 1] + p_[i - 1][j];
         if (t >= mod_) t -= mod_;
-        p_[i][j] = mul_mod_ex(j, t, mod_);
+        p_[i][j] = MulModEx(j, t, mod_);
       }
       p_[i][i] = 1;
       for (int j = 1; j <= i; ++j) {
-        p_[i][i] = mul_mod_ex(p_[i][i], j, mod_);
+        p_[i][i] = MulModEx(p_[i][i], j, mod_);
       }
     }
   }
 
   // n + 1, n, ..., n-k+1 is not divisible by mod
   // 2,3,...k+1 is not divisible by mod
-  int64 cal(int64 n, int64 k) {
+  int64 Cal(int64 n, int64 k) {
     PE_ASSERT(k <= maxk_);
     if (k == 0) {
       return n % mod_;
@@ -442,46 +442,46 @@ struct PowerSumModer {
     int64 ret = 0;
     int64 c = (n + 1) % mod_;
     for (int i = 1; i <= k; ++i) {
-      // ret += P[k][i] * short_comb_mod(n + 1, i + 1, mod) % mod;
-      c = mul_mod_ex(c, regulate_mod(n + 1 - i, mod_), mod_);
-      c = mul_mod_ex(c, invs_[i + 1], mod_);
+      // ret += P[k][i] * ShortCombMod(n + 1, i + 1, mod) % mod;
+      c = MulModEx(c, RegulateMod(n + 1 - i, mod_), mod_);
+      c = MulModEx(c, invs_[i + 1], mod_);
       if (c == 0) {
         break;
       }
-      ret += mul_mod_ex(p_[k][i], c, mod_);
+      ret += MulModEx(p_[k][i], c, mod_);
       if (ret >= mod_) ret -= mod_;
     }
     return ret % mod_;
   }
 
-  int64 cal_safe(int64 n, int64 k) {
+  int64 CalSafe(int64 n, int64 k) {
     PE_ASSERT(k <= maxk_);
     if (k == 0) {
       return n % mod_;
     }
 
     int64 A, B;
-    tie(A, B) = extract_factor(n + 1, mod_);
+    tie(A, B) = ExtractFactor(n + 1, mod_);
 
     int64 ret = 0;
     int64 c = A;
     int64 d = B;
     for (int i = 1; i <= k; ++i) {
-      // ret += P[k][i] * short_comb_mod(n + 1, i + 1, mod) % mod;
-      tie(A, B) = extract_factor(n + 1 - i, mod_);
+      // ret += P[k][i] * ShortCombMod(n + 1, i + 1, mod) % mod;
+      tie(A, B) = ExtractFactor(n + 1 - i, mod_);
       d += B;
-      c = mul_mod_ex(c, regulate_mod(A, mod_), mod_);
+      c = MulModEx(c, RegulateMod(A, mod_), mod_);
 
-      tie(A, B) = extract_factor(i + 1, mod_);
+      tie(A, B) = ExtractFactor(i + 1, mod_);
       d -= B;
-      c = mul_mod_ex(c, invs_[A], mod_);
+      c = MulModEx(c, invs_[A], mod_);
 
       if (c == 0) {
         break;
       }
 
       if (d == 0) {
-        ret += mul_mod_ex(p_[k][i], c, mod_);
+        ret += MulModEx(p_[k][i], c, mod_);
         if (ret >= mod_) ret -= mod_;
       }
     }
@@ -503,12 +503,12 @@ struct PowerSumModer {
  */
 struct PowerSumModerB {
   PowerSumModerB(int64 mod, int64 maxk = 128) : mod_(mod), maxk_(maxk) {
-    init(maxk);
+    Init(maxk);
   }
 
   ~PowerSumModerB() = default;
 
-  void init(int64 maxk = 128) {
+  void Init(int64 maxk = 128) {
     this->maxk_ = maxk;
 
     this->maxk_ = maxk;
@@ -516,15 +516,15 @@ struct PowerSumModerB {
     vector<int64>(maxk + 1).swap(bnl_);
     vector<int64>(maxk + 2).swap(invs_);
 
-    init_inv(&invs_[0], maxk + 1, mod_);
-    init_bernoulli_number(&bnl_[0], maxk + 1, &invs_[0], mod_);
+    InitInv(&invs_[0], maxk + 1, mod_);
+    InitBernoulliNumber(&bnl_[0], maxk + 1, &invs_[0], mod_);
 
     bnl_[1] = mod_ - bnl_[1];
   }
 
   // n + 1, n, ..., n-k+1 is not divisible by mod
   // 2,3,...k+1 is not divisible by mod
-  int64 cal(int64 n, int64 k) {
+  int64 Cal(int64 n, int64 k) {
     PE_ASSERT(k <= maxk_);
     if (k == 0) {
       return n % mod_;
@@ -532,28 +532,28 @@ struct PowerSumModerB {
 
     int64 ret = 0;
 
-    int64 invn = power_mod_ex(n % mod_, mod_ - 2, mod_);
-    int64 c = power_mod_ex(n % mod_, k + 1, mod_);
+    int64 invn = PowerModEx(n % mod_, mod_ - 2, mod_);
+    int64 c = PowerModEx(n % mod_, k + 1, mod_);
 
     for (int64 i = 0; i <= k; ++i) {
       if (i > 0) {
-        c = mul_mod_ex(c, regulate_mod(k + 2 - i, mod_), mod_);
-        c = mul_mod_ex(c, invs_[i], mod_);
-        c = mul_mod_ex(c, invn, mod_);
+        c = MulModEx(c, RegulateMod(k + 2 - i, mod_), mod_);
+        c = MulModEx(c, invs_[i], mod_);
+        c = MulModEx(c, invn, mod_);
       }
 
       if (c == 0) {
         break;
       }
 
-      ret += mul_mod_ex(c, bnl_[i], mod_);
+      ret += MulModEx(c, bnl_[i], mod_);
       if (ret >= mod_) ret -= mod_;
     }
-    ret = mul_mod_ex(ret, invs_[k + 1], mod_);
+    ret = MulModEx(ret, invs_[k + 1], mod_);
     return ret;
   }
 
-  int64 cal_safe(int64 n, int64 k) {
+  int64 CalSafe(int64 n, int64 k) {
     PE_ASSERT(k <= maxk_);
     if (k == 0) {
       return n % mod_;
@@ -561,33 +561,33 @@ struct PowerSumModerB {
 
     int64 ret = 0;
 
-    int64 invn = power_mod_ex(n % mod_, mod_ - 2, mod_);
-    int64 c = power_mod_ex(n % mod_, k + 1, mod_);
+    int64 invn = PowerModEx(n % mod_, mod_ - 2, mod_);
+    int64 c = PowerModEx(n % mod_, k + 1, mod_);
 
     int64 d = 0;
     for (int64 i = 0; i <= k; ++i) {
       if (i > 0) {
         int64 A, B;
 
-        tie(A, B) = extract_factor(k + 2 - i, mod_);
+        tie(A, B) = ExtractFactor(k + 2 - i, mod_);
         d += B;
-        c = mul_mod_ex(c, regulate_mod(A, mod_), mod_);
+        c = MulModEx(c, RegulateMod(A, mod_), mod_);
 
-        tie(A, B) = extract_factor(i, mod_);
+        tie(A, B) = ExtractFactor(i, mod_);
         d -= B;
-        c = mul_mod_ex(c, invs_[A], mod_);
+        c = MulModEx(c, invs_[A], mod_);
 
-        c = mul_mod_ex(c, invn, mod_);
+        c = MulModEx(c, invn, mod_);
       }
       if (c == 0) {
         break;
       }
       if (d == 0) {
-        ret += mul_mod_ex(c, bnl_[i], mod_);
+        ret += MulModEx(c, bnl_[i], mod_);
         if (ret >= mod_) ret -= mod_;
       }
     }
-    ret = mul_mod_ex(ret, invs_[k + 1], mod_);
+    ret = MulModEx(ret, invs_[k + 1], mod_);
     return ret;
   }
 
@@ -606,12 +606,12 @@ struct PowerSumModerB {
  */
 struct PowerSumModerB1 {
   PowerSumModerB1(int64 mod, int64 maxk = 128) : mod_(mod), maxk_(maxk) {
-    init(maxk);
+    Init(maxk);
   }
 
   ~PowerSumModerB1() = default;
 
-  void init(int64 maxk = 128) {
+  void Init(int64 maxk = 128) {
     this->maxk_ = maxk;
 
     this->maxk_ = maxk;
@@ -619,13 +619,13 @@ struct PowerSumModerB1 {
     vector<int64>(maxk + 1).swap(bnl_);
     vector<int64>(maxk + 2).swap(invs_);
 
-    init_inv(&invs_[0], maxk + 1, mod_);
-    init_bernoulli_number(&bnl_[0], maxk + 1, &invs_[0], mod_);
+    InitInv(&invs_[0], maxk + 1, mod_);
+    InitBernoulliNumber(&bnl_[0], maxk + 1, &invs_[0], mod_);
   }
 
   // n + 1, n, ..., n-k+1 is not divisible by mod
   // 2,3,...k+1 is not divisible by mod
-  int64 cal(int64 n, int64 k) {
+  int64 Cal(int64 n, int64 k) {
     PE_ASSERT(k <= maxk_);
     if (k == 0) {
       return n % mod_;
@@ -638,22 +638,22 @@ struct PowerSumModerB1 {
 
     int64 c = 1 % mod_;
     for (int64 i = 1; i <= k1; ++i) {
-      c = mul_mod_ex(c, regulate_mod(k1 - i + 1, mod_), mod_);
-      c = mul_mod_ex(c, invs_[i], mod_);
-      c = mul_mod_ex(c, n1, mod_);
+      c = MulModEx(c, RegulateMod(k1 - i + 1, mod_), mod_);
+      c = MulModEx(c, invs_[i], mod_);
+      c = MulModEx(c, n1, mod_);
 
       if (c == 0) {
         break;
       }
 
-      ret += mul_mod_ex(c, bnl_[k1 - i], mod_);
+      ret += MulModEx(c, bnl_[k1 - i], mod_);
       if (ret >= mod_) ret -= mod_;
     }
-    ret = mul_mod_ex(ret, invs_[k1], mod_);
+    ret = MulModEx(ret, invs_[k1], mod_);
     return ret;
   }
 
-  int64 cal_safe(int64 n, int64 k) {
+  int64 CalSafe(int64 n, int64 k) {
     PE_ASSERT(k <= maxk_);
     if (k == 0) {
       return n % mod_;
@@ -669,25 +669,25 @@ struct PowerSumModerB1 {
     for (int64 i = 1; i <= k1; ++i) {
       int64 A, B;
 
-      tie(A, B) = extract_factor(k1 - i + 1, mod_);
+      tie(A, B) = ExtractFactor(k1 - i + 1, mod_);
       d += B;
-      c = mul_mod_ex(c, regulate_mod(A, mod_), mod_);
+      c = MulModEx(c, RegulateMod(A, mod_), mod_);
 
-      tie(A, B) = extract_factor(i, mod_);
+      tie(A, B) = ExtractFactor(i, mod_);
       d -= B;
-      c = mul_mod_ex(c, invs_[A], mod_);
+      c = MulModEx(c, invs_[A], mod_);
 
-      c = mul_mod_ex(c, n1, mod_);
+      c = MulModEx(c, n1, mod_);
 
       if (c == 0) {
         break;
       }
       if (d == 0) {
-        ret += mul_mod_ex(c, bnl_[k1 - i], mod_);
+        ret += MulModEx(c, bnl_[k1 - i], mod_);
         if (ret >= mod_) ret -= mod_;
       }
     }
-    ret = mul_mod_ex(ret, invs_[k1], mod_);
+    ret = MulModEx(ret, invs_[k1], mod_);
     return ret;
   }
 
@@ -698,12 +698,12 @@ struct PowerSumModerB1 {
   vector<int64> invs_;
 };
 
-SL int64 power_sum(int64 n, int64 k, int64 mod) {
-  return PowerSumModerB(mod, k).cal(n, k);
+SL int64 PowerSum(int64 n, int64 k, int64 mod) {
+  return PowerSumModerB(mod, k).Cal(n, k);
 }
 
-SL int64 power_sum_safe(int64 n, int64 k, int64 mod) {
-  return PowerSumModerB(mod, k).cal_safe(n, k);
+SL int64 PowerSumSafe(int64 n, int64 k, int64 mod) {
+  return PowerSumModerB(mod, k).CalSafe(n, k);
 }
 
 /**
@@ -712,37 +712,37 @@ SL int64 power_sum_safe(int64 n, int64 k, int64 mod) {
  * Complex: O(k^2)
  */
 template <typename T, int D>
-SL void init_power_sum_mod(int64 n, const int maxk, int* result, T (*comb)[D],
-                           const int64 mod) {
+SL void InitPowerSumMod(int64 n, const int maxk, int* result, T (*comb)[D],
+                        const int64 mod) {
   PE_ASSERT(maxk < D);
   result[0] = n % mod;
   for (int i = 1; i <= maxk; ++i) {
-    int64 tmp = power_mod_ex(n, i + 1, mod);
+    int64 tmp = PowerModEx(n, i + 1, mod);
     for (int j = 1; j <= i + 1; ++j) {
       if (j & 1) {
-        tmp = sub_mod(tmp, mul_mod_ex(comb[i + 1][j], result[i + 1 - j], mod),
-                      mod);
+        tmp =
+            SubMod(tmp, MulModEx(comb[i + 1][j], result[i + 1 - j], mod), mod);
       } else {
-        tmp = add_mod(tmp, mul_mod_ex(comb[i + 1][j], result[i + 1 - j], mod),
-                      mod);
+        tmp =
+            AddMod(tmp, MulModEx(comb[i + 1][j], result[i + 1 - j], mod), mod);
       }
     }
-    result[i] = tmp * inv_of(comb[i + 1][1], mod) % mod;
+    result[i] = tmp * InvOf(comb[i + 1][1], mod) % mod;
   }
 }
 
 // Sum of 1 + 2 + 3 + ... + n
-SL int64 ap_sum_mod(int64 n, int64 mod) {
+SL int64 ApSumMod(int64 n, int64 mod) {
   if (n == 0) return 0;
-  if (n < 0) return regulate_mod(-ap_sum_mod(-n, mod), mod);
-  return n & 1 ? mul_mod_ex(((n + 1) >> 1) % mod, n % mod, mod)
-               : mul_mod_ex((n >> 1) % mod, (n + 1) % mod, mod);
+  if (n < 0) return RegulateMod(-ApSumMod(-n, mod), mod);
+  return n & 1 ? MulModEx(((n + 1) >> 1) % mod, n % mod, mod)
+               : MulModEx((n >> 1) % mod, (n + 1) % mod, mod);
 }
 
 // Sum of arithmetic progression
 // a <= a, a + delta, a + 2 delta, ..., a + maxk detla <= b for delta >= 0 or
 // a >= a, a + delta, a + 2 delta, ..., a + maxk delta >= b for delta < 0
-SL int64 ap_sum_mod(int64 a, int64 b, int64 mod, int64 delta = 1) {
+SL int64 ApSumMod(int64 a, int64 b, int64 mod, int64 delta = 1) {
   if (delta == 0) {
     PE_ASSERT(a == b);
     return a;
@@ -751,16 +751,15 @@ SL int64 ap_sum_mod(int64 a, int64 b, int64 mod, int64 delta = 1) {
   if (delta < 0 && a < b) return 0;
   const int64 maxk = (b - a) / delta;
   PE_ASSERT(maxk >= 0);
-  const int64 t0 = mul_mod_ex((maxk + 1) % mod, regulate_mod(a, mod), mod);
+  const int64 t0 = MulModEx((maxk + 1) % mod, RegulateMod(a, mod), mod);
   // delta, 2 delta, maxk delta
-  const int64 t1 =
-      mul_mod_ex(regulate_mod(delta, mod), ap_sum_mod(maxk, mod), mod);
-  return add_mod(t0, t1, mod);
+  const int64 t1 = MulModEx(RegulateMod(delta, mod), ApSumMod(maxk, mod), mod);
+  return AddMod(t0, t1, mod);
 }
 
 // Sum of 1^2 + 2^2 + 3^2 + ... + n^2
 // Assume no overflow for 2 * n + 1
-SL int64 square_sum_mod(int64 n, int64 mod) {
+SL int64 SquareSumMod(int64 n, int64 mod) {
   if (n <= 0) return 0;
   // n*(n + 1)*(2 n + 1)/6
   int64 a = n, b = n + 1, c = 2 * n + 1;
@@ -784,20 +783,20 @@ SL int64 square_sum_mod(int64 n, int64 mod) {
       b /= 6;
       break;
   }
-  return mul_mod_ex(a % mod, mul_mod_ex(b % mod, c % mod, mod), mod);
+  return MulModEx(a % mod, MulModEx(b % mod, c % mod, mod), mod);
 }
 
 // Sum of 1^3 + 2^3 + 3^3 + ... + n^3
-SL int64 cube_sum_mod(int64 n, int64 mod) {
+SL int64 CubeSumMod(int64 n, int64 mod) {
   if (n <= 0) return 0;
   // (n*(n + 1)/2)^2
-  const int64 a = ap_sum_mod(n, mod);
-  return mul_mod_ex(a, a, mod);
+  const int64 a = ApSumMod(n, mod);
+  return MulModEx(a, a, mod);
 }
 
 // Sum of 1^4 + 2^4 + 3^4 + ... + n^4
 // Assume no overflow for 2 * n
-SL int64 quad_sum_mod(int64 n, int64 mod) {
+SL int64 QuadSumMod(int64 n, int64 mod) {
   if (n <= 0) return 0;
   // (3*n*(n + 1) - 1)*(2*n + 1)*(n + 1)*n/30
   // Handle (2*n + 1)*(n + 1)*n/6
@@ -826,11 +825,11 @@ SL int64 quad_sum_mod(int64 n, int64 mod) {
   if (!done && a % 5 == 0) a /= 5, done = 1;
   if (!done && b % 5 == 0) b /= 5, done = 1;
   if (!done && c % 5 == 0) c /= 5, done = 1;
-  const int64 d = mul_mod_ex(a % mod, mul_mod_ex(b % mod, c % mod, mod), mod);
+  const int64 d = MulModEx(a % mod, MulModEx(b % mod, c % mod, mod), mod);
   if (done) {
-    const int64 t0 = mul_mod_ex(n % mod, (n + 1) % mod, mod);
-    const int64 t1 = sub_mod(mul_mod_ex(3LL, t0, mod), 1, mod);
-    return mul_mod_ex(d, t1, mod);
+    const int64 t0 = MulModEx(n % mod, (n + 1) % mod, mod);
+    const int64 t1 = SubMod(MulModEx(3LL, t0, mod), 1, mod);
+    return MulModEx(d, t1, mod);
   }
   // Handle (3*n*n + 3*n - 1)/5
   switch (n % 5) {
@@ -839,10 +838,10 @@ SL int64 quad_sum_mod(int64 n, int64 mod) {
     // (n - 1)*(3*(n - 1) + 4) + 5*n
     // (n - 1)*(3 n + 1) + 5*n
     case 1: {
-      const int64 t0 = add_mod(mul_mod_ex(3LL, n, mod), 1, mod);
+      const int64 t0 = AddMod(MulModEx(3LL, n, mod), 1, mod);
       const int64 t1 =
-          add_mod(mul_mod_ex((n - 1) / 5 % mod, t0, mod), n % mod, mod);
-      return mul_mod_ex(d, t1, mod);
+          AddMod(MulModEx((n - 1) / 5 % mod, t0, mod), n % mod, mod);
+      return MulModEx(d, t1, mod);
     }
     // 3*n*n + 3*n - 1 =
     // 3*(n - 3)*(n - 3) + 7*(3*n - 4)
@@ -850,10 +849,10 @@ SL int64 quad_sum_mod(int64 n, int64 mod) {
     // 3*(n - 3)*(n - 3) + 7*3*(n - 3) + 35
     // 3*(n - 3)*(n + 4) + 35
     case 3: {
-      const int64 t0 = mul_mod_ex(
-          3LL, mul_mod_ex((n - 3) / 5 % mod, (n + 4) % mod, mod), mod);
-      const int64 t1 = add_mod(t0, 7, mod);
-      return mul_mod_ex(d, t1, mod);
+      const int64 t0 =
+          MulModEx(3LL, MulModEx((n - 3) / 5 % mod, (n + 4) % mod, mod), mod);
+      const int64 t1 = AddMod(t0, 7, mod);
+      return MulModEx(d, t1, mod);
     }
     default:
       PE_ASSERT(0);
@@ -863,7 +862,7 @@ SL int64 quad_sum_mod(int64 n, int64 mod) {
 
 // Sum of 1^5 + 2^5 + 3^5 + ... + n^5
 // Assume no overflow for 2 * n
-SL int64 pent_sum_mod(int64 n, int64 mod) {
+SL int64 PentSumMod(int64 n, int64 mod) {
   if (n <= 0) return 0;
   // n^2*(n + 1)^2*(2*n^2 + 2*n - 1)/12
   // Handle (n (n + 1))^2/4
@@ -876,25 +875,25 @@ SL int64 pent_sum_mod(int64 n, int64 mod) {
   int done = 0;
   if (!done && a % 3 == 0) a /= 3, done = 1;
   if (!done && c % 3 == 0) c /= 3, done = 1;
-  const int64 e = mul_mod_ex(mul_mod_ex(a % mod, b % mod, mod),
-                             mul_mod_ex(c % mod, d % mod, mod), mod);
+  const int64 e = MulModEx(MulModEx(a % mod, b % mod, mod),
+                           MulModEx(c % mod, d % mod, mod), mod);
   if (done) {
-    const int64 t0 = add_mod(n, n, mod);
-    const int64 t1 = mul_mod_ex(t0, n, mod);
-    const int64 t2 = sub_mod(add_mod(t0, t1, mod), 1, mod);
-    return mul_mod_ex(e, t2, mod);
+    const int64 t0 = AddMod(n, n, mod);
+    const int64 t1 = MulModEx(t0, n, mod);
+    const int64 t2 = SubMod(AddMod(t0, t1, mod), 1, mod);
+    return MulModEx(e, t2, mod);
   }
   // Handle (2*n^2 + 2*n - 1)/3
   // We have n%3 = 1
   // 2*n^2 + 2*n - 1 = 2*(n-1)^2 + 6n - 3
-  const int64 t0 = mul_mod_ex((n - 1) / 3 % mod, (n - 1) % mod, mod);
-  const int64 t1 = add_mod(add_mod(t0, t0, mod), (2 * n - 1) % mod, mod);
-  return mul_mod_ex(e, t1, mod);
+  const int64 t0 = MulModEx((n - 1) / 3 % mod, (n - 1) % mod, mod);
+  const int64 t1 = AddMod(AddMod(t0, t0, mod), (2 * n - 1) % mod, mod);
+  return MulModEx(e, t1, mod);
 }
 
 // Sum of 1^6 + 2^6 + 3^6 + ... + n^6
 // Assume no overflow for 2 * n
-SL int64 hexa_sum_mod(int64 n, int64 mod) {
+SL int64 HexaSumMod(int64 n, int64 mod) {
   if (n <= 0) return 0;
   // n*(1 + n)*(1 + 2*n)*(1 - 3*n + 6*n^3 + 3*n^4)/42
   // Handle n*(1 + n)*(1 + 2*n)/6
@@ -924,54 +923,54 @@ SL int64 hexa_sum_mod(int64 n, int64 mod) {
   if (!done && a % 7 == 0) a /= 7, done = 1;
   if (!done && b % 7 == 0) b /= 7, done = 1;
   if (!done && c % 7 == 0) c /= 7, done = 1;
-  const int64 d = mul_mod_ex(a % mod, mul_mod_ex(b % mod, c % mod, mod), mod);
+  const int64 d = MulModEx(a % mod, MulModEx(b % mod, c % mod, mod), mod);
   if (done) {
     const int64 n1 = n % mod;
-    const int64 n2 = mul_mod_ex(n1, n1, mod);
-    const int64 n3 = mul_mod_ex(n1, n2, mod);
-    const int64 n4 = mul_mod_ex(n2, n2, mod);
-    const int64 t0 = sub_mod(add_mod(n4, 2 * n3 % mod, mod), n1, mod);
-    const int64 t1 = add_mod(mul_mod_ex(3, t0, mod), 1, mod);
-    return mul_mod_ex(d, t1, mod);
+    const int64 n2 = MulModEx(n1, n1, mod);
+    const int64 n3 = MulModEx(n1, n2, mod);
+    const int64 n4 = MulModEx(n2, n2, mod);
+    const int64 t0 = SubMod(AddMod(n4, 2 * n3 % mod, mod), n1, mod);
+    const int64 t1 = AddMod(MulModEx(3, t0, mod), 1, mod);
+    return MulModEx(d, t1, mod);
   }
   // Handle (1 - 3*n + 6*n^3 + 3*n^4)/7
   const int64 n1 = n % mod;
-  const int64 n2 = mul_mod_ex(n1, n1, mod);
-  const int64 n3 = mul_mod_ex(n1, n2, mod);
+  const int64 n2 = MulModEx(n1, n1, mod);
+  const int64 n3 = MulModEx(n1, n2, mod);
   switch (n % 7) {
     // 3*(2 + 3*n + 3*n^2 + n^3)*(n - 1) + 7
     case 1: {
-      const int64 t0 = add_mod(2LL, mul_mod_ex(3LL, n1, mod), mod);
-      const int64 t1 = add_mod(mul_mod_ex(3LL, n2, mod), n3, mod);
-      const int64 t2 = mul_mod_ex(mul_mod_ex(3LL, add_mod(t0, t1, mod), mod),
-                                  (n - 1) / 7 % mod, mod);
-      const int64 t3 = add_mod(t2, 1, mod);
-      return mul_mod_ex(d, t3, mod);
+      const int64 t0 = AddMod(2LL, MulModEx(3LL, n1, mod), mod);
+      const int64 t1 = AddMod(MulModEx(3LL, n2, mod), n3, mod);
+      const int64 t2 = MulModEx(MulModEx(3LL, AddMod(t0, t1, mod), mod),
+                                (n - 1) / 7 % mod, mod);
+      const int64 t3 = AddMod(t2, 1, mod);
+      return MulModEx(d, t3, mod);
     }
     // 3*(15 + 8*n + 4*n^2 + n^3)*(n - 2) + 91
     case 2: {
-      const int64 t0 = add_mod(15LL, mul_mod_ex(8LL, n1, mod), mod);
-      const int64 t1 = add_mod(mul_mod_ex(4LL, n2, mod), n3, mod);
-      const int64 t2 = mul_mod_ex(mul_mod_ex(3LL, add_mod(t0, t1, mod), mod),
-                                  (n - 2) / 7 % mod, mod);
-      const int64 t3 = add_mod(t2, 13LL, mod);
-      return mul_mod_ex(d, t3, mod);
+      const int64 t0 = AddMod(15LL, MulModEx(8LL, n1, mod), mod);
+      const int64 t1 = AddMod(MulModEx(4LL, n2, mod), n3, mod);
+      const int64 t2 = MulModEx(MulModEx(3LL, AddMod(t0, t1, mod), mod),
+                                (n - 2) / 7 % mod, mod);
+      const int64 t3 = AddMod(t2, 13LL, mod);
+      return MulModEx(d, t3, mod);
     }
     // 3*(-10 + 3 n - n^2 + n^3)*(n + 3) + 91
     case 4: {
-      const int64 t0 = sub_mod(mul_mod_ex(3LL, n1, mod), 10LL, mod);
-      const int64 t1 = sub_mod(n3, n2, mod);
-      const int64 t2 = mul_mod_ex(mul_mod_ex(3LL, add_mod(t0, t1, mod), mod),
-                                  (n + 3) / 7 % mod, mod);
-      const int64 t3 = add_mod(t2, 13LL, mod);
-      return mul_mod_ex(d, t3, mod);
+      const int64 t0 = SubMod(MulModEx(3LL, n1, mod), 10LL, mod);
+      const int64 t1 = SubMod(n3, n2, mod);
+      const int64 t2 = MulModEx(MulModEx(3LL, AddMod(t0, t1, mod), mod),
+                                (n + 3) / 7 % mod, mod);
+      const int64 t3 = AddMod(t2, 13LL, mod);
+      return MulModEx(d, t3, mod);
     }
     // 3*(-1 + n^3)*(n + 2) + 7
     case 5: {
-      const int64 t0 = mul_mod_ex(3LL, sub_mod(n3, 1LL, mod), mod);
-      const int64 t1 = mul_mod_ex(t0, (n + 2) / 7 % mod, mod);
-      const int64 t2 = add_mod(t1, 1LL, mod);
-      return mul_mod_ex(d, t2, mod);
+      const int64 t0 = MulModEx(3LL, SubMod(n3, 1LL, mod), mod);
+      const int64 t1 = MulModEx(t0, (n + 2) / 7 % mod, mod);
+      const int64 t2 = AddMod(t1, 1LL, mod);
+      return MulModEx(d, t2, mod);
     }
     default:
       PE_ASSERT(0);
@@ -981,7 +980,7 @@ SL int64 hexa_sum_mod(int64 n, int64 mod) {
 
 // Sum of 1^7 + 2^7 + 3^7 + ... + n^7
 // Assume no overflow for 2 * n
-SL int64 hept_sum_mod(int64 n, int64 mod) {
+SL int64 HeptSumMod(int64 n, int64 mod) {
   if (n <= 0) return 0;
   // n^2 * (1 + n)^2 * (2 - 4 n - n^2 + 6 n^3 + 3 n^4)/24
   // Handle (n (n + 1))^2/4
@@ -1001,47 +1000,47 @@ SL int64 hept_sum_mod(int64 n, int64 mod) {
   // 648 k^4
   const int64 k = n / 6;
   const int64 k1 = k % mod;
-  const int64 k2 = mul_mod_ex(k1, k1, mod);
-  const int64 k3 = mul_mod_ex(k2, k1, mod);
-  const int64 k4 = mul_mod_ex(k2, k2, mod);
+  const int64 k2 = MulModEx(k1, k1, mod);
+  const int64 k3 = MulModEx(k2, k1, mod);
+  const int64 k4 = MulModEx(k2, k2, mod);
   const int64 f1 = n % 6;
   const int64 f2 = f1 * f1;
   const int64 f3 = f2 * f1;
   const int64 f4 = f2 * f2;
-  int64 t0 = sub_mod(0LL, mul_mod_ex(4LL, k1, mod), mod);
-  t0 = sub_mod(t0, mul_mod_ex(2LL, mul_mod_ex(f1, k1, mod), mod), mod);
-  t0 = add_mod(t0, mul_mod_ex(18LL, mul_mod_ex(f2, k1, mod), mod), mod);
-  t0 = add_mod(t0, mul_mod_ex(12LL, mul_mod_ex(f3, k1, mod), mod), mod);
-  t0 = sub_mod(t0, mul_mod_ex(6LL, k2, mod), mod);
-  t0 = add_mod(t0, mul_mod_ex(108LL, mul_mod_ex(f1, k2, mod), mod), mod);
-  t0 = add_mod(t0, mul_mod_ex(108LL, mul_mod_ex(f2, k2, mod), mod), mod);
-  t0 = add_mod(t0, mul_mod_ex(216LL, k3, mod), mod);
-  t0 = add_mod(t0, mul_mod_ex(432LL, mul_mod_ex(f1, k3, mod), mod), mod);
-  t0 = add_mod(t0, mul_mod_ex(648LL, k4, mod), mod);
+  int64 t0 = SubMod(0LL, MulModEx(4LL, k1, mod), mod);
+  t0 = SubMod(t0, MulModEx(2LL, MulModEx(f1, k1, mod), mod), mod);
+  t0 = AddMod(t0, MulModEx(18LL, MulModEx(f2, k1, mod), mod), mod);
+  t0 = AddMod(t0, MulModEx(12LL, MulModEx(f3, k1, mod), mod), mod);
+  t0 = SubMod(t0, MulModEx(6LL, k2, mod), mod);
+  t0 = AddMod(t0, MulModEx(108LL, MulModEx(f1, k2, mod), mod), mod);
+  t0 = AddMod(t0, MulModEx(108LL, MulModEx(f2, k2, mod), mod), mod);
+  t0 = AddMod(t0, MulModEx(216LL, k3, mod), mod);
+  t0 = AddMod(t0, MulModEx(432LL, MulModEx(f1, k3, mod), mod), mod);
+  t0 = AddMod(t0, MulModEx(648LL, k4, mod), mod);
   if (done3) {
-    t0 = mul_mod_ex(3LL, t0, mod);
+    t0 = MulModEx(3LL, t0, mod);
   }
   const int64 t1 = (3 * f4 + 6 * f3 - f2 - 4 * f1 + 2) / (done3 ? 2 : 6) % mod;
-  const int64 t2 = mul_mod_ex(mul_mod_ex(a % mod, b % mod, mod),
-                              mul_mod_ex(c % mod, d % mod, mod), mod);
-  return mul_mod_ex(add_mod(t0, t1, mod), t2, mod);
+  const int64 t2 = MulModEx(MulModEx(a % mod, b % mod, mod),
+                            MulModEx(c % mod, d % mod, mod), mod);
+  return MulModEx(AddMod(t0, t1, mod), t2, mod);
 }
 
-#define p1_sum_mod ap_sum_mod
-#define p2_sum_mod square_sum_mod
-#define p3_sum_mod cube_sum_mod
-#define p4_sum_mod quad_sum_mod
-#define p5_sum_mod pent_sum_mod
-#define p6_sum_mod hexa_sum_mod
-#define p7_sum_mod hept_sum_mod
+#define P1SumMod ApSumMod
+#define P2SumMod SquareSumMod
+#define P3SumMod CubeSumMod
+#define P4SumMod QuadSumMod
+#define P5SumMod PentSumMod
+#define P6SumMod HexaSumMod
+#define P7SumMod HeptSumMod
 
 #if 0
 // Sum of geometric progression
 // (x^a+x^(a+1)+x^(a+2)+...+x^b) % mod
 // a >= 0
-// zeroPzero: 0^0
+// zero_p_zero: 0^0
 // if b < a: return 0
-SL int64 gp_sum_mod(int64 x, int64 a, int64 b, int64 mod, int64 zeroPzero = 1) {
+SL int64 GpSumMod(int64 x, int64 a, int64 b, int64 mod, int64 zero_p_zero = 1) {
   if (mod == 1) return 0;
   if (b < a) return 0;
   x %= mod;
@@ -1049,18 +1048,18 @@ SL int64 gp_sum_mod(int64 x, int64 a, int64 b, int64 mod, int64 zeroPzero = 1) {
     if (x == 0) return 0;
     if (x == 1) return (b - a + 1) % mod;
     // (x^(b+1)-x^a) / (x - 1)
-    const int64 u = power_mod_ex(x, b + 1, mod);
-    const int64 v = power_mod_ex(x, a, mod);
-    const int64 w = sub_mod(u, v, mod);
-    const int64 t = inv_of(sub_mod(x, 1, mod), mod);
-    return mul_mod_ex(w, t, mod);
+    const int64 u = PowerModEx(x, b + 1, mod);
+    const int64 v = PowerModEx(x, a, mod);
+    const int64 w = SubMod(u, v, mod);
+    const int64 t = InvOf(SubMod(x, 1, mod), mod);
+    return MulModEx(w, t, mod);
   }
   // a == 0 and x == 0
-  return zeroPzero % mod;
+  return zero_p_zero % mod;
 }
 
-SL int64 gp_sum_mod_ivx1(int64 x, int64 invXSub1, int64 a, int64 b, int64 mod,
-                         int64 zeroPzero = 1) {
+SL int64 GpSumModIvx1(int64 x, int64 invXSub1, int64 a, int64 b, int64 mod,
+                         int64 zero_p_zero = 1) {
   if (mod == 1) return 0;
   if (b < a) return 0;
   x %= mod;
@@ -1068,21 +1067,21 @@ SL int64 gp_sum_mod_ivx1(int64 x, int64 invXSub1, int64 a, int64 b, int64 mod,
     if (x == 0) return 0;
     if (x == 1) return (b - a + 1) % mod;
     // (x^(b+1)-x^a) / (x - 1)
-    const int64 u = power_mod_ex(x, b + 1, mod);
-    const int64 v = power_mod_ex(x, a, mod);
-    const int64 w = sub_mod(u, v, mod);
-    return mul_mod_ex(w, invXSub1, mod);
+    const int64 u = PowerModEx(x, b + 1, mod);
+    const int64 v = PowerModEx(x, a, mod);
+    const int64 w = SubMod(u, v, mod);
+    return MulModEx(w, invXSub1, mod);
   }
   // a == 0 and x == 0
-  return zeroPzero % mod;
+  return zero_p_zero % mod;
 }
 
 // Sum of geometric progression
 // (x^a+x^(a+1)+x^(a+2)+...+x^b) % mod
 // a >= 0
-// zeroPzero: 0^0
+// zero_p_zero: 0^0
 // if b < a: return 0
-SL int64 gp_sum_mod(int64 x, int64 a, int64 b, int64 mod,
+SL int64 GpSumMod(int64 x, int64 a, int64 b, int64 mod,
                     int64 zero_p_zero = 1) {
   if (mod == 1 || b < a) return 0;
   if (b < a) return 0;
@@ -1096,14 +1095,14 @@ SL int64 gp_sum_mod(int64 x, int64 a, int64 b, int64 mod,
   m[0][0] = x;
   m[1][0] = x;
   m[1][1] = 1;
-  r[0][0] = a == 0 && x == 0 ? zero_p_zero : power_mod_ex(x, a, mod);
+  r[0][0] = a == 0 && x == 0 ? zero_p_zero : PowerModEx(x, a, mod);
   r[1][0] = r[0][0];
   for (int64 n = b - a; n > 0; n >>= 1) {
     if (n & 1) {
       for (int i = 0; i < 2; ++i) {
         int64 s = 0;
         for (int k = 0; k < 2; ++k) {
-          s = add_mod(s, mul_mod_ex(m[i][k], r[k][0], mod), mod);
+          s = AddMod(s, MulModEx(m[i][k], r[k][0], mod), mod);
         }
         t[i][0] = s;
       }
@@ -1114,7 +1113,7 @@ SL int64 gp_sum_mod(int64 x, int64 a, int64 b, int64 mod,
         for (int j = 0; j < 2; ++j) {
           int64 s = 0;
           for (int k = 0; k < 2; ++k) {
-            s = add_mod(s, mul_mod_ex(m[i][k], m[k][j], mod), mod);
+            s = AddMod(s, MulModEx(m[i][k], m[k][j], mod), mod);
           }
           t[i][j] = s;
         }
@@ -1130,8 +1129,7 @@ SL int64 gp_sum_mod(int64 x, int64 a, int64 b, int64 mod,
 // a >= 0
 // zero_p_zero: 0^0
 // if b < a: return 0
-SL int64 gp_sum_mod(int64 x, int64 a, int64 b, int64 mod,
-                    int64 zero_p_zero = 1) {
+SL int64 GpSumMod(int64 x, int64 a, int64 b, int64 mod, int64 zero_p_zero = 1) {
   if (mod == 1 || b < a) return 0;
   if (b < a) return 0;
   x %= mod;
@@ -1139,16 +1137,16 @@ SL int64 gp_sum_mod(int64 x, int64 a, int64 b, int64 mod,
   // |x 1|       x^a
   int64 u = x;
   int64 w = x;
-  int64 v1 = a == 0 && x == 0 ? zero_p_zero : power_mod_ex(x, a, mod);
+  int64 v1 = a == 0 && x == 0 ? zero_p_zero : PowerModEx(x, a, mod);
   int64 v2 = v1;
   for (int64 n = b - a; n > 0; n >>= 1) {
     if (n & 1) {
-      v2 = add_mod(mul_mod_ex(w, v1, mod), v2, mod);
-      v1 = mul_mod_ex(u, v1, mod);
+      v2 = AddMod(MulModEx(w, v1, mod), v2, mod);
+      v1 = MulModEx(u, v1, mod);
     }
     if (n > 1) {
-      w = add_mod(mul_mod_ex(w, u, mod), w, mod);
-      u = mul_mod_ex(u, u, mod);
+      w = AddMod(MulModEx(w, u, mod), w, mod);
+      u = MulModEx(u, u, mod);
     }
   }
   return v2;
@@ -1161,22 +1159,22 @@ SL int64 gp_sum_mod(int64 x, int64 a, int64 b, int64 mod,
 struct SFCounter {
   SFCounter(int64 pivot_ = ::maxp) : pivot_(pivot_) {
     if (::maxp > 0) {
-      init(pivot_);
+      Init(pivot_);
     }
   }
 
   ~SFCounter() = default;
 
-  void init(int64 pivot_ = ::maxp) {
+  void Init(int64 pivot_ = ::maxp) {
     this->pivot_ = pivot_;
     pre_.resize(pivot_ + 1);
     pre_[0] = 0;
     for (int64 i = 1; i <= pivot_; ++i) {
-      pre_[i] = pre_[i - 1] + is_square_free(i);
+      pre_[i] = pre_[i - 1] + IsSquareFree(i);
     }
   }
 
-  int64 get(int64 n) {
+  int64 Cal(int64 n) {
     if (n <= pivot_) return pre_[n];
     auto where = mem_.find(n);
     if (where != mem_.end()) return where->second;
@@ -1184,7 +1182,7 @@ struct SFCounter {
     for (int64 i = 2;; ++i) {
       int64 i2 = i * i;
       if (i2 > n) break;
-      ret -= get(n / i2);
+      ret -= Cal(n / i2);
     }
     return mem_[n] = ret;
   }
@@ -1199,13 +1197,13 @@ template <typename T = int64>
 struct MuSummer {
   MuSummer(int64 pivot_ = ::maxp) : pivot_(pivot_) {
     if (::maxp > 0) {
-      init(pivot_);
+      Init(pivot_);
     }
   }
 
   ~MuSummer() = default;
 
-  void init(int64 pivot_ = ::maxp) {
+  void Init(int64 pivot_ = ::maxp) {
     this->pivot_ = pivot_;
 
     PE_ASSERT(pivot_ <= ::maxp);
@@ -1217,7 +1215,7 @@ struct MuSummer {
     }
   }
 
-  T get(const int64 n) {
+  T Cal(const int64 n) {
     if (n <= pivot_) return pre_[n];
 
     auto where = mem_.find(n);
@@ -1227,7 +1225,7 @@ struct MuSummer {
     for (int64 i = 2; i <= n;) {
       int64 v = n / i;
       int64 maxi = n / v;
-      ret -= (maxi - i + 1) * get(v);
+      ret -= (maxi - i + 1) * Cal(v);
       i = maxi + 1;
     }
     return mem_[n] = ret;
@@ -1243,13 +1241,13 @@ template <typename T = int64>
 struct MuPhiSummer {
   MuPhiSummer(int64 pivot_ = ::maxp) : pivot_(pivot_) {
     if (::maxp > 0) {
-      init(pivot_);
+      Init(pivot_);
     }
   }
 
   ~MuPhiSummer() = default;
 
-  void init(int64 pivot_ = ::maxp) {
+  void Init(int64 pivot_ = ::maxp) {
     this->pivot_ = pivot_;
 
     PE_ASSERT(pivot_ <= ::maxp);
@@ -1263,7 +1261,7 @@ struct MuPhiSummer {
     }
   }
 
-  T get_sum_mu(const int64 n) {
+  T CalSumMu(const int64 n) {
     if (n <= pivot_) return pre_sum_mu_[n];
 
     auto where = mem_sum_mu_.find(n);
@@ -1274,13 +1272,13 @@ struct MuPhiSummer {
       int64 v = n / i;
       int64 maxi = n / v;
       int64 d = maxi - i + 1;
-      ret -= d * get_sum_mu(v);
+      ret -= d * CalSumMu(v);
       i = maxi + 1;
     }
     return mem_sum_mu_[n] = ret;
   }
 
-  T get_sum_phi(int64 n) {
+  T CalSumPhi(int64 n) {
     if (n <= pivot_) return pre_sum_phi_[n];
 
     auto where = mem_sum_phi_.find(n);
@@ -1291,7 +1289,7 @@ struct MuPhiSummer {
     for (int64 k = 1; k <= n;) {
       int64 v = n / k;
       int64 maxk = n / v;
-      T now = get_sum_mu(maxk);
+      T now = CalSumMu(maxk);
 
       T x = now - last;
       last = now;
@@ -1322,13 +1320,13 @@ template <typename T = int64>
 struct Sigma0Summer {
   Sigma0Summer(int64 pivot_ = ::maxp) : pivot_(pivot_) {
     if (::maxp > 0) {
-      init(pivot_);
+      Init(pivot_);
     }
   }
 
   ~Sigma0Summer() = default;
 
-  void init(int64 pivot_ = ::maxp) {
+  void Init(int64 pivot_ = ::maxp) {
     this->pivot_ = pivot_;
 
     PE_ASSERT(pivot_ <= ::maxp);
@@ -1356,7 +1354,7 @@ struct Sigma0Summer {
       ret += n / i;
     }
     ret += ret;
-    const T t = sqrti(n);
+    const T t = SqrtI(n);
     return mem_[n] = ret - t * t;
   }
 
@@ -1374,13 +1372,13 @@ struct Sigma0Summer {
 struct MuPhiSumModer {
   MuPhiSumModer(int64 mod, int64 pivot_ = ::maxp) : mod_(mod), pivot_(pivot_) {
     if (::maxp > 0) {
-      init(pivot_);
+      Init(pivot_);
     }
   }
 
   ~MuPhiSumModer() = default;
 
-  void init(int64 pivot_ = ::maxp) {
+  void Init(int64 pivot_ = ::maxp) {
     this->pivot_ = pivot_;
 
     PE_ASSERT(pivot_ <= ::maxp);
@@ -1398,7 +1396,7 @@ struct MuPhiSumModer {
     }
   }
 
-  int64 get_sum_mu(const int64 n) {
+  int64 CalSumMu(const int64 n) {
     if (n <= pivot_) return pre_sum_mu_[n];
 
     auto where = mem_sum_mu_.find(n);
@@ -1408,14 +1406,14 @@ struct MuPhiSumModer {
     for (int64 i = 2; i <= n;) {
       int64 v = n / i;
       int64 maxi = n / v;
-      ret = sub_mod(ret, mul_mod_ex((maxi - i + 1) % mod_, get_sum_mu(v), mod_),
-                    mod_);
+      ret =
+          SubMod(ret, MulModEx((maxi - i + 1) % mod_, CalSumMu(v), mod_), mod_);
       i = maxi + 1;
     }
     return mem_sum_mu_[n] = ret;
   }
 
-  int64 get_sum_phi(int64 n) {
+  int64 CalSumPhi(int64 n) {
     if (n <= pivot_) return pre_sum_phi_[n];
 
     auto where = mem_sum_phi_.find(n);
@@ -1426,18 +1424,18 @@ struct MuPhiSumModer {
     for (int64 k = 1; k <= n;) {
       int64 v = n / k;
       int64 maxk = n / v;
-      int64 now = get_sum_mu(maxk);
+      int64 now = CalSumMu(maxk);
 
-      int64 x = sub_mod(now, last, mod_);
+      int64 x = SubMod(now, last, mod_);
       last = now;
 
       int64 s = 0;
       if (v & 1) {
-        s = mul_mod_ex((v + 1) / 2 % mod_, v % mod_, mod_);
+        s = MulModEx((v + 1) / 2 % mod_, v % mod_, mod_);
       } else {
-        s = mul_mod_ex(v / 2 % mod_, (v + 1) % mod_, mod_);
+        s = MulModEx(v / 2 % mod_, (v + 1) % mod_, mod_);
       }
-      ret = add_mod(ret, mul_mod_ex(s, x, mod_), mod_);
+      ret = AddMod(ret, MulModEx(s, x, mod_), mod_);
       k = maxk + 1;
     }
     return mem_sum_phi_[n] = ret;
@@ -1457,13 +1455,13 @@ struct MuPhiSumModer {
 struct Sigma0SumModer {
   Sigma0SumModer(int64 mod, int64 pivot = ::maxp) : mod_(mod), pivot_(pivot) {
     if (::maxp > 0) {
-      init(pivot_);
+      Init(pivot_);
     }
   }
 
   ~Sigma0SumModer() = default;
 
-  void init(int64 pivot_ = ::maxp) {
+  void Init(int64 pivot_ = ::maxp) {
     this->pivot_ = pivot_;
 
     PE_ASSERT(pivot_ <= ::maxp);
@@ -1476,11 +1474,11 @@ struct Sigma0SumModer {
       }
     }
     for (int i = 1; i <= pivot_; ++i) {
-      pre_[i] = add_mod(pre_[i] % mod_, pre_[i - 1], mod_);
+      pre_[i] = AddMod(pre_[i] % mod_, pre_[i - 1], mod_);
     }
   }
 
-  int64 get(const int64 n) {
+  int64 Cal(const int64 n) {
     if (n <= pivot_) return pre_[n];
 
     auto where = mem_.find(n);
@@ -1497,8 +1495,8 @@ struct Sigma0SumModer {
     if (ret >= mod_) {
       ret -= mod_;
     }
-    const int64 t = sqrti(n) % mod_;
-    return mem_[n] = sub_mod(ret, mul_mod_ex(t, t, mod_), mod_);
+    const int64 t = SqrtI(n) % mod_;
+    return mem_[n] = SubMod(ret, MulModEx(t, t, mod_), mod_);
   }
 
  private:
@@ -1522,7 +1520,7 @@ class DVA {
   };
 
   template <typename IT>
-  DVARange<IT> makeRange(IT first, IT last) const {
+  DVARange<IT> MakeRange(IT first, IT last) const {
     return DVARange<IT>(first, last);
   }
 
@@ -1617,7 +1615,7 @@ class DVA {
   int64 key_size;
 
   DVA(int64 n = 1, T element = 0)
-      : n(n), m(sqrti(n)), is_perfect_square(m * m == n) {
+      : n(n), m(SqrtI(n)), is_perfect_square(m * m == n) {
     keys.push_back(0);
 
     for (int64 i = 1; i <= m; ++i) {
@@ -1640,23 +1638,23 @@ class DVA {
 
   void fill(T element) { std::fill(values.begin(), values.end(), element); }
 
-  int idxOfValue(int64 v) const { return (int)(v <= m ? v : key_size - n / v); }
+  int IdxOfValue(int64 v) const { return (int)(v <= m ? v : key_size - n / v); }
 
-  T& operator[](int64 v) { return values[idxOfValue(v)]; }
+  T& operator[](int64 v) { return values[IdxOfValue(v)]; }
 
-  T operator[](int64 v) const { return values[idxOfValue(v)]; }
+  T operator[](int64 v) const { return values[IdxOfValue(v)]; }
 
-  DVARange<std::vector<int64>::const_iterator> fKeys() const {
-    return makeRange(keys.begin() + 1, keys.end());
+  DVARange<std::vector<int64>::const_iterator> FKeys() const {
+    return MakeRange(keys.begin() + 1, keys.end());
   }
 
-  DVARange<std::vector<int64>::const_reverse_iterator> bKeys() const {
-    return makeRange(keys.rbegin(), keys.rend() - 1);
+  DVARange<std::vector<int64>::const_reverse_iterator> BKeys() const {
+    return MakeRange(keys.rbegin(), keys.rend() - 1);
   }
 
-  DVARange<DVAIterator> fItems() const { return makeRange(begin(), end()); }
+  DVARange<DVAIterator> FItems() const { return MakeRange(begin(), end()); }
 
-  DVARange<DVARIterator> bItems() const { return makeRange(rbegin(), rend()); }
+  DVARange<DVARIterator> BItems() const { return MakeRange(rbegin(), rend()); }
 
   DVAIterator begin() const { return DVAIterator(keys, values, 1, key_size); }
 
@@ -1672,17 +1670,17 @@ class DVA {
 };
 
 template <typename T>
-SL DVA<T> prime_s0(const int64 n) {
+SL DVA<T> PrimeS0(const int64 n) {
   PE_ASSERT(n >= 1);
   DVA<T> dva(n);
 
-  for (auto& key : dva.fKeys()) dva[key] = key - 1;
+  for (auto& key : dva.FKeys()) dva[key] = key - 1;
 
   for (int64 p = 2; p <= dva.m; ++p)
     if (dva[p] != dva[p - 1]) {
       const auto pcnt = dva[p - 1];
       const int64 p2 = p * p;
-      for (auto& key : dva.bKeys()) {
+      for (auto& key : dva.BKeys()) {
         if (key < p2) break;
         dva[key] -= dva[key / p] - pcnt;
       }
@@ -1691,7 +1689,7 @@ SL DVA<T> prime_s0(const int64 n) {
 }
 
 template <typename T, int TN = 8>
-SL DVA<T> prime_s0_parallel(const int64 n) {
+SL DVA<T> PrimeS0Parallel(const int64 n) {
   PE_ASSERT(n >= 1);
   DVA<T> dva(n);
 
@@ -1701,7 +1699,7 @@ SL DVA<T> prime_s0_parallel(const int64 n) {
   vector<T> tmpdata(ks);
   auto* tmp = &tmpdata[0];
 
-  for (auto& key : dva.fKeys()) dva[key] = key - 1;
+  for (auto& key : dva.FKeys()) dva[key] = key - 1;
 
   int idx = 0;
   for (int64 p = 2; p <= dva.m; ++p)
@@ -1733,13 +1731,13 @@ SL DVA<T> prime_s0_parallel(const int64 n) {
   return dva;
 }
 
-#define prime_pi prime_s0
+#define PrimePi PrimeS0
 
 template <typename T>
-SL DVA<T> prime_s1(const int64 n) {
+SL DVA<T> PrimeS1(const int64 n) {
   PE_ASSERT(n >= 1);
   DVA<T> dva(n);
-  for (auto& key : dva.fKeys()) {
+  for (auto& key : dva.FKeys()) {
     if (key & 1) {
       T v((key + 1) >> 1);
       dva[key] = v * key - 1;
@@ -1753,7 +1751,7 @@ SL DVA<T> prime_s1(const int64 n) {
     if (dva[p] != dva[p - 1]) {
       const auto psum = dva[p - 1];
       const int64 p2 = p * p;
-      for (auto& key : dva.bKeys()) {
+      for (auto& key : dva.BKeys()) {
         if (key < p2) break;
         dva[key] -= (dva[key / p] - psum) * p;
       }
@@ -1762,7 +1760,7 @@ SL DVA<T> prime_s1(const int64 n) {
 }
 
 template <typename T, int TN = 8>
-SL DVA<T> prime_s1_parallel(const int64 n) {
+SL DVA<T> PrimeS1Parallel(const int64 n) {
   PE_ASSERT(n >= 1);
   DVA<T> dva(n);
 
@@ -1772,7 +1770,7 @@ SL DVA<T> prime_s1_parallel(const int64 n) {
   vector<T> tmpdata(ks);
   auto* tmp = &tmpdata[0];
 
-  for (auto& key : dva.fKeys()) {
+  for (auto& key : dva.FKeys()) {
     if (key & 1) {
       T v((key + 1) >> 1);
       dva[key] = v * key - 1;
@@ -1812,123 +1810,123 @@ SL DVA<T> prime_s1_parallel(const int64 n) {
   return dva;
 }
 
-#define prime_sum prime_s1
+#define PrimeSum PrimeS1
 
 template <typename T>
-SL DVA<T> prime_s0_ex(const int64 n) {
+SL DVA<T> PrimeS0Ex(const int64 n) {
   PE_ASSERT(n >= 1);
   DVA<T> dva(n);
 
   const int keySize = static_cast<int>(dva.key_size);
   RUBit<T> tree(keySize);
 
-  for (auto& key : dva.fKeys()) {
-    const int id = dva.idxOfValue(key);
-    tree.update(id, id, key - 1);
+  for (auto& key : dva.FKeys()) {
+    const int id = dva.IdxOfValue(key);
+    tree.Update(id, id, key - 1);
   }
 
   for (int64 p = 2; p <= dva.m; ++p)
-    if (is_prime(p)) {
-      const auto pcnt = tree.query(static_cast<int>(p - 1));
+    if (IsPrime(p)) {
+      const auto pcnt = tree.Query(static_cast<int>(p - 1));
       const int64 p2 = p * p;
       const int a = keySize - 1;
-      const int b = dva.idxOfValue(p2);
+      const int b = dva.IdxOfValue(p2);
       for (int i = a; i >= b;) {
-        const auto delta = tree.query(dva.idxOfValue(dva.keys[i] / p)) - pcnt;
-        const int mini = max(dva.idxOfValue(dva.keys[i] / p * p), b);
-        tree.update(mini, i, -delta);
+        const auto delta = tree.Query(dva.IdxOfValue(dva.keys[i] / p)) - pcnt;
+        const int mini = max(dva.IdxOfValue(dva.keys[i] / p * p), b);
+        tree.Update(mini, i, -delta);
         i = mini - 1;
       }
     }
-  for (int i = 1; i < keySize; ++i) dva[dva.keys[i]] = tree.query(i);
+  for (int i = 1; i < keySize; ++i) dva[dva.keys[i]] = tree.Query(i);
   return dva;
 }
 
 template <typename T>
-SL DVA<T> prime_s1_ex(const int64 n) {
+SL DVA<T> PrimeS1Ex(const int64 n) {
   PE_ASSERT(n >= 1);
   DVA<T> dva(n);
 
   const int keySize = static_cast<int>(dva.key_size);
   RUBit<T> tree(keySize);
 
-  for (auto& key : dva.fKeys()) {
-    const int id = dva.idxOfValue(key);
+  for (auto& key : dva.FKeys()) {
+    const int id = dva.IdxOfValue(key);
 
     if (key & 1) {
       T v((key + 1) >> 1);
-      tree.update(id, id, v * key - 1);
+      tree.Update(id, id, v * key - 1);
     } else {
       T v(key >> 1);
-      tree.update(id, id, v * (key + 1) - 1);
+      tree.Update(id, id, v * (key + 1) - 1);
     }
   }
 
   for (int64 p = 2; p <= dva.m; ++p)
-    if (is_prime(p)) {
-      const auto psum = tree.query(static_cast<int>(p - 1));
+    if (IsPrime(p)) {
+      const auto psum = tree.Query(static_cast<int>(p - 1));
       const int64 p2 = p * p;
       const int a = keySize - 1;
-      const int b = dva.idxOfValue(p2);
+      const int b = dva.IdxOfValue(p2);
       for (int i = a; i >= b;) {
-        const auto delta = tree.query(dva.idxOfValue(dva.keys[i] / p)) - psum;
-        const int mini = max(dva.idxOfValue(dva.keys[i] / p * p), b);
-        tree.update(mini, i, -delta * p);
+        const auto delta = tree.Query(dva.IdxOfValue(dva.keys[i] / p)) - psum;
+        const int mini = max(dva.IdxOfValue(dva.keys[i] / p * p), b);
+        tree.Update(mini, i, -delta * p);
         i = mini - 1;
       }
     }
 
-  for (int i = 1; i < keySize; ++i) dva[dva.keys[i]] = tree.query(i);
+  for (int i = 1; i < keySize; ++i) dva[dva.keys[i]] = tree.Query(i);
   return dva;
 }
 
 template <typename TreeType>
-SL void prime_sk_ex_impl(const int64 /*n*/, int /*k*/, int64* PK,
-                         TreeType& tree, DVA<int64>& dva, int64 mod) {
+SL void PrimeSkExImpl(const int64 /*n*/, int /*k*/, int64* PK, TreeType& tree,
+                      DVA<int64>& dva, int64 mod) {
   const int keySize = static_cast<int>(dva.key_size);
   int pid = 0;
   for (int64 p = 2; p <= dva.m; ++p)
-    if (is_prime(p)) {
-      const auto psum = tree.query(static_cast<int>(p - 1)).value();
+    if (IsPrime(p)) {
+      const auto psum = tree.Query(static_cast<int>(p - 1)).Value();
       const int64 p2 = p * p;
       const int a = keySize - 1;
-      const int b = dva.idxOfValue(p2);
+      const int b = dva.IdxOfValue(p2);
       for (int i = a; i >= b;) {
-        const auto delta = sub_mod(
-            tree.query(dva.idxOfValue(dva.keys[i] / p)).value(), psum, mod);
-        const int mini = max(dva.idxOfValue(dva.keys[i] / p * p), b);
-        tree.update(mini, i, sub_mod(0, mul_mod_ex(delta, PK[pid], mod), mod));
+        const auto delta = SubMod(
+            tree.Query(dva.IdxOfValue(dva.keys[i] / p)).Value(), psum, mod);
+        const int mini = max(dva.IdxOfValue(dva.keys[i] / p * p), b);
+        tree.Update(mini, i, SubMod(0, MulModEx(delta, PK[pid], mod), mod));
         i = mini - 1;
       }
       ++pid;
     }
 
-  for (int i = 1; i < keySize; ++i) dva[dva.keys[i]] = tree.query(i).value();
+  for (int i = 1; i < keySize; ++i) dva[dva.keys[i]] = tree.Query(i).Value();
 }
 
-SL DVA<int64> prime_sk_ex(const int64 n, int k, int64* PK, int64 mod) {
+SL DVA<int64> PrimeSkEx(const int64 n, int k, int64* PK, int64 mod) {
   PowerSumModerB psm(mod);
 
-  PE_ASSERT(DefaultMod::mod() != 1);
+  PE_ASSERT(DefaultMod::Mod() != 1);
   PE_ASSERT(n >= 1);
   DVA<int64> dva(n);
 
   const int keySize = static_cast<int>(dva.key_size);
   RUBit<NModNumber<DefaultMod>> tree(keySize);
 
-  for (auto& key : dva.fKeys()) {
-    const int id = dva.idxOfValue(key);
-    const int64 val = sub_mod(psm.cal(key, k), 1, mod);
-    tree.update(id, id, val);
+  for (auto& key : dva.FKeys()) {
+    const int id = dva.IdxOfValue(key);
+    const int64 val = SubMod(psm.Cal(key, k), 1, mod);
+    tree.Update(id, id, val);
   }
 
-  prime_sk_ex_impl(n, k, PK, tree, dva, mod);
+  PrimeSkExImpl(n, k, PK, tree, dva, mod);
 
   return dva;
 }
 
 template <int64 mod>
-SL DVA<int64> prime_sk_ex(const int64 n, int k, int64* PK) {
+SL DVA<int64> PrimeSkEx(const int64 n, int k, int64* PK) {
   PowerSumModerB psm(mod);
 
   PE_ASSERT(n >= 1);
@@ -1937,10 +1935,10 @@ SL DVA<int64> prime_sk_ex(const int64 n, int k, int64* PK) {
   const int keySize = static_cast<int>(dva.key_size);
   RUBit<NModNumber<CCMod64<mod>>> tree(keySize);
 
-  for (auto& key : dva.fKeys()) {
-    const int id = dva.idxOfValue(key);
-    const int64 val = sub_mod(psm.cal(key, k), 1, mod);
-    tree.update(id, id, val);
+  for (auto& key : dva.FKeys()) {
+    const int id = dva.IdxOfValue(key);
+    const int64 val = SubMod(psm.Cal(key, k), 1, mod);
+    tree.Update(id, id, val);
   }
 
   prime_sk_ex_impl(n, k, PK, tree, dva, mod);
@@ -1949,30 +1947,30 @@ SL DVA<int64> prime_sk_ex(const int64 n, int k, int64* PK) {
 }
 
 template <typename TreeType>
-SL void prime_sk_ex_impl(const int64 /*n*/, int k, TreeType& tree,
-                         DVA<int64>& dva, int64 mod) {
+SL void PrimeSkExImpl(const int64 /*n*/, int k, TreeType& tree, DVA<int64>& dva,
+                      int64 mod) {
   const int keySize = static_cast<int>(dva.key_size);
 
   for (int64 p = 2; p <= dva.m; ++p)
-    if (is_prime(p)) {
-      const int64 pk = power_mod_ex(p, k, mod);
-      const auto psum = tree.query(static_cast<int>(p - 1)).value();
+    if (IsPrime(p)) {
+      const int64 pk = PowerModEx(p, k, mod);
+      const auto psum = tree.Query(static_cast<int>(p - 1)).Value();
       const int64 p2 = p * p;
       const int a = keySize - 1;
-      const int b = dva.idxOfValue(p2);
+      const int b = dva.IdxOfValue(p2);
       for (int i = a; i >= b;) {
-        const auto delta = sub_mod(
-            tree.query(dva.idxOfValue(dva.keys[i] / p)).value(), psum, mod);
-        const int mini = max(dva.idxOfValue(dva.keys[i] / p * p), b);
-        tree.update(mini, i, sub_mod(0, mul_mod_ex(delta, pk, mod), mod));
+        const auto delta = SubMod(
+            tree.Query(dva.IdxOfValue(dva.keys[i] / p)).Value(), psum, mod);
+        const int mini = max(dva.IdxOfValue(dva.keys[i] / p * p), b);
+        tree.Update(mini, i, SubMod(0, MulModEx(delta, pk, mod), mod));
         i = mini - 1;
       }
     }
 
-  for (int i = 1; i < keySize; ++i) dva[dva.keys[i]] = tree.query(i).value();
+  for (int i = 1; i < keySize; ++i) dva[dva.keys[i]] = tree.Query(i).Value();
 }
 
-SL DVA<int64> prime_sk_ex(const int64 n, int k, int64 mod) {
+SL DVA<int64> PrimeSkEx(const int64 n, int k, int64 mod) {
   PowerSumModerB psm(mod);
 
   PE_ASSERT(n >= 1);
@@ -1981,19 +1979,19 @@ SL DVA<int64> prime_sk_ex(const int64 n, int k, int64 mod) {
   const int keySize = static_cast<int>(dva.key_size);
   RUBit<NModNumber<DefaultMod>> tree(keySize);
 
-  for (auto& key : dva.fKeys()) {
-    const int id = dva.idxOfValue(key);
-    const int64 val = sub_mod(psm.cal(key, k), 1, mod);
-    tree.update(id, id, val);
+  for (auto& key : dva.FKeys()) {
+    const int id = dva.IdxOfValue(key);
+    const int64 val = SubMod(psm.Cal(key, k), 1, mod);
+    tree.Update(id, id, val);
   }
 
-  prime_sk_ex_impl(n, k, tree, dva, mod);
+  PrimeSkExImpl(n, k, tree, dva, mod);
 
   return dva;
 }
 
 template <int64 mod>
-SL DVA<int64> prime_sk_ex(const int64 n, int k) {
+SL DVA<int64> PrimeSkEx(const int64 n, int k) {
   PowerSumModerB psm(mod);
 
   PE_ASSERT(n >= 1);
@@ -2002,10 +2000,10 @@ SL DVA<int64> prime_sk_ex(const int64 n, int k) {
   const int keySize = static_cast<int>(dva.key_size);
   RUBit<NModNumber<CCMod64<mod>>> tree(keySize);
 
-  for (auto& key : dva.fKeys()) {
-    const int id = dva.idxOfValue(key);
-    const int64 val = sub_mod(psm.cal(key, k), 1, mod);
-    tree.update(id, id, val);
+  for (auto& key : dva.FKeys()) {
+    const int id = dva.IdxOfValue(key);
+    const int64 val = SubMod(psm.Cal(key, k), 1, mod);
+    tree.Update(id, id, val);
   }
 
   prime_sk_ex_impl(n, k, tree, dva, mod);
@@ -2014,7 +2012,7 @@ SL DVA<int64> prime_sk_ex(const int64 n, int k) {
 }
 
 template <typename T>
-SL vector<DVA<T>> prime_s0_pmod_even(int64 n, int pmod) {
+SL vector<DVA<T>> PrimeS0PmodEven(int64 n, int pmod) {
   vector<DVA<T>> result;
   result.reserve(pmod);
   for (int i = 0; i < pmod; ++i) result.emplace_back(n);
@@ -2022,14 +2020,14 @@ SL vector<DVA<T>> prime_s0_pmod_even(int64 n, int pmod) {
   for (int i = 1; i < pmod; i += 2) {
     auto& target = result[i];
     const int dec = i == 1;
-    for (auto key : result[0].fKeys())
+    for (auto key : result[0].FKeys())
       target[key] = (key + pmod - i) / pmod - dec;
   }
   for (int i = 1;; ++i) {
     const int64 p = plist[i];
     const int64 p2 = p * p;
     if (p2 > n) break;
-    for (auto key : result[0].bKeys()) {
+    for (auto key : result[0].BKeys()) {
       if (key < p2) break;
       const int rp = p % pmod;
       for (int j = 1; j < pmod; j += 2) {
@@ -2040,28 +2038,28 @@ SL vector<DVA<T>> prime_s0_pmod_even(int64 n, int pmod) {
   }
 
   auto& target = result[2 % pmod];
-  for (auto key : result[0].fKeys()) {
+  for (auto key : result[0].FKeys()) {
     target[key] += key >= 2 ? 1 : 0;
   }
   return result;
 }
 
 template <typename T>
-SL vector<DVA<T>> prime_s0_pmod_odd(int64 n, int pmod) {
+SL vector<DVA<T>> PrimeS0PmodOdd(int64 n, int pmod) {
   vector<DVA<T>> result;
   result.reserve(pmod);
   for (int i = 0; i < pmod; ++i) result.emplace_back(n);
 
   for (int i = 0; i < pmod; ++i) {
     const int dec = (i == 1 % pmod) + (i == 0);
-    for (auto key : result[0].fKeys())
+    for (auto key : result[0].FKeys())
       result[i][key] = (key + pmod - i) / pmod - dec;
   }
   for (int i = 0;; ++i) {
     const int64 p = plist[i];
     const int64 p2 = p * p;
     if (p2 > n) break;
-    for (auto key : result[0].bKeys()) {
+    for (auto key : result[0].BKeys()) {
       if (key < p2) break;
       const int rp = p % pmod;
       for (int j = 0; j < pmod; ++j) {
@@ -2074,20 +2072,19 @@ SL vector<DVA<T>> prime_s0_pmod_odd(int64 n, int pmod) {
 }
 
 template <typename T>
-SL vector<DVA<T>> prime_s0_pmod(int64 n, int pmod) {
-  return pmod & 1 ? prime_s0_pmod_odd<T>(n, pmod)
-                  : prime_s0_pmod_even<T>(n, pmod);
+SL vector<DVA<T>> PrimeS0Pmod(int64 n, int pmod) {
+  return pmod & 1 ? PrimeS0PmodOdd<T>(n, pmod) : PrimeS0PmodEven<T>(n, pmod);
 }
 
 template <typename T>
-SL vector<DVA<T>> prime_s1_pmod_even(int64 n, int pmod) {
+SL vector<DVA<T>> PrimeS1PmodEven(int64 n, int pmod) {
   vector<DVA<T>> result;
   for (int i = 0; i < pmod; ++i) result.emplace_back(n);
 
   for (int i = 1; i < pmod; i += 2) {
     auto& target = result[i];
     const int dec = i == 1;
-    for (auto key : result[0].fKeys()) {
+    for (auto key : result[0].FKeys()) {
 #if PE_HAS_INT128
       const int128 c = (key + pmod - i) / pmod;
 #else
@@ -2100,7 +2097,7 @@ SL vector<DVA<T>> prime_s1_pmod_even(int64 n, int pmod) {
     const int64 p = plist[i];
     const int64 p2 = p * p;
     if (p2 > n) break;
-    for (auto key : result[0].bKeys()) {
+    for (auto key : result[0].BKeys()) {
       if (key < p2) break;
       const int rp = p % pmod;
       for (int j = 1; j < pmod; j += 2) {
@@ -2111,21 +2108,21 @@ SL vector<DVA<T>> prime_s1_pmod_even(int64 n, int pmod) {
   }
 
   auto& target = result[2 % pmod];
-  for (auto key : result[0].fKeys()) {
+  for (auto key : result[0].FKeys()) {
     target[key] += key >= 2 ? 2 : 0;
   }
   return result;
 }
 
 template <typename T>
-SL vector<DVA<T>> prime_s1_pmod_odd(int64 n, int pmod) {
+SL vector<DVA<T>> PrimeS1PmodOdd(int64 n, int pmod) {
   vector<DVA<T>> result;
   for (int i = 0; i < pmod; ++i) result.emplace_back(n);
 
   for (int i = 0; i < pmod; ++i) {
     auto& target = result[i];
     const int dec = i == 1 % pmod;
-    for (auto key : result[0].fKeys()) {
+    for (auto key : result[0].FKeys()) {
 #if PE_HAS_INT128
       const int128 c = (key + pmod - i) / pmod;
 #else
@@ -2139,7 +2136,7 @@ SL vector<DVA<T>> prime_s1_pmod_odd(int64 n, int pmod) {
     const int64 p = plist[i];
     const int64 p2 = p * p;
     if (p2 > n) break;
-    for (auto key : result[0].bKeys()) {
+    for (auto key : result[0].BKeys()) {
       if (key < p2) break;
       const int rp = p % pmod;
       for (int j = 0; j < pmod; ++j) {
@@ -2153,14 +2150,13 @@ SL vector<DVA<T>> prime_s1_pmod_odd(int64 n, int pmod) {
 }
 
 template <typename T>
-SL vector<DVA<T>> prime_s1_pmod(int64 n, int pmod) {
-  return pmod & 1 ? prime_s1_pmod_odd<T>(n, pmod)
-                  : prime_s1_pmod_even<T>(n, pmod);
+SL vector<DVA<T>> PrimeS1Pmod(int64 n, int pmod) {
+  return pmod & 1 ? PrimeS1PmodOdd<T>(n, pmod) : PrimeS1PmodEven<T>(n, pmod);
 }
 
 template <int64 mod>
-SL vector<DVA<NModNumber<CCMod64<mod>>>> prime_sk_pmod(const int64 n, int k,
-                                                       int pmod) {
+SL vector<DVA<NModNumber<CCMod64<mod>>>> PrimeSkPmod(const int64 n, int k,
+                                                     int pmod) {
   using MT = NModNumber<CCMod64<mod>>;
   vector<DVA<MT>> result;
   for (int i = 0; i < pmod; ++i) result.emplace_back(n);
@@ -2185,7 +2181,7 @@ SL vector<DVA<NModNumber<CCMod64<mod>>>> prime_sk_pmod(const int64 n, int k,
       const int size = vec.size();
       for (int i = 0; i < size; ++i) {
         if (it > 1 && vec[i] > 1) {
-          auto t = gcd(it, vec[i]);
+          auto t = Gcd(it, vec[i]);
           vec[i] /= t;
           it /= t;
         }
@@ -2195,25 +2191,25 @@ SL vector<DVA<NModNumber<CCMod64<mod>>>> prime_sk_pmod(const int64 n, int k,
       }
     }
     for (int i = 1; i < pmod; ++i) {
-      auto t = coe * powerPmod * power_mod_ex(i, k - c, mod);
+      auto t = coe * powerPmod * PowerModEx(i, k - c, mod);
       // psm.cal() doesn't count x == 0, i.e x^c is 0.
       // If c = 0, we need i^k, so 1 is added.
       // If c > 0, the behavior is expected.
       const int inc = c == 0;
-      for (auto& key : dva.fKeys()) {
+      for (auto& key : dva.FKeys()) {
         if (key >= i) {
-          result[i][key] += t * (psm.cal((key - i) / pmod, c) + inc);
+          result[i][key] += t * (psm.Cal((key - i) / pmod, c) + inc);
         }
       }
     }
   }
-  MT y = power_mod_ex(pmod, k, mod);
-  for (auto& key : dva.fKeys()) {
-    result[0][key] += y * psm.cal(key / pmod, k);
+  MT y = PowerModEx(pmod, k, mod);
+  for (auto& key : dva.FKeys()) {
+    result[0][key] += y * psm.Cal(key / pmod, k);
   }
   for (int i = 0; i < pmod; ++i) {
     if (1 % pmod == i) {
-      for (auto& key : dva.fKeys()) {
+      for (auto& key : dva.FKeys()) {
         result[i][key] -= 1;
       }
       break;
@@ -2224,9 +2220,9 @@ SL vector<DVA<NModNumber<CCMod64<mod>>>> prime_sk_pmod(const int64 n, int k,
     const int64 p = plist[i];
     const int64 p2 = p * p;
     if (p2 > n) break;
-    for (auto key : result[0].bKeys()) {
+    for (auto key : result[0].BKeys()) {
       if (key < p2) break;
-      const int64 coe = power_mod_ex(p, k, mod);
+      const int64 coe = PowerModEx(p, k, mod);
       const int rp = p % pmod;
       for (int j = 0; j < pmod; ++j) {
         const int next = rp * j % pmod;
@@ -2241,26 +2237,26 @@ SL vector<DVA<NModNumber<CCMod64<mod>>>> prime_sk_pmod(const int64 n, int k,
 struct CachedPi {
   CachedPi(int pivot_ = ::maxp) : pivot_(pivot_) {
     if (::maxp > 0) {
-      init(pivot_);
+      Init(pivot_);
     }
   }
 
-  ~CachedPi() { release(); }
+  ~CachedPi() { Release(); }
 
-  void release() {
+  void Release() {
     if (prepi_ != nullptr) {
       delete[] prepi_;
       prepi_ = nullptr;
     }
   }
 
-  void init(int pivot) {
-    release();
+  void Init(int pivot) {
+    Release();
     pivot_ = pivot;
     prepi_ = new int[pivot_ + 1];
     prepi_[0] = 0;
     for (int i = 1; i <= pivot_; ++i) {
-      prepi_[i] = prepi_[i - 1] + is_prime(i);
+      prepi_[i] = prepi_[i - 1] + IsPrime(i);
     }
   }
 
@@ -2268,7 +2264,7 @@ struct CachedPi {
     if (n <= pivot_) return prepi_[n];
     auto where = pi_cache_.find(n);
     if (where != pi_cache_.end()) return where->second;
-    return pi_cache_[n] = prime_s0_ex<int64>(n)[n];
+    return pi_cache_[n] = PrimeS0Ex<int64>(n)[n];
   }
 
   int64 operator()(int64 n) { return cal(n); }
@@ -2287,9 +2283,9 @@ struct CachedPi {
 struct PatternNumberCounter {
   PatternNumberCounter() = default;
 
-  ~PatternNumberCounter() { release(); }
+  ~PatternNumberCounter() { Release(); }
 
-  void release() {
+  void Release() {
     if (is_prime_used_ != nullptr) {
       delete[] is_prime_used_;
       is_prime_used_ = nullptr;
@@ -2299,23 +2295,23 @@ struct PatternNumberCounter {
   // primeCnt: int a given pattern, we only consider the first primeCnt primes.
   // piPivot: when computing the number of prime no more than m, if m <=
   // piPivot, use pre-computed results in an array.
-  void init(int prime_cnt_, int piPivot = 0) {
+  void Init(int prime_cnt_, int piPivot = 0) {
     PE_ASSERT(prime_cnt_ > 0);
-    release();
+    Release();
 
     this->prime_cnt_ = prime_cnt_;
     is_prime_used_ = new char[prime_cnt_];
     if (piPivot == 0) {
       piPivot = plist[prime_cnt_ - 1];
     }
-    cached_pi_.init(piPivot);
+    cached_pi_.Init(piPivot);
   }
 
-  int128 dfs_pattern(const int start, const int id, const int patternLength,
-                     const vi& pattern, const int128 remain) {
+  int128 DfsPattern(const int start, const int id, const int patternLength,
+                    const vi& pattern, const int128 remain) {
     int128 ret = 0;
     if (id == patternLength - 1) {
-      const int64 t = nrooti(remain, pattern[patternLength - 1]);
+      const int64 t = NRootI(remain, pattern[patternLength - 1]);
       const int64 how_many = cached_pi_(t);
       const int64 idx = how_many - 1;
       if (idx < start) return 0;
@@ -2342,21 +2338,21 @@ struct PatternNumberCounter {
 
         is_prime_used_[i] = 1;
         used_prime_idx_[top_++] = i;
-        const int128 v = power<int128>(plist[i], pattern[id]);
-        ret += dfs_pattern(pattern[id + 1] == pattern[id] ? i + 1 : 0, id + 1,
-                           patternLength, pattern, remain / v);
+        const int128 v = Power<int128>(plist[i], pattern[id]);
+        ret += DfsPattern(pattern[id + 1] == pattern[id] ? i + 1 : 0, id + 1,
+                          patternLength, pattern, remain / v);
         --top_;
         is_prime_used_[i] = 0;
       }
     return ret;
   }
 
-  int128 cal(vi pattern, int128 n) {
+  int128 Cal(vi pattern, int128 n) {
     sort(all(pattern));
     reverse(all(pattern));
 
     top_ = 0;
-    return dfs_pattern(0, 0, sz(pattern), pattern, n);
+    return DfsPattern(0, 0, sz(pattern), pattern, n);
   }
 
   int prime_cnt_;
@@ -2384,7 +2380,7 @@ struct MValueVisitor {
 
   MValueVisitor(const VisitorType& visitor) : visitor_(visitor), top_(0) {}
 
-  T dfs(int limit, int64 n, int64 val, int imp, int64 vmp) {
+  T Dfs(int limit, int64 n, int64 val, int imp, int64 vmp) {
     T ret = visitor_(val, imp, vmp, history_, top_);
     for (int i = 0; i < limit; ++i) {
       const int64 p = plist[i];
@@ -2397,7 +2393,7 @@ struct MValueVisitor {
       history_[top_].e = 1;
       int& e = history_[top_++].e;
       for (int64 nextval = val * p;; ++e) {
-        ret += dfs(i, n, nextval, nextimp, nextvmp);
+        ret += Dfs(i, n, nextval, nextimp, nextvmp);
         if (nextval > valLimit) break;
         nextval *= p;
       }
@@ -2406,7 +2402,7 @@ struct MValueVisitor {
     return ret;
   }
 
-  T run(int64 n) { return dfs(find_prime_idx_sg(n), n, 1, -1, 0); }
+  T Cal(int64 n) { return Dfs(FindPrimeIdxSg(n), n, 1, -1, 0); }
 
  private:
   VisitorType visitor_;
@@ -2415,10 +2411,10 @@ struct MValueVisitor {
 };
 
 template <typename T>
-T for_m_values(
+T ForMValues(
     int64 n,
     const std::function<T(int64, int, int64, MVVHistory*, int)>& visitor) {
-  return MValueVisitor<T>(visitor).run(n);
+  return MValueVisitor<T>(visitor).Cal(n);
 }
 
 /**
@@ -2434,11 +2430,11 @@ struct Solver : public MValueBaseEx<Solver, RT, 8> {
   RT F(int64 p, int64 e) {
     return e + 1;
   }
-  RT batchF(int imp, int64 vmp, int64 remain) {
+  RT BatchF(int imp, int64 vmp, int64 remain) {
     return F(2, 1) * RT(dva[remain] - (imp + 1));
   }
-  void init(int64 n) {
-    dva = prime_s0_ex<int64>(n);
+  void Init(int64 n) {
+    dva = PrimeS0Ex<int64>(n);
   }
   DVA<int64> dva;
 };
@@ -2447,7 +2443,7 @@ Version 3:
 DVA<int64> dva(1);
 using RT = int64;
 struct Solver : public MValueBaseTP<Solver, RT, 8> {
-  RT batch(int64 n, int64 val, int imp, int64 vmp, int emp, RT now) {
+  RT Batch(int64 n, int64 val, int imp, int64 vmp, int emp, RT now) {
     RT ret = 0;
     int64 remain = n / val;
     // we have remain >= vmp
@@ -2457,16 +2453,16 @@ struct Solver : public MValueBaseTP<Solver, RT, 8> {
     }
     if (val > 1) {
       // handle val * vmp
-      ret += now / tmp[omp_get_thread_num()] * each(vmp, emp + 1);
+      ret += now / tmp[omp_get_thread_num()] * F(vmp, emp + 1);
     } else {
       // handle f(1)
       ret += 1;
     }
     return ret;
   }
-  RT each(int64 p, int e) { return e + 1; }
-  void visitMaxPrime(int64 vmp, int emp, RT now) {
-    tmp[omp_get_thread_num()] = each(vmp, emp);
+  RT F(int64 p, int e) { return e + 1; }
+  void VisitMaxPrime(int64 vmp, int emp, RT now) {
+    tmp[omp_get_thread_num()] = F(vmp, emp);
   }
   RT tmp[64];
 };
@@ -2474,7 +2470,7 @@ struct Solver : public MValueBaseTP<Solver, RT, 8> {
 Version 4:
 MVVHistory history_[128];
 int top_;
-RT dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, RT now) {
+RT Dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, RT now) {
   RT ret = 0;{
     int64 remain = n / val;
     // we have remain >= vmp
@@ -2502,7 +2498,7 @@ RT dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, RT now) {
     int& e = history_[top_++].e;
     for (int64 nextval = val * p;; ++e) {
       RT tmp = now * (e + 1);
-      ret += dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp, tmp);
+      ret += Dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp, tmp);
       if (nextval > valLimit) break;
       nextval *= p;
     }
@@ -2510,13 +2506,13 @@ RT dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, RT now) {
   }
   return ret;
 }
-dfs(pcnt, n, 1, -1, 1, 0, 1)
+Dfs(pcnt, n, 1, -1, 1, 0, 1)
 */
 
 template <typename D, typename T = int64>
 struct MValueBaseT {
-  T dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, T now) {
-    T ret = static_cast<D&>(*this).batch(n, val, imp, vmp, emp, now);
+  T Dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, T now) {
+    T ret = static_cast<D&>(*this).Batch(n, val, imp, vmp, emp, now);
     for (int i = 0; i < limit; ++i) {
       const int64 p = plist[i];
       const int nextimp = imp == -1 ? i : imp;
@@ -2528,11 +2524,11 @@ struct MValueBaseT {
       history_[top_].e = 1;
       int& e = history_[top_++].e;
       for (int64 nextval = val * p;; ++e) {
-        T tmp = now * static_cast<D&>(*this).each(p, e);
+        T tmp = now * static_cast<D&>(*this).F(p, e);
         if (imp == -1) {
-          static_cast<D&>(*this).visitMaxPrime(nextvmp, e, tmp);
+          static_cast<D&>(*this).VisitMaxPrime(nextvmp, e, tmp);
         }
-        ret += dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp, tmp);
+        ret += Dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp, tmp);
         if (nextval > valLimit) break;
         nextval *= p;
       }
@@ -2541,11 +2537,11 @@ struct MValueBaseT {
     return ret;
   }
 
-  void visitMaxPrime(int64 vmp, int emp, T now) {}
+  void VisitMaxPrime(int64 vmp, int emp, T now) {}
 
-  T solve(int64 n) {
+  T Cal(int64 n) {
     top_ = 0;
-    return dfs(find_prime_idx_sg(n), n, 1, -1, 1, 0, 1);
+    return Dfs(FindPrimeIdxSg(n), n, 1, -1, 1, 0, 1);
   }
 
  private:
@@ -2555,8 +2551,8 @@ struct MValueBaseT {
 
 template <typename D, typename T = int64, int TN = 1>
 struct MValueBaseTP {
-  T dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, T now) {
-    T ret = static_cast<D&>(*this).batch(n, val, imp, vmp, emp, now);
+  T Dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, T now) {
+    T ret = static_cast<D&>(*this).Batch(n, val, imp, vmp, emp, now);
 #if ENABLE_OPENMP
     if (val == 1 && TN > 1) {
       PSum<T> sumHelper;
@@ -2568,17 +2564,17 @@ struct MValueBaseTP {
         const int64 valLimit = n / p / nextvmp;
         int e = 1;
         for (int64 nextval = val * p;; ++e) {
-          T tmp = now * static_cast<D&>(*this).each(p, e);
+          T tmp = now * static_cast<D&>(*this).F(p, e);
           if (imp == -1) {
             static_cast<D&>(*this).visitMaxPrime(nextvmp, e, tmp);
           }
           sumHelper +=
-              dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp, tmp);
+              Dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp, tmp);
           if (nextval > valLimit) break;
           nextval *= p;
         }
       }
-      ret += sumHelper.value();
+      ret += sumHelper.Value();
     } else {
 #endif
       for (int i = 0; i < limit; ++i) {
@@ -2589,11 +2585,11 @@ struct MValueBaseTP {
         if (val > valLimit) break;
         int e = 1;
         for (int64 nextval = val * p;; ++e) {
-          T tmp = now * static_cast<D&>(*this).each(p, e);
+          T tmp = now * static_cast<D&>(*this).F(p, e);
           if (imp == -1) {
             static_cast<D&>(*this).visitMaxPrime(nextvmp, e, tmp);
           }
-          ret += dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp, tmp);
+          ret += Dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp, tmp);
           if (nextval > valLimit) break;
           nextval *= p;
         }
@@ -2604,19 +2600,19 @@ struct MValueBaseTP {
     return ret;
   }
 
-  void visitMaxPrime(int64 vmp, int emp, T now) {}
-  T solve(int64 n) { return dfs(find_prime_idx_sg(n), n, 1, -1, 1, 0, 1); }
+  void VisitMaxPrime(int64 vmp, int emp, T now) {}
+  T Cal(int64 n) { return Dfs(FindPrimeIdxSg(n), n, 1, -1, 1, 0, 1); }
 };
 
 template <typename D, typename T = int64, int TN = 1>
 struct MValueBaseEx {
-  T batch(int64 n, int64 val, int imp, int64 vmp, int emp, T now, T now1) {
+  T Batch(int64 n, int64 val, int imp, int64 vmp, int emp, T now, T now1) {
     T ret = 0;
     int64 remain = n / val;
     // we have remain >= vmp
     // handle val * q where q > vmp
     if (remain > vmp) {
-      ret += now * static_cast<D&>(*this).batchF(imp, vmp, remain);
+      ret += now * static_cast<D&>(*this).BatchF(imp, vmp, remain);
     }
     if (val > 1) {
       // handle val * vmp
@@ -2628,9 +2624,9 @@ struct MValueBaseEx {
     return ret;
   }
 
-  T dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, T now,
+  T Dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, T now,
         T now1) {
-    T ret = static_cast<D&>(*this).batch(n, val, imp, vmp, emp, now, now1);
+    T ret = static_cast<D&>(*this).Batch(n, val, imp, vmp, emp, now, now1);
 #if ENABLE_OPENMP
     if (val == 1 && TN > 1) {
       PSum<T> sumHelper;
@@ -2643,13 +2639,13 @@ struct MValueBaseEx {
         int e = 1;
         for (int64 nextval = val * p;; ++e) {
           T t = static_cast<D&>(*this).F(p, e);
-          sumHelper += dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp,
+          sumHelper += Dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp,
                            now * t, imp == -1 ? 1 : now1 * t);
           if (nextval > valLimit) break;
           nextval *= p;
         }
       }
-      ret += sumHelper.value();
+      ret += sumHelper.Value();
     } else {
 #endif
       for (int i = 0; i < limit; ++i) {
@@ -2661,7 +2657,7 @@ struct MValueBaseEx {
         int e = 1;
         for (int64 nextval = val * p;; ++e) {
           T t = static_cast<D&>(*this).F(p, e);
-          ret += dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp,
+          ret += Dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp,
                      now * t, imp == -1 ? 1 : now1 * t);
           if (nextval > valLimit) break;
           nextval *= p;
@@ -2674,11 +2670,11 @@ struct MValueBaseEx {
   }
 
   T F(int64 /*p*/, int64 /*e*/) { return 1; }
-  T batchF(int /*imp*/, int64 /*vmp*/, int64 /*remain*/) { return 1; }
-  void init(int64 n) {}
-  T solve(int64 n) {
-    static_cast<D&>(*this).init(n);
-    return dfs(find_prime_idx_sg(n), n, 1, -1, 1, 0, 1, 1);
+  T BatchF(int /*imp*/, int64 /*vmp*/, int64 /*remain*/) { return 1; }
+  void Init(int64 n) {}
+  T Cal(int64 n) {
+    static_cast<D&>(*this).Init(n);
+    return Dfs(FindPrimeIdxSg(n), n, 1, -1, 1, 0, 1, 1);
   }
 };
 
@@ -2688,21 +2684,21 @@ struct MValueBaseEx {
  */
 template <typename D, typename T = int64, int TN = 1>
 struct MValueBaseExLite : public MValueBaseEx<D, T, TN> {
-  T batchF(int imp, int64 /*vmp*/, int64 remain) {
+  T BatchF(int imp, int64 /*vmp*/, int64 remain) {
     return static_cast<D&>(*this).F(2, 1) * T(dva[remain] - (imp + 1));
   }
-  void init(int64 n) { dva = prime_s0_ex<int64>(n); }
+  void Init(int64 n) { dva = PrimeS0Ex<int64>(n); }
   DVA<int64> dva;
 };
 
 // Returns the number of integer solutions of
 // x^2+y^2=z^2 where 0 < x < y, 0 < z <= n.
 // See https://oeis.org/A101930
-int64 count_pythagorean_triple(int64 n) {
+int64 CountPythagoreanTriple(int64 n) {
   // f(i) = 4 prod(e_i + 1, p_i%4==1) #(write i as sum of two squares)
   // s = sum(f(i^2), i=1..n)
   // return (s - 4 * n) / 8
-  auto _ = prime_s0_pmod<int64>(n, 4);
+  auto _ = PrimeS0Pmod<int64>(n, 4);
   auto ps1 = _[1];
   auto ps3 = _[3];
   auto compute = [&](int64 val, int /*imp*/, int64 vmp, MVVHistory* his,
@@ -2725,11 +2721,11 @@ int64 count_pythagorean_triple(int64 n) {
     return ret;
   };
 
-  return (for_m_values<int64>(n, compute) - n) >> 1;
+  return (ForMValues<int64>(n, compute) - n) >> 1;
 }
 
-int64 count_pythagorean_triple_ex(int64 n) {
-  auto _ = prime_s0_pmod<int64>(n, 4);
+int64 CountPythagoreanTripleEx(int64 n) {
+  auto _ = PrimeS0Pmod<int64>(n, 4);
   auto ps1 = _[1];
   auto ps3 = _[3];
   function<int64(int, int64, int64, int64, int, int64)> dfs =
@@ -2768,30 +2764,30 @@ int64 count_pythagorean_triple_ex(int64 n) {
 
 template <typename T>
 struct PerfectPowerCounter {
-  PerfectPowerCounter(int pivot = 1000000) : pivot_(pivot) { init(); }
+  PerfectPowerCounter(int pivot = 1000000) : pivot_(pivot) { Init(); }
 
   ~PerfectPowerCounter() { delete[] pre_; }
 
-  void init() {
+  void Init() {
     PE_ASSERT(pivot_ < (1 << 20));
     pre_ = new int[pivot_][20];
     fill(pre_[0], pre_[0] + 20, 0);
     pre_[0][0] = 1;
     for (int i = 2; i <= pivot_; ++i) {
-      auto f = factorize(i);
+      auto f = Factorize(i);
       int d = 0;
-      for (auto& iter : f) d = gcd(d, iter.second);
+      for (auto& iter : f) d = Gcd(d, iter.second);
       for (int j = 0; j <= 19; ++j) pre_[i][j] = pre_[i - 1][j];
       pre_[i][d]++;
     }
   }
 
-  // Use f(x) to denote gcd of exponention of x.
-  // i.e if x=p1^e1 * p2^e2 * pe^e3, f(x) = gcd(e1, e2, e3).
+  // Use f(x) to denote Gcd of exponention of x.
+  // i.e if x=p1^e1 * p2^e2 * pe^e3, f(x) = Gcd(e1, e2, e3).
   // f(1) = 0
   // This method returns # {x | f(x) = d, x >= 1, x <= n}
   // n < 2^128, d >= 0
-  T cal(T n, int d) {
+  T Cal(T n, int d) {
     if (n <= pivot_) {
       if (d < 20)
         return pre_[n][d];
@@ -2808,12 +2804,12 @@ struct PerfectPowerCounter {
     if (d == 1) {
       T ret = n - 1;
       for (int i = 2; i < 128; ++i) {
-        ret -= cal(n, i);
+        ret -= Cal(n, i);
       }
       return mem_[key] = ret;
     }
 
-    return mem_[key] = cal(nrooti<T>(n, d), 1);
+    return mem_[key] = Cal(NRootI<T>(n, d), 1);
   }
 
  private:
@@ -2825,12 +2821,12 @@ struct PerfectPowerCounter {
 // See pe466, Lucy_Hedgehog's post.
 template <typename T>
 struct NotDivCounter {
-  T notDivCoprimeImpl(T n, const vector<int64>& L, int i) {
+  T NotDivCoprimeImpl(T n, const vector<int64>& L, int i) {
     T ret = n;
     for (int j = 0; j < i; ++j) {
       const auto x = L[j];
       if (x > n) break;
-      ret -= notDivCoprimeImpl(n / x, L, j);
+      ret -= NotDivCoprimeImpl(n / x, L, j);
     }
     return ret;
   }
@@ -2838,17 +2834,17 @@ struct NotDivCounter {
   // Returns the number of integers in the range of 1..n not
   // divisible by any integer in L.
   // The intergers in L must be pairwise coprime.
-  T notDivCoprime(T n, const vector<int64>& L) {
+  T NotDivCoprime(T n, const vector<int64>& L) {
     const int size = sz(L);
     if (size == 0) return n;
-    if (checkSorted(L)) return notDivCoprimeImpl(n, L, size);
+    if (CheckSorted(L)) return NotDivCoprimeImpl(n, L, size);
 
     vector<int64> LL(L);
     sort(LL.begin(), LL.end());
-    return notDivCoprimeImpl(n, LL, size);
+    return NotDivCoprimeImpl(n, LL, size);
   }
 
-  T notDivImpl(T n, const vector<int64>& L) {
+  T NotDivImpl(T n, const vector<int64>& L) {
     const int size = sz(L);
     if (size == 0) return n;
 
@@ -2874,28 +2870,28 @@ struct NotDivCounter {
       vector<int64> B(C);
       for (auto& iter : D) B.push_back(iter / p);
       sort(B.begin(), B.end());
-      return notDivImpl(n, C) - notDivImpl(n / p, C) + notDivImpl(n / p, B);
+      return NotDivImpl(n, C) - NotDivImpl(n / p, C) + NotDivImpl(n / p, B);
     }
 
     pair<T, vector<int64>> key{n, R};
     auto where = mem_.find(key);
     if (where != mem_.end()) return where->second;
-    return mem_[key] = notDivCoprime(n, R);
+    return mem_[key] = NotDivCoprime(n, R);
   }
 
   // Returns the number of inters in the range of 1..n not
   // divisible by any integer in L.
-  T notDiv(T n, const vector<int64>& L) {
+  T NotDiv(T n, const vector<int64>& L) {
     const int size = sz(L);
     if (size == 0) return n;
-    if (checkSorted(L)) return notDivImpl(n, L);
+    if (CheckSorted(L)) return NotDivImpl(n, L);
 
     vector<int64> LL(L);
     sort(LL.begin(), LL.end());
-    return notDivImpl(n, LL);
+    return NotDivImpl(n, LL);
   }
 
-  int checkSorted(const vector<int64>& L) {
+  int CheckSorted(const vector<int64>& L) {
     const int size = sz(L);
     for (int i = 0; i + 1 < size; ++i)
       if (L[i] > L[i + 1]) {
@@ -2910,12 +2906,12 @@ struct NotDivCounter {
 
 /**
  * DfaCounter<Count type> dc;
- * dc.init(state count, transCount, max len)[.setCountEachLen(1)];
- * dc.addTrans(src, dig, dest);
- * dc.markAsCount(state);
- * [optional] dc.prepare();
- * dc.count(upper bound);
- * dc.findKth(k, upper bound);
+ * dc.Init(state count, transCount, max len)[.SetCountEachLen(1)];
+ * dc.AddTrans(src, dig, dest);
+ * dc.MarkAsCount(state);
+ * [optional] dc.Prepare();
+ * dc.Cal(upper bound);
+ * dc.FindKth(k, upper bound);
  */
 /**
  * Example: count the number which contains 3.
@@ -2925,17 +2921,17 @@ struct NotDivCounter {
  *    state 2: 3 is seen
 
 DfaCounter<int64> counter;
-counter.init(3, 10, 16);
+counter.Init(3, 10, 16);
 for (int i = 1; i <= 9; ++i) if (i != 3)
-counter.addTrans(0, i, 1);
-counter.addTrans(0, 3, 2);
-counter.addTrans(0, 0, 0);
+counter.AddTrans(0, i, 1);
+counter.AddTrans(0, 3, 2);
+counter.AddTrans(0, 0, 0);
 for (int i = 0; i <= 9; ++i) if (i != 3)
-counter.addTrans(1, i, 1);
-counter.addTrans(1, 3, 2);
-for (int i = 0; i <= 9; ++i) counter.addTrans(2, i, 2);
-counter.markAsCount(2);
-return counter.count(n);
+counter.AddTrans(1, i, 1);
+counter.AddTrans(1, 3, 2);
+for (int i = 0; i <= 9; ++i) counter.AddTrans(2, i, 2);
+counter.MarkAsCount(2);
+return counter.Cal(n);
  */
 template <typename CT>
 struct DfaCounter {
@@ -2944,14 +2940,14 @@ struct DfaCounter {
     return *this;
   }
 
-  DfaCounter& init(int state_count, int trans_count, int max_len) {
+  DfaCounter& Init(int state_count, int trans_count, int max_len) {
     state_count_ = state_count;
     trans_count_ = trans_count;
     max_len_ = max_len;
 
-    dfa_.reset({state_count, trans_count});
+    dfa_.Reset({state_count, trans_count});
 
-    dp_.reset({max_len + 1, state_count});
+    dp_.Reset({max_len + 1, state_count});
 
     to_count_.resize(state_count);
     fill(to_count_.begin(), to_count_.end(), 0);
@@ -2961,17 +2957,17 @@ struct DfaCounter {
     return *this;
   }
 
-  DfaCounter& addTrans(int s, int d, int t) {
+  DfaCounter& AddTrans(int s, int d, int t) {
     dfa_[s][d] = t;
     return *this;
   }
 
-  DfaCounter& markAsCount(int s, int v = 1) {
+  DfaCounter& MarkAsCount(int s, int v = 1) {
     to_count_[s] = v;
     return *this;
   }
 
-  void prepare() {
+  void Prepare() {
     for (int i = 0; i < state_count_; ++i) {
       dp_[0][i] = to_count_[i];
     }
@@ -2984,14 +2980,14 @@ struct DfaCounter {
   }
 
   template <typename U>
-  CT count(U n) {
+  CT Cal(U n) {
     if (prepared_ == 0) {
-      prepare();
+      Prepare();
       prepared_ = 1;
     }
 
     vector<int> dig;
-    for (auto x = n; !is_zero(x); x /= 10) dig.push_back(to_int<int>(x % 10));
+    for (auto x = n; !IsZero(x); x /= 10) dig.push_back(ToInt<int>(x % 10));
     const int len = dig.size();
     PE_ASSERT(len <= max_len_);
 
@@ -3015,11 +3011,11 @@ struct DfaCounter {
   }
 
   template <typename U>
-  CT findKth(CT k, U max_v) {
+  CT FindKth(CT k, U max_v) {
     U l = 1, r = max_v;
     while (l <= r) {
       U mid = (l + r) / 2;
-      if (count(mid) >= k)
+      if (Cal(mid) >= k)
         r = mid - 1;
       else
         l = mid + 1;
@@ -3041,24 +3037,24 @@ struct DfaCounter {
 // Counting words with Laguerre series
 // https://arxiv.org/pdf/1306.6232.pdf
 struct CarlitzWordsCounter {
-  CarlitzWordsCounter(int64 mod, int64 maxf) { init(mod, maxf); }
+  CarlitzWordsCounter(int64 mod, int64 maxf) { Init(mod, maxf); }
 
-  void init(const int64 mod, const int64 maxf) {
+  void Init(const int64 mod, const int64 maxf) {
     mod_ = mod;
     maxf_ = maxf;
     fac_.resize(maxf_ + 1);
     ifac_.resize(maxf_ + 1);
-    init_seq_prod2<int64>(&fac_[0], &ifac_[0], 1, maxf_, mod_);
+    InitSeqProd2<int64>(&fac_[0], &ifac_[0], 1, maxf_, mod_);
   }
 
-  int64 comb(int64 a, int64 b) {
+  int64 Comb(int64 a, int64 b) {
     if (a < 0 || b < 0 || b > a) return 0;
-    int64 t = mul_mod_ex(fac_[a], ifac_[b], mod_);
-    return mul_mod_ex(t, ifac_[a - b], mod_);
+    int64 t = MulModEx(fac_[a], ifac_[b], mod_);
+    return MulModEx(t, ifac_[a - b], mod_);
   }
 
-  int64 cal(vector<int64> vec) {
-    vec = toInternal(vec);
+  int64 Cal(vector<int64> vec) {
+    vec = ToInternal(vec);
     auto where = cache_.find(vec);
     if (where != cache_.end()) {
       return where->second;
@@ -3066,29 +3062,29 @@ struct CarlitzWordsCounter {
     vector<int64> it{1};
     const int64 vsize = sz(vec);
     for (int64 i = 0; i < vsize; i += 2) {
-      auto L = makeLaguerrePoly(vec[i], is_even(vec[i]) ? 1 : -1);
-      for (int j = 0; j < vec[i + 1]; ++j) it = poly_mul(it, L, mod_);
+      auto L = MakeLaguerrePoly(vec[i], IsEven(vec[i]) ? 1 : -1);
+      for (int j = 0; j < vec[i + 1]; ++j) it = PolyMul(it, L, mod_);
     }
     int64 ret = 0;
     const int64 size = sz(it);
     for (int64 i = 0; i < size; ++i) {
-      ret = add_mod(ret, mul_mod_ex(fac_[i], it[i], mod_), mod_);
+      ret = AddMod(ret, MulModEx(fac_[i], it[i], mod_), mod_);
     }
     return cache_[vec] = ret;
   }
 
-  vector<int64> makeLaguerrePoly(int64 n, int sgn = 1) {
+  vector<int64> MakeLaguerrePoly(int64 n, int sgn = 1) {
     vector<int64> ret(n + 1, 0);
     for (int i = 1; i <= n; ++i) {
-      int64 curr = regulate_mod(is_even(i) ? sgn : -sgn, mod_);
-      curr = mul_mod_ex(curr, comb(n - 1, n - i), mod_);
-      curr = mul_mod_ex(curr, ifac_[i], mod_);
+      int64 curr = RegulateMod(IsEven(i) ? sgn : -sgn, mod_);
+      curr = MulModEx(curr, Comb(n - 1, n - i), mod_);
+      curr = MulModEx(curr, ifac_[i], mod_);
       ret[i] = curr;
     }
     return ret;
   }
 
-  vector<int64> toInternal(const vector<int64>& v) {
+  vector<int64> ToInternal(const vector<int64>& v) {
     map<int64, int64> m;
     for (auto& iter : v) m[iter]++;
     vector<int64> t;

@@ -32,9 +32,9 @@ int main() {
       int k2 = k * k;
       for (int i = k2; i <= 2 * n; ++i) {
         et[i] = ot[i - k];
-        ot[i] = add_mod(et[i - k], ef[i - k], mod);
-        R[i] = add_mod(R[i], ot[i], mod);
-        RR[i] = add_mod(RR[i], et[i], mod);
+        ot[i] = AddMod(et[i - k], ef[i - k], mod);
+        R[i] = AddMod(R[i], ot[i], mod);
+        RR[i] = AddMod(RR[i], et[i], mod);
       }
       swap(ef, et);
       swap(of, ot);
@@ -58,8 +58,8 @@ int main() {
   dbg(u.size());
   dbg(v.size());
   TimeRecorder tr;
-  auto w = ntt32::poly_mul_large(u, v, mod);
-  cerr << tr.elapsed().format() << endl;
+  auto w = ntt32::PolyMulLarge(u, v, mod);
+  cerr << tr.Elapsed().Format() << endl;
   dbg(w.size());
   dbg(w[100]);  // 37076
   int64 ans = 0;

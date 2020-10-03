@@ -9,31 +9,31 @@
 // We assume RAND_MAX is either 32767 or 2147483647
 #if RAND_MAX == 32767
 
-SL int crandbit() { return rand() & 1; }
-SL int crand15() { return rand(); }
-SL int crand31() { return crand15() << 16 | crand15() << 1 | crandbit(); }
-SL int64 crand63() {
-  return static_cast<int64>(crand31()) << 32 |
-         static_cast<uint32>(crand31()) << 1 | crandbit();
+SL int CRandBit() { return rand() & 1; }
+SL int CRand15() { return rand(); }
+SL int CRand32() { return CRand15() << 16 | CRand15() << 1 | CRandBit(); }
+SL int64 CRand63() {
+  return static_cast<int64>(CRand32()) << 32 |
+         static_cast<uint32>(CRand32()) << 1 | CRandBit();
 }
 
-SL int crandi() { return crand31(); }
-SL double crandd() {
+SL int CRandI() { return CRand32(); }
+SL double CRandD() {
   static const double coe = 1. / (RAND_MAX + 1);
   return coe * rand();
 }
 
 #elif RAND_MAX == 2147483647
 
-SL int crandbit() { return rand() & 1; }
-SL int crand15() { return rand() & 32767; }
-SL int crand31() { return rand(); }
-SL int64 crand63() {
-  return (int64)crand31() << 32 | (uint32)crand31() << 1 | crandbit();
+SL int CRandBit() { return rand() & 1; }
+SL int CRand15() { return rand() & 32767; }
+SL int CRand32() { return rand(); }
+SL int64 CRand63() {
+  return (int64)CRand32() << 32 | (uint32)CRand32() << 1 | CRandBit();
 }
 
-SL int crandi() { return crand31(); }
-SL double crandd() {
+SL int CRandI() { return CRand32(); }
+SL double CRandD() {
   static const double coe = 1. / ((int64)RAND_MAX + 1LL);
   return coe * rand();
 }
@@ -58,14 +58,14 @@ class RandomGenerator {
 };
 
 RandomGenerator<std::mt19937, uniform_int_distribution<int>> SL
-make_uniform_generator(int seed, int min, int max) {
+MakeUniformGenerator(int seed, int min, int max) {
   PE_ASSERT(min <= max);
   return RandomGenerator<std::mt19937, uniform_int_distribution<int>>(
       std::mt19937(seed), std::uniform_int_distribution<int>(min, max));
 }
 
 RandomGenerator<std::mt19937, uniform_int_distribution<int>> SL
-make_uniform_generator(int min, int max) {
+MakeUniformGenerator(int min, int max) {
   std::random_device rd;
   PE_ASSERT(min <= max);
   return RandomGenerator<std::mt19937, uniform_int_distribution<int>>(
@@ -73,7 +73,7 @@ make_uniform_generator(int min, int max) {
 }
 
 template <typename ET, typename RT>
-SL void halton(ET idx, const int n, RT* result) {
+SL void Halton(ET idx, const int n, RT* result) {
   fill(result, result + n, 0);
   vector<RT> prime_inv(n, 0);
   vector<ET> t(n, idx);
@@ -91,16 +91,16 @@ SL void halton(ET idx, const int n, RT* result) {
 }
 
 template <typename ET, typename RT>
-SL vector<RT> halton(ET idx, const int n) {
-  return halton<ET, RT>(idx, n);
+SL vector<RT> Halton(ET idx, const int n) {
+  return Halton<ET, RT>(idx, n);
 }
 
 /**
  * The idx_th n-dimension vector.
  */
-SL vector<double> halton(int64 idx, const int n) {
+SL vector<double> Halton(int64 idx, const int n) {
   vector<double> r(n, 0);
-  halton(idx, n, &r[0]);
+  Halton(idx, n, &r[0]);
   return r;
 }
 #endif

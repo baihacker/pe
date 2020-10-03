@@ -119,7 +119,7 @@ SL void bi_div_test_medium_impl(int x, int y) {
               for (auto& iter : A) a *= iter;
               for (auto& iter : B) b *= iter;
               bi c, d;
-              tie(c, d) = div(a, b);
+              tie(c, d) = Div(a, b);
               stringstream ss;
               ss << c;
               ss >> myResult1;

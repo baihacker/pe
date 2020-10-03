@@ -23,25 +23,25 @@ SL void verify_sum(const int64 n, const DVA<int64>& result) {
 SL void small_test() {
   for (int i = 1; i <= 100000; ++i) {
     const int n = i;
-    verify_cnt(n, prime_pi<int64>(i));
-    verify_sum(n, prime_sum<int64>(i));
+    verify_cnt(n, PrimePi<int64>(i));
+    verify_sum(n, PrimeSum<int64>(i));
   }
 }
 
 SL void prime_pi_sum_test() {
   for (int i = 1; i <= 1000000; ++i) {
-    pc[i] = pc[i - 1] + (is_prime(i) ? 1 : 0);
-    ps[i] = ps[i - 1] + (is_prime(i) ? i : 0);
+    pc[i] = pc[i - 1] + (IsPrime(i) ? 1 : 0);
+    ps[i] = ps[i - 1] + (IsPrime(i) ? i : 0);
   }
 
   small_test();
 
-  assert((prime_pi<int64>(10000000))[10000000] == pmpi[7]);
-  assert((prime_pi<int64>(100000000))[100000000] == pmpi[8]);
-  assert((prime_pi<int64>(1000000000))[1000000000] == pmpi[9]);
-  assert((prime_pi<int64>(10000000000))[10000000000] == pmpi[10]);
-  // assert((prime_pi<int64>(100000000000))[100000000000] == pmpi[11]);
-  // assert((prime_pi<int64>(1000000000000))[1000000000000] == pmpi[12]);
+  assert((PrimePi<int64>(10000000))[10000000] == pmpi[7]);
+  assert((PrimePi<int64>(100000000))[100000000] == pmpi[8]);
+  assert((PrimePi<int64>(1000000000))[1000000000] == pmpi[9]);
+  assert((PrimePi<int64>(10000000000))[10000000000] == pmpi[10]);
+  // assert((PrimePi<int64>(100000000000))[100000000000] == pmpi[11]);
+  // assert((PrimePi<int64>(1000000000000))[1000000000000] == pmpi[12]);
 }
 
 PE_REGISTER_TEST(&prime_pi_sum_test, "prime_pi_sum_test", BIG);
@@ -51,7 +51,7 @@ SL void prime_pi_sum_pmod_test() {
   for (int mod = 1; mod <= 30; ++mod) {
     int64 result[32] = {0};
     for (int i = 0; i < pcnt && plist[i] <= N; ++i) ++result[plist[i] % mod];
-    auto v = prime_s0_pmod<int64>(N, mod);
+    auto v = PrimeS0Pmod<int64>(N, mod);
     for (int j = 0; j < mod; ++j) {
       assert(result[j] == v[j][N]);
     }
@@ -60,7 +60,7 @@ SL void prime_pi_sum_pmod_test() {
     int64 result[32] = {0};
     for (int i = 0; i < pcnt && plist[i] <= N; ++i)
       result[plist[i] % mod] += plist[i];
-    auto v = prime_s1_pmod<int64>(N, mod);
+    auto v = PrimeS1Pmod<int64>(N, mod);
     for (int j = 0; j < mod; ++j) {
       assert(result[j] == v[j][N]);
     }
@@ -69,18 +69,18 @@ SL void prime_pi_sum_pmod_test() {
   for (int mod = 1; mod <= 30; ++mod) {
     int64 result[32] = {0};
     for (int i = 0; i < pcnt && plist[i] <= N; ++i) ++result[plist[i] % mod];
-    auto v = prime_s0_pmod<NModNumber<CCMod64<M>>>(N, mod);
+    auto v = PrimeS0Pmod<NModNumber<CCMod64<M>>>(N, mod);
     for (int j = 0; j < mod; ++j) {
-      assert(result[j] % M == v[j][N].value());
+      assert(result[j] % M == v[j][N].Value());
     }
   }
   for (int mod = 1; mod <= 30; ++mod) {
     int64 result[32] = {0};
     for (int i = 0; i < pcnt && plist[i] <= N; ++i)
       result[plist[i] % mod] += plist[i];
-    auto v = prime_s1_pmod<NModNumber<CCMod64<M>>>(N, mod);
+    auto v = PrimeS1Pmod<NModNumber<CCMod64<M>>>(N, mod);
     for (int j = 0; j < mod; ++j) {
-      assert(result[j] % M == v[j][N].value());
+      assert(result[j] % M == v[j][N].Value());
     }
   }
 }

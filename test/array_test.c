@@ -26,7 +26,7 @@ SL void array_test() {
       vec[i][j] = i * j;
     }
 
-  vec.reset({3, 2});
+  vec.Reset({3, 2});
   for (int i = 0; i < 3; ++i)
     for (int j = 0; j < 2; ++j) vec[i][j] = i * j;
 

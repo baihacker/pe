@@ -24,7 +24,7 @@ struct PeTest {
   std::vector<TestItem> tests;
 };
 
-PeTest& getTester();
+PeTest& GetTester();
 
 struct InitializeHelper {
   InitializeHelper(const std::function<void(void)>& action) { action(); }
@@ -36,7 +36,7 @@ struct InitializeHelper {
 
 #define PE_REGISTER_TEST(t, d, s)                                \
   static InitializeHelper MAKE_INITIALIZER_NAME(__LINE__)([]() { \
-    getTester().tests.push_back({t, d, s});                      \
+    GetTester().tests.push_back({t, d, s});                      \
   })
 
 #endif

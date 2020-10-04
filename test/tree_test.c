@@ -1,7 +1,7 @@
 #include "pe_test.h"
 
 namespace tree_test {
-SL void rubit_test() {
+SL void RuBitTest() {
   const int n = 100;
   int data[n + 1] = {0};
   RUBit<int> tree(n);
@@ -22,7 +22,7 @@ SL void rubit_test() {
   }
 }
 
-SL void rsqbit_test() {
+SL void RsqBitTest() {
   const int n = 100;
   int data[n + 1] = {0};
   RSQBit<int> tree(n);
@@ -45,10 +45,10 @@ SL void rsqbit_test() {
   }
 }
 
-SL void tree_test() {
-  rubit_test();
-  rsqbit_test();
+SL void TreeTest() {
+  RuBitTest();
+  RsqBitTest();
 }
 
-PE_REGISTER_TEST(&tree_test, "tree_test", SMALL);
+PE_REGISTER_TEST(&TreeTest, "TreeTest", SMALL);
 }  // namespace tree_test

@@ -9,7 +9,7 @@ struct MulImpl {
   int size;  // 1: coe < 1e18; 3: coe < 1e28; 4: coe < 1e35
   const char* name;
 };
-MulImpl mulImpl[] = {
+MulImpl mul_impl[] = {
 #if HAS_POLY_MUL_FLINT
     {&poly_flint::PolyMulNmod<uint64>, 4, "flint n"},
     {&poly_flint::poly_mul_prime<uint64>, 4, "flint p"},
@@ -44,15 +44,15 @@ MulImpl mulImpl[] = {
     //    {&PolyMul<uint64>, 4, "default"},
 };
 
-const char* dataPolicy[3] = {
+const char* data_policy[3] = {
     "random",
     "min mod",
     "max mod",
 };
 
-SL void test_impl(int dp, int size, int n, int64 mod) {
+SL void TestImpl(int dp, int size, int n, int64 mod) {
   fprintf(stderr, "%-8s : data = %s, size = %d, n = %d, mod = %lld\n", "config",
-          dataPolicy[dp], size, n, (long long)mod);
+          data_policy[dp], size, n, (long long)mod);
 
   vector<uint64> x, y;
   srand(123456789);
@@ -67,11 +67,11 @@ SL void test_impl(int dp, int size, int n, int64 mod) {
     }
   }
 
-  const int M = sizeof(mulImpl) / sizeof(mulImpl[0]);
+  const int M = sizeof(mul_impl) / sizeof(mul_impl[0]);
 
   vector<uint64> expected;
   for (int i = 0; i < M; ++i) {
-    auto who = mulImpl[i];
+    auto who = mul_impl[i];
     if (i > 0) {
       if (who.size < size) {
         continue;
@@ -90,29 +90,29 @@ SL void test_impl(int dp, int size, int n, int64 mod) {
   }
 }
 
-SL void poly_mul_test() {
+SL void PolyMulTest() {
   // uint128 target = 2655355665167707426;
   // target = target * 100000000000000000 + 92721528518903091;
   // cerr << Mod128And64(target, 100000000003) << endl;
 
-  test_impl(0, 1, 1000000, 100019);
-  test_impl(0, 3, 1479725, 100000000003);
-  test_impl(0, 4, 1000000, 316227766016779);
+  TestImpl(0, 1, 1000000, 100019);
+  TestImpl(0, 3, 1479725, 100000000003);
+  TestImpl(0, 4, 1000000, 316227766016779);
 
-  // test_impl(1, 0, 1000000, 100019);
-  // test_impl(1, 1, 1479725, 100000000003);
-  // test_impl(1, 2, 1000000, 316227766016779);
+  // TestImpl(1, 0, 1000000, 100019);
+  // TestImpl(1, 1, 1479725, 100000000003);
+  // TestImpl(1, 2, 1000000, 316227766016779);
 
   // 1e18
-  test_impl(2, 1, 999996, 1000003);
+  TestImpl(2, 1, 999996, 1000003);
   // 1e28
-  test_impl(2, 3, 1479725, 100000000003);
+  TestImpl(2, 3, 1479725, 100000000003);
   // 1e35
-  test_impl(2, 4, 1000000, 316227766016779);
+  TestImpl(2, 4, 1000000, 316227766016779);
 }
-PE_REGISTER_TEST(&poly_mul_test, "poly_mul_test", SUPER);
+PE_REGISTER_TEST(&PolyMulTest, "PolyMulTest", SUPER);
 
-SL void poly_mul_performance_test() {
+SL void PolyMulPerformanceTest() {
   uint64 mods[5] = {100019, 1000003, 1000000007, 100000000003, 316227766016779};
 
   for (int level = 0; level <= 4; ++level) {
@@ -127,11 +127,11 @@ SL void poly_mul_performance_test() {
 
     puts("");
 
-    const int M = sizeof(mulImpl) / sizeof(mulImpl[0]);
+    const int M = sizeof(mul_impl) / sizeof(mul_impl[0]);
 
     vector<uint64> expected;
     for (int i = 0; i < M; ++i) {
-      auto who = mulImpl[i];
+      auto who = mul_impl[i];
       if (who.size < level) continue;
 
       printf("%-8s ", who.name);
@@ -159,7 +159,6 @@ SL void poly_mul_performance_test() {
   }
 }
 
-PE_REGISTER_TEST(&poly_mul_performance_test, "poly_mul_performance_test",
-                 SUPER);
+PE_REGISTER_TEST(&PolyMulPerformanceTest, "PolyMulPerformanceTest", SUPER);
 #endif
 }  // namespace poly_mul_test

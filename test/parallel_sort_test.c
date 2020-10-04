@@ -4,7 +4,7 @@ namespace parallel_sort_test {
 const int n = 10000000;
 int arr[n];
 
-SL void parallel_sort_test() {
+SL void ParallelSortTest() {
   for (int i = 0; i < n; ++i) arr[i] = rand();
   TimeRecorder tr;
   ParallelSort<8>(arr, arr + n);
@@ -14,5 +14,5 @@ SL void parallel_sort_test() {
   }
 }
 
-PE_REGISTER_TEST(&parallel_sort_test, "parallel_sort_test", SMALL);
+PE_REGISTER_TEST(&ParallelSortTest, "ParallelSortTest", SMALL);
 }  // namespace parallel_sort_test

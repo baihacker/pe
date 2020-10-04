@@ -2,7 +2,7 @@
 
 namespace fft_test {
 #if HAS_POLY_MUL_FLINT
-SL void random_test() {
+SL void RandomTest() {
   srand(123456789);
   {
     // 8e13
@@ -64,7 +64,7 @@ SL void random_test() {
   }
 }
 
-SL void limit_test() {
+SL void LimitTest() {
   {
     // 10018*10018*2048=205537943552 2.06e11
     // 1e5+19
@@ -117,10 +117,10 @@ SL void limit_test() {
   }
 }
 
-SL void fft_test() {
-  random_test();
-  limit_test();
+SL void FftTest() {
+  RandomTest();
+  LimitTest();
 }
-PE_REGISTER_TEST(&fft_test, "fft_test", SMALL);
+PE_REGISTER_TEST(&FftTest, "FftTest", SMALL);
 #endif
 }  // namespace fft_test

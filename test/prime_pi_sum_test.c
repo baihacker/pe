@@ -4,7 +4,7 @@ namespace prime_pi_sum_test {
 int64 ps[1000001];
 int64 pc[1000001];
 
-SL void verify_cnt(const int64 n, const DVA<int64>& result) {
+SL void VerifyCnt(const int64 n, const DVA<int64>& result) {
   int64 v = (int64)sqrt(n);
   for (int j = 1; j <= v; ++j) {
     assert(result[j] == pc[j]);
@@ -12,7 +12,7 @@ SL void verify_cnt(const int64 n, const DVA<int64>& result) {
   }
 }
 
-SL void verify_sum(const int64 n, const DVA<int64>& result) {
+SL void VerifySum(const int64 n, const DVA<int64>& result) {
   int64 v = (int64)sqrt(n);
   for (int j = 1; j <= v; ++j) {
     assert(result[j] == ps[j]);
@@ -20,21 +20,21 @@ SL void verify_sum(const int64 n, const DVA<int64>& result) {
   }
 }
 
-SL void small_test() {
+SL void SmallTest() {
   for (int i = 1; i <= 100000; ++i) {
     const int n = i;
-    verify_cnt(n, PrimePi<int64>(i));
-    verify_sum(n, PrimeSum<int64>(i));
+    VerifyCnt(n, PrimePi<int64>(i));
+    VerifySum(n, PrimeSum<int64>(i));
   }
 }
 
-SL void prime_pi_sum_test() {
+SL void PrimePiSumTest() {
   for (int i = 1; i <= 1000000; ++i) {
     pc[i] = pc[i - 1] + (IsPrime(i) ? 1 : 0);
     ps[i] = ps[i - 1] + (IsPrime(i) ? i : 0);
   }
 
-  small_test();
+  SmallTest();
 
   assert((PrimePi<int64>(10000000))[10000000] == pmpi[7]);
   assert((PrimePi<int64>(100000000))[100000000] == pmpi[8]);
@@ -44,9 +44,9 @@ SL void prime_pi_sum_test() {
   // assert((PrimePi<int64>(1000000000000))[1000000000000] == pmpi[12]);
 }
 
-PE_REGISTER_TEST(&prime_pi_sum_test, "prime_pi_sum_test", BIG);
+PE_REGISTER_TEST(&PrimePiSumTest, "PrimePiSumTest", BIG);
 
-SL void prime_pi_sum_pmod_test() {
+SL void PrimePiSumPModTest() {
   const int64 N = 100000;
   for (int mod = 1; mod <= 30; ++mod) {
     int64 result[32] = {0};
@@ -84,5 +84,5 @@ SL void prime_pi_sum_pmod_test() {
     }
   }
 }
-PE_REGISTER_TEST(&prime_pi_sum_pmod_test, "prime_pi_sum_pmod_test", SMALL);
+PE_REGISTER_TEST(&PrimePiSumPModTest, "PrimePiSumPModTest", SMALL);
 }  // namespace prime_pi_sum_test

@@ -2,7 +2,7 @@
 
 namespace bit_test {
 #if defined(COMPILER_GNU)
-SL void bit_test() {
+SL void BitTest() {
   for (int i = 1; i < 65536; ++i) {
     assert(__pe_clz32(i) == __builtin_clz(i));
     assert(__pe_ctz32(i) == __builtin_ctz(i));
@@ -46,6 +46,6 @@ SL void bit_test() {
   assert(GetBit(x, 21) == 0);
 }
 
-PE_REGISTER_TEST(&bit_test, "bit_test", SMALL);
+PE_REGISTER_TEST(&BitTest, "BitTest", SMALL);
 #endif
 }  // namespace bit_test

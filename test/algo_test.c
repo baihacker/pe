@@ -1,7 +1,7 @@
 #include "pe_test.h"
 
 namespace algo_test {
-SL void fact_mod_test() {
+SL void FactModTest() {
   {
     const int64 mod = 10007;
     FactModer moder(mod);
@@ -43,9 +43,9 @@ SL void fact_mod_test() {
   }
 #endif
 }
-PE_REGISTER_TEST(&fact_mod_test, "fact_mod_test", BIG);
+PE_REGISTER_TEST(&FactModTest, "FactModTest", BIG);
 
-SL void fact_sum_mod_test() {
+SL void FactSumModTest() {
   const int64 mod = 99999999907;
   FactSumModer moder(mod);
 
@@ -62,9 +62,9 @@ SL void fact_sum_mod_test() {
   }
   assert(ans == s);
 }
-PE_REGISTER_TEST(&fact_sum_mod_test, "fact_sum_mod_test", BIG);
+PE_REGISTER_TEST(&FactSumModTest, "fact_sum_mod_test", BIG);
 
-SL void power_sum_test() {
+SL void PowerSumTest() {
   assert(PowerSum(10, 2, 1000000007) == 385);
   assert(PowerSum(100, 100, 1000000007) == 568830579);
   assert(PowerSum(1000, 1000, 1000000007) == 918088852);
@@ -75,9 +75,9 @@ SL void power_sum_test() {
   assert(PowerSumSafe(1000, 1000, 1000000007) == 918088852);
   assert(PowerSumSafe(1000, 10000, 1000000007) == 163720385);
 }
-PE_REGISTER_TEST(&power_sum_test, "power_sum_test", SMALL);
+PE_REGISTER_TEST(&PowerSumTest, "PowerSumTest", SMALL);
 
-SL void gp_sum_mod_test() {
+SL void GpSumModTest() {
   const int64 mod = 1000000007;
   assert(GpSumMod(0, 1, 0, mod) == 0);
   assert(GpSumMod(0, 1, 1, mod) == 0);
@@ -104,9 +104,9 @@ SL void gp_sum_mod_test() {
   assert(GpSumMod(2, 0, 0, mod, 100) == 1);
 }
 
-PE_REGISTER_TEST(&gp_sum_mod_test, "gp_sum_mod_test", SMALL);
+PE_REGISTER_TEST(&GpSumModTest, "GpSumModTest", SMALL);
 
-SL void pk_sum_mod_test() {
+SL void PkSumModTest() {
   // 4e18 + 37
   const int64 mod = 4000000000000000037;
   PowerSumModerB moder(mod, 7);
@@ -126,9 +126,9 @@ SL void pk_sum_mod_test() {
     }
 }
 
-PE_REGISTER_TEST(&pk_sum_mod_test, "pk_sum_mod_test", SMALL);
+PE_REGISTER_TEST(&PkSumModTest, "PkSumModTest", SMALL);
 
-SL void mu_phi_sum_moder_test() {
+SL void MuPhiSumModerTest() {
   const int mod = 1000000007;
   MuPhiSumModer moder(mod);
 
@@ -140,9 +140,9 @@ SL void mu_phi_sum_moder_test() {
   assert(s0 == s1);
 }
 
-PE_REGISTER_TEST(&mu_phi_sum_moder_test, "mu_phi_sum_moder_test", MEDIUM);
+PE_REGISTER_TEST(&MuPhiSumModerTest, "MuPhiSumModerTest", MEDIUM);
 
-SL void square_free_counter_test() {
+SL void SquareFreeCounterTest() {
   const int64 n = maxp * 2;
   int64 ans1 = 0;
   for (int i = 1; i <= n; ++i) ans1 += IsSquareFree(i);
@@ -151,18 +151,18 @@ SL void square_free_counter_test() {
   assert(ans1 == ans2);
 }
 
-PE_REGISTER_TEST(&square_free_counter_test, "square_free_counter_test", SMALL);
+PE_REGISTER_TEST(&SquareFreeCounterTest, "SquareFreeCounterTest", SMALL);
 
-SL void mvalues_test() {
+SL void MValuesTest() {
   auto compute = [&](int64 val, int imp, int64 vmp, MVVHistory* his,
                      int top) -> int64 { return 1; };
 
   assert(ForMValues<int64>(100000000000LL, compute) == 34113193);
 }
 
-PE_REGISTER_TEST(&mvalues_test, "mvalues_test", SMALL);
+PE_REGISTER_TEST(&MValuesTest, "MValuesTest", SMALL);
 
-SL void count_pythagorean_triple_test() {
+SL void CountPythagoreanTripleTest() {
   // https://oeis.org/A101930
   const int64 ans[] = {2,       52,       881,       12471,      161436,
                        1980642, 23471475, 271360653, 3080075432, 34465432859};
@@ -176,6 +176,6 @@ SL void count_pythagorean_triple_test() {
   }
 }
 
-PE_REGISTER_TEST(&count_pythagorean_triple_test,
-                 "count_pythagorean_triple_test", SMALL);
+PE_REGISTER_TEST(&CountPythagoreanTripleTest, "CountPythagoreanTripleTest",
+                 SMALL);
 }  // namespace algo_test

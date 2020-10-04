@@ -1,7 +1,7 @@
 #include "pe_test.h"
 
 namespace dva_test {
-SL void test_s0() {
+SL void TestS0() {
   auto orz = PrimePi<int64>(10000);
   assert(orz[10000] == 1229LL);
 
@@ -15,7 +15,7 @@ SL void test_s0() {
   assert(orz[100000000] == 5761455LL);
 }
 
-SL void test_s1() {
+SL void TestS1() {
   int64 s = 0;
   for (int i = 2; i <= 10000; ++i)
     if (IsPrime(i)) s += i;
@@ -39,10 +39,10 @@ SL void test_s1() {
   assert(orz[1000000] == 37550402023LL);
 }
 
-SL void dva_test() {
-  test_s0();
-  test_s1();
+SL void DvaTest() {
+  TestS0();
+  TestS1();
 }
 
-PE_REGISTER_TEST(&dva_test, "dva_test", SMALL);
+PE_REGISTER_TEST(&DvaTest, "DvaTest", SMALL);
 }  // namespace dva_test

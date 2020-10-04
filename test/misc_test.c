@@ -1,7 +1,7 @@
 #include "pe_test.h"
 
 namespace misc_test {
-SL void misc_test() {
+SL void MiscTest() {
   GaussianEliminationSolver solver;
   solver.Init(10, 10);
   for (int i = 0; i < 10; ++i) {
@@ -34,9 +34,9 @@ SL void misc_test() {
   assert(vtos(vec) == "{1, 2, 3}");
 }
 
-PE_REGISTER_TEST(&misc_test, "misc_test", SMALL);
+PE_REGISTER_TEST(&MiscTest, "MiscTest", SMALL);
 
-SL void count_pt_in_circle_test() {
+SL void CountPtInCircleTest() {
   for (int64 n = 0; n <= 100; ++n) {
     int64 u = CountPtInCircle(n);
     int64 v = CountPtInCircleBf(n);
@@ -71,10 +71,10 @@ SL void count_pt_in_circle_test() {
   }
 }
 
-PE_REGISTER_TEST(&count_pt_in_circle_test, "count_pt_in_circle_test", SUPER);
+PE_REGISTER_TEST(&CountPtInCircleTest, "CountPtInCircleTest", SUPER);
 
 #if PE_HAS_INT128
-SL void sum_sigma0_test() {
+SL void SumSigma0Test() {
 #if 1
   for (int64 i = 1; i <= 10000; ++i) {
     int64 u = SumSigma0(i);
@@ -100,6 +100,6 @@ SL void sum_sigma0_test() {
   }
 }
 
-PE_REGISTER_TEST(&sum_sigma0_test, "sum_sigma0_test", SUPER);
+PE_REGISTER_TEST(&SumSigma0Test, "SumSigma0Test", SUPER);
 #endif
 }  // namespace misc_test

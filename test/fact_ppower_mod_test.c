@@ -1,7 +1,7 @@
 #include "pe_test.h"
 
 namespace fact_ppower_mod_test {
-SL void fact_ppower_mod_test() {
+SL void FactPPowerModTest() {
   bi N = 1;
   for (int i = 1; i <= 20; ++i) N *= i;
 
@@ -23,10 +23,10 @@ SL void fact_ppower_mod_test() {
   assert(ans == 21171469991580LL);
 }
 
-PE_REGISTER_TEST(&fact_ppower_mod_test, "fact_ppower_mod_test", SMALL);
+PE_REGISTER_TEST(&FactPPowerModTest, "FactPPowerModTest", SMALL);
 
 #if HAS_MPZ && 0
-SL void mpz_fact_ppower_mod_test() {
+SL void MpzFactPPowerModtest() {
   Mpz N = 1;
   for (int i = 1; i <= 20; ++i) N *= i;
 
@@ -48,11 +48,11 @@ SL void mpz_fact_ppower_mod_test() {
   assert(ToInt<int64>(ans) == 21171469991580LL);
 }
 
-PE_REGISTER_TEST(&mpz_fact_ppower_mod_test, "mpz_fact_ppower_mod_test", SMALL);
+PE_REGISTER_TEST(&MpzFactPPowerModtest, "MpzFactPPowerModtest", SMALL);
 #endif
 
 #if ENABLE_GMP
-SL void mp_integer_fact_ppower_mod_test() {
+SL void MpIntegerFactPPowerModTest() {
   MpInteger N = 1;
   for (int i = 1; i <= 20; ++i) N *= i;
 
@@ -74,7 +74,7 @@ SL void mp_integer_fact_ppower_mod_test() {
   assert(ToInt<int64>(ans) == 21171469991580LL);
 }
 
-PE_REGISTER_TEST(&mp_integer_fact_ppower_mod_test,
-                 "mp_integer_fact_ppower_mod_test", SMALL);
+PE_REGISTER_TEST(&MpIntegerFactPPowerModTest, "MpIntegerFactPPowerModTest",
+                 SMALL);
 #endif
 }  // namespace fact_ppower_mod_test

@@ -59,7 +59,7 @@ const uint64 ValueHolder<uint64>::mods[]{1ull, 2147483648ull, 2147483647ull,
                                          9223372036854775807ull,
                                          18446744073709551615ull};
 
-SL void mod_test() {
+SL void ModTest() {
 #define REGULATE_MOD_TEST(T1, T2)          \
   for (auto v : ValueHolder<T1>::values)   \
     for (auto m : ValueHolder<T2>::mods) { \
@@ -95,11 +95,11 @@ SL void mod_test() {
   REGULATE_MOD_TEST(uint64, uint64)
 }
 
-PE_REGISTER_TEST(&mod_test, "mod_test", SMALL);
+PE_REGISTER_TEST(&ModTest, "ModTest", SMALL);
 #endif
 
 #if PE_HAS_INT128
-SL void frac_mod_test() {
+SL void FracModTest() {
   const int mod = 1000000007;
   for (int64 n = 1; n <= 10; ++n) {
     auto v = FracMod<int64>({n, n + 1, 2 * n + 1}, {2, 3}, mod);
@@ -115,6 +115,6 @@ SL void frac_mod_test() {
   }
 }
 
-PE_REGISTER_TEST(&frac_mod_test, "frac_mod_test", SMALL);
+PE_REGISTER_TEST(&FracModTest, "FracModTest", SMALL);
 #endif
 }  // namespace mod_test

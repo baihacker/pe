@@ -1,7 +1,7 @@
 #include "pe_test.h"
 
 namespace comb_moder_test {
-SL void comb_moder_test() {
+SL void CombModerTest() {
   const int mod = 10007;
   CombModer m1(mod);
   CombModerEx m2(mod);
@@ -22,5 +22,5 @@ SL void comb_moder_test() {
   }
 #endif
 }
-PE_REGISTER_TEST(&comb_moder_test, "comb_moder_test", MEDIUM);
+PE_REGISTER_TEST(&CombModerTest, "CombModerTest", MEDIUM);
 }  // namespace comb_moder_test

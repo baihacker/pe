@@ -7,7 +7,7 @@ const int n = 1000000;
 int sresult[n + 1];
 int64 lresult[n + 1];
 
-SL void init_inv_test() {
+SL void InitInvTest() {
   InitInv(sresult, n, mod);
   InitInv(lresult, n, mod);
   for (int i = 1; i <= n; ++i) {
@@ -16,5 +16,5 @@ SL void init_inv_test() {
   }
 }
 
-PE_REGISTER_TEST(&init_inv_test, "init_inv_test", SMALL);
+PE_REGISTER_TEST(&InitInvTest, "InitInvTest", SMALL);
 }  // namespace init_inv_test

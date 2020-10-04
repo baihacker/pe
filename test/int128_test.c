@@ -2,7 +2,7 @@
 
 namespace print_int128_test {
 #if PE_HAS_INT128
-SL void print_int128_test() {
+SL void PrintInt128Test() {
   int128 x = 1;
   for (int i = 0; i < 127; ++i) {
     assert(ToString(x) == bi(x).ToString());
@@ -14,9 +14,9 @@ SL void print_int128_test() {
   assert(ToString(-x) == bi(-x).ToString());
 }
 
-PE_REGISTER_TEST(&print_int128_test, "print_int128_test", SMALL);
+PE_REGISTER_TEST(&PrintInt128Test, "PrintInt128Test", SMALL);
 
-SL void int128_literal_test() {
+SL void Int128LiteralTest() {
   const int128 p1 = 10;
   const int128 p2 = p1 * p1;
   const int128 p4 = p2 * p2;
@@ -37,6 +37,6 @@ SL void int128_literal_test() {
   assert(b127 == "170141183460469231731687303715884105728"_u128);
 }
 
-PE_REGISTER_TEST(&int128_literal_test, "int128_literal_test", SMALL);
+PE_REGISTER_TEST(&Int128LiteralTest, "Int128LiteralTest", SMALL);
 #endif
 }  // namespace print_int128_test

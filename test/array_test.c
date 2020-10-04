@@ -19,7 +19,7 @@ struct A : public B {
 */
 
 namespace array_test {
-SL void array_test() {
+SL void ArrayTest() {
   DArray<int, 2> vec({5, 6});
   for (int i = 0; i < 5; ++i)
     for (int j = 0; j < 6; ++j) {
@@ -38,5 +38,5 @@ SL void array_test() {
   for (int i = 0; i < 4; ++i)
     for (int j = 0; j < 5; ++j) arr1[i][j] = i * j;
 }
-PE_REGISTER_TEST(&array_test, "array_test", SMALL);
+PE_REGISTER_TEST(&ArrayTest, "ArrayTest", SMALL);
 }  // namespace array_test

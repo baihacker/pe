@@ -1,7 +1,7 @@
 #include "pe_test.h"
 
 namespace poly_test {
-SL void poly_general_test() {
+SL void PolyGeneralTest() {
   NModPolyT<31> p{1, 2, 3, 31, 32};
   assert(p[3] == 0);
   assert(p[4] == 1);
@@ -35,9 +35,9 @@ SL void poly_general_test() {
 
   assert(q / NModPoly({1}, 31) == q);
 }
-PE_REGISTER_TEST(&poly_general_test, "poly_general_test", SMALL);
+PE_REGISTER_TEST(&PolyGeneralTest, "PolyGeneralTest", SMALL);
 
-SL void poly_mod_test() {
+SL void PolyModTest() {
   const int64 P = 10007;
   NModPoly a({0, 1, 2, 0, 0, 123}, P);
   NModPoly b({0, 1, 17}, P);
@@ -46,5 +46,5 @@ SL void poly_mod_test() {
 
   assert(m1 == m2);
 }
-PE_REGISTER_TEST(&poly_mod_test, "poly_mod_test", SMALL);
+PE_REGISTER_TEST(&PolyModTest, "PolyModTest", SMALL);
 }  // namespace poly_test

@@ -1,7 +1,7 @@
 #include "pe_test.h"
 
 namespace bi_test {
-SL void bi_test_small() {
+SL void BiTestSmall() {
   for (int i = -100; i <= 100; ++i)
     for (int j = -100; j <= 100; ++j) {
       bi a(i), b(j);
@@ -25,10 +25,10 @@ SL void bi_test_small() {
     }
 }
 
-PE_REGISTER_TEST(&bi_test_small, "bi_test_small", SMALL);
+PE_REGISTER_TEST(&BiTestSmall, "BiTestSmall", SMALL);
 
 #if ENABLE_GMP
-SL void bi_mul_test_impl(int x, int y) {
+SL void BiMulTestImpl(int x, int y) {
   for (int s1 = -1; s1 <= 1; ++s1)
     for (int s2 = -1; s2 <= 1; ++s2)
       for (int id = 0; id < x; ++id) {
@@ -63,17 +63,17 @@ SL void bi_mul_test_impl(int x, int y) {
       }
 }
 
-SL void bi_mul_test_medium() { bi_mul_test_impl(1000, 500); }
+SL void BiMulTestMedium() { BiMulTestImpl(1000, 500); }
 
-PE_REGISTER_TEST(&bi_mul_test_medium, "bi_mul_test_medium", MEDIUM);
+PE_REGISTER_TEST(&BiMulTestMedium, "BiMulTestMedium", MEDIUM);
 
-SL void bi_mul_test_big() { bi_mul_test_impl(10, 10000); }
+SL void BiMulTestBig() { BiMulTestImpl(10, 10000); }
 
 #if !defined(CONTINUOUS_INTEGRATION_TEST)
-PE_REGISTER_TEST(&bi_mul_test_big, "bi_mul_test_big", BIG);
+PE_REGISTER_TEST(&BiMulTestBig, "BiMulTestBig", BIG);
 #endif
 
-SL void bi_div_test_medium_impl(int x, int y) {
+SL void BiDivTestMediumImpl(int x, int y) {
   for (int strategy = 0; strategy < 2; ++strategy)
     for (int s1 = -1; s1 <= 1; ++s1)
       for (int s2 = -1; s2 <= 1; ++s2)
@@ -131,16 +131,16 @@ SL void bi_div_test_medium_impl(int x, int y) {
           }
 }
 
-SL void bi_div_test_medium() { bi_div_test_medium_impl(100, 500); }
+SL void BiDivTestMedium() { BiDivTestMediumImpl(100, 500); }
 
 #if !defined(CONTINUOUS_INTEGRATION_TEST)
-PE_REGISTER_TEST(&bi_div_test_medium, "bi_div_test_medium", MEDIUM);
+PE_REGISTER_TEST(&BiDivTestMedium, "BiDivTestMedium", MEDIUM);
 #endif
 
-SL void bi_div_test_big() { bi_div_test_medium_impl(10, 2000); }
+SL void BiDivTestBig() { BiDivTestMediumImpl(10, 2000); }
 
 #if !defined(CONTINUOUS_INTEGRATION_TEST)
-PE_REGISTER_TEST(&bi_div_test_big, "bi_div_test_big", BIG);
+PE_REGISTER_TEST(&BiDivTestBig, "BiDivTestBig", BIG);
 #endif
 
 #endif

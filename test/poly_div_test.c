@@ -9,7 +9,7 @@ struct DivImpl {
   const char* name;
 };
 
-DivImpl divImpl[] = {
+DivImpl div_impl[] = {
     {&PolyDivDc<uint64>, 1, "dc"},
     {&PolyDivNormal<uint64>, 0, "normal"},
 #if HAS_POLY_FLINT
@@ -21,15 +21,15 @@ DivImpl divImpl[] = {
 #endif
 };
 
-const char* dataPolicy[3] = {
+const char* data_policy[3] = {
     "random",
     "min mod",
     "max mod",
 };
 
-SL void test_impl(int dp, int size, int n, int64 mod) {
+SL void TestImpl(int dp, int size, int n, int64 mod) {
   fprintf(stderr, "%-8s : data = %s, size = %d, n = %d, mod = %lld\n", "config",
-          dataPolicy[dp], size, n, (long long)mod);
+          data_policy[dp], size, n, (long long)mod);
 
   vector<uint64> x, y;
   srand(123456789);
@@ -43,11 +43,11 @@ SL void test_impl(int dp, int size, int n, int64 mod) {
     x[n - 1] = y[n / 2 - 1] = 1;
   }
 
-  const int M = sizeof(divImpl) / sizeof(divImpl[0]);
+  const int M = sizeof(div_impl) / sizeof(div_impl[0]);
 
   vector<uint64> expected;
   for (int i = 0; i < M; ++i) {
-    auto who = divImpl[i];
+    auto who = div_impl[i];
     if (i > 0) {
       if (who.size < size) {
         continue;
@@ -66,16 +66,16 @@ SL void test_impl(int dp, int size, int n, int64 mod) {
   }
 }
 
-SL void poly_div_test() {
+SL void PolyDivTest() {
   for (int dp = 0; dp < 3; ++dp)
     for (int n : {128, 2048, 1000000, 1479725})
       for (int64 mod : {100019LL, 100000000003LL, 316227766016779LL}) {
-        test_impl(dp, n > 2048, n, mod);
+        TestImpl(dp, n > 2048, n, mod);
       }
 }
-PE_REGISTER_TEST(&poly_div_test, "poly_div_test", SUPER);
+PE_REGISTER_TEST(&PolyDivTest, "PolyDivTest", SUPER);
 
-SL void poly_div_performance_test() {
+SL void PolyDivPerformanceTest() {
   uint64 mods[5] = {100019, 1000003, 1000000007, 100000000003, 316227766016779};
 
   for (int level = 0; level <= 4; ++level) {
@@ -90,11 +90,11 @@ SL void poly_div_performance_test() {
 
     puts("");
 
-    const int M = sizeof(divImpl) / sizeof(divImpl[0]);
+    const int M = sizeof(div_impl) / sizeof(div_impl[0]);
 
     vector<uint64> expected;
     for (int i = 0; i < M; ++i) {
-      auto who = divImpl[i];
+      auto who = div_impl[i];
 
       printf("%-8s ", who.name);
       srand(314159);
@@ -125,6 +125,5 @@ SL void poly_div_performance_test() {
   }
 }
 
-PE_REGISTER_TEST(&poly_div_performance_test, "poly_div_performance_test",
-                 SUPER);
+PE_REGISTER_TEST(&PolyDivPerformanceTest, "PolyDivPerformanceTest", SUPER);
 }  // namespace poly_div_test

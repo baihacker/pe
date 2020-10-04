@@ -2,7 +2,7 @@
 
 namespace mpf_test {
 #if HAS_MPF
-SL void mpf_test() {
+SL void MpfTest() {
   // cout << Mpf::getDefaultPrec() << endl;
   Mpf::setDefaultPrec(200);
 
@@ -31,6 +31,6 @@ SL void mpf_test() {
 #endif
 }
 
-PE_REGISTER_TEST(&mpf_test, "mpf_test", SMALL);
+PE_REGISTER_TEST(&MpfTest, "MpfTest", SMALL);
 #endif
 }  // namespace mpf_test

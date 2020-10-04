@@ -3,7 +3,7 @@
 namespace poly_app_test {
 const int64 mod = 1000000007;
 
-SL void gf_test() {
+SL void GfTest() {
   {
     // Fibonacci sequence
     vector<int64> A{1, -1, -1};
@@ -54,9 +54,9 @@ SL void gf_test() {
     assert(mine == expected);
   }
 }
-PE_REGISTER_TEST(&gf_test, "gf_test", SMALL);
+PE_REGISTER_TEST(&GfTest, "GfTest", SMALL);
 
-SL void minimal_polynomial_test() {
+SL void MinimalPolynomialTest() {
   const int64 P = 1000000009;
   NModPoly s{{0, 1, 1, 2, 3, 5}, P};
   auto v = FindMinimalPoly(s);
@@ -78,9 +78,9 @@ SL void minimal_polynomial_test() {
   assert(NthElement({{0, 1, 1, 2, 3, 5, 8, 13}, P}, 38) == 39088169);
   assert(NthElement({0, 1, 1, 2, 3, 5, 8, 13}, P, 38) == 39088169);
 }
-PE_REGISTER_TEST(&minimal_polynomial_test, "minimal_polynomial_test", SMALL);
+PE_REGISTER_TEST(&MinimalPolynomialTest, "MinimalPolynomialTest", SMALL);
 
-SL void poly_multipoint_evaluation_test() {
+SL void PolyMultiPointEvaluationTest() {
   srand(123456789);
   vector<int64> data;
   int n = 5000;
@@ -116,10 +116,10 @@ SL void poly_multipoint_evaluation_test() {
   }
 #endif
 }
-PE_REGISTER_TEST(&poly_multipoint_evaluation_test,
-                 "poly_multipoint_evaluation_test", SMALL);
+PE_REGISTER_TEST(&PolyMultiPointEvaluationTest, "PolyMultiPointEvaluationTest",
+                 SMALL);
 
-SL void poly_batch_mul_test() {
+SL void PolyBatchMulTest() {
   const int mod = 10007;
   vector<int64> data{1, 1, 2, 1, 3, 1};
   auto result = PolyBatchMul(data, mod);
@@ -127,5 +127,5 @@ SL void poly_batch_mul_test() {
   vector<int64> expected{6, 11, 6, 1};
   assert(expected == result);
 }
-PE_REGISTER_TEST(&poly_batch_mul_test, "poly_batch_mul_test", SMALL);
+PE_REGISTER_TEST(&PolyBatchMulTest, "PolyBatchMulTest", SMALL);
 }  // namespace poly_app_test

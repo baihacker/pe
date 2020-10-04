@@ -4,7 +4,7 @@
 namespace mpi_test {
 
 template <typename T>
-SL void test_constructor_internal() {
+SL void TestConstructorInternal() {
   /*cout << typeid(T).name() << endl;
   cout << MpInteger(T()) << endl;
   cout << MpInteger(T(0)) << " " << MpInteger(T(1)) << endl;
@@ -21,31 +21,31 @@ SL void test_constructor_internal() {
   // cout << endl;
 }
 
-SL void test_constructor() {
+SL void TestConstructor() {
   // cout << MpInteger() << endl;
   MpInteger x;
-  // test_constructor_internal<bool>();
-  test_constructor_internal<char>();
-  test_constructor_internal<signed char>();
-  test_constructor_internal<unsigned char>();
-  test_constructor_internal<short>();
-  test_constructor_internal<int>();
-  test_constructor_internal<long>();
-  test_constructor_internal<long long>();
+  // TestConstructorInternal<bool>();
+  TestConstructorInternal<char>();
+  TestConstructorInternal<signed char>();
+  TestConstructorInternal<unsigned char>();
+  TestConstructorInternal<short>();
+  TestConstructorInternal<int>();
+  TestConstructorInternal<long>();
+  TestConstructorInternal<long long>();
 #if PE_HAS_INT128
-  test_constructor_internal<int128>();
+  TestConstructorInternal<int128>();
 #endif
-  test_constructor_internal<unsigned short>();
-  test_constructor_internal<unsigned int>();
-  test_constructor_internal<unsigned long>();
-  test_constructor_internal<unsigned long long>();
+  TestConstructorInternal<unsigned short>();
+  TestConstructorInternal<unsigned int>();
+  TestConstructorInternal<unsigned long>();
+  TestConstructorInternal<unsigned long long>();
 #if PE_HAS_INT128
-  test_constructor_internal<uint128>();
+  TestConstructorInternal<uint128>();
 #endif
 }
 
 template <typename T>
-SL void test_assignment_internal() {
+SL void TestAssignmentInternal() {
   MpInteger x;
   x = T();
   assert(x.ToInt<T>() == T());
@@ -57,24 +57,24 @@ SL void test_assignment_internal() {
   assert(x.ToInt<T>() == numeric_limits<T>::min());
 }
 
-SL void test_assignment_operator() {
-  // test_assignment_internal<bool>();
-  test_assignment_internal<char>();
-  test_assignment_internal<signed char>();
-  test_assignment_internal<unsigned char>();
-  test_assignment_internal<short>();
-  test_assignment_internal<int>();
-  test_assignment_internal<long>();
-  test_assignment_internal<long long>();
+SL void TestAssignmentOperator() {
+  // TestAssignmentInternal<bool>();
+  TestAssignmentInternal<char>();
+  TestAssignmentInternal<signed char>();
+  TestAssignmentInternal<unsigned char>();
+  TestAssignmentInternal<short>();
+  TestAssignmentInternal<int>();
+  TestAssignmentInternal<long>();
+  TestAssignmentInternal<long long>();
 #if PE_HAS_INT128
-  test_assignment_internal<int128>();
+  TestAssignmentInternal<int128>();
 #endif
-  test_assignment_internal<unsigned short>();
-  test_assignment_internal<unsigned int>();
-  test_assignment_internal<unsigned long>();
-  test_assignment_internal<unsigned long long>();
+  TestAssignmentInternal<unsigned short>();
+  TestAssignmentInternal<unsigned int>();
+  TestAssignmentInternal<unsigned long>();
+  TestAssignmentInternal<unsigned long long>();
 #if PE_HAS_INT128
-  test_assignment_internal<uint128>();
+  TestAssignmentInternal<uint128>();
 #endif
 
   string s = "123456789123456789123456789";
@@ -84,7 +84,7 @@ SL void test_assignment_operator() {
 }
 
 template <typename T>
-SL void test_asmd_internal() {
+SL void TestAsmdInternal() {
   MpInteger x;
   x += T(1);
   x = x + T(1);
@@ -115,24 +115,24 @@ SL void test_asmd_internal() {
   x = x % x;
 }
 
-SL void test_asmd_operator() {
-  // test_asmd_internal<bool>();
-  test_asmd_internal<char>();
-  test_asmd_internal<signed char>();
-  test_asmd_internal<unsigned char>();
-  test_asmd_internal<short>();
-  test_asmd_internal<int>();
-  test_asmd_internal<long>();
-  test_asmd_internal<long long>();
+SL void TestAsmdOperator() {
+  // TestAsmdInternal<bool>();
+  TestAsmdInternal<char>();
+  TestAsmdInternal<signed char>();
+  TestAsmdInternal<unsigned char>();
+  TestAsmdInternal<short>();
+  TestAsmdInternal<int>();
+  TestAsmdInternal<long>();
+  TestAsmdInternal<long long>();
 #if PE_HAS_INT128
-  test_asmd_internal<int128>();
+  TestAsmdInternal<int128>();
 #endif
-  test_asmd_internal<unsigned short>();
-  test_asmd_internal<unsigned int>();
-  test_asmd_internal<unsigned long>();
-  test_asmd_internal<unsigned long long>();
+  TestAsmdInternal<unsigned short>();
+  TestAsmdInternal<unsigned int>();
+  TestAsmdInternal<unsigned long>();
+  TestAsmdInternal<unsigned long long>();
 #if PE_HAS_INT128
-  test_asmd_internal<uint128>();
+  TestAsmdInternal<uint128>();
 #endif
 
   for (int a = -10; a <= 10; ++a)
@@ -254,7 +254,7 @@ SL void test_asmd_operator() {
 }
 
 template <typename T>
-SL void test_compare_operator_internal() {
+SL void TestCompareOperatorInternal() {
   MpInteger x;
   assert((x == T(0)) == 1);
   assert((x > T(0)) == 0);
@@ -286,28 +286,28 @@ SL void test_compare_operator_internal() {
   assert((x != x) == 0);
 }
 
-SL void test_compare_operator() {
-  // test_compare_operator_internal<bool>();
-  test_compare_operator_internal<char>();
-  test_compare_operator_internal<signed char>();
-  test_compare_operator_internal<unsigned char>();
-  test_compare_operator_internal<short>();
-  test_compare_operator_internal<int>();
-  test_compare_operator_internal<long>();
-  test_compare_operator_internal<long long>();
+SL void TestCompareOperator() {
+  // TestCompareOperatorInternal<bool>();
+  TestCompareOperatorInternal<char>();
+  TestCompareOperatorInternal<signed char>();
+  TestCompareOperatorInternal<unsigned char>();
+  TestCompareOperatorInternal<short>();
+  TestCompareOperatorInternal<int>();
+  TestCompareOperatorInternal<long>();
+  TestCompareOperatorInternal<long long>();
 #if PE_HAS_INT128
-  test_compare_operator_internal<int128>();
+  TestCompareOperatorInternal<int128>();
 #endif
-  test_compare_operator_internal<unsigned short>();
-  test_compare_operator_internal<unsigned int>();
-  test_compare_operator_internal<unsigned long>();
-  test_compare_operator_internal<unsigned long long>();
+  TestCompareOperatorInternal<unsigned short>();
+  TestCompareOperatorInternal<unsigned int>();
+  TestCompareOperatorInternal<unsigned long>();
+  TestCompareOperatorInternal<unsigned long long>();
 #if PE_HAS_INT128
-  test_compare_operator_internal<uint128>();
+  TestCompareOperatorInternal<uint128>();
 #endif
 }
 
-SL void test_bit_operator() {
+SL void TestBitOperator() {
   MpInteger x;
   for (int i = 0; i <= 19; ++i) x.SetBit(i);
   assert(x.ToInt<int>() == 1048575);
@@ -333,7 +333,7 @@ SL void test_bit_operator() {
   assert(x.ToInt<int>() == 1);
 }
 
-SL void test_utilities() {
+SL void TestUtilities() {
   PowerMod(MpInteger(5), 10, MpInteger("123456789"));
   PowerMod(MpInteger(5), MpInteger(10), MpInteger("123456789"));
 
@@ -349,18 +349,18 @@ SL void test_utilities() {
   TimeRecorder tr;
   MpInteger v(1);
   for (int i = 1; i <= 100000; ++i) v *= i;
-  // cout << tr.elapsed().format() << " " << v.bitCount() << endl;
+  // cout << tr.Elapsed().Format() << " " << v.bitCount() << endl;
 }
 
-SL void mpi_test() {
-  test_constructor();
-  test_assignment_operator();
-  test_asmd_operator();
-  test_compare_operator();
-  test_bit_operator();
-  test_utilities();
+SL void MpiTest() {
+  TestConstructor();
+  TestAssignmentOperator();
+  TestAsmdOperator();
+  TestCompareOperator();
+  TestBitOperator();
+  TestUtilities();
 }
 
-PE_REGISTER_TEST(&mpi_test, "mpi_test", SMALL);
+PE_REGISTER_TEST(&MpiTest, "MpiTest", SMALL);
 }  // namespace mpi_test
 #endif

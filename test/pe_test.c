@@ -28,12 +28,12 @@
 
 static TimeUsage __time_usage;
 
-PeTest& getTester() {
+PeTest& GetTester() {
   static PeTest tester;
   return tester;
 }
 
-TestSize enabledTestSize[] {
+TestSize enabled_test_size[] {
 #if defined(TEST_ALL)
   SMALL, MEDIUM, BIG, SUPER, SPECIFIED,
 #else
@@ -41,8 +41,8 @@ TestSize enabledTestSize[] {
 #endif
 };
 
-SL bool isEnabledTestSize(TestSize size) {
-  for (auto& iter : enabledTestSize) {
+SL bool IsEnabledTestSize(TestSize size) {
+  for (auto& iter : enabled_test_size) {
     if (iter == size) {
       return true;
     }
@@ -61,14 +61,14 @@ int main() {
   dbg(maxp);
   dbg(maxp2);
 
-  auto& tester = getTester();
+  auto& tester = GetTester();
   const int size = (int)tester.tests.size();
 
   bool isFirstTest = true;
 
   for (int i = 0; i < size; ++i) {
     auto& item = tester.tests[i];
-    if (!isEnabledTestSize(item.testSize)) {
+    if (!IsEnabledTestSize(item.testSize)) {
       continue;
     }
 #ifdef NO_SMALL_TEST

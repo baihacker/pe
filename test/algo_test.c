@@ -62,7 +62,7 @@ SL void FactSumModTest() {
   }
   assert(ans == s);
 }
-PE_REGISTER_TEST(&FactSumModTest, "fact_sum_mod_test", BIG);
+PE_REGISTER_TEST(&FactSumModTest, "FactSumModTest", BIG);
 
 SL void PowerSumTest() {
   assert(PowerSum(10, 2, 1000000007) == 385);

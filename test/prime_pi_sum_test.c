@@ -51,7 +51,7 @@ SL void PrimePiSumPModTest() {
   for (int mod = 1; mod <= 30; ++mod) {
     int64 result[32] = {0};
     for (int i = 0; i < pcnt && plist[i] <= N; ++i) ++result[plist[i] % mod];
-    auto v = PrimeS0Pmod<int64>(N, mod);
+    auto v = PrimeS0PMod<int64>(N, mod);
     for (int j = 0; j < mod; ++j) {
       assert(result[j] == v[j][N]);
     }
@@ -60,7 +60,7 @@ SL void PrimePiSumPModTest() {
     int64 result[32] = {0};
     for (int i = 0; i < pcnt && plist[i] <= N; ++i)
       result[plist[i] % mod] += plist[i];
-    auto v = PrimeS1Pmod<int64>(N, mod);
+    auto v = PrimeS1PMod<int64>(N, mod);
     for (int j = 0; j < mod; ++j) {
       assert(result[j] == v[j][N]);
     }
@@ -69,7 +69,7 @@ SL void PrimePiSumPModTest() {
   for (int mod = 1; mod <= 30; ++mod) {
     int64 result[32] = {0};
     for (int i = 0; i < pcnt && plist[i] <= N; ++i) ++result[plist[i] % mod];
-    auto v = PrimeS0Pmod<NModNumber<CCMod64<M>>>(N, mod);
+    auto v = PrimeS0PMod<NModNumber<CCMod64<M>>>(N, mod);
     for (int j = 0; j < mod; ++j) {
       assert(result[j] % M == v[j][N].value());
     }
@@ -78,7 +78,7 @@ SL void PrimePiSumPModTest() {
     int64 result[32] = {0};
     for (int i = 0; i < pcnt && plist[i] <= N; ++i)
       result[plist[i] % mod] += plist[i];
-    auto v = PrimeS1Pmod<NModNumber<CCMod64<M>>>(N, mod);
+    auto v = PrimeS1PMod<NModNumber<CCMod64<M>>>(N, mod);
     for (int j = 0; j < mod; ++j) {
       assert(result[j] % M == v[j][N].value());
     }

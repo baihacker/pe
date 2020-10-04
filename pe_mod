@@ -260,13 +260,13 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
 
 #if defined(COMPILER_GNU) && PE_X86_64
   // We have a disassembly version
-  return (ResultType)MulModExDis<ResultType>(a, b, mod);
+  return static_cast<ResultType>(MulModExDis<ResultType>(a, b, mod));
 #else
   if (mod <= PE_SOI63) {
     return MulModImpl<atLeastInt64T, M>(a, b, mod);
   }
 #if PE_HAS_INT128
-  return (ResultType)MulModImpl<int128, M>(a, b, mod);
+  return static_cast<ResultType>(MulModImpl<int128, M>(a, b, mod));
 #else
 
   // The openmp has issue about long double on windows.
@@ -282,15 +282,18 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
 
   if (CAN_USE_LONG_DOUBLE) {
     const int64 x = a, y = b, m = mod;
-    int64 r = (x * y - (int64)(((long double)x * y) / m) * m);
+    int64 r = (x * y - static_cast<int64>(((long double)x * y) / m) * m);
     if (r >= m) r -= r / m * m;
     if (r < 0) r += m;
     return r;
   }
 
 #if defined(COMPILER_MSVC) && PLATFORM_WIN && PE_X86_64
-  return (ResultType)((MulModFunctionPointerType)(
-      unsigned char*)__MulModShellCode)((uint64)a, (uint64)b, (uint64)mod);
+  MulModFunctionPointerType code = reinterpret_cast<MulModFunctionPointerType>(
+      reinterpret_cast<unsigned char*>(__MulModShellCode));
+  return static_cast<ResultType>(code(static_cast<uint64>(a),
+                                      static_cast<uint64>(b),
+                                      static_cast<uint64>(mod)));
 #endif
 
   MulModExSlowWarningOnce();
@@ -547,17 +550,17 @@ struct APSB {
   using ints = S;
   using intb = B;
   static ints Add(ints a, ints b, ints mod) {
-    intb c = (intb)a + b;
+    intb c = static_cast<intb>(a) + b;
     if (c >= mod) c -= mod;
     return static_cast<ints>(c);
   }
   static ints Sub(ints a, ints b, ints mod) {
-    intb c = (intb)a - b;
+    intb c = static_cast<intb>(a) - b;
     if (c < 0) c += mod;
     return static_cast<ints>(c);
   }
   static ints Mul(ints a, ints b, ints mod) {
-    intb c = (intb)a * b % mod;
+    intb c = static_cast<intb>(a) * b % mod;
     return static_cast<ints>(c);
   }
   static void FixValue(ints& v, ints mod) {

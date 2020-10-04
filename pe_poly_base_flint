@@ -95,7 +95,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   nmod_poly_clear(b);
 }
 
-POLY_MUL_IMPL(poly_mul_prime, poly_flint::PolyMulPrimeInternal)
+POLY_MUL_IMPL(PolyMulPrime, poly_flint::PolyMulPrimeInternal)
 POLY_MUL_IMPL(PolyMulNmod, poly_flint::PolyMulNModInternal)
 
 // size result >= n
@@ -159,8 +159,8 @@ template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     PolyInv(const T* x, int64 m, int64 n, T* result, int64 mod) {
   using unsignedT = typename std::make_unsigned<T>::type;
-  PolyInvInternal<unsignedT>((const unsignedT*)x, m, n, (unsignedT*)result,
-                             mod);
+  PolyInvInternal<unsignedT>(static_cast<const unsignedT*>(x), m, n,
+                             static_cast<unsignedT*>(result), mod);
 }
 
 template <typename T>
@@ -276,8 +276,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     PolySeries(const T* x, int64 m, int64 n, T* result, int64 mod,
                nmod_poly_series_t trans) {
   using unsignedT = typename std::make_unsigned<T>::type;
-  PolySeriesInternal<unsignedT>((const unsignedT*)x, m, n, (unsignedT*)result,
-                                mod, trans);
+  PolySeriesInternal<unsignedT>(static_cast<const unsignedT*>(x), m, n,
+                                static_cast<unsignedT*>(result), mod, trans);
 }
 
 template <typename T>
@@ -307,8 +307,8 @@ template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     PolyLog(const T* x, int64 m, int64 n, T* result, int64 mod) {
   using unsignedT = typename std::make_unsigned<T>::type;
-  PolyLogInternal<unsignedT>((const unsignedT*)x, m, n, (unsignedT*)result,
-                             mod);
+  PolyLogInternal<unsignedT>(static_cast<const unsignedT*>(x), m, n,
+                             static_cast<unsignedT*>(result), mod);
 }
 
 template <typename T>
@@ -338,8 +338,8 @@ template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     PolyExp(const T* x, int64 m, int64 n, T* result, int64 mod) {
   using unsignedT = typename std::make_unsigned<T>::type;
-  PolyExpInternal<unsignedT>((const unsignedT*)x, m, n, (unsignedT*)result,
-                             mod);
+  PolyExpInternal<unsignedT>(static_cast<const unsignedT*>(x), m, n,
+                             static_cast<unsignedT*>(result), mod);
 }
 
 template <typename T>
@@ -383,7 +383,9 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
                            T* result, int64 mod) {
   using unsignedT = typename std::make_unsigned<T>::type;
   PolyMultipointEvaluateInternal<unsignedT>(
-      (const unsignedT*)X, n, (const unsignedT*)V, m, (unsignedT*)result, mod);
+      reinterpret_cast<const unsignedT*>(X), n,
+      reinterpret_cast<const unsignedT*>(V), m,
+      reinterpret_cast<unsignedT*>(result), mod);
 }
 
 // size(V) = n
@@ -393,7 +395,9 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
                            int64 mod) {
   using unsignedT = typename std::make_unsigned<T>::type;
   PolyMultipointEvaluateInternal<unsignedT>(
-      (const unsignedT*)X, n, (const unsignedT*)V, n, (unsignedT*)result, mod);
+      reinterpret_cast<const unsignedT*>(X), n,
+      reinterpret_cast<const unsignedT*>(V), n, static_cast<unsignedT*>(result),
+      mod);
 }
 
 template <typename T>

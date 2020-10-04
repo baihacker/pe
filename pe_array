@@ -48,7 +48,7 @@ struct DArray : public DArrayRef<T, D> {
 
   template <class... Args>
   void Init(Args&&... arg) {
-    const int d = (int)dimension.size();
+    const int d = static_cast<int>(dimension.size());
     elementCounts.clear();
     elementCounts.push_back(1);
     for (int i = d - 1; i >= 0; --i) {
@@ -58,7 +58,7 @@ struct DArray : public DArrayRef<T, D> {
     elementCount = elementCounts[0];
     base::dimension = &dimension[0];
     base::elementCounts = &elementCounts[0];
-    base::data_ = (T*)A::Allocate(elementCount * sizeof(T));
+    base::data_ = reinterpret_cast<T*>(A::Allocate(elementCount * sizeof(T)));
     for (int64 i = 0; i < elementCount; ++i) {
       new (base::data_ + i) T(arg...);
     }
@@ -173,7 +173,7 @@ struct FArray : public FArrayRef<T, S> {
 
   template <class... Args>
   void Init(Args&&... arg) {
-    base::data_ = (T*)A::Allocate(S::EC * sizeof(T));
+    base::data_ = reinterpret_cast<T*>(A::Allocate(S::EC * sizeof(T)));
     for (int64 i = 0; i < S::EC; ++i) {
       new (base::data_ + i) T(arg...);
     }

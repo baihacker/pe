@@ -30,8 +30,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(int) IsOdd(T v) {
 template <typename T0, typename T1>
 SL REQUIRES((is_native_integer<T0>::value && is_native_integer<T1>::value))
     RETURN(int) SameParity(T0 v0, T1 v1) {
-  const int x = (int)(v0 & 1);
-  const int y = (int)(v1 & 1);
+  const int x = static_cast<int>(v0 & 1);
+  const int y = static_cast<int>(v1 & 1);
   return x == y ? 1 : 0;
 }
 
@@ -116,7 +116,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T) SqrtI(T d) {
 #else
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(T) SqrtI(T v) {
-  return static_cast<T>(sqrt((long double)v));
+  return static_cast<T>(sqrt(static_cast<long double>(v)));
 }
 #endif
 
@@ -124,7 +124,8 @@ template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
     NRootIInternal(T v, int n) {
   // n > 2 && v > 1
-  T r = static_cast<T>(pow((long double)v, static_cast<long double>(1.) / n));
+  T r = static_cast<T>(
+      pow(static_cast<long double>(v), static_cast<long double>(1.) / n));
 #if defined(COMPILER_MSVC)
   // Avoid floating round error when the compiler is msvc.
   if (r > 2) {
@@ -201,7 +202,7 @@ SL int64 SquareRoot(int64 n) {
 template <typename T1, typename T2>
 SL tuple<T1, int64> ExtractFactor(T1 A, T2 B) {
   int64 c = 0;
-  while (A && A % B == 0) A = (T1)(A / B), ++c;
+  while (A && A % B == 0) A = static_cast<T1>(A / B), ++c;
   return tuple<T1, int64>{A, c};
 }
 
@@ -221,7 +222,7 @@ template <typename T0, typename T1>
 SL REQUIRES((is_native_integer<T0>::value && is_native_integer<T1>::value))
     RETURN_T(IntPromotionT(T0, T1)) Gcd(T0 __m, T1 __n) {
   using ResultType = typename BiggerIntegralN<T0, T1>::type;
-  return Gcd((ResultType)__m, (ResultType)__n);
+  return Gcd(static_cast<ResultType>(__m), static_cast<ResultType>(__n));
 }
 // #endif
 
@@ -457,13 +458,13 @@ SL void InitInv(T* dest, int64 n, M mod) {
   if (n >= 1) {
     dest[1] = 1;
   }
-  auto maxi = min(n, (int64)mod - 1);
+  auto maxi = min(n, static_cast<int64>(mod) - 1);
   for (int i = 2; i <= maxi; ++i) {
     const auto t = mod / i;
     const auto k = mod % i;
     const auto v = MulModEx(t, t, mod);
     const auto u = MulModEx(dest[k], dest[k], mod);
-    dest[i] = (T)MulModEx(i, MulModEx(v, u, mod), mod);
+    dest[i] = static_cast<T>(MulModEx(i, MulModEx(v, u, mod), mod));
   }
   for (auto i = mod; i <= n; ++i) {
     dest[i] = dest[i - mod];
@@ -545,7 +546,7 @@ SL void InitSeqProd2(T* dest, T* idest, T s, T e, T mod) {
   if (dest == nullptr && idest == nullptr) {
     return;
   }
-  const int cnt = (int)(e - s + 1);
+  const int cnt = static_cast<int>(e - s + 1);
   T lastv = 0;
   if (dest == nullptr) {
     lastv = 1;

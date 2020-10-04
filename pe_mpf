@@ -115,13 +115,15 @@ class Mpf {
 
   Mpf() { mpf_init_set_si(f, 0); }
 
+  Mpf(bool t) : Mpf(static_cast<long>(t ? 1 : 0)) {}
+
   Mpf(int t) : Mpf(static_cast<long>(t)) {}
 
   Mpf(long t) { mpf_init_set_si(f, t); }
 
   Mpf(double t) { mpf_init_set_d(f, t); }
 
-  Mpf(long double t) : Mpf(ToString(t)) {}
+  Mpf(long double t) : Mpf(std::to_string(t)) {}
 
   Mpf(const string& s) : Mpf(s.c_str()) {}
 
@@ -135,7 +137,8 @@ class Mpf {
   }
 
   template <typename T,
-            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(void)>
+            typename TT = REQUIRES((is_native_integer<T>::value &&
+                                    !is_same<T, bool>::value)) RETURN(void)>
   Mpf(T value) : Mpf(MpInteger(value)) {
     mpf_init(f);
     mpf_set_z(f, MpInteger(value).mpz());

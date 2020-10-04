@@ -15,7 +15,8 @@ SL void InitNModPoly(NTL::ZZ_pX& p, const T* x, int64 n, int64 mod) {
   p.SetLength(n);
   if (mod >> 32) {
     for (int64 i = 0; i < n; ++i) {
-      ZZFromBytes(tmp, (const unsigned char*)&x[i], sizeof(T));
+      ZZFromBytes(tmp, reinterpret_cast<const unsigned char*>(&x[i]),
+                  sizeof(T));
       p[i] = to_ZZ_p(tmp);
     }
   } else {
@@ -32,12 +33,13 @@ SL void CopyNModPoly(NTL::ZZ_pX& p, T* x, int64 n, int64 mod) {
   if (mod >> 32) {
     for (int64 i = 0; i <= m; ++i) {
       T a;
-      BytesFromZZ((unsigned char*)&a, (NTL::ZZ&)p[i], sizeof(T));
+      BytesFromZZ(reinterpret_cast<unsigned char*>(&a),
+                  reinterpret_cast<NTL::ZZ&>(p[i]), sizeof(T));
       x[i] = a;
     }
   } else {
     for (int64 i = 0; i <= m; ++i) {
-      x[i] = static_cast<T>(to_int((NTL::ZZ&)p[i]));
+      x[i] = static_cast<T>(to_int(reinterpret_cast<NTL::ZZ&>(p[i])));
     }
   }
   for (int64 i = m + 1; i < n; ++i) {

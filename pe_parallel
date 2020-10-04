@@ -60,16 +60,16 @@ class MultiThreadsTaskRunner {
     InitializeCriticalSection(&request_access);
     has_new_request = CreateEvent(nullptr, FALSE, FALSE, nullptr);
     request_removed = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-    threads_count = max(threads, (int)min_thread);
-    threads_count = min(threads_count, (int)max_thread);
+    threads_count = max(threads, static_cast<int>(min_thread));
+    threads_count = min(threads_count, static_cast<int>(max_thread));
     worker_ptr = worker;
     for (int i = 0; i < threads_count; ++i) {
       threads_context[i].idx = i;
       threads_context[i].worker_ptr = worker_ptr;
       threads_context[i].host = this;
-      threads_handle[i] = (HANDLE)_beginthreadex(
+      threads_handle[i] = reinterpret_cast<HANDLE>(_beginthreadex(
           nullptr, max(stack, 100 * (1 << 20)), WorkThread,
-          (void*)&threads_context[i], 0, nullptr);
+          reinterpret_cast<void*>(&threads_context[i]), 0, nullptr));
     }
     start = GetTickCount();
   }
@@ -105,7 +105,7 @@ class MultiThreadsTaskRunner {
     CloseHandle(has_new_request);
     DeleteCriticalSection(&request_access);
     end = GetTickCount();
-    fprintf(stderr, "time : %u\n", (unsigned)(end - start));
+    fprintf(stderr, "time : %u\n", static_cast<unsigned>(end - start));
   }
 
   void Lock() { EnterCriticalSection(&request_access); }
@@ -165,7 +165,7 @@ class MultiThreadsTaskRunner {
   }
 
   static unsigned int __stdcall WorkThread(void* p) {
-    ThreadContext context_copy = *(ThreadContext*)p;
+    ThreadContext context_copy = *reinterpret_cast<ThreadContext*>(p);
     context_copy.host->Work(context_copy);
     return 0;
   }

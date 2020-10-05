@@ -110,7 +110,7 @@ SL int64 SqrtI(int128 d) {
 #if defined(COMPILER_MSVC)
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(T) SqrtI(T d) {
-  const auto result = static_cast<T>(sqrt((long double)d));
+  const auto result = static_cast<T>(sqrt(static_cast<long double>(d)));
   return result * result > d ? result - 1 : result;
 }
 #else
@@ -122,7 +122,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T) SqrtI(T v) {
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
-    NRootIInternal(T v, int n) {
+    RootIInternal(T v, int n) {
   // n > 2 && v > 1
   T r = static_cast<T>(
       pow(static_cast<long double>(v), static_cast<long double>(1.) / n));
@@ -168,7 +168,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T) RootI(T v, int n) {
     PE_ASSERT(v > 0);
     return SqrtI(v);
   }
-  return v > 0 ? NRootIInternal(v, n) : -NRootIInternal(-v, n);
+  return v > 0 ? RootIInternal(v, n) : -RootIInternal(-v, n);
 }
 
 SL int64 SquareRootSafe(int64 n) {
@@ -415,7 +415,7 @@ SL int IsSquareFreeNormal(int64 n) {
 
 SL int IsSquareFreeByPmask(int64 n) {
   while (n != 1) {
-    int now = pmask[n];
+    const int now = pmask[n];
     int c = 0;
     while (n % now == 0) n /= now, ++c;
     if (c > 1) return 0;
@@ -482,7 +482,7 @@ template <typename T>
 SL void InitSeqProd(T* dest, T s, T e, int64 mod) {
   dest[0] = 1;
 
-  const int cnt = (int)(e - s + 1);
+  const int cnt = static_cast<int>(e - s + 1);
   T i = s;
   for (int j = 1; j <= cnt; ++i, ++j) {
     dest[j] = MulModEx(dest[j - 1], i, mod);
@@ -510,7 +510,7 @@ SL void InitSeqProdInvLastv(T* dest, T s, T e, T mod, T lastv = 0) {
     }
     lastv = PowerModEx(lastv, mod - 2, mod);
   }
-  const int cnt = (int)(e - s + 1);
+  const int cnt = static_cast<int>(e - s + 1);
   dest[0] = 1;
   dest[cnt] = lastv;
 

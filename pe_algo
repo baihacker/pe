@@ -1058,7 +1058,7 @@ SL int64 GpSumMod(int64 x, int64 a, int64 b, int64 mod, int64 zero_p_zero = 1) {
   return zero_p_zero % mod;
 }
 
-SL int64 GpSumModIvx1(int64 x, int64 invXSub1, int64 a, int64 b, int64 mod,
+SL int64 GpSumModIvx1(int64 x, int64 inv_x_sub_1, int64 a, int64 b, int64 mod,
                          int64 zero_p_zero = 1) {
   if (mod == 1) return 0;
   if (b < a) return 0;
@@ -1070,7 +1070,7 @@ SL int64 GpSumModIvx1(int64 x, int64 invXSub1, int64 a, int64 b, int64 mod,
     const int64 u = PowerModEx(x, b + 1, mod);
     const int64 v = PowerModEx(x, a, mod);
     const int64 w = SubMod(u, v, mod);
-    return MulModEx(w, invXSub1, mod);
+    return MulModEx(w, inv_x_sub_1, mod);
   }
   // a == 0 and x == 0
   return zero_p_zero % mod;
@@ -1536,16 +1536,16 @@ class DVA {
     const std::vector<int64>& keys;
     const std::vector<T>& values;
     int idx;
-    const int keySize;
+    const int key_size;
 
     DVAIteratorBase(const std::vector<int64>& keys,
-                    const std::vector<T>& values, int idx, int keySize)
-        : keys(keys), values(values), idx(idx), keySize(keySize) {}
+                    const std::vector<T>& values, int idx, int key_size)
+        : keys(keys), values(values), idx(idx), key_size(key_size) {}
 
     DVAItem operator*() { return DVAItem{values[idx], keys[idx], idx}; }
 
     int operator==(const DVAIteratorBase& o) const {
-      return idx == o.idx && keySize == o.keySize;
+      return idx == o.idx && key_size == o.key_size;
     }
 
     int operator!=(const DVAIteratorBase& o) const {
@@ -1565,7 +1565,7 @@ class DVA {
 
     DVAIterator operator++(int) {
       return DVAIterator(DVAIteratorBase::keys, DVAIteratorBase::values,
-                         DVAIteratorBase::idx++, DVAIteratorBase::keySize);
+                         DVAIteratorBase::idx++, DVAIteratorBase::key_size);
     }
 
     DVAIterator& operator--() {
@@ -1575,7 +1575,7 @@ class DVA {
 
     DVAIterator operator--(int) {
       return DVAIterator(DVAIteratorBase::keys, DVAIteratorBase::values,
-                         DVAIteratorBase::idx--, DVAIteratorBase::keySize);
+                         DVAIteratorBase::idx--, DVAIteratorBase::key_size);
     }
   };
 
@@ -1591,7 +1591,7 @@ class DVA {
 
     DVARIterator operator++(int) {
       return DVARIterator(DVAIteratorBase::keys, DVAIteratorBase::values,
-                          DVAIteratorBase::idx--, DVAIteratorBase::keySize);
+                          DVAIteratorBase::idx--, DVAIteratorBase::key_size);
     }
 
     DVARIterator& operator--() {
@@ -1601,7 +1601,7 @@ class DVA {
 
     DVARIterator operator--(int) {
       return DVARIterator(DVAIteratorBase::keys, DVAIteratorBase::values,
-                          DVAIteratorBase::idx++, DVAIteratorBase::keySize);
+                          DVAIteratorBase::idx++, DVAIteratorBase::key_size);
     }
   };
 
@@ -1819,8 +1819,8 @@ SL DVA<T> PrimeS0Ex(const int64 n) {
   PE_ASSERT(n >= 1);
   DVA<T> dva(n);
 
-  const int keySize = static_cast<int>(dva.key_size);
-  RUBit<T> tree(keySize);
+  const int key_size = static_cast<int>(dva.key_size);
+  RUBit<T> tree(key_size);
 
   for (auto& key : dva.FKeys()) {
     const int id = dva.IdxOfValue(key);
@@ -1831,7 +1831,7 @@ SL DVA<T> PrimeS0Ex(const int64 n) {
     if (IsPrime(p)) {
       const auto pcnt = tree.Query(static_cast<int>(p - 1));
       const int64 p2 = p * p;
-      const int a = keySize - 1;
+      const int a = key_size - 1;
       const int b = dva.IdxOfValue(p2);
       for (int i = a; i >= b;) {
         const auto delta = tree.Query(dva.IdxOfValue(dva.keys[i] / p)) - pcnt;
@@ -1840,7 +1840,7 @@ SL DVA<T> PrimeS0Ex(const int64 n) {
         i = mini - 1;
       }
     }
-  for (int i = 1; i < keySize; ++i) dva[dva.keys[i]] = tree.Query(i);
+  for (int i = 1; i < key_size; ++i) dva[dva.keys[i]] = tree.Query(i);
   return dva;
 }
 
@@ -1849,8 +1849,8 @@ SL DVA<T> PrimeS1Ex(const int64 n) {
   PE_ASSERT(n >= 1);
   DVA<T> dva(n);
 
-  const int keySize = static_cast<int>(dva.key_size);
-  RUBit<T> tree(keySize);
+  const int key_size = static_cast<int>(dva.key_size);
+  RUBit<T> tree(key_size);
 
   for (auto& key : dva.FKeys()) {
     const int id = dva.IdxOfValue(key);
@@ -1868,7 +1868,7 @@ SL DVA<T> PrimeS1Ex(const int64 n) {
     if (IsPrime(p)) {
       const auto psum = tree.Query(static_cast<int>(p - 1));
       const int64 p2 = p * p;
-      const int a = keySize - 1;
+      const int a = key_size - 1;
       const int b = dva.IdxOfValue(p2);
       for (int i = a; i >= b;) {
         const auto delta = tree.Query(dva.IdxOfValue(dva.keys[i] / p)) - psum;
@@ -1878,20 +1878,20 @@ SL DVA<T> PrimeS1Ex(const int64 n) {
       }
     }
 
-  for (int i = 1; i < keySize; ++i) dva[dva.keys[i]] = tree.Query(i);
+  for (int i = 1; i < key_size; ++i) dva[dva.keys[i]] = tree.Query(i);
   return dva;
 }
 
 template <typename TreeType>
 SL void PrimeSkExImpl(const int64 /*n*/, int /*k*/, int64* PK, TreeType& tree,
                       DVA<int64>& dva, int64 mod) {
-  const int keySize = static_cast<int>(dva.key_size);
+  const int key_size = static_cast<int>(dva.key_size);
   int pid = 0;
   for (int64 p = 2; p <= dva.m; ++p)
     if (IsPrime(p)) {
       const auto psum = tree.Query(static_cast<int>(p - 1)).value();
       const int64 p2 = p * p;
-      const int a = keySize - 1;
+      const int a = key_size - 1;
       const int b = dva.IdxOfValue(p2);
       for (int i = a; i >= b;) {
         const auto delta = SubMod(
@@ -1903,7 +1903,7 @@ SL void PrimeSkExImpl(const int64 /*n*/, int /*k*/, int64* PK, TreeType& tree,
       ++pid;
     }
 
-  for (int i = 1; i < keySize; ++i) dva[dva.keys[i]] = tree.Query(i).value();
+  for (int i = 1; i < key_size; ++i) dva[dva.keys[i]] = tree.Query(i).value();
 }
 
 SL DVA<int64> PrimeSkEx(const int64 n, int k, int64* PK, int64 mod) {
@@ -1913,8 +1913,8 @@ SL DVA<int64> PrimeSkEx(const int64 n, int k, int64* PK, int64 mod) {
   PE_ASSERT(n >= 1);
   DVA<int64> dva(n);
 
-  const int keySize = static_cast<int>(dva.key_size);
-  RUBit<NModNumber<DefaultMod>> tree(keySize);
+  const int key_size = static_cast<int>(dva.key_size);
+  RUBit<NModNumber<DefaultMod>> tree(key_size);
 
   for (auto& key : dva.FKeys()) {
     const int id = dva.IdxOfValue(key);
@@ -1934,8 +1934,8 @@ SL DVA<int64> PrimeSkEx(const int64 n, int k, int64* PK) {
   PE_ASSERT(n >= 1);
   DVA<int64> dva(n);
 
-  const int keySize = static_cast<int>(dva.key_size);
-  RUBit<NModNumber<CCMod64<mod>>> tree(keySize);
+  const int key_size = static_cast<int>(dva.key_size);
+  RUBit<NModNumber<CCMod64<mod>>> tree(key_size);
 
   for (auto& key : dva.FKeys()) {
     const int id = dva.IdxOfValue(key);
@@ -1951,14 +1951,14 @@ SL DVA<int64> PrimeSkEx(const int64 n, int k, int64* PK) {
 template <typename TreeType>
 SL void PrimeSkExImpl(const int64 /*n*/, int k, TreeType& tree, DVA<int64>& dva,
                       int64 mod) {
-  const int keySize = static_cast<int>(dva.key_size);
+  const int key_size = static_cast<int>(dva.key_size);
 
   for (int64 p = 2; p <= dva.m; ++p)
     if (IsPrime(p)) {
       const int64 pk = PowerModEx(p, k, mod);
       const auto psum = tree.Query(static_cast<int>(p - 1)).value();
       const int64 p2 = p * p;
-      const int a = keySize - 1;
+      const int a = key_size - 1;
       const int b = dva.IdxOfValue(p2);
       for (int i = a; i >= b;) {
         const auto delta = SubMod(
@@ -1969,7 +1969,7 @@ SL void PrimeSkExImpl(const int64 /*n*/, int k, TreeType& tree, DVA<int64>& dva,
       }
     }
 
-  for (int i = 1; i < keySize; ++i) dva[dva.keys[i]] = tree.Query(i).value();
+  for (int i = 1; i < key_size; ++i) dva[dva.keys[i]] = tree.Query(i).value();
 }
 
 SL DVA<int64> PrimeSkEx(const int64 n, int k, int64 mod) {
@@ -1978,8 +1978,8 @@ SL DVA<int64> PrimeSkEx(const int64 n, int k, int64 mod) {
   PE_ASSERT(n >= 1);
   DVA<int64> dva(n);
 
-  const int keySize = static_cast<int>(dva.key_size);
-  RUBit<NModNumber<DefaultMod>> tree(keySize);
+  const int key_size = static_cast<int>(dva.key_size);
+  RUBit<NModNumber<DefaultMod>> tree(key_size);
 
   for (auto& key : dva.FKeys()) {
     const int id = dva.IdxOfValue(key);
@@ -1999,8 +1999,8 @@ SL DVA<int64> PrimeSkEx(const int64 n, int k) {
   PE_ASSERT(n >= 1);
   DVA<int64> dva(n);
 
-  const int keySize = static_cast<int>(dva.key_size);
-  RUBit<NModNumber<CCMod64<mod>>> tree(keySize);
+  const int key_size = static_cast<int>(dva.key_size);
+  RUBit<NModNumber<CCMod64<mod>>> tree(key_size);
 
   for (auto& key : dva.FKeys()) {
     const int id = dva.IdxOfValue(key);
@@ -2168,13 +2168,13 @@ SL vector<DVA<NModNumber<CCMod64<mod>>>> PrimeSkPMod(const int64 n, int k,
   PE_ASSERT(n >= 1);
   DVA<int64> dva(n);
 
-  const int keySize = static_cast<int>(dva.key_size);
-  RUBit<MT> tree(keySize);
+  const int key_size = static_cast<int>(dva.key_size);
+  RUBit<MT> tree(key_size);
 
   vector<int64> vec;
-  MT powerPmod = 1;
+  MT power_pmod = 1;
   // Expand (pmod * x + i) ^ k
-  for (int c = 0; c <= k; ++c, powerPmod *= pmod) {
+  for (int c = 0; c <= k; ++c, power_pmod *= pmod) {
     // C(k, c) (pmod * x)^c i^(k - c)
     MT coe = 1;
     if (c > 0) {
@@ -2193,7 +2193,7 @@ SL vector<DVA<NModNumber<CCMod64<mod>>>> PrimeSkPMod(const int64 n, int k,
       }
     }
     for (int i = 1; i < pmod; ++i) {
-      auto t = coe * powerPmod * PowerModEx(i, k - c, mod);
+      auto t = coe * power_pmod * PowerModEx(i, k - c, mod);
       // psm.cal() doesn't count x == 0, i.e x^c is 0.
       // If c = 0, we need i^k, so 1 is added.
       // If c > 0, the behavior is expected.
@@ -2295,25 +2295,25 @@ struct PatternNumberCounter {
   }
 
   // primeCnt: int a given pattern, we only consider the first primeCnt primes.
-  // piPivot: when computing the number of prime no more than m, if m <=
-  // piPivot, use pre-computed results in an array.
-  void Init(int prime_cnt_, int piPivot = 0) {
+  // pi_pivot: when computing the number of prime no more than m, if m <=
+  // pi_pivot, use pre-computed results in an array.
+  void Init(int prime_cnt_, int pi_pivot = 0) {
     PE_ASSERT(prime_cnt_ > 0);
     Release();
 
     this->prime_cnt_ = prime_cnt_;
     is_prime_used_ = new char[prime_cnt_];
-    if (piPivot == 0) {
-      piPivot = plist[prime_cnt_ - 1];
+    if (pi_pivot == 0) {
+      pi_pivot = plist[prime_cnt_ - 1];
     }
-    cached_pi_.Init(piPivot);
+    cached_pi_.Init(pi_pivot);
   }
 
-  int128 DfsPattern(const int start, const int id, const int patternLength,
+  int128 DfsPattern(const int start, const int id, const int pattern_length,
                     const vi& pattern, const int128 remain) {
     int128 ret = 0;
-    if (id == patternLength - 1) {
-      const int64 t = RootI(remain, pattern[patternLength - 1]);
+    if (id == pattern_length - 1) {
+      const int64 t = RootI(remain, pattern[pattern_length - 1]);
       const int64 how_many = cached_pi_(t);
       const int64 idx = how_many - 1;
       if (idx < start) return 0;
@@ -2326,7 +2326,7 @@ struct PatternNumberCounter {
     }
 
     int e = pattern[id];
-    for (int j = id + 1; j < patternLength; ++j)
+    for (int j = id + 1; j < pattern_length; ++j)
       if (pattern[j] == pattern[id])
         e += pattern[id];
       else
@@ -2342,7 +2342,7 @@ struct PatternNumberCounter {
         used_prime_idx_[top_++] = i;
         const int128 v = Power<int128>(plist[i], pattern[id]);
         ret += DfsPattern(pattern[id + 1] == pattern[id] ? i + 1 : 0, id + 1,
-                          patternLength, pattern, remain / v);
+                          pattern_length, pattern, remain / v);
         --top_;
         is_prime_used_[i] = 0;
       }
@@ -2386,17 +2386,17 @@ struct MValueVisitor {
     T ret = visitor_(val, imp, vmp, history_, top_);
     for (int i = 0; i < limit; ++i) {
       const int64 p = plist[i];
-      const int nextimp = imp == -1 ? i : imp;
-      const int64 nextvmp = imp == -1 ? p : vmp;
-      const int64 valLimit = n / p / nextvmp;
-      if (val > valLimit) break;
+      const int next_imp = imp == -1 ? i : imp;
+      const int64 next_vmp = imp == -1 ? p : vmp;
+      const int64 val_limit = n / p / next_vmp;
+      if (val > val_limit) break;
       history_[top_].ip = i;
       history_[top_].p = p;
       history_[top_].e = 1;
       int& e = history_[top_++].e;
       for (int64 nextval = val * p;; ++e) {
-        ret += Dfs(i, n, nextval, nextimp, nextvmp);
-        if (nextval > valLimit) break;
+        ret += Dfs(i, n, nextval, next_imp, next_vmp);
+        if (nextval > val_limit) break;
         nextval *= p;
       }
       --top_;
@@ -2490,18 +2490,18 @@ RT Dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, RT now) {
   }
   for (int i = 0; i < limit; ++i) {
     const int64 p = plist[i];
-    const int nextimp = imp == -1 ? i : imp;
-    const int64 nextvmp = imp == -1 ? p : vmp;
-    const int64 valLimit = n / p / nextvmp;
-    if (val > valLimit) break;
+    const int next_imp = imp == -1 ? i : imp;
+    const int64 next_vmp = imp == -1 ? p : vmp;
+    const int64 val_limit = n / p / next_vmp;
+    if (val > val_limit) break;
     history_[top_].ip = i;
     history_[top_].p = p;
     history_[top_].e = 1;
     int& e = history_[top_++].e;
     for (int64 nextval = val * p;; ++e) {
       RT tmp = now * (e + 1);
-      ret += Dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp, tmp);
-      if (nextval > valLimit) break;
+      ret += Dfs(i, n, nextval, next_imp, next_vmp, imp == -1 ? e : emp, tmp);
+      if (nextval > val_limit) break;
       nextval *= p;
     }
     --top_;
@@ -2517,10 +2517,10 @@ struct MValueBaseT {
     T ret = static_cast<D&>(*this).Batch(n, val, imp, vmp, emp, now);
     for (int i = 0; i < limit; ++i) {
       const int64 p = plist[i];
-      const int nextimp = imp == -1 ? i : imp;
-      const int64 nextvmp = imp == -1 ? p : vmp;
-      const int64 valLimit = n / p / nextvmp;
-      if (val > valLimit) break;
+      const int next_imp = imp == -1 ? i : imp;
+      const int64 next_vmp = imp == -1 ? p : vmp;
+      const int64 val_limit = n / p / next_vmp;
+      if (val > val_limit) break;
       history_[top_].ip = i;
       history_[top_].p = p;
       history_[top_].e = 1;
@@ -2528,10 +2528,10 @@ struct MValueBaseT {
       for (int64 nextval = val * p;; ++e) {
         T tmp = now * static_cast<D&>(*this).F(p, e);
         if (imp == -1) {
-          static_cast<D&>(*this).VisitMaxPrime(nextvmp, e, tmp);
+          static_cast<D&>(*this).VisitMaxPrime(next_vmp, e, tmp);
         }
-        ret += Dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp, tmp);
-        if (nextval > valLimit) break;
+        ret += Dfs(i, n, nextval, next_imp, next_vmp, imp == -1 ? e : emp, tmp);
+        if (nextval > val_limit) break;
         nextval *= p;
       }
       --top_;
@@ -2557,42 +2557,42 @@ struct MValueBaseTP {
     T ret = static_cast<D&>(*this).Batch(n, val, imp, vmp, emp, now);
 #if ENABLE_OPENMP
     if (val == 1 && TN > 1) {
-      PSum<T> sumHelper;
+      PSum<T> sum_helper;
 #pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
       for (int i = 0; i < limit; ++i) {
         const int64 p = plist[i];
-        const int nextimp = imp == -1 ? i : imp;
-        const int64 nextvmp = imp == -1 ? p : vmp;
-        const int64 valLimit = n / p / nextvmp;
+        const int next_imp = imp == -1 ? i : imp;
+        const int64 next_vmp = imp == -1 ? p : vmp;
+        const int64 val_limit = n / p / next_vmp;
         int e = 1;
         for (int64 nextval = val * p;; ++e) {
           T tmp = now * static_cast<D&>(*this).F(p, e);
           if (imp == -1) {
-            static_cast<D&>(*this).visitMaxPrime(nextvmp, e, tmp);
+            static_cast<D&>(*this).visitMaxPrime(next_vmp, e, tmp);
           }
-          sumHelper +=
-              Dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp, tmp);
-          if (nextval > valLimit) break;
+          sum_helper +=
+              Dfs(i, n, nextval, next_imp, next_vmp, imp == -1 ? e : emp, tmp);
+          if (nextval > val_limit) break;
           nextval *= p;
         }
       }
-      ret += sumHelper.value();
+      ret += sum_helper.value();
     } else {
 #endif
       for (int i = 0; i < limit; ++i) {
         const int64 p = plist[i];
-        const int nextimp = imp == -1 ? i : imp;
-        const int64 nextvmp = imp == -1 ? p : vmp;
-        const int64 valLimit = n / p / nextvmp;
-        if (val > valLimit) break;
+        const int next_imp = imp == -1 ? i : imp;
+        const int64 next_vmp = imp == -1 ? p : vmp;
+        const int64 val_limit = n / p / next_vmp;
+        if (val > val_limit) break;
         int e = 1;
         for (int64 nextval = val * p;; ++e) {
           T tmp = now * static_cast<D&>(*this).F(p, e);
           if (imp == -1) {
-            static_cast<D&>(*this).visitMaxPrime(nextvmp, e, tmp);
+            static_cast<D&>(*this).visitMaxPrime(next_vmp, e, tmp);
           }
-          ret += Dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp, tmp);
-          if (nextval > valLimit) break;
+          ret += Dfs(i, n, nextval, next_imp, next_vmp, imp == -1 ? e : emp, tmp);
+          if (nextval > val_limit) break;
           nextval *= p;
         }
       }
@@ -2631,37 +2631,37 @@ struct MValueBaseEx {
     T ret = static_cast<D&>(*this).Batch(n, val, imp, vmp, emp, now, now1);
 #if ENABLE_OPENMP
     if (val == 1 && TN > 1) {
-      PSum<T> sumHelper;
+      PSum<T> sum_helper;
 #pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
       for (int i = 0; i < limit; ++i) {
         const int64 p = plist[i];
-        const int nextimp = imp == -1 ? i : imp;
-        const int64 nextvmp = imp == -1 ? p : vmp;
-        const int64 valLimit = n / p / nextvmp;
+        const int next_imp = imp == -1 ? i : imp;
+        const int64 next_vmp = imp == -1 ? p : vmp;
+        const int64 val_limit = n / p / next_vmp;
         int e = 1;
         for (int64 nextval = val * p;; ++e) {
           T t = static_cast<D&>(*this).F(p, e);
-          sumHelper += Dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp,
+          sum_helper += Dfs(i, n, nextval, next_imp, next_vmp, imp == -1 ? e : emp,
                            now * t, imp == -1 ? 1 : now1 * t);
-          if (nextval > valLimit) break;
+          if (nextval > val_limit) break;
           nextval *= p;
         }
       }
-      ret += sumHelper.value();
+      ret += sum_helper.value();
     } else {
 #endif
       for (int i = 0; i < limit; ++i) {
         const int64 p = plist[i];
-        const int nextimp = imp == -1 ? i : imp;
-        const int64 nextvmp = imp == -1 ? p : vmp;
-        const int64 valLimit = n / p / nextvmp;
-        if (val > valLimit) break;
+        const int next_imp = imp == -1 ? i : imp;
+        const int64 next_vmp = imp == -1 ? p : vmp;
+        const int64 val_limit = n / p / next_vmp;
+        if (val > val_limit) break;
         int e = 1;
         for (int64 nextval = val * p;; ++e) {
           T t = static_cast<D&>(*this).F(p, e);
-          ret += Dfs(i, n, nextval, nextimp, nextvmp, imp == -1 ? e : emp,
+          ret += Dfs(i, n, nextval, next_imp, next_vmp, imp == -1 ? e : emp,
                      now * t, imp == -1 ? 1 : now1 * t);
-          if (nextval > valLimit) break;
+          if (nextval > val_limit) break;
           nextval *= p;
         }
       }
@@ -2704,13 +2704,13 @@ int64 CountPythagoreanTriple(int64 n) {
   auto ps1 = _[1];
   auto ps3 = _[3];
   auto compute = [&](int64 val, int /*imp*/, int64 vmp, MVVHistory* his,
-                     int top_) -> int64 {
+                     int top) -> int64 {
     if (val == 1) {
       return 3 * ps1[n] + ps3[n] + 2;  // 2 is for 1 and 2.
     }
     int64 ret = 0;
     int64 t = 1;
-    for (int i = 0; i < top_; ++i) {
+    for (int i = 0; i < top; ++i) {
       if (his[i].p % 4 == 1) t *= 2 * his[i].e + 1;
     }
     if (his[0].p % 4 == 1) {
@@ -2747,15 +2747,15 @@ int64 CountPythagoreanTripleEx(int64 n) {
     }
     for (int i = 0; i < limit; ++i) {
       const int64 p = plist[i];
-      const int64 nextvmp = vmp == 0 ? p : vmp;
-      const int64 valLimit = n / p / nextvmp;
-      if (val > valLimit) break;
+      const int64 next_vmp = vmp == 0 ? p : vmp;
+      const int64 val_limit = n / p / next_vmp;
+      if (val > val_limit) break;
       int e = 1;
       int should = p % 4 == 1;
       for (int64 nextval = val * p;; ++e) {
         ret += dfs(i, n, nextval, should ? c * (2 * e + 1) : c,
-                   nextvmp == p ? e : evmp, nextvmp);
-        if (nextval > valLimit) break;
+                   next_vmp == p ? e : evmp, next_vmp);
+        if (nextval > val_limit) break;
         nextval *= p;
       }
     }

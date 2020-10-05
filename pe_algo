@@ -24,9 +24,9 @@ struct FactModer {
       return;
     }
 
-    const int halfD = d >> 1;
-    Evaluate(halfD, result, v);
-    copy(result, result + halfD + 1, &g0_[0]);
+    const int half_d = d >> 1;
+    Evaluate(half_d, result, v);
+    copy(result, result + half_d + 1, &g0_[0]);
 #if ENABLE_OPENMP
 #pragma omp parallel sections if (d >= 10000)
 #endif
@@ -34,30 +34,30 @@ struct FactModer {
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-      PolyOffsetEvaluate<uint64>(halfD, result, &g1_[0], halfD + 1,
+      PolyOffsetEvaluate<uint64>(half_d, result, &g1_[0], half_d + 1,
                                  &pre_fact_inv_[0], p_);
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-      PolyOffsetEvaluate<uint64>(halfD, result, &g2_[0], v * halfD,
+      PolyOffsetEvaluate<uint64>(half_d, result, &g2_[0], v * half_d,
                                  &pre_fact_inv_[0], p_);
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-      PolyOffsetEvaluate<uint64>(halfD, result, &g3_[0], v * halfD + halfD,
+      PolyOffsetEvaluate<uint64>(half_d, result, &g3_[0], v * half_d + half_d,
                                  &pre_fact_inv_[0], p_);
     }
 
-    for (int i = 0; i <= halfD; ++i) {
+    for (int i = 0; i <= half_d; ++i) {
       result[i] = MulModEx(g0_[i], g2_[i], p_);
     }
-    for (int i = halfD + 1, j = 0; i <= halfD * 2; ++i, ++j) {
+    for (int i = half_d + 1, j = 0; i <= half_d * 2; ++i, ++j) {
       result[i] = MulModEx(g1_[j], g3_[j + 1], p_);
     }
 
     if (d & 1) {
       uint64 tmp = (v * (d - 1) + 1) % p_;
-      for (int i = 0; i <= 2 * halfD; ++i) {
+      for (int i = 0; i <= 2 * half_d; ++i) {
         result[i] = MulModEx(result[i], tmp++, p_);
         if (tmp >= p_) tmp -= p_;
       }
@@ -275,13 +275,13 @@ int64* CombModerOld<P, F>::fac_;
  */
 struct CombModer {
   CombModer(uint64 p, uint64 f = 0) : p_(p), f_(f == 0 ? p : f) {
-    Init(this->f_);
+    Init(f_);
   }
 
   ~CombModer() = default;
 
   void Init(uint64 F) {
-    this->f_ = F;
+    f_ = F;
 
     vector<uint64>(F).swap(fac_);
     fac_[0] = 1;
@@ -403,22 +403,22 @@ struct PowerSumModer {
   ~PowerSumModer() = default;
 
   void Init(int maxk = 128) {
-    this->maxk_ = maxk;
+    maxk_ = maxk;
 
-    vector<vector<int64>>(maxk + 1).swap(p_);
-    for (int i = 0; i <= maxk; ++i) {
-      vector<int64>(maxk + 1).swap(p_[i]);
+    vector<vector<int64>>(maxk_ + 1).swap(p_);
+    for (int i = 0; i <= maxk_; ++i) {
+      vector<int64>(maxk_ + 1).swap(p_[i]);
     }
 
-    vector<int64>(maxk + 2).swap(invs_);
+    vector<int64>(maxk_ + 2).swap(invs_);
 
-    InitInv(&invs_[0], maxk + 1, mod_);
-    for (int i = 0; i <= maxk; ++i)
-      for (int j = 0; j <= maxk; ++j) {
+    InitInv(&invs_[0], maxk_ + 1, mod_);
+    for (int i = 0; i <= maxk_; ++i)
+      for (int j = 0; j <= maxk_; ++j) {
         p_[i][j] = 0;
       }
-    for (int i = 0; i <= maxk; ++i) p_[i][1] = 1;
-    for (int i = 1; i <= maxk; ++i) {
+    for (int i = 0; i <= maxk_; ++i) p_[i][1] = 1;
+    for (int i = 1; i <= maxk_; ++i) {
       for (int j = 1; j < i; ++j) {
         int64 t = p_[i - 1][j - 1] + p_[i - 1][j];
         if (t >= mod_) t -= mod_;
@@ -509,15 +509,13 @@ struct PowerSumModerB {
   ~PowerSumModerB() = default;
 
   void Init(int64 maxk = 128) {
-    this->maxk_ = maxk;
+    maxk_ = maxk;
 
-    this->maxk_ = maxk;
+    vector<int64>(maxk_ + 1).swap(bnl_);
+    vector<int64>(maxk_ + 2).swap(invs_);
 
-    vector<int64>(maxk + 1).swap(bnl_);
-    vector<int64>(maxk + 2).swap(invs_);
-
-    InitInv(&invs_[0], maxk + 1, mod_);
-    InitBernoulliNumber(&bnl_[0], maxk + 1, &invs_[0], mod_);
+    InitInv(&invs_[0], maxk_ + 1, mod_);
+    InitBernoulliNumber(&bnl_[0], maxk_ + 1, &invs_[0], mod_);
 
     bnl_[1] = mod_ - bnl_[1];
   }
@@ -612,15 +610,13 @@ struct PowerSumModerB1 {
   ~PowerSumModerB1() = default;
 
   void Init(int64 maxk = 128) {
-    this->maxk_ = maxk;
+    maxk_ = maxk;
 
-    this->maxk_ = maxk;
+    vector<int64>(maxk_ + 1).swap(bnl_);
+    vector<int64>(maxk_ + 2).swap(invs_);
 
-    vector<int64>(maxk + 1).swap(bnl_);
-    vector<int64>(maxk + 2).swap(invs_);
-
-    InitInv(&invs_[0], maxk + 1, mod_);
-    InitBernoulliNumber(&bnl_[0], maxk + 1, &invs_[0], mod_);
+    InitInv(&invs_[0], maxk_ + 1, mod_);
+    InitBernoulliNumber(&bnl_[0], maxk_ + 1, &invs_[0], mod_);
   }
 
   // n + 1, n, ..., n-k+1 is not divisible by mod
@@ -1166,7 +1162,7 @@ struct SFCounter {
   ~SFCounter() = default;
 
   void Init(int64 pivot_ = ::maxp) {
-    this->pivot_ = pivot_;
+    pivot_ = pivot_;
     pre_.resize(pivot_ + 1);
     pre_[0] = 0;
     for (int64 i = 1; i <= pivot_; ++i) {
@@ -1204,7 +1200,7 @@ struct MuSummer {
   ~MuSummer() = default;
 
   void Init(int64 pivot_ = ::maxp) {
-    this->pivot_ = pivot_;
+    pivot_ = pivot_;
 
     PE_ASSERT(pivot_ <= ::maxp);
 
@@ -1247,15 +1243,15 @@ struct MuPhiSummer {
 
   ~MuPhiSummer() = default;
 
-  void Init(int64 pivot_ = ::maxp) {
-    this->pivot_ = pivot_;
+  void Init(int64 pivot = ::maxp) {
+    pivot_ = pivot;
 
-    PE_ASSERT(pivot_ <= ::maxp);
+    PE_ASSERT(pivot <= ::maxp);
 
-    pre_sum_mu_.resize(pivot_ + 1);
-    pre_sum_phi_.resize(pivot_ + 1);
+    pre_sum_mu_.resize(pivot + 1);
+    pre_sum_phi_.resize(pivot + 1);
     pre_sum_mu_[0] = pre_sum_phi_[0] = 0;
-    for (int i = 1; i <= pivot_; ++i) {
+    for (int i = 1; i <= pivot; ++i) {
       pre_sum_mu_[i] = ::mu[i] + pre_sum_mu_[i - 1];
       pre_sum_phi_[i] = ::phi[i] + pre_sum_phi_[i - 1];
     }
@@ -1326,19 +1322,19 @@ struct Sigma0Summer {
 
   ~Sigma0Summer() = default;
 
-  void Init(int64 pivot_ = ::maxp) {
-    this->pivot_ = pivot_;
+  void Init(int64 pivot = ::maxp) {
+    pivot_ = pivot;
 
-    PE_ASSERT(pivot_ <= ::maxp);
+    PE_ASSERT(pivot <= ::maxp);
 
-    pre_.resize(pivot_ + 1);
+    pre_.resize(pivot + 1);
     fill(pre_.begin(), pre_.end(), 0);
-    for (int i = 1; i <= pivot_; ++i) {
-      for (int j = i; j <= pivot_; j += i) {
+    for (int i = 1; i <= pivot; ++i) {
+      for (int j = i; j <= pivot; j += i) {
         ++pre_[j];
       }
     }
-    for (int i = 1; i <= pivot_; ++i) {
+    for (int i = 1; i <= pivot; ++i) {
       pre_[i] += pre_[i - 1];
     }
   }
@@ -1378,15 +1374,15 @@ struct MuPhiSumModer {
 
   ~MuPhiSumModer() = default;
 
-  void Init(int64 pivot_ = ::maxp) {
-    this->pivot_ = pivot_;
+  void Init(int64 pivot = ::maxp) {
+    pivot_ = pivot;
 
-    PE_ASSERT(pivot_ <= ::maxp);
+    PE_ASSERT(pivot <= ::maxp);
 
-    pre_sum_mu_.resize(pivot_ + 1);
-    pre_sum_phi_.resize(pivot_ + 1);
+    pre_sum_mu_.resize(pivot + 1);
+    pre_sum_phi_.resize(pivot + 1);
     pre_sum_mu_[0] = pre_sum_phi_[0] = 0;
-    for (int i = 1; i <= pivot_; ++i) {
+    for (int i = 1; i <= pivot; ++i) {
       pre_sum_mu_[i] = ::mu[i] + pre_sum_mu_[i - 1];
       pre_sum_phi_[i] = (::phi[i] + pre_sum_phi_[i - 1]) % mod_;
       if (pre_sum_mu_[i] < 0)
@@ -1461,19 +1457,19 @@ struct Sigma0SumModer {
 
   ~Sigma0SumModer() = default;
 
-  void Init(int64 pivot_ = ::maxp) {
-    this->pivot_ = pivot_;
+  void Init(int64 pivot = ::maxp) {
+    pivot_ = pivot;
 
-    PE_ASSERT(pivot_ <= ::maxp);
+    PE_ASSERT(pivot <= ::maxp);
 
-    pre_.resize(pivot_ + 1);
+    pre_.resize(pivot + 1);
     fill(pre_.begin(), pre_.end(), 0);
-    for (int i = 1; i <= pivot_; ++i) {
-      for (int j = i; j <= pivot_; j += i) {
+    for (int i = 1; i <= pivot; ++i) {
+      for (int j = i; j <= pivot; j += i) {
         ++pre_[j];
       }
     }
-    for (int i = 1; i <= pivot_; ++i) {
+    for (int i = 1; i <= pivot; ++i) {
       pre_[i] = AddMod(pre_[i] % mod_, pre_[i - 1], mod_);
     }
   }
@@ -2297,14 +2293,14 @@ struct PatternNumberCounter {
   // primeCnt: int a given pattern, we only consider the first primeCnt primes.
   // pi_pivot: when computing the number of prime no more than m, if m <=
   // pi_pivot, use pre-computed results in an array.
-  void Init(int prime_cnt_, int pi_pivot = 0) {
-    PE_ASSERT(prime_cnt_ > 0);
+  void Init(int prime_cnt, int pi_pivot = 0) {
+    PE_ASSERT(prime_cnt > 0);
     Release();
 
-    this->prime_cnt_ = prime_cnt_;
-    is_prime_used_ = new char[prime_cnt_];
+    prime_cnt_ = prime_cnt;
+    is_prime_used_ = new char[prime_cnt];
     if (pi_pivot == 0) {
-      pi_pivot = plist[prime_cnt_ - 1];
+      pi_pivot = plist[prime_cnt - 1];
     }
     cached_pi_.Init(pi_pivot);
   }
@@ -2938,7 +2934,7 @@ return counter.Cal(n);
 template <typename CT>
 struct DfaCounter {
   DfaCounter& set_count_each_len(int count_each_len) {
-    this->count_each_len_ = count_each_len;
+    count_each_len_ = count_each_len;
     return *this;
   }
 

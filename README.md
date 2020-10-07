@@ -38,7 +38,7 @@ It is my basic code for solving problem on project euler.
 ## Use:
 * #include <pe.hpp> in your source code.
 
-* Use **pe().set_max_prime(prime limit).init();** to initialize builtin variables such as prime list, prime count. See the end of file "pe" for details.
+* Use **pe().set_max_prime(prime limit).Init();** to initialize builtin variables such as prime list, prime count. See the end of file "pe" for details.
 * A candidate way is to use PE_INIT macro, the argument format example is: maxp = 1000, cal_mu = 1, ... (note: the order doesn't matter).
 * Important global variables
   * **int64 maxp;** the maximum value in the prime list should be no more than maxp. Use **.set_max_prime(prime limit)** to initialize it.

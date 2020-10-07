@@ -7,9 +7,8 @@
 It is my basic code for solving problem on project euler.
 
 ## Installation:
-* Put all the files in a folder (directory). For example, we put them in the directory D:\usr\include.
-* Make sure the environment variable CPLUS_INCLUDE_PATH contain D:\usr\include.
-* Run **gen_config.py** in the installation folder to generate **pe_config** automatically according to your environment, or edit [pe_config](https://github.com/baihacker/pe/blob/master/pe_config) manually. The configurable macros are
+* Put all the files in an installation folder (directory) and make sure the environment variable CPLUS_INCLUDE_PATH contain the installation folder.
+* Run **gen_config.py** in the installation folder to generate **[pe_config](https://github.com/baihacker/pe/blob/master/pe_config)** automatically according to your environment, or edit it manually. The configurable macros are
   * ENABLE_ASSERT whether to assert some inputs or conditions.
 
   * TRY_TO_USE_INT128 whether to check whether the compiler support int128 and use it. Some implementations depends on this flag.

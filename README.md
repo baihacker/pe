@@ -45,9 +45,9 @@ It is my basic code for solving problem on project euler.
   * **int\* plist;** plist[i] is the ith prime. (i starts from 0, i < pcnt).
   * **int pcnt;** the number of prime no more than maxp, i.e. the number of elements in plist.
   * **int\* pmask;** pmask[i] is the minimal prime factor of i (i <= maxp).
-  * **int\* mu;** mu[i] it mobius function value of i (i <= maxp). Add **.set_cal_mu()** to the initializing statement to initialize **mu**. Use **CalMu(i)** if i > maxp.
-  * **int\* phi;** phi[i] is Euler's totient function value of i (i <= maxp). Add **.set_cal_phi()** to the initializting statement to initialize **phi**. use **CalPhi(i)** if i > maxp.
-  * **int\* rad;** rad[i] is the radical of i (i <= maxp). Add **.set_cal_mu()** to the initializting statement to initialize **phi**. use **CalPhi(i)** if i > maxp.
+  * **int\* mu;** mu[i] it mobius function value of i (i <= maxp) and initialized by **.set_cal_mu()**. It is recommended to use **CalMu(i)** which uses mu[i] for i <= maxp and is able to handle i > maxp.
+  * **int\* phi;** phi[i] is Euler's totient function value of i (i <= maxp) and initialized by **.set_cal_phi()**. It is recommended to use **CalPhi(i)** which uses mu[i] for i <= maxp and is able to handle i > maxp.
+  * **int\* rad;** rad[i] is the radical of i (i <= maxp) initialized by **.set_cal_mu()**. It is recommended to use **CalPhi(i)** which uses mu[i] for i <= maxp and is able to handle i > maxp.
 
 * See [example.c](https://github.com/baihacker/pe/blob/master/example/example.c) for quick start.
 

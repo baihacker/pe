@@ -10,7 +10,7 @@ It is my basic code for solving problem on project euler.
 * Put all the files in a folder (directory). For example, we put them in the directory D:\usr\include.
 * Make sure the environment variable CPLUS_INCLUDE_PATH contain D:\usr\include.
 * Use **gen_config.py** to generate pe_config automatically according to your environment, or
-* Configure this library manually in [pe_config](https://github.com/baihacker/pe/blob/master/pe_config) or [pe](https://github.com/baihacker/pe/blob/master/pe). 
+* Configure this library manually in [pe_config](https://github.com/baihacker/pe/blob/master/pe_config) or [pe](https://github.com/baihacker/pe/blob/master/pe).
   * ENABLE_ASSERT whether to assert some inputs or conditions.
 
   * TRY_TO_USE_INT128 whether to check whether the compiler support int128 and use it. Some implementations depends on this flag.
@@ -38,15 +38,16 @@ It is my basic code for solving problem on project euler.
 ## Use:
 * #include <pe.hpp> in your source code.
 
-* Use **pe().maxPrime(prime limit).init();** to initialize builtin variables such as prime list, prime count. See the end of file "pe" for details.
-
+* Use **pe().set_max_prime(prime limit).init();** to initialize builtin variables such as prime list, prime count. See the end of file "pe" for details.
+* A candidate way is to use PE_INIT macro, the argument format example is: maxp = 1000, cal_mu = 1, ... (note: the order doesn't matter).
 * Important global variables
-  * **int64 maxp;** the maximum value in the prime list should be no more than maxp. Use **.maxPrime(prime limit)** to initialize it.
+  * **int64 maxp;** the maximum value in the prime list should be no more than maxp. Use **.set_max_prime(prime limit)** to initialize it.
   * **int\* plist;** plist[i] is the ith prime. (i starts from 0, i < pcnt).
   * **int pcnt;** the number of prime no more than maxp, i.e. the number of elements in plist.
   * **int\* pmask;** pmask[i] is the minimal prime factor of i (i <= maxp).
-  * **int\* mu;** mu[i] it mobius function value of i (i <= maxp). Add **.calMu()** to the initializing statement to initialize **mu**. Use **cal_mu(i)** if i > maxp.
-  * **int\* phi;** phi[i] is Euler's totient function value of i (i <= maxp). Add **.calPhi()** to the initializting statement to initialize **phi**. use **cal_phi(i)** if i > maxp.
+  * **int\* mu;** mu[i] it mobius function value of i (i <= maxp). Add **.set_cal_mu()** to the initializing statement to initialize **mu**. Use **CalMu(i)** if i > maxp.
+  * **int\* phi;** phi[i] is Euler's totient function value of i (i <= maxp). Add **.set_cal_phi()** to the initializting statement to initialize **phi**. use **CalPhi(i)** if i > maxp.
+  * **int\* rad;** rad[i] is the radical of i (i <= maxp). Add **.set_cal_mu()** to the initializting statement to initialize **phi**. use **CalPhi(i)** if i > maxp.
 
 * See [example.c](https://github.com/baihacker/pe/blob/master/example/example.c) for quick start.
 

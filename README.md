@@ -9,8 +9,7 @@ It is my basic code for solving problem on project euler.
 ## Installation:
 * Put all the files in a folder (directory). For example, we put them in the directory D:\usr\include.
 * Make sure the environment variable CPLUS_INCLUDE_PATH contain D:\usr\include.
-* Use **gen_config.py** to generate pe_config automatically according to your environment, or
-* Configure this library manually in [pe_config](https://github.com/baihacker/pe/blob/master/pe_config) or [pe](https://github.com/baihacker/pe/blob/master/pe).
+* Run **gen_config.py** in the installation folder to generate **pe_config** automatically according to your environment, or edit [pe_config](https://github.com/baihacker/pe/blob/master/pe_config) manually. The configurable macros are
   * ENABLE_ASSERT whether to assert some inputs or conditions.
 
   * TRY_TO_USE_INT128 whether to check whether the compiler support int128 and use it. Some implementations depends on this flag.
@@ -32,14 +31,15 @@ It is my basic code for solving problem on project euler.
 * See [Build and use third party library in pe](https://github.com/baihacker/pe/blob/master/libraries_on_win64.md#build-and-use-third-party-library-in-pe) for the pre-built third party libraries.
 
 * [optional, recommended] Generate precompile header "pe.hpp.gch".
-  * Command: "g++ xc++-header pe.hpp". Run in D:\usr\include
-  * You can add more options, usually, they are the same as the options to compile your target. e.g. "g++ -xc++-header pe.hpp --std=c++17 -O3 -march=native -fopenmp".
+  * Command: "g++ -xc++-header pe.hpp". Run in D:\usr\include
+  * You can add more compiling options, usually, they are the same as the options to compile your target. e.g. "g++ -xc++-header pe.hpp --std=c++17 -O3 -march=native -fopenmp".
 
 ## Use:
 * #include <pe.hpp> in your source code.
 
-* Use **pe().set_max_prime(prime limit).Init();** to initialize builtin variables such as prime list, prime count. See the end of file "pe" for details.
-* A candidate way is to use PE_INIT macro, the argument format example is: maxp = 1000, cal_mu = 1, ... (note: the order doesn't matter).
+* Use **pe().set_max_prime(prime limit).Init();** to initialize builtin variables such as prime list, prime count. See the end of file "pe" for initialization options.
+  * A candidate way is to use PE_INIT macro, e.g. PE_INIT(maxp = 100000, cal_mu = 1) (note: the order doesn't matter).
+  * Skip the initialization if the code doesn't depend on those variables.
 * Important global variables
   * **int64 maxp;** the maximum value in the prime list should be no more than maxp. Use **.set_max_prime(prime limit)** to initialize it.
   * **int\* plist;** plist[i] is the ith prime. (i starts from 0, i < pcnt).

@@ -41,107 +41,107 @@ class MultiThreadsTaskRunner {
   };
 
  public:
-  MultiThreadsTaskRunner() : worker_ptr(nullptr) {
-    memset(threads_context, 0, sizeof threads_context);
+  MultiThreadsTaskRunner() : worker_ptr_(nullptr) {
+    memset(threads_context_, 0, sizeof threads_context_);
   }
 
   void Reset() {
-    threads_count = 0;
-    worker_ptr = nullptr;
-    p = q = 0;
-    memset(threads_context, 0, sizeof threads_context);
+    threads_count_ = 0;
+    worker_ptr_ = nullptr;
+    p_ = q_ = 0;
+    memset(threads_context_, 0, sizeof threads_context_);
   }
 
   void Init(worker_ptr_t worker, const int threads = 3,
             const int stack = 100 * (1 << 20)) {
-    assert(worker_ptr == nullptr);
+    assert(worker_ptr_ == nullptr);
 
-    p = q = 0;
-    InitializeCriticalSection(&request_access);
-    has_new_request = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-    request_removed = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-    threads_count = max(threads, static_cast<int>(min_thread));
-    threads_count = min(threads_count, static_cast<int>(max_thread));
-    worker_ptr = worker;
-    for (int i = 0; i < threads_count; ++i) {
-      threads_context[i].idx = i;
-      threads_context[i].worker_ptr = worker_ptr;
-      threads_context[i].host = this;
-      threads_handle[i] = reinterpret_cast<HANDLE>(_beginthreadex(
+    p_ = q_ = 0;
+    InitializeCriticalSection(&request_access_);
+    has_new_request_ = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    request_removed_ = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    threads_count_ = max(threads, static_cast<int>(min_thread));
+    threads_count_ = min(threads_count_, static_cast<int>(max_thread));
+    worker_ptr_ = worker;
+    for (int i = 0; i < threads_count_; ++i) {
+      threads_context_[i].idx = i;
+      threads_context_[i].worker_ptr = worker_ptr_;
+      threads_context_[i].host = this;
+      threads_handle_[i] = reinterpret_cast<HANDLE>(_beginthreadex(
           nullptr, max(stack, 100 * (1 << 20)), WorkThread,
-          reinterpret_cast<void*>(&threads_context[i]), 0, nullptr));
+          reinterpret_cast<void*>(&threads_context_[i]), 0, nullptr));
     }
-    start = GetTickCount();
+    start_ = GetTickCount();
   }
 
   void WaitForQueue(int max_request = -1) {
-    if (max_request == -1) max_request = threads_count;
+    if (max_request == -1) max_request = threads_count_;
     if (max_request > max_pending_tasks - 1)
       max_request = max_pending_tasks - 1;
     for (;;) {
       if (RequestCount() < max_request) break;
-      WaitForSingleObject(request_removed, static_cast<DWORD>(INFINITY));
+      WaitForSingleObject(request_removed_, static_cast<DWORD>(INFINITY));
     }
   }
 
   void AddRequest(const Task& task, int is_stop_task = 0) {
-    EnterCriticalSection(&request_access);
-    PE_ASSERT((q + 1) % static_cast<int64>(max_pending_tasks) != p);
-    TaskItem item = {task, next_task_item_id++, -1, is_stop_task};
-    task_que[q++] = item;
-    if (q >= max_pending_tasks) {
-      q -= max_pending_tasks;
+    EnterCriticalSection(&request_access_);
+    PE_ASSERT((q_ + 1) % static_cast<int64>(max_pending_tasks) != p_);
+    TaskItem item = {task, next_task_item_id_++, -1, is_stop_task};
+    task_que_[q_++] = item;
+    if (q_ >= max_pending_tasks) {
+      q_ -= max_pending_tasks;
     }
-    LeaveCriticalSection(&request_access);
-    SetEvent(has_new_request);
+    LeaveCriticalSection(&request_access_);
+    SetEvent(has_new_request_);
   }
 
   void WaitForEnd() {
     WaitForQueue();
     AddRequest(Task(), 1);
-    WaitForMultipleObjects(threads_count, threads_handle, TRUE, INFINITE);
-    for (int i = 0; i < threads_count; ++i) CloseHandle(threads_handle[i]);
-    CloseHandle(request_removed);
-    CloseHandle(has_new_request);
-    DeleteCriticalSection(&request_access);
-    end = GetTickCount();
-    fprintf(stderr, "time : %u\n", static_cast<unsigned>(end - start));
+    WaitForMultipleObjects(threads_count_, threads_handle_, TRUE, INFINITE);
+    for (int i = 0; i < threads_count_; ++i) CloseHandle(threads_handle_[i]);
+    CloseHandle(request_removed_);
+    CloseHandle(has_new_request_);
+    DeleteCriticalSection(&request_access_);
+    end_ = GetTickCount();
+    fprintf(stderr, "time : %u\n", static_cast<unsigned>(end_ - start_));
   }
 
-  void Lock() { EnterCriticalSection(&request_access); }
+  void Lock() { EnterCriticalSection(&request_access_); }
 
-  void Unlock() { LeaveCriticalSection(&request_access); }
+  void Unlock() { LeaveCriticalSection(&request_access_); }
 
  private:
   // inc = 0 or 1
   bool NextRequest(TaskItem& item, int inc) {
     item.task_item_id = -1;
-    int oldp = p;
-    EnterCriticalSection(&request_access);
-    if (p != q) {
-      item = task_que[p];
+    int oldp = p_;
+    EnterCriticalSection(&request_access_);
+    if (p_ != q_) {
+      item = task_que_[p_];
       if (inc > 0 && !item.is_stop_task) {
-        p += inc;
-        if (p >= max_pending_tasks) {
-          p -= max_pending_tasks;
+        p_ += inc;
+        if (p_ >= max_pending_tasks) {
+          p_ -= max_pending_tasks;
         }
       }
     }
-    LeaveCriticalSection(&request_access);
-    if (oldp != p) {
-      SetEvent(request_removed);
+    LeaveCriticalSection(&request_access_);
+    if (oldp != p_) {
+      SetEvent(request_removed_);
     }
     return item.task_item_id != -1;
   }
 
   int RequestCount() {
     int ret = 0;
-    EnterCriticalSection(&request_access);
-    ret = q - p;
+    EnterCriticalSection(&request_access_);
+    ret = q_ - p_;
     if (ret < 0) {
       ret += max_pending_tasks;
     }
-    LeaveCriticalSection(&request_access);
+    LeaveCriticalSection(&request_access_);
     return ret;
   }
 
@@ -149,12 +149,12 @@ class MultiThreadsTaskRunner {
     for (;;) {
       TaskItem item;
       if (NextRequest(item, 0) == false) {
-        DWORD wait_result = WaitForSingleObject(has_new_request, INFINITE);
+        DWORD wait_result = WaitForSingleObject(has_new_request_, INFINITE);
         if (wait_result != WAIT_OBJECT_0) continue;
       }
       if (NextRequest(item, 1) == false) continue;
       if (item.is_stop_task) {
-        SetEvent(has_new_request);
+        SetEvent(has_new_request_);
         break;
       }
       if (thread_context.worker_ptr) {
@@ -171,22 +171,22 @@ class MultiThreadsTaskRunner {
   }
 
  private:
-  DWORD start, end;
+  DWORD start_, end_;
 
  private:
-  int threads_count{0};
+  int threads_count_{0};
 
-  HANDLE threads_handle[max_thread];
-  ThreadContext threads_context[max_thread];
+  HANDLE threads_handle_[max_thread];
+  ThreadContext threads_context_[max_thread];
 
-  HANDLE has_new_request;
-  HANDLE request_removed;
-  CRITICAL_SECTION request_access;
-  worker_ptr_t worker_ptr;
+  HANDLE has_new_request_;
+  HANDLE request_removed_;
+  CRITICAL_SECTION request_access_;
+  worker_ptr_t worker_ptr_;
 
-  TaskItem task_que[max_pending_tasks + 1];
-  int64 next_task_item_id{0};
-  int p{0}, q{0};
+  TaskItem task_que_[max_pending_tasks + 1];
+  int64 next_task_item_id_{0};
+  int p_{0}, q_{0};
 };
 
 enum {
@@ -374,6 +374,7 @@ class ParallelRunner {
   int64 Run(CONTEXT&& context, int threads_count) {
     return Run(context, threads_count);
   }
+
   int64 Run(CONTEXT& context, int threads_count) {
     const char* file_name =
         GetCacheFileNameHelper<
@@ -435,7 +436,11 @@ class ParallelRange : public RangeBasedTaskGenerator<ParallelRange>,
   void OnFinished() { cerr << "result = " << result_ << endl; }
 
   void HandleResult(const Task& /*task*/, int64 result) {
-    result_ = update_result_(result_, result);
+    if (reducer_internal_) {
+      result_ = (this->*reducer_internal_)(result_, result);
+    } else {
+      result_ = update_result_(result_, result);
+    }
   }
 
   bool HandleCachedResult(const Task& task, int64 result) {
@@ -449,9 +454,16 @@ class ParallelRange : public RangeBasedTaskGenerator<ParallelRange>,
       return work_on_block_(range.first, range.second, worker_idx);
     }
     assert(has_woi_);
-    int64 t = 0;
-    for (int64 i = range.first; i <= range.second; ++i) {
-      t = update_result_(t, work_on_item_(i, worker_idx));
+
+    int64 t = work_on_item_(range.first, worker_idx);
+    if (reducer_internal_) {
+      for (int64 i = range.first + 1; i <= range.second; ++i) {
+        t = (this->*reducer_internal_)(t, work_on_item_(i, worker_idx));
+      }
+    } else {
+      for (int64 i = range.first + 1; i <= range.second; ++i) {
+        t = update_result_(t, work_on_item_(i, worker_idx));
+      }
     }
     return t;
   }
@@ -460,70 +472,141 @@ class ParallelRange : public RangeBasedTaskGenerator<ParallelRange>,
     first_ = first;
     return *this;
   }
+
   ParallelRange& To(int64 last) {
     last_ = last;
     return *this;
   }
+
   ParallelRange& DividedBy(int64 block_size) {
     block_size_ = block_size;
     return *this;
   }
+
   ParallelRange& SetCacheFileName(const char* file_name) {
     SetCacheFileName(file_name);
     return *this;
   }
+
   ParallelRange& SetResult(int64 result) {
     result_ = result;
     return *this;
   }
+
   ParallelRange& SetThreadsCount(int threads_count) {
     threads_count_ = threads_count;
     return *this;
   }
+
   ParallelRange& Map(std::function<int64(int64, int64)> woi) {
     work_on_item_ = std::move(woi);
     has_woi_ = true;
     return *this;
   }
+
   ParallelRange& BlockMap(std::function<int64(int64, int64, int64)> wor) {
     work_on_block_ = std::move(wor);
     has_wob_ = true;
     return *this;
   }
+
   ParallelRange& Reduce(std::function<int64(int64, int64)> ur) {
     update_result_ = std::move(ur);
     return *this;
   }
+
+  ParallelRange& SetReduceSum(bool reduce_sum) {
+    reduce_sum_ = reduce_sum;
+    return *this;
+  }
+
+  ParallelRange& SetReduceProd(bool reduce_prod) {
+    reduce_prod_ = reduce_prod;
+    return *this;
+  }
+
+  ParallelRange& SetMod(int64 mod) {
+    mod_ = mod;
+    return *this;
+  }
+
   ParallelRange& Start() {
     SetRange(first_, last_, block_size_);
+    BindReducer();
     runner_.Run(*this, threads_count_);
     return *this;
   }
+
   void Run(int threads_count) { runner_.Run(*this, threads_count); }
+
+ protected:
+  void BindReducer() {
+    if (reduce_sum_) {
+      if (mod_) {
+        reducer_internal_ = &ParallelRange::ReduceAddMod;
+      } else {
+        reducer_internal_ = &ParallelRange::ReduceAdd;
+      }
+      reducer_init_value_ = 0;
+    } else if (reduce_prod_) {
+      if (mod_) {
+        reducer_internal_ = &ParallelRange::ReduceProdMod;
+      } else {
+        reducer_internal_ = &ParallelRange::ReduceProd;
+      }
+      reducer_init_value_ = 1;
+    }
+    if (reducer_internal_) {
+      result_ = reducer_init_value_;
+    }
+  }
+
+  int64 ReduceAdd(int64 result, int64 value) { return result + value; }
+
+  int64 ReduceAddMod(int64 result, int64 value) {
+    return AddMod(result, RegulateMod(value, mod_), mod_);
+  }
+
+  int64 ReduceProd(int64 result, int64 value) { return result * value; }
+
+  int64 ReduceProdMod(int64 result, int64 value) {
+    return MulModEx(result, RegulateMod(value, mod_), mod_);
+  }
 
  protected:
   ParallelRunner<ParallelRange> runner_;
   int64 result_{0};
-  int threads_count_{-1};
+  int threads_count_{8};
   bool has_woi_{false};
   bool has_wob_{false};
+  bool reduce_sum_{false};
+  bool reduce_prod_{false};
+  int64 mod_{0};
+  int64 reducer_init_value_{0};
+  using ReducerType = int64 (ParallelRange::*)(int64, int64);
+  ReducerType reducer_internal_{nullptr};
   std::function<int64(int64, int64)> update_result_;
   std::function<int64(int64, int64)> work_on_item_;
   std::function<int64(int64, int64, int64)> work_on_block_;
 };
 
+#define PARALLEL_RANGE ParallelRange()
 #define BEGIN_PARALLEL ParallelRange()
-#define FROM              .From((
-#define TO                )).To((
-#define EACH_BLOCK_IS     )).DividedBy((
-#define CACHE             )).SetCacheFileName((
-#define INIT_RESULT       )).SetResult((
+#define FROM                  .From((
+#define TO                    )).To((
+#define EACH_BLOCK_IS         )).DividedBy((
+#define CACHE                 )).SetCacheFileName((
+#define INIT_RESULT           )).SetResult((
 
-#define THREADS           )).SetThreadsCount((
-#define MAP               )).Map((        [=] (int64 key, int64 worker)-> int64
-#define BLOCK_MAP         )).BlockMap((  [=] (int64 first, int64 last, int64 worker)-> int64
-#define REDUCE            )).Reduce((     [=] (int64 result, int64 value)-> int64
-#define END_PARALLEL      )).Start()
+#define THREADS               )).SetThreadsCount((
+#define MAP                   )).Map((        [=] (int64 key, int64 worker)-> int64
+#define BLOCK_MAP             )).BlockMap((  [=] (int64 first, int64 last, int64 worker)-> int64
+#define REDUCE                )).Reduce((     [=] (int64 result, int64 value)-> int64
+#define REDUCE_SUM            )).SetReduceSum(true).SetMod(0).Start().Result()
+#define REDUCE_SUM_MOD(mod)   )).SetReduceSum(true).SetMod(mod).Start().Result()
+#define REDUCE_PROD           )).SetReduceProd(true).SetMod(0).Start().Result()
+#define REDUCE_PROD_MOD(mod)  )).SetReduceProd(true).SetMod(mod).Start().Result()
+#define END_PARALLEL          )).Start()
 #define END_PARALLEL_WITH_RESULT      )).Start().Result()
 #define PARALLEL_RESULT(x) (x.Result())
 
@@ -542,8 +625,12 @@ class ParallelRangeT : public RangeBasedTaskGenerator<ParallelRangeT<Derived>>,
   void OnFinished() { cerr << "result = " << result_ << endl; }
 
   void HandleResult(const Task& /*task*/, int64 result) {
-    auto& obj = static_cast<Derived&>(*this);
-    result_ = obj.UpdateResult(result_, result);
+    if (reducer_internal_) {
+      result_ = (this->*reducer_internal_)(result_, result);
+    } else {
+      auto& obj = static_cast<Derived&>(*this);
+      result_ = obj.UpdateResult(result_, result);
+    }
   }
 
   bool HandleCachedResult(const Task& task, int64 result) {
@@ -567,37 +654,99 @@ class ParallelRangeT : public RangeBasedTaskGenerator<ParallelRangeT<Derived>>,
     this->first_ = first;
     return *this;
   }
+
   Self& To(int64 last) {
     this->last_ = last;
     return *this;
   }
+
   Self& DividedBy(int64 block_size) {
     this->block_size_ = block_size;
     return *this;
   }
+
   Self& SetCacheFileName(const char* file_name) {
-    this->SetCacheFileName(file_name);
+    SetCacheFileName(file_name);
     return *this;
   }
+
   Self& SetResult(int64 result) {
-    result_ = result;
+    this->result_ = result;
     return *this;
   }
+
   Self& SetThreadsCount(int threads_count) {
-    threads_count_ = threads_count;
+    this->threads_count_ = threads_count;
     return *this;
   }
+
+  Self& SetReduceSum(bool reduce_sum) {
+    reduce_sum_ = reduce_sum;
+    return *this;
+  }
+
+  Self& SetReduceProd(bool reduce_prod) {
+    reduce_prod_ = reduce_prod;
+    return *this;
+  }
+
+  Self& SetMod(int64 mod) {
+    mod_ = mod;
+    return *this;
+  }
+
   Self& Start() {
     this->SetRange(this->first_, this->last_, this->block_size_);
     runner_.Run(*this, threads_count_);
     return *this;
   }
+
   void Run(int threads_count) { runner_.Run(*this, threads_count); }
+
+ protected:
+  void BindReducer() {
+    if (reduce_sum_) {
+      if (mod_) {
+        reducer_internal_ = &ParallelRange::ReduceAddMod;
+      } else {
+        reducer_internal_ = &ParallelRange::ReduceAdd;
+      }
+      reducer_init_value_ = 0;
+    } else if (reduce_prod_) {
+      if (mod_) {
+        reducer_internal_ = &ParallelRange::ReduceProdMod;
+      } else {
+        reducer_internal_ = &ParallelRange::ReduceProd;
+      }
+      reducer_init_value_ = 1;
+    }
+    if (reducer_internal_) {
+      result_ = reducer_init_value_;
+    }
+  }
+
+  int64 ReduceAdd(int64 result, int64 value) { return result + value; }
+
+  int64 ReduceAddMod(int64 result, int64 value) {
+    return AddMod(result, RegulateMod(value, mod_), mod_);
+  }
+
+  int64 ReduceProd(int64 result, int64 value) { return result * value; }
+
+  int64 ReduceProdMod(int64 result, int64 value) {
+    return MulModEx(result, RegulateMod(value, mod_), mod_);
+  }
 
  protected:
   ParallelRunner<ParallelRangeT<Derived>> runner_;
   int64 result_;
-  int threads_count_;
+  int threads_count_{8};
+  bool reduce_sum_{false};
+  bool reduce_prod_{false};
+  int64 mod_{0};
+  int64 reducer_init_value_{0};
+  using ReducerType = int64 (ParallelRange::*)(int64, int64);
+  ReducerType reducer_internal_{nullptr};
 };
 
 #endif  // end PE_PARALLEL_HAS_CPP11

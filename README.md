@@ -47,7 +47,7 @@ It is my basic code for solving problem on project euler.
   * **int\* pmask;** pmask[i] is the minimal prime factor of i (i <= maxp).
   * **int\* mu;** mu[i] it mobius function value of i (i <= maxp) and initialized by **.set_cal_mu()**. It is recommended to use **CalMu(i)** which uses mu[i] for i <= maxp and is able to handle i > maxp.
   * **int\* phi;** phi[i] is Euler's totient function value of i (i <= maxp) and initialized by **.set_cal_phi()**. It is recommended to use **CalPhi(i)** which uses mu[i] for i <= maxp and is able to handle i > maxp.
-  * **int\* rad;** rad[i] is the radical of i (i <= maxp) initialized by **.set_cal_mu()**. It is recommended to use **CalPhi(i)** which uses mu[i] for i <= maxp and is able to handle i > maxp.
+  * **int\* rad;** rad[i] is the radical of i (i <= maxp) initialized by **.set_cal_rad()**. It is recommended to use **CalRad(i)** which uses mu[i] for i <= maxp and is able to handle i > maxp.
 
 * See [example.c](https://github.com/baihacker/pe/blob/master/example/example.c) for quick start.
 

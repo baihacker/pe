@@ -15,7 +15,7 @@ It is my basic code for solving problem on <a href="https://projecteuler.net/rec
 
   * ENABLE_EIGEN whether to use [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page) library.
 
-  * ENABLE_OPENMP swhether to use [openmp](http://www.openmp.org). The auto generated pe_config doesn't include this configuration since it will be checked and enabled automatically in pe (you can still configure it in pe_config). In the configuration in pe, you can disable it evenif the environment supports it.
+  * ENABLE_OPENMP swhether to use [openmp](http://www.openmp.org). The auto generated pe_config doesn't include this configuration since it will be checked and enabled automatically in pe. You can still define it in pe_config to enable/disable it. If it is enabled but the environment doesn't support it, a warning message will show.
 
   * ENABLE_GMP whether to use [gmp](https://gmplib.org).
 

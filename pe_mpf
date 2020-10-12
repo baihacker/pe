@@ -146,9 +146,16 @@ class Mpf {
 
   Mpf(const Mpf& o) { mpf_init_set(f, o.f); }
 
-  Mpf(Mpf&& o) noexcept { mpf_swap(f, o.f); }
+  Mpf(Mpf&& o) noexcept {
+    f[0]._mp_d = nullptr;
+    mpf_swap(f, o.f);
+  }
 
-  ~Mpf() { mpf_clear(f); }
+  ~Mpf() {
+    if (f[0]._mp_d) {
+      mpf_clear(f);
+    }
+  }
 
   Mpf& operator=(const Mpf& o) {
     mpf_set(f, o.f);
@@ -275,7 +282,7 @@ class Mpf {
     const int offset = buff[0] == '-' ? 2 : 1;
     string temp(buff);
     string t = temp.substr(0, offset) + string(".") + temp.substr(offset);
-    if (e - 1 != 0) t = t + "e" + ToString(e - 1);
+    if (e - 1 != 0) t = t + "e" + ::ToString(e - 1);
     return t;
   }
 

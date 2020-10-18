@@ -73,12 +73,12 @@ struct NModPoly {
   NModPoly& Redeg(int64 n) { return Resize(n + 1); }
 
   int64& operator[](int64 idx) {
-    PE_ASSERT(idx >= 0 && idx < data.size());
+    PE_ASSERT(idx >= 0 && idx < static_cast<int64>(data.size()));
     return data[idx];
   }
 
   int64 operator[](int64 idx) const {
-    PE_ASSERT(idx >= 0 && idx < data.size());
+    PE_ASSERT(idx >= 0 && idx < static_cast<int64>(data.size()));
     return data[idx];
   }
 
@@ -91,8 +91,7 @@ struct NModPoly {
   int64 ValueAt(int64 v) const {
     int64 ret = 0;
     for (int64 i = deg(); i >= 0; --i) {
-      ret = ret * v % mod + data[i];
-      if (ret >= mod) ret -= mod;
+      ret = AddMod(MulModEx(ret, v, mod), AddMod(ret, data[i], mod), mod);
     }
     return ret;
   }

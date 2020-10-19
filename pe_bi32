@@ -706,13 +706,19 @@ class BigInteger {
   }
 
  public:
-  // compare operators
-  friend inline int operator>(const BigInteger& l, const BigInteger& r);
-  friend inline int operator<(const BigInteger& l, const BigInteger& r);
+// compare operators
+#if PE_HAS_CPP20
+  friend inline int operator<=>(const BigInteger& l, const BigInteger& r);
   friend inline int operator==(const BigInteger& l, const BigInteger& r);
-  friend inline int operator>=(const BigInteger& l, const BigInteger& r);
-  friend inline int operator<=(const BigInteger& l, const BigInteger& r);
   friend inline int operator!=(const BigInteger& l, const BigInteger& r);
+#else
+  friend inline int operator<(const BigInteger& l, const BigInteger& r);
+  friend inline int operator<=(const BigInteger& l, const BigInteger& r);
+  friend inline int operator>(const BigInteger& l, const BigInteger& r);
+  friend inline int operator>=(const BigInteger& l, const BigInteger& r);
+  friend inline int operator==(const BigInteger& l, const BigInteger& r);
+  friend inline int operator!=(const BigInteger& l, const BigInteger& r);
+#endif
 
   // binary operators
   friend inline BigInteger operator+(const BigInteger& l, const BigInteger& r);
@@ -1204,19 +1210,26 @@ RETURN(void) __InitBigInteger(BigInteger& b, T value) {
   }
   b.sign_ = 1;
 }
-inline int operator>(const BigInteger& l, const BigInteger& r) {
-  const int s1 = l.sign_;
-  const int s2 = r.sign_;
 
-  if (s1 < 0) {
-    return s2 < 0 && BigInteger::AbsCompare(l, r) < 0;
-  } else if (s1 > 0) {
-    return s2 <= 0 || BigInteger::AbsCompare(l, r) > 0;
-  } else {
-    return s2 < 0;
+#if PE_HAS_CPP20
+int operator<=>(const BigInteger& l, const BigInteger& r) {
+  if (l.sign_ != r.sign_) {
+    return l.sign_ < r.sign_ ? -1 : 1;
   }
+  if (l.sign_ == 0) {
+    return 0;
+  }
+  const int t = BigInteger::AbsCompare(l, r);
+  return l.sign_ > 0 ? t : -t;
+}
+int operator==(const BigInteger& l, const BigInteger& r) {
+  return (l <=> r) == 0;
 }
 
+int operator!=(const BigInteger& l, const BigInteger& r) {
+  return (l <=> r) != 0;
+}
+#else
 inline int operator<(const BigInteger& l, const BigInteger& r) {
   const int s1 = l.sign_;
   const int s2 = r.sign_;
@@ -1227,23 +1240,6 @@ inline int operator<(const BigInteger& l, const BigInteger& r) {
     return s2 > 0 && BigInteger::AbsCompare(l, r) < 0;
   } else {
     return s2 > 0;
-  }
-}
-
-inline int operator==(const BigInteger& l, const BigInteger& r) {
-  return l.sign_ == r.sign_ && BigInteger::AbsCompare(l, r) == 0;
-}
-
-inline int operator>=(const BigInteger& l, const BigInteger& r) {
-  const int s1 = l.sign_;
-  const int s2 = r.sign_;
-
-  if (s1 < 0) {
-    return s2 < 0 && BigInteger::AbsCompare(l, r) <= 0;
-  } else if (s1 > 0) {
-    return s2 <= 0 || BigInteger::AbsCompare(l, r) >= 0;
-  } else {
-    return s2 <= 0;
   }
 }
 
@@ -1260,9 +1256,40 @@ inline int operator<=(const BigInteger& l, const BigInteger& r) {
   }
 }
 
+inline int operator>(const BigInteger& l, const BigInteger& r) {
+  const int s1 = l.sign_;
+  const int s2 = r.sign_;
+
+  if (s1 < 0) {
+    return s2 < 0 && BigInteger::AbsCompare(l, r) < 0;
+  } else if (s1 > 0) {
+    return s2 <= 0 || BigInteger::AbsCompare(l, r) > 0;
+  } else {
+    return s2 < 0;
+  }
+}
+
+inline int operator>=(const BigInteger& l, const BigInteger& r) {
+  const int s1 = l.sign_;
+  const int s2 = r.sign_;
+
+  if (s1 < 0) {
+    return s2 < 0 && BigInteger::AbsCompare(l, r) <= 0;
+  } else if (s1 > 0) {
+    return s2 <= 0 || BigInteger::AbsCompare(l, r) >= 0;
+  } else {
+    return s2 <= 0;
+  }
+}
+
+inline int operator==(const BigInteger& l, const BigInteger& r) {
+  return l.sign_ == r.sign_ && BigInteger::AbsCompare(l, r) == 0;
+}
+
 inline int operator!=(const BigInteger& l, const BigInteger& r) {
   return !(l == r);
 }
+#endif
 
 inline BigInteger operator+(const BigInteger& l, const BigInteger& r) {
   BigInteger ret(l);

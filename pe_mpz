@@ -297,13 +297,19 @@ class MpInteger {
   inline MpInteger& operator=(const Mpf& o);
 
  public:
-  // compare operators
-  friend inline int operator>(const MpInteger& l, const MpInteger& r);
-  friend inline int operator<(const MpInteger& l, const MpInteger& r);
+// compare operators
+#if PE_HAS_CPP20
+  friend inline int operator<=>(const MpInteger& l, const MpInteger& r);
   friend inline int operator==(const MpInteger& l, const MpInteger& r);
-  friend inline int operator>=(const MpInteger& l, const MpInteger& r);
-  friend inline int operator<=(const MpInteger& l, const MpInteger& r);
   friend inline int operator!=(const MpInteger& l, const MpInteger& r);
+#else
+  friend inline int operator<(const MpInteger& l, const MpInteger& r);
+  friend inline int operator<=(const MpInteger& l, const MpInteger& r);
+  friend inline int operator>(const MpInteger& l, const MpInteger& r);
+  friend inline int operator>=(const MpInteger& l, const MpInteger& r);
+  friend inline int operator==(const MpInteger& l, const MpInteger& r);
+  friend inline int operator!=(const MpInteger& l, const MpInteger& r);
+#endif
 
   // binary operators
   friend inline MpInteger operator+(const MpInteger& l, const MpInteger& r);
@@ -679,29 +685,43 @@ RETURN(void) __InitMpz(mpz_t z, T value) {
 }
 
 // Operators
-int operator>(const MpInteger& l, const MpInteger& r) {
-  return mpz_cmp(l.z, r.z) > 0;
-}
-
-int operator<(const MpInteger& l, const MpInteger& r) {
-  return mpz_cmp(l.z, r.z) < 0;
+#if PE_HAS_CPP20
+int operator<=>(const MpInteger& l, const MpInteger& r) {
+  return mpz_cmp(l.z, r.z);
 }
 
 int operator==(const MpInteger& l, const MpInteger& r) {
-  return mpz_cmp(l.z, r.z) == 0;
+  return (l <=> r) == 0;
 }
 
-int operator>=(const MpInteger& l, const MpInteger& r) {
-  return mpz_cmp(l.z, r.z) >= 0;
+int operator!=(const MpInteger& l, const MpInteger& r) {
+  return (l <=> r) != 0;
+}
+#else
+int operator<(const MpInteger& l, const MpInteger& r) {
+  return mpz_cmp(l.z, r.z) < 0;
 }
 
 int operator<=(const MpInteger& l, const MpInteger& r) {
   return mpz_cmp(l.z, r.z) <= 0;
 }
 
+int operator>(const MpInteger& l, const MpInteger& r) {
+  return mpz_cmp(l.z, r.z) > 0;
+}
+
+int operator>=(const MpInteger& l, const MpInteger& r) {
+  return mpz_cmp(l.z, r.z) >= 0;
+}
+
+int operator==(const MpInteger& l, const MpInteger& r) {
+  return mpz_cmp(l.z, r.z) == 0;
+}
+
 int operator!=(const MpInteger& l, const MpInteger& r) {
   return mpz_cmp(l.z, r.z) != 0;
 }
+#endif
 
 MpInteger operator+(const MpInteger& l, const MpInteger& r) {
   MpInteger ret;
@@ -990,7 +1010,7 @@ MpInteger Gcd(const MpInteger& l, const MpInteger& r) {
 
 #if PE_HAS_CPP20
 static_assert(PeGbi<MpInteger>);
-static_assert(PeFraction<Fraction<MpInteger>>);
+static_assert(PeFraction<Fraction<MpInteger> >);
 #endif
 
 #endif  // end ENABLE_GMP

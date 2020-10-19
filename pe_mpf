@@ -3,7 +3,9 @@
 
 #if ENABLE_GMP
 
+#include "pe_nt"
 #include "pe_mpz"
+
 #if PE_HAS_CPP20
 template <class T>
 concept PeFloatArithmeticOperation = requires(T v) {
@@ -103,6 +105,7 @@ template <class T>
 concept PeFloat = requires(T v) {
   requires PeFloatArithmeticOperation<T>;
   requires PeFloatSelfOperation<T>;
+  requires PeComparable<T>;
 };
 #endif
 
@@ -333,6 +336,13 @@ SL Mpf operator/(const Mpf& a, const Mpf& b) {
 
 SL int compare(const Mpf& a, const Mpf& b) { return mpf_cmp(a.f, b.f); }
 
+#if PE_HAS_CPP20
+SL int operator<=>(const Mpf& a, const Mpf& b) { return mpf_cmp(a.f, b.f); }
+
+SL int operator==(const Mpf& a, const Mpf& b) { return (a <=> b) == 0; }
+
+SL int operator!=(const Mpf& a, const Mpf& b) { return (a <=> b) != 0; }
+#else
 SL int operator<(const Mpf& a, const Mpf& b) { return compare(a, b) < 0; }
 
 SL int operator<=(const Mpf& a, const Mpf& b) { return compare(a, b) <= 0; }
@@ -344,6 +354,7 @@ SL int operator>=(const Mpf& a, const Mpf& b) { return compare(a, b) >= 0; }
 SL int operator==(const Mpf& a, const Mpf& b) { return compare(a, b) == 0; }
 
 SL int operator!=(const Mpf& a, const Mpf& b) { return compare(a, b) != 0; }
+#endif
 
 SL ostream& operator<<(ostream& o, const Mpf& v) { return o << v.ToString(20); }
 

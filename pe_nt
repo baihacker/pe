@@ -88,6 +88,11 @@ SL string ToString(long double v) { return std::to_string(v); }
 
 SL string ToString(float v) { return std::to_string(v); }
 
+template <typename T>
+SL tuple<T, T> Div(const T& l, const T& r) {
+  return {l / r, l % r};
+}
+
 #if PE_HAS_CPP20
 template <class T>
 concept PeComparable = requires(T v) {
@@ -98,6 +103,36 @@ concept PeComparable = requires(T v) {
   v == v;
   v != v;
 };
+template <class T>
+concept PeNumberUtil = requires(T v) {
+  IsZero(v);
+  IntSign(v);
+  IsEven(v);
+  IsOdd(v);
+  LowerBits(v);
+  Abs(v);
+  FAbs(v);
+  ToInt<int>(v);
+  ToInt<unsigned int>(v);
+  ToInt<long long>(v);
+  ToInt<unsigned long long>(v);
+#if PE_HAS_INT128
+  ToInt<int128>(v);
+  ToInt<uint128>(v);
+#endif
+  ToFloat<float>(v);
+  ToFloat<double>(v);
+  ToString(v);
+  Div(v, v);
+};
+static_assert(PeNumberUtil<int>);
+static_assert(PeNumberUtil<unsigned int>);
+static_assert(PeNumberUtil<long long>);
+static_assert(PeNumberUtil<unsigned long long>);
+#if PE_HAS_INT128
+static_assert(PeNumberUtil<int128>);
+static_assert(PeNumberUtil<uint128>);
+#endif
 #endif
 // PowerMod is in pe_mod
 

@@ -2,29 +2,76 @@
 #define PE_TREE_
 
 #include "pe_base"
-
-// Range update bit indexed tree
-// Support range based update and query the value of a specified index.
-template <typename T>
-class RUBit {
+// Maps distinct elements to 1..n
+class IndexHelper {
  public:
-  RUBit(int size = 0) { Reset(size); }
+  IndexHelper(const vector<int64>& elements) { Reset(elements); }
 
-  RUBit& Reset(int new_size) {
-    size_ = new_size;
-    data_.resize(size_ + 1);
-    fill(data_.begin(), data_.end(), 0);
+  IndexHelper& Reset(const vector<int64>& elements) {
+    elements_ = elements;
+    sort(elements_.begin(), elements_.end());
+    size_ = std::unique(elements_.begin(), elements_.end()) - elements_.begin();
+    elements_.resize(size_);
     return *this;
   }
 
-  RUBit& Update(int x, T v) {
+  int size() const { return size_; }
+
+  int Index(int64 v) const { return this->operator[](v); }
+
+  int operator[](int64 v) const {
+    const int idx = std::lower_bound(elements_.begin(), elements_.end(), v) -
+                    elements_.begin();
+    return idx + 1;
+  }
+
+ private:
+  vector<int64> elements_;
+  int size_;
+};
+
+template <typename T, typename Derived>
+class BitBase {
+ public:
+  BitBase(int size = 0) { Reset(size); }
+  BitBase(const IndexHelper& ih) { Reset(ih.size()); }
+
+  Derived& Reset(int new_size) {
+    size_ = new_size;
+    data_.resize(size_ + 1);
+    Clear();
+    return static_cast<Derived&>(*this);
+  }
+
+  Derived& Clear() {
+    fill(data_.begin(), data_.end(), 0);
+    return static_cast<Derived&>(*this);
+  }
+
+ public:
+  vector<T> data_;
+  int size_;
+};
+
+// Range update bit indexed tree.
+// Support range based update and query the value of a specified index.
+template <typename T>
+class RUBit : public BitBase<T, RUBit<T>> {
+ public:
+  using BitBase<T, RUBit<T>>::BitBase;
+  using BitBase<T, RUBit<T>>::data_;
+  using BitBase<T, RUBit<T>>::size_;
+
+  RUBit& Update(int x, T delta) {
     for (; x <= size_; x += x & -x) {
-      data_[x] += v;
+      data_[x] += delta;
     }
     return *this;
   }
 
-  RUBit& Update(int x, int y, T v) { return Update(x, v).Update(y + 1, -v); }
+  RUBit& Update(int x, int y, T delta) {
+    return Update(x, delta).Update(y + 1, -delta);
+  }
 
   T Query(int x) const {
     T ret(0);
@@ -33,29 +80,20 @@ class RUBit {
     }
     return ret;
   }
-
- private:
-  vector<T> data_;
-  int size_;
 };
 
-// Range sum query bit indexed tree
+// Range sum query bit indexed tree.
 // Support index based update and value of a range.
 template <typename T>
-class RSQBit {
+class RSQBit : public BitBase<T, RSQBit<T>> {
  public:
-  RSQBit(int size = 0) { Reset(size); }
+  using BitBase<T, RSQBit<T>>::BitBase;
+  using BitBase<T, RSQBit<T>>::data_;
+  using BitBase<T, RSQBit<T>>::size_;
 
-  RSQBit& Reset(int new_size) {
-    size_ = new_size;
-    data_.resize(size_ + 1);
-    fill(data_.begin(), data_.end(), 0);
-    return *this;
-  }
-
-  RSQBit& Update(int x, T v) {
+  RSQBit& Update(int x, T delta) {
     for (; x <= size_; x += x & -x) {
-      data_[x] += v;
+      data_[x] += delta;
     }
     return *this;
   }
@@ -69,9 +107,6 @@ class RSQBit {
   }
 
   T Query(int x, int y) const { return Query(y) - Query(x - 1); }
-
- private:
-  vector<T> data_;
-  int size_;
 };
+
 #endif

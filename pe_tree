@@ -6,13 +6,28 @@
 class IndexHelper {
  public:
   IndexHelper(const vector<int64>& elements) { Reset(elements); }
+  IndexHelper(const vector<int64>&& elements) { Reset(std::move(elements)); }
+  template <typename IT>
+  IndexHelper(IT s, IT e) {
+    Reset(std::vector<int64>(s, e));
+  }
 
   IndexHelper& Reset(const vector<int64>& elements) {
     elements_ = elements;
+    ResetInternal();
+    return *this;
+  }
+
+  IndexHelper& Reset(const vector<int64>&& elements) {
+    elements_ = std::move(elements);
+    ResetInternal();
+    return *this;
+  }
+
+  void ResetInternal() {
     sort(elements_.begin(), elements_.end());
     size_ = std::unique(elements_.begin(), elements_.end()) - elements_.begin();
     elements_.resize(size_);
-    return *this;
   }
 
   int size() const { return size_; }

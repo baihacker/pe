@@ -1,8 +1,8 @@
 #include <pe.hpp>
 
 struct CalPI : public ParallelRangeT<CalPI> {
-  int64 update_result(int64 result, int64 value) { return result + value; }
-  int64 work_on_block(int64 first, int64 last, int64 worker) {
+  int64 UpdateResult(int64 result, int64 value) { return result + value; }
+  int64 WorkOnBlock(int64 first, int64 last, int64 worker) {
     int64 t = 0;
     for (int64 i = first; i <= last; ++i) t += IsPrimeEx(i);
     return t;

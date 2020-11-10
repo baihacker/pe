@@ -134,18 +134,26 @@ struct RangeBase {
                            static_cast<const DERIVED&>(*this).end(), filter};
   }
 
+  int64 CalDefaultEach(const int64 size, const int thread_number,
+                       const int64 each) const {
+    return each == 0 ? max<int64>(size / thread_number / 2, 1) : each;
+  }
+
   VectorRange<value_type> PFilter(const std::function<int(arg_type)>& filter,
-                                  const int thread_number = 8) const {
+                                  const int thread_number = 8,
+                                  int64 each = 0) const {
     auto data = ToVector();
     const int size = sz(data);
     if (size == 0) {
       return vector<value_type>{};
     }
 
+    each = CalDefaultEach(size, thread_number, each);
+
     vector<vector<value_type>> tmp(thread_number);
     vector<value_type> vec;
 #if ENABLE_OPENMP
-#pragma omp parallel for schedule(dynamic) num_threads(thread_number)
+#pragma omp parallel for schedule(dynamic, each) num_threads(thread_number)
     for (int i = 0; i < size; ++i) {
       if (filter(data[i])) {
         const auto id = omp_get_thread_num();
@@ -179,18 +187,20 @@ struct RangeBase {
   }
 
   template <typename T>
-  auto PReduce(const T& reducer, const int thread_number = 8) const ->
-      typename T::VT {
+  auto PReduce(const T& reducer, const int thread_number = 8,
+               int64 each = 0) const -> typename T::VT {
 #if ENABLE_OPENMP
     using VT = typename T::VT;
     auto data = ToVector();
-    const int size = sz(data);
+    const int64 size = sz(data);
     if (size == 0) {
       return reducer.GetInitValue();
     }
 
+    each = CalDefaultEach(size, thread_number, each);
+
     vector<VT> tmp(thread_number, reducer.GetInitValue());
-#pragma omp parallel for schedule(dynamic) num_threads(thread_number)
+#pragma omp parallel for schedule(dynamic, each) num_threads(thread_number)
     for (int i = 0; i < size; ++i) {
       const auto id = omp_get_thread_num();
       reducer.Accumulate(tmp[id], std::move(data[i]));
@@ -218,8 +228,8 @@ struct RangeBase {
   }
 
   template <typename VT, typename AT>
-  VT PReduce(const VT& v, const AT& accumulator,
-             const int thread_number = 8) const {
+  VT PReduce(const VT& v, const AT& accumulator, const int thread_number = 8,
+             int64 each = 0) const {
 #if ENABLE_OPENMP
     auto data = ToVector();
     const int size = sz(data);
@@ -227,8 +237,10 @@ struct RangeBase {
       return v;
     }
 
+    each = CalDefaultEach(size, thread_number, each);
+
     vector<VT> tmp(thread_number, v);
-#pragma omp parallel for schedule(dynamic) num_threads(thread_number)
+#pragma omp parallel for schedule(dynamic, each) num_threads(thread_number)
     for (int i = 0; i < size; ++i) {
       const auto id = omp_get_thread_num();
       accumulator(tmp[id], data[i]);
@@ -246,7 +258,7 @@ struct RangeBase {
 
   template <typename VT, typename AT, typename CT>
   VT PReduce(const VT& v, const AT& accumulator, const CT& combiner,
-             const int thread_number = 8) const {
+             const int thread_number = 8, int64 each = 0) const {
 #if ENABLE_OPENMP
     auto data = ToVector();
     const int size = sz(data);
@@ -254,8 +266,10 @@ struct RangeBase {
       return v;
     }
 
+    each = CalDefaultEach(size, thread_number, each);
+
     vector<VT> tmp(thread_number, v);
-#pragma omp parallel for schedule(dynamic) num_threads(thread_number)
+#pragma omp parallel for schedule(dynamic, each) num_threads(thread_number)
     for (int i = 0; i < size; ++i) {
       const auto id = omp_get_thread_num();
       accumulator(tmp[id], data[i]);
@@ -280,16 +294,18 @@ struct RangeBase {
 
   template <typename TT>
   VectorRange<TT> PMap(const std::function<TT(arg_type)>& mapper,
-                       const int thread_number = 8) const {
+                       const int thread_number = 8, int64 each = 0) const {
     auto data = ToVector();
     const int size = sz(data);
     if (size == 0) {
       return vector<TT>{};
     }
 
+    each = CalDefaultEach(size, thread_number, each);
+
     vector<TT> vec(size);
 #if ENABLE_OPENMP
-#pragma omp parallel for schedule(dynamic) num_threads(thread_number)
+#pragma omp parallel for schedule(dynamic, each) num_threads(thread_number)
 #endif
     for (int i = 0; i < size; ++i) {
       vec[i] = mapper(std::move(data[i]));
@@ -309,7 +325,8 @@ struct RangeBase {
   }
 
   template <typename T>
-  self_type& PForEach(const T& action, const int thread_number = 8) {
+  self_type& PForEach(const T& action, const int thread_number = 8,
+                      int64 each = 0) {
 #if ENABLE_OPENMP
     auto data = ToVector();
     const int size = sz(data);
@@ -317,7 +334,9 @@ struct RangeBase {
       return *this;
     }
 
-#pragma omp parallel for schedule(dynamic) num_threads(thread_number)
+    each = CalDefaultEach(size, thread_number, each);
+
+#pragma omp parallel for schedule(dynamic, each) num_threads(thread_number)
     for (int i = 0; i < size; ++i) {
       action(std::move(data[i]));
     }
@@ -567,6 +586,79 @@ struct NumberRange : public RangeBase<NumberRange<ET>, NumberIter<ET>> {
 
   int64 CountImpl() const { return static_cast<int64>(e_ - b_); }
 
+  template <typename T>
+  auto PReduce(const T& reducer, const int thread_number = 8,
+               int64 each = 0) const -> typename T::VT {
+#if ENABLE_OPENMP
+    using VT = typename T::VT;
+
+    each = RangeBase<NumberRange<ET>, NumberIter<ET>>::CalDefaultEach(
+        e_ - b_, thread_number, each);
+
+    vector<VT> tmp(thread_number, reducer.GetInitValue());
+#pragma omp parallel for schedule(dynamic, each) num_threads(thread_number)
+    for (ET i = b_; i < e_; ++i) {
+      const auto id = omp_get_thread_num();
+      reducer.Accumulate(tmp[id], i);
+    }
+
+    VT ret = tmp[0];
+    for (int i = 1; i < thread_number; ++i) {
+      reducer.Combine(ret, std::move(tmp[i]));
+    }
+    return ret;
+#else
+    return Reduce(reducer);
+#endif
+  }
+
+  template <typename VT, typename AT>
+  VT PReduce(const VT& v, const AT& accumulator, const int thread_number = 8,
+             int64 each = 0) const {
+#if ENABLE_OPENMP
+    each = RangeBase<NumberRange<ET>, NumberIter<ET>>::CalDefaultEach(
+        e_ - b_, thread_number, each);
+
+    vector<VT> tmp(thread_number, v);
+#pragma omp parallel for schedule(dynamic, each) num_threads(thread_number)
+    for (ET i = b_; i < e_; ++i) {
+      const auto id = omp_get_thread_num();
+      accumulator(tmp[id], i);
+    }
+
+    VT ret = tmp[0];
+    for (int i = 1; i < thread_number; ++i) {
+      accumulator(ret, std::move(tmp[i]));
+    }
+    return ret;
+#else
+    return Reduce(v, accumulator);
+#endif
+  }
+
+  template <typename VT, typename AT, typename CT>
+  VT PReduce(const VT& v, const AT& accumulator, const CT& combiner,
+             const int thread_number = 8, int64 each = 0) const {
+#if ENABLE_OPENMP
+    each = RangeBase<NumberRange<ET>, NumberIter<ET>>::CalDefaultEach(
+        e_ - b_, thread_number, each);
+
+    vector<VT> tmp(thread_number, v);
+#pragma omp parallel for schedule(dynamic, each) num_threads(thread_number)
+    for (ET i = b_; i < e_; ++i) {
+      const auto id = omp_get_thread_num();
+      accumulator(tmp[id], i);
+    }
+
+    VT ret = tmp[0];
+    for (int i = 1; i < thread_number; ++i) {
+      combiner(ret, std::move(tmp[i]));
+    }
+    return ret;
+#else
+    return Reduce(v, accumulator);
+#endif
+  }
   const value_type b_;
   const value_type e_;
 };

@@ -79,8 +79,9 @@ SL void SumSigma0Test() {
   for (int64 i = 1; i <= 10000; ++i) {
     int64 u = SumSigma0(i);
     int64 v = SumSigma0Bf(i);
-    if (u != v) {
-      cerr << i << " " << u << " " << v << endl;
+    auto w = v;  // min25::sigma0_sum_fast(i);
+    if (u != v || v != w || u != w) {
+      cerr << i << " " << u << " " << v << " " << w << endl;
     }
     assert(u == v);
   }
@@ -92,8 +93,9 @@ SL void SumSigma0Test() {
       int64 target = i + j;
       int64 u = SumSigma0(target);
       int64 v = SumSigma0Bf(target);
-      if (u != v) {
-        cerr << target << " " << u << " " << v << endl;
+      auto w = v;  // min25::sigma0_sum_fast(i);
+      if (u != v || v != w || u != w) {
+        cerr << target << " " << u << " " << v << " " << w << endl;
       }
       assert(u == v);
     }

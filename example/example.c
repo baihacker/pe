@@ -130,7 +130,7 @@ void poly_mul_example() {
 }
 
 int main() {
-  pe().set_max_prime(2000000).set_cal_mu().set_cal_phi().Init();
+  PE_INIT(maxp=2000000,cal_phi=1,cal_mu=1);
 
   prime_sum();
   mu_sum();

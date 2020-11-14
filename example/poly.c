@@ -3,12 +3,14 @@
 const int64 mod = 1000000007;
 int main() {
   {
+    // Polynomial inverse
     NModPoly x{{1LL, 96LL}, 97};
     cout << x.Inv(20) << endl;
     cout << x.Inv(20) * x << endl;
   }
 
   {
+    // Polynomial inverse
     NModPoly x{{}, 97};
     for (int i = 1; i < 100; ++i) x.data.push_back(i % 97);
     cout << x.Inv(100) * x << endl;

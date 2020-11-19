@@ -2370,14 +2370,14 @@ struct MVVHistory {
  * auto compute = [&](int64 val, int imp, int64 vmp, MVVHistory* his,
  *                    int top) -> int64 { return 1; };
  */
-template <typename T = int64>
+template <typename RT = int64>
 struct MValueVisitor {
-  using VisitorType = std::function<T(int64, int, int64, MVVHistory*, int)>;
+  using VisitorType = std::function<RT(int64, int, int64, MVVHistory*, int)>;
 
   MValueVisitor(const VisitorType& visitor) : visitor_(visitor), top_(0) {}
 
-  T Dfs(int limit, int64 n, int64 val, int imp, int64 vmp) {
-    T ret = visitor_(val, imp, vmp, history_, top_);
+  RT Dfs(int limit, int64 n, int64 val, int imp, int64 vmp) {
+    RT ret = visitor_(val, imp, vmp, history_, top_);
     for (int i = 0; i < limit; ++i) {
       const int64 p = plist[i];
       const int next_imp = imp == -1 ? i : imp;
@@ -2398,7 +2398,7 @@ struct MValueVisitor {
     return ret;
   }
 
-  T Cal(int64 n) { return Dfs(FindPrimeIdxSg(n), n, 1, -1, 0); }
+  RT Cal(int64 n) { return Dfs(FindPrimeIdxSg(n), n, 1, -1, 0); }
 
  private:
   VisitorType visitor_;
@@ -2406,205 +2406,18 @@ struct MValueVisitor {
   int top_;
 };
 
-template <typename T>
-T ForMValues(
+template <typename RT>
+RT ForMValues(
     int64 n,
-    const std::function<T(int64, int, int64, MVVHistory*, int)>& visitor) {
-  return MValueVisitor<T>(visitor).Cal(n);
+    const std::function<RT(int64, int, int64, MVVHistory*, int)>& visitor) {
+  return MValueVisitor<RT>(visitor).Cal(n);
 }
 
-/**
-Version 1:
-struct Solver : public MValueBaseExLite<Solver, RT, 8> {
-  RT F(int64 p, int64 e) {
-    return e + 1;
-  }
-};
-
-Version 2:
-struct Solver : public MValueBaseEx<Solver, RT, 8> {
-  RT F(int64 p, int64 e) {
-    return e + 1;
-  }
-  RT BatchF(int imp, int64 vmp, int64 remain) {
-    return F(2, 1) * RT(dva[remain] - (imp + 1));
-  }
-  void Init(int64 n) {
-    dva = PrimeS0Ex<int64>(n);
-  }
-  DVA<int64> dva;
-};
-
-Version 3:
-DVA<int64> dva(1);
-using RT = int64;
-struct Solver : public MValueBaseTP<Solver, RT, 8> {
-  RT Batch(int64 n, int64 val, int imp, int64 vmp, int emp, RT now) {
-    RT ret = 0;
-    int64 remain = n / val;
-    // we have remain >= vmp
-    // handle val * q where q > vmp
-    if (remain > vmp) {
-      ret += now * (dva[remain] - (imp + 1)) * 2;
-    }
-    if (val > 1) {
-      // handle val * vmp
-      ret += now / tmp[omp_get_thread_num()] * F(vmp, emp + 1);
-    } else {
-      // handle f(1)
-      ret += 1;
-    }
-    return ret;
-  }
-  RT F(int64 p, int e) { return e + 1; }
-  void VisitMaxPrime(int64 vmp, int emp, RT now) {
-    tmp[omp_get_thread_num()] = F(vmp, emp);
-  }
-  RT tmp[64];
-};
-
-Version 4:
-MVVHistory history_[128];
-int top_;
-RT Dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, RT now) {
-  RT ret = 0;{
-    int64 remain = n / val;
-    // we have remain >= vmp
-    // handle val * q where q > vmp
-    if (remain > vmp) {
-      ret += now * (dva[remain] - (imp + 1)) * 2;
-    }
-    if (val > 1) {
-      // handle val * vmp
-      ret += now / (history_[0].e + 1) * (emp + 2);
-    } else {
-      // handle f(1)
-      ret += 1;
-    }
-  }
-  for (int i = 0; i < limit; ++i) {
-    const int64 p = plist[i];
-    const int next_imp = imp == -1 ? i : imp;
-    const int64 next_vmp = imp == -1 ? p : vmp;
-    const int64 val_limit = n / p / next_vmp;
-    if (val > val_limit) break;
-    history_[top_].ip = i;
-    history_[top_].p = p;
-    history_[top_].e = 1;
-    int& e = history_[top_++].e;
-    for (int64 nextval = val * p;; ++e) {
-      RT tmp = now * (e + 1);
-      ret += Dfs(i, n, nextval, next_imp, next_vmp, imp == -1 ? e : emp, tmp);
-      if (nextval > val_limit) break;
-      nextval *= p;
-    }
-    --top_;
-  }
-  return ret;
-}
-Dfs(pcnt, n, 1, -1, 1, 0, 1)
-*/
-
-template <typename D, typename T = int64>
-struct MValueBaseT {
-  T Dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, T now) {
-    T ret = static_cast<D&>(*this).Batch(n, val, imp, vmp, emp, now);
-    for (int i = 0; i < limit; ++i) {
-      const int64 p = plist[i];
-      const int next_imp = imp == -1 ? i : imp;
-      const int64 next_vmp = imp == -1 ? p : vmp;
-      const int64 val_limit = n / p / next_vmp;
-      if (val > val_limit) break;
-      history_[top_].ip = i;
-      history_[top_].p = p;
-      history_[top_].e = 1;
-      int& e = history_[top_++].e;
-      for (int64 nextval = val * p;; ++e) {
-        T tmp = now * static_cast<D&>(*this).F(p, e);
-        if (imp == -1) {
-          static_cast<D&>(*this).VisitMaxPrime(next_vmp, e, tmp);
-        }
-        ret += Dfs(i, n, nextval, next_imp, next_vmp, imp == -1 ? e : emp, tmp);
-        if (nextval > val_limit) break;
-        nextval *= p;
-      }
-      --top_;
-    }
-    return ret;
-  }
-
-  void VisitMaxPrime(int64 vmp, int emp, T now) {}
-
-  T Cal(int64 n) {
-    top_ = 0;
-    return Dfs(FindPrimeIdxSg(n), n, 1, -1, 1, 0, 1);
-  }
-
- private:
-  MVVHistory history_[128];
-  int top_;
-};
-
-template <typename D, typename T = int64, int TN = 1>
-struct MValueBaseTP {
-  T Dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, T now) {
-    T ret = static_cast<D&>(*this).Batch(n, val, imp, vmp, emp, now);
-#if ENABLE_OPENMP
-    if (val == 1 && TN > 1) {
-      PSum<T> sum_helper;
-#pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
-      for (int i = 0; i < limit; ++i) {
-        const int64 p = plist[i];
-        const int next_imp = imp == -1 ? i : imp;
-        const int64 next_vmp = imp == -1 ? p : vmp;
-        const int64 val_limit = n / p / next_vmp;
-        int e = 1;
-        for (int64 nextval = val * p;; ++e) {
-          T tmp = now * static_cast<D&>(*this).F(p, e);
-          if (imp == -1) {
-            static_cast<D&>(*this).visitMaxPrime(next_vmp, e, tmp);
-          }
-          sum_helper +=
-              Dfs(i, n, nextval, next_imp, next_vmp, imp == -1 ? e : emp, tmp);
-          if (nextval > val_limit) break;
-          nextval *= p;
-        }
-      }
-      ret += sum_helper.value();
-    } else {
-#endif
-      for (int i = 0; i < limit; ++i) {
-        const int64 p = plist[i];
-        const int next_imp = imp == -1 ? i : imp;
-        const int64 next_vmp = imp == -1 ? p : vmp;
-        const int64 val_limit = n / p / next_vmp;
-        if (val > val_limit) break;
-        int e = 1;
-        for (int64 nextval = val * p;; ++e) {
-          T tmp = now * static_cast<D&>(*this).F(p, e);
-          if (imp == -1) {
-            static_cast<D&>(*this).visitMaxPrime(next_vmp, e, tmp);
-          }
-          ret +=
-              Dfs(i, n, nextval, next_imp, next_vmp, imp == -1 ? e : emp, tmp);
-          if (nextval > val_limit) break;
-          nextval *= p;
-        }
-      }
-#if ENABLE_OPENMP
-    }
-#endif
-    return ret;
-  }
-
-  void VisitMaxPrime(int64 vmp, int emp, T now) {}
-  T Cal(int64 n) { return Dfs(FindPrimeIdxSg(n), n, 1, -1, 1, 0, 1); }
-};
-
-template <typename D, typename T = int64, int TN = 1>
+// See example/multiplicative_function_prefix_sum.c
+template <typename D, typename RT = int64, int TN = 1>
 struct MValueBaseEx {
-  T Batch(int64 n, int64 val, int imp, int64 vmp, int emp, T now, T now1) {
-    T ret = 0;
+  RT Batch(int64 n, int64 val, int imp, int64 vmp, int emp, RT now, RT now1) {
+    RT ret = 0;
     int64 remain = n / val;
     // we have remain >= vmp
     // handle val * q where q > vmp
@@ -2621,12 +2434,12 @@ struct MValueBaseEx {
     return ret;
   }
 
-  T Dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, T now,
-        T now1) {
-    T ret = static_cast<D&>(*this).Batch(n, val, imp, vmp, emp, now, now1);
+  RT Dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, RT now,
+         RT now1) {
+    RT ret = static_cast<D&>(*this).Batch(n, val, imp, vmp, emp, now, now1);
 #if ENABLE_OPENMP
     if (val == 1 && TN > 1) {
-      PSum<T> sum_helper;
+      PSum<RT> sum_helper;
 #pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
       for (int i = 0; i < limit; ++i) {
         const int64 p = plist[i];
@@ -2635,7 +2448,7 @@ struct MValueBaseEx {
         const int64 val_limit = n / p / next_vmp;
         int e = 1;
         for (int64 nextval = val * p;; ++e) {
-          T t = static_cast<D&>(*this).F(p, e);
+          RT t = static_cast<D&>(*this).F(p, e);
           sum_helper +=
               Dfs(i, n, nextval, next_imp, next_vmp, imp == -1 ? e : emp,
                   now * t, imp == -1 ? 1 : now1 * t);
@@ -2654,7 +2467,7 @@ struct MValueBaseEx {
         if (val > val_limit) break;
         int e = 1;
         for (int64 nextval = val * p;; ++e) {
-          T t = static_cast<D&>(*this).F(p, e);
+          RT t = static_cast<D&>(*this).F(p, e);
           ret += Dfs(i, n, nextval, next_imp, next_vmp, imp == -1 ? e : emp,
                      now * t, imp == -1 ? 1 : now1 * t);
           if (nextval > val_limit) break;
@@ -2667,10 +2480,10 @@ struct MValueBaseEx {
     return ret;
   }
 
-  T F(int64 /*p*/, int64 /*e*/) { return 1; }
-  T BatchF(int /*imp*/, int64 /*vmp*/, int64 /*remain*/) { return 1; }
+  RT F(int64 /*p*/, int64 /*e*/) { return 1; }
+  RT BatchF(int /*imp*/, int64 /*vmp*/, int64 /*remain*/) { return 1; }
   void Init(int64 n) {}
-  T Cal(int64 n) {
+  RT Cal(int64 n) {
     static_cast<D&>(*this).Init(n);
     return Dfs(FindPrimeIdxSg(n), n, 1, -1, 1, 0, 1, 1);
   }
@@ -2680,10 +2493,10 @@ struct MValueBaseEx {
  * The lite version assumes that F(p, e) is only related to e.
  * In other words, F(p1, e) = F(p2, e) for two different primes p1, p2.
  */
-template <typename D, typename T = int64, int TN = 1>
-struct MValueBaseExLite : public MValueBaseEx<D, T, TN> {
-  T BatchF(int imp, int64 /*vmp*/, int64 remain) {
-    return static_cast<D&>(*this).F(2, 1) * T(dva[remain] - (imp + 1));
+template <typename D, typename RT = int64, int TN = 1>
+struct MValueBaseExLite : public MValueBaseEx<D, RT, TN> {
+  RT BatchF(int imp, int64 /*vmp*/, int64 remain) {
+    return static_cast<D&>(*this).F(2, 1) * RT(dva[remain] - (imp + 1));
   }
   void Init(int64 n) { dva = PrimeS0Ex<int64>(n); }
   DVA<int64> dva;
@@ -2913,7 +2726,6 @@ struct NotDivCounter {
  *
  * Example: examples/dfa_counter.c
  */
-
 template <typename CT>
 struct DfaCounter {
   DfaCounter& set_count_each_len(int count_each_len) {

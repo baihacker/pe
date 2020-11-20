@@ -1877,12 +1877,13 @@ SL DVA<T> PrimeS1Ex(const int64 n) {
 }
 
 template <typename TreeType>
-SL void PrimeSkExImpl(const int64 /*n*/, int /*k*/, int64* PK, TreeType& tree,
+SL void PrimeSkExImpl(const int64 /*n*/, int k, int64* PK, TreeType& tree,
                       DVA<int64>& dva, int64 mod) {
   const int key_size = static_cast<int>(dva.key_size);
   int pid = 0;
   for (int64 p = 2; p <= dva.m; ++p)
     if (IsPrime(p)) {
+      const int64 pk = PK ? PK[pid] : PowerModEx(p, k, mod);
       const auto psum = tree.Query(static_cast<int>(p - 1)).value();
       const int64 p2 = p * p;
       const int a = key_size - 1;
@@ -1891,7 +1892,7 @@ SL void PrimeSkExImpl(const int64 /*n*/, int /*k*/, int64* PK, TreeType& tree,
         const auto delta = SubMod(
             tree.Query(dva.IdxOfValue(dva.keys[i] / p)).value(), psum, mod);
         const int mini = max(dva.IdxOfValue(dva.keys[i] / p * p), b);
-        tree.Update(mini, i, SubMod(0, MulModEx(delta, PK[pid], mod), mod));
+        tree.Update(mini, i, SubMod(0, MulModEx(delta, pk, mod), mod));
         i = mini - 1;
       }
       ++pid;
@@ -1922,7 +1923,7 @@ SL DVA<int64> PrimeSkEx(const int64 n, int k, int64* PK, int64 mod) {
 }
 
 template <int64 mod>
-SL DVA<int64> PrimeSkEx(const int64 n, int k, int64* PK) {
+SL DVA<int64> PrimeSkEx(const int64 n, int k, int64* PK = nullptr) {
   PowerSumModerB psm(mod);
 
   PE_ASSERT(n >= 1);
@@ -1937,72 +1938,7 @@ SL DVA<int64> PrimeSkEx(const int64 n, int k, int64* PK) {
     tree.Update(id, id, val);
   }
 
-  prime_sk_ex_impl(n, k, PK, tree, dva, mod);
-
-  return dva;
-}
-
-template <typename TreeType>
-SL void PrimeSkExImpl(const int64 /*n*/, int k, TreeType& tree, DVA<int64>& dva,
-                      int64 mod) {
-  const int key_size = static_cast<int>(dva.key_size);
-
-  for (int64 p = 2; p <= dva.m; ++p)
-    if (IsPrime(p)) {
-      const int64 pk = PowerModEx(p, k, mod);
-      const auto psum = tree.Query(static_cast<int>(p - 1)).value();
-      const int64 p2 = p * p;
-      const int a = key_size - 1;
-      const int b = dva.IdxOfValue(p2);
-      for (int i = a; i >= b;) {
-        const auto delta = SubMod(
-            tree.Query(dva.IdxOfValue(dva.keys[i] / p)).value(), psum, mod);
-        const int mini = max(dva.IdxOfValue(dva.keys[i] / p * p), b);
-        tree.Update(mini, i, SubMod(0, MulModEx(delta, pk, mod), mod));
-        i = mini - 1;
-      }
-    }
-
-  for (int i = 1; i < key_size; ++i) dva[dva.keys[i]] = tree.Query(i).value();
-}
-
-SL DVA<int64> PrimeSkEx(const int64 n, int k, int64 mod) {
-  PowerSumModerB psm(mod);
-
-  PE_ASSERT(n >= 1);
-  DVA<int64> dva(n);
-
-  const int key_size = static_cast<int>(dva.key_size);
-  RUBit<NModNumber<DefaultMod>> tree(key_size);
-
-  for (auto& key : dva.FKeys()) {
-    const int id = dva.IdxOfValue(key);
-    const int64 val = SubMod(psm.Cal(key, k), 1, mod);
-    tree.Update(id, id, val);
-  }
-
-  PrimeSkExImpl(n, k, tree, dva, mod);
-
-  return dva;
-}
-
-template <int64 mod>
-SL DVA<int64> PrimeSkEx(const int64 n, int k) {
-  PowerSumModerB psm(mod);
-
-  PE_ASSERT(n >= 1);
-  DVA<int64> dva(n);
-
-  const int key_size = static_cast<int>(dva.key_size);
-  RUBit<NModNumber<CCMod64<mod>>> tree(key_size);
-
-  for (auto& key : dva.FKeys()) {
-    const int id = dva.IdxOfValue(key);
-    const int64 val = SubMod(psm.Cal(key, k), 1, mod);
-    tree.Update(id, id, val);
-  }
-
-  prime_sk_ex_impl(n, k, tree, dva, mod);
+  PrimeSkExImpl(n, k, PK, tree, dva, mod);
 
   return dva;
 }

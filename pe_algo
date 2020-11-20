@@ -706,13 +706,13 @@ SL int64 PowerSumSafe(int64 n, int64 k, int64 mod) {
  * Complex: O(k^2)
  */
 template <typename T, int D>
-SL void InitPowerSumMod(int64 n, const int maxk, int* result, T (*comb)[D],
+SL void InitPowerSumMod(int64 n, const int maxk, int64* result, T (*comb)[D],
                         const int64 mod) {
-  PE_ASSERT(maxk < D);
+  PE_ASSERT(maxk + 1 < D);
   result[0] = n % mod;
   for (int i = 1; i <= maxk; ++i) {
     int64 tmp = PowerModEx(n, i + 1, mod);
-    for (int j = 1; j <= i + 1; ++j) {
+    for (int j = 2; j <= i + 1; ++j) {
       if (j & 1) {
         tmp =
             SubMod(tmp, MulModEx(comb[i + 1][j], result[i + 1 - j], mod), mod);
@@ -721,7 +721,7 @@ SL void InitPowerSumMod(int64 n, const int maxk, int* result, T (*comb)[D],
             AddMod(tmp, MulModEx(comb[i + 1][j], result[i + 1 - j], mod), mod);
       }
     }
-    result[i] = tmp * InvOf(comb[i + 1][1], mod) % mod;
+    result[i] = MulModEx(tmp, InvOf(comb[i + 1][1], mod), mod);
   }
 }
 

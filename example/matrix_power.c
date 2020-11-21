@@ -17,7 +17,7 @@ int64 solve0(int64 n) {
         m(0, 1) = 1;
         m(1, 0) = 1;
         v[0] = 1;
-        v[1] = 1;
+        v[1] = 0;
       },
       2, n);
   return ans[0];
@@ -31,7 +31,7 @@ int64 solve1(int64 n) {
         m(0, 1) = 1;
         m(1, 0) = 1;
         v[0] = 1;
-        v[1] = 1;
+        v[1] = 0;
       },
       2, n);
   return ans[0].value();
@@ -47,7 +47,7 @@ int64 solve2(int64 n, int64 mod) {
         m(0, 1) = 1;
         m(1, 0) = 1;
         v[0] = 1;
-        v[1] = 1;
+        v[1] = 0;
       },
       2, n, mod);
   return ans[0];
@@ -63,7 +63,7 @@ int64 solve3(int64 n, int64 rmod) {
         m(0, 1) = 1;
         m(1, 0) = 1;
         v[0] = 1;
-        v[1] = 1;
+        v[1] = 0;
       },
       2, n);
   return ans[0].value();
@@ -80,7 +80,7 @@ int64 solve4(int64 n, int64 rmod) {
         m(0, 1) = 1;
         m(1, 0) = 1;
         v[0] = 1;
-        v[1] = 1;
+        v[1] = 0;
       },
       2, n);
   return ans[0].value();

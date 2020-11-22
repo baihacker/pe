@@ -220,6 +220,8 @@ CC=$(CROSS_PREFIX)gcc
 CFLAGS=-Wall
 CFLAGS+=-O3
 CFLAGS+=-D__MSVCRT_VERSION__=0x1400
+CFLAGS+=-Wno-format-extra-args
+CFLAGS+=-Wno-format
 CFLAGS+=-march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0
 LDFLAGS=
 
@@ -253,6 +255,10 @@ CFLAGS+=-O3
 CFLAGS+=-D__MSVCRT_VERSION__=0x1400
 CFLAGS+=-I../include
 CFLAGS+=--std=c++14
+CFLAGS+=-Wno-maybe-uninitialized
+CFLAGS+=-Wno-unused-variable
+CFLAGS+=-Wno-unused-function
+CFLAGS+=-Wno-unused-but-set-variable
 CFLAGS+=-march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0
 LDFLAGS=
 
@@ -285,7 +291,8 @@ clean:
   4. make install
 
 ## Auto build script
-```
+Create makefile_libbf and makefile_ntl whose content is mentioned in the previous section
+```cpp
 #!/bin/bash
 
 BUILD_ROOT=$(pwd)

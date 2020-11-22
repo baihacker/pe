@@ -9,7 +9,7 @@ const int show = 1;
 template <typename E>
 void Test(const vector<int>& data, const vector<int>& V) {
   std::vector<E> v(K, 0);
-  MatT<E> m = MatT<E>::Zero(K, K);
+  EigenMatrix<E> m = EigenMatrix<E>::Zero(K, K);
 
   for (int i = 0; i < K; ++i) v[i] = V[i];
   rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j * K + i];
@@ -95,7 +95,7 @@ SL void MatMulTest() {
   {
     typedef int64 E;
     std::vector<E> v(K, 0);
-    MatT<E> m = MatT<E>::Zero(K, K);
+    EigenMatrix<E> m = EigenMatrix<E>::Zero(K, K);
 
     for (int i = 0; i < K; ++i) v[i] = V[i];
     rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j * K + i];
@@ -114,7 +114,7 @@ SL void MatMulTest() {
   {
     typedef int128 E;
     std::vector<E> v(K, 0);
-    MatT<E> m = MatT<E>::Zero(K, K);
+    EigenMatrix<E> m = EigenMatrix<E>::Zero(K, K);
 
     for (int i = 0; i < K; ++i) v[i] = V[i];
     rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j * K + i];

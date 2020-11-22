@@ -9,10 +9,9 @@ using MT = NMod64<mod>;
  * |1 0|      |0|
  */
 
-#if ENABLE_EIGEN
 // mod is specified at compiling time.
 int64 solve0(int64 n) {
-  auto ans = PowerMod<mod>(
+  auto ans = MatrixPowerMod<mod>(
       [=](auto& m, auto& v) {
         m(0, 0) = 1;
         m(0, 1) = 1;
@@ -26,7 +25,7 @@ int64 solve0(int64 n) {
 
 // Use a customized type which depends on mod specified at compiling time.
 int64 solve1(int64 n) {
-  auto ans = PowerMod<MT>(
+  auto ans = MatrixPowerMod<MT>(
       [=](auto& m, auto& v) {
         m(0, 0) = 1;
         m(0, 1) = 1;
@@ -42,7 +41,7 @@ int64 solve1(int64 n) {
 // If int128 is available, use int128 as element type, different threads use
 // different mod. Otherwise, use DefaultMod, All the threads use the same mod.
 int64 solve2(int64 n, int64 mod) {
-  auto ans = PowerMod(
+  auto ans = MatrixPowerMod(
       [=](auto& m, auto& v) {
         m(0, 0) = 1;
         m(0, 1) = 1;
@@ -58,7 +57,7 @@ int64 solve2(int64 n, int64 mod) {
 // Different threads use different mod.
 int64 solve3(int64 n, int64 rmod) {
   TLMod<int64>::Set(rmod);
-  auto ans = PowerMod<TLNMod64<>>(
+  auto ans = MatrixPowerMod<TLNMod64<>>(
       [=](auto& m, auto& v) {
         m(0, 0) = 1;
         m(0, 1) = 1;
@@ -75,7 +74,7 @@ int64 solve3(int64 n, int64 rmod) {
 int64 solve4(int64 n, int64 rmod) {
   using T = NModNumber<DefaultMod>;
   DefaultMod::Set(rmod);
-  auto ans = PowerMod<T>(
+  auto ans = MatrixPowerMod<T>(
       [=](auto& m, auto& v) {
         m(0, 0) = 1;
         m(0, 1) = 1;
@@ -86,12 +85,10 @@ int64 solve4(int64 n, int64 rmod) {
       2, n);
   return ans[0].value();
 }
-#endif
 
 int main() {
   PE_INIT(maxp = 2000000);
 
-#if ENABLE_EIGEN
   for (int64 n = 1; n <= 1000000000; n *= 10) {
     cout << "n = " << n << endl;
     int64 ans0 = solve0(n);
@@ -120,6 +117,6 @@ int main() {
       cout << "Ans4 = " << ans4 << endl;
       cout << endl;
     }
-#endif
+
   return 0;
 }

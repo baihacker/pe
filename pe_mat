@@ -119,14 +119,652 @@ SL void MatMulVecMod(T* aa, T* b, T* c, int64 mod, int N) {
   }
 }
 
+namespace pe_mat {
+template <typename T, int C = -1>
+struct MatStorage {
+  MatStorage(T* data, const int r, const int c) : data_(data), own_(0), r_(r) {
+    PE_ASSERT(c == C);
+  }
+
+  MatStorage(const int r, const int c) : own_(1), r_(r) {
+    PE_ASSERT(c == C);
+    data_ = new T[r_ * C];
+  }
+
+  MatStorage(const int r, const int c, T v) : own_(1), r_(r) {
+    PE_ASSERT(c == C);
+    data_ = new T[r_ * C];
+    std::fill(data_, data_ + r_ * C, v);
+  }
+
+  MatStorage(const MatStorage& storage)
+      : MatStorage(storage.r, storage.column()) {
+    PE_ASSERT(storage.column() == C);
+    std::copy(storage.data_, storage.data_ + r_ * C, data_);
+  }
+
+  MatStorage(MatStorage&& storage)
+      : data_(storage.data_), own_(storage.own_), r_(storage.r_) {
+    PE_ASSERT(storage.column() == C);
+    storage.own_ = 0;
+  }
+
+  template <int C1>
+  MatStorage(const MatStorage<T, C1>& storage)
+      : MatStorage(storage.r, storage.column()) {
+    PE_ASSERT(storage.column() == C);
+    std::copy(storage.data_, storage.data_ + r_ * C, data_);
+  }
+
+  template <int C1>
+  MatStorage(MatStorage<T, C1>&& storage)
+      : data_(storage.data_), own_(storage.own_), r_(storage.r_) {
+    PE_ASSERT(storage.column() == C);
+    storage.own_ = 0;
+  }
+
+  template <int C1>
+  MatStorage& operator=(MatStorage<T, C1>& storage) {
+    if (&storage != this) {
+      Release();
+      ::new (this) MatStorage(storage);
+    }
+    return *this;
+  }
+
+  template <int C1>
+  MatStorage& operator=(MatStorage<T, C1>&& storage) {
+    if (&storage != this) {
+      Release();
+      ::new (this) MatStorage(std::move(storage));
+    }
+    return *this;
+  }
+
+  ~MatStorage() { Release(); }
+
+  void Release() {
+    if (own_) {
+      delete[] data_;
+    }
+  }
+
+  const int column() const { return C; }
+
+  T* data() { return data_; }
+
+  T& at(const int x, const int y) { return at(data_, x, y); }
+
+  T& at(T* data, const int x, const int y) { return data[x * column() + y]; }
+
+  const T& at(const T* data, const int x, const int y) const {
+    return data[x * column() + y];
+  }
+
+ private:
+  T* data_;
+  int own_;
+  int r_;
+};
+
+template <typename T>
+struct MatStorage<T, -1> {
+  MatStorage(T* data, const int r, const int c)
+      : data_(data), own_(0), r_(r), c_(c) {}
+
+  MatStorage(const int r, const int c) : own_(1), r_(r), c_(c) {
+    data_ = new T[r_ * c_];
+  }
+
+  MatStorage(const int r, const int c, T v) : own_(1), r_(r), c_(c) {
+    data_ = new T[r_ * c_];
+    std::fill(data_, data_ + r_ * c_, v);
+  }
+
+  MatStorage(const MatStorage& storage)
+      : MatStorage(storage.r_, storage.column()) {
+    std::copy(storage.data_, storage.data_ + r_ * c_, data_);
+  }
+
+  template <int C>
+  MatStorage(MatStorage<T, C>&& storage)
+      : data_(storage.data_),
+        own_(storage.own_),
+        r_(storage.r_),
+        c_(storage.column()) {
+    storage.own_ = 0;
+  }
+
+  template <int C>
+  MatStorage(const MatStorage<T, C>& storage)
+      : MatStorage(storage.r_, storage.column()) {
+    std::copy(storage.data_, storage.data_ + r_ * c_, data_);
+  }
+
+  MatStorage(MatStorage&& storage)
+      : data_(storage.data_),
+        own_(storage.own_),
+        r_(storage.r_),
+        c_(storage.column()) {
+    storage.own_ = 0;
+  }
+
+  template <int C>
+  MatStorage& operator=(MatStorage<T, C>& storage) {
+    if (&storage != this) {
+      Release();
+      ::new (this) MatStorage(storage);
+    }
+    return *this;
+  }
+
+  template <int C>
+  MatStorage& operator=(MatStorage<T, C>&& storage) {
+    if (&storage != this) {
+      Release();
+      ::new (this) MatStorage(std::move(storage));
+    }
+    return *this;
+  }
+
+  ~MatStorage() { Release(); }
+
+  void Release() {
+    if (own_) {
+      delete[] data_;
+    }
+  }
+
+  const int column() const { return c_; }
+
+  T* data() { return data_; }
+
+  T& at(const int x, const int y) { return at(data_, x, y); }
+
+  T& at(T* data, const int x, const int y) { return data[x * column() + y]; }
+
+  const T& at(const T* data, const int x, const int y) const {
+    return data[x * column() + y];
+  }
+
+ private:
+  T* data_;
+  int own_;
+  int r_;
+  int c_;
+};
+
+struct MatrixNoInit {};
+
+static MatrixNoInit matrix_no_init;
+
+template <typename T, int C = -1>
+struct Matrix {
+  Matrix(const int r, const int c, MatrixNoInit)
+      : storage_(r, c), row_(r), col_(c) {
+    data_ = storage_.data();
+    if (C != -1) {
+      PE_ASSERT(C == c);
+    }
+  }
+
+  Matrix(const int r, const int c, T v = T())
+      : storage_(r, c, v), row_(r), col_(c) {
+    data_ = storage_.data();
+    if (C != -1) {
+      PE_ASSERT(C == c);
+    }
+  }
+
+  Matrix(T* data, const int r, const int c)
+      : storage_(data, r, c), row_(r), col_(c) {
+    data_ = storage_.data();
+    if (C != -1) {
+      PE_ASSERT(C == c);
+    }
+  }
+
+  template <int D>
+  Matrix(T (*a)[D], const int r, const int c)
+      : storage_(&a[0][0], r, D), row_(r), col_(c) {
+    data_ = storage_.data();
+    if (C != -1) {
+      PE_ASSERT(C == c);
+    }
+  }
+
+  Matrix(const Matrix& mat)
+      : storage_(mat.storage_), row_(mat.row()), col_(mat.col()) {
+    data_ = storage_.data();
+  }
+
+  Matrix(Matrix&& mat)
+      : storage_(std::move(mat.storage_)), row_(mat.row()), col_(mat.col()) {
+    data_ = storage_.data();
+  }
+
+  template <int C1>
+  Matrix(const Matrix<T, C1>& mat)
+      : storage_(mat.storage_), row_(mat.row()), col_(mat.col()) {
+    data_ = storage_.data();
+  }
+
+  template <int C1>
+  Matrix(Matrix<T, C1>&& mat)
+      : storage_(std::move(mat.storage_)), row_(mat.row()), col_(mat.col()) {
+    data_ = storage_.data();
+  }
+
+  template <int C1>
+  Matrix& operator=(Matrix<T, C1>& mat) {
+    if (&mat != this) {
+      storage_.Release();
+      new (this) Matrix(mat);
+    }
+    return *this;
+  }
+
+  template <int C1>
+  Matrix& operator=(Matrix<T, C1>&& mat) {
+    if (&mat != this) {
+      storage_.Release();
+      new (this) Matrix(std::move(mat));
+    }
+    return *this;
+  }
+
+  ~Matrix() {}
+
+  T& at(const int x, const int y) { return storage_.at(data_, x, y); }
+
+  const T& at(const int x, const int y) const {
+    return storage_.at(data_, x, y);
+  }
+
+  T& operator()(const int x, const int y) { return storage_.at(data_, x, y); }
+
+  const T& operator()(const int x, const int y) const {
+    return storage_.at(data_, x, y);
+  }
+
+  const int row() const { return row_; }
+  const int col() const { return col_; }
+
+  Matrix& FillValue(const T v = T()) {
+    for (int i = 0; i < row_; ++i)
+      for (int j = 0; j < col_; ++j) {
+        at(i, j) = v;
+      }
+    return *this;
+  }
+
+ private:
+  MatStorage<T, C> storage_;
+  T* data_;
+  int row_;
+  int col_;
+};
+
+template <typename T, int C = -1>
+SL ostream& operator<<(ostream& o, const Matrix<T, C>& mat) {
+  o << "{";
+  const int row = mat.row();
+  const int col = mat.col();
+  for (int i = 0; i < row; ++i) {
+    if (i > 0) {
+      o << "\n";
+    }
+    o << "{";
+    for (int j = 0; j < col; ++j) {
+      if (j > 0) {
+        o << ", ";
+      }
+      o << mat(i, j);
+    }
+    o << "}";
+  }
+  o << "}";
+  return o;
+}
+}  // namespace pe_mat
+
+template <typename T, int C1, int C2>
+SL pe_mat::Matrix<T, -1> MatrixMul(const pe_mat::Matrix<T, C1>& m1,
+                                   const pe_mat::Matrix<T, C2>& m2) {
+  PE_ASSERT(m1.col() == m2.row());
+  const int r = m1.row();
+  const int cr = m1.col();
+  const int c = m2.col();
+  pe_mat::Matrix<T, -1> result(r, c, pe_mat::matrix_no_init);
+  for (int i = 0; i < r; ++i)
+    for (int j = 0; j < c; ++j) {
+      T s = 0;
+      for (int k = 0; k < cr; ++k) {
+        s += m1(i, k) * m2(k, j);
+      }
+      result(i, j) = s;
+    }
+  return result;
+}
+
+template <typename T, int C>
+SL vector<T> MatrixMulVec(const pe_mat::Matrix<T, C>& m1, const vector<T>& m2) {
+  PE_ASSERT(m1.col() == m2.size());
+  const int r = m1.row();
+  const int cr = m1.col();
+  vector<T> result(r);
+  for (int i = 0; i < r; ++i) {
+    T s = 0;
+    for (int k = 0; k < cr; ++k) {
+      s += m1(i, k) * m2[k];
+    }
+    result[i] = s;
+  }
+  return result;
+}
+
+template <typename T, int C1, int C2>
+SL pe_mat::Matrix<T, -1> MatrixMul(const pe_mat::Matrix<T, C1>& m1,
+                                   const pe_mat::Matrix<T, C2>& m2, T mod) {
+  PE_ASSERT(m1.col() == m2.row());
+  const int r = m1.row();
+  const int cr = m1.col();
+  const int c = m2.col();
+  pe_mat::Matrix<T, -1> result(r, c, pe_mat::matrix_no_init);
+  for (int i = 0; i < r; ++i)
+    for (int j = 0; j < c; ++j) {
+      T s = 0;
+      for (int k = 0; k < cr; ++k) {
+        s += MulModEx(m1(i, k), m2(k, j), mod);
+      }
+      result(i, j) = s % mod;
+    }
+  return result;
+}
+
+template <typename T, int C>
+SL vector<T> MatrixMulVec(const pe_mat::Matrix<T, C>& m1, const vector<T>& m2,
+                          T mod) {
+  PE_ASSERT(m1.col() == m2.size());
+  const int r = m1.row();
+  const int cr = m1.col();
+  vector<T> result(r);
+  for (int i = 0; i < r; ++i) {
+    T s = 0;
+    for (int k = 0; k < cr; ++k) {
+      s += MulModEx(m1(i, k), m2[k], mod);
+    }
+    result[i] = s % mod;
+  }
+  return result;
+}
+
+template <typename T, int C>
+SL pe_mat::Matrix<T, -1> MatrixPower(const pe_mat::Matrix<T, C>& m, int64 n) {
+  const int r = m.row();
+  const int c = m.col();
+
+  PE_ASSERT(r == c);
+
+  pe_mat::Matrix<T, -1> result(r, r);
+  pe_mat::Matrix<T, C> t(m);
+
+  const T ONE = 1;
+  for (int i = 0; i < r; ++i) {
+    result(i, i) = ONE;
+  }
+
+  for (; n; n >>= 1) {
+    if (n & 1) {
+      result = MatrixMul(t, result);
+    }
+    if (n > 1) {
+      t = MatrixMul(t, t);
+    }
+  }
+
+  return result;
+}
+
+template <typename T, int C>
+SL pe_mat::Matrix<T, -1> MatrixPower(const pe_mat::Matrix<T, C>& m, int64 n,
+                                     T mod) {
+  const int r = m.row();
+  const int c = m.col();
+
+  PE_ASSERT(r == c);
+
+  pe_mat::Matrix<T, -1> result(r, r);
+  pe_mat::Matrix<T, C> t(m);
+
+  const T ONE = 1;
+  for (int i = 0; i < r; ++i) {
+    result(i, i) = ONE;
+  }
+
+  for (; n; n >>= 1) {
+    if (n & 1) {
+      result = MatrixMul(t, result, mod);
+    }
+    if (n > 1) {
+      t = MatrixMul(t, t, mod);
+    }
+  }
+
+  return result;
+}
+
+template <typename T, int C>
+SL vector<T> MatrixPower(const pe_mat::Matrix<T, C>& m, int64 n,
+                         const vector<T>& v) {
+  const int r = m.row();
+  const int c = m.col();
+
+  PE_ASSERT(r == c);
+  PE_ASSERT(r == v.size());
+
+  vector<T> result(v);
+  pe_mat::Matrix<T, C> t(m);
+
+  for (; n; n >>= 1) {
+    if (n & 1) {
+      result = MatrixMulVec(t, result);
+    }
+    if (n > 1) {
+      t = MatrixMul(t, t);
+    }
+  }
+
+  return result;
+}
+
+template <typename T, int C>
+SL vector<T> MatrixPower(const pe_mat::Matrix<T, C>& m, int64 n,
+                         const vector<T>& v, T mod) {
+  const int r = m.row();
+  const int c = m.col();
+
+  PE_ASSERT(r == c);
+  PE_ASSERT(r == v.size());
+
+  vector<T> result(v);
+  pe_mat::Matrix<T, C> t(m);
+
+  for (; n; n >>= 1) {
+    if (n & 1) {
+      result = MatrixMulVec(t, result, mod);
+    }
+    if (n > 1) {
+      t = MatrixMul(t, t, mod);
+    }
+  }
+
+  return result;
+}
+
+// Version 1
+template <int64 mod>
+SL pe_mat::Matrix<int64> PeMatrixPowerMod(
+    const function<void(pe_mat::Matrix<NMod64<mod>>& mat)>& init, const int K,
+    int64 n) {
+  using T = NMod64<mod>;
+  using MatrixT = pe_mat::Matrix<T>;
+
+  MatrixT m(K, K);
+
+  init(m);
+
+  auto t = MatrixPower(m, n);
+
+  pe_mat::Matrix<int64> res(K, K);
+  for (int i = 0; i < K; ++i)
+    for (int j = 0; j < K; ++j) res(i, j) = t(i, j).value();
+
+  return res;
+}
+
+template <int64 mod>
+SL vector<int64> PeMatrixPowerMod(
+    const function<void(pe_mat::Matrix<NMod64<mod>>& mat,
+                        vector<NMod64<mod>>& v)>& init,
+    const int K, int64 n) {
+  using T = NMod64<mod>;
+  using MatrixT = pe_mat::Matrix<T>;
+
+  vector<T> v(K, 0);
+  MatrixT m(K, K);  // zero initialized
+
+  init(m, v);
+
+  auto t = MatrixPower(m, n, v);
+
+  vector<int64> res(K, 0);
+  for (int i = 0; i < K; ++i) res[i] = t[i].value();
+
+  return res;
+}
+
+// Version 2
+template <typename T>
+SL REQUIRES((IsNModNumber<T>::result)) RETURN(pe_mat::Matrix<T>)
+    PeMatrixPowerMod(const function<void(pe_mat::Matrix<T>& mat)>& init,
+                     const int K, int64 n) {
+  using MatrixT = pe_mat::Matrix<T>;
+
+  MatrixT m(K, K);
+
+  init(m);
+
+  return MatrixPower(m, n);
+}
+
+template <typename T>
+SL REQUIRES((IsNModNumber<T>::result)) RETURN(vector<T>) PeMatrixPowerMod(
+    const function<void(pe_mat::Matrix<T>& mat, vector<T>& v)>& init,
+    const int K, int64 n) {
+  using MatrixT = pe_mat::Matrix<T>;
+
+  vector<T> v(K, 0);
+  MatrixT m(K, K);
+
+  init(m, v);
+
+  return MatrixPower(m, n, v);
+}
+
+// Version 3
+#if PE_HAS_INT128
+SL vector<int64> PeMatrixPowerMod(
+    const function<void(pe_mat::Matrix<int128>& mat, vector<int128>& v)>& init,
+    const int K, int64 n, int64 mod) {
+  using T = int128;
+  using MatrixT = pe_mat::Matrix<T>;
+
+  vector<T> v(K, 0);
+  MatrixT m(K, K);
+
+  init(m, v);
+
+  auto t = MatrixPower<int128>(m, n, v, mod);
+
+  vector<int64> res(K, 0);
+  for (int i = 0; i < K; ++i) res[i] = t[i];
+
+  return res;
+}
+
+SL pe_mat::Matrix<int64> PeMatrixPowerMod(
+    const function<void(pe_mat::Matrix<int128>& mat)>& init, const int K,
+    int64 n, int64 mod) {
+  using T = int128;
+  using MatrixT = pe_mat::Matrix<T>;
+
+  MatrixT m(K, K);
+
+  init(m);
+
+  auto t = MatrixPower<int128>(m, n, mod);
+
+  pe_mat::Matrix<int64> res(K, K);
+  for (int i = 0; i < K; ++i)
+    for (int j = 0; j < K; ++j) res(i, j) = static_cast<int64>(t(i, j));
+
+  return res;
+}
+#else
+// mod == DefaultMod::mod()
+SL vector<int64> PeMatrixPowerMod(
+    const function<void(pe_mat::Matrix<NModNumber<DefaultMod>>& mat,
+                        vector<NModNumber<DefaultMod>>& v)>& init,
+    const int K, int64 n, int64 mod) {
+  using T = NModNumber<DefaultMod>;
+  using MatrixT = pe_mat::Matrix<T>;
+
+  PE_ASSERT(mod == DefaultMod::Mod());
+
+  vector<T> v(K, 0);
+  MatrixT m(K, K);
+
+  init(m, v);
+
+  auto t = MatrixPower(m, n, v);
+
+  vector<int64> res(K, 0);
+  for (int i = 0; i < K; ++i) res[i] = t[i].value();
+
+  return res;
+}
+
+SL pe_mat::Matrix<int64> PeMatrixPowerMod(
+    const function<void(pe_mat::Matrix<NModNumber<DefaultMod>>& mat)>& init,
+    const int K, int64 n, int64 mod) {
+  using T = NModNumber<DefaultMod>;
+  using MatrixT = pe_mat::Matrix<T>;
+
+  PE_ASSERT(mod == DefaultMod::Mod());
+
+  MatrixT m(K, K);
+
+  init(m);
+
+  auto t = MatrixPower(m, n);
+
+  pe_mat::Matrix<int64> res(K, K);
+  for (int i = 0; i < K; ++i)
+    for (int j = 0; j < K; ++j) res(i, j) = static_cast<int64>(t(i, j).value());
+
+  return res;
+}
+#endif  // end PE_HAS_INT128
+
 #if ENABLE_EIGEN
 
 template <typename T>
 using MatT = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
 
-template <typename _Scalar>
+template <typename T>
 struct NormalMatrixModFixer {
-  static void Fix(MatT<_Scalar>& m, const int64 mod) {
+  static void Fix(MatT<T>& m, const int64 mod) {
     const auto r = m.rows();
     const auto c = m.cols();
     for (int i = 0; i < r; ++i)
@@ -136,9 +774,9 @@ struct NormalMatrixModFixer {
   }
 };
 
-template <typename _Scalar>
+template <typename T>
 struct NModMatrixModFixer {
-  static void Fix(MatT<_Scalar>& m) {}
+  static void Fix(MatT<T>& m) {}
 };
 
 template <typename MC, typename S>
@@ -165,38 +803,9 @@ struct NModMatrixModFixer<NModNumberM<MC, APSBL<S>>> {
   }
 };
 
-template <typename _Scalar>
-SL MatT<_Scalar> PowerModImpl(const MatT<_Scalar>& x, int64 n, int64 mod,
-                              NModNumberIndicator<0>) {
-  using MatrixT = MatT<_Scalar>;
-
-  const int K = x.rows();
-
-  MatrixT e = MatrixT::Identity(K, K);
-
-  MatrixT y = x;
-  NormalMatrixModFixer<_Scalar>::Fix(y, mod);
-
-  for (; n; n >>= 1) {
-    // cout << "n = " << n << endl;
-    if (n & 1) {
-      e *= y;
-      NormalMatrixModFixer<_Scalar>::Fix(e, mod);
-    }
-    if (n > 1) {
-      y *= y;
-      NormalMatrixModFixer<_Scalar>::Fix(y, mod);
-    }
-  }
-  return e;
-}
-
-template <typename _Scalar>
-SL MatT<_Scalar> PowerModImpl(const MatT<_Scalar>& x, int64 n, int64 mod,
-                              NModNumberIndicator<1>) {
-  using MatrixT = MatT<_Scalar>;
-
-  PE_ASSERT(mod == _Scalar().Mod());
+template <typename T>
+SL MatT<T> MatrixPower(const MatT<T>& x, int64 n) {
+  using MatrixT = MatT<T>;
 
   const int K = static_cast<int>(x.rows());
 
@@ -207,77 +816,57 @@ SL MatT<_Scalar> PowerModImpl(const MatT<_Scalar>& x, int64 n, int64 mod,
     // cout << "n = " << n << endl;
     if (n & 1) {
       e *= y;
-      NModMatrixModFixer<_Scalar>::Fix(e);
+      NModMatrixModFixer<T>::Fix(e);
     }
     if (n > 1) {
       y *= y;
-      NModMatrixModFixer<_Scalar>::Fix(y);
+      NModMatrixModFixer<T>::Fix(y);
     }
   }
   return e;
 }
 
-template <typename _Scalar>
-SL MatT<_Scalar> PowerMod(const MatT<_Scalar>& x, int64 n, int64 mod) {
-  return PowerModImpl(x, n, mod,
-                      NModNumberIndicator<IsNModNumber<_Scalar>::result>());
-}
+template <typename T>
+SL MatT<T> MatrixPower(const MatT<T>& x, int64 n, int64 mod) {
+  using MatrixT = MatT<T>;
 
-template <typename _Scalar>
-SL vector<_Scalar> PowerModImpl(const MatT<_Scalar>& x, int64 n,
-                                const vector<_Scalar>& v, int64 mod,
-                                NModNumberIndicator<0>) {
-  using MatrixT = MatT<_Scalar>;
   const int K = x.rows();
 
-  vector<_Scalar> result(v);
-  for (auto& i : result) i = RegulateMod(i, mod);
+  MatrixT e = MatrixT::Identity(K, K);
 
   MatrixT y = x;
-  NormalMatrixModFixer<_Scalar>::Fix(y, mod);
-
-  vector<_Scalar> temp(K, 0);
+  NormalMatrixModFixer<T>::Fix(y, mod);
 
   for (; n; n >>= 1) {
     // cout << "n = " << n << endl;
     if (n & 1) {
-      for (int i = 0; i < K; ++i) {
-        _Scalar s = 0;
-        for (int j = 0; j < K; ++j) {
-          s += y(i, j) * result[j];
-        }
-        temp[i] = s % mod;
-      }
-      swap(result, temp);
+      e *= y;
+      NormalMatrixModFixer<T>::Fix(e, mod);
     }
     if (n > 1) {
       y *= y;
-      NormalMatrixModFixer<_Scalar>::Fix(y, mod);
+      NormalMatrixModFixer<T>::Fix(y, mod);
     }
   }
-  return result;
+  return e;
 }
 
-template <typename _Scalar>
-SL vector<_Scalar> PowerModImpl(const MatT<_Scalar>& x, int64 n,
-                                const vector<_Scalar>& v, int64 mod,
-                                NModNumberIndicator<1>) {
-  using MatrixT = MatT<_Scalar>;
-
-  PE_ASSERT(mod == _Scalar().Mod());
+template <typename T>
+SL vector<T> MatrixPower(const MatT<T>& x, int64 n, const vector<T>& v) {
+  using MatrixT = MatT<T>;
 
   const int K = static_cast<int>(x.rows());
 
-  vector<_Scalar> result(v);
+  vector<T> result(v);
   MatrixT y = x;
 
-  vector<_Scalar> temp(K, 0);
+  vector<T> temp(K, 0);
 
   for (; n; n >>= 1) {
     // cout << "n = " << n << endl;
     if (n & 1) {
       for (int i = 0; i < K; ++i) {
-        _Scalar s = 0;
+        T s = 0;
         for (int j = 0; j < K; ++j) {
           s += y(i, j) * result[j];
         }
@@ -288,17 +877,44 @@ SL vector<_Scalar> PowerModImpl(const MatT<_Scalar>& x, int64 n,
     }
     if (n > 1) {
       y *= y;
-      NModMatrixModFixer<_Scalar>::Fix(y);
+      NModMatrixModFixer<T>::Fix(y);
     }
   }
   return result;
 }
 
-template <typename _Scalar>
-SL vector<_Scalar> PowerMod(const MatT<_Scalar>& x, int64 n,
-                            const vector<_Scalar>& v, int64 mod) {
-  return PowerModImpl(x, n, v, mod,
-                      NModNumberIndicator<IsNModNumber<_Scalar>::result>());
+template <typename T>
+SL vector<T> MatrixPower(const MatT<T>& x, int64 n, const vector<T>& v,
+                         int64 mod) {
+  using MatrixT = MatT<T>;
+  const int K = x.rows();
+
+  vector<T> result(v);
+  for (auto& i : result) i = RegulateMod(i, mod);
+
+  MatrixT y = x;
+  NormalMatrixModFixer<T>::Fix(y, mod);
+
+  vector<T> temp(K, 0);
+
+  for (; n; n >>= 1) {
+    // cout << "n = " << n << endl;
+    if (n & 1) {
+      for (int i = 0; i < K; ++i) {
+        T s = 0;
+        for (int j = 0; j < K; ++j) {
+          s += y(i, j) * result[j];
+        }
+        temp[i] = s % mod;
+      }
+      swap(result, temp);
+    }
+    if (n > 1) {
+      y *= y;
+      NormalMatrixModFixer<T>::Fix(y, mod);
+    }
+  }
+  return result;
 }
 
 /**
@@ -312,14 +928,14 @@ SL vector<_Scalar> PowerMod(const MatT<_Scalar>& x, int64 n,
 // Version 1
 // mod * mod < int64
 /**
-    auto res0 = PowerMod<1000000007>(
+    auto res0 = MatPowerMod<1000000007>(
         [=](auto& m) {
           m(0, 0) = 1;
           m(0, 1) = 1;
           m(1, 0) = 1;
         },
         2, 100000);
-    auto res1 = PowerMod<1000000007>(
+    auto res1 = MatPowerMod<1000000007>(
         [=](auto& m, auto& v) {
           m(0, 0) = 1;
           m(0, 1) = 1;
@@ -329,38 +945,18 @@ SL vector<_Scalar> PowerMod(const MatT<_Scalar>& x, int64 n,
         },
         2, 100000);
  */
+
 template <int64 mod>
-SL vector<int64> PowerMod(
-    const function<void(MatT<NMod64<mod>>& mat, vector<NMod64<mod>>& v)>& init,
-    const int K, int64 n) {
-  using ScalarT = NMod64<mod>;
-  using MatrixT = MatT<ScalarT>;
-
-  vector<ScalarT> v(K, 0);
-  MatrixT m = MatrixT::Zero(K, K);
-
-  init(m, v);
-
-  auto t = PowerMod(m, n, v, mod);
-
-  vector<int64> res(K, 0);
-  for (int i = 0; i < K; ++i) res[i] = t[i].value();
-
-  return res;
-}
-
-// mod * mod < int64
-template <int64 mod>
-SL MatT<int64> PowerMod(const function<void(MatT<NMod64<mod>>& mat)>& init,
-                        const int K, int64 n) {
-  using ScalarT = NMod64<mod>;
-  using MatrixT = MatT<ScalarT>;
+SL MatT<int64> EigenMatrixPowerMod(
+    const function<void(MatT<NMod64<mod>>& mat)>& init, const int K, int64 n) {
+  using T = NMod64<mod>;
+  using MatrixT = MatT<T>;
 
   MatrixT m = MatrixT::Zero(K, K);
 
   init(m);
 
-  auto t = PowerMod(m, n, mod);
+  auto t = MatrixPower(m, n);
 
   MatT<int64> res(K, K);
   for (int i = 0; i < K; ++i)
@@ -369,17 +965,37 @@ SL MatT<int64> PowerMod(const function<void(MatT<NMod64<mod>>& mat)>& init,
   return res;
 }
 
+template <int64 mod>
+SL vector<int64> EigenMatrixPowerMod(
+    const function<void(MatT<NMod64<mod>>& mat, vector<NMod64<mod>>& v)>& init,
+    const int K, int64 n) {
+  using T = NMod64<mod>;
+  using MatrixT = MatT<T>;
+
+  vector<T> v(K, 0);
+  MatrixT m = MatrixT::Zero(K, K);
+
+  init(m, v);
+
+  auto t = MatrixPower(m, n, v);
+
+  vector<int64> res(K, 0);
+  for (int i = 0; i < K; ++i) res[i] = t[i].value();
+
+  return res;
+}
+
 // Version 2
 // mod == T().mod()
 /**
-    auto res0 = PowerMod<NMod64<1000000007>>(
+    auto res0 = MatPowerMod<NMod64<1000000007>>(
         [=](auto& m) {
           m(0, 0) = 1;
           m(0, 1) = 1;
           m(1, 0) = 1;
         },
         2, 100000);
-    auto res1 = PowerMod<NMod64<1000000007>>(
+    auto res1 = MatPowerMod<NMod64<1000000007>>(
         [=](auto& m, auto& v) {
           m(0, 0) = 1;
           m(0, 1) = 1;
@@ -389,46 +1005,46 @@ SL MatT<int64> PowerMod(const function<void(MatT<NMod64<mod>>& mat)>& init,
         },
         2, 100000);
 */
+
+template <typename T>
+SL REQUIRES((IsNModNumber<T>::result)) RETURN(MatT<T>)
+    EigenMatrixPowerMod(const function<void(MatT<T>& mat)>& init, const int K,
+                        int64 n) {
+  using MatrixT = MatT<T>;
+
+  MatrixT m = MatrixT::Zero(K, K);
+
+  init(m);
+
+  return MatrixPower(m, n);
+}
+
 template <typename T>
 SL REQUIRES((IsNModNumber<T>::result)) RETURN(vector<T>)
-    PowerMod(const function<void(MatT<T>& mat, vector<T>& v)>& init,
-             const int K, int64 n) {
-  using ScalarT = T;
-  using MatrixT = MatT<ScalarT>;
+    EigenMatrixPowerMod(const function<void(MatT<T>& mat, vector<T>& v)>& init,
+                        const int K, int64 n) {
+  using MatrixT = MatT<T>;
 
   vector<T> v(K, 0);
   MatrixT m = MatrixT::Zero(K, K);
 
   init(m, v);
 
-  return PowerMod(m, n, v, T().Mod());
-}
-
-template <typename T>
-SL REQUIRES((IsNModNumber<T>::result)) RETURN(MatT<T>)
-    PowerMod(const function<void(MatT<T>& mat)>& init, const int K, int64 n) {
-  using ScalarT = T;
-  using MatrixT = MatT<ScalarT>;
-
-  MatrixT m = MatrixT::Zero(K, K);
-
-  init(m);
-
-  return PowerMod(m, n, T().Mod());
+  return MatrixPower(m, n, v);
 }
 
 // Version 3
 /**
-    auto res0 = PowerMod(
+    auto res0 = MatPowerMod(
         [=](auto& m) {
           m(0, 0) = 1;
           m(0, 1) = 1;
           m(1, 0) = 1;
         },
         2, 100000, 1000000007);
-    auto res1 = PowerMod(
+    auto res1 = MatPowerMod(
         [=](auto& m, auto& v) {
-          m(0, 0) = 1;
+          // m(0, 0) = 1;
           m(0, 1) = 1;
           m(1, 0) = 1;
           v[0] = 1;
@@ -437,18 +1053,18 @@ SL REQUIRES((IsNModNumber<T>::result)) RETURN(MatT<T>)
         2, 100000, 1000000007);
  */
 #if PE_HAS_INT128
-SL vector<int64> PowerMod(
+SL vector<int64> EigenMatrixPowerMod(
     const function<void(MatT<int128>& mat, vector<int128>& v)>& init,
     const int K, int64 n, int64 mod) {
-  using ScalarT = int128;
-  using MatrixT = MatT<ScalarT>;
+  using T = int128;
+  using MatrixT = MatT<T>;
 
-  vector<ScalarT> v(K, 0);
+  vector<T> v(K, 0);
   MatrixT m = MatrixT::Zero(K, K);
 
   init(m, v);
 
-  auto t = PowerMod(m, n, v, mod);
+  auto t = MatrixPower(m, n, v, mod);
 
   vector<int64> res(K, 0);
   for (int i = 0; i < K; ++i) res[i] = t[i];
@@ -456,16 +1072,17 @@ SL vector<int64> PowerMod(
   return res;
 }
 
-SL MatT<int64> PowerMod(const function<void(MatT<int128>& mat)>& init,
-                        const int K, int64 n, int64 mod) {
-  using ScalarT = int128;
-  using MatrixT = MatT<ScalarT>;
+SL MatT<int64> EigenMatrixPowerMod(
+    const function<void(MatT<int128>& mat)>& init, const int K, int64 n,
+    int64 mod) {
+  using T = int128;
+  using MatrixT = MatT<T>;
 
   MatrixT m = MatrixT::Zero(K, K);
 
   init(m);
 
-  auto t = PowerMod(m, n, mod);
+  auto t = MatrixPower(m, n, mod);
 
   MatT<int64> res(K, K);
   for (int i = 0; i < K; ++i)
@@ -475,21 +1092,21 @@ SL MatT<int64> PowerMod(const function<void(MatT<int128>& mat)>& init,
 }
 #else
 // mod == DefaultMod::mod()
-SL vector<int64> PowerMod(
+SL vector<int64> EigenMatrixPowerMod(
     const function<void(MatT<NModNumber<DefaultMod>>& mat,
                         vector<NModNumber<DefaultMod>>& v)>& init,
     const int K, int64 n, int64 mod) {
-  typedef NModNumber<DefaultMod> ScalarT;
-  typedef MatT<ScalarT> MatrixT;
+  typedef NModNumber<DefaultMod> T;
+  typedef MatT<T> MatrixT;
 
   PE_ASSERT(mod == DefaultMod::Mod());
 
-  vector<ScalarT> v(K, 0);
+  vector<T> v(K, 0);
   MatrixT m = MatrixT::Zero(K, K);
 
   init(m, v);
 
-  auto t = PowerMod(m, n, v, mod);
+  auto t = MatrixPower(m, n, v, mod);
 
   vector<int64> res(K, 0);
   for (int i = 0; i < K; ++i) res[i] = t[i].value();
@@ -498,11 +1115,11 @@ SL vector<int64> PowerMod(
 }
 
 // mod == DefaultMod::mod()
-SL MatT<int64> PowerMod(
+SL MatT<int64> EigenMatrixPowerMod(
     const function<void(MatT<NModNumber<DefaultMod>>& mat)>& init, const int K,
     int64 n, int64 mod) {
-  typedef NModNumber<DefaultMod> ScalarT;
-  typedef MatT<ScalarT> MatrixT;
+  typedef NModNumber<DefaultMod> T;
+  typedef MatT<T> MatrixT;
 
   PE_ASSERT(mod == DefaultMod::Mod());
 
@@ -510,7 +1127,7 @@ SL MatT<int64> PowerMod(
 
   init(m);
 
-  auto t = PowerMod(m, n, mod);
+  auto t = MatrixPower(m, n, mod);
 
   MatT<int64> res(K, K);
   for (int i = 0; i < K; ++i)
@@ -521,5 +1138,11 @@ SL MatT<int64> PowerMod(
 #endif  // end PE_HAS_INT128
 
 #endif  // end ENABLE_EIGEN
+
+#if ENABLE_EIGEN
+#define MatrixPowerMod EigenMatrixPowerMod
+#else
+#define MatrixPowerMod PeMatrixPowerMod
+#endif
 
 #endif

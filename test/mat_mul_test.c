@@ -15,7 +15,7 @@ void Test(const vector<int>& data, const vector<int>& V) {
   rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j * K + i];
 
   TimeRecorder tr;
-  v = PowerMod(m, 4, v, mod);
+  v = MatrixPower(m, 4, v);
   int64 s = 0;
   for (auto i : v) s += i.value();
   // cout << s << endl;
@@ -28,14 +28,14 @@ void Test(const vector<int>& data, const vector<int>& V) {
 
 SL void TestHelperMethod() {
   {
-    auto res0 = PowerMod<1000000007>(
+    auto res0 = MatrixPowerMod<1000000007>(
         [=](auto& m) {
           m(0, 0) = 1;
           m(0, 1) = 1;
           m(1, 0) = 1;
         },
         2, 100000);
-    auto res1 = PowerMod<1000000007>(
+    auto res1 = MatrixPowerMod<1000000007>(
         [=](auto& m, auto& v) {
           m(0, 0) = 1;
           m(0, 1) = 1;
@@ -47,14 +47,14 @@ SL void TestHelperMethod() {
   }
 
   {
-    auto res0 = PowerMod<NMod64<1000000007>>(
+    auto res0 = MatrixPowerMod<NMod64<1000000007>>(
         [=](auto& m) {
           m(0, 0) = 1;
           m(0, 1) = 1;
           m(1, 0) = 1;
         },
         2, 100000);
-    auto res1 = PowerMod<NMod64<1000000007>>(
+    auto res1 = MatrixPowerMod<NMod64<1000000007>>(
         [=](auto& m, auto& v) {
           m(0, 0) = 1;
           m(0, 1) = 1;
@@ -66,14 +66,14 @@ SL void TestHelperMethod() {
   }
 
   {
-    auto res0 = PowerMod(
+    auto res0 = MatrixPowerMod(
         [=](auto& m) {
           m(0, 0) = 1;
           m(0, 1) = 1;
           m(1, 0) = 1;
         },
         2, 100000, 1000000007);
-    auto res1 = PowerMod(
+    auto res1 = MatrixPowerMod(
         [=](auto& m, auto& v) {
           m(0, 0) = 1;
           m(0, 1) = 1;
@@ -101,7 +101,7 @@ SL void MatMulTest() {
     rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j * K + i];
 
     TimeRecorder tr;
-    v = PowerMod(m, 4, v, mod);
+    v = MatrixPower(m, 4, v, mod);
     int64 s = 0;
     for (auto i : v) s += i;
     // cout << s << endl;
@@ -120,7 +120,7 @@ SL void MatMulTest() {
     rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j * K + i];
 
     TimeRecorder tr;
-    v = PowerMod(m, 4, v, mod);
+    v = MatrixPower(m, 4, v, mod);
     int64 s = 0;
     for (auto i : v) s += i;
     // cout << s << endl;

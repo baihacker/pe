@@ -74,6 +74,7 @@ void power_sum() {
 }
 
 void matrix_power() {
+#if ENABLE_EIGEN
   // m^n, m is a k*k matrix
   cout << PowerMod([](auto& m) { m(0, 0) = m(0, 1) = m(1, 0) = 1; }, 2,
                    10000000000, mod)
@@ -87,12 +88,15 @@ void matrix_power() {
               },
               2, 10000000000, mod)
        << endl;
+#endif
 }
 
 void big_number() {
-  cout << Power(2_bi, 128) << endl;    // BigInteger
+  cout << Power(2_bi, 128) << endl;  // BigInteger
+#if ENABLE_GMP
   cout << Power(2_mpi, 128) << endl;   // MpInteger, a wrapper of mpz_class
   cout << Power(MPZ(2), 128) << endl;  // Helper function of mpz_class
+#endif
 }
 
 void fraction() {
@@ -112,6 +116,7 @@ void modular() {
 }
 
 void multi_precision_float() {
+#if HAS_MPF
   Mpf::setDefaultPrec(2000);
   Mpf x;
   Mpf one(1);
@@ -120,6 +125,7 @@ void multi_precision_float() {
   }
   // The same as SetPrecision[Sum[1/i, {i, 1, 100}], 100]
   cout << x.ToString(100) << endl;
+#endif
 }
 
 void poly_mul_example() {
@@ -130,7 +136,7 @@ void poly_mul_example() {
 }
 
 int main() {
-  PE_INIT(maxp=2000000,cal_phi=1,cal_mu=1);
+  PE_INIT(maxp = 2000000, cal_phi = 1, cal_mu = 1);
 
   prime_sum();
   mu_sum();

@@ -17,7 +17,9 @@ void demo() {
 }
 
 int main() {
+#if ENABLE_GMP
   demo<bi>();
   demo<Mpz>();
+#endif
   return 0;
 }

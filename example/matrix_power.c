@@ -9,6 +9,7 @@ using MT = NMod64<mod>;
  * |1 0|      |0|
  */
 
+#if ENABLE_EIGEN
 // mod is specified at compiling time.
 int64 solve0(int64 n) {
   auto ans = PowerMod<mod>(
@@ -85,10 +86,12 @@ int64 solve4(int64 n, int64 rmod) {
       2, n);
   return ans[0].value();
 }
+#endif
 
 int main() {
   PE_INIT(maxp = 2000000);
 
+#if ENABLE_EIGEN
   for (int64 n = 1; n <= 1000000000; n *= 10) {
     cout << "n = " << n << endl;
     int64 ans0 = solve0(n);
@@ -117,5 +120,6 @@ int main() {
       cout << "Ans4 = " << ans4 << endl;
       cout << endl;
     }
+#endif
   return 0;
 }

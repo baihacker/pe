@@ -2,7 +2,7 @@
 
 This doc tells you how to build and use C/C++ libraries on windows 64, and those libraries provide script to build on linux environment. In most cases, it is also applied to windows 32.
 
-## Build
+## Manual build instruction
 
 Please read the README or INSTALL doc of the target library before building it, since **it may contain important configuration specifications**. If the library provides vc solution/project, you can use it to build. This doc only focuses on a library which can be built by makefile (other building system is not included).
 
@@ -113,7 +113,7 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 ## Build and use third party library in pe
 * General
 
-  * Current version: gmp 6.1.2, flint 2.5.2, mpfr 4.0.2, mpir 3.0.0, libbf 2019-02-10, ntl 11_4_1.
+  * Current version: gmp 6.2.1, flint 2.6.3, mpfr 4.0.2, mpir 3.0.0 (unused), libbf 2020-01-19, ntl 11_4_3.
 
   * The compiled binaries (flint, gmp, mpfr, mpir, libbf, libntl) on windows (x64) can be found [here](https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA) (pwd:x7cg). The msys2 builds (installed by "pacman -S mingw-w64-x86_64-gmp") don't support msvc.
 
@@ -283,3 +283,107 @@ clean:
   3. make
 
   4. make install
+
+## Auto build script
+```
+#!/bin/bash
+
+BUILD_ROOT=$(pwd)
+
+GMP_DIR="gmp-6.2.1"
+MPFR_DIR="mpfr-4.0.2"
+MPIR_DIR="mpir-3.0.0"
+LIBBF_DIR="libbf-2020-01-19"
+WIN_NTL_DIR="WinNTL-11_4_3"
+FLINT_DIR="flint-2.6.3"
+
+TARGET_DIR="/usr/test"
+SHARED_FLAGS="-mtune=skylake -march=k8-sse3 -D__USE_MINGW_ANSI_STDIO=0"
+
+function build_gmp(){
+  echo "build gmp"
+  cd "${GMP_DIR}"
+  sed -i 's/ln -s "$ac_rel_source" "$ac_file" 2>\/dev\/null ||//g' configure
+  sed -i 's/ln "$ac_source" "$ac_file" 2>\/dev\/null ||//g' configure
+  ./configure --disable-shared --enable-static --prefix=${TARGET_DIR} --enable-cxx --host=x86_64-w64-mingw32 CFLAGS="-O3 -m64 -march=k8-sse3 ${SHARED_FLAGS}" CXXFLAGS="-O3 -m64 ${SHARED_FLAGS}"
+  make -j8
+  make install
+  cd ..
+}
+
+function build_mpfr(){
+  echo "build mpfr"
+  cd "${MPFR_DIR}"
+  ./configure --with-gmp=/usr --enable-static --disable-shared --prefix=${TARGET_DIR} CFLAGS="-O3 -m64 ${SHARED_FLAGS}"
+  sed -i 's/DLT_OBJDIR=\\"\.libs\/\\"/DLT_OBJDIR=\.libs/g' makefile
+  sed -i 's/DMPFR_PRINTF_MAXLM=\\"j\\"/DLT_OBJDIR=\DMPFR_PRINTF_MAXLM=j/g' makefile
+  sed -i 's/DLT_OBJDIR=\\"\.libs\/\\"/DLT_OBJDIR=\.libs/g' src/makefile
+  sed -i 's/DMPFR_PRINTF_MAXLM=\\"j\\"/DLT_OBJDIR=\DMPFR_PRINTF_MAXLM=j/g' src/makefile
+  make -j8
+  make install
+  cd ..
+}
+
+function build_mpir(){
+  echo "build mpir"
+  cd "${MPIR_DIR}"
+  sed -i 's/ln -s "$ac_rel_source" "$ac_file" 2>\/dev\/null ||//g' configure
+  sed -i 's/ln "$ac_source" "$ac_file" 2>\/dev\/null ||//g' configure
+  ./configure --disable-shared --enable-static --prefix=${TARGET_DIR} CFLAGS="-m64 -O3 ${SHARED_FLAGS}" CXXFLAGS="-m64 -O3 ${SHARED_FLAGS}"
+  make -j8
+  make install
+  cd ..
+}
+
+function build_libbf(){
+  echo "build libbf"
+  cp makefile_libbf "${LIBBF_DIR}/makefile"
+  cd "${LIBBF_DIR}"
+  make -j8
+  cp libbf.h "${TARGET_DIR}/include/libbf.h"
+  cp libbf.avx2.a "${TARGET_DIR}/lib/libbf.avx2.a"
+  cp libbf.generic.a "${TARGET_DIR}/lib/libbf.generic.a"
+  cd ..
+}
+
+function build_ntl(){
+  echo "build win ntl"
+  cp makefile_ntl "${WIN_NTL_DIR}/src/makefile"
+  cd "${WIN_NTL_DIR}/src"
+  make -j8
+  cp libntl.a "${TARGET_DIR}/lib/libntl.a"
+  cd ..
+  cp -r "./include/NTL" "${TARGET_DIR}/include/"
+  cd ..
+}
+
+function build_flint(){
+  echo "build flint"
+  cd "${FLINT_DIR}"
+  ./configure --disable-shared --enable-static --prefix=${TARGET_DIR} --with-gmp=${TARGET_DIR} --with-mpfr=${TARGET_DIR} --disable-pthread CFLAGS="-ansi -Wno-long-long -Wno-declaration-after-statement -O3 -funroll-loops -mpopcnt -mtune=skylake ${SHARED_FLAGS}" CXXFLAGS="-ansi -Wno-long-long -Wno-declaration-after-statement -O3 -funroll-loops -mpopcnt ${SHARED_FLAGS}"
+  sed -i '1i\BUILD_DIR = ../build/${MOD}' Makefile.subdirs
+  sed -i '1i\MOD_DIR = ${MOD}' Makefile.subdirs
+  sed -i '/^libflint.a:.*/a\\t$(AT)$(foreach dir, $(BUILD_DIRS), mkdir -p build/$(dir))' makefile
+  sed -i 's/mkdir -p build\/$(dir); BUILD_DIR=..\/build\/$(dir); export BUILD_DIR; MOD_DIR=$(dir); export MOD_DIR;/export MOD=$(dir);/g' makefile
+  mkdir -p fmpz_mod_mpoly/test
+  echo "int main(){return 0;}" > fmpz_mod_mpoly/test/t-1.c
+  make -j8
+  make install
+  cd ..
+}
+
+function build_all(){
+  build_gmp
+  build_mpfr
+  build_mpir
+  build_libbf
+  build_ntl
+  build_flint
+}
+
+mkdir -p "${TARGET_DIR}/include"
+mkdir -p "${TARGET_DIR}/lib"
+build_all
+
+cd ${BUILD_ROOT}
+```

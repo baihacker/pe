@@ -2,6 +2,7 @@
 #define PE_MAT_
 
 #include "pe_base"
+#include "pe_type_traits"
 #include "pe_mod"
 
 template <typename T, int D>
@@ -521,8 +522,29 @@ SL vector<T> MatrixMulVec(const pe_mat::Matrix<T, C>& m1, const vector<T>& m2) {
 }
 
 template <typename T, int C1, int C2>
-SL pe_mat::Matrix<T, -1> MatrixMul(const pe_mat::Matrix<T, C1>& m1,
-                                   const pe_mat::Matrix<T, C2>& m2, T mod) {
+SL REQUIRES((!is_native_integer<T>::value)) RETURN(pe_mat::Matrix<T, -1>)
+    MatrixMul(const pe_mat::Matrix<T, C1>& m1, const pe_mat::Matrix<T, C2>& m2,
+              T mod) {
+  PE_ASSERT(m1.col() == m2.row());
+  const int r = m1.row();
+  const int cr = m1.col();
+  const int c = m2.col();
+  pe_mat::Matrix<T, -1> result(r, c, pe_mat::matrix_no_init);
+  for (int i = 0; i < r; ++i)
+    for (int j = 0; j < c; ++j) {
+      T s = 0;
+      for (int k = 0; k < cr; ++k) {
+        s += m1(i, k) * m2(k, j) % mod;
+      }
+      result(i, j) = s % mod;
+    }
+  return result;
+}
+
+template <typename T, int C1, int C2>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(pe_mat::Matrix<T, -1>)
+    MatrixMul(const pe_mat::Matrix<T, C1>& m1, const pe_mat::Matrix<T, C2>& m2,
+              T mod) {
   PE_ASSERT(m1.col() == m2.row());
   const int r = m1.row();
   const int cr = m1.col();
@@ -540,8 +562,25 @@ SL pe_mat::Matrix<T, -1> MatrixMul(const pe_mat::Matrix<T, C1>& m1,
 }
 
 template <typename T, int C>
-SL vector<T> MatrixMulVec(const pe_mat::Matrix<T, C>& m1, const vector<T>& m2,
-                          T mod) {
+SL REQUIRES((!is_native_integer<T>::value)) RETURN(vector<T>)
+    MatrixMulVec(const pe_mat::Matrix<T, C>& m1, const vector<T>& m2, T mod) {
+  PE_ASSERT(m1.col() == m2.size());
+  const int r = m1.row();
+  const int cr = m1.col();
+  vector<T> result(r);
+  for (int i = 0; i < r; ++i) {
+    T s = 0;
+    for (int k = 0; k < cr; ++k) {
+      s += m1(i, k) * m2[k] % mod;
+    }
+    result[i] = s % mod;
+  }
+  return result;
+}
+
+template <typename T, int C>
+SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
+    MatrixMulVec(const pe_mat::Matrix<T, C>& m1, const vector<T>& m2, T mod) {
   PE_ASSERT(m1.col() == m2.size());
   const int r = m1.row();
   const int cr = m1.col();

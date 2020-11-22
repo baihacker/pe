@@ -74,21 +74,19 @@ void power_sum() {
 }
 
 void matrix_power() {
-#if ENABLE_EIGEN
   // m^n, m is a k*k matrix
-  cout << PowerMod([](auto& m) { m(0, 0) = m(0, 1) = m(1, 0) = 1; }, 2,
-                   10000000000, mod)
+  cout << MatrixPowerMod([](auto& m) { m(0, 0) = m(0, 1) = m(1, 0) = 1; }, 2,
+                         10000000000, mod)
        << endl;
 
   // m^n*v, m is a k*k matrix
-  cout << PowerMod(
+  cout << MatrixPowerMod(
               [](auto& m, auto& v) {
                 m(0, 0) = m(0, 1) = m(1, 0) = 1;
                 v[0] = v[1] = 1;
               },
               2, 10000000000, mod)
        << endl;
-#endif
 }
 
 void big_number() {

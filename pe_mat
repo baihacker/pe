@@ -674,25 +674,6 @@ SL REQUIRES((IsNModNumber<T>::result)) RETURN(vector<T>) PeMatrixPowerMod(
 
 // Version 3
 #if PE_HAS_INT128
-SL vector<int64> PeMatrixPowerMod(
-    const function<void(pe_mat::Matrix<int128>& mat, vector<int128>& v)>& init,
-    const int K, int64 n, int64 mod) {
-  using T = int128;
-  using MatrixT = pe_mat::Matrix<T>;
-
-  vector<T> v(K, 0);
-  MatrixT m(K, K);
-
-  init(m, v);
-
-  auto t = MatrixPower<int128>(m, n, v, mod);
-
-  vector<int64> res(K, 0);
-  for (int i = 0; i < K; ++i) res[i] = t[i];
-
-  return res;
-}
-
 SL pe_mat::Matrix<int64> PeMatrixPowerMod(
     const function<void(pe_mat::Matrix<int128>& mat)>& init, const int K,
     int64 n, int64 mod) {
@@ -711,7 +692,46 @@ SL pe_mat::Matrix<int64> PeMatrixPowerMod(
 
   return res;
 }
+
+SL vector<int64> PeMatrixPowerMod(
+    const function<void(pe_mat::Matrix<int128>& mat, vector<int128>& v)>& init,
+    const int K, int64 n, int64 mod) {
+  using T = int128;
+  using MatrixT = pe_mat::Matrix<T>;
+
+  vector<T> v(K, 0);
+  MatrixT m(K, K);
+
+  init(m, v);
+
+  auto t = MatrixPower<int128>(m, n, v, mod);
+
+  vector<int64> res(K, 0);
+  for (int i = 0; i < K; ++i) res[i] = t[i];
+
+  return res;
+}
 #else
+SL pe_mat::Matrix<int64> PeMatrixPowerMod(
+    const function<void(pe_mat::Matrix<NModNumber<DefaultMod>>& mat)>& init,
+    const int K, int64 n, int64 mod) {
+  using T = NModNumber<DefaultMod>;
+  using MatrixT = pe_mat::Matrix<T>;
+
+  PE_ASSERT(mod == DefaultMod::Mod());
+
+  MatrixT m(K, K);
+
+  init(m);
+
+  auto t = MatrixPower(m, n);
+
+  pe_mat::Matrix<int64> res(K, K);
+  for (int i = 0; i < K; ++i)
+    for (int j = 0; j < K; ++j) res(i, j) = static_cast<int64>(t(i, j).value());
+
+  return res;
+}
 // mod == DefaultMod::mod()
 SL vector<int64> PeMatrixPowerMod(
     const function<void(pe_mat::Matrix<NModNumber<DefaultMod>>& mat,
@@ -731,27 +751,6 @@ SL vector<int64> PeMatrixPowerMod(
 
   vector<int64> res(K, 0);
   for (int i = 0; i < K; ++i) res[i] = t[i].value();
-
-  return res;
-}
-
-SL pe_mat::Matrix<int64> PeMatrixPowerMod(
-    const function<void(pe_mat::Matrix<NModNumber<DefaultMod>>& mat)>& init,
-    const int K, int64 n, int64 mod) {
-  using T = NModNumber<DefaultMod>;
-  using MatrixT = pe_mat::Matrix<T>;
-
-  PE_ASSERT(mod == DefaultMod::Mod());
-
-  MatrixT m(K, K);
-
-  init(m);
-
-  auto t = MatrixPower(m, n);
-
-  pe_mat::Matrix<int64> res(K, K);
-  for (int i = 0; i < K; ++i)
-    for (int j = 0; j < K; ++j) res(i, j) = static_cast<int64>(t(i, j).value());
 
   return res;
 }
@@ -1053,6 +1052,25 @@ SL REQUIRES((IsNModNumber<T>::result)) RETURN(vector<T>)
         2, 100000, 1000000007);
  */
 #if PE_HAS_INT128
+SL MatT<int64> EigenMatrixPowerMod(
+    const function<void(MatT<int128>& mat)>& init, const int K, int64 n,
+    int64 mod) {
+  using T = int128;
+  using MatrixT = MatT<T>;
+
+  MatrixT m = MatrixT::Zero(K, K);
+
+  init(m);
+
+  auto t = MatrixPower(m, n, mod);
+
+  MatT<int64> res(K, K);
+  for (int i = 0; i < K; ++i)
+    for (int j = 0; j < K; ++j) res(i, j) = static_cast<int64>(t(i, j));
+
+  return res;
+}
+
 SL vector<int64> EigenMatrixPowerMod(
     const function<void(MatT<int128>& mat, vector<int128>& v)>& init,
     const int K, int64 n, int64 mod) {
@@ -1072,11 +1090,15 @@ SL vector<int64> EigenMatrixPowerMod(
   return res;
 }
 
+#else
+// mod == DefaultMod::mod()
 SL MatT<int64> EigenMatrixPowerMod(
-    const function<void(MatT<int128>& mat)>& init, const int K, int64 n,
-    int64 mod) {
-  using T = int128;
-  using MatrixT = MatT<T>;
+    const function<void(MatT<NModNumber<DefaultMod>>& mat)>& init, const int K,
+    int64 n, int64 mod) {
+  typedef NModNumber<DefaultMod> T;
+  typedef MatT<T> MatrixT;
+
+  PE_ASSERT(mod == DefaultMod::Mod());
 
   MatrixT m = MatrixT::Zero(K, K);
 
@@ -1086,11 +1108,11 @@ SL MatT<int64> EigenMatrixPowerMod(
 
   MatT<int64> res(K, K);
   for (int i = 0; i < K; ++i)
-    for (int j = 0; j < K; ++j) res(i, j) = static_cast<int64>(t(i, j));
+    for (int j = 0; j < K; ++j) res(i, j) = static_cast<int64>(t(i, j).value());
 
   return res;
 }
-#else
+
 // mod == DefaultMod::mod()
 SL vector<int64> EigenMatrixPowerMod(
     const function<void(MatT<NModNumber<DefaultMod>>& mat,
@@ -1110,28 +1132,6 @@ SL vector<int64> EigenMatrixPowerMod(
 
   vector<int64> res(K, 0);
   for (int i = 0; i < K; ++i) res[i] = t[i].value();
-
-  return res;
-}
-
-// mod == DefaultMod::mod()
-SL MatT<int64> EigenMatrixPowerMod(
-    const function<void(MatT<NModNumber<DefaultMod>>& mat)>& init, const int K,
-    int64 n, int64 mod) {
-  typedef NModNumber<DefaultMod> T;
-  typedef MatT<T> MatrixT;
-
-  PE_ASSERT(mod == DefaultMod::Mod());
-
-  MatrixT m = MatrixT::Zero(K, K);
-
-  init(m);
-
-  auto t = MatrixPower(m, n, mod);
-
-  MatT<int64> res(K, K);
-  for (int i = 0; i < K; ++i)
-    for (int j = 0; j < K; ++j) res(i, j) = static_cast<int64>(t(i, j).value());
 
   return res;
 }

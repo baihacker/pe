@@ -138,7 +138,7 @@ struct MatStorage {
   }
 
   MatStorage(const MatStorage& storage)
-      : MatStorage(storage.r, storage.column()) {
+      : MatStorage(storage.r_, storage.column()) {
     PE_ASSERT(storage.column() == C);
     std::copy(storage.data_, storage.data_ + r_ * C, data_);
   }
@@ -149,18 +149,34 @@ struct MatStorage {
     storage.own_ = 0;
   }
 
+  MatStorage& operator=(MatStorage& storage) {
+    if (&storage != this) {
+      Release();
+      ::new (this) MatStorage(storage);
+    }
+    return *this;
+  }
+
+  MatStorage& operator=(MatStorage&& storage) {
+    if (&storage != this) {
+      Release();
+      ::new (this) MatStorage(std::move(storage));
+    }
+    return *this;
+  }
+
   template <int C1>
   MatStorage(const MatStorage<T, C1>& storage)
-      : MatStorage(storage.r, storage.column()) {
+      : MatStorage(storage.row(), storage.column()) {
     PE_ASSERT(storage.column() == C);
-    std::copy(storage.data_, storage.data_ + r_ * C, data_);
+    std::copy(storage.data(), storage.data() + r_ * C, data_);
   }
 
   template <int C1>
   MatStorage(MatStorage<T, C1>&& storage)
-      : data_(storage.data_), own_(storage.own_), r_(storage.r_) {
+      : data_(storage.data()), own_(storage.own()), r_(storage.row()) {
     PE_ASSERT(storage.column() == C);
-    storage.own_ = 0;
+    storage.set_own(0);
   }
 
   template <int C1>
@@ -189,6 +205,8 @@ struct MatStorage {
     }
   }
 
+  const int row() const { return r_; }
+
   const int column() const { return C; }
 
   T* data() { return data_; }
@@ -200,6 +218,10 @@ struct MatStorage {
   const T& at(const T* data, const int x, const int y) const {
     return data[x * column() + y];
   }
+
+  const int own() const { return own_; }
+
+  void set_own(int own) { own_ = own; }
 
  private:
   T* data_;
@@ -226,21 +248,6 @@ struct MatStorage<T, -1> {
     std::copy(storage.data_, storage.data_ + r_ * c_, data_);
   }
 
-  template <int C>
-  MatStorage(MatStorage<T, C>&& storage)
-      : data_(storage.data_),
-        own_(storage.own_),
-        r_(storage.r_),
-        c_(storage.column()) {
-    storage.own_ = 0;
-  }
-
-  template <int C>
-  MatStorage(const MatStorage<T, C>& storage)
-      : MatStorage(storage.r_, storage.column()) {
-    std::copy(storage.data_, storage.data_ + r_ * c_, data_);
-  }
-
   MatStorage(MatStorage&& storage)
       : data_(storage.data_),
         own_(storage.own_),
@@ -249,8 +256,7 @@ struct MatStorage<T, -1> {
     storage.own_ = 0;
   }
 
-  template <int C>
-  MatStorage& operator=(MatStorage<T, C>& storage) {
+  MatStorage& operator=(MatStorage& storage) {
     if (&storage != this) {
       Release();
       ::new (this) MatStorage(storage);
@@ -258,12 +264,40 @@ struct MatStorage<T, -1> {
     return *this;
   }
 
-  template <int C>
-  MatStorage& operator=(MatStorage<T, C>&& storage) {
+  MatStorage& operator=(MatStorage&& storage) {
     if (&storage != this) {
       Release();
       ::new (this) MatStorage(std::move(storage));
     }
+    return *this;
+  }
+
+  template <int C>
+  MatStorage(MatStorage<T, C>&& storage)
+      : data_(storage.data()),
+        own_(storage.own()),
+        r_(storage.row()),
+        c_(storage.column()) {
+    storage.set_own(0);
+  }
+
+  template <int C>
+  MatStorage(const MatStorage<T, C>& storage)
+      : MatStorage(storage.row(), storage.column()) {
+    std::copy(storage.data(), storage.data() + r_ * c_, data_);
+  }
+
+  template <int C>
+  MatStorage& operator=(MatStorage<T, C>& storage) {
+    Release();
+    ::new (this) MatStorage(storage);
+    return *this;
+  }
+
+  template <int C>
+  MatStorage& operator=(MatStorage<T, C>&& storage) {
+    Release();
+    ::new (this) MatStorage(std::move(storage));
     return *this;
   }
 
@@ -274,6 +308,8 @@ struct MatStorage<T, -1> {
       delete[] data_;
     }
   }
+
+  const int row() const { return r_; }
 
   const int column() const { return c_; }
 
@@ -286,6 +322,10 @@ struct MatStorage<T, -1> {
   const T& at(const T* data, const int x, const int y) const {
     return data[x * column() + y];
   }
+
+  const int own() const { return own_; }
+
+  void set_own(int own) { own_ = own; }
 
  private:
   T* data_;
@@ -343,20 +383,7 @@ struct Matrix {
     data_ = storage_.data();
   }
 
-  template <int C1>
-  Matrix(const Matrix<T, C1>& mat)
-      : storage_(mat.storage_), row_(mat.row()), col_(mat.col()) {
-    data_ = storage_.data();
-  }
-
-  template <int C1>
-  Matrix(Matrix<T, C1>&& mat)
-      : storage_(std::move(mat.storage_)), row_(mat.row()), col_(mat.col()) {
-    data_ = storage_.data();
-  }
-
-  template <int C1>
-  Matrix& operator=(Matrix<T, C1>& mat) {
+  Matrix& operator=(Matrix& mat) {
     if (&mat != this) {
       storage_.Release();
       new (this) Matrix(mat);
@@ -364,12 +391,37 @@ struct Matrix {
     return *this;
   }
 
-  template <int C1>
-  Matrix& operator=(Matrix<T, C1>&& mat) {
+  Matrix& operator=(Matrix&& mat) {
     if (&mat != this) {
       storage_.Release();
       new (this) Matrix(std::move(mat));
     }
+    return *this;
+  }
+
+  template <int C1>
+  Matrix(const Matrix<T, C1>& mat)
+      : storage_(mat.storage()), row_(mat.row()), col_(mat.col()) {
+    data_ = storage_.data();
+  }
+
+  template <int C1>
+  Matrix(Matrix<T, C1>&& mat)
+      : storage_(std::move(mat.storage())), row_(mat.row()), col_(mat.col()) {
+    data_ = storage_.data();
+  }
+
+  template <int C1>
+  Matrix& operator=(Matrix<T, C1>& mat) {
+    storage_.Release();
+    new (this) Matrix(mat);
+    return *this;
+  }
+
+  template <int C1>
+  Matrix& operator=(Matrix<T, C1>&& mat) {
+    storage_.Release();
+    new (this) Matrix(std::move(mat));
     return *this;
   }
 
@@ -388,7 +440,12 @@ struct Matrix {
   }
 
   const int row() const { return row_; }
+
   const int col() const { return col_; }
+
+  const MatStorage<T, C>& storage() const { return storage_; }
+
+  MatStorage<T, C>& storage() { return storage_; }
 
   Matrix& FillValue(const T v = T()) {
     for (int i = 0; i < row_; ++i)

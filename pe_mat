@@ -485,9 +485,24 @@ SL ostream& operator<<(ostream& o, const PeMatrix<T, C>& mat) {
   return o;
 }
 
+template <typename T>
+struct ModValueFixer {
+  static void Fix(T& v) {}
+};
+
+template <typename MC, typename S>
+struct ModValueFixer<NModNumber<MC, APSBL<S>>> {
+  static void Fix(NModNumber<MC, APSBL<S>>& v) { v.FixValue(); }
+};
+
+template <typename MC, typename S>
+struct ModValueFixer<NModNumberM<MC, APSBL<S>>> {
+  static void Fix(NModNumberM<MC, APSBL<S>>& v) { v.FixValue(); }
+};
+
 template <typename T, int C1, int C2>
-SL PeMatrix<T, -1> MatrixMul(const PeMatrix<T, C1>& m1,
-                             const PeMatrix<T, C2>& m2) {
+SL REQUIRES((!IsNModNumber<T>::result)) RETURN(PeMatrix<T, -1>)
+    MatrixMul(const PeMatrix<T, C1>& m1, const PeMatrix<T, C2>& m2) {
   PE_ASSERT(m1.col() == m2.row());
   const int r = m1.row();
   const int cr = m1.col();
@@ -504,25 +519,9 @@ SL PeMatrix<T, -1> MatrixMul(const PeMatrix<T, C1>& m1,
   return result;
 }
 
-template <typename T, int C>
-SL vector<T> MatrixMulVec(const PeMatrix<T, C>& m1, const vector<T>& m2) {
-  PE_ASSERT(m1.col() == m2.size());
-  const int r = m1.row();
-  const int cr = m1.col();
-  vector<T> result(r);
-  for (int i = 0; i < r; ++i) {
-    T s = 0;
-    for (int k = 0; k < cr; ++k) {
-      s += m1(i, k) * m2[k];
-    }
-    result[i] = s;
-  }
-  return result;
-}
-
 template <typename T, int C1, int C2>
-SL REQUIRES((!is_native_integer<T>::value)) RETURN(PeMatrix<T, -1>)
-    MatrixMul(const PeMatrix<T, C1>& m1, const PeMatrix<T, C2>& m2, T mod) {
+SL REQUIRES((IsNModNumber<T>::result)) RETURN(PeMatrix<T, -1>)
+    MatrixMul(const PeMatrix<T, C1>& m1, const PeMatrix<T, C2>& m2) {
   PE_ASSERT(m1.col() == m2.row());
   const int r = m1.row();
   const int cr = m1.col();
@@ -532,9 +531,10 @@ SL REQUIRES((!is_native_integer<T>::value)) RETURN(PeMatrix<T, -1>)
     for (int j = 0; j < c; ++j) {
       T s = 0;
       for (int k = 0; k < cr; ++k) {
-        s += m1(i, k) * m2(k, j) % mod;
+        s += m1(i, k) * m2(k, j);
       }
-      result(i, j) = s % mod;
+      ModValueFixer<T>::Fix(s);
+      result(i, j) = s;
     }
   return result;
 }
@@ -558,9 +558,28 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(PeMatrix<T, -1>)
   return result;
 }
 
+template <typename T, int C1, int C2>
+SL REQUIRES((!is_native_integer<T>::value)) RETURN(PeMatrix<T, -1>)
+    MatrixMul(const PeMatrix<T, C1>& m1, const PeMatrix<T, C2>& m2, T mod) {
+  PE_ASSERT(m1.col() == m2.row());
+  const int r = m1.row();
+  const int cr = m1.col();
+  const int c = m2.col();
+  PeMatrix<T, -1> result(r, c, matrix_no_init);
+  for (int i = 0; i < r; ++i)
+    for (int j = 0; j < c; ++j) {
+      T s = 0;
+      for (int k = 0; k < cr; ++k) {
+        s += m1(i, k) * m2(k, j) % mod;
+      }
+      result(i, j) = s % mod;
+    }
+  return result;
+}
+
 template <typename T, int C>
-SL REQUIRES((!is_native_integer<T>::value)) RETURN(vector<T>)
-    MatrixMulVec(const PeMatrix<T, C>& m1, const vector<T>& m2, T mod) {
+SL REQUIRES((!IsNModNumber<T>::result)) RETURN(vector<T>)
+    MatrixMulVec(const PeMatrix<T, C>& m1, const vector<T>& m2) {
   PE_ASSERT(m1.col() == m2.size());
   const int r = m1.row();
   const int cr = m1.col();
@@ -568,9 +587,27 @@ SL REQUIRES((!is_native_integer<T>::value)) RETURN(vector<T>)
   for (int i = 0; i < r; ++i) {
     T s = 0;
     for (int k = 0; k < cr; ++k) {
-      s += m1(i, k) * m2[k] % mod;
+      s += m1(i, k) * m2[k];
     }
-    result[i] = s % mod;
+    result[i] = s;
+  }
+  return result;
+}
+
+template <typename T, int C>
+SL REQUIRES((IsNModNumber<T>::result)) RETURN(vector<T>)
+    MatrixMulVec(const PeMatrix<T, C>& m1, const vector<T>& m2) {
+  PE_ASSERT(m1.col() == m2.size());
+  const int r = m1.row();
+  const int cr = m1.col();
+  vector<T> result(r);
+  for (int i = 0; i < r; ++i) {
+    T s = 0;
+    for (int k = 0; k < cr; ++k) {
+      s += m1(i, k) * m2[k];
+    }
+    ModValueFixer<T>::Fix(s);
+    result[i] = s;
   }
   return result;
 }
@@ -586,6 +623,23 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)
     T s = 0;
     for (int k = 0; k < cr; ++k) {
       s += MulModEx(m1(i, k), m2[k], mod);
+    }
+    result[i] = s % mod;
+  }
+  return result;
+}
+
+template <typename T, int C>
+SL REQUIRES((!is_native_integer<T>::value)) RETURN(vector<T>)
+    MatrixMulVec(const PeMatrix<T, C>& m1, const vector<T>& m2, T mod) {
+  PE_ASSERT(m1.col() == m2.size());
+  const int r = m1.row();
+  const int cr = m1.col();
+  vector<T> result(r);
+  for (int i = 0; i < r; ++i) {
+    T s = 0;
+    for (int k = 0; k < cr; ++k) {
+      s += m1(i, k) * m2[k];
     }
     result[i] = s % mod;
   }
@@ -803,6 +857,7 @@ SL vector<int64> PeMatrixPowerMod(
   return res;
 }
 #else
+// mod == DefaultMod::mod()
 SL PeMatrix<int64> PeMatrixPowerMod(
     const function<void(PeMatrix<NModNumber<DefaultMod>>& mat)>& init,
     const int K, int64 n, int64 mod) {
@@ -867,12 +922,12 @@ struct NormalMatrixModFixer {
 };
 
 template <typename T>
-struct NModMatrixModFixer {
+struct NModEigenMatrixModFixer {
   static void Fix(EigenMatrix<T>& m) {}
 };
 
 template <typename MC, typename S>
-struct NModMatrixModFixer<NModNumber<MC, APSBL<S>>> {
+struct NModEigenMatrixModFixer<NModNumber<MC, APSBL<S>>> {
   static void Fix(EigenMatrix<NModNumber<MC, APSBL<S>>>& m) {
     const auto r = m.rows();
     const auto c = m.cols();
@@ -884,7 +939,7 @@ struct NModMatrixModFixer<NModNumber<MC, APSBL<S>>> {
 };
 
 template <typename MC, typename S>
-struct NModMatrixModFixer<NModNumberM<MC, APSBL<S>>> {
+struct NModEigenMatrixModFixer<NModNumberM<MC, APSBL<S>>> {
   static void Fix(EigenMatrix<NModNumberM<MC, APSBL<S>>>& m) {
     const auto r = m.rows();
     const auto c = m.cols();
@@ -908,11 +963,11 @@ SL EigenMatrix<T> MatrixPower(const EigenMatrix<T>& x, int64 n) {
     // cout << "n = " << n << endl;
     if (n & 1) {
       e *= y;
-      NModMatrixModFixer<T>::Fix(e);
+      NModEigenMatrixModFixer<T>::Fix(e);
     }
     if (n > 1) {
       y *= y;
-      NModMatrixModFixer<T>::Fix(y);
+      NModEigenMatrixModFixer<T>::Fix(y);
     }
   }
   return e;
@@ -969,7 +1024,7 @@ SL vector<T> MatrixPower(const EigenMatrix<T>& x, int64 n, const vector<T>& v) {
     }
     if (n > 1) {
       y *= y;
-      NModMatrixModFixer<T>::Fix(y);
+      NModEigenMatrixModFixer<T>::Fix(y);
     }
   }
   return result;
@@ -1012,8 +1067,8 @@ SL vector<T> MatrixPower(const EigenMatrix<T>& x, int64 n, const vector<T>& v,
 /**
  * Helper method for matrix multiplication
  * 1. Compiling time mod version, you only need to specify mod
- * 2. Use Customized element type.
- * 3. Dynamic mod version: use int128 (if available) or global variable
+ * 2. Compiling time mod version, you only need to specify NModNumber.
+ * 3. Runtime mod version: use int128 (if available) or global variable
  * DEFAULT_MOD (slow).
  */
 

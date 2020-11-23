@@ -9,7 +9,8 @@ using MT = NMod64<mod>;
  * |1 0|      |0|
  */
 
-// mod is specified at compiling time.
+// Mod is specified at compiling time.
+// The element type is choosed internally.
 int64 solve0(int64 n) {
   auto ans = MatrixPowerMod<mod>(
       [=](auto& m, auto& v) {
@@ -23,7 +24,7 @@ int64 solve0(int64 n) {
   return ans[0];
 }
 
-// Use a customized type which depends on mod specified at compiling time.
+// Mod is associated with T at compiling time.
 int64 solve1(int64 n) {
   auto ans = MatrixPowerMod<MT>(
       [=](auto& m, auto& v) {
@@ -37,25 +38,9 @@ int64 solve1(int64 n) {
   return ans[0].value();
 }
 
-// Mod is specified at runtime.
-// If int128 is available, use int128 as element type, different threads use
-// different mod. Otherwise, use DefaultMod, All the threads use the same mod.
-int64 solve2(int64 n, int64 mod) {
-  auto ans = MatrixPowerMod(
-      [=](auto& m, auto& v) {
-        m(0, 0) = 1;
-        m(0, 1) = 1;
-        m(1, 0) = 1;
-        v[0] = 1;
-        v[1] = 0;
-      },
-      2, n, mod);
-  return ans[0];
-}
-
-// Mod is specified at runtime.
+// Mod is associated with T at runtime.
 // Different threads use different mod.
-int64 solve3(int64 n, int64 rmod) {
+int64 solve2(int64 n, int64 rmod) {
   TLMod<int64>::Set(rmod);
   auto ans = MatrixPowerMod<TLNMod64<>>(
       [=](auto& m, auto& v) {
@@ -69,9 +54,9 @@ int64 solve3(int64 n, int64 rmod) {
   return ans[0].value();
 }
 
-// Mod is specified at runtime.
+// Mod is associated with T at runtime.
 // All the threads use the same mod.
-int64 solve4(int64 n, int64 rmod) {
+int64 solve3(int64 n, int64 rmod) {
   using T = NModNumber<DefaultMod>;
   DefaultMod::Set(rmod);
   auto ans = MatrixPowerMod<T>(
@@ -84,6 +69,25 @@ int64 solve4(int64 n, int64 rmod) {
       },
       2, n);
   return ans[0].value();
+}
+
+// Mod is specified at runtime.
+// If int128 is available, use int128 as element type, different threads use
+// different mod.
+// Otherwise, use DefaultMod, All the threads use the same mod, and this is same
+// as solve3 and the difference is solve3 needs to set the default mod
+// exiplicitly and solve4 will set it automatically.
+int64 solve4(int64 n, int64 mod) {
+  auto ans = MatrixPowerMod(
+      [=](auto& m, auto& v) {
+        m(0, 0) = 1;
+        m(0, 1) = 1;
+        m(1, 0) = 1;
+        v[0] = 1;
+        v[1] = 0;
+      },
+      2, n, mod);
+  return ans[0];
 }
 
 int main() {

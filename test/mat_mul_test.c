@@ -170,7 +170,7 @@ SL void TestPeHelperMethod() {
 }
 
 SL void MatMulTest() {
-  DEFAULT_MOD = mod;
+  DefaultMod::Set(mod);
   vector<int> data;
   for (int i = 0; i < K; ++i)
     for (int j = 0; j < K; ++j) data.push_back(j * K + i);

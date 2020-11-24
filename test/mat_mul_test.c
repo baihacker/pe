@@ -27,6 +27,26 @@ void TestEigen(const vector<int>& data, const vector<int>& V) {
 }
 
 template <typename E>
+void TestEigen(const vector<int>& data, const vector<int>& V, E mod) {
+  std::vector<E> v(K, 0);
+  EigenMatrix<E> m = EigenMatrix<E>::Zero(K, K);
+
+  for (int i = 0; i < K; ++i) v[i] = V[i] % mod;
+  rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j * K + i] % mod;
+
+  TimeRecorder tr;
+  v = MatrixPower(m, 4, v, mod);
+  int64 s = 0;
+  for (auto i : v) s += i;
+  // cout << s << endl;
+  if (show) {
+    cout << tr.Elapsed().Format() << endl;
+  }
+  assert(s == 247446585411LL);
+  sort(all(v));
+}
+
+template <typename E>
 void TestPe(const vector<int>& data, const vector<int>& V) {
   std::vector<E> v(K, 0);
   PeMatrix<E> m(K, K);
@@ -38,6 +58,26 @@ void TestPe(const vector<int>& data, const vector<int>& V) {
   v = MatrixPower(m, 4, v);
   int64 s = 0;
   for (auto i : v) s += i.value();
+  // cout << s << endl;
+  if (show) {
+    cout << tr.Elapsed().Format() << endl;
+  }
+  assert(s == 247446585411LL);
+  sort(all(v));
+}
+
+template <typename E>
+void TestPe(const vector<int>& data, const vector<int>& V, E mod) {
+  std::vector<E> v(K, 0);
+  PeMatrix<E> m(K, K);
+
+  for (int i = 0; i < K; ++i) v[i] = V[i] % mod;
+  rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j * K + i] % mod;
+
+  TimeRecorder tr;
+  v = MatrixPower(m, 4, v, mod);
+  int64 s = 0;
+  for (auto i : v) s += i;
   // cout << s << endl;
   if (show) {
     cout << tr.Elapsed().Format() << endl;
@@ -217,38 +257,42 @@ SL void MatMulTest() {
   if (show) {
     cout << endl;
   }
+
   TimeRecorder tr;
-  TestEigen<NModNumber<CCMod64<mod>, APSB<int64, int64>>>(data, V);
-  TestEigen<NModNumber<DefaultMod, APSB<int64, int64>>>(data, V);
+  TestEigen<int128>(data, V, mod);
 
-  TestEigen<NModNumber<CCMod64<mod>, APSB<int64, int128>>>(data, V);
-  TestEigen<NModNumber<DefaultMod, APSB<int64, int128>>>(data, V);
-
-  TestEigen<NModNumber<CCMod64<mod>, APSB<int64, fake_int128>>>(data, V);
-  TestEigen<NModNumber<DefaultMod, APSB<int64, fake_int128>>>(data, V);
-
-  TestEigen<NModNumber<CCMod64<mod>, APSB<int128, int128>>>(data, V);
-  TestEigen<NModNumber<DefaultMod, APSB<int128, int128>>>(data, V);
-
-  TestEigen<NModNumber<CCMod64<mod>, APSBL<int128>>>(data, V);
-  TestEigen<NModNumber<DefaultMod, APSBL<int128>>>(data, V);
   if (show) {
     cout << endl;
   }
+
+  TestEigen<NModNumber<CCMod64<mod>, APSB<int64, int64>>>(data, V);
+  TestEigen<NModNumber<CCMod64<mod>, APSB<int64, int128>>>(data, V);
+  TestEigen<NModNumber<CCMod64<mod>, APSB<int64, fake_int128>>>(data, V);
+  TestEigen<NModNumber<CCMod64<mod>, APSB<int128, int128>>>(data, V);
+  TestEigen<NModNumber<CCMod64<mod>, APSBL<int128>>>(data, V);
+
+  TestEigen<NModNumber<DefaultMod, APSB<int64, int64>>>(data, V);
+  TestEigen<NModNumber<DefaultMod, APSB<int64, int128>>>(data, V);
+  TestEigen<NModNumber<DefaultMod, APSB<int64, fake_int128>>>(data, V);
+  TestEigen<NModNumber<DefaultMod, APSB<int128, int128>>>(data, V);
+  TestEigen<NModNumber<DefaultMod, APSBL<int128>>>(data, V);
+
+  if (show) {
+    cout << endl;
+  }
+
   TestEigen<NModNumberM<CCMod64<mod>, APSB<int64, int64>>>(data, V);
-  TestEigen<NModNumberM<DefaultMod, APSB<int64, int64>>>(data, V);
-
   TestEigen<NModNumberM<CCMod64<mod>, APSB<int64, int128>>>(data, V);
-  TestEigen<NModNumberM<DefaultMod, APSB<int64, int128>>>(data, V);
-
   TestEigen<NModNumberM<CCMod64<mod>, APSB<int64, fake_int128>>>(data, V);
-  TestEigen<NModNumberM<DefaultMod, APSB<int64, fake_int128>>>(data, V);
-
   TestEigen<NModNumberM<CCMod64<mod>, APSB<int128, int128>>>(data, V);
-  TestEigen<NModNumberM<DefaultMod, APSB<int128, int128>>>(data, V);
-
   TestEigen<NModNumberM<CCMod64<mod>, APSBL<int128>>>(data, V);
+
+  TestEigen<NModNumberM<DefaultMod, APSB<int64, int64>>>(data, V);
+  TestEigen<NModNumberM<DefaultMod, APSB<int64, int128>>>(data, V);
+  TestEigen<NModNumberM<DefaultMod, APSB<int64, fake_int128>>>(data, V);
+  TestEigen<NModNumberM<DefaultMod, APSB<int128, int128>>>(data, V);
   TestEigen<NModNumberM<DefaultMod, APSBL<int128>>>(data, V);
+
   if (show) {
     cout << endl;
   }
@@ -262,37 +306,39 @@ SL void MatMulTest() {
   }
 
   tr.Record();
+  TestPe<int128>(data, V, mod);
+
+  if (show) {
+    cout << endl;
+  }
+
   TestPe<NModNumber<CCMod64<mod>, APSB<int64, int64>>>(data, V);
-  TestPe<NModNumber<DefaultMod, APSB<int64, int64>>>(data, V);
-
   TestPe<NModNumber<CCMod64<mod>, APSB<int64, int128>>>(data, V);
-  TestPe<NModNumber<DefaultMod, APSB<int64, int128>>>(data, V);
-
   TestPe<NModNumber<CCMod64<mod>, APSB<int64, fake_int128>>>(data, V);
-  TestPe<NModNumber<DefaultMod, APSB<int64, fake_int128>>>(data, V);
-
   TestPe<NModNumber<CCMod64<mod>, APSB<int128, int128>>>(data, V);
-  TestPe<NModNumber<DefaultMod, APSB<int128, int128>>>(data, V);
-
   TestPe<NModNumber<CCMod64<mod>, APSBL<int128>>>(data, V);
+
+  TestPe<NModNumber<DefaultMod, APSB<int64, int64>>>(data, V);
+  TestPe<NModNumber<DefaultMod, APSB<int64, int128>>>(data, V);
+  TestPe<NModNumber<DefaultMod, APSB<int64, fake_int128>>>(data, V);
+  TestPe<NModNumber<DefaultMod, APSB<int128, int128>>>(data, V);
   TestPe<NModNumber<DefaultMod, APSBL<int128>>>(data, V);
+
   if (show) {
     cout << endl;
   }
   TestPe<NModNumberM<CCMod64<mod>, APSB<int64, int64>>>(data, V);
-  TestPe<NModNumberM<DefaultMod, APSB<int64, int64>>>(data, V);
-
   TestPe<NModNumberM<CCMod64<mod>, APSB<int64, int128>>>(data, V);
-  TestPe<NModNumberM<DefaultMod, APSB<int64, int128>>>(data, V);
-
   TestPe<NModNumberM<CCMod64<mod>, APSB<int64, fake_int128>>>(data, V);
-  TestPe<NModNumberM<DefaultMod, APSB<int64, fake_int128>>>(data, V);
-
   TestPe<NModNumberM<CCMod64<mod>, APSB<int128, int128>>>(data, V);
-  TestPe<NModNumberM<DefaultMod, APSB<int128, int128>>>(data, V);
-
   TestPe<NModNumberM<CCMod64<mod>, APSBL<int128>>>(data, V);
+
+  TestPe<NModNumberM<DefaultMod, APSB<int64, int64>>>(data, V);
+  TestPe<NModNumberM<DefaultMod, APSB<int64, int128>>>(data, V);
+  TestPe<NModNumberM<DefaultMod, APSB<int64, fake_int128>>>(data, V);
+  TestPe<NModNumberM<DefaultMod, APSB<int128, int128>>>(data, V);
   TestPe<NModNumberM<DefaultMod, APSBL<int128>>>(data, V);
+
   if (show) {
     cout << endl;
   }
@@ -300,6 +346,6 @@ SL void MatMulTest() {
   cout << "Pe " << tr.Elapsed().Format() << endl;
 }
 
-PE_REGISTER_TEST(&MatMulTest, "MatMulTest", SUPER);
+PE_REGISTER_TEST(&MatMulTest, "MatMulTest", SPECIFIED);
 #endif
 }  // namespace mat_mul_test

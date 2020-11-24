@@ -41,7 +41,8 @@ int64 solve1(int64 n) {
 // Mod is associated with T at runtime.
 // Different threads use different mod.
 int64 solve2(int64 n, int64 rmod) {
-  TLMod<int64>::Set(rmod);
+  Eigen::setNbThreads(1);
+  TLMod64::Set(rmod);
   auto ans = MatrixPowerMod<TLNMod64<>>(
       [=](auto& m, auto& v) {
         m(0, 0) = 1;
@@ -51,6 +52,7 @@ int64 solve2(int64 n, int64 rmod) {
         v[1] = 0;
       },
       2, n);
+  Eigen::setNbThreads(0);
   return ans[0].value();
 }
 

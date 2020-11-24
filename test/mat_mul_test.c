@@ -346,6 +346,6 @@ SL void MatMulTest() {
   cout << "Pe " << tr.Elapsed().Format() << endl;
 }
 
-PE_REGISTER_TEST(&MatMulTest, "MatMulTest", SPECIFIED);
+PE_REGISTER_TEST(&MatMulTest, "MatMulTest", SUPER);
 #endif
 }  // namespace mat_mul_test

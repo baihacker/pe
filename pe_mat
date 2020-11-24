@@ -781,8 +781,86 @@ SL vector<T> MatrixPower(const PeMatrix<T, C>& m, int64 n, const vector<T>& v,
   return result;
 }
 
+/**
+ * Helper method for matrix multiplication
+ * 1. Compiling time mod version.
+ * 2. Customized element type version. The mod is associated with element type.
+ * It is also possible that element type has no mod associated with.
+ * 3. Explicit runtime mod version: use int128 (if available) or
+ * NModNumber<DefaultMod> (slow).
+ *
+ * For pe implementation:
+ * If ENABLE_OPENMP, multi-thread implementation is not applied if the element
+ * type is NModNumber other than CCMod and DefaultMod.
+ *
+ * For eigen implementation:
+ * If the element type is NModNumber other than CCMod and DefaultMod, the caller
+ * should guarantee Eigen::nbThreads() == 1.
+ *
+ * For both implementations:
+ * The caller is responsible for keeping DefaultMod thread-safe. In another
+ * words, it is not modified when MatrixPowerMod is running.
+ *
+ * See example/matrix_power.c.
+ */
+/**
+    Version 1:
+    auto res0 = MatrixPowerMod<1000000007>(
+        [=](auto& m) {
+          m(0, 0) = 1;
+          m(0, 1) = 1;
+          m(1, 0) = 1;
+        },
+        2, 100000);
+    auto res1 = MatrixPowerMod<1000000007>(
+        [=](auto& m, auto& v) {
+          m(0, 0) = 1;
+          m(0, 1) = 1;
+          m(1, 0) = 1;
+          v[0] = 1;
+          v[1] = 1;
+        },
+        2, 100000);
+
+    Version 2:
+    auto res0 = MatrixPowerMod<NMod64<1000000007>>(
+        [=](auto& m) {
+          m(0, 0) = 1;
+          m(0, 1) = 1;
+          m(1, 0) = 1;
+        },
+        2, 100000);
+    auto res1 = MatrixPowerMod<NMod64<1000000007>>(
+        [=](auto& m, auto& v) {
+          m(0, 0) = 1;
+          m(0, 1) = 1;
+          m(1, 0) = 1;
+          v[0] = 1;
+          v[1] = 1;
+        },
+        2, 100000);
+
+    Version 3:
+    auto res0 = MatrixPowerMod(
+        [=](auto& m) {
+          m(0, 0) = 1;
+          m(0, 1) = 1;
+          m(1, 0) = 1;
+        },
+        2, 100000, 1000000007);
+    auto res1 = MatrixPowerMod(
+        [=](auto& m, auto& v) {
+          // m(0, 0) = 1;
+          m(0, 1) = 1;
+          m(1, 0) = 1;
+          v[0] = 1;
+          v[1] = 1;
+        },
+        2, 100000, 1000000007);
+ */
+
 // Version 1
-// Mod is specified exipilictly at compiling time.
+// Mod is specified explicitly at compiling time.
 template <int64 mod>
 SL PeMatrix<int64> PeMatrixPowerMod(
     const function<void(PeMatrix<NMod64<mod>>& mat)>& init, const int K,
@@ -1117,35 +1195,8 @@ SL vector<T> MatrixPower(const EigenMatrix<T>& x, int64 n, const vector<T>& v,
   return result;
 }
 
-/**
- * Helper method for matrix multiplication
- * 1. Compiling time mod version, you only need to specify mod
- * 2. Compiling time mod version, you only need to specify NModNumber.
- * 3. Runtime mod version: use int128 (if available) or global variable
- * DEFAULT_MOD (slow).
- */
-
 // Version 1
-// Mod is specified exipilictly at compiling time.
-/**
-    auto res0 = MatPowerMod<1000000007>(
-        [=](auto& m) {
-          m(0, 0) = 1;
-          m(0, 1) = 1;
-          m(1, 0) = 1;
-        },
-        2, 100000);
-    auto res1 = MatPowerMod<1000000007>(
-        [=](auto& m, auto& v) {
-          m(0, 0) = 1;
-          m(0, 1) = 1;
-          m(1, 0) = 1;
-          v[0] = 1;
-          v[1] = 1;
-        },
-        2, 100000);
- */
-
+// Mod is specified explicitly at compiling time.
 template <int64 mod>
 SL EigenMatrix<int64> EigenMatrixPowerMod(
     const function<void(EigenMatrix<NMod64<mod>>& mat)>& init, const int K,
@@ -1189,25 +1240,6 @@ SL vector<int64> EigenMatrixPowerMod(
 
 // Version 2
 // Mod is associated with T at compiling time or runtime.
-/**
-    auto res0 = MatPowerMod<NMod64<1000000007>>(
-        [=](auto& m) {
-          m(0, 0) = 1;
-          m(0, 1) = 1;
-          m(1, 0) = 1;
-        },
-        2, 100000);
-    auto res1 = MatPowerMod<NMod64<1000000007>>(
-        [=](auto& m, auto& v) {
-          m(0, 0) = 1;
-          m(0, 1) = 1;
-          m(1, 0) = 1;
-          v[0] = 1;
-          v[1] = 1;
-        },
-        2, 100000);
-*/
-
 template <typename T>
 SL REQUIRES((IsNModNumber<T>::result)) RETURN(EigenMatrix<T>)
     EigenMatrixPowerMod(const function<void(EigenMatrix<T>& mat)>& init,
@@ -1237,24 +1269,6 @@ SL REQUIRES((IsNModNumber<T>::result)) RETURN(vector<T>) EigenMatrixPowerMod(
 
 // Version 3
 // Mod is specified at runtime.
-/**
-    auto res0 = MatPowerMod(
-        [=](auto& m) {
-          m(0, 0) = 1;
-          m(0, 1) = 1;
-          m(1, 0) = 1;
-        },
-        2, 100000, 1000000007);
-    auto res1 = MatPowerMod(
-        [=](auto& m, auto& v) {
-          // m(0, 0) = 1;
-          m(0, 1) = 1;
-          m(1, 0) = 1;
-          v[0] = 1;
-          v[1] = 1;
-        },
-        2, 100000, 1000000007);
- */
 #if PE_HAS_INT128
 SL EigenMatrix<int64> EigenMatrixPowerMod(
     const function<void(EigenMatrix<int128>& mat)>& init, const int K, int64 n,

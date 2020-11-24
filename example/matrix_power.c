@@ -76,9 +76,9 @@ int64 solve3(int64 n, int64 rmod) {
 // Mod is specified at runtime.
 // If int128 is available, use int128 as element type, different threads use
 // different mod.
-// Otherwise, use DefaultMod, All the threads use the same mod, and this is same
+// Otherwise, use DefaultMod, all the threads use the same mod, and this is same
 // as solve3 and the difference is solve3 needs to set the default mod
-// exiplicitly and solve4 will set it automatically.
+// explicitly and solve4 will set it automatically.
 int64 solve4(int64 n, int64 mod) {
   auto ans = MatrixPowerMod(
       [=](auto& m, auto& v) {

@@ -10,7 +10,9 @@ SL void MatMulMat(T (*a)[D], T (*b)[D], T (*c)[D], int N = D) {
   for (int i = 0; i < N; ++i)
     for (int j = 0; j < N; ++j) {
       T s = 0;
-      for (int k = 0; k < N; ++k) s += a[i][k] * b[k][j];
+      for (int k = 0; k < N; ++k) {
+        s += a[i][k] * b[k][j];
+      }
       c[i][j] = s;
     }
 }
@@ -22,7 +24,9 @@ SL void MatMulMat(T* aa, T* bb, T* cc, int N) {
       T* a = aa + i * N;
       T* c = cc + i * N;
       T s = 0;
-      for (int k = 0; k < N; ++k) s += a[k] * (bb + k * N)[j];
+      for (int k = 0; k < N; ++k) {
+        s += a[k] * (bb + k * N)[j];
+      }
       c[j] = s;
     }
 }
@@ -31,7 +35,9 @@ template <typename T, int D>
 SL void MatMulVec(T (*a)[D], T (*b)[D], T (*c)[D], int N = D) {
   for (int i = 0; i < N; ++i) {
     T s = 0;
-    for (int k = 0; k < N; ++k) s += a[i][k] * b[k][0];
+    for (int k = 0; k < N; ++k) {
+      s += a[i][k] * b[k][0];
+    }
     c[i][0] = s;
   }
 }
@@ -40,7 +46,9 @@ template <typename T, int D>
 SL void MatMulVec(T (*a)[D], T* b, T* c, int N = D) {
   for (int i = 0; i < N; ++i) {
     T s = 0;
-    for (int k = 0; k < N; ++k) s += a[i][k] * b[k];
+    for (int k = 0; k < N; ++k) {
+      s += a[i][k] * b[k];
+    }
     c[i] = s;
   }
 }
@@ -50,7 +58,9 @@ SL void MatMulVec(T* aa, T* b, T* c, int N) {
   for (int i = 0; i < N; ++i) {
     T* a = aa + i * N;
     T s = 0;
-    for (int k = 0; k < N; ++k) s += a[k] * b[k];
+    for (int k = 0; k < N; ++k) {
+      s += a[k] * b[k];
+    }
     c[i] = s;
   }
 }
@@ -62,7 +72,9 @@ SL void MatMulMatMod(T (*a)[D], T (*b)[D], T (*c)[D], int64 mod, int N = D) {
       int64 s = 0;
       for (int k = 0; k < N; ++k) {
         s += MulMod(a[i][k], b[k][j], mod);
-        if (s >= mod) s -= mod;
+        if (s >= mod) {
+          s -= mod;
+        }
       }
       c[i][j] = s % mod;
     }
@@ -77,7 +89,9 @@ SL void MatMulMatMod(T* aa, T* bb, T* cc, int64 mod, int N) {
       int64 s = 0;
       for (int k = 0; k < N; ++k) {
         s += MulMod(a[k], (bb + k * N)[j], mod);
-        if (s >= mod) s -= mod;
+        if (s >= mod) {
+          s -= mod;
+        }
       }
       c[j] = s % mod;
     }
@@ -89,7 +103,9 @@ SL void MatMulVecMod(T (*a)[D], T (*b)[D], T (*c)[D], int64 mod, int N = D) {
     int64 s = 0;
     for (int k = 0; k < N; ++k) {
       s += MulMod(a[i][k], b[k][0], mod);
-      if (s >= mod) s -= mod;
+      if (s >= mod) {
+        s -= mod;
+      }
     }
     c[i][0] = s;
   }
@@ -101,7 +117,9 @@ SL void MatMulVecMod(T (*a)[D], T* b, T* c, int64 mod, int N = D) {
     int64 s = 0;
     for (int k = 0; k < N; ++k) {
       s += MulMod(a[i][k], b[k], mod);
-      if (s >= mod) s -= mod;
+      if (s >= mod) {
+        s -= mod;
+      }
     }
     c[i] = s;
   }
@@ -114,7 +132,9 @@ SL void MatMulVecMod(T* aa, T* b, T* c, int64 mod, int N) {
     int64 s = 0;
     for (int k = 0; k < N; ++k) {
       s += MulMod(a[k], b[k], mod);
-      if (s >= mod) s -= mod;
+      if (s >= mod) {
+        s -= mod;
+      }
     }
     c[i] = s;
   }
@@ -795,7 +815,7 @@ SL vector<T> MatrixPower(const PeMatrix<T, C>& m, int64 n, const vector<T>& v,
  *
  * For eigen implementation:
  * If the element type is NModNumber other than CCMod and DefaultMod, the caller
- * should guarantee Eigen::nbThreads() == 1.
+ * should guarantee Eigen::nbThreads() == 1. (Call Eigen::setNbThreads(1))
  *
  * For both implementations:
  * The caller is responsible for keeping DefaultMod thread-safe. In another
@@ -850,7 +870,7 @@ SL vector<T> MatrixPower(const PeMatrix<T, C>& m, int64 n, const vector<T>& v,
         2, 100000, 1000000007);
     auto res1 = MatrixPowerMod(
         [=](auto& m, auto& v) {
-          // m(0, 0) = 1;
+          m(0, 0) = 1;
           m(0, 1) = 1;
           m(1, 0) = 1;
           v[0] = 1;
@@ -876,7 +896,9 @@ SL PeMatrix<int64> PeMatrixPowerMod(
 
   PeMatrix<int64> res(K, K);
   for (int i = 0; i < K; ++i)
-    for (int j = 0; j < K; ++j) res(i, j) = t(i, j).value();
+    for (int j = 0; j < K; ++j) {
+      res(i, j) = t(i, j).value();
+    }
 
   return res;
 }
@@ -897,7 +919,9 @@ SL vector<int64> PeMatrixPowerMod(
   auto t = MatrixPower(m, n, v);
 
   vector<int64> res(K, 0);
-  for (int i = 0; i < K; ++i) res[i] = t[i].value();
+  for (int i = 0; i < K; ++i) {
+    res[i] = t[i].value();
+  }
 
   return res;
 }
@@ -948,7 +972,9 @@ SL PeMatrix<int64> PeMatrixPowerMod(
 
   PeMatrix<int64> res(K, K);
   for (int i = 0; i < K; ++i)
-    for (int j = 0; j < K; ++j) res(i, j) = static_cast<int64>(t(i, j));
+    for (int j = 0; j < K; ++j) {
+      res(i, j) = static_cast<int64>(t(i, j));
+    }
 
   return res;
 }
@@ -967,7 +993,9 @@ SL vector<int64> PeMatrixPowerMod(
   auto t = MatrixPower<int128>(m, n, v, mod);
 
   vector<int64> res(K, 0);
-  for (int i = 0; i < K; ++i) res[i] = t[i];
+  for (int i = 0; i < K; ++i) {
+    res[i] = t[i];
+  }
 
   return res;
 }
@@ -990,7 +1018,9 @@ SL PeMatrix<int64> PeMatrixPowerMod(
 
   PeMatrix<int64> res(K, K);
   for (int i = 0; i < K; ++i)
-    for (int j = 0; j < K; ++j) res(i, j) = static_cast<int64>(t(i, j).value());
+    for (int j = 0; j < K; ++j) {
+      res(i, j) = static_cast<int64>(t(i, j).value());
+    }
 
   return res;
 }
@@ -1013,7 +1043,9 @@ SL vector<int64> PeMatrixPowerMod(
   auto t = MatrixPower(m, n, v);
 
   vector<int64> res(K, 0);
-  for (int i = 0; i < K; ++i) res[i] = t[i].value();
+  for (int i = 0; i < K; ++i) {
+    res[i] = t[i].value();
+  }
 
   return res;
 }
@@ -1212,7 +1244,9 @@ SL EigenMatrix<int64> EigenMatrixPowerMod(
 
   EigenMatrix<int64> res(K, K);
   for (int i = 0; i < K; ++i)
-    for (int j = 0; j < K; ++j) res(i, j) = t(i, j).value();
+    for (int j = 0; j < K; ++j) {
+      res(i, j) = t(i, j).value();
+    }
 
   return res;
 }
@@ -1233,7 +1267,9 @@ SL vector<int64> EigenMatrixPowerMod(
   auto t = MatrixPower(m, n, v);
 
   vector<int64> res(K, 0);
-  for (int i = 0; i < K; ++i) res[i] = t[i].value();
+  for (int i = 0; i < K; ++i) {
+    res[i] = t[i].value();
+  }
 
   return res;
 }
@@ -1284,7 +1320,9 @@ SL EigenMatrix<int64> EigenMatrixPowerMod(
 
   EigenMatrix<int64> res(K, K);
   for (int i = 0; i < K; ++i)
-    for (int j = 0; j < K; ++j) res(i, j) = static_cast<int64>(t(i, j));
+    for (int j = 0; j < K; ++j) {
+      res(i, j) = static_cast<int64>(t(i, j));
+    }
 
   return res;
 }
@@ -1303,7 +1341,9 @@ SL vector<int64> EigenMatrixPowerMod(
   auto t = MatrixPower(m, n, v, mod);
 
   vector<int64> res(K, 0);
-  for (int i = 0; i < K; ++i) res[i] = t[i];
+  for (int i = 0; i < K; ++i) {
+    res[i] = t[i];
+  }
 
   return res;
 }
@@ -1326,7 +1366,9 @@ SL EigenMatrix<int64> EigenMatrixPowerMod(
 
   EigenMatrix<int64> res(K, K);
   for (int i = 0; i < K; ++i)
-    for (int j = 0; j < K; ++j) res(i, j) = static_cast<int64>(t(i, j).value());
+    for (int j = 0; j < K; ++j) {
+      res(i, j) = static_cast<int64>(t(i, j).value());
+    }
 
   return res;
 }
@@ -1350,7 +1392,9 @@ SL vector<int64> EigenMatrixPowerMod(
   auto t = MatrixPower(m, n, v);
 
   vector<int64> res(K, 0);
-  for (int i = 0; i < K; ++i) res[i] = t[i].value();
+  for (int i = 0; i < K; ++i) {
+    res[i] = t[i].value();
+  }
 
   return res;
 }

@@ -515,6 +515,7 @@ int64 DEFAULT_MOD = 1;
 // The modulo is a global variable
 struct DefaultMod {
   using mod_type = int64;
+  using big_type = fake_int128;
   static int64 Mod() { return ::DEFAULT_MOD; }
   static void Set(int64 v) { ::DEFAULT_MOD = v; }
 };
@@ -523,6 +524,7 @@ struct DefaultMod {
 template <typename M, M mod_value = 0>
 struct CCMod {
   using mod_type = M;
+  using big_type = M;
   constexpr static int64 Mod() { return mod_value; }
 };
 
@@ -533,6 +535,7 @@ using CCMod64 = CCMod<int64, mod_value>;
 template <typename T>
 struct TLMod {
   using mod_type = T;
+  using big_type = T;
   static T Mod() { return mod_value; }
   static void Set(T v) { mod_value = v; }
   static thread_local T mod_value;
@@ -547,6 +550,7 @@ using TLMod64 = TLMod<int64>;
 template <typename T>
 struct MemMod {
   using mod_type = T;
+  using big_type = T;
   MemMod(T mod_value = ::DEFAULT_MOD) : mod_value(mod_value) {}
   T Mod() const { return mod_value; }
   T mod_value;
@@ -639,7 +643,7 @@ struct NModNumber;
 // AP = arithmetic policy
 // Use MC::mod() to get the modulo.
 template <typename MC,
-          typename AP = APSB<typename MC::mod_type, typename MC::mod_type>>
+          typename AP = APSB<typename MC::mod_type, typename MC::big_type>>
 struct NModNumber {
   using ints = typename AP::ints;
 
@@ -804,7 +808,7 @@ struct NModNumberM;
 // AP = arithmetic policy
 // Use mc.mod() to get the modulo.
 template <typename MC,
-          typename AP = APSB<typename MC::mod_type, typename MC::mod_type>>
+          typename AP = APSB<typename MC::mod_type, typename MC::big_type>>
 struct NModNumberM {
   using ints = typename AP::ints;
 

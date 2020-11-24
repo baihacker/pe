@@ -1,6 +1,6 @@
 #include <pe.hpp>
 
-const int64 mod = 1000000007;
+const int64 mod = 316227766016779;
 using MT = NMod64<mod>;
 
 /**
@@ -93,7 +93,7 @@ int64 solve4(int64 n, int64 mod) {
 }
 
 int main() {
-  PE_INIT(maxp = 2000000);
+  PE_INIT(maxp = 200000000);
 
   for (int64 n = 1; n <= 1000000000; n *= 10) {
     cout << "n = " << n << endl;

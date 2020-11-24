@@ -46,7 +46,7 @@ Please read the README or INSTALL doc of the target library before building it, 
   * "--enable-cxx" gmp specified option to support c++ wrapper.
 
   * "--host=x86_64-w64-mingw32" required for building gmp on win64.
-  
+
   * -D__USE_MINGW_ANSI_STDIO=0 in C or CXX flags to avoid mingw dependencies.
 
   * "make check" is optional but some libraries have this option in their makefile to check the build result.
@@ -82,7 +82,7 @@ Please read the README or INSTALL doc of the target library before building it, 
 * Note for mutiple libraries:
   * The order of included header files is important. Please adjust them if necessaries.
 
-  * The order of libraries (the order of additional library in compile command) is important (it usually happens). If the compiler says it cannot find a symbol, please try to adjust the library order. (Also try to adjust the order for other cases)
+  * The order of libraries (the order of additional library in compile command) is important (it usually happens). If the compiler says it cannot find a symbol, please try to adjust the library order. [Why does the order in which libraries are linked sometimes cause errors in GCC?](https://stackoverflow.com/questions/45135/why-does-the-order-in-which-libraries-are-linked-sometimes-cause-errors-in-gcc/409470#409470)
 
 ### MSVC
 * You can edit the include path and lib path in the solution property dialog.
@@ -157,7 +157,7 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 * mpir
 
   1. Make sure yasm.exe is in the PATH
-  
+
   2. Fix configure file if you are using msys2. (Similar to that of gmp)
 
   3. ./configure --disable-shared --enable-static --prefix=/usr
@@ -211,7 +211,7 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
   3. make -j8
 
      * Some test targets will fail to build due to the same reason. It is safe to ignore them.
-  
+
   4. make install
 
 * libbf. Use the following makefile which will generate libbf.avx2.a and libbf.generic.a, please choose one and rename it to libbf.a

@@ -271,7 +271,7 @@ clean:
 -include $(wildcard *.d)
 ```
 
-  * makefile_ntl (windows). Place edit config.h to enable c++14 and move assignment before running the script.
+  * makefile_ntl (windows). Please edit config.h to enable c++14 and move assignment before running the script.
 ```cpp
 CC=$(CROSS_PREFIX)gcc
 CFLAGS=-Wall

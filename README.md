@@ -28,7 +28,7 @@ It is my basic code for solving problem on <a href="https://projecteuler.net/rec
 
   * ENABLE_NTL whether to use [ntl](https://www.shoup.net/ntl/download.html).
 
-* See [Build and use third party library in pe](https://github.com/baihacker/pe/blob/master/libraries_on_win64.md#build-and-use-third-party-library-in-pe) for the pre-built third party libraries.
+* See [Build and use third party libraries in pe](https://github.com/baihacker/pe/blob/master/libraries_on_win64.md#build-and-use-third-party-libraries-in-pe) for the pre-built third party libraries.
 
 * [optional, recommended] Generate precompile header "pe.hpp.gch".
   * Command: "g++ -xc++-header pe.hpp". Run in D:\usr\include

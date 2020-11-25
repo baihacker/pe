@@ -2,7 +2,7 @@
 
 This doc tells you how to build and use C/C++ libraries on windows 64, and those libraries provide script to build on linux environment. In most cases, it is also applied to windows 32.
 
-## Manual build instruction
+## General build instruction
 
 Please read the README or INSTALL doc of the target library before building it, since **it may contain important configuration specifications**. If the library provides vc solution/project, you can use it to build. This doc only focuses on a library which can be built by makefile (other building system is not included).
 
@@ -110,8 +110,21 @@ Please read the README or INSTALL doc of the target library before building it, 
   * Build test on AppVeyor: "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"
 cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:precise /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /errorReport:prompt /WX- /Zc:forScope /Gd /Oi /MT /openmp /FC /EHsc /nologo /diagnostics:classic /DTEST_ALL /DCONTINUOUS_INTEGRATION_TEST /DENABLE_ASSERT=0 /DTRY_TO_USE_INT128=1 /DENABLE_OPENMP=1 /DENABLE_EIGEN=0 /DENABLE_GMP=0 /DENABLE_FLINT=0 /DENABLE_MPFR=0 /DENABLE_LIBBF=0 /DENABLE_NTL=0 /I "C:\projects\pe"
 
-## Build and use third party library in pe
- * Current version: gmp 6.2.1, flint 2.6.3, mpfr 4.0.2, mpir 3.0.0 (unused), libbf 2020-01-19, ntl 11_4_3.
+## Build pe's dependencies automatically
+
+ * Current version
+ 
+   * [gmp 6.2.1](https://gmplib.org/)
+   
+   * [mpfr 4.0.2](https://www.mpfr.org/mpfr-current/#download)
+   
+   * [mpir 3.0.0](http://mpir.org/downloads.html) (not used now)
+   
+   * [flint2 2.6.3](https://github.com/wbhart/flint2)
+   
+   * [libbf 2020-01-19](https://bellard.org/libbf/)
+   
+   * [ntl Windows: WinNTL-11_4_3.zip](https://www.shoup.net/ntl/download.html)
 
  * The compiled binaries (flint, gmp, mpfr, mpir, libbf, libntl) on windows (x64) can be found [here](https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA) (pwd:x7cg).
 

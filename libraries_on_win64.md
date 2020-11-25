@@ -117,7 +117,12 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 
  * Library order in compiling command: "-lbf -lgmpxx -lflint -lmpfr -lntl -lgmp"
 
- * Auto build script (makefile_libbf and makefile_ntl are mentioned in the next section)
+ * Building script
+ 
+   * makefile_libbf and makefile_ntl are mentioned in the next section
+   
+   * Please extract the source into the directories mentioned in building script
+
 ```cpp
 #!/bin/bash
 
@@ -220,7 +225,7 @@ build_all
 
 cd ${BUILD_ROOT}
 ```
- * makefile_libbf. Use the following makefile which will generate libbf.avx2.a and libbf.generic.a, please choose one and rename it to libbf.a
+ * makefile_libbf. This makefile will generate libbf.avx2.a and libbf.generic.a, please choose one and rename it to libbf.a
 ```cpp
 CC=$(CROSS_PREFIX)gcc
 CFLAGS=-Wall
@@ -253,7 +258,7 @@ clean:
 -include $(wildcard *.d)
 ```
 
-  * makefile_ntl (windows) (Change config.h to enable c++14 and move assignment before running the script."
+  * makefile_ntl (windows) Place edit config.h to enable c++14 and move assignment before running the script.
 ```cpp
 CC=$(CROSS_PREFIX)gcc
 CFLAGS=-Wall

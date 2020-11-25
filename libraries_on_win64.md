@@ -111,187 +111,13 @@ Please read the README or INSTALL doc of the target library before building it, 
 cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:precise /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /errorReport:prompt /WX- /Zc:forScope /Gd /Oi /MT /openmp /FC /EHsc /nologo /diagnostics:classic /DTEST_ALL /DCONTINUOUS_INTEGRATION_TEST /DENABLE_ASSERT=0 /DTRY_TO_USE_INT128=1 /DENABLE_OPENMP=1 /DENABLE_EIGEN=0 /DENABLE_GMP=0 /DENABLE_FLINT=0 /DENABLE_MPFR=0 /DENABLE_LIBBF=0 /DENABLE_NTL=0 /I "C:\projects\pe"
 
 ## Build and use third party library in pe
-* General
+ * Current version: gmp 6.2.1, flint 2.6.3, mpfr 4.0.2, mpir 3.0.0 (unused), libbf 2020-01-19, ntl 11_4_3.
 
-  * Current version: gmp 6.2.1, flint 2.6.3, mpfr 4.0.2, mpir 3.0.0 (unused), libbf 2020-01-19, ntl 11_4_3.
+ * The compiled binaries (flint, gmp, mpfr, mpir, libbf, libntl) on windows (x64) can be found [here](https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA) (pwd:x7cg).
 
-  * The compiled binaries (flint, gmp, mpfr, mpir, libbf, libntl) on windows (x64) can be found [here](https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA) (pwd:x7cg). The msys2 builds (installed by "pacman -S mingw-w64-x86_64-gmp") don't support msvc.
+ * Library order in compiling command: "-lbf -lgmpxx -lflint -lmpfr -lntl -lgmp"
 
-  * Library order in compiling command: "-lbf -lgmpxx -lflint -lmpfr -lntl -lgmp"
-
-* gmp
-
-  1. Fix configure file if you are using msys2.
-
-  *The latest msys (msys2-x86_64-20200602) is not compatible with gmp6.2.0, the corresponding erro is*
-```
-../gmp-impl.h:146:10: fatal error: ../gmp-mparam.h: Invalid argument
-  146 | #include "gmp-mparam.h"
-```
-
-*I guess it is caused by the ln.exe in msys2, the fix is: in ./configure, change*
-
-```
-    ln -s "$ac_rel_source" "$ac_file" 2>/dev/null ||
-      ln "$ac_source" "$ac_file" 2>/dev/null ||
-      cp -p "$ac_source" "$ac_file" ||
-      as_fn_error $? "cannot link or copy $ac_source to $ac_file" "$LINENO" 5
-```
-
-*to*
-
-```
-      cp -p "$ac_source" "$ac_file" ||
-      as_fn_error $? "cannot link or copy $ac_source to $ac_file" "$LINENO" 5
-```
-
-  2. ./configure --disable-shared --enable-static --prefix=/usr --enable-cxx --host=x86_64-w64-mingw32
-
-     * CFLAGS="-O3 -pedantic -fomit-frame-pointer -m64 -march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0"
-     * CXXFLAGS="-O3 -pedantic -fomit-frame-pointer -m64 -march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0"
-
-  3. make
-
-  4. make install
-
-* mpir
-
-  1. Make sure yasm.exe is in the PATH
-
-  2. Fix configure file if you are using msys2. (Similar to that of gmp)
-
-  3. ./configure --disable-shared --enable-static --prefix=/usr
-
-     * CFLAGS="-m64 -O3 -march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0"
-     * CXXFLAGS="-O3 -march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0"
-
-  4. make
-
-  5. make install
-
-* mpfr
-
-  1. ./configure --with-gmp=/usr --enable-static --disable-shared --prefix=/usr
-
-     * CFLAGS="-Wall -Wmissing-prototypes -Wc++-compat -Wpointer-arith -O3 -fomit-frame-pointer -m64 -mtune=skylake -march=k8-sse3 -D__USE_MINGW_ANSI_STDIO=0"
-
-  2. Fix error in makefile
-
-     * "rm: unknown option -- c": caused by argument passing when sh.exe is executing libtool. Please replace -DLT_OBJDIR=\".libs/\" in variable DEFS by -DLT_OBJDIR=.libs Meanwhile, -DMPFR_PRINTF_MAXLM=\"ll\" is replaced by -DMPFR_PRINTF_MAXLM=ll (ll may be other value, like j)
-     * There are two makefiles, one is in ./ and the other is in ./src
-
-  3. make
-
-  4. make install
-
-* flint
-
-  1. ./configure --disable-shared --enable-static --prefix=/usr --with-gmp=/usr --with-mpfr=/usr
-
-     * --disable-pthread
-     * CFLAGS="-ansi -pedantic -Wno-long-long -Wno-declaration-after-statement -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3 -D__USE_MINGW_ANSI_STDIO=0"
-     * CXXFLAGS="-ansi -pedantic -Wno-long-long -Wno-declaration-after-statement -O3 -funroll-loops -mpopcnt -mtune=skylake -march=k8-sse3 -D__USE_MINGW_ANSI_STDIO=0"
-
-  2. Fix building script
-
-     * The following command of building libflint.a will fail because the return result is too long
-
-       * $(AT)$(foreach dir, $(BUILD_DIRS), mkdir -p build/$(dir); BUILD_DIR=../build/$(dir); export BUILD_DIR; MOD_DIR=$(dir); export MOD_DIR; $(MAKE) -f ../Makefile.subdirs -C $(dir) static || exit $$?;)
-
-     * Fix Makefile
-
-       1. Insert "$(AT)$(foreach dir, $(BUILD_DIRS), mkdir -p build/$(dir))" as the first command of building libflint.a (don't forget leading tab)
-
-       2. Replace the failure command to "$(AT)$(foreach dir, $(BUILD_DIRS), export MOD=$(dir); $(MAKE) -f ../Makefile.subdirs -C $(dir) static || exit $$?;)"
-
-     * Fix Makefile.subdirs
-
-       1. Insert "MOD_DIR = ${MOD}" "BUILD_DIR = ../build/${MOD}" as the first two lines.
-
-  3. make -j8
-
-     * Some test targets will fail to build due to the same reason. It is safe to ignore them.
-
-  4. make install
-
-* libbf. Use the following makefile which will generate libbf.avx2.a and libbf.generic.a, please choose one and rename it to libbf.a
-```cpp
-CC=$(CROSS_PREFIX)gcc
-CFLAGS=-Wall
-CFLAGS+=-O3
-CFLAGS+=-D__MSVCRT_VERSION__=0x1400
-CFLAGS+=-Wno-format-extra-args
-CFLAGS+=-Wno-format
-CFLAGS+=-march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0
-LDFLAGS=
-
-PROGS+=libbf.generic.a libbf.avx2.a
-
-all: $(PROGS)
-
-libbf.generic.a : libbf.o  cutils.o
-	gcc-ar crv libbf.generic.a cutils.o libbf.o
-
-libbf.avx2.a : libbf.avx2.o  cutils.avx2.o
-	gcc-ar crv libbf.avx2.a cutils.avx2.o libbf.avx2.o
-
-%.o: %.c
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-%.avx2.o: %.c
-	$(CC) $(CFLAGS) -mavx -mavx2 -mfma -mbmi2 -c -o $@ $<
-
-clean:
-	rm -f $(PROGS) *.o *.d *.a *.exe *~
-
--include $(wildcard *.d)
-```
-
-  * ntl (windows) (Change config.h to enable c++14 and move assignment before running the script."
-```cpp
-CC=$(CROSS_PREFIX)gcc
-CFLAGS=-Wall
-CFLAGS+=-O3
-CFLAGS+=-D__MSVCRT_VERSION__=0x1400
-CFLAGS+=-I../include
-CFLAGS+=--std=c++14
-CFLAGS+=-Wno-maybe-uninitialized
-CFLAGS+=-Wno-unused-variable
-CFLAGS+=-Wno-unused-function
-CFLAGS+=-Wno-unused-but-set-variable
-CFLAGS+=-march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0
-LDFLAGS=
-
-SOURCE = $(wildcard *.cpp)
-OBJS = $(patsubst %.cpp,%.o,$(SOURCE))
-
-PROGS+=libntl.a
-
-all: $(PROGS)
-
-libntl.a : $(OBJS)
-	gcc-ar crv libntl.a $(OBJS)
-
-%.o: %.cpp
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-clean:
-	rm -f $(PROGS) *.o *.d *.a *.exe *~
-```
-
-* ntl
-
-  1. ./configure
-
-     * CXXFLAGS="-O3 --std=c++14"
-     * CXXAUTOFLAGS="-pthread -march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0"
-
-  3. make
-
-  4. make install
-
-## Auto build script
-Create makefile_libbf and makefile_ntl whose content is mentioned in the previous section
+ * Auto build script (makefile_libbf and makefile_ntl are mentioned in the next section)
 ```cpp
 #!/bin/bash
 
@@ -393,4 +219,68 @@ mkdir -p "${TARGET_DIR}/lib"
 build_all
 
 cd ${BUILD_ROOT}
+```
+ * makefile_libbf. Use the following makefile which will generate libbf.avx2.a and libbf.generic.a, please choose one and rename it to libbf.a
+```cpp
+CC=$(CROSS_PREFIX)gcc
+CFLAGS=-Wall
+CFLAGS+=-O3
+CFLAGS+=-D__MSVCRT_VERSION__=0x1400
+CFLAGS+=-Wno-format-extra-args
+CFLAGS+=-Wno-format
+CFLAGS+=-march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0
+LDFLAGS=
+
+PROGS+=libbf.generic.a libbf.avx2.a
+
+all: $(PROGS)
+
+libbf.generic.a : libbf.o  cutils.o
+	gcc-ar crv libbf.generic.a cutils.o libbf.o
+
+libbf.avx2.a : libbf.avx2.o  cutils.avx2.o
+	gcc-ar crv libbf.avx2.a cutils.avx2.o libbf.avx2.o
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+%.avx2.o: %.c
+	$(CC) $(CFLAGS) -mavx -mavx2 -mfma -mbmi2 -c -o $@ $<
+
+clean:
+	rm -f $(PROGS) *.o *.d *.a *.exe *~
+
+-include $(wildcard *.d)
+```
+
+  * makefile_ntl (windows) (Change config.h to enable c++14 and move assignment before running the script."
+```cpp
+CC=$(CROSS_PREFIX)gcc
+CFLAGS=-Wall
+CFLAGS+=-O3
+CFLAGS+=-D__MSVCRT_VERSION__=0x1400
+CFLAGS+=-I../include
+CFLAGS+=--std=c++14
+CFLAGS+=-Wno-maybe-uninitialized
+CFLAGS+=-Wno-unused-variable
+CFLAGS+=-Wno-unused-function
+CFLAGS+=-Wno-unused-but-set-variable
+CFLAGS+=-march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0
+LDFLAGS=
+
+SOURCE = $(wildcard *.cpp)
+OBJS = $(patsubst %.cpp,%.o,$(SOURCE))
+
+PROGS+=libntl.a
+
+all: $(PROGS)
+
+libntl.a : $(OBJS)
+	gcc-ar crv libntl.a $(OBJS)
+
+%.o: %.cpp
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+clean:
+	rm -f $(PROGS) *.o *.d *.a *.exe *~
 ```

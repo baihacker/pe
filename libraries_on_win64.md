@@ -116,7 +116,7 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
  
    * [gmp 6.2.1](https://gmplib.org/)
    
-   * [mpfr 4.0.2](https://www.mpfr.org/mpfr-current/#download)
+   * [mpfr 4.1.0](https://www.mpfr.org/mpfr-current/#download)
    
    * [mpir 3.0.0](http://mpir.org/downloads.html) (not used now)
    
@@ -142,7 +142,7 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 BUILD_ROOT=$(pwd)
 
 GMP_DIR="gmp-6.2.1"
-MPFR_DIR="mpfr-4.0.2"
+MPFR_DIR="mpfr-4.1.0"
 MPIR_DIR="mpir-3.0.0"
 LIBBF_DIR="libbf-2020-01-19"
 WIN_NTL_DIR="WinNTL-11_4_3"
@@ -156,7 +156,7 @@ function build_gmp(){
   cd "${GMP_DIR}"
   sed -i 's/ln -s "$ac_rel_source" "$ac_file" 2>\/dev\/null ||//g' configure
   sed -i 's/ln "$ac_source" "$ac_file" 2>\/dev\/null ||//g' configure
-  ./configure --disable-shared --enable-static --prefix=${TARGET_DIR} --enable-cxx --host=x86_64-w64-mingw32 CFLAGS="-O3 -m64 -march=k8-sse3 ${SHARED_FLAGS}" CXXFLAGS="-O3 -m64 ${SHARED_FLAGS}"
+  ./configure --disable-shared --enable-static --prefix=${TARGET_DIR} --enable-cxx --host=x86_64-w64-mingw32 CFLAGS="-O3 -m64 ${SHARED_FLAGS}" CXXFLAGS="-O3 -m64 ${SHARED_FLAGS}"
   make -j8
   make install
   cd ..
@@ -211,7 +211,7 @@ function build_ntl(){
 function build_flint(){
   echo "build flint"
   cd "${FLINT_DIR}"
-  ./configure --disable-shared --enable-static --prefix=${TARGET_DIR} --with-gmp=${TARGET_DIR} --with-mpfr=${TARGET_DIR} --disable-pthread CFLAGS="-ansi -Wno-long-long -Wno-declaration-after-statement -O3 -funroll-loops -mpopcnt -mtune=skylake ${SHARED_FLAGS}" CXXFLAGS="-ansi -Wno-long-long -Wno-declaration-after-statement -O3 -funroll-loops -mpopcnt ${SHARED_FLAGS}"
+  ./configure --disable-shared --enable-static --prefix=${TARGET_DIR} --with-gmp=${TARGET_DIR} --with-mpfr=${TARGET_DIR} --disable-pthread CFLAGS="-ansi -Wno-long-long -Wno-declaration-after-statement -O3 -funroll-loops -mpopcnt ${SHARED_FLAGS}" CXXFLAGS="-ansi -Wno-long-long -Wno-declaration-after-statement -O3 -funroll-loops -mpopcnt ${SHARED_FLAGS}"
   sed -i '1i\BUILD_DIR = ../build/${MOD}' Makefile.subdirs
   sed -i '1i\MOD_DIR = ${MOD}' Makefile.subdirs
   sed -i '/^libflint.a:.*/a\\t$(AT)$(foreach dir, $(BUILD_DIRS), mkdir -p build/$(dir))' makefile

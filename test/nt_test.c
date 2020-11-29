@@ -44,24 +44,24 @@ SL void GcdTest() {
 PE_REGISTER_TEST(&GcdTest, "GcdTest", SMALL);
 
 SL void GetFactorsTest() {
-  auto result = Factors(1);
+  auto result = GetFactors(1);
   assert(result == vector<int64>{1});
 
-  result = Factors(2);
+  result = GetFactors(2);
   assert(result == vector<int64>({1, 2}));
 
-  result = Factors(3);
+  result = GetFactors(3);
   assert(result == vector<int64>({1, 3}));
 
-  result = Factors(4);
+  result = GetFactors(4);
   assert(result == vector<int64>({1, 2, 4}));
 
-  result = Factors(12);
+  result = GetFactors(12);
   sort(all(result));
   assert(result == vector<int64>({1, 2, 3, 4, 6, 12}));
 
   for (int64 limit = -1; limit <= 20; ++limit) {
-    auto result = Factors(12, limit);
+    auto result = GetFactors(12, limit);
     sort(all(result));
     vector<int64> expected;
     for (auto iter : {1, 2, 3, 4, 6, 12})

@@ -34,7 +34,8 @@ SL int __pe_clz64(uint64 x) {
 #if PE_HAS_INT128
 
 SL int __pe_clz128(uint128 x) {
-  return x >> 64 ? __pe_clz64(x >> 64) : 64 + __pe_clz64(x);
+  return x >> 64 ? __pe_clz64(x >> 64)
+                 : 64 + __pe_clz64(static_cast<uint64>(x));
 }
 
 #endif
@@ -122,6 +123,56 @@ SL int __pe_bitcnt128(uint128 x) {
 
 #endif
 
+SL uint32 __pe_bitreverse32(uint32 x) {
+  x = (((x & 0xAAAAAAAA) >> 1) | ((x & 0x55555555) << 1));
+  x = (((x & 0xCCCCCCCC) >> 2) | ((x & 0x33333333) << 2));
+  x = (((x & 0xF0F0F0F0) >> 4) | ((x & 0x0F0F0F0F) << 4));
+  x = (((x & 0xFF00FF00) >> 8) | ((x & 0x00FF00FF) << 8));
+  return ((x >> 16) | (x << 16));
+}
+
+SL uint64 __pe_bitreverse64(uint64 x) {
+  x = (((x & 0xAAAAAAAAAAAAAAAAULL) >> 1) | ((x & 0x5555555555555555ULL) << 1));
+  x = (((x & 0xCCCCCCCCCCCCCCCCULL) >> 2) | ((x & 0x3333333333333333ULL) << 2));
+  x = (((x & 0xF0F0F0F0F0F0F0F0ULL) >> 4) | ((x & 0x0F0F0F0F0F0F0F0FULL) << 4));
+  x = (((x & 0xFF00FF00FF00FF00ULL) >> 8) | ((x & 0x00FF00FF00FF00FFULL) << 8));
+  x = (((x & 0xFFFF0000FFFF0000ULL) >> 16) |
+       ((x & 0x0000FFFF0000FFFFULL) << 16));
+  return ((x >> 32) | (x << 32));
+}
+
+#if PE_HAS_INT128
+
+SL uint128 __pe_bitreverse128(uint128 x) {
+  const uint128 x0 = __pe_bitreverse64(x >> 64);
+  const uint128 x1 = __pe_bitreverse64(static_cast<uint64>(x));
+  return (x1 << 64) | x0;
+}
+
+#endif
+
+SL uint32 __pe_bswap32(uint32 x) {
+  x = (((x & 0xFF00FF00) >> 8) | ((x & 0x00FF00FF) << 8));
+  return ((x >> 16) | (x << 16));
+}
+
+SL uint64 __pe_bswap64(uint64 x) {
+  x = (((x & 0xFF00FF00FF00FF00ULL) >> 8) | ((x & 0x00FF00FF00FF00FFULL) << 8));
+  x = (((x & 0xFFFF0000FFFF0000ULL) >> 16) |
+       ((x & 0x0000FFFF0000FFFFULL) << 16));
+  return ((x >> 32) | (x << 32));
+}
+
+#if PE_HAS_INT128
+
+SL uint128 __pe_bswap128(uint128 x) {
+  const uint128 x0 = __pe_bswap64(x >> 64);
+  const uint128 x1 = __pe_bswap64(static_cast<uint64>(x));
+  return (x1 << 64) | x0;
+}
+
+#endif
+
 SL int __pe_ffs32(uint32 x) { return x == 0 ? 0 : 1 + __pe_ctz32(x); }
 
 SL int __pe_ffs64(uint64 x) { return x == 0 ? 0 : 1 + __pe_ctz64(x); }
@@ -157,6 +208,14 @@ SL int __pe_lg128(uint128 x) { return 127 - __pe_clz128(x); }
 #define pe_bitcnt __builtin_popcount
 #define pe_bitcntll __builtin_popcountll
 
+#define pe_bitreverse __pe_bitreverse32
+#define pe_bitreversell __pe_bitreverse64
+
+#define pe_bswap __builtin_bswap32
+#define pe_bswapll __builtin_bswap64
+#define pe_bswap32 __builtin_bswap32
+#define pe_bswap64 __builtin_bswap64
+
 #define pe_ffs __builtin_ffs
 #define pe_ffsll __builtin_ffsll
 
@@ -183,6 +242,14 @@ SL int __pe_lg128(uint128 x) { return 127 - __pe_clz128(x); }
 #define pe_popcountll __pe_bitcnt64
 #define pe_bitcnt __pe_bitcnt32
 #define pe_bitcntll __pe_bitcnt64
+
+#define pe_bitreverse __pe_bitreverse32
+#define pe_bitreversell __pe_bitreverse64
+
+#define pe_bswap __pe_bswap32
+#define pe_bswapll __pe_bswap64
+#define pe_bswap32 __pe_bswap32
+#define pe_bswap64 __pe_bswap64
 
 #define pe_ffs __pe_ffs32
 #define pe_ffsll __pe_ffs64

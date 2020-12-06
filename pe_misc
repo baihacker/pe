@@ -1234,7 +1234,7 @@ SL void BuildSuffixArray(EleType* T, int n, int* SA, int* rank, int* lcp,
 }
 
 SL void BuildSuffixArray(const string& T, int* SA, int* rank, int* lcp) {
-  const int n = T.size();
+  const int n = static_cast<int>(T.size());
   int char_set[256] = {0};
   int k = 0;
   for (auto c : T) {
@@ -1283,4 +1283,80 @@ SL void BuildSuffixArray(const string& T, int* SA, int* rank, int* lcp) {
   delete[] text;
 }
 }  // namespace dc3
+
+// Suffix automaton copied from https://oi-wiki.org/string/sam/#_8
+struct SAM {
+  struct State {
+    int len, link;
+    std::map<char, int> next;
+  };
+
+  SAM(int maxn) { Init(maxn); }
+
+  void Init(int maxn) {
+    maxn_ = maxn;
+    st_ = vector<State>(2 * maxn_);
+    Reset();
+  }
+
+  void Reset() {
+    st_[0].len = 0;
+    st_[0].link = -1;
+    top_ = 1;
+    last_ = 0;
+  }
+
+  void Extend(char c) {
+    const int cur = top_++;
+    st_[cur].len = st_[last_].len + 1;
+    int p = last_;
+    while (p != -1 && !st_[p].next.count(c)) {
+      st_[p].next[c] = cur;
+      p = st_[p].link;
+    }
+    if (p == -1) {
+      st_[cur].link = 0;
+    } else {
+      const int q = st_[p].next[c];
+      if (st_[p].len + 1 == st_[q].len) {
+        st_[cur].link = q;
+      } else {
+        const int clone = top_++;
+        st_[clone].len = st_[p].len + 1;
+        st_[clone].next = st_[q].next;
+        st_[clone].link = st_[q].link;
+        while (p != -1 && st_[p].next[c] == q) {
+          st_[p].next[c] = clone;
+          p = st_[p].link;
+        }
+        st_[q].link = st_[cur].link = clone;
+      }
+    }
+    last_ = cur;
+  }
+
+  vector<State>& data() { return st_; };
+
+  State& operator[](int idx) { return st_[idx]; };
+
+  State& state(int idx) { return st_[idx]; }
+
+  int StateCount() const { return top_; }
+
+  int top() const { return top_; }
+
+  int last() const { return last_; }
+
+  vector<State>::iterator begin() { return st_.begin(); }
+
+  vector<State>::iterator end() { return st_.begin() + top_; }
+
+  int IdxOf(State& state) { return &state - &st_[0]; }
+
+ private:
+  vector<State> st_;
+  int maxn_;
+  int top_;
+  int last_;
+};
 #endif

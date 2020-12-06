@@ -1295,51 +1295,51 @@ struct SAM {
 
   void Init(int maxn) {
     maxn_ = maxn;
-    st_ = vector<State>(2 * maxn_);
+    state_ = vector<State>(2 * maxn_);
     Reset();
   }
 
   void Reset() {
-    st_[0].len = 0;
-    st_[0].link = -1;
+    state_[0].len = 0;
+    state_[0].link = -1;
     top_ = 1;
     last_ = 0;
   }
 
   void Extend(char c) {
     const int cur = top_++;
-    st_[cur].len = st_[last_].len + 1;
+    state_[cur].len = state_[last_].len + 1;
     int p = last_;
-    while (p != -1 && !st_[p].next.count(c)) {
-      st_[p].next[c] = cur;
-      p = st_[p].link;
+    while (p != -1 && !state_[p].next.count(c)) {
+      state_[p].next[c] = cur;
+      p = state_[p].link;
     }
     if (p == -1) {
-      st_[cur].link = 0;
+      state_[cur].link = 0;
     } else {
-      const int q = st_[p].next[c];
-      if (st_[p].len + 1 == st_[q].len) {
-        st_[cur].link = q;
+      const int q = state_[p].next[c];
+      if (state_[p].len + 1 == state_[q].len) {
+        state_[cur].link = q;
       } else {
         const int clone = top_++;
-        st_[clone].len = st_[p].len + 1;
-        st_[clone].next = st_[q].next;
-        st_[clone].link = st_[q].link;
-        while (p != -1 && st_[p].next[c] == q) {
-          st_[p].next[c] = clone;
-          p = st_[p].link;
+        state_[clone].len = state_[p].len + 1;
+        state_[clone].next = state_[q].next;
+        state_[clone].link = state_[q].link;
+        while (p != -1 && state_[p].next[c] == q) {
+          state_[p].next[c] = clone;
+          p = state_[p].link;
         }
-        st_[q].link = st_[cur].link = clone;
+        state_[q].link = state_[cur].link = clone;
       }
     }
     last_ = cur;
   }
 
-  vector<State>& data() { return st_; };
+  vector<State>& data() { return state_; };
 
-  State& operator[](int idx) { return st_[idx]; };
+  State& operator[](int idx) { return state_[idx]; };
 
-  State& state(int idx) { return st_[idx]; }
+  State& state(int idx) { return state_[idx]; }
 
   int StateCount() const { return top_; }
 
@@ -1347,14 +1347,14 @@ struct SAM {
 
   int last() const { return last_; }
 
-  vector<State>::iterator begin() { return st_.begin(); }
+  vector<State>::iterator begin() { return state_.begin(); }
 
-  vector<State>::iterator end() { return st_.begin() + top_; }
+  vector<State>::iterator end() { return state_.begin() + top_; }
 
-  int IdxOf(State& state) { return &state - &st_[0]; }
+  int IdxOf(State& state) { return &state - &state_[0]; }
 
  private:
-  vector<State> st_;
+  vector<State> state_;
   int maxn_;
   int top_;
   int last_;

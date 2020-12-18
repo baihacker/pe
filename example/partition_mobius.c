@@ -3,6 +3,7 @@
 const int S = 500;
 // The number of non-negative solution for
 // 1 x1 + 2 x2 + 3 x3 + 4 x4 + 5 x5 = S
+// x1, x2, ..., x5 are distinct.
 
 const int64 mod = 1000000007;
 using MT = NMod64<mod>;

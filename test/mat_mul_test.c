@@ -89,14 +89,14 @@ void TestPe(const vector<int>& data, const vector<int>& V, E mod) {
 SL void TestEigenHelperMethod() {
   TimeRecorder tr;
   {
-    auto res0 = EigenMatrixPowerMod<1000000007>(
+    auto res0 = MatrixPowerModEigen<1000000007>(
         [=](auto& m) {
           m(0, 0) = 1;
           m(0, 1) = 1;
           m(1, 0) = 1;
         },
         2, 100000);
-    auto res1 = EigenMatrixPowerMod<1000000007>(
+    auto res1 = MatrixPowerModEigen<1000000007>(
         [=](auto& m, auto& v) {
           m(0, 0) = 1;
           m(0, 1) = 1;
@@ -108,14 +108,14 @@ SL void TestEigenHelperMethod() {
   }
 
   {
-    auto res0 = EigenMatrixPowerMod<NMod64<1000000007>>(
+    auto res0 = MatrixPowerModEigen<NMod64<1000000007>>(
         [=](auto& m) {
           m(0, 0) = 1;
           m(0, 1) = 1;
           m(1, 0) = 1;
         },
         2, 100000);
-    auto res1 = EigenMatrixPowerMod<NMod64<1000000007>>(
+    auto res1 = MatrixPowerModEigen<NMod64<1000000007>>(
         [=](auto& m, auto& v) {
           m(0, 0) = 1;
           m(0, 1) = 1;
@@ -127,14 +127,14 @@ SL void TestEigenHelperMethod() {
   }
 
   {
-    auto res0 = EigenMatrixPowerMod(
+    auto res0 = MatrixPowerModEigen(
         [=](auto& m) {
           m(0, 0) = 1;
           m(0, 1) = 1;
           m(1, 0) = 1;
         },
         2, 100000, 1000000007);
-    auto res1 = EigenMatrixPowerMod(
+    auto res1 = MatrixPowerModEigen(
         [=](auto& m, auto& v) {
           m(0, 0) = 1;
           m(0, 1) = 1;
@@ -151,14 +151,14 @@ SL void TestEigenHelperMethod() {
 SL void TestPeHelperMethod() {
   TimeRecorder tr;
   {
-    auto res0 = PeMatrixPowerMod<1000000007>(
+    auto res0 = MatrixPowerModPe<1000000007>(
         [=](auto& m) {
           m(0, 0) = 1;
           m(0, 1) = 1;
           m(1, 0) = 1;
         },
         2, 100000);
-    auto res1 = PeMatrixPowerMod<1000000007>(
+    auto res1 = MatrixPowerModPe<1000000007>(
         [=](auto& m, auto& v) {
           m(0, 0) = 1;
           m(0, 1) = 1;
@@ -170,14 +170,14 @@ SL void TestPeHelperMethod() {
   }
 
   {
-    auto res0 = PeMatrixPowerMod<NMod64<1000000007>>(
+    auto res0 = MatrixPowerModPe<NMod64<1000000007>>(
         [=](auto& m) {
           m(0, 0) = 1;
           m(0, 1) = 1;
           m(1, 0) = 1;
         },
         2, 100000);
-    auto res1 = PeMatrixPowerMod<NMod64<1000000007>>(
+    auto res1 = MatrixPowerModPe<NMod64<1000000007>>(
         [=](auto& m, auto& v) {
           m(0, 0) = 1;
           m(0, 1) = 1;
@@ -189,14 +189,14 @@ SL void TestPeHelperMethod() {
   }
 
   {
-    auto res0 = PeMatrixPowerMod(
+    auto res0 = MatrixPowerModPe(
         [=](auto& m) {
           m(0, 0) = 1;
           m(0, 1) = 1;
           m(1, 0) = 1;
         },
         2, 100000, 1000000007);
-    auto res1 = PeMatrixPowerMod(
+    auto res1 = MatrixPowerModPe(
         [=](auto& m, auto& v) {
           m(0, 0) = 1;
           m(0, 1) = 1;

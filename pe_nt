@@ -581,6 +581,8 @@ SL void InitSeqProdInv(T* dest, T e, T mod) {
 #endif
 
 /**
+ * 1 <= s <= e
+ *
  * dest[0] = 1
  * dest[1] = s
  * dest[2] = s(s+1)
@@ -591,39 +593,112 @@ SL void InitSeqProdInv(T* dest, T e, T mod) {
  * idest[e-s+1]=1/(s(s+1)...e)
  */
 template <typename T>
-SL void InitSeqProd2(T* dest, T* idest, T s, T e, T mod) {
+SL REQUIRES((!IsNModNumber<T>::result)) RETURN(void)
+    InitSeqProd2(T* dest, T* idest, T s, T e, T mod) {
   if (dest == nullptr && idest == nullptr) {
     return;
   }
-  const int cnt = static_cast<int>(e - s + 1);
-  T lastv = 0;
+
+  const int64 cnt = static_cast<int64>(e - s + 1);
+  if (mod == 1) {
+    if (dest != nullptr) {
+      fill(dest, dest + cnt + 1, 0);
+    }
+    if (idest != nullptr) {
+      fill(idest, idest + cnt + 1, 0);
+    }
+    return;
+  }
+
+  T lastv = 1;
   if (dest == nullptr) {
-    lastv = 1;
+    T v = s % mod;
     for (T i = s; i <= e; ++i) {
-      lastv = MulModEx(lastv, i, mod);
+      lastv = MulModEx(lastv, v, mod);
+      v = v == mod - 1 ? 0 : v + 1;
     }
   } else {
-    dest[0] = lastv = 1;
+    dest[0] = lastv;
+    T v = s % mod;
     for (T i = s, j = 1; i <= e; ++i, ++j) {
-      dest[j] = lastv = MulModEx(lastv, i, mod);
+      dest[j] = lastv = MulModEx(lastv, v, mod);
+      v = v == mod - 1 ? 0 : v + 1;
     }
   }
   if (idest == nullptr) {
     return;
   }
+
+  // Assumption 1: mod is a prime number
+  // Assumption 2: lastv != 0
   lastv = PowerModEx(lastv, mod - 2, mod);
   idest[0] = 1;
   idest[cnt] = lastv;
 
-  T i = e;
-  for (int j = cnt - 1; j > 0; --j) {
-    idest[j] = MulModEx(idest[j + 1], i--, mod);
+  T v = e % mod;
+  for (int64 j = cnt - 1; j > 0; --j) {
+    idest[j] = MulModEx(idest[j + 1], v, mod);
+    v = v == 0 ? mod - 1 : v - 1;
   }
 }
 
 template <typename T>
-SL void InitSeqProd2(T* dest, T* idest, T e, T mod) {
+SL REQUIRES((!IsNModNumber<T>::result)) RETURN(void)
+    InitSeqProd2(T* dest, T* idest, T e, T mod) {
   InitSeqProd2<T>(dest, idest, 1, e, mod);
+}
+
+template <typename T>
+SL REQUIRES((IsNModNumber<T>::result)) RETURN(void)
+    InitSeqProd2(T* dest, T* idest, int64 s, int64 e) {
+  if (dest == nullptr && idest == nullptr) {
+    return;
+  }
+
+  using ModType = typename T::ints;
+  const ModType mod = T().Mod();
+  const int64 cnt = static_cast<int64>(e - s + 1);
+  if (mod == 1) {
+    return;
+  }
+
+  ModType lastv = 1;
+  if (dest == nullptr) {
+    ModType v = s % mod;
+    for (int64 i = s; i <= e; ++i) {
+      lastv = MulModEx(lastv, v, mod);
+      v = v == mod - 1 ? 0 : v + 1;
+    }
+  } else {
+    dest[0].SetValue(lastv);
+    ModType v = s % mod;
+    for (int64 i = s, j = 1; i <= e; ++i, ++j) {
+      lastv = MulModEx(lastv, v, mod);
+      dest[j].SetValue(lastv);
+      v = v == mod - 1 ? 0 : v + 1;
+    }
+  }
+  if (idest == nullptr) {
+    return;
+  }
+
+  // Assumption 1: mod is a prime number
+  // Assumption 2: lastv != 0
+  lastv = PowerModEx(lastv, mod - 2, mod);
+  idest[0] = 1;
+  idest[cnt].SetValue(lastv);
+
+  ModType v = e % mod;
+  for (int64 j = cnt - 1; j > 0; --j) {
+    idest[j].SetValue(MulModEx(idest[j + 1].value(), v, mod));
+    v = v == 0 ? mod - 1 : v - 1;
+  }
+}
+
+template <typename T>
+SL REQUIRES((IsNModNumber<T>::result)) RETURN(void)
+    InitSeqProd2(T* dest, T* idest, int64 e) {
+  InitSeqProd2<T>(dest, idest, 1, e);
 }
 
 template <typename T, int D>

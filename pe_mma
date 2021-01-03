@@ -6,6 +6,232 @@
 #include "pe_base"
 #include "pe_nt"
 
+namespace mma {
+// Assume leading * a[n] = P1(n) a[n-1] + P2(n) a[n-2] ...
+// values: example values of a[n]
+// check_points and offsets:
+// for each check point i, we use a[i], a[i-offsets[0]], a[i-offsets[1]] ...
+// to build equation.
+// porder: polynomial order. The maximal order of P1, P2, ...
+// max_abs_coe: The maximum absolute value of the coefficients of P1, P2, ...
+//
+// FRHelper will generates a mathematica command to find the parameters with
+// given constraints.
+//
+// Example: example/find_recurence.c.
+template <typename T>
+void ValidateAll(const vector<T>& values, const string& result, T leading = 1);
+
+template <typename T>
+struct FRHelper {
+  FRHelper& set_values(const vector<T>& values) {
+    values_ = values;
+    return *this;
+  }
+
+  FRHelper& set_check_points(const vector<int>& check_points) {
+    check_points_ = check_points;
+    return *this;
+  }
+
+  FRHelper& set_offsets(const vector<int>& offsets) {
+    offsets_ = offsets;
+    return *this;
+  }
+
+  FRHelper& set_porder(const int porder) {
+    porder_ = porder;
+    return *this;
+  }
+
+  FRHelper& set_max_abs_coe(const int max_abs_coe) {
+    max_abs_coe_ = max_abs_coe;
+    return *this;
+  }
+
+  FRHelper& set_leading(const int leading) {
+    leading_ = leading;
+    return *this;
+  }
+
+  ostream& Generate(ostream& o) {
+    const int test_size = sz(check_points_);
+    vector<vector<T>> them;
+    for (int i = 0; i < test_size; ++i) {
+      int64 it = check_points_[i];
+      vector<T> eq;
+      for (auto offset : offsets_) {
+        PE_ASSERT(it >= offset);
+        auto val = values_[it - offset];
+        for (int k = 0; k <= porder_; ++k) {
+          eq.push_back(val);
+          val *= it;
+        }
+      }
+      eq.push_back(-leading_ * values_[it]);
+      them.push_back(eq);
+    }
+
+    vector<string> vars;
+    for (auto offset : offsets_) {
+      for (int k = 0; k <= porder_; ++k) {
+        char buff[30];
+        sprintf(buff, "x%dp%d", offset, k);
+        vars.push_back(buff);
+      }
+    }
+
+    o << "FindInstance[";
+    for (int i = 0; i < test_size; ++i) {
+      if (i > 0) o << "&&";
+      auto& vec = them[i];
+      int id = 0;
+      for (auto offset : offsets_) {
+        for (int k = 0; k <= porder_; ++k) {
+          if (id > 0 && vec[id] >= 0) o << "+";
+          o << vec[id] << "x" << offset << "p" << k;
+          ++id;
+        }
+      }
+      if (vec.back() >= 0) o << "+";
+      o << vec.back() << "==0";
+    }
+
+    if (max_abs_coe_ >= 1) {
+      for (auto& iter : vars) {
+        o << "&&" << iter << ">=" << -max_abs_coe_ << "&&" << iter
+          << "<=" << max_abs_coe_;
+      }
+    }
+    o << ", ";
+    o << vars;
+    return o << ", Integers, 10]";
+  }
+
+  string ToString() {
+    stringstream ss;
+    Generate(ss);
+    return ss.str();
+  }
+
+  void Validate(const string& result) {
+    mma::ValidateAll<T>(values_, result, leading_);
+  }
+
+  void Validate(const vector<T>& values, const string& result) {
+    mma::ValidateAll<T>(values, result, leading_);
+  }
+
+  vector<T> values_;
+  vector<int> check_points_;
+  vector<int> offsets_;
+  int porder_ = 1;
+  int max_abs_coe_ = -1;
+  T leading_ = 1;
+};
+
+map<int, vector<int64>> ParseSolution(const string& text) {
+  auto start = 0U;
+  auto end = text.find(",");
+  vector<string> tokens;
+  while (end != std::string::npos) {
+    tokens.push_back(text.substr(start, end - start));
+    start = end + 1;
+    end = text.find(",", start);
+  }
+  tokens.push_back(text.substr(start));
+
+  map<int, vector<int64>> result;
+  for (auto& iter : tokens) {
+    int offset, order;
+    int64 value;
+    sscanf(iter.c_str(), "%*[^x]x%dp%d%*[^-]->%I64d", &offset, &order, &value);
+    // cout << iter << endl << "\t" << offset << " " << order << " " << value <<
+    // endl;
+    if (value != 0) {
+      auto& target = result[offset];
+      while (order >= target.size()) target.push_back(0);
+      target[order] = value;
+    }
+  }
+  return result;
+}
+
+vector<string> ParseSolutionList(const string& text) {
+  const int n = text.size();
+  vector<string> result;
+  for (int curr = 0, depth = 0, last = 1; curr < n; ++curr) {
+    const int it = text[curr];
+    if (it == '{') {
+      if (++depth == 2) {
+        last = curr;
+      }
+    } else if (it == '}') {
+      if (--depth == 0) {
+        break;
+      }
+      if (depth == 1) {
+        result.push_back(text.substr(last, curr - last + 1));
+      }
+    }
+  }
+  return result;
+}
+
+template <typename T>
+void ValidateOne(const vector<T>& values, const string& result, T leading = 1) {
+  cout << "Validate " << result << endl;
+  int offset = 0, deg = 0;
+  map<int, vector<int64>> ans = ParseSolution(result);
+  for (auto& iter : ans) {
+    if (iter.first > offset) {
+      offset = iter.first;
+    }
+    const int d = iter.second.size() - 1;
+    if (d > deg) {
+      deg = d;
+    }
+  }
+
+  cout << "max offset = " << offset << ", "
+       << "max degree = " << deg << endl;
+
+  const int n = values.size();
+  int failed = 0;
+  int successful = 0;
+  for (int i = offset; i < n; ++i) {
+    T expected = leading * values[i];
+    T actual = 0;
+    for (auto& iter : ans) {
+      const auto& vec = iter.second;
+      const auto size = sz(vec);
+      T tmp = 0;
+      for (int j = size - 1; j >= 0; --j) {
+        tmp = tmp * i + vec[j];
+      }
+      actual += tmp * values[i - iter.first];
+    }
+    int pass = expected == actual;
+    if (pass) {
+      ++successful;
+    } else {
+      cout << i << " " << expected << " " << actual << endl;
+      ++failed;
+    }
+  }
+  cout << "failed tests " << failed << endl;
+  cout << "successful tests " << successful << endl;
+}
+
+template <typename T>
+void ValidateAll(const vector<T>& values, const string& result, T leading) {
+  for (auto ans : ParseSolutionList(result)) {
+    ValidateOne(values, ans, leading);
+    cout << endl;
+  }
+}
+}  // namespace mma
+
 // InterpolatingPolynomial
 struct IntPoly {
   IntPoly() = default;

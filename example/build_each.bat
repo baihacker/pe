@@ -3,6 +3,7 @@ pe++.py billion_sort.c
 pe++.py continued_fraction.c
 pe++.py dfa_counter.c
 pe++.py example.c
+pe++.py find_recurrence.c
 pe++.py linear_recurrence.c
 pe++.py matrix_power.c
 pe++.py mma_interpolating_polynomial.c

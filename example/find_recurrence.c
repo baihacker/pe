@@ -17,10 +17,10 @@ int main() {
       // sometimes it has different recurrence according to n. For example, when
       // n is odd, it has a recurrence formula. When n is even, it has a
       // different one.
-      .set_check_points({3, 5, 7, 9})
+      .set_check_points({3, 5, 7})
       .set_offsets({1, 2})  // Tune the offset manually
       .set_porder(5)        // Tune the order manually
-      .set_max_abs_coe(13)  // Tune the coefficient manually
+      .set_max_abs_coe(4)   // Tune the coefficient manually
       .set_leading(2);      // Tune the leading manually
 
   cout << helper.ToString() << endl << endl;

@@ -142,10 +142,20 @@ map<int, vector<int64>> ParseSolution(const string& text) {
   tokens.push_back(text.substr(start));
 
   map<int, vector<int64>> result;
-  for (auto& iter : tokens) {
+  for (const auto& iter : tokens) {
     int offset, order;
     int64 value;
-    sscanf(iter.c_str(), "%*[^x]x%dp%d%*[^-]->%I64d", &offset, &order, &value);
+    int start = 0;
+    while (start < iter.size() && iter[start] != 'x') ++start;
+    if (start == iter.size()) {
+      cout << "failed to parse:" << endl << iter << endl;
+      exit(-1);
+    }
+    if (sscanf(iter.c_str() + start + 1, "%dp%d%*[^-]->%I64d", &offset, &order,
+               &value) != 3) {
+      cout << "failed to parse:" << endl << iter << endl;
+      exit(-1);
+    }
     // cout << iter << endl << "\t" << offset << " " << order << " " << value <<
     // endl;
     if (value != 0) {

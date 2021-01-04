@@ -19,7 +19,7 @@ int main() {
       // different one.
       .set_check_points({3, 5, 7})
       .set_offsets({1, 2})  // Tune the offset manually
-      .set_porder(5)        // Tune the order manually
+      .set_max_degree(5)    // Tune the polynomial degree manually
       .set_max_abs_coe(4)   // Tune the coefficient manually
       .set_leading(2);      // Tune the leading manually
 

@@ -7,17 +7,18 @@
 #include "pe_nt"
 
 namespace mma {
-// Assuming leading * a[n] = P1(n) a[n-1] + P2(n) a[n-2] ... (P1, P2 are
-// polynomials)
-// FRHelper generates a mathematica command to find the parameters by given
-// constraints.
+// FRHelper generates a mathematica command to find the recurrence formula by
+// given constraints
+//
+// assume the formula is: leading * a[n] = P1(n) a[n-1] + P2(n) a[n-2] ...
+// (P1, P2 are polynomials)
 //
 // values: example values of a[n]
 //
 // check_points and offsets: for each check point i, we use a[i],
 // a[i-offsets[0]], a[i-offsets[1]] ... to build equation.
 //
-// porder: polynomial order. The maximal order of P1, P2, ...
+// max_degree: The maximal degree of P1, P2, ...
 //
 // max_abs_coe: The maximum absolute value of the coefficients of P1, P2, ...
 //
@@ -42,8 +43,8 @@ struct FRHelper {
     return *this;
   }
 
-  FRHelper& set_porder(const int porder) {
-    porder_ = porder;
+  FRHelper& set_max_degree(const int max_degree) {
+    max_degree_ = max_degree;
     return *this;
   }
 
@@ -66,7 +67,7 @@ struct FRHelper {
       for (auto offset : offsets_) {
         PE_ASSERT(it >= offset);
         auto val = values_[it - offset];
-        for (int k = 0; k <= porder_; ++k) {
+        for (int k = 0; k <= max_degree_; ++k) {
           eq.push_back(val);
           val *= it;
         }
@@ -77,7 +78,7 @@ struct FRHelper {
 
     vector<string> vars;
     for (auto offset : offsets_) {
-      for (int k = 0; k <= porder_; ++k) {
+      for (int k = 0; k <= max_degree_; ++k) {
         char buff[30];
         sprintf(buff, "x%dp%d", offset, k);
         vars.push_back(buff);
@@ -90,7 +91,7 @@ struct FRHelper {
       auto& vec = them[i];
       int id = 0;
       for (auto offset : offsets_) {
-        for (int k = 0; k <= porder_; ++k) {
+        for (int k = 0; k <= max_degree_; ++k) {
           if (id > 0 && vec[id] >= 0) o << "+";
           o << vec[id] << "x" << offset << "p" << k;
           ++id;
@@ -128,7 +129,7 @@ struct FRHelper {
   vector<T> values_;
   vector<int> check_points_;
   vector<int> offsets_;
-  int porder_ = 1;
+  int max_degree_ = 1;
   int max_abs_coe_ = -1;
   T leading_ = 1;
 };
@@ -146,7 +147,7 @@ SL map<int, vector<int64>> ParseSolution(const string& text) {
 
   map<int, vector<int64>> result;
   for (const auto& iter : tokens) {
-    int offset, order;
+    int offset, degree;
     int64 value;
     int start = 0;
     while (start < iter.size() && iter[start] != 'x') ++start;
@@ -154,17 +155,17 @@ SL map<int, vector<int64>> ParseSolution(const string& text) {
       cout << "failed to parse:" << endl << iter << endl;
       exit(-1);
     }
-    if (sscanf(iter.c_str() + start + 1, "%dp%d%*[^-]->%I64d", &offset, &order,
+    if (sscanf(iter.c_str() + start + 1, "%dp%d%*[^-]->%I64d", &offset, &degree,
                &value) != 3) {
       cout << "failed to parse:" << endl << iter << endl;
       exit(-1);
     }
-    // cout << iter << endl << "\t" << offset << " " << order << " " << value <<
-    // endl;
+    // cout << iter << endl << "\t" << offset << " " << degree << " " << value
+    // << endl;
     if (value != 0) {
       auto& target = result[offset];
-      while (order >= target.size()) target.push_back(0);
-      target[order] = value;
+      while (degree >= target.size()) target.push_back(0);
+      target[degree] = value;
     }
   }
   return result;

@@ -1,6 +1,6 @@
 #include <pe.hpp>
 
-// Consider http://oeis.org/A001499/list
+// Consider http://oeis.org/A001499
 // Oeis given two results
 // 2 a[n] = 2 n (n-1) a[n-1] + n (n-1)^2 a[n-2]
 // 2 a[n] = n (n-1)^2 ((2 n - 3) a[n-2] + (n-2)^2 a[n-3])

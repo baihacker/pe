@@ -19,7 +19,7 @@ int main() {
       output:
       InterpolatingPolynomial[{{0, 1}, {1, 10}, {2, 49}, {3, 142}, {4, 313}, {5,
       586}, {6, 985}, {7, 1534}, {8, 2257}, {9, 3178}, {10, 4321}}, x]
-      Simplied mma output:
+      Simplified mma output:
       1 + 2 x + 3 x^2 + 4 x^3
     */
   }

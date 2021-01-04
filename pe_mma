@@ -7,16 +7,19 @@
 #include "pe_nt"
 
 namespace mma {
-// Assume leading * a[n] = P1(n) a[n-1] + P2(n) a[n-2] ...
-// values: example values of a[n]
-// check_points and offsets:
-// for each check point i, we use a[i], a[i-offsets[0]], a[i-offsets[1]] ...
-// to build equation.
-// porder: polynomial order. The maximal order of P1, P2, ...
-// max_abs_coe: The maximum absolute value of the coefficients of P1, P2, ...
+// Assuming leading * a[n] = P1(n) a[n-1] + P2(n) a[n-2] ... (P1, P2 are
+// polynomials)
+// FRHelper generates a mathematica command to find the parameters by given
+// constraints.
 //
-// FRHelper will generates a mathematica command to find the parameters with
-// given constraints.
+// values: example values of a[n]
+//
+// check_points and offsets: for each check point i, we use a[i],
+// a[i-offsets[0]], a[i-offsets[1]] ... to build equation.
+//
+// porder: polynomial order. The maximal order of P1, P2, ...
+//
+// max_abs_coe: The maximum absolute value of the coefficients of P1, P2, ...
 //
 // Example: example/find_recurence.c.
 template <typename T>
@@ -54,7 +57,7 @@ struct FRHelper {
     return *this;
   }
 
-  ostream& Generate(ostream& o) {
+  ostream& Generate(ostream& o) const {
     const int test_size = sz(check_points_);
     vector<vector<T>> them;
     for (int i = 0; i < test_size; ++i) {
@@ -108,7 +111,7 @@ struct FRHelper {
     return o << ", Integers, 10]";
   }
 
-  string ToString() {
+  string ToString() const {
     stringstream ss;
     Generate(ss);
     return ss.str();
@@ -130,7 +133,7 @@ struct FRHelper {
   T leading_ = 1;
 };
 
-map<int, vector<int64>> ParseSolution(const string& text) {
+SL map<int, vector<int64>> ParseSolution(const string& text) {
   size_t start = 0U;
   size_t end = text.find(",");
   vector<string> tokens;
@@ -167,7 +170,7 @@ map<int, vector<int64>> ParseSolution(const string& text) {
   return result;
 }
 
-vector<string> ParseSolutionList(const string& text) {
+SL vector<string> ParseSolutionList(const string& text) {
   const int n = static_cast<int>(text.size());
   vector<string> result;
   for (int curr = 0, depth = 0, last = 1; curr < n; ++curr) {
@@ -189,7 +192,8 @@ vector<string> ParseSolutionList(const string& text) {
 }
 
 template <typename T>
-void ValidateOne(const vector<T>& values, const string& result, T leading = 1) {
+SL void ValidateOne(const vector<T>& values, const string& result,
+                    T leading = 1) {
   cout << "Validate " << result << endl;
   int offset = 0, deg = 0;
   map<int, vector<int64>> ans = ParseSolution(result);
@@ -234,13 +238,18 @@ void ValidateOne(const vector<T>& values, const string& result, T leading = 1) {
 }
 
 template <typename T>
-void ValidateAll(const vector<T>& values, const string& result, T leading) {
+SL void ValidateAll(const vector<T>& values, const string& result, T leading) {
   for (auto ans : ParseSolutionList(result)) {
     ValidateOne(values, ans, leading);
     cout << endl;
   }
 }
 }  // namespace mma
+
+template <typename T>
+SL ostream& operator<<(ostream& o, const mma::FRHelper<T>& frh) {
+  return frh.Generate(o);
+}
 
 // InterpolatingPolynomial
 struct IntPoly {

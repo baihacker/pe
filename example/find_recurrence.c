@@ -1,7 +1,7 @@
 #include <pe.hpp>
 
-// Consider http://oeis.org/A001499
-// Oeis given two results
+// http://oeis.org/A001499
+// Oeis gives two recurrence formula:
 // 2 a[n] = 2 n (n-1) a[n-1] + n (n-1)^2 a[n-2]
 // 2 a[n] = n (n-1)^2 ((2 n - 3) a[n-2] + (n-2)^2 a[n-3])
 //
@@ -23,7 +23,7 @@ int main() {
       .set_max_abs_coe(4)   // Tune the coefficient manually
       .set_leading(2);      // Tune the leading manually
 
-  cout << helper.ToString() << endl << endl;
+  cout << helper << endl << endl;
 
   // The output of the generated mathematica command is
   const string result =
@@ -46,7 +46,9 @@ int main() {
     dp1.push_back(i * sq(i - 1) *
                   ((2 * i - 3) * dp1[i - 2] + sq(i - 2) * dp1[i - 3]) / 2);
   }
+
   helper.Validate(dp0, result);
   helper.Validate(dp1, result);
+
   return 0;
 }

@@ -4,7 +4,7 @@ int main() {
   PE_INIT(maxp = 2000000);
   // Convert mathematica expression to cpp
   // For mathematica function, it only supports Sqrt
-  for (auto a : mma_compiler::Compile(
+  for (auto a : mma::Compile(
            "Sqrt(-A^4 + 2 A^2 B^2 - B^4 + 2 A^2 x1^2 + 2 B^2 x1^2 - x1^4 - 4 "
            "A^2 x1 x2 - 4 B^2 x1 x2 + 4 x1^3 x2 + 2 A^2 x2^2 + 2 B^2 x2^2 - "
            "6 x1^2 x2^2 + 4 x1 x2^3 - x2^4)/(2 Sqrt(x1^2 - 2 x1 x2 + "
@@ -20,7 +20,7 @@ int main() {
     * sqrt(x1 * x1 - 2 * x1 * x2 + x2 * x2))
   */
   // Convert mathematica expression to cpp using modular arithmetic.
-  for (auto a : mma_compiler::CompileMod("(a^4+a b)*7/b")) {
+  for (auto a : mma::CompileMod("(a^4+a b)*7/b")) {
     cout << a << endl;
   }
   /*

@@ -9,7 +9,7 @@ int64 g(int64 x, int64 y) {
 int main() {
   PE_INIT(maxp = 2000000);
   {
-    IntPoly ip;
+    mma::IntPoly ip;
     ip.Reset({"x"});  // one variable x.
     for (int64 x = 0; x <= 10; ++x) {
       ip.Add({x}, f(x));
@@ -24,9 +24,9 @@ int main() {
     */
   }
   {
-    IntPoly2D ip(2,  // x's degree
-                 2,  // y's degree
-                 2   // max a + b of terms in the form of x^a y^b
+    mma::IntPoly2D ip(2,  // x's degree
+                      2,  // y's degree
+                      2   // max a + b of terms in the form of x^a y^b
     );
     for (int64 x = 0; x <= 4; ++x)
       for (int64 y = 0; y <= 4; ++y) {

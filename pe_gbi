@@ -145,6 +145,50 @@ concept PeGbi = requires(T v) {
 };
 #endif
 
+template <typename GBI, typename M>
+SL REQUIRES((is_gbi<GBI>::value))
+    RETURN(GBI) RegulateMod(const GBI& a, M mod) {
+  if (IntSign(a) >= 0) {
+    return a >= mod ? a % mod : a;
+  } else {
+    auto tmp = a % mod;
+    if (tmp < 0) tmp += mod;
+    return tmp;
+  }
+}
+
+template <typename GBI, typename M>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI)
+    AddMod(GBI a, const GBI& b, M mod) {
+  a += b;
+  if (a >= mod) {
+    a -= mod;
+  }
+  return a;
+}
+
+template <typename GBI, typename M>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI)
+    SubMod(GBI a, const GBI& b, M mod) {
+  a -= b;
+  if (IntSign(a) < 0) {
+    a += mod;
+  }
+  return a;
+}
+
+template <typename GBI, typename M>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI)
+    MulMod(const GBI& a, const GBI& b, M mod) {
+  return a * b % mod;
+}
+
+template <typename GBI, typename M>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI)
+    MulModEx(const GBI& a, const GBI& b, M mod) {
+  return a * b % mod;
+}
+
 template <typename GBI, typename T>
 SL REQUIRES((is_gbi<GBI>::value && is_native_integer<T>::value)) RETURN(GBI)
     PowerMod(const GBI& l, T n, const GBI& mod) {
@@ -158,6 +202,12 @@ SL REQUIRES((is_gbi<GBI>::value && is_native_integer<T>::value)) RETURN(GBI)
     if (n > 1) x = x * x % mod;
   }
   return ret;
+}
+
+template <typename GBI, typename T>
+SL REQUIRES((is_gbi<GBI>::value && is_native_integer<T>::value)) RETURN(GBI)
+    PowerModEx(const GBI& l, T n, const GBI& mod) {
+  return PowerMod(l, n, mod);
 }
 
 template <typename GBI>
@@ -177,10 +227,15 @@ SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI)
   return ret;
 }
 
+template <typename GBI>
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI)
+    PowerModEx(const GBI& l, const GBI& m, const GBI& mod) {
+  return PowerMod(l, m, mod);
+}
+
 // Gcd is only for BigInteger
 template <typename GBI>
-SL REQUIRES((is_gbi<GBI>::value))
-    RETURN(GBI) Gcd(GBI m, GBI n) {
+SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI) Gcd(GBI m, GBI n) {
   while (!IsZero(n)) {
     GBI t = m % n;
     m = std::move(n);

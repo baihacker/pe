@@ -2651,19 +2651,31 @@ struct NotDivCounter {
   map<pair<T, vector<int64>>, T> mem_;
 };
 
-/**
- * DfaCounter<Count type> dc;
- * dc.Init(state count, transCount, max len)[.SetCountEachLen(1)];
- * dc.AddTrans(src, dig, dest);
- * dc.MarkAsCount(state);
- * [optional] dc.Prepare();
- * dc.Cal(upper bound);
- * dc.FindKth(k, upper bound);
- *
- * Example: examples/dfa_counter.c
- */
+// Counts the number of integers accepted by a DFA.
+// Case 1. Counts the numbers which are no more than a given upper bound.
+// Case 2. Finds the kth number.
+//
+// DfaCounter<Count type> dc;
+//
+// Build DFA:
+// dc.Init(state count, transCount, max len);
+// dc.AddTrans(src, dig, dest);
+//
+// Mark acepted status:
+// dc.MarkAsCount(state);
+//
+// Build internal helper data structures.
+// [optional] dc.Prepare();
+//
+// Calcuate the result:
+// dc.Cal(upper bound);
+// dc.FindKth(k, upper bound);
+//
+// Example: examples/dfa_counter.c
 template <typename CT>
 struct DfaCounter {
+  // Call set_count_each_len(1) if the dfa doesn't count the numbers with
+  // leading zeros.
   DfaCounter& set_count_each_len(int count_each_len) {
     count_each_len_ = count_each_len;
     return *this;
@@ -2763,7 +2775,10 @@ struct DfaCounter {
   vector<int> to_count_;
 };
 
-// Counting words with Laguerre series
+// Counts the number of different words where the number of each letter is given
+// by vec[0], vec[1], ...
+//
+// Reference: Counting words with Laguerre series
 // https://arxiv.org/pdf/1306.6232.pdf
 struct CarlitzWordsCounter {
   CarlitzWordsCounter(int64 mod, int64 maxf) { Init(mod, maxf); }

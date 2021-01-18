@@ -205,6 +205,112 @@ struct FactSumModer {
   vector<uint64> preFactSum_;
 };
 
+// Calculates x^n % mod using pre-computed x^(2^(i))
+struct PowerModer {
+  PowerModer(int64 x, int64 mod, int64 f = 0) { Init(x, mod, f); }
+
+  ~PowerModer() = default;
+
+  void Init(int64 f) { Init(x_, mod_, f); }
+
+  void Init(int64 x, int64 mod, int64 f) {
+    x_ = x;
+    mod_ = mod;
+    f_ = max(100000LL, f);
+    powers_.resize(f_ + 1);
+    powers_[0] = 1 % mod_;
+    for (int64 i = 1; i <= f_; ++i) {
+      powers_[i] = MulModEx<int64>(powers_[i - 1], x_, mod_);
+    }
+    ppowers_.resize(128);
+    ppowers_[0] = x_ % mod_;
+    for (int i = 1; i < 128; ++i) {
+      ppowers_[i] = MulModEx(ppowers_[i - 1], ppowers_[i - 1], mod_);
+    }
+  }
+
+  int64 operator()(int64 n) { return Cal(n); }
+
+  int64 Cal(int64 n) {
+    if (n <= f_) {
+      return powers_[n];
+    }
+    int64 r = 1 % mod_;
+    for (int i = 0; n; n >>= 1, ++i) {
+      if (n & 1) {
+        r = MulModEx(r, ppowers_[i], mod_);
+      }
+    }
+    return r;
+  }
+
+ private:
+  int64 x_, mod_, f_;
+  vector<int64> powers_, ppowers_;
+};
+
+// Calculates x^n % mod. Unlike using pre-computed x^(2^(i)), this
+// implementation extends 2 to 2^k. (k = lgf_, f is aligned to the power of 2).
+// In most cases, it is not necessary to specify f.
+struct PowerModerEx {
+  PowerModerEx(int64 x, int64 mod, int64 f = 0) { Init(x, mod, f); }
+
+  ~PowerModerEx() = default;
+
+  void Init(int64 f) { Init(x_, mod_, f); }
+
+  void Init(int64 x, int64 mod, int64 f) {
+    x_ = x;
+    mod_ = mod;
+    f_ = max(512LL, f);
+    lgf_ = pe_lgll(f_);
+    if (1LL << lgf_ <= f_) {
+      ++lgf_;
+    }
+    f_ = 1LL << lgf_;
+    mask_ = f_ - 1;
+    powers_.resize(f_);
+    powers_[0] = 1 % mod_;
+    for (int64 i = 1; i < f_; ++i) {
+      powers_[i] = MulModEx<int64>(powers_[i - 1], x_, mod_);
+    }
+    c_ = MulModEx(powers_.back(), x_, mod_);
+
+    const int size = (128 + lgf_ - 1) / lgf_;
+    ppowers_.resize(size);
+    ppowers_[0] = powers_;
+
+    for (int64 i = 1; i < size; ++i) {
+      const int64 base = PowerModEx(ppowers_[i - 1][1], f_, mod_);
+      ppowers_[i].push_back(1 % mod_);
+      for (int64 j = 1; j < f_; ++j) {
+        ppowers_[i].push_back(PowerModEx<int64>(base, j, mod_));
+      }
+    }
+  }
+
+  int64 operator()(int64 n) { return Cal(n); }
+
+  int64 Cal(int64 n) {
+    if (n <= f_) {
+      return powers_[n];
+    }
+    int64 r = 1 % mod_;
+    for (int i = 0; n; n >>= lgf_, ++i) {
+      const int64 now = n & mask_;
+      if (now) {
+        r = MulModEx(r, ppowers_[i][now], mod_);
+      }
+    }
+    return r;
+  }
+
+ private:
+  int64 x_, mod_, f_, lgf_, mask_, c_;
+  vector<int64> powers_;
+  vector<vector<int64>> ppowers_;
+};
+
 /**
  * Calculates C(n, m) % P where P is prime
  * Deprecated
@@ -274,44 +380,53 @@ int64* CombModerOld<P, F>::fac_;
  * Calculates C(n, m) % P where P is prime
  */
 struct CombModer {
-  CombModer(uint64 p, uint64 f = 0) : p_(p), f_(f == 0 ? p : f) { Init(f_); }
+  CombModer(int64 p, int64 f = 0) { Init(p, f == 0 ? p : f); }
 
   ~CombModer() = default;
 
-  void Init(uint64 F) {
-    f_ = F;
+  void Init(int64 f) { Init(p_, f); }
 
-    vector<uint64>(F).swap(fac_);
-    fac_[0] = 1;
-    for (int i = 1; i < F; ++i) {
-      fac_[i] = MulModEx(fac_[i - 1], i, p_);
-    }
+  void Init(int64 p, int64 f) {
+    p_ = p;
+    f_ = min(f, p_ - 1);
+    fac_.resize(f_ + 1);
+    ifac_.resize(f_ + 1);
+    InitSeqProd2<int64>(&fac_[0], &ifac_[0], 1, f_, p_);
   }
 
-  uint64 Sign(int64 x) { return x & 1 ? p_ - 1 : 1; }
-  uint64 Comb(int64 m, int64 n) {
-    if (m < 0 || n > m) return 0;
-    if (n == m || n == 0) return 1;
-    if (n == 1 || n == m - 1) return m % p_;
+  int64 Sign(int64 x) { return x & 1 ? p_ - 1 : 1; }
+
+  int64 operator()(const int64 n, const int64 m) { return Comb(n, m); }
+
+  int64 Comb(const int64 n, const int64 m) {
+    if (n < 0 || m > n) return 0;
+    if (m == n || m == 0) return 1;
+    if (m == 1 || m == n - 1) return n % p_;
+
+    if (n <= f_) {
+      return MulModEx(MulModEx(fac_[n], ifac_[m], p_), ifac_[n - m], p_);
+    }
+
+    // It's required that x % p_ <= f_ in the following code.
 
     int64 pp = 0;
-    int64 dist = m - n;
+    int64 dist = n - m;
 
-    for (uint64 mm = m / p_, nn = n / p_, dd = dist / p_; mm;
-         mm /= p_, nn /= p_, dd /= p_) {
-      pp += mm - nn - dd;
+    for (int64 nn = n / p_, mm = m / p_, dd = dist / p_; nn;
+         nn /= p_, mm /= p_, dd /= p_) {
+      pp += nn - mm - dd;
     }
     if (pp) return 0;
-    uint64 l = 1, r = 1;
-    for (uint64 x = m; x; x /= p_) {
+    int64 l = 1, r = 1;
+    for (int64 x = n; x; x /= p_) {
       l = MulModEx(l, Sign(x / p_), p_);
       l = MulModEx(l, fac_[x % p_], p_);
     }
-    for (uint64 x = n; x; x /= p_) {
+    for (int64 x = m; x; x /= p_) {
       r = MulModEx(r, Sign(x / p_), p_);
       r = MulModEx(r, fac_[x % p_], p_);
     }
-    for (uint64 x = dist; x; x /= p_) {
+    for (int64 x = dist; x; x /= p_) {
       r = MulModEx(r, Sign(x / p_), p_);
       r = MulModEx(r, fac_[x % p_], p_);
     }
@@ -319,8 +434,8 @@ struct CombModer {
   }
 
  private:
-  uint64 p_, f_;
-  vector<uint64> fac_;
+  int64 p_, f_;
+  vector<int64> fac_, ifac_;
 };
 
 int64 ShortCombMod(int64 n, int64 m, int64 mod) {
@@ -341,7 +456,9 @@ int64 ShortCombMod(int64 n, int64 m, int64 mod) {
     }
   }
   int64 ret = 1;
-  for (int i = 0; i < size; ++i) ret = MulModEx(ret, data[i], mod);
+  for (int i = 0; i < size; ++i) {
+    ret = MulModEx(ret, data[i], mod);
+  }
   return ret;
 }
 
@@ -350,7 +467,7 @@ int64 ShortCombMod(int64 n, int64 m, int64 mod) {
  * The complexity is log(m) M(p^(1/2))
  */
 struct CombModerEx {
-  CombModerEx(uint64 p) : p_(p), fmoder_(p) {}
+  CombModerEx(int64 p) : p_(p), fmoder_(p) {}
   int64 Sign(int64 x) { return x & 1 ? p_ - 1 : 1; }
   int64 Comb(int64 m, int64 n) {
     if (m < 0 || n > m) return 0;
@@ -383,7 +500,7 @@ struct CombModerEx {
   }
 
  private:
-  uint64 p_;
+  int64 p_;
   FactModer fmoder_;
 };
 

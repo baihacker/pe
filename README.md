@@ -63,6 +63,7 @@ C++17 or above
 * pe_bi32: Big integer whose base is 1 << 32.
 * pe_bit: Bit operation tricks.
 * pe_config: a centralized place the configure pe.
+* pe_db: load and save pre-calculated result such as prime pi and prime sum.
 * pe_fft: Fast fourier transform and polynomial multiplication.
 * pe_fraction: Fraction arithmetic.
 * pe_gbi: general big integer. The content corresponds to pe_nt.

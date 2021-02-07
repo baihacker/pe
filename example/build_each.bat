@@ -12,6 +12,7 @@ pe++.py multiplicative_function_prefix_sum_common_function.c
 pe++.py multiplicative_function_prefix_sum_mavlue_base_ex.c
 pe++.py parallel_cal_prime_pi.c
 pe++.py partition_mobius.c
+pe++.py pe_db.c
 pe++.py poly.c
 pe++.py power_sum.c
 pe++.py prime_power_sum.c

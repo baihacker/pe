@@ -1,0 +1,265 @@
+#ifndef PE_DB_
+#define PE_DB_
+
+#include "pe_base"
+#include "pe_int128"
+#include "pe_algo"
+
+struct PrimePiItem {
+  int64 n;
+  int64 value;
+  PrimePiItem(int64 n = 0, int64 value = 0) : n(n), value(value) {}
+  int operator<(const PrimePiItem& o) const { return n < o.n; }
+};
+
+#if PE_HAS_INT128
+struct PrimeSumItem {
+  int64 n;
+  int128 value;
+  PrimeSumItem(int64 n = 0, int128 value = 0) : n(n), value(value) {}
+  int operator<(const PrimeSumItem& o) const { return n < o.n; }
+};
+#endif
+
+struct TableHeader {
+  int size;  // header length
+  int64 checksum;
+};
+
+static const char kPrimePiTableName[] = "PrimePi";
+static const char kPrimeSumTableName[] = "PrimeSum";
+
+struct PeDb {
+  PeDb(const string& directory) { Init(directory); }
+
+  void Init(const string& directory) {
+    directory_ = directory;
+    if (directory_.back() != '/') {
+      directory_.push_back('/');
+    }
+
+    vector<PrimePiItem>().swap(prime_pi_table_);
+
+#if PE_HAS_INT128
+    vector<PrimeSumItem>().swap(prime_sum_table_);
+#endif
+  }
+
+  template <typename T>
+  static vector<T> LoadRecords(const string& file) {
+    FILE* f = fopen(file.c_str(), "rb");
+    if (!f) {
+      fprintf(stderr, "cannot open %s\n", file.c_str());
+      exit(-1);
+    }
+    TableHeader header;
+
+    int r = fread(&header, sizeof(header), 1, f);
+    if (r != 1) {
+      fprintf(stderr, "cannot read header from  %s\n", file.c_str());
+      fclose(f);
+      exit(-1);
+    }
+    vector<T> buff(100000);
+    vector<T> data;
+    int64 actual_read = 0;
+    for (;;) {
+      int64 cnt = fread(&buff[0], sizeof(T), buff.size(), f);
+      for (int i = 0; i < cnt; ++i) {
+        data.push_back(buff[i]);
+      }
+      actual_read += cnt;
+      if (cnt < buff.size()) {
+        break;
+      }
+    }
+
+    fclose(f);
+    // TODO(baihacker): verify checksum
+    sort(data.begin(), data.end());
+    return data;
+  }
+
+  template <typename T>
+  static void SaveRecords(const string& file, const vector<T>& data) {
+    FILE* f = fopen(file.c_str(), "wb");
+    if (!f) {
+      fprintf(stderr, "cannot open %s\n", file);
+      exit(-1);
+    }
+
+    TableHeader header = {sizeof(TableHeader), 0};
+    // TODO(baihacker): add check sum
+    fwrite(&header, sizeof(header), 1, f);
+
+    const int64 each = 100000;
+    for (int64 i = 0; i < data.size();) {
+      int64 j = i + each;
+      if (j > data.size()) {
+        j = data.size();
+      }
+      int64 should_write = j - i;
+      int64 actual_write = fwrite(&data[i], sizeof(T), should_write, f);
+      if (should_write != actual_write) {
+        fclose(f);
+        fprintf(stderr, "should write = %I64d, actual write = %I64d\n",
+                should_write, actual_write);
+        exit(-1);
+      }
+      i = j;
+    }
+
+    fclose(f);
+  }
+
+  template <typename T>
+  void MergeItems(const vector<T>& source, vector<T>& target) {
+    if (source.empty()) {
+      return;
+    }
+
+    if (target.empty()) {
+      target = source;
+      return;
+    }
+
+    vector<T> result;
+
+    const int64 size1 = source.size();
+    const int64 size2 = target.size();
+    int64 i = 0, j = 0;
+    for (; i < size1 && j < size2;) {
+      if (source[i].n == target[j].n) {
+        result.push_back(source[i]);
+        ++i, ++j;
+      } else if (source[i].n < target[j].n) {
+        result.push_back(source[i]);
+        ++i;
+      } else {
+        result.push_back(target[j]);
+        ++j;
+      }
+    }
+
+    while (i < size1) {
+      result.push_back(source[i]);
+      ++i;
+    }
+    while (j < size2) {
+      result.push_back(target[j]);
+      ++j;
+    }
+
+    target = std::move(result);
+  }
+
+  void MergePrimePi(const DVA<int64>& dva) {
+    vector<PrimePiItem> result;
+    for (int i = 0; i < dva.key_size; ++i) {
+      result.emplace_back(dva.keys[i], dva.values[i]);
+    }
+    MergeItems(result, prime_pi_table_);
+  }
+
+  template <typename T>
+  int FillPrimePi(DVA<T>& dva) {
+    const int size = prime_pi_table_.size();
+    for (int64 i = 0, j = 0; i < dva.key_size; ++i) {
+      while (j < size && prime_pi_table_[j].n < dva.keys[i]) ++j;
+      if (j == size) return 0;
+      if (prime_pi_table_[j].n != dva.keys[i]) return 0;
+      dva.values[i] = prime_pi_table_[j].value;
+    }
+    return 1;
+  }
+
+#if PE_HAS_INT128
+  void MergePrimeSum(const DVA<int128>& dva) {
+    vector<PrimeSumItem> result;
+    for (int i = 0; i < dva.key_size; ++i) {
+      result.emplace_back(dva.keys[i], dva.values[i]);
+    }
+    MergeItems(result, prime_sum_table_);
+  }
+
+  template <typename T>
+  int FillPrimeSum(DVA<T>& dva) {
+    const int size = prime_sum_table_.size();
+    for (int64 i = 0, j = 0; i < dva.key_size; ++i) {
+      while (j < size && prime_sum_table_[j].n < dva.keys[i]) ++j;
+      if (j == size) return 0;
+      if (prime_sum_table_[j].n != dva.keys[i]) return 0;
+      dva.values[i] = prime_sum_table_[j].value;
+    }
+    return 1;
+  }
+
+  template <typename T>
+  int FillPrimeSum(DVA<T>& dva, int64 mod) {
+    const int size = prime_sum_table_.size();
+    for (int64 i = 0, j = 0; i < dva.key_size; ++i) {
+      while (j < size && prime_sum_table_[j].n < dva.keys[i]) ++j;
+      if (j == size) return 0;
+      if (prime_sum_table_[j].n != dva.keys[i]) return 0;
+      dva.values[i] = prime_sum_table_[j].value % mod;
+    }
+    return 1;
+  }
+#endif
+
+  template <typename T>
+  int64 SearchItem(const vector<T>& data, int64 target) {
+    int64 size = data.size();
+    int64 l = 0, r = size - 1;
+    while (l <= r) {
+      const int64 mid = l + r >> 1;
+      if (data[mid].n == target) {
+        return mid;
+      }
+      if (data[mid].n > target)
+        r = mid - 1;
+      else
+        l = mid + 1;
+    }
+    if (l >= 0 && l < size) {
+      return data[l].n == target ? l : -1;
+    }
+    return -1;
+  }
+
+  int64 PrimePi(int64 n) {
+    int64 idx = SearchItem(prime_pi_table_, n);
+    return idx == -1 ? -1 : prime_pi_table_[idx].value;
+  }
+
+#if PE_HAS_INT128
+  int128 PrimeSum(int64 n) {
+    int64 idx = SearchItem(prime_sum_table_, n);
+    return idx == -1 ? -1 : prime_sum_table_[idx].value;
+  }
+#endif
+
+  void Load() {
+    MergeItems(LoadRecords<PrimePiItem>(directory_ + kPrimePiTableName),
+               prime_pi_table_);
+#if PE_HAS_INT128
+    MergeItems(LoadRecords<PrimeSumItem>(directory_ + kPrimeSumTableName),
+               prime_sum_table_);
+#endif
+  }
+
+  void Save() {
+    SaveRecords(directory_ + kPrimePiTableName, prime_pi_table_);
+#if PE_HAS_INT128
+    SaveRecords(directory_ + kPrimeSumTableName, prime_sum_table_);
+#endif
+  }
+
+  vector<PrimePiItem> prime_pi_table_;
+#if PE_HAS_INT128
+  vector<PrimeSumItem> prime_sum_table_;
+#endif
+  string directory_;
+};
+
+#endif

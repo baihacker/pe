@@ -54,22 +54,23 @@ struct PeDb {
     }
     TableHeader header;
 
-    int r = fread(&header, sizeof(header), 1, f);
+    int r = static_cast<int>(fread(&header, sizeof(header), 1, f));
     if (r != 1) {
       fprintf(stderr, "cannot read header from  %s\n", file.c_str());
       fclose(f);
       exit(-1);
     }
-    vector<T> buff(100000);
+    const int64 buff_size = 100000;
+    vector<T> buff(buff_size);
     vector<T> data;
     int64 actual_read = 0;
     for (;;) {
-      int64 cnt = fread(&buff[0], sizeof(T), buff.size(), f);
+      int64 cnt = fread(&buff[0], sizeof(T), buff_size, f);
       for (int i = 0; i < cnt; ++i) {
         data.push_back(buff[i]);
       }
       actual_read += cnt;
-      if (cnt < buff.size()) {
+      if (cnt < buff_size) {
         break;
       }
     }
@@ -84,7 +85,7 @@ struct PeDb {
   static void SaveRecords(const string& file, const vector<T>& data) {
     FILE* f = fopen(file.c_str(), "wb");
     if (!f) {
-      fprintf(stderr, "cannot open %s\n", file);
+      fprintf(stderr, "cannot open %s\n", file.c_str());
       exit(-1);
     }
 
@@ -93,10 +94,11 @@ struct PeDb {
     fwrite(&header, sizeof(header), 1, f);
 
     const int64 each = 100000;
-    for (int64 i = 0; i < data.size();) {
+    const int64 size = static_cast<int64>(data.size());
+    for (int64 i = 0; i < size;) {
       int64 j = i + each;
-      if (j > data.size()) {
-        j = data.size();
+      if (j > size) {
+        j = size;
       }
       int64 should_write = j - i;
       int64 actual_write = fwrite(&data[i], sizeof(T), should_write, f);
@@ -212,7 +214,7 @@ struct PeDb {
     int64 size = data.size();
     int64 l = 0, r = size - 1;
     while (l <= r) {
-      const int64 mid = l + r >> 1;
+      const int64 mid = (l + r) >> 1;
       if (data[mid].n == target) {
         return mid;
       }

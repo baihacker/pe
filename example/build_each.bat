@@ -1,6 +1,7 @@
 pe++.py bi_example_pe483.c
 pe++.py billion_sort.c
 pe++.py continued_fraction.c
+pe++.py count_carlitz_words.c
 pe++.py dfa_counter.c
 pe++.py example.c
 pe++.py find_recurrence.c

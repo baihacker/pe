@@ -79,15 +79,16 @@ struct SymPoly {
     for (const auto& iter : terms_) {
       int found = 0;
       const int size = sz(iter.first);
-      for (int i = 0; i < size; ++i)
+      for (int i = 0; i < size; ++i) {
         if (iter.first[i].first == var) {
           SymPoly t = target.Power(iter.first[i].second);
           SymPoly k;
           TermKey others;
-          for (int j = 0; j < size; ++j)
+          for (int j = 0; j < size; ++j) {
             if (j != i) {
               others.push_back(iter.first[j]);
             }
+          }
           k.terms_[others] = iter.second;
           for (const auto& i : (k * t).terms_) {
             resultTerms[i.first] += i.second;
@@ -95,6 +96,7 @@ struct SymPoly {
           found = 1;
           break;
         }
+      }
       if (!found) {
         resultTerms[iter.first] += iter.second;
       }
@@ -160,11 +162,12 @@ SL TermKey MergeTermKey(const TermKey& a, const TermKey& b) {
 template <typename CT>
 SL SymPoly<CT> operator*(const SymPoly<CT>& a, const SymPoly<CT>& b) {
   std::map<TermKey, CT> terms;
-  for (const auto& iter1 : a.terms())
+  for (const auto& iter1 : a.terms()) {
     for (const auto& iter2 : b.terms()) {
       terms[MergeTermKey<CT>(iter1.first, iter2.first)] +=
           iter1.second * iter2.second;
     }
+  }
   return SymPoly<CT>(terms);
 }
 
@@ -238,8 +241,9 @@ template <typename CT>
 SL CT EvaluateDigs(const vector<int>& sgns, const string& digs,
                    CT defaultVal = 0) {
   int s = 1;
-  for (const auto& iter : sgns)
+  for (const auto& iter : sgns) {
     if (iter == -1) s = -s;
+  }
   CT v = 0;
   for (const auto& iter : digs) v = v * 10 + iter - '0';
   if (digs.empty()) v = defaultVal;

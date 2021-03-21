@@ -135,7 +135,7 @@ SL void TestAsmdOperator() {
   TestAsmdInternal<uint128>();
 #endif
 
-  for (int a = -10; a <= 10; ++a)
+  for (int a = -10; a <= 10; ++a) {
     for (int b = -10; b <= 10; ++b) {
       assert((MpInteger(a) + MpInteger(b)).ToInt<int>() == (a + b));
       assert((MpInteger(a) += MpInteger(b)).ToInt<int>() == (a + b));
@@ -192,9 +192,10 @@ SL void TestAsmdOperator() {
         assert((a ^ MpInteger(b)).ToInt<int>() == (a ^ b));
       }
     }
+  }
 
-  for (int64 A : {-10000000000LL, -10000LL, 0LL, 10000LL, 10000000000LL})
-    for (int64 a = A - 10; a <= A + 10; ++a)
+  for (int64 A : {-10000000000LL, -10000LL, 0LL, 10000LL, 10000000000LL}) {
+    for (int64 a = A - 10; a <= A + 10; ++a) {
       for (int64 b = -10; b <= 10; ++b) {
         assert((MpInteger(a) + MpInteger(b)).ToInt<int64>() == (a + b));
         assert((MpInteger(a) += MpInteger(b)).ToInt<int64>() == (a + b));
@@ -251,6 +252,8 @@ SL void TestAsmdOperator() {
           assert((a ^ MpInteger(b)).ToInt<int64>() == (a ^ b));
         }
       }
+    }
+  }
 }
 
 template <typename T>

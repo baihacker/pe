@@ -42,8 +42,9 @@ SL void CountPtInCircleTest() {
     int64 v = CountPtInCircleBf(n);
     int64 ans = 0;
     const int t = (int)SqrtI(n);
-    for (int x = -t; x <= t; ++x)
+    for (int x = -t; x <= t; ++x) {
       for (int y = -t; y <= t; ++y) ans += sq(x) + sq(y) <= n;
+    }
     assert(u == ans);
     assert(v == ans);
   }

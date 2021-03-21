@@ -64,10 +64,11 @@ SL void GetFactorsTest() {
     auto result = GetFactors(12, limit);
     sort(all(result));
     vector<int64> expected;
-    for (auto iter : {1, 2, 3, 4, 6, 12})
+    for (auto iter : {1, 2, 3, 4, 6, 12}) {
       if (limit < 0 || iter <= limit) {
         expected.push_back(iter);
       }
+    }
     assert(result == expected);
   }
 }
@@ -104,10 +105,11 @@ SL void SquareRootModTest() {
       }
       cnt += sz(ans) > 0;
     }
-    if (p > 2)
+    if (p > 2) {
       assert(cnt * 2 == p + 1);
-    else
+    } else {
       assert(cnt == 2);
+    }
   }
 }
 
@@ -156,21 +158,27 @@ PE_REGISTER_TEST(&TwoSquaresTest, "TwoSquaresTest", SMALL);
 #endif
 
 SL void BaseKConversionTest() {
-  for (int64 n = 0; n <= 100; ++n)
-    for (int k = -200; k <= 200; ++k)
+  for (int64 n = 0; n <= 100; ++n) {
+    for (int k = -200; k <= 200; ++k) {
       if (Abs(k) >= 2) {
         assert(FromBaseK<int64>(ToBaseK(n, k), k) == n);
       }
-  for (int64 n = 0; n <= 10000; ++n)
-    for (int k = -16; k <= 16; ++k)
+    }
+  }
+  for (int64 n = 0; n <= 10000; ++n) {
+    for (int k = -16; k <= 16; ++k) {
       if (Abs(k) >= 2) {
         assert(FromBaseK<int64>(ToBaseK(n, k), k) == n);
       }
-  for (int64 n = -100; n <= 100; ++n)
-    for (int k = -200; k <= -2; ++k)
+    }
+  }
+  for (int64 n = -100; n <= 100; ++n) {
+    for (int k = -200; k <= -2; ++k) {
       if (Abs(k) >= 2) {
         assert(FromBaseK<int64>(ToBaseK(n, k), k) == n);
       }
+    }
+  }
 }
 PE_REGISTER_TEST(&BaseKConversionTest, "BaseKConversionTest", SMALL);
 }  // namespace nt_test

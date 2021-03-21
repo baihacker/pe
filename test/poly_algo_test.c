@@ -27,22 +27,25 @@ SL void GfTest() {
     int64 dp[10000 + 1] = {1};
     int64 can[5] = {1, 5, 10, 25, 50};
     for (auto each : can) {
-      for (int j = 0; j + each <= 10000; ++j)
+      for (int j = 0; j + each <= 10000; ++j) {
         if (dp[j]) {
           dp[j + each] = AddMod(dp[j + each], dp[j], mod);
         }
+      }
     }
 
     int64 coe[100] = {0};
     for (int i = 0; i < 1 << 5; ++i) {
       int s = 0;
       int bc = 0;
-      for (int j = 0; j < 5; ++j)
+      for (int j = 0; j < 5; ++j) {
         if (i & (1 << j)) ++bc, s += (int)can[j];
-      if (bc & 1)
+      }
+      if (bc & 1) {
         --coe[s];
-      else
+      } else {
         ++coe[s];
+      }
     }
     auto gfresult =
         GfFirst({vector<int64>(coe, coe + 92), mod}, {{1}, mod}, 10000);

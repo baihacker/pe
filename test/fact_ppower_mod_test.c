@@ -6,8 +6,9 @@ SL void FactPPowerModTest() {
   for (int i = 1; i <= 20; ++i) N *= i;
 
   bi v = 0;
-  for (bi n = N; !IsZero(n); n >>= 1, v += n)
+  for (bi n = N; !IsZero(n); n >>= 1, v += n) {
     ;
+  }
 
   bi mod = Power(bi(2), 48);
   bi ans = 1;
@@ -57,8 +58,9 @@ SL void MpIntegerFactPPowerModTest() {
   for (int i = 1; i <= 20; ++i) N *= i;
 
   MpInteger v = 0;
-  for (MpInteger n = N; !IsZero(n); n >>= 1, v += n)
+  for (MpInteger n = N; !IsZero(n); n >>= 1, v += n) {
     ;
+  }
 
   MpInteger mod = Power(MpInteger(2), 48);
   MpInteger ans = 1;

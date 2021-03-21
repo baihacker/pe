@@ -1,8 +1,8 @@
 #include "pe_test.h"
 
 namespace poly_div_test {
-typedef vector<uint64> (*poly_div_t)(const vector<uint64>& X,
-                                     const vector<uint64>& Y, int64 mod);
+using poly_div_t = vector<uint64> (*)(const vector<uint64>&,
+                                      const vector<uint64>&, int64);
 struct DivImpl {
   poly_div_t impl;
   int size;  // 0:small, 1:large
@@ -67,11 +67,13 @@ SL void TestImpl(int dp, int size, int n, int64 mod) {
 }
 
 SL void PolyDivTest() {
-  for (int dp = 0; dp < 3; ++dp)
-    for (int n : {128, 2048, 1000000, 1479725})
+  for (int dp = 0; dp < 3; ++dp) {
+    for (int n : {128, 2048, 1000000, 1479725}) {
       for (int64 mod : {100019LL, 100000000003LL, 316227766016779LL}) {
         TestImpl(dp, n > 2048, n, mod);
       }
+    }
+  }
 }
 PE_REGISTER_TEST(&PolyDivTest, "PolyDivTest", SUPER);
 

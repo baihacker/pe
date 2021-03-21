@@ -17,8 +17,9 @@ SL void TestS0() {
 
 SL void TestS1() {
   int64 s = 0;
-  for (int i = 2; i <= 10000; ++i)
+  for (int i = 2; i <= 10000; ++i) {
     if (IsPrime(i)) s += i;
+  }
   assert(s == 5736396LL);
 
   auto orz = PrimeS1<int64>(10000);
@@ -28,8 +29,9 @@ SL void TestS1() {
   assert(orz[10000] == 5736396LL);
 
   s = 0;
-  for (int i = 2; i <= 1000000; ++i)
+  for (int i = 2; i <= 1000000; ++i) {
     if (IsPrime(i)) s += i;
+  }
   assert(s == 37550402023LL);
 
   orz = PrimeS1<int64>(1000000);

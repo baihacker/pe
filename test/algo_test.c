@@ -114,7 +114,7 @@ SL void PkSumModTest() {
   function<int64(int64, int64)> them[]{p1_impl,   p1_impl,   &P2SumMod,
                                        &P3SumMod, &P4SumMod, &P5SumMod,
                                        &P6SumMod, &P7SumMod};
-  for (int k = 1; k <= 7; ++k)
+  for (int k = 1; k <= 7; ++k) {
     for (int offset = -100; offset < 100; ++offset) {
       const int64 n = mod + offset;
       const int64 ans1 = (them[k])(n, mod);
@@ -124,6 +124,7 @@ SL void PkSumModTest() {
       }
       assert(ans1 == ans2);
     }
+  }
 }
 
 PE_REGISTER_TEST(&PkSumModTest, "PkSumModTest", SMALL);
@@ -154,8 +155,8 @@ SL void SquareFreeCounterTest() {
 PE_REGISTER_TEST(&SquareFreeCounterTest, "SquareFreeCounterTest", SMALL);
 
 SL void MValuesTest() {
-  auto compute = [&](int64 val, int imp, int64 vmp, MVVHistory* his,
-                     int top) -> int64 { return 1; };
+  auto compute = [&](int64 /*val*/, int /*imp*/, int64 /*vmp*/,
+                     MVVHistory* /*his*/, int /*top*/) -> int64 { return 1; };
 
   assert(ForMValues<int64>(100000000000LL, compute) == 34113193);
 }

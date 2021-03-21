@@ -9,9 +9,10 @@ SL void RandomTest() {
     // 1e5+19
     const int64 mod = 100019;
     vector<uint64> x, y;
-    for (int i = 0; i < 7000; ++i)
+    for (int i = 0; i < 7000; ++i) {
       x.push_back((uint64)CRand63() % mod),
           y.push_back((uint64)CRand63() % mod);
+    }
 
     int t0 = clock();
     auto ans0 = poly_flint::PolyMulNmod(x, y, mod);
@@ -31,9 +32,10 @@ SL void RandomTest() {
     // 1e9+7
     const int64 mod = 1000000007;
     vector<uint64> x, y;
-    for (int i = 0; i < 1020000; ++i)
+    for (int i = 0; i < 1020000; ++i) {
       x.push_back((uint64)CRand63() % mod),
           y.push_back((uint64)CRand63() % mod);
+    }
 
     int t0 = clock();
     auto ans0 = poly_flint::PolyMulNmod(x, y, mod);
@@ -49,9 +51,10 @@ SL void RandomTest() {
     // 1e10+19
     const int64 mod = 10000000019;
     vector<uint64> x, y;
-    for (int i = 0; i < 80000; ++i)
+    for (int i = 0; i < 80000; ++i) {
       x.push_back((uint64)CRand63() % mod),
           y.push_back((uint64)CRand63() % mod);
+    }
 
     int t0 = clock();
     auto ans0 = poly_flint::PolyMulNmod(x, y, mod);

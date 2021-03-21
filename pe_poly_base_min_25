@@ -61,8 +61,9 @@ class UnsafeMod {
   void Set(word_t n) { x = n; }
   UnsafeMod Power(word_t e) const {
     UnsafeMod ret = UnsafeMod(1);
-    for (UnsafeMod base = *this; e; e >>= 1, base *= base)
+    for (UnsafeMod base = *this; e; e >>= 1, base *= base) {
       if (e & 1) ret *= base;
+    }
     return ret;
   }
   UnsafeMod Inverse() const { return Power(mod - 2); }
@@ -82,16 +83,18 @@ void Transform(mod_t* A, int64 n, const mod_t* roots, const mod_t* iroots) {
 
   mod_t dw[lv - 1];
   dw[0] = roots[lv - 3];
-  for (int64 i = 1; i < lv - 2; ++i)
+  for (int64 i = 1; i < lv - 2; ++i) {
     dw[i] = dw[i - 1] * iroots[lv - 1 - i] * roots[lv - 3 - i];
+  }
   dw[lv - 2] = dw[lv - 3] * iroots[1];
 
-  if (logn & 1)
+  if (logn & 1) {
     for (int64 i = 0; i < nh; ++i) {
       mod_t a = A[i], b = A[i + nh];
       A[i] = a + b;
       A[i + nh] = a - b;
     }
+  }
   for (int e = logn & ~1; e >= 2; e -= 2) {
     const int64 m = 1LL << e, m4 = m >> 2;
     mod_t w2 = one;
@@ -119,8 +122,9 @@ void ITransform(mod_t* A, int64 n, const mod_t* roots, const mod_t* iroots) {
 
   mod_t dw[lv - 1];
   dw[0] = iroots[lv - 3];
-  for (int64 i = 1; i < lv - 2; ++i)
+  for (int64 i = 1; i < lv - 2; ++i) {
     dw[i] = dw[i - 1] * roots[lv - 1 - i] * iroots[lv - 3 - i];
+  }
   dw[lv - 2] = dw[lv - 3] * roots[1];
 
   for (int e = 2; e <= logn; e += 2) {
@@ -141,12 +145,13 @@ void ITransform(mod_t* A, int64 n, const mod_t* roots, const mod_t* iroots) {
       w2 *= dw[pe_ctzll(~(i >> e))];
     }
   }
-  if (logn & 1)
+  if (logn & 1) {
     for (int64 i = 0; i < nh; ++i) {
       mod_t a = A[i], b = A[i + nh];
       A[i] = a + b;
       A[i + nh] = a - b;
     }
+  }
 }
 
 template <typename mod_t>
@@ -157,23 +162,27 @@ void Convolve(mod_t* A, int64 s1, mod_t* B, int64 s2, bool cyclic = false) {
 
   mod_t roots[mod_t::level], iroots[mod_t::level];
   roots[0] = mod_t::Omega();
-  for (int64 i = 1; i < mod_t::level; ++i)
+  for (int64 i = 1; i < mod_t::level; ++i) {
     roots[i] = roots[i - 1] * roots[i - 1];
+  }
   iroots[0] = roots[0].Inverse();
-  for (int64 i = 1; i < mod_t::level; ++i)
+  for (int64 i = 1; i < mod_t::level; ++i) {
     iroots[i] = iroots[i - 1] * iroots[i - 1];
+  }
 
   fill(A + s1, A + size, 0);
   Transform(A, size, roots, iroots);
   const mod_t inv = mod_t(size).Inverse();
   if (A == B && s1 == s2) {
-    for (int64 i = 0; i < size; ++i)
+    for (int64 i = 0; i < size; ++i) {
       (A[i] *= A[i]) *= inv;  // not A[i] *= A[i] * inv;
+    }
   } else {
     fill(B + s2, B + size, 0);
     Transform(B, size, roots, iroots);
-    for (int64 i = 0; i < size; ++i)
+    for (int64 i = 0; i < size; ++i) {
       (A[i] *= B[i]) *= inv;  // not A[i] *= B[i] * inv;
+    }
   }
   ITransform(A, size, roots, iroots);
 }

@@ -4,7 +4,7 @@
 #define PE_TEST_MODE
 #include <pe>
 
-typedef std::function<void(void)> TestMethodT;
+using TestMethodT = std::function<void()>;
 
 enum TestSize {
   SMALL = 0,

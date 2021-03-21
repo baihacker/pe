@@ -7,7 +7,7 @@
 
 template <typename T, int D>
 SL void MatMulMat(T (*a)[D], T (*b)[D], T (*c)[D], int N = D) {
-  for (int i = 0; i < N; ++i)
+  for (int i = 0; i < N; ++i) {
     for (int j = 0; j < N; ++j) {
       T s = 0;
       for (int k = 0; k < N; ++k) {
@@ -15,11 +15,12 @@ SL void MatMulMat(T (*a)[D], T (*b)[D], T (*c)[D], int N = D) {
       }
       c[i][j] = s;
     }
+  }
 }
 
 template <typename T>
 SL void MatMulMat(T* aa, T* bb, T* cc, int N) {
-  for (int i = 0; i < N; ++i)
+  for (int i = 0; i < N; ++i) {
     for (int j = 0; j < N; ++j) {
       T* a = aa + i * N;
       T* c = cc + i * N;
@@ -29,6 +30,7 @@ SL void MatMulMat(T* aa, T* bb, T* cc, int N) {
       }
       c[j] = s;
     }
+  }
 }
 
 template <typename T, int D>
@@ -67,7 +69,7 @@ SL void MatMulVec(T* aa, T* b, T* c, int N) {
 
 template <typename T, int D>
 SL void MatMulMatMod(T (*a)[D], T (*b)[D], T (*c)[D], int64 mod, int N = D) {
-  for (int i = 0; i < N; ++i)
+  for (int i = 0; i < N; ++i) {
     for (int j = 0; j < N; ++j) {
       int64 s = 0;
       for (int k = 0; k < N; ++k) {
@@ -78,11 +80,12 @@ SL void MatMulMatMod(T (*a)[D], T (*b)[D], T (*c)[D], int64 mod, int N = D) {
       }
       c[i][j] = s % mod;
     }
+  }
 }
 
 template <typename T>
 SL void MatMulMatMod(T* aa, T* bb, T* cc, int64 mod, int N) {
-  for (int i = 0; i < N; ++i)
+  for (int i = 0; i < N; ++i) {
     for (int j = 0; j < N; ++j) {
       T* a = aa + i * N;
       T* c = cc + i * N;
@@ -95,6 +98,7 @@ SL void MatMulMatMod(T* aa, T* bb, T* cc, int64 mod, int N) {
       }
       c[j] = s % mod;
     }
+  }
 }
 
 template <typename T, int D>
@@ -164,8 +168,8 @@ struct PeMatrixStorage {
     std::copy(storage.data_, storage.data_ + r_ * C, data_);
   }
 
-  PeMatrixStorage(PeMatrixStorage&& storage)
- noexcept       : data_(storage.data_), own_(storage.own_), r_(storage.r_) {
+  PeMatrixStorage(PeMatrixStorage&& storage) noexcept
+      : data_(storage.data_), own_(storage.own_), r_(storage.r_) {
     PE_ASSERT(storage.column() == C);
     storage.own_ = 0;
   }
@@ -178,7 +182,7 @@ struct PeMatrixStorage {
     return *this;
   }
 
-  PeMatrixStorage& operator=(PeMatrixStorage&& storage)  noexcept {
+  PeMatrixStorage& operator=(PeMatrixStorage&& storage) noexcept {
     if (&storage != this) {
       Release();
       ::new (this) PeMatrixStorage(std::move(storage));
@@ -269,8 +273,8 @@ struct PeMatrixStorage<T, -1> {
     std::copy(storage.data_, storage.data_ + r_ * c_, data_);
   }
 
-  PeMatrixStorage(PeMatrixStorage&& storage)
- noexcept       : data_(storage.data_),
+  PeMatrixStorage(PeMatrixStorage&& storage) noexcept
+      : data_(storage.data_),
         own_(storage.own_),
         r_(storage.r_),
         c_(storage.column()) {
@@ -285,7 +289,7 @@ struct PeMatrixStorage<T, -1> {
     return *this;
   }
 
-  PeMatrixStorage& operator=(PeMatrixStorage&& storage)  noexcept {
+  PeMatrixStorage& operator=(PeMatrixStorage&& storage) noexcept {
     if (&storage != this) {
       Release();
       ::new (this) PeMatrixStorage(std::move(storage));
@@ -398,8 +402,8 @@ struct PeMatrix {
     data_ = storage_.data();
   }
 
-  PeMatrix(PeMatrix&& mat)
- noexcept       : storage_(std::move(mat.storage_)), row_(mat.row()), col_(mat.col()) {
+  PeMatrix(PeMatrix&& mat) noexcept
+      : storage_(std::move(mat.storage_)), row_(mat.row()), col_(mat.col()) {
     data_ = storage_.data();
   }
 
@@ -411,7 +415,7 @@ struct PeMatrix {
     return *this;
   }
 
-  PeMatrix& operator=(PeMatrix&& mat)  noexcept {
+  PeMatrix& operator=(PeMatrix&& mat) noexcept {
     if (&mat != this) {
       storage_.Release();
       new (this) PeMatrix(std::move(mat));
@@ -468,10 +472,11 @@ struct PeMatrix {
   PeMatrixStorage<T, C>& storage() { return storage_; }
 
   PeMatrix& FillValue(const T v = T()) {
-    for (int i = 0; i < row_; ++i)
+    for (int i = 0; i < row_; ++i) {
       for (int j = 0; j < col_; ++j) {
         at(i, j) = v;
       }
+    }
     return *this;
   }
 
@@ -530,7 +535,7 @@ SL REQUIRES((!IsNModNumber<T>::result)) RETURN(PeMatrix<T, -1>)
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 70) num_threads(8)
 #endif
-  for (int i = 0; i < r; ++i)
+  for (int i = 0; i < r; ++i) {
     for (int j = 0; j < c; ++j) {
       T s = 0;
       for (int k = 0; k < cr; ++k) {
@@ -538,6 +543,7 @@ SL REQUIRES((!IsNModNumber<T>::result)) RETURN(PeMatrix<T, -1>)
       }
       result(i, j) = s;
     }
+  }
   return result;
 }
 
@@ -553,7 +559,7 @@ SL REQUIRES((IsNModNumber<T>::result &&
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 70) num_threads(8)
 #endif
-  for (int i = 0; i < r; ++i)
+  for (int i = 0; i < r; ++i) {
     for (int j = 0; j < c; ++j) {
       T s = 0;
       for (int k = 0; k < cr; ++k) {
@@ -562,6 +568,7 @@ SL REQUIRES((IsNModNumber<T>::result &&
       ModValueFixer<T>::Fix(s);
       result(i, j) = s;
     }
+  }
   return result;
 }
 
@@ -574,7 +581,7 @@ SL REQUIRES((IsNModNumber<T>::result &&
   const int cr = m1.col();
   const int c = m2.col();
   PeMatrix<T, -1> result(r, c, matrix_no_init);
-  for (int i = 0; i < r; ++i)
+  for (int i = 0; i < r; ++i) {
     for (int j = 0; j < c; ++j) {
       T s = 0;
       for (int k = 0; k < cr; ++k) {
@@ -583,6 +590,7 @@ SL REQUIRES((IsNModNumber<T>::result &&
       ModValueFixer<T>::Fix(s);
       result(i, j) = s;
     }
+  }
   return result;
 }
 
@@ -597,7 +605,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(PeMatrix<T, -1>)
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 70) num_threads(8)
 #endif
-  for (int i = 0; i < r; ++i)
+  for (int i = 0; i < r; ++i) {
     for (int j = 0; j < c; ++j) {
       T s = 0;
       for (int k = 0; k < cr; ++k) {
@@ -605,6 +613,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(PeMatrix<T, -1>)
       }
       result(i, j) = s % mod;
     }
+  }
   return result;
 }
 
@@ -619,7 +628,7 @@ SL REQUIRES((!is_native_integer<T>::value)) RETURN(PeMatrix<T, -1>)
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 70) num_threads(8)
 #endif
-  for (int i = 0; i < r; ++i)
+  for (int i = 0; i < r; ++i) {
     for (int j = 0; j < c; ++j) {
       T s = 0;
       for (int k = 0; k < cr; ++k) {
@@ -627,6 +636,7 @@ SL REQUIRES((!is_native_integer<T>::value)) RETURN(PeMatrix<T, -1>)
       }
       result(i, j) = s % mod;
     }
+  }
   return result;
 }
 
@@ -894,10 +904,11 @@ SL PeMatrix<int64> MatrixPowerModPe(
   auto t = MatrixPower(m, n);
 
   PeMatrix<int64> res(K, K);
-  for (int i = 0; i < K; ++i)
+  for (int i = 0; i < K; ++i) {
     for (int j = 0; j < K; ++j) {
       res(i, j) = t(i, j).value();
     }
+  }
 
   return res;
 }
@@ -970,10 +981,11 @@ SL PeMatrix<int64> MatrixPowerModPe(
   auto t = MatrixPower<int128>(m, n, mod);
 
   PeMatrix<int64> res(K, K);
-  for (int i = 0; i < K; ++i)
+  for (int i = 0; i < K; ++i) {
     for (int j = 0; j < K; ++j) {
       res(i, j) = static_cast<int64>(t(i, j));
     }
+  }
 
   return res;
 }
@@ -1060,10 +1072,11 @@ struct NormalMatrixModFixer {
   static void Fix(EigenMatrix<T>& m, const int64 mod) {
     const auto r = m.rows();
     const auto c = m.cols();
-    for (int i = 0; i < r; ++i)
+    for (int i = 0; i < r; ++i) {
       for (int j = 0; j < c; ++j) {
         m(i, j) = RegulateMod(m(i, j), mod);
       }
+    }
   }
 };
 
@@ -1077,10 +1090,11 @@ struct NModEigenMatrixModFixer<NModNumber<MC, APSBL<S>>> {
   static void Fix(EigenMatrix<NModNumber<MC, APSBL<S>>>& m) {
     const auto r = m.rows();
     const auto c = m.cols();
-    for (int i = 0; i < r; ++i)
+    for (int i = 0; i < r; ++i) {
       for (int j = 0; j < c; ++j) {
         m(i, j).FixValue();
       }
+    }
   }
 };
 
@@ -1089,10 +1103,11 @@ struct NModEigenMatrixModFixer<NModNumberM<MC, APSBL<S>>> {
   static void Fix(EigenMatrix<NModNumberM<MC, APSBL<S>>>& m) {
     const auto r = m.rows();
     const auto c = m.cols();
-    for (int i = 0; i < r; ++i)
+    for (int i = 0; i < r; ++i) {
       for (int j = 0; j < c; ++j) {
         m(i, j).FixValue();
       }
+    }
   }
 };
 
@@ -1242,10 +1257,11 @@ SL EigenMatrix<int64> MatrixPowerModEigen(
   auto t = MatrixPower(m, n);
 
   EigenMatrix<int64> res(K, K);
-  for (int i = 0; i < K; ++i)
+  for (int i = 0; i < K; ++i) {
     for (int j = 0; j < K; ++j) {
       res(i, j) = t(i, j).value();
     }
+  }
 
   return res;
 }
@@ -1318,10 +1334,11 @@ SL EigenMatrix<int64> MatrixPowerModEigen(
   auto t = MatrixPower(m, n, mod);
 
   EigenMatrix<int64> res(K, K);
-  for (int i = 0; i < K; ++i)
+  for (int i = 0; i < K; ++i) {
     for (int j = 0; j < K; ++j) {
       res(i, j) = static_cast<int64>(t(i, j));
     }
+  }
 
   return res;
 }

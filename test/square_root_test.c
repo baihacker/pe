@@ -17,10 +17,11 @@ SL void SquareRootCorrectnessTest() {
       }
     }
   }
-  if (f == 0)
+  if (f == 0) {
     cerr << "Correctness test pass!" << endl;
-  else
+  } else {
     cerr << "Correctness tess failed!" << endl;
+  }
 }
 
 SL void SquareRootPerformanceTest() {

@@ -5,7 +5,7 @@ int64 ps[1000001];
 int64 pc[1000001];
 
 SL void VerifyCnt(const int64 n, const DVA<int64>& result) {
-  int64 v = (int64)sqrt(n);
+  auto v = (int64)sqrt(n);
   for (int j = 1; j <= v; ++j) {
     assert(result[j] == pc[j]);
     assert(result[n / j] == pc[n / j]);
@@ -13,7 +13,7 @@ SL void VerifyCnt(const int64 n, const DVA<int64>& result) {
 }
 
 SL void VerifySum(const int64 n, const DVA<int64>& result) {
-  int64 v = (int64)sqrt(n);
+  auto v = (int64)sqrt(n);
   for (int j = 1; j <= v; ++j) {
     assert(result[j] == ps[j]);
     assert(result[n / j] == ps[n / j]);
@@ -58,8 +58,9 @@ SL void PrimePiSumPModTest() {
   }
   for (int mod = 1; mod <= 30; ++mod) {
     int64 result[32] = {0};
-    for (int i = 0; i < pcnt && plist[i] <= N; ++i)
+    for (int i = 0; i < pcnt && plist[i] <= N; ++i) {
       result[plist[i] % mod] += plist[i];
+    }
     auto v = PrimeS1PMod<int64>(N, mod);
     for (int j = 0; j < mod; ++j) {
       assert(result[j] == v[j][N]);
@@ -76,8 +77,9 @@ SL void PrimePiSumPModTest() {
   }
   for (int mod = 1; mod <= 30; ++mod) {
     int64 result[32] = {0};
-    for (int i = 0; i < pcnt && plist[i] <= N; ++i)
+    for (int i = 0; i < pcnt && plist[i] <= N; ++i) {
       result[plist[i] % mod] += plist[i];
+    }
     auto v = PrimeS1PMod<NModNumber<CCMod64<M>>>(N, mod);
     for (int j = 0; j < mod; ++j) {
       assert(result[j] % M == v[j][N].value());

@@ -212,12 +212,14 @@ SL void TestPeHelperMethod() {
 SL void MatMulTest() {
   DefaultMod::Set(mod);
   vector<int> data;
-  for (int i = 0; i < K; ++i)
+  for (int i = 0; i < K; ++i) {
     for (int j = 0; j < K; ++j) data.push_back(j * K + i);
+  }
   vector<int> V;
+  V.reserve(K);
   for (int i = 0; i < K; ++i) V.push_back(i);
   {
-    typedef int64 E;
+    using E = int64;
     std::vector<E> v(K, 0);
     EigenMatrix<E> m = EigenMatrix<E>::Zero(K, K);
 
@@ -236,7 +238,7 @@ SL void MatMulTest() {
     sort(all(v));
   }
   {
-    typedef int128 E;
+    using E = int128;
     std::vector<E> v(K, 0);
     EigenMatrix<E> m = EigenMatrix<E>::Zero(K, K);
 

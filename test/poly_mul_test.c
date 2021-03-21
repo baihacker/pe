@@ -2,8 +2,8 @@
 
 namespace poly_mul_test {
 #if HAS_POLY_MUL_FLINT || HAS_POLY_MUL_NTT64
-typedef vector<uint64> (*poly_mul_t)(const vector<uint64>& X,
-                                     const vector<uint64>& Y, int64 mod);
+using poly_mul_t = vector<uint64> (*)(const vector<uint64>&,
+                                      const vector<uint64>&, int64);
 struct MulImpl {
   poly_mul_t impl;
   int size;  // 1: coe < 1e18; 3: coe < 1e28; 4: coe < 1e35
@@ -139,9 +139,10 @@ SL void PolyMulPerformanceTest() {
       for (int n = 10; n <= 20; ++n) {
         const int size = 1 << n;
         vector<uint64> x, y;
-        for (int i = 0; i < size; ++i)
+        for (int i = 0; i < size; ++i) {
           x.push_back((uint64)CRand63() % mod),
               y.push_back((uint64)CRand63() % mod);
+        }
 
         auto start = clock();
         who.impl(x, y, mod);

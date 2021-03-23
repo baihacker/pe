@@ -200,6 +200,37 @@ SL vector<pair<int64, int>> Factorize(int64 n) {
   return ret;
 }
 
+SL vector<pair<int64, int>> Factorize(int64 n, const vector<int64>& hint) {
+  vector<pair<int64, int>> ret;
+  if (n <= 1) {
+    return ret;
+  }
+
+  for (auto& h : hint) {
+    for (auto iter : Factorize(h)) {
+      const int64 p = iter.first;
+      int c = 0;
+      while (n % p == 0) n /= p, ++c;
+      if (c) ret.emplace_back(p, c);
+    }
+  }
+
+  for (int i = 0; i < pcnt; ++i) {
+    if (n <= maxp) {
+      FactorizeByPmask(n, ret);
+      return ret;
+    }
+    const int64 p = plist[i];
+    const int64 test = p * p;
+    if (test > n) break;
+    int c = 0;
+    while (n % p == 0) n /= p, ++c;
+    if (c) ret.emplace_back(p, c);
+  }
+  if (n != 1) ret.emplace_back(n, 1);
+  return ret;
+}
+
 SL int IsPrime(int64 n) {
   if (n <= 1) return 0;
   if (n <= maxp) return pmask[n] == n;

@@ -1,0 +1,61 @@
+#ifndef PE_FLOAT128_
+#define PE_FLOAT128_
+
+#include "pe_base"
+
+#if PE_HAS_FLOAT128 && !defined(COMPILER_CLANG)
+
+#include <quadmath.h>
+
+SL string ToString(__float128 f, int dig = 20) {
+  char buff[256];
+  const int buff_size = sizeof(buff);
+  int n = quadmath_snprintf(buff, buff_size, "%#.*Qe", dig, f);
+  if (n < buff_size) {
+    return buff;
+  }
+  n = quadmath_snprintf(NULL, 0, "%#.*Qe", dig, f);
+  if (n <= -1) {
+    return "";
+  }
+  char* str = static_cast<char*>(malloc(n + 1));
+  string result;
+  if (str) {
+    quadmath_snprintf(str, n + 1, "%#.*Qe", dig, f);
+    result = str;
+  }
+  free(str);
+  return result;
+}
+
+SL ostream& operator<<(ostream& o, __float128 f) {
+  return o << ToString(f, 20);
+}
+
+SL __float128 Abs(__float128 f) { return fabsq(f); }
+
+SL __float128 FAbs(__float128 f) { return fabsq(f); }
+
+SL __float128 Power(__float128 f, int p) {
+  return powq(f, static_cast<__float128>(p));
+}
+
+SL __float128 Ceil(__float128 f) { return ceilq(f); }
+
+SL __float128 Floor(__float128 f) { return floorq(f); }
+
+SL __float128 Trunc(__float128 f) { return truncq(f); }
+
+SL __float128 abs(__float128 f) { return fabsq(f); }
+
+SL __float128 fabs(__float128 f) { return fabsq(f); }
+
+SL __float128 ceil(__float128 f) { return ceilq(f); }
+
+SL __float128 floor(__float128 f) { return floorq(f); }
+
+SL __float128 trunc(__float128 f) { return truncq(f); }
+
+#endif
+
+#endif

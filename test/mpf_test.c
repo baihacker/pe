@@ -4,7 +4,7 @@ namespace mpf_test {
 #if HAS_MPF
 SL void MpfTest() {
   // cout << Mpf::getDefaultPrec() << endl;
-  Mpf::setDefaultPrec(200);
+  Mpf::SetDefaultPrec(200);
 
   Mpf x(1);
   x /= 10;

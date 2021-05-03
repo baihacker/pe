@@ -115,7 +115,7 @@ void modular() {
 
 void multi_precision_float() {
 #if HAS_MPF
-  Mpf::setDefaultPrec(2000);
+  Mpf::SetDefaultPrec(2000);
   Mpf x;
   Mpf one(1);
   for (int i = 1; i <= 100; ++i) {

@@ -17,6 +17,7 @@ pe++.py pe_db.c
 pe++.py poly.c
 pe++.py power_sum.c
 pe++.py prime_power_sum.c
+pe++.py random_sample.c
 pe++.py range.c
 pe++.py sym_poly.c
 pause

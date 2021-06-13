@@ -2799,11 +2799,11 @@ struct NotDivCounter {
 // DfaCounter<Count type> dc;
 //
 // Build DFA:
-// dc.Init(state count, transCount, max len);
+// dc.Init(state count, number base, max len);
 // dc.AddTrans(src, dig, dest);
 //
 // Mark acepted status:
-// dc.MarkAsCount(state);
+// dc.MarkTargetState(state);
 //
 // Build internal helper data structures.
 // [optional] dc.Prepare();
@@ -2822,17 +2822,17 @@ struct DfaCounter {
     return *this;
   }
 
-  DfaCounter& Init(int state_count, int trans_count, int max_len) {
+  DfaCounter& Init(int state_count, int number_base, int max_len) {
     state_count_ = state_count;
-    trans_count_ = trans_count;
+    number_base_ = number_base;
     max_len_ = max_len;
 
-    dfa_.Reset({state_count, trans_count});
+    dfa_.Reset({state_count, number_base_});
 
     dp_.Reset({max_len + 1, state_count});
 
-    to_count_.resize(state_count);
-    fill(to_count_.begin(), to_count_.end(), 0);
+    target_state_.resize(state_count);
+    fill(target_state_.begin(), target_state_.end(), 0);
 
     prepared_ = 0;
 
@@ -2844,19 +2844,21 @@ struct DfaCounter {
     return *this;
   }
 
-  DfaCounter& MarkAsCount(int s, int v = 1) {
-    to_count_[s] = v;
+  DfaCounter& MarkTargetState(int s, int v = 1) {
+    target_state_[s] = v;
     return *this;
   }
 
   void Prepare() {
     for (int i = 0; i < state_count_; ++i) {
-      dp_[0][i] = to_count_[i];
+      dp_[0][i] = target_state_[i];
     }
     for (int i = 1; i <= max_len_; ++i) {
       for (int j = 0; j < state_count_; ++j) {
         auto to = dfa_[j];
-        for (int k = 0; k < trans_count_; ++k) dp_[i][j] += dp_[i - 1][to[k]];
+        for (int k = 0; k < number_base_; ++k) {
+          dp_[i][j] += dp_[i - 1][to[k]];
+        }
       }
     }
     prepared_ = 1;
@@ -2864,19 +2866,27 @@ struct DfaCounter {
 
   template <typename U>
   CT Cal(U n) {
+    vector<int> dig;
+    for (auto x = n; !IsZero(x); x /= number_base_) {
+      dig.push_back(ToInt<int>(x % number_base_));
+    }
+    return Cal(dig);
+  }
+
+  CT Cal(const vector<int>& dig) {
     if (prepared_ == 0) {
       Prepare();
       prepared_ = 1;
     }
 
-    vector<int> dig;
-    for (auto x = n; !IsZero(x); x /= 10) dig.push_back(ToInt<int>(x % 10));
     const int len = dig.size();
     PE_ASSERT(len <= max_len_);
 
     CT result = 0;
     if (count_each_len_) {
-      for (int i = 1; i < len; ++i) result += dp_[i][0];
+      for (int i = 1; i < len; ++i) {
+        result += dp_[i][0];
+      }
     }
 
     int state = 0;
@@ -2887,7 +2897,7 @@ struct DfaCounter {
       }
       state = dfa_[state][me];
     }
-    if (to_count_[state]) {
+    if (target_state_[state]) {
       result += 1;
     }
     return result;
@@ -2910,12 +2920,165 @@ struct DfaCounter {
  private:
   int count_each_len_ = 0;
   int state_count_ = 0;
-  int trans_count_ = 0;
+  int number_base_ = 0;
   int prepared_ = 0;
   int max_len_ = 0;
   DArray<int, 2> dfa_;
   DArray<CT, 2> dp_;
-  vector<int> to_count_;
+  vector<int> target_state_;
+};
+
+// Calculates the sum of the power of the integers accepted by a DFA.
+// See DfaCounter for more details.
+// Example: examples/dfa_summer.c
+template <typename CT>
+struct DfaSummer {
+  DfaSummer& set_count_each_len(int count_each_len) {
+    count_each_len_ = count_each_len;
+    return *this;
+  }
+
+  DfaSummer& Init(int state_count, int max_power, int number_base,
+                  int max_len) {
+    state_count_ = state_count;
+    max_power_ = max_power;
+    max_len_ = max_len;
+    number_base_ = number_base;
+
+    dfa_.Reset({state_count, number_base_});
+
+    dp_.Reset({max_power_ + 1, max_len + 1, state_count});
+
+    target_state_.resize(state_count);
+    fill(target_state_.begin(), target_state_.end(), 0);
+
+    base_power_.resize(max_len + 1);
+    base_power_[0] = 1;
+    for (int i = 1; i <= max_len; ++i) {
+      base_power_[i] = base_power_[i - 1] * number_base_;
+    }
+
+    choose.Reset({max_power_ + 1, max_power_ + 1});
+    for (int i = 0; i <= max_power_; ++i)
+      for (int j = 0; j <= max_power_; ++j) {
+        if (j == 0 || i == j) {
+          choose[i][j] = 1;
+        } else {
+          choose[i][j] = j > i ? 0 : choose[i - 1][j - 1] + choose[i - 1][j];
+        }
+      }
+
+    prepared_ = 0;
+
+    return *this;
+  }
+
+  DfaSummer& AddTrans(int s, int d, int t) {
+    dfa_[s][d] = t;
+    return *this;
+  }
+
+  DfaSummer& MarkTargetState(int s, int v = 1) {
+    target_state_[s] = v;
+    return *this;
+  }
+
+  void Prepare() {
+    for (int i = 0; i < state_count_; ++i) {
+      dp_[0][0][i] = target_state_[i];
+    }
+    for (int i = 1; i <= max_len_; ++i) {
+      for (int j = 0; j < state_count_; ++j) {
+        auto to = dfa_[j];
+        for (int k = 0; k < number_base_; ++k) {
+          dp_[0][i][j] += dp_[0][i - 1][to[k]];
+        }
+        for (int p = 1; p <= max_power_; ++p) {
+          for (int k = 0; k < number_base_; ++k) {
+            CT v = 0;
+            CT a = 1;
+            CT each = k * base_power_[i - 1];
+            int state = to[k];
+            for (int t = 0; t <= p; ++t) {
+              v += choose[p][t] * a * dp_[p - t][i - 1][state];
+              a *= each;
+            }
+            dp_[p][i][j] += v;
+          }
+        }
+      }
+    }
+    prepared_ = 1;
+  }
+
+  template <typename U>
+  CT Cal(U n, int target_power = 0) {
+    vector<int> dig;
+    for (auto x = n; !IsZero(x); x /= number_base_) {
+      dig.push_back(ToInt<int>(x % number_base_));
+    }
+
+    return Cal(dig, target_power);
+  }
+
+  CT Cal(const vector<int>& dig, int target_power = 0) {
+    if (prepared_ == 0) {
+      Prepare();
+      prepared_ = 1;
+    }
+    if (target_power == 0) {
+      target_power = max_power_;
+    }
+
+    const int len = dig.size();
+    PE_ASSERT(len <= max_len_);
+
+    CT result = 0;
+    if (count_each_len_) {
+      for (int i = 1; i < len; ++i) {
+        result += dp_[target_power][i][0];
+      }
+    }
+
+    int state = 0;
+    CT val = 0;
+    for (int curr = len - 1; curr >= 0; --curr) {
+      const int me = dig[curr];
+      for (int i = 0; i < me; ++i) {
+        const int next_state = dfa_[state][i];
+        CT a = 1;
+        CT each = (val * number_base_ + i) * base_power_[curr];
+        for (int j = 0; j <= target_power; ++j) {
+          result += choose[target_power][j] * a *
+                    dp_[target_power - j][curr][next_state];
+          a *= each;
+        }
+      }
+      state = dfa_[state][me];
+      val = val * number_base_ + me;
+    }
+    if (target_state_[state]) {
+      CT t = 1;
+      for (int i = 0; i < target_power; ++i) {
+        t *= val;
+      }
+      result += t;
+    }
+    return result;
+  }
+
+ private:
+  int count_each_len_ = 0;
+  int state_count_ = 0;
+  int max_power_ = 0;
+  int number_base_ = 0;
+  int prepared_ = 0;
+  int max_len_ = 0;
+  DArray<int, 2> dfa_;
+  DArray<CT, 3> dp_;
+  vector<int> target_state_;
+  vector<CT> base_power_;
+  DArray<CT, 2> choose;
 };
 
 // Counts the number of different words where the number of each letter is given

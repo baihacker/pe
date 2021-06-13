@@ -1023,7 +1023,7 @@ struct IsNModNumber {
 
   using result_type = decltype(NModNumberMatch(MakeX()));
 
-  enum { result = result_type::value };
+  enum { value = result_type::value };
 };
 
 template <typename X>
@@ -1050,13 +1050,25 @@ struct IsNModNumberCCModOrDefaultMod {
 
   using result_type = decltype(NModNumberCCmodOrDefaultModMatch(MakeX()));
 
-  enum { result = result_type::value };
+  enum { value = result_type::value };
 };
+
+template <typename T>
+SL REQUIRES((IsNModNumber<T>::value)) RETURN(typename T::ints)
+    ExtractValue(const T& t) {
+  return t.FixValue().value();
+}
+
+template <typename T>
+SL REQUIRES((!IsNModNumber<T>::value)) RETURN(T)
+    ExtractValue(const T& t) {
+  return t;
+}
 
 #if PE_HAS_CPP20
 template <class T>
 concept PeModNumber = requires(T v) {
-  requires static_cast<bool>(IsNModNumber<T>::result);
+  requires static_cast<bool>(IsNModNumber<T>::value);
   v + 1;
   v - 1;
   v * 1;

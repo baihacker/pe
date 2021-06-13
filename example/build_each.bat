@@ -3,6 +3,7 @@ pe++.py billion_sort.c
 pe++.py continued_fraction.c
 pe++.py count_carlitz_words.c
 pe++.py dfa_counter.c
+pe++.py dfa_summer.c
 pe++.py example.c
 pe++.py find_recurrence.c
 pe++.py linear_recurrence.c

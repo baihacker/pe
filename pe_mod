@@ -1060,10 +1060,24 @@ SL REQUIRES((IsNModNumber<T>::value)) RETURN(typename T::ints)
 }
 
 template <typename T>
-SL REQUIRES((!IsNModNumber<T>::value)) RETURN(T)
-    ExtractValue(const T& t) {
+SL REQUIRES((!IsNModNumber<T>::value)) RETURN(T) ExtractValue(const T& t) {
   return t;
 }
+
+template <typename T>
+struct ModValueFixer {
+  static void Fix(T& v) {}
+};
+
+template <typename MC, typename S>
+struct ModValueFixer<NModNumber<MC, APSBL<S>>> {
+  static void Fix(NModNumber<MC, APSBL<S>>& v) { v.FixValue(); }
+};
+
+template <typename MC, typename S>
+struct ModValueFixer<NModNumberM<MC, APSBL<S>>> {
+  static void Fix(NModNumberM<MC, APSBL<S>>& v) { v.FixValue(); }
+};
 
 #if PE_HAS_CPP20
 template <class T>

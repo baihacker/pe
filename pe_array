@@ -20,15 +20,15 @@ struct DArray : public DArrayRef<T, D> {
   using base = DArrayRef<T, D>;
   template <class... Args>
   DArray(const vector<int64>& dimension, Args&&... arg)
-      : dimension(dimension), base(NULL, 0, NULL, NULL) {
+      : dimension_(dimension), base(NULL, 0, NULL, NULL) {
     Init(arg...);
     PE_ASSERT(dimension.size() == D);
   }
 
   DArray() : base(NULL, 0, NULL, NULL) {
-    dimension = vector<int64>(D, 1);
+    dimension_ = vector<int64>(D, 1);
     Init();
-    PE_ASSERT(dimension.size() == D);
+    PE_ASSERT(dimension_.size() == D);
   }
 
   DArray(const DArray&) = delete;
@@ -42,30 +42,30 @@ struct DArray : public DArrayRef<T, D> {
   template <class... Args>
   void Reset(const vector<int64>& dimension, Args&&... arg) {
     Clear();
-    this->dimension = dimension;
+    this->dimension_ = dimension;
     Init(arg...);
   }
 
   template <class... Args>
   void Init(Args&&... arg) {
-    const int d = static_cast<int>(dimension.size());
-    elementCounts.clear();
-    elementCounts.push_back(1);
+    const int d = static_cast<int>(dimension_.size());
+    element_counts_.clear();
+    element_counts_.push_back(1);
     for (int i = d - 1; i >= 0; --i) {
-      elementCounts.push_back(elementCounts.back() * dimension[i]);
+      element_counts_.push_back(element_counts_.back() * dimension_[i]);
     }
-    reverse(elementCounts.begin(), elementCounts.end());
-    elementCount = elementCounts[0];
-    base::dimension = &dimension[0];
-    base::elementCounts = &elementCounts[0];
-    base::data_ = reinterpret_cast<T*>(A::Allocate(elementCount * sizeof(T)));
-    for (int64 i = 0; i < elementCount; ++i) {
+    reverse(element_counts_.begin(), element_counts_.end());
+    element_count_ = element_counts_[0];
+    base::dimension_ = &dimension_[0];
+    base::element_counts_ = &element_counts_[0];
+    base::data_ = reinterpret_cast<T*>(A::Allocate(element_count_ * sizeof(T)));
+    for (int64 i = 0; i < element_count_; ++i) {
       new (base::data_ + i) T(arg...);
     }
   }
 
   void Clear() {
-    for (int64 i = 0; i < elementCount; ++i) {
+    for (int64 i = 0; i < element_count_; ++i) {
       (base::data_ + i)->~T();
     }
     A::Deallocate(base::data_);
@@ -74,14 +74,14 @@ struct DArray : public DArrayRef<T, D> {
   T* data() { return base::data_; }
 
   DArrayRef<T, D> Ref() {
-    return DArrayRef<T, D>(base::data_, 0, base::dimension,
-                           base::elementCounts);
+    return DArrayRef<T, D>(base::data_, 0, base::dimension_,
+                           base::element_counts_);
   }
 
  private:
-  vector<int64> dimension;
-  vector<int64> elementCounts;
-  int64 elementCount;
+  vector<int64> dimension_;
+  vector<int64> element_counts_;
+  int64 element_count_;
 };
 
 template <typename T, int D>
@@ -90,22 +90,22 @@ struct DArrayRef {
   using ConstValueType = DArrayRef<T, D - 1>;
 
   DArrayRef(T* data, int off, const int64* dimension,
-            const int64* elementCounts)
+            const int64* element_counts)
       : data_(data),
-        off(off),
-        dimension(dimension),
-        elementCounts(elementCounts) {}
+        off_(off),
+        dimension_(dimension),
+        element_counts_(element_counts) {}
 
   DArrayRef<T, D - 1> operator[](int64 idx) const {
-    return DArrayRef<T, D - 1>(data_ + idx * elementCounts[off + 1], off + 1,
-                               dimension, elementCounts);
+    return DArrayRef<T, D - 1>(data_ + idx * element_counts_[off_ + 1], off_ + 1,
+                               dimension_, element_counts_);
   }
 
  protected:
   T* data_;
-  const int off;
-  const int64* elementCounts;
-  const int64* dimension;
+  const int off_;
+  const int64* element_counts_;
+  const int64* dimension_;
 };
 
 template <typename T>
@@ -114,20 +114,20 @@ struct DArrayRef<T, 1> {
   using ConstValueType = const T&;
 
   DArrayRef(T* data, int off, const int64* dimension,
-            const int64* elementCounts)
+            const int64* element_counts)
       : data_(data),
-        off(off),
-        dimension(dimension),
-        elementCounts(elementCounts) {}
+        off_(off),
+        dimension_(dimension),
+        element_counts_(element_counts) {}
 
   T& operator[](int64 idx) { return data_[idx]; }
   ConstValueType operator[](int64 idx) const { return data_[idx]; }
 
  protected:
   T* data_;
-  const int off;
-  const int64* elementCounts;
-  const int64* dimension;
+  const int off_;
+  const int64* element_counts_;
+  const int64* dimension_;
 };
 
 template <int64... X>

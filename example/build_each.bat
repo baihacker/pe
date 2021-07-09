@@ -10,6 +10,7 @@ pe++.py linear_recurrence.c
 pe++.py matrix_power.c
 pe++.py mma_interpolating_polynomial.c
 pe++.py mma_to_cpp.c
+pe++.py mod_number.c
 pe++.py multiplicative_function_prefix_sum_common_function.c
 pe++.py multiplicative_function_prefix_sum_mavlue_base_ex.c
 pe++.py parallel_cal_prime_pi.c

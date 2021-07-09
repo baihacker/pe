@@ -665,6 +665,8 @@ struct NModNumber {
 
   NModNumber(ints value, init_direct_t) : value_(value) {}
 
+  static NModNumber OfValue(const ints value) { return NModNumber(value); }
+
   static constexpr ints Mod() { return MC::Mod(); }
 
   NModNumber& operator+=(const NModNumber& y) {
@@ -708,6 +710,20 @@ struct NModNumber {
   NModNumber& operator*=(const NModNumber& y) {
     value_ = AP::Mul(value_, y.value_, Mod());
     return *this;
+  }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value))
+  RETURN(NModNumber) Power(T n) const {
+    NModNumber ret(1);
+    NModNumber x(*this);
+    for (; n; n >>= 1) {
+      if (n & 1) {
+        ret = ret * x;
+      }
+      x = x * x;
+    }
+    return ret;
   }
 
   ints value() const { return value_; }
@@ -834,6 +850,8 @@ struct NModNumberM {
   NModNumberM(ints value, const MC& mc, init_direct_t)
       : value_(value), mc(mc) {}
 
+  NModNumberM OfValue(const ints value) const { return NModNumberM(value, mc); }
+
   ints Mod() const { return mc.Mod(); }
 
   NModNumberM& operator+=(const NModNumberM& y) {
@@ -879,6 +897,20 @@ struct NModNumberM {
   NModNumberM& operator*=(const NModNumberM& y) {
     value_ = AP::Mul(value_, y.value_, Mod());
     return *this;
+  }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value))
+  RETURN(NModNumberM) Power(T n) const {
+    NModNumberM ret(1, mc);
+    NModNumberM x(*this);
+    for (; n; n >>= 1) {
+      if (n & 1) {
+        ret = ret * x;
+      }
+      x = x * x;
+    }
+    return ret;
   }
 
   ints value() const { return value_; }
@@ -1078,6 +1110,42 @@ template <typename MC, typename S>
 struct ModValueFixer<NModNumberM<MC, APSBL<S>>> {
   static void Fix(NModNumberM<MC, APSBL<S>>& v) { v.FixValue(); }
 };
+
+template <typename T1, typename T2>
+SL REQUIRES((IsNModNumber<T1>::value && is_native_integer<T2>::value))
+    RETURN(T1) Power(T1 x, T2 n) {
+  return x.Power(n);
+}
+
+template <typename T1, typename T2>
+SL REQUIRES((IsNModNumber<T1>::value && is_native_integer<T2>::value))
+    RETURN(T1) PowerMod(T1 x, T2 n) {
+  return x.Power(n);
+}
+
+template <typename T1, typename T2, typename M>
+SL REQUIRES((IsNModNumber<T1>::value && is_native_integer<T2>::value &&
+             is_native_integer<M>::value)) RETURN(T1)
+    PowerMod(T1 x, T2 n, M mod) {
+  PE_ASSERT(mod == x.Mod());
+  return x.Power(n);
+}
+
+template <typename T1, typename T2>
+SL REQUIRES((IsNModNumber<T1>::value && is_native_integer<T2>::value))
+    RETURN(T1) PowerModEx(T1 x, T2 n) {
+  auto v = PowerModEx(ExtractValue(x), n, x.Mod());
+  return x.OfValue(v);
+}
+
+template <typename T1, typename T2, typename M>
+SL REQUIRES((IsNModNumber<T1>::value && is_native_integer<T2>::value &&
+             is_native_integer<M>::value)) RETURN(T1)
+    PowerModEx(T1 x, T2 n, M mod) {
+  PE_ASSERT(mod == x.Mod());
+  auto v = PowerModEx(ExtractValue(x), n, x.Mod());
+  return x.OfValue(v);
+}
 
 #if PE_HAS_CPP20
 template <class T>

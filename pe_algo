@@ -2792,6 +2792,73 @@ struct NotDivCounter {
   map<pair<T, vector<int64>>, T> mem_;
 };
 
+/**
+ * Counts the integers in [1, n] which cannot be divided by any integers in v.
+ * It is assumsed the GCD of each two integers is 1.
+ */
+template <typename T>
+SL T CountNotDivImpl(T n, const vector<T>& v, T* mask, int* bc) {
+  if (n <= 0) return 0;
+  const int size = sz(v);
+  if (size == 0) return n;
+
+  const int limit = 1 << size;
+  T ret = 0;
+  for (int i = 0; i < limit; ++i) {
+    if (bc[i] % 2) {
+      ret -= n / mask[i];
+    } else {
+      ret += n / mask[i];
+    }
+  }
+
+  return ret;
+}
+
+template <typename T>
+SL T CountNotDiv(T n, const vector<T>& v, int* bc) {
+  if (n <= 0) return n;
+  const int size = sz(v);
+  if (size == 0) return n;
+
+  const int limit = 1 << size;
+  vector<T> mask(limit);
+  mask[0] = 1;
+  for (int i = 0; i < size; ++i) {
+    mask[1 << i] = v[i];
+  }
+  for (int i = 1; i < limit; ++i)
+    if (i & (i - 1)) {
+      const int f = i & -i;
+      mask[i] = mask[i ^ f] * mask[f];
+    }
+  return CountNotDivImpl<T>(n, v, &mask[0], bc);
+}
+
+template <typename T>
+SL T CountNotDiv(T n, const vector<T>& v) {
+  if (n <= 0) return n;
+  const int size = sz(v);
+  if (size == 0) return n;
+
+  const int limit = 1 << size;
+  vector<T> mask(limit);
+  vector<int> bc(limit);
+  mask[0] = 1;
+  for (int i = 0; i < size; ++i) {
+    mask[1 << i] = v[i];
+  }
+  bc[0] = 0;
+  for (int i = 1; i < limit; ++i) {
+    if (i & (i - 1)) {
+      const int f = i & -i;
+      mask[i] = mask[i ^ f] * mask[f];
+    }
+    bc[i] = bc[i >> 1] + (i & 1);
+  }
+  return CountNotDivImpl(n, v, &mask[0], &bc[0]);
+}
+
 // Counts the number of integers accepted by a DFA.
 // Case 1. Counts the numbers which are no more than a given upper bound.
 // Case 2. Finds the kth number.
@@ -2967,7 +3034,7 @@ struct DfaSummer {
           choose[i][j] = j > i ? 0 : choose[i - 1][j - 1] + choose[i - 1][j];
         }
       }
-}
+    }
 
     prepared_ = 0;
 

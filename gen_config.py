@@ -1,3 +1,4 @@
+#! python3
 # -*- coding: UTF-8 -*-
 import os
 import sys
@@ -19,6 +20,8 @@ RULE = {
     #'ENABLE_MPIR': ['mpir.h'],
     'ENABLE_LIBBF': ['libbf.h'],
     'ENABLE_NTL': ['NTL/ZZ.h'],
+    'ENABLE_PRIME_COUNT': ['primecount.hpp'],
+    'ENABLE_PRIME_SIEVE': ['primesieve.hpp'],
 }
 
 content = []
@@ -61,7 +64,7 @@ def main():
     add_define(key, '1' if ok else '0')
   content.append('#endif')
   with open(TARGET_PATH, 'wb') as tempf:
-    tempf.write('\r\n'.join(content))
+    tempf.write('\r\n'.join(content).encode('utf8'))
 
 
 if __name__ == "__main__":

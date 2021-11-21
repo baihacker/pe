@@ -5,6 +5,7 @@
 #include "pe_int128"
 #include "pe_mod"
 #include "pe_type_traits"
+#include "pe_range"
 
 // About primes
 static int64 maxp;
@@ -623,6 +624,9 @@ struct PrimeEnumeratorPe {
       : start_(start <= 1 ? 2 : start), end_(end) {}
 
   struct Iterator {
+    using reference = T;
+    using value_type = T;
+
     Iterator(T now, T end) : now_(now), end_(end) {}
 
     int operator==(const Iterator& o) const { return now_ == o.now_; }
@@ -639,9 +643,9 @@ struct PrimeEnumeratorPe {
       return *this;
     }
 
-    Iterator operator++(int) const {
+    Iterator operator++(int) {
       Iterator r{now_, end_};
-      ++r;
+      ++*this;
       return r;
     }
 
@@ -667,13 +671,20 @@ struct PrimeEnumeratorPe {
     T end_;
   };
 
-  Iterator begin() {
+  using iterator = Iterator;
+  using const_iterator = Iterator;
+
+  Iterator begin() const {
     Iterator ret{start_, end_};
     ret.SeekNext();
     return ret;
   }
 
-  Iterator end() { return {-1, end_}; }
+  Iterator end() const { return {-1, end_}; }
+
+  ContainerRange<Iterator> ToRange() const {
+    return ContainerRange<Iterator>(begin(), end());
+  }
 
  private:
   T start_;
@@ -711,6 +722,9 @@ struct PrimeEnumeratorPs {
         it_(max(start_ - 1, 1LL), end < 0 ? primesieve::get_max_stop() : end) {}
 
   struct Iterator {
+    using reference = T;
+    using value_type = T;
+
     Iterator(T now, T end, primesieve::iterator* it)
         : now_(now), end_(end), it_(it) {}
 
@@ -728,9 +742,9 @@ struct PrimeEnumeratorPs {
       return *this;
     }
 
-    Iterator operator++(int) const {
+    Iterator operator++(int) {
       Iterator r{now_, end_, it_};
-      ++r;
+      ++*this;
       return r;
     }
 
@@ -749,13 +763,22 @@ struct PrimeEnumeratorPs {
     primesieve::iterator* it_;
   };
 
-  Iterator begin() {
-    Iterator ret{start_, end_, &it_};
+  using iterator = Iterator;
+  using const_iterator = Iterator;
+
+  Iterator begin() const {
+    Iterator ret{start_, end_, const_cast<primesieve::iterator*>(&it_)};
     ret.SeekNext();
     return ret;
   }
 
-  Iterator end() { return {-1, end_, &it_}; }
+  Iterator end() const {
+    return {-1, end_, const_cast<primesieve::iterator*>(&it_)};
+  }
+
+  ContainerRange<Iterator> ToRange() const {
+    return ContainerRange<Iterator>(begin(), end());
+  }
 
  private:
   T start_;

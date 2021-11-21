@@ -11,32 +11,29 @@ int main() {
            "x2^2))")) {
     cout << a << endl;
   }
-  /*
-    output:
-    sqrt(-A * A * A * A + 2 * A * A * B * B - B * B * B * B + 2 * A * A * x1 *
-    x1 + 2 * B * B * x1 * x1 - x1 * x1 * x1 * x1 - 4 * A * A * x1 * x2 - 4 * B *
-    B * x1 * x2 + 4 * x1 * x1 * x1 * x2 + 2 * A * A * x2 * x2 + 2 * B * B * x2 *
-    x2 - 6 * x1 * x1 * x2 * x2 + 4 * x1 * x2 * x2 * x2 - x2 * x2 * x2 * x2) / (2
-    * sqrt(x1 * x1 - 2 * x1 * x2 + x2 * x2))
-  */
+  // output:
+  // sqrt(-A * A * A * A + 2 * A * A * B * B - B * B * B * B + 2 * A * A * x1 *
+  // x1 + 2 * B * B * x1 * x1 - x1 * x1 * x1 * x1 - 4 * A * A * x1 * x2 - 4 * B
+  // * B * x1 * x2 + 4 * x1 * x1 * x1 * x2 + 2 * A * A * x2 * x2 + 2 * B * B *
+  // x2 * x2 - 6 * x1 * x1 * x2 * x2 + 4 * x1 * x2 * x2 * x2 - x2 * x2 * x2 *
+  // x2) / (2
+  // * sqrt(x1 * x1 - 2 * x1 * x2 + x2 * x2))
   // Convert mathematica expression to cpp using modular arithmetic.
   for (auto a : mma::CompileMod("(a^4+a b)*7/b")) {
     cout << a << endl;
   }
-  /*
-    output:
-    int64 foo(int64 a, int64 b, int64 mod) {
-      const int64 t0 = a % mod;
-      const int64 t1 = 4;
-      const int64 t2 = PowerModEx(t0, t1, mod) % mod;
-      const int64 t3 = b % mod;
-      const int64 t4 = (t0 * t3) % mod;
-      const int64 t5 = (t2 + t4) % mod;
-      const int64 t6 = 7 % mod;
-      const int64 t7 = (t5 * t6) % mod;
-      const int64 t8 = t7 * InvOf(t3, mod) % mod;
-      return t8;
-    }
-  */
+  // output:
+  // int64 foo(int64 a, int64 b, int64 mod) {
+  //   const int64 t0 = a % mod;
+  //   const int64 t1 = 4;
+  //   const int64 t2 = PowerModEx(t0, t1, mod) % mod;
+  //   const int64 t3 = b % mod;
+  //   const int64 t4 = (t0 * t3) % mod;
+  //   const int64 t5 = (t2 + t4) % mod;
+  //   const int64 t6 = 7 % mod;
+  //   const int64 t7 = (t5 * t6) % mod;
+  //   const int64 t8 = t7 * InvOf(t3, mod) % mod;
+  //   return t8;
+  // }
   return 0;
 }

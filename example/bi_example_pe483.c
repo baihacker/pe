@@ -1,11 +1,10 @@
-/*
-  Project Euler 483	Repeated permutation
-  reference answer:
-  N = 100:           53817203945.52453
-  output:            53817203945
-  N = 150:           55335570173801.14
-  output:            55335570173801
-*/
+
+// Project Euler 483	Repeated permutation
+// reference answer:
+// N = 100:           53817203945.52453
+// output:            53817203945
+// N = 150:           55335570173801.14
+// output:            55335570173801
 #include <pe.hpp>
 const int N = 100;
 bi choose[505][505];

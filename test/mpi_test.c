@@ -1,17 +1,19 @@
-#include <pe.hpp>
+#include "pe_test.h"
 
 #if ENABLE_GMP
 namespace mpi_test {
 
 template <typename T>
 SL void TestConstructorInternal() {
-  /*cout << typeid(T).name() << endl;
-  cout << MpInteger(T()) << endl;
-  cout << MpInteger(T(0)) << " " << MpInteger(T(1)) << endl;
-  cout << MpInteger(numeric_limits<T>::min()) << " " << numeric_limits<T>::min()
-       << endl;
-  cout << MpInteger(numeric_limits<T>::max()) << " " << numeric_limits<T>::max()
-       << endl;*/
+  // cout << typeid(T).name() << endl;
+  // cout << MpInteger(T()) << endl;
+  // cout << MpInteger(T(0)) << " " << MpInteger(T(1)) << endl;
+  // cout << MpInteger(numeric_limits<T>::min()) << " " <<
+  // numeric_limits<T>::min()
+  //      << endl;
+  // cout << MpInteger(numeric_limits<T>::max()) << " " <<
+  // numeric_limits<T>::max()
+  //      << endl;
 
   assert(MpInteger(numeric_limits<T>::min()).ToInt<T>() ==
          numeric_limits<T>::min());

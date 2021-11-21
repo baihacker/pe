@@ -799,83 +799,77 @@ SL vector<T> MatrixPower(const PeMatrix<T, C>& m, int64 n, const vector<T>& v,
   return result;
 }
 
-/**
- * Helper method for matrix multiplication
- * 1. Compiling time mod version.
- * 2. Customized element type version. The mod is associated with element type.
- * It is also possible that element type has no mod associated with.
- * 3. Explicit runtime mod version: use int128 (if available) or
- * NModNumber<DefaultMod> (slow).
- *
- * For pe implementation:
- * If ENABLE_OPENMP, multi-thread implementation is not applied if the element
- * type is NModNumber other than CCMod and DefaultMod.
- *
- * For eigen implementation:
- * If the element type is NModNumber other than CCMod and DefaultMod, the caller
- * should guarantee Eigen::nbThreads() == 1. (Call Eigen::setNbThreads(1))
- *
- * For both implementations:
- * The caller is responsible for keeping DefaultMod thread-safe. In another
- * words, it is not modified when MatrixPowerMod is running.
- *
- * See example/matrix_power.c.
- */
-/**
-    Version 1:
-    auto res0 = MatrixPowerMod<1000000007>(
-        [=](auto& m) {
-          m(0, 0) = 1;
-          m(0, 1) = 1;
-          m(1, 0) = 1;
-        },
-        2, 100000);
-    auto res1 = MatrixPowerMod<1000000007>(
-        [=](auto& m, auto& v) {
-          m(0, 0) = 1;
-          m(0, 1) = 1;
-          m(1, 0) = 1;
-          v[0] = 1;
-          v[1] = 1;
-        },
-        2, 100000);
-
-    Version 2:
-    auto res0 = MatrixPowerMod<NMod64<1000000007>>(
-        [=](auto& m) {
-          m(0, 0) = 1;
-          m(0, 1) = 1;
-          m(1, 0) = 1;
-        },
-        2, 100000);
-    auto res1 = MatrixPowerMod<NMod64<1000000007>>(
-        [=](auto& m, auto& v) {
-          m(0, 0) = 1;
-          m(0, 1) = 1;
-          m(1, 0) = 1;
-          v[0] = 1;
-          v[1] = 1;
-        },
-        2, 100000);
-
-    Version 3:
-    auto res0 = MatrixPowerMod(
-        [=](auto& m) {
-          m(0, 0) = 1;
-          m(0, 1) = 1;
-          m(1, 0) = 1;
-        },
-        2, 100000, 1000000007);
-    auto res1 = MatrixPowerMod(
-        [=](auto& m, auto& v) {
-          m(0, 0) = 1;
-          m(0, 1) = 1;
-          m(1, 0) = 1;
-          v[0] = 1;
-          v[1] = 1;
-        },
-        2, 100000, 1000000007);
- */
+// Helper method for matrix multiplication
+// 1. Compiling time mod version.
+// 2. Customized element type version. The mod is associated with element type.
+// It is also possible that element type has no mod associated with.
+// 3. Explicit runtime mod version: use int128 (if available) or
+// NModNumber<DefaultMod> (slow).
+//
+// For pe implementation:
+// If ENABLE_OPENMP, multi-thread implementation is not applied if the element
+// type is NModNumber other than CCMod and DefaultMod.
+//
+// For eigen implementation:
+// If the element type is NModNumber other than CCMod and DefaultMod, the caller
+// should guarantee Eigen::nbThreads() == 1. (Call Eigen::setNbThreads(1))
+//
+// For both implementations:
+// The caller is responsible for keeping DefaultMod thread-safe. In another
+// words, it is not modified when MatrixPowerMod is running.
+//
+// See example/matrix_power.c.
+// Version 1:
+// auto res0 = MatrixPowerMod<1000000007>(
+//     [=](auto& m) {
+//       m(0, 0) = 1;
+//       m(0, 1) = 1;
+//       m(1, 0) = 1;
+//     },
+//     2, 100000);
+// auto res1 = MatrixPowerMod<1000000007>(
+//     [=](auto& m, auto& v) {
+//       m(0, 0) = 1;
+//       m(0, 1) = 1;
+//       m(1, 0) = 1;
+//       v[0] = 1;
+//       v[1] = 1;
+//     },
+//     2, 100000);
+// Version 2:
+// auto res0 = MatrixPowerMod<NMod64<1000000007>>(
+//     [=](auto& m) {
+//       m(0, 0) = 1;
+//       m(0, 1) = 1;
+//       m(1, 0) = 1;
+//     },
+//     2, 100000);
+// auto res1 = MatrixPowerMod<NMod64<1000000007>>(
+//     [=](auto& m, auto& v) {
+//       m(0, 0) = 1;
+//       m(0, 1) = 1;
+//       m(1, 0) = 1;
+//       v[0] = 1;
+//       v[1] = 1;
+//     },
+//     2, 100000);
+// Version 3:
+// auto res0 = MatrixPowerMod(
+//     [=](auto& m) {
+//       m(0, 0) = 1;
+//       m(0, 1) = 1;
+//       m(1, 0) = 1;
+//     },
+//     2, 100000, 1000000007);
+// auto res1 = MatrixPowerMod(
+//     [=](auto& m, auto& v) {
+//       m(0, 0) = 1;
+//       m(0, 1) = 1;
+//       m(1, 0) = 1;
+//       v[0] = 1;
+//       v[1] = 1;
+//     },
+//     2, 100000, 1000000007);
 
 // Version 1
 // Mod is specified explicitly at compiling time.

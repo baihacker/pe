@@ -1,22 +1,20 @@
 #include "pe_test.h"
 
-/**
-struct XYZ {
-  XYZ() {dbg("xyz");}
-};
-struct B {
-  B(XYZ& xyz) : xyz(xyz) {
-    dbg("B constructed");
-  }
-  XYZ& xyz;
-};
-struct A : public B {
-  A() : B(xyz) {
-    dbg("A constructed");
-  }
-  XYZ xyz;
-};
-*/
+// struct XYZ {
+//   XYZ() {dbg("xyz");}
+// };
+// struct B {
+//   B(XYZ& xyz) : xyz(xyz) {
+//     dbg("B constructed");
+//   }
+//   XYZ& xyz;
+// };
+// struct A : public B {
+//   A() : B(xyz) {
+//     dbg("A constructed");
+//   }
+//   XYZ xyz;
+// };
 
 namespace array_test {
 SL void ArrayTest() {

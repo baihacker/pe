@@ -1,9 +1,7 @@
 #include <pe.hpp>
 
-/**
-  Guess the solution to a^2=b^2+c^2+bc where
-  a = t1, b = t2, c = t3, c7 = 1, c8 = 0, c9 = -1
- */
+// Guess the solution to a^2=b^2+c^2+bc where
+// a = t1, b = t2, c = t3, c7 = 1, c8 = 0, c9 = -1
 SymPoly<int64> t1("c1 m^2 + c2 m n + c3 n^2");
 SymPoly<int64> t2("c4 m^2 + c5 m n + c6 n^2");
 SymPoly<int64> t3("c7 m^2 + c8 m n + c9 n^2");

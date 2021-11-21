@@ -3,11 +3,9 @@
 const int64 mod = 316227766016779;
 using MT = NMod64<mod>;
 
-/**
- * Computes
- * |1 1|^n *  |1|
- * |1 0|      |0|
- */
+// Computes
+// |1 1|^n *  |1|
+// |1 0|      |0|
 
 // Mod is specified at compiling time.
 // The element type is choosed internally.

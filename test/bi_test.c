@@ -1,15 +1,15 @@
-#include <pe.hpp>
+#include "pe_test.h"
 
 namespace bi_test {
 template <typename T>
 SL void TestConstructorInternal() {
-  /*cout << typeid(T).name() << endl;
-  cout << BigInteger(T()) << endl;
-  cout << BigInteger(T(0)) << " " << BigInteger(T(1)) << endl;
-  cout << BigInteger(numeric_limits<T>::min()) << " "
-       << numeric_limits<T>::min() << endl;
-  cout << BigInteger(numeric_limits<T>::max()) << " "
-       << numeric_limits<T>::max() << endl;*/
+  // cout << typeid(T).name() << endl;
+  // cout << BigInteger(T()) << endl;
+  // cout << BigInteger(T(0)) << " " << BigInteger(T(1)) << endl;
+  // cout << BigInteger(numeric_limits<T>::min()) << " "
+  //      << numeric_limits<T>::min() << endl;
+  // cout << BigInteger(numeric_limits<T>::max()) << " "
+  //      << numeric_limits<T>::max() << endl;
 
   assert(BigInteger(numeric_limits<T>::min()).ToInt<T>() ==
          numeric_limits<T>::min());

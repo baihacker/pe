@@ -704,7 +704,8 @@ SL REQUIRES((IsNModNumber<T>::value)) RETURN(void)
 }
 
 template <typename T, int D>
-SL void InitComb(T (*comb)[D], int n, int64 mod) {
+SL REQUIRES((!IsNModNumber<T>::value)) RETURN(void)
+    InitComb(T (*comb)[D], int n, int64 mod) {
   const int64 ONE = 1 % mod;
   for (int i = 0; i <= n; ++i) {
     for (int j = 1; j < i; ++j) {
@@ -713,6 +714,30 @@ SL void InitComb(T (*comb)[D], int n, int64 mod) {
     }
     comb[i][0] = comb[i][i] = ONE;
   }
+}
+
+template <typename T, int D>
+SL REQUIRES((!IsNModNumber<T>::value)) RETURN(void)
+    InitComb(T (*comb)[D], int64 mod) {
+  InitComb(comb, D - 1, mod);
+}
+
+template <typename T, int D>
+SL REQUIRES((IsNModNumber<T>::value)) RETURN(void)
+    InitComb(T (*comb)[D], int n) {
+  const T ONE = 1;
+  for (int i = 0; i <= n; ++i) {
+    for (int j = 1; j < i; ++j) {
+      comb[i][j] = j == 0 ? ONE : comb[i - 1][j - 1] + comb[i - 1][j];
+    }
+    comb[i][0] = comb[i][i] = ONE;
+  }
+}
+
+template <typename T, int D>
+SL REQUIRES((IsNModNumber<T>::value)) RETURN(void)
+    InitComb(T (*comb)[D]) {
+  InitComb(comb, D - 1);
 }
 
 // Primitive Root

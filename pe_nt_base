@@ -233,6 +233,8 @@ SL vector<pair<int64, int>> Factorize(int64 n, const vector<int64>& hint) {
 
 SL int IsPrime(int64 n) {
   if (n <= 1) return 0;
+  if (n == 2) return 1;
+  if ((n & 1) == 0) return 0;
   if (n <= maxp) return pmask[n] == n;
   PE_ASSERT(n <= maxp2);
   for (int i = 0; i < pcnt; ++i) {
@@ -616,28 +618,70 @@ SL int FindPrimeIdxSg(int64 n) {
 }
 
 template <typename T = int64>
-SL vector<T> GetPrimesInRangePe(int64 start, int64 end) {
-  if (start <= 1) {
-    start = 2;
-  }
-  if (start > end) {
-    return {};
-  }
-  vector<T> result;
-  if (start == 2) {
-    result.emplace_back(2);
-    ++start;
-  }
-  start |= 1;
-  for (int64 p = start; p <= end; p += 2)
-    if (IsPrime(p)) {
-      result.emplace_back(p);
+struct PrimeEnumeratorPe {
+  PrimeEnumeratorPe(T start, T end = -1)
+      : start_(start <= 1 ? 2 : start), end_(end) {}
+
+  struct Iterator {
+    Iterator(T now, T end) : now_(now), end_(end) {}
+
+    int operator==(const Iterator& o) const { return now_ == o.now_; }
+
+    int operator!=(const Iterator& o) const { return !(this->operator==(o)); }
+
+    T operator*() const { return now_; }
+
+    Iterator& operator++() {
+      if (now_ > 0) {
+        ++now_;
+        SeekNext();
+      }
+      return *this;
     }
-  return result;
-}
+
+    Iterator operator++(int) const {
+      Iterator r{now_, end_};
+      ++r;
+      return r;
+    }
+
+    void SeekNext() {
+      if (now_ > 0) {
+        if (end_ > 0) {
+          while (now_ <= end_ && !IsPrimeEx(now_)) {
+            now_ += now_ & 1 ? 2 : 1;
+          }
+          if (now_ > end_) {
+            now_ = -1;
+          }
+        } else {
+          while (!IsPrimeEx(now_)) {
+            now_ += now_ & 1 ? 2 : 1;
+          }
+        }
+      }
+    }
+
+   private:
+    T now_;
+    T end_;
+  };
+
+  Iterator begin() {
+    Iterator ret{start_, end_};
+    ret.SeekNext();
+    return ret;
+  }
+
+  Iterator end() { return {-1, end_}; }
+
+ private:
+  T start_;
+  T end_;
+};
 
 template <typename T = int64>
-SL vector<T> GetPrimesInRangeExPe(int64 start, int64 end) {
+SL vector<T> GetPrimesInRangePe(int64 start, int64 end) {
   if (start <= 1) {
     start = 2;
   }
@@ -658,6 +702,67 @@ SL vector<T> GetPrimesInRangeExPe(int64 start, int64 end) {
 }
 
 #if ENABLE_PRIME_SIEVE
+
+template <typename T = int64>
+struct PrimeEnumeratorPs {
+  PrimeEnumeratorPs(T start, T end = -1)
+      : start_(start <= 1 ? 2 : start),
+        end_(end),
+        it_(max(start_ - 1, 1LL), end < 0 ? primesieve::get_max_stop() : end) {}
+
+  struct Iterator {
+    Iterator(T now, T end, primesieve::iterator* it)
+        : now_(now), end_(end), it_(it) {}
+
+    int operator==(const Iterator& o) const { return now_ == o.now_; }
+
+    int operator!=(const Iterator& o) const { return !(this->operator==(o)); }
+
+    T operator*() const { return now_; }
+
+    Iterator& operator++() {
+      if (now_ > 0) {
+        ++now_;
+        SeekNext();
+      }
+      return *this;
+    }
+
+    Iterator operator++(int) const {
+      Iterator r{now_, end_, it_};
+      ++r;
+      return r;
+    }
+
+    void SeekNext() {
+      if (now_ > 0) {
+        now_ = it_->next_prime();
+        if (end_ > 0 && now_ > end_) {
+          now_ = -1;
+        }
+      }
+    }
+
+   private:
+    T now_;
+    T end_;
+    primesieve::iterator* it_;
+  };
+
+  Iterator begin() {
+    Iterator ret{start_, end_, &it_};
+    ret.SeekNext();
+    return ret;
+  }
+
+  Iterator end() { return {-1, end_, &it_}; }
+
+ private:
+  T start_;
+  T end_;
+  primesieve::iterator it_;
+};
+
 template <typename T = int64>
 SL vector<T> GetPrimesInRangePs(int64 start, int64 end) {
   if (start <= 1) {
@@ -674,16 +779,11 @@ SL vector<T> GetPrimesInRangePs(int64 start, int64 end) {
   }
   return result;
 }
-
-template <typename T = int64>
-SL vector<T> GetPrimesInRangeExPs(int64 start, int64 end) {
-  return GetPrimesInRangePs<T>(start, end);
-}
+#define PrimeEnumerator PrimeEnumeratorPs
 #define GetPrimesInRange GetPrimesInRangePs
-#define GetPrimesInRangeEx GetPrimesInRangeExPs
 #else
+#define PrimeEnumerator PrimeEnumeratorPe
 #define GetPrimesInRange GetPrimesInRangePe
-#define GetPrimesInRangeEx GetPrimesInRangeExPe
 #endif
 // 65701
 #endif

@@ -2,7 +2,15 @@
 
 const int n = 1000000;
 const int64 mod = 1000000007;
+
 #define output(x) cout << (#x) << ": " << (x) << endl
+
+#define ExecuteAndPrint1(method, arg) \
+  cout << (#method) << "(" << arg << "): " << method(arg) << endl
+
+#define ExecuteAndPrint2(method, arg1, arg2)       \
+  cout << (#method) << "(" << arg1 << ", " << arg2 \
+       << "): " << method(arg1, arg2) << endl
 
 void NtBaseExample() {
   output(pcnt);
@@ -12,12 +20,12 @@ void NtBaseExample() {
   cout << endl;
   for (int64 i = -2; i <= 10; ++i) {
     cout << i << endl;
-    output(IsPrime(i));
-    output(IsPrimeEx(i));
-    output(Factorize(i));
-    output(GetFactors(i));
-    output(GetPrimeFactors(i));
-    output(GetRadFactors(i));
+    ExecuteAndPrint1(IsPrime, i);
+    ExecuteAndPrint1(IsPrimeEx, i);
+    ExecuteAndPrint1(Factorize, i);
+    ExecuteAndPrint1(GetFactors, i);
+    ExecuteAndPrint1(GetPrimeFactors, i);
+    ExecuteAndPrint1(GetRadFactors, i);
     cout << "GetRadFactorsWithMu(i)): ";
     int idx = 0;
     for (auto& iter : GetRadFactorsWithMu(i)) {
@@ -27,9 +35,9 @@ void NtBaseExample() {
       cout << "(" << iter.first << ", " << iter.second << ")";
     }
     cout << endl;
-    output(CalPhi(i));
-    output(CalMu(i));
-    output(CalRad(i));
+    ExecuteAndPrint1(CalPhi, i);
+    ExecuteAndPrint1(CalMu, i);
+    ExecuteAndPrint1(CalRad, i);
     cout << endl;
   }
 }
@@ -54,14 +62,14 @@ void NtExample() {
     for (int64 offset = -1; offset <= 1; ++offset) {
       const int64 n = i * i + offset;
       // Integer part of the square root.
-      cout << "SqrtI(" << n << "): " << SqrtI(n) << endl;
+      ExecuteAndPrint1(SqrtI, n);
     }
   }
   for (int64 i = 1; i <= 10; ++i) {
     for (int64 d = 1; d <= 5; ++d) {
       const int64 n = i * i;
       // Integer part of the dth root.
-      cout << "RootI(" << n << ", " << d << "): " << RootI(n, d) << endl;
+      ExecuteAndPrint2(RootI, n, d);
     }
   }
 
@@ -78,18 +86,35 @@ void NtExample() {
   }
 
   for (int i = 1; i < 7; ++i) {
+    // Calculate the inverse and the programme exits if it doesn't exist.
     int ans = ModInv(i, 7);
     cout << ans * i % 7 << endl;  // Expected to be 1
   }
 
   {
     // Solve 3 * x = 4 (mod 7)
-    int x, u;
-    int have = SolveLinearEquation(3, 4, 7, x, u);
-    // The solutions are x + k u where k is an integer.
-    cout << have << endl;  // 1 means the solution exists.
-    cout << x << " " << u
-         << endl;  // Output 4 7 since the solutions are 6 + k * 7.
+    // The solutions are x + k m where k is an integer.
+    int x, m;
+    // Whether the solution exist
+    int have = SolveLinearEquation(3, 4, 7, x, m);
+    // Output 1 4 7 since the solutions are 6 + k * 7.
+    cout << have << " " << x << " " << m << endl;
+  }
+  {
+    // Solve x = 1 (mod 3), x = 2 (mod 5)
+    auto t = Crt2<int64>(1, 3, 2, 5);
+    auto have = get<0>(t);
+    // The solution are x + k m where k is an integer.
+    auto x = get<1>(t);
+    auto m = get<2>(t);
+    // Output 1 7 15 since the solutions are 7 + k * 15.
+    cout << have << " " << x << " " << m << endl;
+
+    // CrtN(const T* val, const T* mod, int n) is also available.
+  }
+
+  for (int i = 1; i <= 10; ++i) {
+    ExecuteAndPrint1(IsSquareFree, i);
   }
 }
 

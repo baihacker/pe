@@ -36,6 +36,7 @@ void NtBaseExample() {
 
 void PrimeSieveExample() {
   int idx = 0;
+  // Iterate the primes in the range.
   for (auto i : PrimeEnumerator<int64>(10, 40)) {
     if (idx++) {
       cout << ", ";
@@ -44,7 +45,52 @@ void PrimeSieveExample() {
   }
   cout << endl;
 
+  // Return a vector whose elements are the primes in the range.
   cout << GetPrimesInRange(10, 40) << endl;
+}
+
+void NtExample() {
+  for (int64 i = 1; i <= 10; ++i) {
+    for (int64 offset = -1; offset <= 1; ++offset) {
+      const int64 n = i * i + offset;
+      // Integer part of the square root.
+      cout << "SqrtI(" << n << "): " << SqrtI(n) << endl;
+    }
+  }
+  for (int64 i = 1; i <= 10; ++i) {
+    for (int64 d = 1; d <= 5; ++d) {
+      const int64 n = i * i;
+      // Integer part of the dth root.
+      cout << "RootI(" << n << ", " << d << "): " << RootI(n, d) << endl;
+    }
+  }
+
+  // Gcd of one number is the number itself.
+  cout << Gcd(24) << endl;
+  // Gcd of two numbers.
+  cout << Gcd(24, 36) << endl;
+  // Gcd of more than 2 numbers.
+  cout << Gcd(24, 36, 52) << endl;
+
+  {
+    auto t = ExGcd<int>(24, 36);
+    cout << get<1>(t) * 24 + get<2>(t) * 36 << " = " << get<0>(t) << endl;
+  }
+
+  for (int i = 1; i < 7; ++i) {
+    int ans = ModInv(i, 7);
+    cout << ans * i % 7 << endl;  // Expected to be 1
+  }
+
+  {
+    // Solve 3 * x = 4 (mod 7)
+    int x, u;
+    int have = SolveLinearEquation(3, 4, 7, x, u);
+    // The solutions are x + k u where k is an integer.
+    cout << have << endl;  // 1 means the solution exists.
+    cout << x << " " << u
+         << endl;  // Output 4 7 since the solutions are 6 + k * 7.
+  }
 }
 
 void PrimeSumExample() {
@@ -194,6 +240,7 @@ int main() {
 
   NtBaseExample();
   PrimeSieveExample();
+  NtExample();
   PrimeSumExample();
   MuSumExample();
   PhiSumExample();

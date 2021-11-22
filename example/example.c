@@ -2,8 +2,52 @@
 
 const int n = 1000000;
 const int64 mod = 1000000007;
+#define output(x) cout << (#x) << ": " << (x) << endl
 
-void prime_sum() {
+void NtBaseExample() {
+  output(pcnt);
+  for (int i = 0; i < 10; ++i) {
+    output(plist[i]);
+  }
+  cout << endl;
+  for (int64 i = -2; i <= 10; ++i) {
+    cout << i << endl;
+    output(IsPrime(i));
+    output(IsPrimeEx(i));
+    output(Factorize(i));
+    output(GetFactors(i));
+    output(GetPrimeFactors(i));
+    output(GetRadFactors(i));
+    cout << "GetRadFactorsWithMu(i)): ";
+    int idx = 0;
+    for (auto& iter : GetRadFactorsWithMu(i)) {
+      if (idx++) {
+        cout << ", ";
+      }
+      cout << "(" << iter.first << ", " << iter.second << ")";
+    }
+    cout << endl;
+    output(CalPhi(i));
+    output(CalMu(i));
+    output(CalRad(i));
+    cout << endl;
+  }
+}
+
+void PrimeSieveExample() {
+  int idx = 0;
+  for (auto i : PrimeEnumerator<int64>(10, 40)) {
+    if (idx++) {
+      cout << ", ";
+    }
+    cout << i;
+  }
+  cout << endl;
+
+  cout << GetPrimesInRange(10, 40) << endl;
+}
+
+void PrimeSumExample() {
   int64 sum0 = 0;
   for (int i = 0; i < pcnt; ++i) {
     int p = plist[i];
@@ -18,7 +62,7 @@ void prime_sum() {
   cout << sum0 << " " << sum1 << " " << sum2 << " " << sum3 << endl;
 }
 
-void mu_sum() {
+void MuSumExample() {
   int64 sum0 = 0;
   for (int i = 1; i <= n; ++i) {
     sum0 += CalMu(i);
@@ -29,7 +73,7 @@ void mu_sum() {
   cout << sum0 << " " << sum1 << endl;
 }
 
-void phi_sum() {
+void PhiSumExample() {
   int64 sum0 = 0;
   for (int i = 1; i <= n; ++i) {
     sum0 += CalPhi(i);
@@ -40,7 +84,7 @@ void phi_sum() {
   cout << sum0 << " " << sum1 << endl;
 }
 
-void squere_free_number_count() {
+void SquareFreeNumberExample() {
   int64 count0 = 0;
   for (int i = 1; i <= n; ++i) {
     int ok = 1;
@@ -58,12 +102,12 @@ void squere_free_number_count() {
   cout << count0 << " " << count1 << endl;
 }
 
-void LinearRecurrence() {
+void LinearRecurrenceExample() {
   cout << NthElement({1, 2, 4, 8, 16, 32, 64}, mod, 7) << endl;
   cout << NthElement({1, 1, 2, 3, 5, 8, 13}, mod, 10000000000) << endl;
 }
 
-void power_sum() {
+void PowerSumExample() {
   PowerSumModer a(mod);
   PowerSumModerB b(mod);
   PowerSumModerB1 c(mod);
@@ -73,7 +117,7 @@ void power_sum() {
        << endl;
 }
 
-void matrix_power() {
+void MatrixPowerExample() {
   // m^n, m is a k*k matrix
   cout << MatrixPowerMod([](auto& m) { m(0, 0) = m(0, 1) = m(1, 0) = 1; }, 2,
                          10000000000, mod)
@@ -89,7 +133,7 @@ void matrix_power() {
        << endl;
 }
 
-void big_number() {
+void BigNumberExample() {
   cout << Power(2_bi, 128) << endl;  // BigInteger
 #if ENABLE_GMP
   cout << Power(2_mpi, 128) << endl;   // MpInteger, a wrapper of mpz_class
@@ -97,7 +141,7 @@ void big_number() {
 #endif
 }
 
-void fraction() {
+void FractionExample() {
   Fraction<bi> x;
   for (int i = 1; i < 100; ++i) {
     x = x + Fraction<bi>(1, i);
@@ -106,14 +150,14 @@ void fraction() {
   cout << x << endl;
 }
 
-void modular() {
+void ModularArithmeticExample() {
   NMod64<mod> x = 1;
   for (int i = 1; i <= 10000; ++i) x *= i;
 
   cout << x << " " << FactModer(mod).Cal(10000) << endl;
 }
 
-void multi_precision_float() {
+void MultiprecisionFloatNumberExample() {
 #if HAS_MPF
   Mpf::SetDefaultPrec(2000);
   Mpf x;
@@ -126,28 +170,42 @@ void multi_precision_float() {
 #endif
 }
 
-void poly_mul_example() {
+void PolynomialMultiplicationExample() {
   vector<int64> a, b;
   for (int i = 0; i < 100000; ++i) a.pb(i), b.pb(i);
   auto c = PolyMul(a, b, mod);
   cout << c[12345] << endl;
 }
 
+// Latest compiling command:
+// g++.exe" "example.c" -o a.exe --std=c++17 -fno-diagnostics-color -O3
+// -march=native -mtune=native -fopenmp -lquadmath -Wl,--stack,268435456 -static
+// -lbf -lgmpxx -lflint -lmpfr -lntl -lgmp -lprimesieve -lprimecount
 int main() {
-  PE_INIT(maxp = 2000000, cal_phi = 1, cal_mu = 1);
+  PE_INIT(maxp = 2000000,  // Initialize a prime table which stores the primes
+                           // no more than maxp. This table is used by many
+                           // internal functions.
+                           // plist points to the first element of the prime
+                           // table.
+                           // pcnt is the size of the table.
+          cal_phi = 1,     // Initialize the phi[i] for i <= maxp
+          cal_mu = 1       // Initialize mu[i] fro i <= maxp
+  );
 
-  prime_sum();
-  mu_sum();
-  phi_sum();
-  squere_free_number_count();
-  LinearRecurrence();
-  power_sum();
-  matrix_power();
-  big_number();
-  fraction();
-  modular();
-  multi_precision_float();
-  poly_mul_example();
+  NtBaseExample();
+  PrimeSieveExample();
+  PrimeSumExample();
+  MuSumExample();
+  PhiSumExample();
+  SquareFreeNumberExample();
+  LinearRecurrenceExample();
+  PowerSumExample();
+  MatrixPowerExample();
+  BigNumberExample();
+  FractionExample();
+  ModularArithmeticExample();
+  MultiprecisionFloatNumberExample();
+  PolynomialMultiplicationExample();
 
   return 0;
 }

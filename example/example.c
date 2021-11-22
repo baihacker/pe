@@ -82,7 +82,13 @@ void NtExample() {
 
   {
     auto t = ExGcd<int>(24, 36);
-    cout << get<1>(t) * 24 + get<2>(t) * 36 << " = " << get<0>(t) << endl;
+    // x * 24 + y * 36 = d (greatest common divisor)
+    auto d = get<0>(t);
+    auto x = get<1>(t);
+    auto y = get<2>(t);
+    // -1 1 12
+    cout << x << " " << y << " " << d << endl;
+    cout << x * 24 + y * 36 << endl;
   }
 
   for (int i = 1; i < 7; ++i) {

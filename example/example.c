@@ -101,7 +101,7 @@ void NtExample() {
     // Solve 3 * x = 4 (mod 7)
     // The solutions are x + k m where k is an integer.
     int x, m;
-    // Whether the solution exist
+    // Whether the solution exists.
     int have = SolveLinearEquation(3, 4, 7, x, m);
     // Output 1 4 7 since the solutions are 6 + k * 7.
     cout << have << " " << x << " " << m << endl;
@@ -109,6 +109,7 @@ void NtExample() {
   {
     // Solve x = 1 (mod 3), x = 2 (mod 5)
     auto t = Crt2<int64>(1, 3, 2, 5);
+    // Whether the solution exists.
     auto have = get<0>(t);
     // The solution are x + k m where k is an integer.
     auto x = get<1>(t);

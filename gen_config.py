@@ -12,17 +12,17 @@ TARGET_PATH = os.path.join(CURRENT_DIRECTORY, TARGET_FILENAME)
 SPLITTER = ';' if os.name == 'nt' else ':'
 CHECKING_PATHS = os.environ.get('CPLUS_INCLUDE_PATH', '').split(SPLITTER)
 
-RULE = {
-    'ENABLE_EIGEN': ['Eigen/Dense'],
-    'ENABLE_GMP': ['gmp.h'],
-    'ENABLE_FLINT': ['flint.h'],
-    'ENABLE_MPFR': ['mpfr.h'],
-    #'ENABLE_MPIR': ['mpir.h'],
-    'ENABLE_LIBBF': ['libbf.h'],
-    'ENABLE_NTL': ['NTL/ZZ.h'],
-    'ENABLE_PRIME_COUNT': ['primecount.hpp'],
-    'ENABLE_PRIME_SIEVE': ['primesieve.hpp'],
-}
+RULES = [
+    ('ENABLE_EIGEN', ['Eigen/Dense']),
+    ('ENABLE_GMP', ['gmp.h']),
+    ('ENABLE_FLINT', ['flint.h']),
+    ('ENABLE_MPFR', ['mpfr.h']),
+    #('ENABLE_MPIR', ['mpir.h']),
+    ('ENABLE_LIBBF', ['libbf.h']),
+    ('ENABLE_NTL', ['NTL/ZZ.h']),
+    ('ENABLE_PRIME_COUNT', ['primecount.hpp']),
+    ('ENABLE_PRIME_SIEVE', ['primesieve.hpp']),
+]
 
 content = []
 
@@ -59,7 +59,7 @@ def main():
   content.append('')
   add_define('ENABLE_ASSERT', '1')
   add_define('TRY_TO_USE_INT128', '1')
-  for (key, value) in RULE.items():
+  for (key, value) in RULES:
     ok = check_target(value)
     add_define(key, '1' if ok else '0')
   content.append('#endif')

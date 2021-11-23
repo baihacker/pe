@@ -175,7 +175,7 @@ void PrimeCountExample() {
     int64 count1 = PrimeS0<int64>(n)[n];
     int64 count2 = PrimeS0Ex<int64>(n)[n];
     int64 count3 = PrimeS0Parallel<int64>(n)[n];
-    // An object that can be used to calculate prie count for different n.
+    // An object that can be used to calculate prime count for different n.
     int64 count4 = CachedPi().Cal(n);
 
     cout << count0 << " " << count1 << " " << count2 << " " << count3 << " "

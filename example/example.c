@@ -13,11 +13,19 @@ const int64 mod = 1000000007;
        << "): " << method(arg1, arg2) << endl
 
 void NtBaseExample() {
-  output(pcnt);
-  for (int i = 0; i < 10; ++i) {
-    output(plist[i]);
+  cout << endl << __func__ << endl;
+
+  {
+    // pcnt is the number of primes no more than 2000000.
+    output(pcnt);
+    // Print the first 10 primes.
+    for (int i = 0; i < 10; ++i) {
+      output(plist[i]);
+    }
+    cout << endl;
   }
-  cout << endl;
+
+  // Print value of fundamental arithmetic function and other functions
   for (int64 i = -2; i <= 10; ++i) {
     cout << i << endl;
     ExecuteAndPrint1(IsPrime, i);
@@ -44,7 +52,7 @@ void NtBaseExample() {
   // Prime sieve
   {
     int idx = 0;
-    // Iterate the primes in the range.
+    // Iterate the primes in the range and print them.
     for (auto i : PrimeEnumerator<int64>(10, 40)) {
       if (idx++) {
         cout << ", ";
@@ -53,12 +61,14 @@ void NtBaseExample() {
     }
     cout << endl;
 
-    // Return a vector whose elements are the primes in the range.
+    // Output a vector whose elements are the primes in the range.
     cout << GetPrimesInRange(10, 40) << endl;
   }
 }
 
 void NtExample() {
+  cout << endl << __func__ << endl;
+
   for (int64 i = 1; i <= 10; ++i) {
     for (int64 offset = -1; offset <= 1; ++offset) {
       const int64 n = i * i + offset;
@@ -66,6 +76,7 @@ void NtExample() {
       ExecuteAndPrint1(SqrtI, n);
     }
   }
+
   for (int64 i = 1; i <= 10; ++i) {
     for (int64 d = 1; d <= 5; ++d) {
       const int64 n = i * i;
@@ -163,6 +174,8 @@ void NtExample() {
 }
 
 void PrimeCountExample() {
+  cout << endl << __func__ << endl;
+
   {
     int64 count0 = 0;
     for (int i = 1; i <= n; ++i)
@@ -196,6 +209,8 @@ void PrimeCountExample() {
 }
 
 void PrimeSumExample() {
+  cout << endl << __func__ << endl;
+
   {
     int64 sum0 = 0;
     for (int i = 1; i <= n; ++i)
@@ -224,6 +239,8 @@ void PrimeSumExample() {
 }
 
 void PrimePowerSumExample() {
+  cout << endl << __func__ << endl;
+
   {
     const int E = 7;
     int64 sum0 = 0;
@@ -255,6 +272,8 @@ void PrimePowerSumExample() {
 }
 
 void MuSumExample() {
+  cout << endl << __func__ << endl;
+
   int64 sum0 = 0;
   for (int i = 1; i <= n; ++i) {
     sum0 += CalMu(i);
@@ -266,6 +285,8 @@ void MuSumExample() {
 }
 
 void PhiSumExample() {
+  cout << endl << __func__ << endl;
+
   int64 sum0 = 0;
   for (int i = 1; i <= n; ++i) {
     sum0 += CalPhi(i);
@@ -277,6 +298,8 @@ void PhiSumExample() {
 }
 
 void SquareFreeNumberCountExample() {
+  cout << endl << __func__ << endl;
+
   int64 count0 = 0;
   for (int i = 1; i <= n; ++i) {
     int ok = 1;
@@ -295,6 +318,8 @@ void SquareFreeNumberCountExample() {
 }
 
 void LinearRecurrenceExample() {
+  cout << endl << __func__ << endl;
+
   {
     // Find the linear recurrence automatically and output the nth element.
     cout << NthElement({1, 2, 4, 8, 16, 32, 64}, mod, 7) << endl;
@@ -319,6 +344,8 @@ void LinearRecurrenceExample() {
 }
 
 void PowerSumExample() {
+  cout << endl << __func__ << endl;
+
   PowerSumModer a(mod);
   PowerSumModerB b(mod);
   PowerSumModerB1 c(mod);
@@ -329,6 +356,8 @@ void PowerSumExample() {
 }
 
 void MatrixPowerExample() {
+  cout << endl << __func__ << endl;
+
   // m^n, m is a k*k matrix
   cout << MatrixPowerMod([](auto& m) { m(0, 0) = m(0, 1) = m(1, 0) = 1; }, 2,
                          10000000000, mod)
@@ -345,6 +374,8 @@ void MatrixPowerExample() {
 }
 
 void BigNumberExample() {
+  cout << endl << __func__ << endl;
+
   cout << Power(2_bi, 128) << endl;  // BigInteger
 #if ENABLE_GMP
   cout << Power(2_mpi, 128) << endl;   // MpInteger, a wrapper of mpz_class
@@ -353,6 +384,8 @@ void BigNumberExample() {
 }
 
 void FractionExample() {
+  cout << endl << __func__ << endl;
+
   Fraction<bi> x;
   for (int i = 1; i < 100; ++i) {
     x = x + Fraction<bi>(1, i);
@@ -362,14 +395,21 @@ void FractionExample() {
 }
 
 void ModularArithmeticExample() {
+  cout << endl << __func__ << endl;
+
   NMod64<mod> x = 1;
-  for (int i = 1; i <= 10000; ++i) x *= i;
+  for (int i = 1; i <= 10000; ++i) {
+    x *= i;
+  }
 
   cout << x << " " << FactModer(mod).Cal(10000) << endl;
 }
 
 void MultiprecisionFloatNumberExample() {
+  cout << endl << __func__ << endl;
+
 #if HAS_MPF
+  // 2000 bit precision.
   Mpf::SetDefaultPrec(2000);
   Mpf x;
   Mpf one(1);
@@ -382,8 +422,13 @@ void MultiprecisionFloatNumberExample() {
 }
 
 void PolynomialMultiplicationExample() {
+  cout << endl << __func__ << endl;
+
   vector<int64> a, b;
-  for (int i = 0; i < 100000; ++i) a.pb(i), b.pb(i);
+  for (int i = 0; i < 100000; ++i) {
+    a.push_back(i);
+    b.push_back(i);
+  }
   auto c = PolyMul(a, b, mod);
   cout << c[12345] << endl;
 }
@@ -419,5 +464,6 @@ int main() {
   ModularArithmeticExample();
   MultiprecisionFloatNumberExample();
   PolynomialMultiplicationExample();
+
   return 0;
 }

@@ -40,21 +40,22 @@ void NtBaseExample() {
     ExecuteAndPrint1(CalRad, i);
     cout << endl;
   }
-}
 
-void PrimeSieveExample() {
-  int idx = 0;
-  // Iterate the primes in the range.
-  for (auto i : PrimeEnumerator<int64>(10, 40)) {
-    if (idx++) {
-      cout << ", ";
+  // Prime sieve
+  {
+    int idx = 0;
+    // Iterate the primes in the range.
+    for (auto i : PrimeEnumerator<int64>(10, 40)) {
+      if (idx++) {
+        cout << ", ";
+      }
+      cout << i;
     }
-    cout << i;
-  }
-  cout << endl;
+    cout << endl;
 
-  // Return a vector whose elements are the primes in the range.
-  cout << GetPrimesInRange(10, 40) << endl;
+    // Return a vector whose elements are the primes in the range.
+    cout << GetPrimesInRange(10, 40) << endl;
+  }
 }
 
 void NtExample() {
@@ -125,21 +126,132 @@ void NtExample() {
   for (int i = 1; i <= 10; ++i) {
     ExecuteAndPrint1(IsSquareFree, i);
   }
+
+  {
+    int64 invs[10];
+    InitInv(invs, 9, mod);
+    for (int i = 1; i <= 9; ++i) {
+      cout << invs[i] * i % mod << endl;  // Expected to be 1.
+    }
+  }
+
+  {
+    int64 comb[10][10];
+    InitComb(comb, 9);
+    cout << comb[5][2] << endl;  // Binomial(5, 2) = 10.
+  }
+
+  {
+    int64 fac[10];
+    int64 ifac[10];
+    InitSeqProd2<int64>(fac, ifac, 1, 9, mod);
+    cout << fac[5] << endl;  // 5! = 120
+    for (int i = 1; i <= 9; ++i) {
+      cout << fac[i] * ifac[i] % mod << endl;  // Expected to be 1.
+    }
+  }
+
+  {
+    // Output 4 and 9 since 4^2 = 9^2 = 3 (mod 13)
+    cout << SquareRootMod(3, 13) << endl;
+  }
+
+  {
+    // Output 7, 8, 11 since 7^3 = 8^3 = 11^3 = 5 (mod 13)
+    cout << RootMod(5, 3, 13) << endl;
+  }
+}
+
+void PrimeCountExample() {
+  {
+    int64 count0 = 0;
+    for (int i = 1; i <= n; ++i)
+      if (IsPrimeEx(i)) {
+        ++count0;
+      }
+
+    // A DVA structure that hold the prime count for 1, 2, 3, ..., n/3, n/2,
+    // n/1.
+    int64 count1 = PrimeS0<int64>(n)[n];
+    int64 count2 = PrimeS0Ex<int64>(n)[n];
+    int64 count3 = PrimeS0Parallel<int64>(n)[n];
+    // An object that can be used to calculate prie count for different n.
+    int64 count4 = CachedPi().Cal(n);
+
+    cout << count0 << " " << count1 << " " << count2 << " " << count3 << " "
+         << count4 << endl;
+  }
+  {
+    int64 count01 = 0;  // p % 4 = 1
+    int64 count03 = 0;  // p % 4 = 3
+    for (int i = 1; i <= n; ++i)
+      if (IsPrimeEx(i)) {
+        if (i % 4 == 1) ++count01;
+        if (i % 4 == 3) ++count03;
+      }
+    auto result = PrimeS0PMod<int64>(n, 4);
+    cout << count01 << " " << result[1][n] << endl;
+    cout << count03 << " " << result[3][n] << endl;
+  }
 }
 
 void PrimeSumExample() {
-  int64 sum0 = 0;
-  for (int i = 0; i < pcnt; ++i) {
-    int p = plist[i];
-    if (p > n) break;
-    sum0 += p;
+  {
+    int64 sum0 = 0;
+    for (int i = 1; i <= n; ++i)
+      if (IsPrimeEx(i)) {
+        sum0 += i;
+      }
+
+    int64 sum1 = PrimeS1<int64>(n)[n];
+    int64 sum2 = PrimeS1Ex<int64>(n)[n];
+    int64 sum3 = PrimeS1Parallel<int64>(n)[n];
+
+    cout << sum0 << " " << sum1 << " " << sum2 << " " << sum3 << endl;
   }
+  {
+    int64 sum01 = 0;  // p % 4 = 1
+    int64 sum03 = 0;  // p % 4 = 3
+    for (int i = 1; i <= n; ++i)
+      if (IsPrimeEx(i)) {
+        if (i % 4 == 1) sum01 += i;
+        if (i % 4 == 3) sum03 += i;
+      }
+    auto result = PrimeS1PMod<int64>(n, 4);
+    cout << sum01 << " " << result[1][n] << endl;
+    cout << sum03 << " " << result[3][n] << endl;
+  }
+}
 
-  int64 sum1 = PrimeS1<int64>(n)[n];
-  int64 sum2 = PrimeS1Ex<int64>(n)[n];
-  int64 sum3 = PrimeS1Parallel<int64>(n)[n];
+void PrimePowerSumExample() {
+  {
+    const int E = 7;
+    int64 sum0 = 0;
+    for (int i = 1; i <= n; ++i)
+      if (IsPrimeEx(i)) {
+        sum0 += PowerMod(i, E, mod);
+      }
+    sum0 %= mod;
 
-  cout << sum0 << " " << sum1 << " " << sum2 << " " << sum3 << endl;
+    int64 sum1 = PrimeSkEx<mod>(n, E)[n];
+
+    cout << sum0 << " " << sum1 << endl;
+  }
+  {
+    const int E = 7;
+    int64 sum01 = 0;  // p % 4 = 1
+    int64 sum03 = 0;  // p % 4 = 3
+    for (int i = 1; i <= n; ++i)
+      if (IsPrimeEx(i)) {
+        if (i % 4 == 1) sum01 += PowerMod(i, E, mod);
+        if (i % 4 == 3) sum03 += PowerMod(i, E, mod);
+      }
+    sum01 %= mod;
+    sum03 %= mod;
+    auto result = PrimeSkPMod<mod>(n, E, 4);
+    cout << sum01 << " " << result[1][n] << endl;
+    cout << sum03 << " " << result[3][n] << endl;
+  }
 }
 
 void MuSumExample() {
@@ -164,7 +276,7 @@ void PhiSumExample() {
   cout << sum0 << " " << sum1 << endl;
 }
 
-void SquareFreeNumberExample() {
+void SquareFreeNumberCountExample() {
   int64 count0 = 0;
   for (int i = 1; i <= n; ++i) {
     int ok = 1;
@@ -183,8 +295,27 @@ void SquareFreeNumberExample() {
 }
 
 void LinearRecurrenceExample() {
-  cout << NthElement({1, 2, 4, 8, 16, 32, 64}, mod, 7) << endl;
-  cout << NthElement({1, 1, 2, 3, 5, 8, 13}, mod, 10000000000) << endl;
+  {
+    // Find the linear recurrence automatically and output the nth element.
+    cout << NthElement({1, 2, 4, 8, 16, 32, 64}, mod, 7) << endl;
+    cout << NthElement({1, 1, 2, 3, 5, 8, 13}, mod, 10000000000) << endl;
+  }
+  {
+    // a[i+1] = a[i] * rec[0] + a[i-1] * rec[1] ...
+    // a[0] = init[0], a[1] = init[1], ...
+    vector<int64> rec{1, 1};
+    vector<int64> init{1, 1};
+    for (int i = 2; i <= 5; ++i) {
+      cout << LinearRecurrence(rec, init, mod, i) << endl;
+    }
+  }
+  {
+    vector<int64> rec{1, 1};
+    vector<int64> init{1, 1};
+    for (int i = 0; i <= 5; ++i) {
+      cout << LinearRecurrenceSum(rec, init, mod, i) << endl;
+    }
+  }
 }
 
 void PowerSumExample() {
@@ -273,12 +404,13 @@ int main() {
   );
 
   NtBaseExample();
-  PrimeSieveExample();
   NtExample();
+  PrimeCountExample();
   PrimeSumExample();
+  PrimePowerSumExample();
   MuSumExample();
   PhiSumExample();
-  SquareFreeNumberExample();
+  SquareFreeNumberCountExample();
   LinearRecurrenceExample();
   PowerSumExample();
   MatrixPowerExample();
@@ -287,6 +419,5 @@ int main() {
   ModularArithmeticExample();
   MultiprecisionFloatNumberExample();
   PolynomialMultiplicationExample();
-
   return 0;
 }

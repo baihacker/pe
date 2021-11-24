@@ -145,10 +145,11 @@ GMP_DIR="gmp-6.2.1"
 MPFR_DIR="mpfr-4.1.0"
 MPIR_DIR="mpir-3.0.0"
 LIBBF_DIR="libbf-2020-01-19"
-WIN_NTL_DIR="WinNTL-11_4_3"
-FLINT_DIR="flint-2.6.3"
+WIN_NTL_DIR="WinNTL-11_5_1"
+FLINT_DIR="flint-2.8.4"
 
-TARGET_DIR="/usr/test"
+BUILD_DIR="build"
+TARGET_DIR="$(pwd)/${BUILD_DIR}"
 SHARED_FLAGS="-mtune=skylake -march=k8-sse3 -D__USE_MINGW_ANSI_STDIO=0"
 
 function build_gmp(){
@@ -200,7 +201,10 @@ function build_libbf(){
 function build_ntl(){
   echo "build win ntl"
   cp makefile_ntl "${WIN_NTL_DIR}/src/makefile"
-  cd "${WIN_NTL_DIR}/src"
+  cd "${WIN_NTL_DIR}"
+  cd "include/NTL"
+  sed -i 's/\/\* sanity checks \*\//\/\* sanity checks \*\/\n#define NTL_STD_CXX14\n#undef NTL_DISABLE_MOVE_ASSIGN/g' config.h
+  cd "../../src"
   make -j8
   cp libntl.a "${TARGET_DIR}/lib/libntl.a"
   cd ..
@@ -212,10 +216,12 @@ function build_flint(){
   echo "build flint"
   cd "${FLINT_DIR}"
   ./configure --disable-shared --enable-static --prefix=${TARGET_DIR} --with-gmp=${TARGET_DIR} --with-mpfr=${TARGET_DIR} --disable-pthread CFLAGS="-ansi -Wno-long-long -Wno-declaration-after-statement -O3 -funroll-loops -mpopcnt ${SHARED_FLAGS}" CXXFLAGS="-ansi -Wno-long-long -Wno-declaration-after-statement -O3 -funroll-loops -mpopcnt ${SHARED_FLAGS}"
-  sed -i '1i\BUILD_DIR = ../build/${MOD}' Makefile.subdirs
-  sed -i '1i\MOD_DIR = ${MOD}' Makefile.subdirs
+  cp  -f ./Makefile.subdirs ./MS
+  sed -i '1i\BUILD_DIR = ../build/${MOD}' MS
+  sed -i '1i\MOD_DIR = ${MOD}' MS
+  sed -i '/^WANT_DEPS=.*/aexport WANTDEPS=$(WANT_DEPS)' makefile
   sed -i '/^libflint.a:.*/a\\t$(AT)$(foreach dir, $(BUILD_DIRS), mkdir -p build/$(dir))' makefile
-  sed -i 's/mkdir -p build\/$(dir); BUILD_DIR=..\/build\/$(dir); export BUILD_DIR; MOD_DIR=$(dir); export MOD_DIR;/export MOD=$(dir);/g' makefile
+  sed -i 's/mkdir -p build\/$(dir); WANTDEPS=$(WANT_DEPS); export WANTDEPS; BUILD_DIR=..\/build\/$(dir); export BUILD_DIR; MOD_DIR=$(dir); export MOD_DIR; $(MAKE) -f ..\/Makefile.subdirs/export MOD=$(dir); $(MAKE) -f ..\/MS/g' makefile
   mkdir -p fmpz_mod_mpoly/test
   echo "int main(){return 0;}" > fmpz_mod_mpoly/test/t-1.c
   make -j8
@@ -232,9 +238,52 @@ function build_all(){
   build_flint
 }
 
-mkdir -p "${TARGET_DIR}/include"
-mkdir -p "${TARGET_DIR}/lib"
-build_all
+function clean() {
+  rm -r -f "${GMP_DIR}"
+  rm -r -f "${MPFR_DIR}"
+  rm -r -f "${MPIR_DIR}"
+  rm -r -f "${LIBBF_DIR}"
+  rm -r -f "${WIN_NTL_DIR}"
+  rm -r -f "${FLINT_DIR}"
+  rm -r -f "./${BUILD_DIR}"
+}
+
+function extract_file() {
+  #xz -d -k "${GMP_DIR}.tar.xz"
+  #tar xf "${GMP_DIR}.tar"
+  #rm "${GMP_DIR}.tar"
+  tar xf "${GMP_DIR}.tar.xz"
+  unzip -o -q "${MPFR_DIR}.zip"
+  unzip -o -q "${MPIR_DIR}.zip"
+  unzip -o -q "${WIN_NTL_DIR}.zip"
+  tar xf "${LIBBF_DIR}.tar.gz"
+  unzip -o -q "${FLINT_DIR}.zip"
+}
+
+function build_main() {
+  clean
+  extract_file
+  mkdir -p "${TARGET_DIR}/include"
+  mkdir -p "${TARGET_DIR}/lib"
+  build_all
+  cp -f ./METADATA.txt "${TARGET_DIR}/METADATA.txt"
+  cp -f ./makefile_ntl "${TARGET_DIR}/makefile_ntl"
+  cp -f ./makefile_libbf "${TARGET_DIR}/makefile_libbf"
+  cp -f ./build_pe_deps.sh "${TARGET_DIR}/build_pe_deps.sh"
+  rm -r -f "${TARGET_DIR}/share"
+  rm -r -f "${TARGET_DIR}/lib/pkgconfig"
+}
+
+function package_file() {
+  RELEASE_FILENAME="pe_dependencies_win64_$(date '+%Y%m%d').zip"
+  cd ${BUILD_DIR}
+  zip -r -q "${RELEASE_FILENAME}" .
+  cd ..
+  mv -f "./${BUILD_DIR}/${RELEASE_FILENAME}" ./
+}
+
+build_main
+package_file
 
 cd ${BUILD_ROOT}
 ```
@@ -278,7 +327,7 @@ CFLAGS=-Wall
 CFLAGS+=-O3
 CFLAGS+=-D__MSVCRT_VERSION__=0x1400
 CFLAGS+=-I../include
-CFLAGS+=--std=c++14
+CFLAGS+=--std=c++17
 CFLAGS+=-Wno-maybe-uninitialized
 CFLAGS+=-Wno-unused-variable
 CFLAGS+=-Wno-unused-function

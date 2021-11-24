@@ -132,9 +132,11 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 
  * Building script
  
-   * makefile_libbf and makefile_ntl are mentioned in the next section
-   
-   * Please extract the source into the directories mentioned in building script
+   * Download the library package and put them in directory of the script. Please not the library version matters.
+
+   * Edit the script manually if you don't want to build some libraries.
+	
+   * makefile_libbf and makefile_ntl are mentioned in the following section
 
 ```cpp
 #!/bin/bash

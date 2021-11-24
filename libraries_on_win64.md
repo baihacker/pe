@@ -120,11 +120,11 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
    
    * [mpir 3.0.0](http://mpir.org/downloads.html) (not used now)
    
-   * [flint2 2.6.3](https://github.com/wbhart/flint2)
+   * [flint2 2.8.4](https://github.com/wbhart/flint2)
    
    * [libbf 2020-01-19](https://bellard.org/libbf/)
    
-   * [ntl Windows: WinNTL-11_4_3.zip](https://www.shoup.net/ntl/download.html)
+   * [ntl Windows: WinNTL-11_5_1.zip](https://www.shoup.net/ntl/download.html)
 
  * The compiled binaries (flint, gmp, mpfr, mpir, libbf, libntl) on windows (x64) can be found [here](https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA) (pwd:x7cg).
 

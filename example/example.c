@@ -78,7 +78,7 @@ void NtExample() {
   }
 
   for (int64 i = 1; i <= 10; ++i) {
-    for (int64 d = 1; d <= 5; ++d) {
+    for (int d = 1; d <= 5; ++d) {
       const int64 n = i * i;
       // Integer part of the dth root.
       ExecuteAndPrint2(RootI, n, d);
@@ -350,9 +350,9 @@ void PowerSumExample() {
   PowerSumModerB b(mod);
   PowerSumModerB1 c(mod);
 
+  const int64 N = Power(10LL, 18);
   // (1^127+2^127+...+(1e18)^127) % mod
-  cout << a.Cal(1e18, 127) << " " << b.Cal(1e18, 127) << " " << c.Cal(1e18, 127)
-       << endl;
+  cout << a.Cal(N, 127) << " " << b.Cal(N, 127) << " " << c.Cal(N, 127) << endl;
 }
 
 void MatrixPowerExample() {

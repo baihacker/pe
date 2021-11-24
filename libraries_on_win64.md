@@ -1,6 +1,11 @@
 # Libraries on Win64
 
-This doc tells you how to build and use C/C++ libraries on windows 64, and those libraries provide script to build on linux environment. In most cases, it is also applied to windows 32.
+This doc describes 
+  * General intstructions for how to build C/C++ libraries on windows 64. It assumes those libraries provide script to build on linux environment.
+  * How to use C/C++ libraries on windows 64 in MinGW and MSVC.
+  * For gmp, mpfr, mpir, flint2, libbf, ntl, this doc also gives a script to build them. Makefiles are also given if necessary.
+
+In most cases, this doc is also applied to windows 32.
 
 ## General build instruction
 
@@ -130,14 +135,24 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 
  * Library order in compiling command: "-lbf -lgmpxx -lflint -lmpfr -lntl -lgmp"
 
- * Building script
- 
-   * Download the library package and put them in directory of the script. Please not the library version matters.
+ * Use this script to build these libraries
+   * Install msys2
+   * Install building tools
+     * pacman -S mingw-w64-x86_64-toolchain
+     * pacman -S msys/m4
+     * pacman -S mingw64/mingw-w64-x86_64-yasm
+     * pacman -S unzip
+     * pacman -S xz
+     * pacman -S tar
+     * pacman -S zip 
+   * Download the library package and put them under "<msys2 installation dir>/home/<your username>". Please not the library version matters.
+   * Put **build_pe_deps.sh**, **makefile_libbf** and **makefile_ntl** under "<msys2 installation dir>/home/<your username>".
+   * Edit **build_pe_deps.sh** manually if you just want to build some of them.
+   * Double click "<msys2 instalation dir>/mingw64.exe" to enter the msys2 environment and the current directory is "/home/<your username>".
+   * Run "./build_pe_deps.sh".
 
-   * Edit the script manually if you don't want to build some libraries.
-	
-   * makefile_libbf and makefile_ntl are mentioned in the following section
 
+  * build_pe_deps.sh
 ```cpp
 #!/bin/bash
 
@@ -289,7 +304,8 @@ package_file
 
 cd ${BUILD_ROOT}
 ```
- * makefile_libbf. This makefile will generate libbf.avx2.a and libbf.generic.a, please choose one and rename it to libbf.a
+
+  * makefile_libbf. This makefile will generate libbf.avx2.a and libbf.generic.a, please choose one and rename it to libbf.a
 ```cpp
 CC=$(CROSS_PREFIX)gcc
 CFLAGS=-Wall

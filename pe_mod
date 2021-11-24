@@ -509,25 +509,27 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
       vector<atLeastInt64T>(b.begin(), b.end()), mod);
 }
 
-// Guide for NModNumber and NModNumberM
-// 1. Use NModNumber instead of NModNumberM if possible.
-// 2. Choose mod context.
-// 2.1 If the modulus is a compiling-time integer, use CCMod, CCMod64 with
-// NModNumber.
-// 2.2 If the modulus is a runtime integer accessed by a single thread or
-// multiple threads share the same modulus, use GlobalMod<T>.
-// Call GlobalMod<T>::Set(mod_value) to initialize the modulus once.
-// 2.3 If the modulus is a runtime integer accessed by multithreads, use
-// TLMod<T>.
-// Call TLMod<T>::Set(mod_value) to initialize the modulus in each thread.
-
 struct init_direct_t {};
 static const init_direct_t __init_direct{};
 struct fake_int128 {};
 enum class ModContextType { STATIC, DYNAMIC };
 
-// Mod context implementations
-// The modulus is a global variable
+// Mod context provides modulus type and value.
+// If ModContextType is STATIC, the modulus is not associated with an instance.
+// If ModContextType is DYNAMIC, the modulus is associated with a mod context
+// instance. This context can only be used with NModNumberM. NModNumberM is
+// not used in most cases.
+
+// 1. If the modulus is a compiling-time integer, use CCMod<T, value>.
+// 2. If the modulus is a runtime integer accessed by a single thread or
+// multiple threads share the same modulus, use GlobalMod<T>.
+// Call GlobalMod<T>::Set(mod_value) to initialize the modulus once.
+// 3. If the modulus is a runtime integer accessed by multithreads, use
+// TLMod<T>.
+// Call TLMod<T>::Set(mod_value) to initialize the modulus in each thread.
+// 4. MemMod<T> is a DYNAMIC ModContextType and it is rarely used.
+
+// The modulus is a global variable.
 template <typename T>
 struct GlobalMod {
   using mod_type = int64;
@@ -544,13 +546,13 @@ T GlobalMod<T>::mod_value = 1;
 using DefaultMod = GlobalMod<int64>;
 using GlobalMod64 = GlobalMod<int64>;
 
-// The modulus is a compiling time constant
+// The modulus is a compiling time constant.
 template <typename M, M mod_value = 0>
 struct CCMod {
   using mod_type = M;
   using big_type = M;
   static constexpr ModContextType mc_type = ModContextType::STATIC;
-  constexpr static int64 Mod() { return mod_value; }
+  static constexpr int64 Mod() { return mod_value; }
 };
 
 template <int64 mod_value>

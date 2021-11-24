@@ -445,7 +445,7 @@ int main() {
                            // table.
                            // pcnt is the size of the table.
           cal_phi = 1,     // Initialize the phi[i] for i <= maxp
-          cal_mu = 1       // Initialize mu[i] fro i <= maxp
+          cal_mu = 1       // Initialize mu[i] for i <= maxp
   );
 
   NtBaseExample();

@@ -32,6 +32,9 @@ int main() {
     cout << PowerModEx(a, 10) << endl;
     cout << PowerModEx(a, 10, mod) << endl;
   }
+  {
+      // NModNumber<MemMod<int64>> a(5);
+  }
 
   {
     NModM64<mod> a(5);
@@ -62,8 +65,8 @@ int main() {
     cout << PowerModEx(a, 10) << endl;
     cout << PowerModEx(a, 10, mod) << endl;
   }
-  // Not recommended.
   {
+    // Not recommended.
     NModNumberM<MemMod<int64>> a(5, MemMod<int64>(mod));
     cout << a.Power(10) << endl;
     cout << Power(a, 10) << endl;

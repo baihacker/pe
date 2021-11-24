@@ -509,6 +509,18 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
       vector<atLeastInt64T>(b.begin(), b.end()), mod);
 }
 
+// Guide for NModNumber and NModNumberM
+// 1. Use NModNumber instead of NModNumberM if possible.
+// 2. Choose mod context.
+// 2.1 If the modulus is a compiling-time integer, use CCMod, CCMod64 with
+// NModNumber.
+// 2.2 If the modulus is a runtime integer accessed by a single thread, use
+// DefaultMod for int64, or TLMod<T> for other type. Do not forget to initialize
+// the modulus before accessing it. (Call DefaultMod::Set(mod_value),
+// TLMod<T>::Set(mod_value))
+// 2.3 If the modulus is a runtime integer accessed by multithreads, use
+// TLMod<T> and initialize the modulus in each thread.
+
 struct init_direct_t {};
 static const init_direct_t __init_direct{};
 struct fake_int128 {};
@@ -516,7 +528,7 @@ enum class ModContextType { STATIC, DYNAMIC };
 int64 DEFAULT_MOD = 1;
 
 // Mod context implementations
-// The modulo is a global variable
+// The modulus is a global variable
 struct DefaultMod {
   using mod_type = int64;
   using big_type = fake_int128;
@@ -525,7 +537,7 @@ struct DefaultMod {
   static void Set(int64 v) { ::DEFAULT_MOD = v; }
 };
 
-// The modulo is a compiling time constant
+// The modulus is a compiling time constant
 template <typename M, M mod_value = 0>
 struct CCMod {
   using mod_type = M;
@@ -537,7 +549,7 @@ struct CCMod {
 template <int64 mod_value>
 using CCMod64 = CCMod<int64, mod_value>;
 
-// The modulo is a thread local variable.
+// The modulus is a thread local variable.
 template <typename T>
 struct TLMod {
   using mod_type = T;
@@ -553,7 +565,7 @@ thread_local T TLMod<T>::mod_value = 1;
 
 using TLMod64 = TLMod<int64>;
 
-// The modulo is a field.
+// The modulus is a field of an instance.
 template <typename T>
 struct MemMod {
   using mod_type = T;
@@ -650,7 +662,7 @@ struct NModNumber;
 // MC = mod context
 // AP = arithmetic policy
 // Use MC::mod() to get the modulus, i.e. the modulus can be retrieve from a
-// static context (not related to an instance of NModNumber)
+// static context (not related to an instance of the mod context)
 template <typename MC,
           typename AP = APSB<typename MC::mod_type, typename MC::big_type>>
 struct NModNumber {
@@ -834,8 +846,8 @@ struct NModNumberM;
 
 // MC = mod context
 // AP = arithmetic policy
-// Use mc.mod() to get the modulus. i.e. the modulus is associated with an
-// instance of NModNumberM.
+// Use mc.mod() to get the modulus. i.e. the modulus is associated with
+// an instance of mod context.
 template <typename MC,
           typename AP = APSB<typename MC::mod_type, typename MC::big_type>>
 struct NModNumberM {
@@ -1208,11 +1220,5 @@ static_assert(PeModNumber<TLNMod64<>>);
 static_assert(PeModNumber<NModM64<1000000007>>);
 static_assert(PeModNumber<TLNModM64<>>);
 #endif
-// Guide:
-// 1. Use NModNumber instead of NModNumberM.
-// 2. If mod is a compiling-time value, use CCMod, CCMod64.
-// 3. If mod is a runtime value, use DefaultMod for int64, or TLMod<T> for
-// other type.
-// 4. If mod is a runtime value used in different threads, use TLMod<T>.
-// 5. Call DefaultMod::set(mod_value), TLMod<T>::set(mod_value) when necessary.
+
 #endif

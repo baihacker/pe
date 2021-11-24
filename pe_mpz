@@ -203,11 +203,11 @@ class MpInteger {
   static constexpr mp_limb_t LIMB_MASK = -1;
 
   template <typename T>
-  friend REQUIRES((is_native_integer<T>::value && is_signed<T>::value))
+  friend REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
       RETURN(void) __InitMpz(mpz_t z, T value);
 
   template <typename T>
-  friend REQUIRES((is_native_integer<T>::value && is_unsigned<T>::value &&
+  friend REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value &&
                    !is_same<T, bool>::value)) RETURN(void)
       __InitMpz(mpz_t z, T value);
 
@@ -579,9 +579,9 @@ class MpInteger {
   string to_string(int base = 10) const { return ToString(base); }
 
   template <typename T>
-  REQUIRES((is_native_integer<T>::value && std::is_signed<T>::value))
+  REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
   RETURN(T) ToInt() const {
-    using unsignedT = typename std::make_unsigned<T>::type;
+    using unsignedT = typename pe_make_unsigned<T>::type;
     unsignedT v = ToInt<unsignedT>();
     if (Sign() < 0) {
       v = ~v + 1;
@@ -590,7 +590,7 @@ class MpInteger {
   }
 
   template <typename T>
-  REQUIRES((is_native_integer<T>::value && std::is_unsigned<T>::value))
+  REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value))
   RETURN(T) ToInt() const {
     T result = 0;
     const auto* buff = data();
@@ -632,14 +632,14 @@ class MpInteger {
 };
 
 template <typename T>
-REQUIRES((is_native_integer<T>::value && is_signed<T>::value))
+REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
 RETURN(void) __InitMpz(mpz_t z, T value) {
   if (value == 0) {
     mpz_init(z);
     return;
   }
 
-  using unsignedT = typename std::make_unsigned<T>::type;
+  using unsignedT = typename pe_make_unsigned<T>::type;
   if (value > 0) {
     __InitMpz<unsignedT>(z, static_cast<unsignedT>(value));
   } else {
@@ -650,7 +650,7 @@ RETURN(void) __InitMpz(mpz_t z, T value) {
 }
 
 template <typename T>
-REQUIRES((is_native_integer<T>::value && is_unsigned<T>::value &&
+REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value &&
           !is_same<T, bool>::value))
 RETURN(void) __InitMpz(mpz_t z, T value) {
   if (value == 0) {
@@ -999,7 +999,7 @@ template <typename T>
 REQUIRES((is_native_integer<T>::value &&
           (is_same<T, int>::value || is_same<T, long>::value)))
 RETURN(MpInteger) Power(const MpInteger& base, T n) {
-  using unsignedT = typename std::make_unsigned<T>::type;
+  using unsignedT = typename pe_make_unsigned<T>::type;
   MpInteger ret;
   mpz_pow_ui(ret.mpz(), base.mpz(), static_cast<unsignedT>(n));
   return ret;

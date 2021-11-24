@@ -73,11 +73,11 @@ class BigInteger {
   static constexpr unsigned int mod32_mask = 31;
 
   template <typename T>
-  friend REQUIRES((is_native_integer<T>::value && is_signed<T>::value))
+  friend REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
       RETURN(void) __InitBigInteger(BigInteger& b, T value);
 
   template <typename T>
-  friend REQUIRES((is_native_integer<T>::value && is_unsigned<T>::value))
+  friend REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value))
       RETURN(void) __InitBigInteger(BigInteger& b, T value);
 
  public:
@@ -207,26 +207,26 @@ class BigInteger {
   }
 
   template <typename T>
-  SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(T)
+  SL REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value)) RETURN(T)
       AbsValue(T x) {
     return x >= 0 ? x : -x;
   }
 
   template <typename T>
-  SL REQUIRES((is_native_integer<T>::value && is_unsigned<T>::value)) RETURN(T)
-      AbsValue(T x) {
+  SL REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value))
+      RETURN(T) AbsValue(T x) {
     return x;
   }
 
   template <typename T>
-  SL REQUIRES((is_native_integer<T>::value && is_signed<T>::value)) RETURN(T)
+  SL REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value)) RETURN(T)
       NegValue(T x) {
     return -x;
   }
 
   template <typename T>
-  SL REQUIRES((is_native_integer<T>::value && is_unsigned<T>::value)) RETURN(T)
-      NegValue(T x) {
+  SL REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value))
+      RETURN(T) NegValue(T x) {
     return x;
   }
 
@@ -468,7 +468,7 @@ class BigInteger {
 
   template <typename T>
   static BigInteger AbsMul(const BigInteger& l, T r) {
-    static_assert(is_unsigned<T>::value, "T must be unsigned");
+    static_assert(pe_is_unsigned<T>::value, "T must be unsigned");
     if (r > max_32bit_value) {
       return AbsMul(l, BigInteger(r));
     }
@@ -479,7 +479,7 @@ class BigInteger {
 
   template <typename T>
   static void AbsMulInplace(BigInteger& l, T r) {
-    static_assert(is_unsigned<T>::value, "T must be unsigned");
+    static_assert(pe_is_unsigned<T>::value, "T must be unsigned");
     if (r > max_32bit_value) {
       l = AbsMul(l, BigInteger(r));
       return;
@@ -627,7 +627,7 @@ class BigInteger {
 
   template <typename T>
   static BigInteger AbsDiv(const BigInteger& l, T r, T& remain) {
-    static_assert(is_unsigned<T>::value, "T must be unsigned");
+    static_assert(pe_is_unsigned<T>::value, "T must be unsigned");
     static_assert(sizeof(T) <= 8, "T must be at most 64-bit");
     if (l.size() <= 2) {
       const uint64 a = l.ToInt<uint64>();
@@ -643,7 +643,7 @@ class BigInteger {
 
   template <typename T>
   static BigInteger AbsDiv(const BigInteger& l, T r) {
-    static_assert(is_unsigned<T>::value, "T must be unsigned");
+    static_assert(pe_is_unsigned<T>::value, "T must be unsigned");
     static_assert(sizeof(T) <= 8, "T must be at most 64-bit");
     if (l.size() <= 2) {
       const uint64 a = l.ToInt<uint64>();
@@ -659,7 +659,7 @@ class BigInteger {
 
   template <typename T>
   static void AbsDivInplace(BigInteger& l, T r, T& remain) {
-    static_assert(is_unsigned<T>::value, "T must be unsigned");
+    static_assert(pe_is_unsigned<T>::value, "T must be unsigned");
     static_assert(sizeof(T) <= 8, "T must be at most 64-bit");
 
     l.FixPos();
@@ -885,7 +885,7 @@ class BigInteger {
       sign_ = 0;
       return *this;
     }
-    using unsignedT = typename std::make_unsigned<T>::type;
+    using unsignedT = typename pe_make_unsigned<T>::type;
     unsignedT absValue = AbsValue(other);
     AbsMulInplace(*this, absValue);
     sign_ = sign_ * (other > 0 ? 1 : -1);
@@ -1114,9 +1114,9 @@ class BigInteger {
   }
 
   template <typename T>
-  REQUIRES((is_native_integer<T>::value && std::is_signed<T>::value))
+  REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
   RETURN(T) ToInt() const {
-    using unsignedT = typename std::make_unsigned<T>::type;
+    using unsignedT = typename pe_make_unsigned<T>::type;
     unsignedT v = ToInt<unsignedT>();
     if (sign() < 0) {
       v = ~v + 1;
@@ -1125,7 +1125,7 @@ class BigInteger {
   }
 
   template <typename T>
-  REQUIRES((is_native_integer<T>::value && std::is_unsigned<T>::value))
+  REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value))
   RETURN(T) ToInt() const {
     T result = 0;
     for (int i = pos_; i >= 0; --i) {
@@ -1157,7 +1157,7 @@ class BigInteger {
 };
 
 template <typename T>
-REQUIRES((is_native_integer<T>::value && is_signed<T>::value))
+REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
 RETURN(void) __InitBigInteger(BigInteger& b, T value) {
   if (value == 0) {
     b.Reserve(1);
@@ -1166,7 +1166,7 @@ RETURN(void) __InitBigInteger(BigInteger& b, T value) {
     return;
   }
 
-  using unsignedT = typename std::make_unsigned<T>::type;
+  using unsignedT = typename pe_make_unsigned<T>::type;
   if (value > 0) {
     __InitBigInteger<unsignedT>(b, static_cast<unsignedT>(value));
   } else {
@@ -1177,7 +1177,7 @@ RETURN(void) __InitBigInteger(BigInteger& b, T value) {
 }
 
 template <typename T>
-REQUIRES((is_native_integer<T>::value && is_unsigned<T>::value))
+REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value))
 RETURN(void) __InitBigInteger(BigInteger& b, T value) {
   if (value == 0) {
     b.Reserve(1);
@@ -1343,7 +1343,7 @@ inline REQUIRES((is_native_integer<T>::value &&
     operator*(const BigInteger& l, T r) {
   if (r == 0 || l.IsZero()) return 0;
 
-  using unsignedT = typename std::make_unsigned<T>::type;
+  using unsignedT = typename pe_make_unsigned<T>::type;
   unsignedT absValue = BigInteger::AbsValue(r);
   const int s = l.sign() * (r > 0 ? 1 : -1);
   BigInteger ret(BigInteger::AbsMul(l, absValue));
@@ -1426,7 +1426,7 @@ inline REQUIRES((is_native_integer<T>::value &&
   }
 
   const int signl = l.sign_;
-  using unsignedT = typename std::make_unsigned<T>::type;
+  using unsignedT = typename pe_make_unsigned<T>::type;
   unsignedT absValue = BigInteger::AbsValue(r);
   unsignedT x;
   BigInteger ret(l);
@@ -1434,7 +1434,7 @@ inline REQUIRES((is_native_integer<T>::value &&
   ret.sign_ = signl * (r > 0 ? 1 : -1);
   ret.FixPos();
   if (l.sign_ < 0) {
-    PE_ASSERT(x == 0 || !std::is_unsigned<T>::value);
+    PE_ASSERT(x == 0 || !pe_is_unsigned<T>::value);
     x = BigInteger::AbsValue(x);
   }
 
@@ -1460,7 +1460,7 @@ inline REQUIRES((is_native_integer<T>::value &&
     remain = 0;
     return;
   }
-  using unsignedT = typename std::make_unsigned<T>::type;
+  using unsignedT = typename pe_make_unsigned<T>::type;
   unsignedT absValue = BigInteger::AbsValue(r);
   unsignedT remainT;
   const int signl = l.sign_;
@@ -1469,7 +1469,7 @@ inline REQUIRES((is_native_integer<T>::value &&
   l.FixPos();
   remain = static_cast<T>(remainT);
   if (signl < 0) {
-    PE_ASSERT(remain == 0 || !std::is_unsigned<T>::value);
+    PE_ASSERT(remain == 0 || !pe_is_unsigned<T>::value);
     remain = BigInteger::NegValue(remain);
   }
 }

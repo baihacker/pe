@@ -47,6 +47,11 @@ struct remove_cvref {
 
 class BigInteger;
 
+#if ENABLE_GMP
+class MpInteger;
+#endif
+
+// is_native_integer
 template <typename T>
 struct is_native_integer {
   enum { value = is_integral<T>::value };
@@ -57,15 +62,16 @@ struct is_native_integer<T&> {
   enum { value = is_native_integer<T>::value };
 };
 
-template <typename T>
-struct is_general_integer {
-  enum { value = is_integral<T>::value };
+#if PE_HAS_INT128
+template <>
+struct is_native_integer<int128> {
+  enum { value = true };
 };
-
-template <typename T>
-struct is_general_integer<T&> {
-  enum { value = is_general_integer<T>::value };
+template <>
+struct is_native_integer<uint128> {
+  enum { value = true };
 };
+#endif
 
 template <>
 struct is_native_integer<BigInteger> {
@@ -82,10 +88,12 @@ struct is_native_integer<const BigInteger&> {
   enum { value = false };
 };
 
+#if ENABLE_GMP
 template <>
-struct is_general_integer<BigInteger> {
-  enum { value = true };
+struct is_native_integer<MpInteger> {
+  enum { value = false };
 };
+#endif
 
 #if defined(__GMP_PLUSPLUS__)
 template <>
@@ -102,13 +110,122 @@ template <>
 struct is_native_integer<const mpz_class&> {
   enum { value = false };
 };
+#endif
 
+// is_general_integer
+template <typename T>
+struct is_general_integer {
+  enum { value = is_integral<T>::value };
+};
+
+template <typename T>
+struct is_general_integer<T&> {
+  enum { value = is_general_integer<T>::value };
+};
+
+#if PE_HAS_INT128
+template <>
+struct is_general_integer<int128> {
+  enum { value = true };
+};
+template <>
+struct is_general_integer<uint128> {
+  enum { value = true };
+};
+#endif
+
+template <>
+struct is_general_integer<BigInteger> {
+  enum { value = true };
+};
+
+#if ENABLE_GMP
+template <>
+struct is_general_integer<MpInteger> {
+  enum { value = true };
+};
+#endif
+
+#if defined(__GMP_PLUSPLUS__)
 template <>
 struct is_general_integer<mpz_class> {
   enum { value = true };
 };
 #endif
 
+// pe_is_signed
+template <typename T>
+struct pe_is_signed {
+  enum { value = std::is_signed<T>::value };
+};
+
+#if PE_HAS_INT128
+template <>
+struct pe_is_signed<int128> {
+  enum { value = true };
+};
+
+template <>
+struct pe_is_signed<uint128> {
+  enum { value = false };
+};
+#endif
+
+// pe_is_unsigned
+template <typename T>
+struct pe_is_unsigned {
+  enum { value = std::is_unsigned<T>::value };
+};
+
+#if PE_HAS_INT128
+template <>
+struct pe_is_unsigned<int128> {
+  enum { value = false };
+};
+
+template <>
+struct pe_is_unsigned<uint128> {
+  enum { value = true };
+};
+#endif
+
+// pe_make_signed
+template <typename T>
+struct pe_make_signed {
+  using type = typename std::make_signed<T>::type;
+};
+
+#if PE_HAS_INT128
+template <>
+struct pe_make_signed<int128> {
+  using type = int128;
+};
+
+template <>
+struct pe_make_signed<uint128> {
+  using type = int128;
+};
+#endif
+
+// pe_make_unsigned
+template <typename T>
+struct pe_make_unsigned {
+  using type = typename std::make_unsigned<T>::type;
+};
+
+#if PE_HAS_INT128
+template <>
+struct pe_make_unsigned<int128> {
+  using type = uint128;
+};
+
+template <>
+struct pe_make_unsigned<uint128> {
+  using type = uint128;
+};
+#endif
+
+// is_gbi
 template <typename T>
 struct is_gbi {
   enum { value = false };
@@ -130,8 +247,6 @@ struct is_gbi<const BigInteger&> {
 };
 
 #if ENABLE_GMP
-class MpInteger;
-
 template <>
 struct is_gbi<MpInteger> {
   enum { value = true };
@@ -165,6 +280,7 @@ struct is_gbi<const mpz_class&> {
 };
 #endif
 
+// make_const_arg_type
 template <typename T, int is_arithmetic_type>
 struct make_const_arg_type_impl {
   using type = const T;
@@ -196,13 +312,13 @@ struct BiggerIntegralImpl<T1, T2, false, false> {
 
 template <typename T1, typename T2>
 struct BiggerIntegralImpl<T1, T2, true, true> {
-  using type = typename std::make_unsigned<T1>::type;
+  using type = typename pe_make_unsigned<T1>::type;
 };
 
 template <typename T1, typename T2>
 struct BiggerIntegral {
-  using U1 = typename std::make_unsigned<T1>::type;
-  using U2 = typename std::make_unsigned<T2>::type;
+  using U1 = typename pe_make_unsigned<T1>::type;
+  using U2 = typename pe_make_unsigned<T2>::type;
   using type = typename BiggerIntegralImpl<T1, T2, (sizeof(T1) >= sizeof(T2)),
                                            std::is_same<U1, U2>::value>::type;
 };

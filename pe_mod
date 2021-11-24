@@ -514,28 +514,35 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
 // 2. Choose mod context.
 // 2.1 If the modulus is a compiling-time integer, use CCMod, CCMod64 with
 // NModNumber.
-// 2.2 If the modulus is a runtime integer accessed by a single thread, use
-// DefaultMod for int64, or TLMod<T> for other type. Do not forget to initialize
-// the modulus before accessing it. (Call DefaultMod::Set(mod_value),
-// TLMod<T>::Set(mod_value))
+// 2.2 If the modulus is a runtime integer accessed by a single thread or
+// multiple threads share the same modulus, use GlobalMod<T>.
+// Call GlobalMod<T>::Set(mod_value) to initialize the modulus once.
 // 2.3 If the modulus is a runtime integer accessed by multithreads, use
-// TLMod<T> and initialize the modulus in each thread.
+// TLMod<T>.
+// Call TLMod<T>::Set(mod_value) to initialize the modulus in each thread.
 
 struct init_direct_t {};
 static const init_direct_t __init_direct{};
 struct fake_int128 {};
 enum class ModContextType { STATIC, DYNAMIC };
-int64 DEFAULT_MOD = 1;
 
 // Mod context implementations
 // The modulus is a global variable
-struct DefaultMod {
+template <typename T>
+struct GlobalMod {
   using mod_type = int64;
   using big_type = fake_int128;
   static constexpr ModContextType mc_type = ModContextType::STATIC;
-  static int64 Mod() { return ::DEFAULT_MOD; }
-  static void Set(int64 v) { ::DEFAULT_MOD = v; }
+  static int64 Mod() { return mod_value; }
+  static void Set(int64 v) { mod_value = v; }
+  static T mod_value;
 };
+
+template <typename T>
+T GlobalMod<T>::mod_value = 1;
+
+using DefaultMod = GlobalMod<int64>;
+using GlobalMod64 = GlobalMod<int64>;
 
 // The modulus is a compiling time constant
 template <typename M, M mod_value = 0>
@@ -571,7 +578,7 @@ struct MemMod {
   using mod_type = T;
   using big_type = T;
   static constexpr ModContextType mc_type = ModContextType::DYNAMIC;
-  MemMod(T mod_value = ::DEFAULT_MOD) : mod_value(mod_value) {}
+  MemMod(T mod_value = DefaultMod::Mod()) : mod_value(mod_value) {}
   T Mod() const { return mod_value; }
   T mod_value;
 };

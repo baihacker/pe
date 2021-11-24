@@ -320,7 +320,7 @@ clean:
 -include $(wildcard *.d)
 ```
 
-  * makefile_ntl (windows). Please edit config.h to enable c++14 and move assignment before running the script.
+  * makefile_ntl (windows). The script will edit config.h to enable c++14 and move-assignment.
 ```cpp
 CC=$(CROSS_PREFIX)gcc
 CFLAGS=-Wall

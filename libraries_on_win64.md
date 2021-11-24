@@ -94,10 +94,10 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
      * pacman -S xz
      * pacman -S tar
      * pacman -S zip 
-   * Download the library package and put them under "<msys2 installation dir>/home/<your username>". Please not the library version matters.
-   * Put **build_pe_deps.sh**, **makefile_libbf** and **makefile_ntl** under "<msys2 installation dir>/home/<your username>".
+   * Download the library package and put them under "\<msys2 installation dir\>/home/\<your username\>". Please not the library version matters.
+   * Put **build_pe_deps.sh**, **makefile_libbf** and **makefile_ntl** under "\<msys2 installation dir\>/home/\<your username\>".
    * Edit **build_pe_deps.sh** manually if you just want to build some of them.
-   * Double click "<msys2 instalation dir>/mingw64.exe" to enter the msys2 environment and the current directory is "/home/<your username>".
+   * Double click "\<msys2 instalation dir\>/mingw64.exe" to enter the msys2 environment and the current directory is "/home/\<your username\>".
    * Run "./build_pe_deps.sh".
   * build_pe_deps.sh
 ```cpp

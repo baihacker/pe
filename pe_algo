@@ -70,6 +70,8 @@ struct FactModer {
     }
   }
 
+  int64 operator()(uint64 n) { return Cal(n); }
+
   int64 Cal(uint64 n) {
     if (n >= p_) return 0;
     if (n < q_) return pre_fact_[n];
@@ -117,6 +119,8 @@ struct FactModer {
 // Example result: f(4e8)%99999999907 = 16815920030
 struct FactSumModer {
   FactSumModer(uint64 p) : p_(p) { Init(); }
+
+  int64 operator()(uint64 n) { return Cal(n); }
 
   int64 Cal(uint64 n) {
     if (n >= p_) n = p_ - 1;
@@ -315,7 +319,9 @@ template <int64 P, int64 F = P>
 struct CombModerOld {
   static_assert(P <= PE_SOI63, "P <= PE_SOI63");
   static_assert(F > 0, "F > 0");
+
   CombModerOld() { Init(); }
+
   static int64 Inv(int64 x) {
     int64 result = 1;
     int n = P - 2;
@@ -325,7 +331,7 @@ struct CombModerOld {
     }
     return result;
   }
-  static int64* fac_;
+
   static void Init() {
     if (fac_ == nullptr) {
       fac_ = new int64[F];
@@ -333,30 +339,33 @@ struct CombModerOld {
       for (int i = 1; i < F; ++i) fac_[i] = fac_[i - 1] * i % P;
     }
   }
+
   static void DestroyFac() {
     delete[] fac_;
     fac_ = nullptr;
   }
-  static int64 Sign(int64 x) { return x & 1 ? -1 : 1; }
-  static int64 Comb(int64 m, int64 n) {
+
+  static int64 Sign(const int64 x) { return x & 1 ? -1 : 1; }
+
+  static int64 Comb(const int64 n, const int64 m) {
     PE_ASSERT(fac_);
 
-    if (m < 0 || n > m) return 0;
+    if (n < 0 || m > n) return 0;
 
     int64 pp = 0;
-    int64 dist = m - n;
+    int64 dist = n - m;
 
-    for (int64 mm = m / P, nn = n / P, dd = dist / P; mm;
-         mm /= P, nn /= P, dd /= P) {
-      pp += mm - nn - dd;
+    for (int64 nn = n / P, mm = m / P, dd = dist / P; nn;
+         nn /= P, mm /= P, dd /= P) {
+      pp += nn - mm - dd;
     }
     if (pp) return 0;
     int64 l = 1, r = 1;
-    for (int64 x = m; x; x /= P) {
+    for (int64 x = n; x; x /= P) {
       PE_ASSERT(x % P < F);
       l = l * Sign(x / P) * fac_[x % P] % P;
     }
-    for (int64 x = n; x; x /= P) {
+    for (int64 x = m; x; x /= P) {
       PE_ASSERT(x % P < F);
       r = r * Sign(x / P) * fac_[x % P] % P;
     }
@@ -369,6 +378,8 @@ struct CombModerOld {
     int64 t = (Inv(r) * l % P + P) % P;
     return t;
   }
+
+  static int64* fac_;
 };
 template <int64 P, int64 F>
 int64* CombModerOld<P, F>::fac_;
@@ -389,11 +400,13 @@ struct CombModer {
     InitSeqProd2<int64>(&fac_[0], &ifac_[0], 1, f_, p_);
   }
 
-  int64 Sign(int64 x) { return x & 1 ? p_ - 1 : 1; }
+  int64 Sign(int64 x) const { return x & 1 ? p_ - 1 : 1; }
 
-  int64 operator()(const int64 n, const int64 m) { return Comb(n, m); }
+  int64 operator()(int64 n, int64 m) const { return Cal(n, m); }
 
-  int64 Comb(const int64 n, const int64 m) {
+  int64 Comb(int64 n, int64 m) const { return Cal(n, m); }
+
+  int64 Cal(int64 n, int64 m) const {
     if (n < 0 || m > n) return 0;
     if (m == n || m == 0) return 1;
     if (m == 1 || m == n - 1) return n % p_;
@@ -462,26 +475,30 @@ SL int64 ShortCombMod(int64 n, int64 m, int64 mod) {
 // Complexity: log(m) M(p^(1/2))
 struct CombModerEx {
   CombModerEx(int64 p) : p_(p), fmoder_(p) {}
-  int64 Sign(int64 x) { return x & 1 ? p_ - 1 : 1; }
-  int64 Comb(int64 m, int64 n) {
-    if (m < 0 || n > m) return 0;
-    if (n == m || n == 0) return 1;
-    if (n == 1 || n == m - 1) return m % p_;
+
+  int64 Sign(int64 x) const { return x & 1 ? p_ - 1 : 1; }
+
+  int64 Comb(int64 n, int64 m) { return Cal(n, m); }
+
+  int64 Cal(int64 n, int64 m) {
+    if (n < 0 || m > n) return 0;
+    if (m == n || m == 0) return 1;
+    if (m == 1 || m == n - 1) return n % p_;
 
     int64 pp = 0;
-    int64 dist = m - n;
+    int64 dist = n - m;
 
-    for (int64 mm = m / p_, nn = n / p_, dd = dist / p_; mm;
-         mm /= p_, nn /= p_, dd /= p_) {
-      pp += mm - nn - dd;
+    for (int64 nn = n / p_, mm = m / p_, dd = dist / p_; nn;
+         nn /= p_, mm /= p_, dd /= p_) {
+      pp += nn - mm - dd;
     }
     if (pp) return 0;
     int64 l = 1, r = 1;
-    for (int64 x = m; x; x /= p_) {
+    for (int64 x = n; x; x /= p_) {
       l = MulModEx(l, Sign(x / p_), p_);
       l = MulModEx(l, fmoder_.Cal(x % p_), p_);
     }
-    for (int64 x = n; x; x /= p_) {
+    for (int64 x = m; x; x /= p_) {
       r = MulModEx(r, Sign(x / p_), p_);
       r = MulModEx(r, fmoder_.Cal(x % p_), p_);
     }
@@ -539,9 +556,11 @@ struct PowerSumModer {
     }
   }
 
+  int64 operator()(int64 n, int64 k) const { return Cal(n, k); }
+
   // n + 1, n, ..., n-k+1 is not divisible by mod
   // 2, 3, ..., k+1 is not divisible by mod
-  int64 Cal(int64 n, int64 k) {
+  int64 Cal(int64 n, int64 k) const {
     PE_ASSERT(k <= maxk_);
     if (k == 0) {
       return n % mod_;
@@ -626,9 +645,11 @@ struct PowerSumModerB {
     bnl_[1] = mod_ - bnl_[1];
   }
 
+  int64 operator()(int64 n, int64 k) const { return Cal(n, k); }
+
   // n + 1, n, ..., n-k+1 is not divisible by mod
   // 2, 3, ..., k+1 is not divisible by mod
-  int64 Cal(int64 n, int64 k) {
+  int64 Cal(int64 n, int64 k) const {
     PE_ASSERT(k <= maxk_);
     if (k == 0) {
       return n % mod_;
@@ -657,7 +678,7 @@ struct PowerSumModerB {
     return ret;
   }
 
-  int64 CalSafe(int64 n, int64 k) {
+  int64 CalSafe(int64 n, int64 k) const {
     PE_ASSERT(k <= maxk_);
     if (k == 0) {
       return n % mod_;
@@ -723,9 +744,11 @@ struct PowerSumModerB1 {
     InitBernoulliNumber(&bnl_[0], maxk_ + 1, &invs_[0], mod_);
   }
 
+  int64 operator()(int64 n, int64 k) const { return Cal(n, k); }
+
   // n + 1, n, ..., n-k+1 is not divisible by mod
   // 2, 3, ..., k+1 is not divisible by mod
-  int64 Cal(int64 n, int64 k) {
+  int64 Cal(int64 n, int64 k) const {
     PE_ASSERT(k <= maxk_);
     if (k == 0) {
       return n % mod_;
@@ -753,7 +776,7 @@ struct PowerSumModerB1 {
     return ret;
   }
 
-  int64 CalSafe(int64 n, int64 k) {
+  int64 CalSafe(int64 n, int64 k) const {
     PE_ASSERT(k <= maxk_);
     if (k == 0) {
       return n % mod_;
@@ -1272,6 +1295,8 @@ struct SFCounter {
     }
   }
 
+  int64 operator()(int64 n) { return Cal(n); }
+
   int64 Cal(int64 n) {
     if (n <= pivot_) return pre_[n];
     auto where = mem_.find(n);
@@ -1314,7 +1339,9 @@ struct MuSummer {
     }
   }
 
-  T Cal(const int64 n) {
+  T operator()(int64 n) { return Cal(n); }
+
+  T Cal(int64 n) {
     if (n <= pivot_) return pre_[n];
 
     auto where = mem_.find(n);
@@ -1361,7 +1388,7 @@ struct MuPhiSummer {
     }
   }
 
-  T CalSumMu(const int64 n) {
+  T CalSumMu(int64 n) {
     if (n <= pivot_) return pre_sum_mu_[n];
 
     auto where = mem_sum_mu_.find(n);
@@ -1445,7 +1472,9 @@ struct Sigma0Summer {
     }
   }
 
-  T Cal(const int64 n) {
+  T operator()(int64 n) { return Cal(n); }
+
+  T Cal(int64 n) {
     if (n <= pivot_) return pre_[n];
 
     auto where = mem_.find(n);
@@ -1498,7 +1527,7 @@ struct MuPhiSumModer {
     }
   }
 
-  int64 CalSumMu(const int64 n) {
+  int64 CalSumMu(int64 n) {
     if (n <= pivot_) return pre_sum_mu_[n];
 
     auto where = mem_sum_mu_.find(n);
@@ -1582,7 +1611,9 @@ struct Sigma0SumModer {
     }
   }
 
-  int64 Cal(const int64 n) {
+  int64 operator()(int64 n) { return Cal(n); }
+
+  int64 Cal(int64 n) {
     if (n <= pivot_) return pre_[n];
 
     auto where = mem_.find(n);
@@ -2329,14 +2360,14 @@ struct CachedPi {
     }
   }
 
+  int64 operator()(int64 n) { return Cal(n); }
+
   int64 Cal(int64 n) {
     if (n <= pivot_) return prepi_[n];
     auto where = pi_cache_.find(n);
     if (where != pi_cache_.end()) return where->second;
     return pi_cache_[n] = PrimeS0Ex<int64>(n)[n];
   }
-
-  int64 operator()(int64 n) { return Cal(n); }
 
  private:
   int* prepi_{nullptr};
@@ -2416,6 +2447,8 @@ struct PatternNumberCounter {
     }
     return ret;
   }
+
+  int128 operator()(const vi& pattern, int64 k) { return Cal(pattern, k); }
 
   int128 Cal(vi pattern, int128 n) {
     sort(all(pattern));

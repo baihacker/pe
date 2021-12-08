@@ -7,17 +7,56 @@ Outline of this doc
 
 In most cases, this doc is also applied to windows 32.
 
-## General build instruction
+# Prepare
+## Tools introduction
+[MinGW-w64](https://www.mingw-w64.org)
+  * MinGW-w64 homepage says
+  >Mingw-w64 is an advancement of the original mingw.org project, created to support the GCC compiler on Windows systems. It has forked it in 2007 in order to provide support for 64 bits and new APIs. It has since then gained widespread use and distribution.
+
+[MSYS2](https://www.msys2.org/)
+ * MSYS homepage says
+ >MSYS2 is a collection of tools and libraries providing you with an easy-to-use environment for building, installing and running native Windows software. 
+ * Wikipedia says
+ >MSYS2 ("minimal system 2") is a software distribution and a development platform for Microsoft Windows, based on Mingw-w64 and Cygwin, that helps to deploy code from the Unix world on Windows. It plays the same role the old MSYS did in MinGW.
+
+
+## Install
+For MSYS2, just download the [installer](https://www.msys2.org/#installation) and install it. For MinGW-w64, there are two ways
+* Use [MinGW-w64 installer](https://sourceforge.net/projects/mingw-w64/)
+  * The installer provides several install options, and a typical install option is MinGW-x86_64-8.1.0-win32-seh-rt_v6-rev0.
+* Install the MinGW-w64 provided by MSYS2 (recommended, the binaries are updated more frequently)
+  * Use the following commands to install it
+    * pacman -Syuu
+    * pacman -S --needed mingw-w64-x86_64-toolchain
+  * If your are only interested in C/C++ development, some unnecessary packages can be removed bye the following commands
+    * pacman -R mingw-w64-x86_64-gcc-objc mingw-w64-x86_64-gcc-libgfortran mingw-w64-x86_64-gcc-fortran mingw-w64-x86_64-gcc-ada mingw-w64-x86_64-tools-git mingw-w64-x86_64-libgccjit mingw-w64-x86_64-gdb-multiarch
+
+Note: it is possible to use the MinGW-w64 installed by "MinGW-w64 installer" on MSYS2, just copy the "mingw64" folder under the MinGW-w64 installation folder to <MSYS2 path>/mingw64. Meanwhile, you can also use MSYS2 to obtain MinGW-w64 and copy it to some other directories.
+
+
+## Use MinGW-w64
+As saied by the Wikipedia, there are several ways to run MinGW-w64:
+>Mingw-w64 can be run either on the native Microsoft Windows platform, cross-hosted on Linux (or other Unix), or "cross-native" on MSYS2 or Cygwin. Mingw-w64 can generate 32 bit and 64-bit executables for x86 under the target names i686-w64-mingw32 and x86_64-w64-mingw32.
+
+* run it on the native Microsoft Windows platform
+  * Make sure the <MinGW-w64 path>\bin is a part of the einvironment variable named PATH.
+  * Open the command line tool and enter the parent directory of you source code.
+  * Build your binary
+    * The bassic command is "g++ source_code.cpp"
+    * Usually, I often add the following options "--std=c++17 -O3 -march=native -mtune=native -Wl,--stack,268435456".
+    * Please add "-fopenmp" if you want to use openmp.
+    * See [x86 Options](https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html) for more options.
+* run MinGW-w64 on MSYS2
+  * Make a copy of <MSYS2 path>/mingw64/bin/mingw32-make.exe and the new name is make.exe.
+  * Launch the MSYS2 with MinGW-ws64 by double clicking "<MSYS2 path>/mingw64.exe".
+
+Some library requires extra packages, here are the packges required by the following examples/scripts
+  * pacman -S msys/m4
+  * pacman -S mingw64/mingw-w64-x86_64-yasm
+
+## Build libraries
 
 Please read the README or INSTALL doc of the target library before building it, since **it may contain important configuration specifications**. If the library provides vc solution/project, you can use it to build. This doc only focuses on a library which can be built by makefile (other building system is not included).
-
-### Prepare
-* MinGW64, the 64-bit version of MinGW. You can download the installer [here](https://sourceforge.net/projects/mingw-w64/). The installer provides several install options, and a typical install option is MinGW-x86_64-8.1.0-win32-seh-rt_v6-rev0.
-  * Please make a copy of <parent path>/bin/mingw32-make.exe and the new name is make.exe.
-* msys2, its core is an independent rewrite of [MSYS](http://www.mingw.org/wiki/MSYS), based on modern Cygwin (POSIX compatibility layer) and MinGW-w64 with the aim of better interoperability with native Windows software.
-  * Please copy the "mingw64" folder under the installation path of MinGW64 to C:/msys64/mingw64 (Assuming the installation path of msys2 is c:/msys64)
-  * You can run C:/msys64/mingw64.exe to open the terminal.
-  * Make sure C:/msys64/home/`<computer user name>`/build is a valid directory.
 
 ### Build gmp
 * Extract the package to build directory and cd the build directory (use msys2 terminal)
@@ -41,15 +80,8 @@ Please read the README or INSTALL doc of the target library before building it, 
   * "make install" copies the result to target path
   * "make clean" cleans intermediate outputs generated in the build process
 
-## Use
+## Use libraries
 ### MinGW
-#### General use
-* Make sure the parent folder of "g++.exe" is in environment PATH.
-* Use "g++ source_code.cpp" to compile your code.
-* Usually, I add "--std=c++11 -O3 -march=native -mtune=native -Wl,--stack,268435456" to compile my code.
-* Please add "-fopenmp" if you want to use openmp.
-* See [x86 Options](https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html) for more options.
-#### Use a library
 * CPLUS_INCLUDE_PATH contains the corresponding header files.
   * if "D:/X/Y/zzz.h" is your header file and CPLUS_INCLUDE_PATH contains "D:/X/Y" you can use #include <zzz.h> in your code. If "D:/X" is in it, you can use #include <Y/zzz.h> in your code.
 * LIBRARY_PATH contains the corresponding lib files.

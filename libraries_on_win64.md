@@ -56,11 +56,11 @@ When building libraries, makefile is frequently used. Please make a copy of \<MS
   * pacman -S mingw64/mingw-w64-x86_64-yasm
 
 
-## Build libraries
+# Build libraries
 
 Please read the README or INSTALL doc of the target library before building it, since **it may contain important configuration specifications**. If the library provides vc solution/project, you can use it to build. This doc only focuses on a library which can be built by makefile (other building system is not included).
 
-### Build gmp
+## Build gmp
 * Extract the package to build directory and cd the build directory (use msys2 terminal)
 * Commands
   * ./configure --disable-shared --enable-static --prefix=/usr --enable-cxx --host=x86_64-w64-mingw32
@@ -82,8 +82,8 @@ Please read the README or INSTALL doc of the target library before building it, 
   * "make install" copies the result to target path
   * "make clean" cleans intermediate outputs generated in the build process
 
-## Use libraries
-### MinGW
+# Use libraries
+## MinGW
 * CPLUS_INCLUDE_PATH contains the corresponding header files.
   * if "D:/X/Y/zzz.h" is your header file and CPLUS_INCLUDE_PATH contains "D:/X/Y" you can use #include <zzz.h> in your code. If "D:/X" is in it, you can use #include <Y/zzz.h> in your code.
 * LIBRARY_PATH contains the corresponding lib files.
@@ -93,7 +93,7 @@ Please read the README or INSTALL doc of the target library before building it, 
   * The order of included header files is important. Please adjust them if necessaries.
   * The order of libraries (the order of additional library in compile command) is important (it usually happens). If the compiler says it cannot find a symbol, please try to adjust the library order. [Why does the order in which libraries are linked sometimes cause errors in GCC?](https://stackoverflow.com/questions/45135/why-does-the-order-in-which-libraries-are-linked-sometimes-cause-errors-in-gcc/409470#409470)
 
-### MSVC
+## MSVC
 * You can edit the include path and lib path in the solution property dialog.
 * In the solution property dialog, you can also add dependent libraries (in linker option section). Unlike that in MinGW, you need to specify libzzz.a instead of zzz.
   * You can also use #pragma comment(lib, "libzzz.lib") in your code to add dependent libraries.
@@ -108,7 +108,7 @@ Please read the README or INSTALL doc of the target library before building it, 
   * Build test on AppVeyor: "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"
 cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:precise /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /errorReport:prompt /WX- /Zc:forScope /Gd /Oi /MT /openmp /FC /EHsc /nologo /diagnostics:classic /DTEST_ALL /DCONTINUOUS_INTEGRATION_TEST /DENABLE_ASSERT=0 /DTRY_TO_USE_INT128=1 /DENABLE_OPENMP=1 /DENABLE_EIGEN=0 /DENABLE_GMP=0 /DENABLE_FLINT=0 /DENABLE_MPFR=0 /DENABLE_LIBBF=0 /DENABLE_NTL=0 /I "C:\projects\pe"
 
-## Build and use third party libraries in pe
+# Build and use third party libraries in pe
  * Current version
    * [gmp 6.2.1](https://gmplib.org/)
    * [mpfr 4.1.0](https://www.mpfr.org/mpfr-current/#download)

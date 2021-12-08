@@ -20,7 +20,7 @@ C++ dev environment that supports C++17 or above.
     * Static configuration. The values are always 1 in the generated config file. You can edit the values after generating the config file.
       * ENABLE_ASSERT whether to assert some inputs or conditions.
       * TRY_TO_USE_INT128 whether to check whether the compiler support int128 and use it. If it is 0, it int128 is disabled even if the compiler supports it.
-    * Auto-deduced configuration for third party libraries. The script searches for the corresponding header file and set the value to 1 if found. See [Build and use third party libraries in pe](https://github.com/baihacker/pe/blob/master/libraries_on_win64.md#build-and-use-third-party-libraries-in-pe) for the pre-built third party binaries.
+    * Auto-deduced configuration for third party libraries. The script searches for the corresponding header file and set the value to 1 if found. See [Build and use pe's dependent libraries](https://github.com/baihacker/pe/blob/master/libraries_on_win64.md#build-and-use-pes-dependent-libraries) for the pre-built third party binaries.
       * ENABLE_EIGEN whether to use [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page) library.
       * ENABLE_GMP whether to use [gmp](https://gmplib.org).
       * ENABLE_FLINT whether to use [FLINT](http://www.flintlib.org).

@@ -38,7 +38,7 @@ Note: it is possible to use the MinGW-w64 installed by "MinGW-w64 installer" on 
 As saied by the Wikipedia, there are several ways to run MinGW-w64:
 >Mingw-w64 can be run either on the native Microsoft Windows platform, cross-hosted on Linux (or other Unix), or "cross-native" on MSYS2 or Cygwin. Mingw-w64 can generate 32 bit and 64-bit executables for x86 under the target names i686-w64-mingw32 and x86_64-w64-mingw32.
 
-* run it on the native Microsoft Windows platform
+* Run MinGW-w64 on the native Microsoft Windows platform
   * Make sure the \<MinGW-w64 path\>\bin is a part of the einvironment variable named PATH.
   * Open the cmd.exe (or other command line shell).
   * Enter the parent directory of you source code.
@@ -47,7 +47,7 @@ As saied by the Wikipedia, there are several ways to run MinGW-w64:
     * Usually, I often add the following options "--std=c++17 -O3 -march=native -mtune=native -Wl,--stack,268435456".
     * Please add "-fopenmp" if you want to use openmp.
     * See [x86 Options](https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html) for more options.
-* run MinGW-w64 on MSYS2
+* Run MinGW-w64 on MSYS2
   * Launch the MSYS2 with MinGW-w64 by double clicking "\<MSYS2 path\>/mingw64.exe".
   * The way of building binaries is the same that of "run it on the native Microsoft Windows platform".
 

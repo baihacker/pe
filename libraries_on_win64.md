@@ -28,10 +28,10 @@ For MSYS2, just download the [installer](https://www.msys2.org/#installation) an
   * Use the following commands to install it
     * pacman -Syuu
     * pacman -S --needed mingw-w64-x86_64-toolchain
-  * If your are only interested in C/C++ development, some unnecessary packages can be removed bye the following commands
+  * If your are only interested in C/C++ development, some unnecessary packages can be removed by the following commands
     * pacman -R mingw-w64-x86_64-gcc-objc mingw-w64-x86_64-gcc-libgfortran mingw-w64-x86_64-gcc-fortran mingw-w64-x86_64-gcc-ada mingw-w64-x86_64-tools-git mingw-w64-x86_64-libgccjit mingw-w64-x86_64-gdb-multiarch
 
-Note: it is possible to use the MinGW-w64 installed by "MinGW-w64 installer" on MSYS2, just copy the "mingw64" folder under the MinGW-w64 installation folder to <MSYS2 path>/mingw64. Meanwhile, you can also use MSYS2 to obtain MinGW-w64 and copy it to some other directories.
+Note: it is possible to use the MinGW-w64 installed by "MinGW-w64 installer" on MSYS2, just copy the "mingw64" folder under the MinGW-w64 installation folder to \<MSYS2 path\>/mingw64. Meanwhile, you can also use MSYS2 to obtain MinGW-w64 and copy it to some other directories.
 
 
 ## Use MinGW-w64
@@ -39,20 +39,22 @@ As saied by the Wikipedia, there are several ways to run MinGW-w64:
 >Mingw-w64 can be run either on the native Microsoft Windows platform, cross-hosted on Linux (or other Unix), or "cross-native" on MSYS2 or Cygwin. Mingw-w64 can generate 32 bit and 64-bit executables for x86 under the target names i686-w64-mingw32 and x86_64-w64-mingw32.
 
 * run it on the native Microsoft Windows platform
-  * Make sure the <MinGW-w64 path>\bin is a part of the einvironment variable named PATH.
-  * Open the command line tool and enter the parent directory of you source code.
+  * Make sure the \<MinGW-w64 path\>\bin is a part of the einvironment variable named PATH.
+  * Open the cmd.exe (or other command line shell).
+  * Enter the parent directory of you source code.
   * Build your binary
     * The bassic command is "g++ source_code.cpp"
     * Usually, I often add the following options "--std=c++17 -O3 -march=native -mtune=native -Wl,--stack,268435456".
     * Please add "-fopenmp" if you want to use openmp.
     * See [x86 Options](https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html) for more options.
 * run MinGW-w64 on MSYS2
-  * Make a copy of <MSYS2 path>/mingw64/bin/mingw32-make.exe and the new name is make.exe.
-  * Launch the MSYS2 with MinGW-ws64 by double clicking "<MSYS2 path>/mingw64.exe".
+  * Launch the MSYS2 with MinGW-w64 by double clicking "\<MSYS2 path\>/mingw64.exe".
+  * The way of building binaries is the same that of "run it on the native Microsoft Windows platform"
 
-Some library requires extra packages, here are the packges required by the following examples/scripts
+When building libraries, makefile is frequently used. Please make a copy of \<MSYS2 path\>/mingw64/bin/mingw32-make.exe and rename the name of the copy to make.exe. Some libraries requires extra packages, please also install them. Here are the packges required by the following examples/scripts
   * pacman -S msys/m4
   * pacman -S mingw64/mingw-w64-x86_64-yasm
+
 
 ## Build libraries
 

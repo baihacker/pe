@@ -95,7 +95,8 @@ int main() {
     int64 c = Solver2().Cal(n);
     ::dva = PrimeS0Ex<int64>(n);
     int64 d = Dfs(pcnt, n, 1, -1, 1, 0, 1, 1);
-    cout << n << "\t" << a << "\t" << b << "\t" << c << " " << d << endl;
+    std::cout << n << "\t" << a << "\t" << b << "\t" << c << " " << d
+              << std::endl;
   }
   return 0;
 }

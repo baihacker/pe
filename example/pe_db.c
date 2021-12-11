@@ -23,15 +23,15 @@ int main() {
     db.FillPrimePi(dva1);
     for (int i = 0; i < dva.key_size; ++i) {
       if (dva.values[i] != dva1.values[i]) {
-        cout << dva.values[i] << endl;
-        cout << dva1.values[i] << endl;
+        std::cout << dva.values[i] << std::endl;
+        std::cout << dva1.values[i] << std::endl;
       }
       assert(dva.values[i] == dva1.values[i]);
     }
-    cout << dva[n] << endl;
-    cout << dva1[n] << endl;
+    std::cout << dva[n] << std::endl;
+    std::cout << dva1[n] << std::endl;
     // https://oeis.org/A006880
-    cout << db.PrimePi(Power(10LL, 14)) << endl;
+    std::cout << db.PrimePi(Power(10LL, 14)) << std::endl;
   }
 #if PE_HAS_INT128
   {
@@ -40,15 +40,15 @@ int main() {
     db.FillPrimeSum(dva1);
     for (int i = 0; i < dva.key_size; ++i) {
       if (dva.values[i] != dva1.values[i]) {
-        cout << dva.values[i] << endl;
-        cout << dva1.values[i] << endl;
+        std::cout << dva.values[i] << std::endl;
+        std::cout << dva1.values[i] << std::endl;
       }
       assert(dva.values[i] == dva1.values[i]);
     }
-    cout << dva[n] << endl;
-    cout << dva1[n] << endl;
+    std::cout << dva[n] << std::endl;
+    std::cout << dva1[n] << std::endl;
     // https://oeis.org/A046731
-    cout << db.PrimeSum(Power(10LL, 14)) << endl;
+    std::cout << db.PrimeSum(Power(10LL, 14)) << std::endl;
   }
 #endif
   return 0;

@@ -81,13 +81,13 @@ SL void IsSquareFreeTest() {
   {
     TimeRecorder tr;
     for (int i = 1; i <= n; ++i) ans1 += IsSquareFree(i);
-    // cerr << tr.Elapsed().Format() << endl;
+    // std::cerr << tr.Elapsed().Format() << std::endl;
   }
   int64 ans2 = 0;
   {
     TimeRecorder tr;
     for (int i = 1; i <= n; ++i) ans2 += IsSquareFreeNormal(i);
-    // cerr << tr.Elapsed().Format() << endl;
+    // std::cerr << tr.Elapsed().Format() << std::endl;
   }
   assert(ans1 == ans2);
 }

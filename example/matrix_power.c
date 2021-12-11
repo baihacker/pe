@@ -94,32 +94,32 @@ int main() {
   PE_INIT(maxp = 200000000);
 
   for (int64 n = 1; n <= 1000000000; n *= 10) {
-    cout << "n = " << n << endl;
+    std::cout << "n = " << n << std::endl;
     int64 ans0 = solve0(n);
     int64 ans1 = solve1(n);
     int64 ans2 = solve2(n, mod);
     int64 ans3 = solve3(n, mod);
     int64 ans4 = solve4(n, mod);
-    cout << "Ans0 = " << ans0 << endl;
-    cout << "Ans1 = " << ans1 << endl;
-    cout << "Ans2 = " << ans2 << endl;
-    cout << "Ans3 = " << ans3 << endl;
-    cout << "Ans4 = " << ans4 << endl;
-    cout << endl;
+    std::cout << "Ans0 = " << ans0 << std::endl;
+    std::cout << "Ans1 = " << ans1 << std::endl;
+    std::cout << "Ans2 = " << ans2 << std::endl;
+    std::cout << "Ans3 = " << ans3 << std::endl;
+    std::cout << "Ans4 = " << ans4 << std::endl;
+    std::cout << std::endl;
   }
 
   for (int64 rmod = mod; rmod <= mod + 100; ++rmod)
     if (IsPrime(rmod)) {
       const int64 n = 1000000000;
-      cout << "n = " << n << endl;
-      cout << "rmod = " << rmod << endl;
+      std::cout << "n = " << n << std::endl;
+      std::cout << "rmod = " << rmod << std::endl;
       int64 ans2 = solve2(n, rmod);
       int64 ans3 = solve3(n, rmod);
       int64 ans4 = solve4(n, rmod);
-      cout << "Ans2 = " << ans2 << endl;
-      cout << "Ans3 = " << ans3 << endl;
-      cout << "Ans4 = " << ans4 << endl;
-      cout << endl;
+      std::cout << "Ans2 = " << ans2 << std::endl;
+      std::cout << "Ans3 = " << ans3 << std::endl;
+      std::cout << "Ans4 = " << ans4 << std::endl;
+      std::cout << std::endl;
     }
 
   return 0;

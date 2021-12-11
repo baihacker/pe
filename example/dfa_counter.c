@@ -54,7 +54,7 @@ int main() {
     auto a = bf(n);
     auto b = counter1.Cal(n);
     auto c = counter2.Cal(n);
-    cout << n << "\t" << a << "\t" << b << "\t" << c << endl;
+    std::cout << n << "\t" << a << "\t" << b << "\t" << c << std::endl;
   }
   return 0;
 }

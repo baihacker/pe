@@ -15,22 +15,22 @@ int main() {
   int64 comb[32][32];
   InitComb(comb, 31, mod);
   for (int k = 0; k <= 10; ++k) {
-    cout << "k = " << k << endl;
+    std::cout << "k = " << k << std::endl;
     for (int64 n = 1; n <= 1000000000; n *= 10) {
-      cout << "n = " << n << endl;
+      std::cout << "n = " << n << std::endl;
       int64 ans[32];
       InitPowerSumMod<int64>(n, k, ans, comb, mod);
-      cout << "InitPowerSumMod   " << ans[k] << endl;
-      cout << "PowerSumModer     " << moder0.Cal(n, k) << endl;
-      cout << "PowerSumModerB    " << moder1.Cal(n, k) << endl;
-      cout << "PowerSumModerB1   " << moder2.Cal(n, k) << endl;
+      std::cout << "InitPowerSumMod   " << ans[k] << std::endl;
+      std::cout << "PowerSumModer     " << moder0.Cal(n, k) << std::endl;
+      std::cout << "PowerSumModerB    " << moder1.Cal(n, k) << std::endl;
+      std::cout << "PowerSumModerB1   " << moder2.Cal(n, k) << std::endl;
       if (k >= 1 && k <= 7) {
-        cout << "P" << k << "SumMod          " << sum_function[k](n, mod)
-             << endl;
+        std::cout << "P" << k << "SumMod          " << sum_function[k](n, mod)
+                  << std::endl;
       }
-      cout << endl;
+      std::cout << std::endl;
     }
-    cout << endl;
+    std::cout << std::endl;
   }
   return 0;
 }

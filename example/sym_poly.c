@@ -23,10 +23,10 @@ void dfs(int now, const SymPoly<int64>& p) {
           t3.Replace("c7", his[7]).Replace("c8", his[8]).Replace("c9", his[9]);
       if (aa.terms().empty() || bb.terms().empty() || cc.terms().empty())
         return;
-      cout << "a = " << aa << endl;
-      cout << "b = " << bb << endl;
-      cout << "c = " << cc << endl;
-      cout << endl;
+      std::cout << "a = " << aa << std::endl;
+      std::cout << "b = " << bb << std::endl;
+      std::cout << "c = " << cc << std::endl;
+      std::cout << std::endl;
     }
   } else {
     string me = "c" + ToString(now);
@@ -38,7 +38,7 @@ void dfs(int now, const SymPoly<int64>& p) {
 }
 
 int main() {
-  cout << target.Replace("n", 1).Replace("m", 1) << endl;
+  std::cout << target.Replace("n", 1).Replace("m", 1) << std::endl;
   dfs(1, target);
   return 0;
 }

@@ -11,16 +11,16 @@ SL void SquareRootCorrectnessTest() {
       int64 v = SquareRootUnsafe(now);
       int64 w = SquareRoot(now);
       if (u != v || u != w || v != w) {
-        cerr << "failed " << now << ":" << endl;
-        cerr << u << " " << v << " " << w << endl;
+        std::cerr << "failed " << now << ":" << std::endl;
+        std::cerr << u << " " << v << " " << w << std::endl;
         ++f;
       }
     }
   }
   if (f == 0) {
-    cerr << "Correctness test pass!" << endl;
+    std::cerr << "Correctness test pass!" << std::endl;
   } else {
-    cerr << "Correctness tess failed!" << endl;
+    std::cerr << "Correctness tess failed!" << std::endl;
   }
 }
 
@@ -36,7 +36,8 @@ SL void SquareRootPerformanceTest() {
       s += u;
     }
   }
-  cerr << "SquareRootSafe : " << tr.Elapsed().Format() << " " << s << endl;
+  std::cerr << "SquareRootSafe : " << tr.Elapsed().Format() << " " << s
+            << std::endl;
   s = 0;
   tr.Record();
   for (int64 i = 10; i <= N; ++i) {
@@ -47,7 +48,8 @@ SL void SquareRootPerformanceTest() {
       s += u;
     }
   }
-  cerr << "SquareRootUnsafe : " << tr.Elapsed().Format() << " " << s << endl;
+  std::cerr << "SquareRootUnsafe : " << tr.Elapsed().Format() << " " << s
+            << std::endl;
   s = 0;
   tr.Record();
   for (int64 i = 10; i <= N; ++i) {
@@ -58,7 +60,8 @@ SL void SquareRootPerformanceTest() {
       s += u;
     }
   }
-  cerr << "SquareRoot : " << tr.Elapsed().Format() << " " << s << endl;
+  std::cerr << "SquareRoot : " << tr.Elapsed().Format() << " " << s
+            << std::endl;
 }
 
 PE_REGISTER_TEST(&SquareRootCorrectnessTest, "SquareRootCorrectnessTest",

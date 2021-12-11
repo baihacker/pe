@@ -4,16 +4,16 @@ template <typename GBI>
 void demo() {
   vi data{1, 2, 2, 2, 2, 2, 2, 2, 2, 2};
   for (int i = 0; i < 10; ++i) {
-    cout << FromCf<GBI>(data, i) << endl;
+    std::cout << FromCf<GBI>(data, i) << std::endl;
   }
-  cout << FromCfN<GBI>(data) << endl;
+  std::cout << FromCfN<GBI>(data) << std::endl;
   for (int i = 50; i <= 50; ++i) {
-    cout << i << " " << ToCf<GBI>(1, 6, i) << endl;
+    std::cout << i << " " << ToCf<GBI>(1, 6, i) << std::endl;
   }
 
-  cout << ToCf<GBI>(1, 2, 10) << endl;
+  std::cout << ToCf<GBI>(1, 2, 10) << std::endl;
 
-  cout << FromCf<GBI>(ToCf<GBI>(1, 2, 50)) << endl;
+  std::cout << FromCf<GBI>(ToCf<GBI>(1, 2, 50)) << std::endl;
 }
 
 int main() {

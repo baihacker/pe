@@ -3,17 +3,17 @@
 const int n = 1000000;
 const int64 mod = 1000000007;
 
-#define output(x) cout << (#x) << ": " << (x) << endl
+#define output(x) std::cout << (#x) << ": " << (x) << std::endl
 
 #define ExecuteAndPrint1(method, arg) \
-  cout << (#method) << "(" << arg << "): " << method(arg) << endl
+  std::cout << (#method) << "(" << arg << "): " << method(arg) << std::endl
 
-#define ExecuteAndPrint2(method, arg1, arg2)       \
-  cout << (#method) << "(" << arg1 << ", " << arg2 \
-       << "): " << method(arg1, arg2) << endl
+#define ExecuteAndPrint2(method, arg1, arg2)            \
+  std::cout << (#method) << "(" << arg1 << ", " << arg2 \
+            << "): " << method(arg1, arg2) << std::endl
 
 void NtBaseExample() {
-  cout << endl << __func__ << endl;
+  std::cout << std::endl << __func__ << std::endl;
 
   {
     // pcnt is the number of primes no more than 2000000.
@@ -22,31 +22,31 @@ void NtBaseExample() {
     for (int i = 0; i < 10; ++i) {
       output(plist[i]);
     }
-    cout << endl;
+    std::cout << std::endl;
   }
 
   // Print value of fundamental arithmetic function and other functions
   for (int64 i = -2; i <= 10; ++i) {
-    cout << i << endl;
+    std::cout << i << std::endl;
     ExecuteAndPrint1(IsPrime, i);
     ExecuteAndPrint1(IsPrimeEx, i);
     ExecuteAndPrint1(Factorize, i);
     ExecuteAndPrint1(GetFactors, i);
     ExecuteAndPrint1(GetPrimeFactors, i);
     ExecuteAndPrint1(GetRadFactors, i);
-    cout << "GetRadFactorsWithMu(i)): ";
+    std::cout << "GetRadFactorsWithMu(i)): ";
     int idx = 0;
     for (auto& iter : GetRadFactorsWithMu(i)) {
       if (idx++) {
-        cout << ", ";
+        std::cout << ", ";
       }
-      cout << "(" << iter.first << ", " << iter.second << ")";
+      std::cout << "(" << iter.first << ", " << iter.second << ")";
     }
-    cout << endl;
+    std::cout << std::endl;
     ExecuteAndPrint1(CalPhi, i);
     ExecuteAndPrint1(CalMu, i);
     ExecuteAndPrint1(CalRad, i);
-    cout << endl;
+    std::cout << std::endl;
   }
 
   // Prime sieve
@@ -55,19 +55,19 @@ void NtBaseExample() {
     // Iterate the primes in the range and print them.
     for (auto i : PrimeEnumerator<int64>(10, 40)) {
       if (idx++) {
-        cout << ", ";
+        std::cout << ", ";
       }
-      cout << i;
+      std::cout << i;
     }
-    cout << endl;
+    std::cout << std::endl;
 
     // Output a vector whose elements are the primes in the range.
-    cout << GetPrimesInRange(10, 40) << endl;
+    std::cout << GetPrimesInRange(10, 40) << std::endl;
   }
 }
 
 void NtExample() {
-  cout << endl << __func__ << endl;
+  std::cout << std::endl << __func__ << std::endl;
 
   for (int64 i = 1; i <= 10; ++i) {
     for (int64 offset = -1; offset <= 1; ++offset) {
@@ -86,11 +86,11 @@ void NtExample() {
   }
 
   // Gcd of one number is the number itself.
-  cout << Gcd(24) << endl;
+  std::cout << Gcd(24) << std::endl;
   // Gcd of two numbers.
-  cout << Gcd(24, 36) << endl;
+  std::cout << Gcd(24, 36) << std::endl;
   // Gcd of more than 2 numbers.
-  cout << Gcd(24, 36, 52) << endl;
+  std::cout << Gcd(24, 36, 52) << std::endl;
 
   {
     auto t = ExGcd<int>(24, 36);
@@ -99,14 +99,14 @@ void NtExample() {
     auto x = std::get<1>(t);
     auto y = std::get<2>(t);
     // -1 1 12
-    cout << x << " " << y << " " << d << endl;
-    cout << x * 24 + y * 36 << endl;
+    std::cout << x << " " << y << " " << d << std::endl;
+    std::cout << x * 24 + y * 36 << std::endl;
   }
 
   for (int i = 1; i < 7; ++i) {
     // Calculate the inverse and the programme exits if it doesn't exist.
     int ans = ModInv(i, 7);
-    cout << ans * i % 7 << endl;  // Expected to be 1
+    std::cout << ans * i % 7 << std::endl;  // Expected to be 1
   }
 
   {
@@ -118,7 +118,7 @@ void NtExample() {
     auto x = std::get<1>(t);
     auto m = std::get<2>(t);
     // Output 1 4 7 since the solutions are 6 + k * 7.
-    cout << have << " " << x << " " << m << endl;
+    std::cout << have << " " << x << " " << m << std::endl;
   }
 
   {
@@ -129,7 +129,7 @@ void NtExample() {
     int64 x, m;
     tie(have, x, m) = Crt2<int64>(1, 3, 2, 5);
     // Output 1 7 15 since the solutions are 7 + k * 15.
-    cout << have << " " << x << " " << m << endl;
+    std::cout << have << " " << x << " " << m << std::endl;
 
     // CrtN(const T* val, const T* mod, int n) is also available.
   }
@@ -142,39 +142,39 @@ void NtExample() {
     int64 invs[10];
     InitInv(invs, 9, mod);
     for (int i = 1; i <= 9; ++i) {
-      cout << invs[i] * i % mod << endl;  // Expected to be 1.
+      std::cout << invs[i] * i % mod << std::endl;  // Expected to be 1.
     }
   }
 
   {
     int64 comb[10][10];
     InitComb(comb, 9);
-    cout << comb[5][2] << endl;  // Binomial(5, 2) = 10.
+    std::cout << comb[5][2] << std::endl;  // Binomial(5, 2) = 10.
   }
 
   {
     int64 fac[10];
     int64 ifac[10];
     InitSeqProd2<int64>(fac, ifac, 1, 9, mod);
-    cout << fac[5] << endl;  // 5! = 120
+    std::cout << fac[5] << std::endl;  // 5! = 120
     for (int i = 1; i <= 9; ++i) {
-      cout << fac[i] * ifac[i] % mod << endl;  // Expected to be 1.
+      std::cout << fac[i] * ifac[i] % mod << std::endl;  // Expected to be 1.
     }
   }
 
   {
     // Output 4 and 9 since 4^2 = 9^2 = 3 (mod 13)
-    cout << SquareRootMod(3, 13) << endl;
+    std::cout << SquareRootMod(3, 13) << std::endl;
   }
 
   {
     // Output 7, 8, 11 since 7^3 = 8^3 = 11^3 = 5 (mod 13)
-    cout << RootMod(5, 3, 13) << endl;
+    std::cout << RootMod(5, 3, 13) << std::endl;
   }
 }
 
 void PrimeCountExample() {
-  cout << endl << __func__ << endl;
+  std::cout << std::endl << __func__ << std::endl;
 
   {
     int64 count0 = 0;
@@ -191,8 +191,8 @@ void PrimeCountExample() {
     // An object that can be used to calculate prime count for different n.
     int64 count4 = CachedPi().Cal(n);
 
-    cout << count0 << " " << count1 << " " << count2 << " " << count3 << " "
-         << count4 << endl;
+    std::cout << count0 << " " << count1 << " " << count2 << " " << count3
+              << " " << count4 << std::endl;
   }
   {
     int64 count01 = 0;  // p % 4 = 1
@@ -203,13 +203,13 @@ void PrimeCountExample() {
         if (i % 4 == 3) ++count03;
       }
     auto result = PrimeS0PMod<int64>(n, 4);
-    cout << count01 << " " << result[1][n] << endl;
-    cout << count03 << " " << result[3][n] << endl;
+    std::cout << count01 << " " << result[1][n] << std::endl;
+    std::cout << count03 << " " << result[3][n] << std::endl;
   }
 }
 
 void PrimeSumExample() {
-  cout << endl << __func__ << endl;
+  std::cout << std::endl << __func__ << std::endl;
 
   {
     int64 sum0 = 0;
@@ -222,7 +222,7 @@ void PrimeSumExample() {
     int64 sum2 = PrimeS1Ex<int64>(n)[n];
     int64 sum3 = PrimeS1Parallel<int64>(n)[n];
 
-    cout << sum0 << " " << sum1 << " " << sum2 << " " << sum3 << endl;
+    std::cout << sum0 << " " << sum1 << " " << sum2 << " " << sum3 << std::endl;
   }
   {
     int64 sum01 = 0;  // p % 4 = 1
@@ -233,13 +233,13 @@ void PrimeSumExample() {
         if (i % 4 == 3) sum03 += i;
       }
     auto result = PrimeS1PMod<int64>(n, 4);
-    cout << sum01 << " " << result[1][n] << endl;
-    cout << sum03 << " " << result[3][n] << endl;
+    std::cout << sum01 << " " << result[1][n] << std::endl;
+    std::cout << sum03 << " " << result[3][n] << std::endl;
   }
 }
 
 void PrimePowerSumExample() {
-  cout << endl << __func__ << endl;
+  std::cout << std::endl << __func__ << std::endl;
 
   {
     const int E = 7;
@@ -252,7 +252,7 @@ void PrimePowerSumExample() {
 
     int64 sum1 = PrimeSkEx<mod>(n, E)[n];
 
-    cout << sum0 << " " << sum1 << endl;
+    std::cout << sum0 << " " << sum1 << std::endl;
   }
   {
     const int E = 7;
@@ -266,13 +266,13 @@ void PrimePowerSumExample() {
     sum01 %= mod;
     sum03 %= mod;
     auto result = PrimeSkPMod<mod>(n, E, 4);
-    cout << sum01 << " " << result[1][n] << endl;
-    cout << sum03 << " " << result[3][n] << endl;
+    std::cout << sum01 << " " << result[1][n] << std::endl;
+    std::cout << sum03 << " " << result[3][n] << std::endl;
   }
 }
 
 void MuSumExample() {
-  cout << endl << __func__ << endl;
+  std::cout << std::endl << __func__ << std::endl;
 
   int64 sum0 = 0;
   for (int i = 1; i <= n; ++i) {
@@ -281,11 +281,11 @@ void MuSumExample() {
 
   int64 sum1 = MuPhiSumModer(316227766016779, 10000).CalSumMu(n);
 
-  cout << sum0 << " " << sum1 << endl;
+  std::cout << sum0 << " " << sum1 << std::endl;
 }
 
 void PhiSumExample() {
-  cout << endl << __func__ << endl;
+  std::cout << std::endl << __func__ << std::endl;
 
   int64 sum0 = 0;
   for (int i = 1; i <= n; ++i) {
@@ -294,11 +294,11 @@ void PhiSumExample() {
 
   int64 sum1 = MuPhiSumModer(316227766016779, 10000).CalSumPhi(n);
 
-  cout << sum0 << " " << sum1 << endl;
+  std::cout << sum0 << " " << sum1 << std::endl;
 }
 
 void SquareFreeNumberCountExample() {
-  cout << endl << __func__ << endl;
+  std::cout << std::endl << __func__ << std::endl;
 
   int64 count0 = 0;
   for (int i = 1; i <= n; ++i) {
@@ -314,16 +314,17 @@ void SquareFreeNumberCountExample() {
 
   int64 count1 = SFCounter(10000).Cal(n);
 
-  cout << count0 << " " << count1 << endl;
+  std::cout << count0 << " " << count1 << std::endl;
 }
 
 void LinearRecurrenceExample() {
-  cout << endl << __func__ << endl;
+  std::cout << std::endl << __func__ << std::endl;
 
   {
     // Find the linear recurrence automatically and output the nth element.
-    cout << NthElement({1, 2, 4, 8, 16, 32, 64}, mod, 7) << endl;
-    cout << NthElement({1, 1, 2, 3, 5, 8, 13}, mod, 10000000000) << endl;
+    std::cout << NthElement({1, 2, 4, 8, 16, 32, 64}, mod, 7) << std::endl;
+    std::cout << NthElement({1, 1, 2, 3, 5, 8, 13}, mod, 10000000000)
+              << std::endl;
   }
   {
     // a[i+1] = a[i] * rec[0] + a[i-1] * rec[1] ...
@@ -331,20 +332,20 @@ void LinearRecurrenceExample() {
     vector<int64> rec{1, 1};
     vector<int64> init{1, 1};
     for (int i = 2; i <= 5; ++i) {
-      cout << LinearRecurrence(rec, init, mod, i) << endl;
+      std::cout << LinearRecurrence(rec, init, mod, i) << std::endl;
     }
   }
   {
     vector<int64> rec{1, 1};
     vector<int64> init{1, 1};
     for (int i = 0; i <= 5; ++i) {
-      cout << LinearRecurrenceSum(rec, init, mod, i) << endl;
+      std::cout << LinearRecurrenceSum(rec, init, mod, i) << std::endl;
     }
   }
 }
 
 void PowerSumExample() {
-  cout << endl << __func__ << endl;
+  std::cout << std::endl << __func__ << std::endl;
 
   PowerSumModer a(mod);
   PowerSumModerB b(mod);
@@ -352,61 +353,63 @@ void PowerSumExample() {
 
   const int64 N = Power(10LL, 18);
   // (1^127+2^127+...+(1e18)^127) % mod
-  cout << a.Cal(N, 127) << " " << b.Cal(N, 127) << " " << c.Cal(N, 127) << endl;
+  std::cout << a.Cal(N, 127) << " " << b.Cal(N, 127) << " " << c.Cal(N, 127)
+            << std::endl;
 }
 
 void MatrixPowerExample() {
-  cout << endl << __func__ << endl;
+  std::cout << std::endl << __func__ << std::endl;
 
   // m^n, m is a k*k matrix
-  cout << MatrixPowerMod([](auto& m) { m(0, 0) = m(0, 1) = m(1, 0) = 1; }, 2,
-                         10000000000, mod)
-       << endl;
+  std::cout << MatrixPowerMod([](auto& m) { m(0, 0) = m(0, 1) = m(1, 0) = 1; },
+                              2, 10000000000, mod)
+            << std::endl;
 
   // m^n*v, m is a k*k matrix
-  cout << MatrixPowerMod(
-              [](auto& m, auto& v) {
-                m(0, 0) = m(0, 1) = m(1, 0) = 1;
-                v[0] = v[1] = 1;
-              },
-              2, 10000000000, mod)
-       << endl;
+  std::cout << MatrixPowerMod(
+                   [](auto& m, auto& v) {
+                     m(0, 0) = m(0, 1) = m(1, 0) = 1;
+                     v[0] = v[1] = 1;
+                   },
+                   2, 10000000000, mod)
+            << std::endl;
 }
 
 void BigNumberExample() {
-  cout << endl << __func__ << endl;
+  std::cout << std::endl << __func__ << std::endl;
 
-  cout << Power(2_bi, 128) << endl;  // BigInteger
+  std::cout << Power(2_bi, 128) << std::endl;  // BigInteger
 #if ENABLE_GMP
-  cout << Power(2_mpi, 128) << endl;   // MpInteger, a wrapper of mpz_class
-  cout << Power(MPZ(2), 128) << endl;  // Helper function of mpz_class
+  std::cout << Power(2_mpi, 128)
+            << std::endl;  // MpInteger, a wrapper of mpz_class
+  std::cout << Power(MPZ(2), 128) << std::endl;  // Helper function of mpz_class
 #endif
 }
 
 void FractionExample() {
-  cout << endl << __func__ << endl;
+  std::cout << std::endl << __func__ << std::endl;
 
   Fraction<bi> x;
   for (int i = 1; i < 100; ++i) {
     x = x + Fraction<bi>(1, i);
   }
   // 1/1 + 1/2 + 1/3 + ... + 1/99
-  cout << x << endl;
+  std::cout << x << std::endl;
 }
 
 void ModularArithmeticExample() {
-  cout << endl << __func__ << endl;
+  std::cout << std::endl << __func__ << std::endl;
 
   NMod64<mod> x = 1;
   for (int i = 1; i <= 10000; ++i) {
     x *= i;
   }
 
-  cout << x << " " << FactModer(mod).Cal(10000) << endl;
+  std::cout << x << " " << FactModer(mod).Cal(10000) << std::endl;
 }
 
 void MultiprecisionFloatNumberExample() {
-  cout << endl << __func__ << endl;
+  std::cout << std::endl << __func__ << std::endl;
 
 #if HAS_MPF
   // 2000 bit precision.
@@ -417,12 +420,12 @@ void MultiprecisionFloatNumberExample() {
     x += one / i;
   }
   // The same as SetPrecision[Sum[1/i, {i, 1, 100}], 100]
-  cout << x.ToString(100) << endl;
+  std::cout << x.ToString(100) << std::endl;
 #endif
 }
 
 void PolynomialMultiplicationExample() {
-  cout << endl << __func__ << endl;
+  std::cout << std::endl << __func__ << std::endl;
 
   vector<int64> a, b;
   for (int i = 0; i < 100000; ++i) {
@@ -430,7 +433,7 @@ void PolynomialMultiplicationExample() {
     b.push_back(i);
   }
   auto c = PolyMul(a, b, mod);
-  cout << c[12345] << endl;
+  std::cout << c[12345] << std::endl;
 }
 
 // Latest compiling command:

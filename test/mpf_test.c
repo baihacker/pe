@@ -3,31 +3,31 @@
 namespace mpf_test {
 #if HAS_MPF
 SL void MpfTest() {
-  // cout << Mpf::getDefaultPrec() << endl;
+  // std::cout << Mpf::getDefaultPrec() << std::endl;
   Mpf::SetDefaultPrec(200);
 
   Mpf x(1);
   x /= 10;
 #if 0
-  cout << x.toString(20) << endl;
+  std::cout << x.toString(20) << std::endl;
   x = -x.Power(10);
-  cout << x.toString(20) << endl;
-  cout << x.toLongDouble() << endl;
-  cout << Mpf().toString(20) << endl;
-  cout << Mpf("-.1123456789e31").toString(30) << endl;
-  cout << Mpf(".1123456789e31").toString(30) << endl;
-  cout << Mpf(100).toString(30) << endl;
+  std::cout << x.toString(20) << std::endl;
+  std::cout << x.toLongDouble() << std::endl;
+  std::cout << Mpf().toString(20) << std::endl;
+  std::cout << Mpf("-.1123456789e31").toString(30) << std::endl;
+  std::cout << Mpf(".1123456789e31").toString(30) << std::endl;
+  std::cout << Mpf(100).toString(30) << std::endl;
   mpf_t tester;
   mpf_init(tester);
   mpf_set_str(tester, "112345678987654321", 10);
-  cout << Mpf("12345678987654321").toString() << endl;
-  cout << mpf_get_d(tester) << endl;
-  cout << mpf_get_prec(tester) << endl;
+  std::cout << Mpf("12345678987654321").toString() << std::endl;
+  std::cout << mpf_get_d(tester) << std::endl;
+  std::cout << mpf_get_prec(tester) << std::endl;
   Mpf y(1);
   y *= 123456789;
   y *= 1000000000;
   y += 123456789;
-  cout << y.toString() << endl;
+  std::cout << y.toString() << std::endl;
 #endif
 }
 

@@ -13,18 +13,20 @@ int main() {
   Sigma0SumModer sigma0_sum_moder(mod);
 
   for (int64 n = 1; n <= 10000000000; n *= 10) {
-    cout << n << " = " << n << endl;
-    cout << "# square free number " << sf_counter.Cal(n) << endl;
-    cout << "sum mu " << mu_summer.Cal(n) << endl;
-    cout << "sum mu " << mu_phi_summer.CalSumMu(n) << endl;
-    cout << "sum phi " << mu_phi_summer.CalSumPhi(n) << endl;
-    cout << "sum sigma0 " << sigma0_summer.Cal(n) << endl;
+    std::cout << n << " = " << n << std::endl;
+    std::cout << "# square free number " << sf_counter.Cal(n) << std::endl;
+    std::cout << "sum mu " << mu_summer.Cal(n) << std::endl;
+    std::cout << "sum mu " << mu_phi_summer.CalSumMu(n) << std::endl;
+    std::cout << "sum phi " << mu_phi_summer.CalSumPhi(n) << std::endl;
+    std::cout << "sum sigma0 " << sigma0_summer.Cal(n) << std::endl;
 
-    cout << "sum mu mod " << mod << " " << mu_phi_sum_moder.CalSumMu(n) << endl;
-    cout << "sum phi mod " << mod << " " << mu_phi_sum_moder.CalSumPhi(n)
-         << endl;
-    cout << "sum sigma0 mod " << mod << " " << sigma0_sum_moder.Cal(n) << endl;
-    cout << endl;
+    std::cout << "sum mu mod " << mod << " " << mu_phi_sum_moder.CalSumMu(n)
+              << std::endl;
+    std::cout << "sum phi mod " << mod << " " << mu_phi_sum_moder.CalSumPhi(n)
+              << std::endl;
+    std::cout << "sum sigma0 mod " << mod << " " << sigma0_sum_moder.Cal(n)
+              << std::endl;
+    std::cout << std::endl;
   }
   return 0;
 }

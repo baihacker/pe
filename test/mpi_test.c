@@ -5,26 +5,26 @@ namespace mpi_test {
 
 template <typename T>
 SL void TestConstructorInternal() {
-  // cout << typeid(T).name() << endl;
-  // cout << MpInteger(T()) << endl;
-  // cout << MpInteger(T(0)) << " " << MpInteger(T(1)) << endl;
-  // cout << MpInteger(std::numeric_limits<T>::min()) << " " <<
+  // std::cout << typeid(T).name() << std::endl;
+  // std::cout << MpInteger(T()) << std::endl;
+  // std::cout << MpInteger(T(0)) << " " << MpInteger(T(1)) << std::endl;
+  // std::cout << MpInteger(std::numeric_limits<T>::min()) << " " <<
   // std::numeric_limits<T>::min()
-  //      << endl;
-  // cout << MpInteger(std::numeric_limits<T>::max()) << " " <<
+  //      << std::endl;
+  // std::cout << MpInteger(std::numeric_limits<T>::max()) << " " <<
   // std::numeric_limits<T>::max()
-  //      << endl;
+  //      << std::endl;
 
   assert(MpInteger(std::numeric_limits<T>::min()).ToInt<T>() ==
          std::numeric_limits<T>::min());
   assert(MpInteger(std::numeric_limits<T>::max()).ToInt<T>() ==
          std::numeric_limits<T>::max());
 
-  // cout << endl;
+  // std::cout << std::endl;
 }
 
 SL void TestConstructor() {
-  // cout << MpInteger() << endl;
+  // std::cout << MpInteger() << std::endl;
   MpInteger x;
   // TestConstructorInternal<bool>();
   TestConstructorInternal<char>();
@@ -354,7 +354,7 @@ SL void TestUtilities() {
   TimeRecorder tr;
   MpInteger v(1);
   for (int i = 1; i <= 100000; ++i) v *= i;
-  // cout << tr.Elapsed().Format() << " " << v.bitCount() << endl;
+  // std::cout << tr.Elapsed().Format() << " " << v.bitCount() << std::endl;
 }
 
 SL void MpiTest() {

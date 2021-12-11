@@ -54,7 +54,7 @@ int64 solve1() {
 }
 
 int main() {
-  cout << solve0() << endl;
-  cout << solve1() << endl;
+  std::cout << solve0() << std::endl;
+  std::cout << solve1() << std::endl;
   return 0;
 }

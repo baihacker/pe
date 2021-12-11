@@ -57,7 +57,7 @@ int main() {
     auto a = bf(n);
     auto b = summer1.Cal(n);
     auto c = summer2.Cal(n);
-    cout << n << "\t" << a << "\t" << b << "\t" << c << endl;
+    std::cout << n << "\t" << a << "\t" << b << "\t" << c << std::endl;
   }
   return 0;
 }

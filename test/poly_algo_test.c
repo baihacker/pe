@@ -95,7 +95,7 @@ SL void PolyMultiPointEvaluationTest() {
   {
     TimeRecorder tr;
     auto result = PolyMultipointEvaluateNormal(p.data, v, p.mod);
-    cout << tr.Elapsed().Format() << endl;
+    std::cout << tr.Elapsed().Format() << std::endl;
     for (int i = 1; i <= n; ++i) {
       assert(p.ValueAt(i % 10007) == result[i - 1]);
     }
@@ -103,7 +103,7 @@ SL void PolyMultiPointEvaluationTest() {
   {
     TimeRecorder tr;
     auto result = PolyMultipointEvaluateBls(p.data, v, p.mod);
-    cout << tr.Elapsed().Format() << endl;
+    std::cout << tr.Elapsed().Format() << std::endl;
     for (int i = 1; i <= n; ++i) {
       assert(p.ValueAt(i % 10007) == result[i - 1]);
     }
@@ -112,7 +112,7 @@ SL void PolyMultiPointEvaluationTest() {
   {
     TimeRecorder tr;
     auto result = poly_flint::PolyMultipointEvaluate(p.data, v, p.mod);
-    cout << tr.Elapsed().Format() << endl;
+    std::cout << tr.Elapsed().Format() << std::endl;
     for (int i = 1; i <= n; ++i) {
       assert(p.ValueAt(i % 10007) == result[i - 1]);
     }

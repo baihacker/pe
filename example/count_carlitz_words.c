@@ -38,7 +38,7 @@ int main() {
       {4, 4}, {4, 4, 2, 2}, {5, 5, 5}};
 
   for (auto& iter : test_data) {
-    cout << brute_force(iter) << " " << counter.Cal(iter) << endl;
+    std::cout << brute_force(iter) << " " << counter.Cal(iter) << std::endl;
   }
   return 0;
 }

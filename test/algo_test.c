@@ -52,7 +52,7 @@ SL void FactSumModTest() {
   TimeRecorder tr;
   const int64 n = 100000000;
   auto ans = moder.Cal(n);
-  cerr << tr.Elapsed().Format() << endl;
+  std::cerr << tr.Elapsed().Format() << std::endl;
 
   int64 now = 1;
   int64 s = 1;
@@ -120,7 +120,7 @@ SL void PkSumModTest() {
       const int64 ans1 = (them[k])(n, mod);
       const int64 ans2 = moder.Cal(n, k);
       if (ans1 != ans2) {
-        cout << n << " " << k << " " << ans1 << " " << ans2 << endl;
+        std::cout << n << " " << k << " " << ans1 << " " << ans2 << std::endl;
       }
       assert(ans1 == ans2);
     }

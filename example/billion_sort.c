@@ -15,6 +15,6 @@ int main() {
   // sort(data, data+N);
   dbg("sorted");
 
-  cerr << tr.Elapsed().Format() << endl;
+  std::cerr << tr.Elapsed().Format() << std::endl;
   return 0;
 }

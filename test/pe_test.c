@@ -92,13 +92,13 @@ int main() {
     }
 #endif
     if (!isFirstTest) {
-      cout << endl;
+      std::cout << std::endl;
     }
-    cout << "Begin " << item.description << endl;
+    std::cout << "Begin " << item.description << std::endl;
     TimeRecorder tr;
     item.test();
-    cout << "End " << item.description << endl;
-    cout << "Time usage " << tr.Elapsed().Format() << endl;
+    std::cout << "End " << item.description << std::endl;
+    std::cout << "Time usage " << tr.Elapsed().Format() << std::endl;
     isFirstTest = false;
   }
   return 0;

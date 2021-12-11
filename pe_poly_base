@@ -49,7 +49,7 @@ struct NttMod32 {
       omg[i] = static_cast<unsigned>(
           PowerMod<uint64, uint64, uint64>(g, (mod - 1) >> i, mod));
     }
-    fill(preOmg, preOmg + 32, nullptr);
+    std::fill(preOmg, preOmg + 32, nullptr);
   }
 
   ~NttMod32() {
@@ -388,7 +388,7 @@ struct NttMod64 {
     for (int i = 0; i <= k; ++i) {
       omg[i] = PowerModEx<uint64, uint64, uint64>(g, (mod - 1) >> i, mod);
     }
-    fill(preOmg, preOmg + 64, nullptr);
+    std::fill(preOmg, preOmg + 64, nullptr);
   }
 
   ~NttMod64() {
@@ -695,12 +695,12 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     for (int64 i = 0; i < n; ++i) {
       result[i] = AddMod(X[i], Y[i], mod);
     }
-    copy(Y + n, Y + m, result + n);
+    std::copy(Y + n, Y + m, result + n);
   } else {
     for (int64 i = 0; i < m; ++i) {
       result[i] = AddMod(X[i], Y[i], mod);
     }
-    copy(X + m, X + n, result + m);
+    std::copy(X + m, X + n, result + m);
   }
 }
 
@@ -731,7 +731,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     for (int64 i = 0; i < m; ++i) {
       result[i] = SubMod(X[i], Y[i], mod);
     }
-    copy(X + m, X + n, result + m);
+    std::copy(X + m, X + n, result + m);
   }
 }
 
@@ -758,7 +758,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
   const int64 n2 = n << 1;
   if (n <= 49) {
-    fill(result, result + n2, 0);
+    std::fill(result, result + n2, 0);
     for (int64 i = 0; i < n; ++i) {
       for (int64 j = 0; j < n; ++j) {
         result[i + j] = AddMod(result[i + j], MulModEx(X[i], Y[j], mod), mod);
@@ -815,7 +815,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
       w[i] = SubMod(w[i], AddMod(x0y0[i], x1y1[i], mod), mod);
     }
   }
-  fill(result, result + n2, 0);
+  std::fill(result, result + n2, 0);
   for (int64 i = 0; i < dbm0; ++i) {
     result[dbm1 + i] = AddMod(result[dbm1 + i], x0y0[i], mod);
   }
@@ -864,7 +864,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
                                  reinterpret_cast<unsignedT*>(&tresult[0]),
                                  mod);
   }
-  copy(tresult.begin(), tresult.begin() + n + m - 1, result);
+  std::copy(tresult.begin(), tresult.begin() + n + m - 1, result);
 }
 
 template <typename T>
@@ -957,7 +957,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   } else {
     const int64 m = (n + 1) >> 1;
     PolyInvDoublingInternal(m, a, b, tmp, mod);
-    fill(b + m, b + n, 0);
+    std::fill(b + m, b + n, 0);
     PolyMul(b, m, b, m, tmp[0], mod);
     if (m + m - 2 < n - 1) {
       tmp[0][n - 1] = 0;
@@ -1003,7 +1003,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   }
 
   PolyInvDoublingInternal(n, &a[0], &b[0], tmp, mod);
-  copy(b.begin(), b.begin() + n, result);
+  std::copy(b.begin(), b.begin() + n, result);
 }
 
 // size result >= n
@@ -1068,8 +1068,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
   if (m > n) {
     if (r) {
-      copy(X, X + n, r);
-      fill(r + n, r + m, 0);
+      std::copy(X, X + n, r);
+      std::fill(r + n, r + m, 0);
     }
     if (q) {
       q[0] = 0;
@@ -1083,9 +1083,9 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   for (int64 i = 0; i < n; ++i) XR[i] = X[n - 1 - i];
   vector<T> Z = PolyMul(XR, IYR, mod);
   Z.resize(n - m + 1);
-  reverse(Z.begin(), Z.end());
+  std::reverse(Z.begin(), Z.end());
   if (q) {
-    copy(Z.begin(), Z.end(), q);
+    std::copy(Z.begin(), Z.end(), q);
   }
   if (r) {
     vector<T> tmp(n);
@@ -1110,8 +1110,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
   if (m > n) {
     if (r) {
-      copy(X, X + n, r);
-      fill(r + n, r + m, 0);
+      std::copy(X, X + n, r);
+      std::fill(r + n, r + m, 0);
     }
     if (q) {
       q[0] = 0;
@@ -1132,10 +1132,10 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     }
   }
   if (q) {
-    reverse(q, q + top);
+    std::reverse(q, q + top);
   }
   if (r) {
-    copy(tmp.begin(), tmp.begin() + m, r);
+    std::copy(tmp.begin(), tmp.begin() + m, r);
   }
 }
 
@@ -1352,7 +1352,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   }
 
   ret.resize(n);
-  copy(ret.begin(), ret.end(), result);
+  std::copy(ret.begin(), ret.end(), result);
 }
 
 // size result == n
@@ -1537,9 +1537,9 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   const int64 d = static_cast<int64>(tree.size()) - 1;
   {
     auto alpha = tree[d][0];
-    reverse(alpha.begin(), alpha.end());
+    std::reverse(alpha.begin(), alpha.end());
     alpha = PolyInv(alpha, n, mod);
-    reverse(alpha.begin(), alpha.end());
+    std::reverse(alpha.begin(), alpha.end());
 
     vector<uint64> b(X, X + n);
     int64 degb = static_cast<int64>(b.size()) - 1;
@@ -1550,7 +1550,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
     }
     assert(degb + 1 >= n);
     t.resize(n);
-    reverse(t.begin(), t.end());
+    std::reverse(t.begin(), t.end());
 
     vector<vector<T>> c(n);
     c[0] = std::move(t);
@@ -1568,7 +1568,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
         vector<T> x;
         {
           const auto os = static_cast<int64>(tree[i - 1][2 * j].size());
-          reverse(tree[i - 1][2 * j].begin(), tree[i - 1][2 * j].end());
+          std::reverse(tree[i - 1][2 * j].begin(), tree[i - 1][2 * j].end());
           x = PolyMul(tree[i - 1][2 * j], c[j], mod);
           int64 s = 0;
           const auto sizeX = static_cast<int64>(x.size());
@@ -1581,7 +1581,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
         vector<T> y;
         {
           const auto os = static_cast<int64>(tree[i - 1][2 * j + 1].size());
-          reverse(tree[i - 1][2 * j + 1].begin(), tree[i - 1][2 * j + 1].end());
+          std::reverse(tree[i - 1][2 * j + 1].begin(),
+                       tree[i - 1][2 * j + 1].end());
           y = PolyMul(tree[i - 1][2 * j + 1], c[j], mod);
           int64 s = 0;
           const auto ySize = static_cast<int64>(y.size());
@@ -1715,7 +1716,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   }
 
   PolyMul(&A[0], d + 1, &B[0], 2 * d + 1, &C[0], mod);
-  copy(&C[0] + d, &C[0] + 2 * d + 1, result);
+  std::copy(&C[0] + d, &C[0] + 2 * d + 1, result);
 
   for (int64 i = 0, j = d + 1; i <= d; ++i, ++j) {
     result[i] = MulModEx(result[i], T0[j], mod);
@@ -1772,7 +1773,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   }
   auto& t = from[0];
   PE_ASSERT(sz(t) == n + 1);
-  copy(t.begin(), t.end(), result);
+  std::copy(t.begin(), t.end(), result);
 }
 
 // n = e - s
@@ -1798,7 +1799,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   static_assert(pe_is_unsigned<T>::value, "T must be unsigned");
   const int64 n = e - s;
   if (n == 1) {
-    copy(X + s * 2, X + e * 2, result);
+    std::copy(X + s * 2, X + e * 2, result);
     return;
   }
   const int64 half = n >> 1;

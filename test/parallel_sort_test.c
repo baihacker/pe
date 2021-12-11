@@ -8,7 +8,7 @@ SL void ParallelSortTest() {
   for (int i = 0; i < n; ++i) arr[i] = rand();
   TimeRecorder tr;
   ParallelSort<8>(arr, arr + n);
-  cerr << tr.Elapsed().Format() << endl;
+  std::cerr << tr.Elapsed().Format() << std::endl;
   for (int i = 1; i < n; ++i) {
     assert(arr[i - 1] <= arr[i]);
   }

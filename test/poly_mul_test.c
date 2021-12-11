@@ -93,7 +93,7 @@ SL void TestImpl(int dp, int size, int n, int64 mod) {
 SL void PolyMulTest() {
   // uint128 target = 2655355665167707426;
   // target = target * 100000000000000000 + 92721528518903091;
-  // cerr << Mod128And64(target, 100000000003) << endl;
+  // std::cerr << Mod128And64(target, 100000000003) << std::endl;
 
   TestImpl(0, 1, 1000000, 100019);
   TestImpl(0, 3, 1479725, 100000000003);

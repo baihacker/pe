@@ -24,7 +24,7 @@ int main() {
   dp[0] = 1;
   orz[0][1] = 1;
   for (int i = 1; i <= N; ++i) {
-    cerr << i << " ";
+    std::cerr << i << " ";
     for (int j = N; j >= i; --j) {
       bi total = 0;
       map<int128, bi> inc;
@@ -49,13 +49,13 @@ int main() {
       foreach (it, inc)
         orz[n][it.first] += it.second;
     }
-    cerr << dp[N] << endl;
+    std::cerr << dp[N] << std::endl;
   }
 
-  cerr << dp[N] << endl;
+  std::cerr << dp[N] << std::endl;
   bi s = 0;
   foreach (it, orz[N])
     s += bi(it.first) * bi(it.first) * it.second;
-  cerr << s / dp[N] << endl;
+  std::cerr << s / dp[N] << std::endl;
   return 0;
 }

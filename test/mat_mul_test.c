@@ -18,9 +18,9 @@ void TestEigen(const vector<int>& data, const vector<int>& V) {
   v = MatrixPower(m, 4, v);
   int64 s = 0;
   for (auto i : v) s += i.value();
-  // cout << s << endl;
+  // std::cout << s << std::endl;
   if (show) {
-    cout << tr.Elapsed().Format() << endl;
+    std::cout << tr.Elapsed().Format() << std::endl;
   }
   assert(s == 247446585411LL);
   sort(all(v));
@@ -38,9 +38,9 @@ void TestEigen(const vector<int>& data, const vector<int>& V, E mod) {
   v = MatrixPower(m, 4, v, mod);
   int64 s = 0;
   for (auto i : v) s += i;
-  // cout << s << endl;
+  // std::cout << s << std::endl;
   if (show) {
-    cout << tr.Elapsed().Format() << endl;
+    std::cout << tr.Elapsed().Format() << std::endl;
   }
   assert(s == 247446585411LL);
   sort(all(v));
@@ -58,9 +58,9 @@ void TestPe(const vector<int>& data, const vector<int>& V) {
   v = MatrixPower(m, 4, v);
   int64 s = 0;
   for (auto i : v) s += i.value();
-  // cout << s << endl;
+  // std::cout << s << std::endl;
   if (show) {
-    cout << tr.Elapsed().Format() << endl;
+    std::cout << tr.Elapsed().Format() << std::endl;
   }
   assert(s == 247446585411LL);
   sort(all(v));
@@ -78,9 +78,9 @@ void TestPe(const vector<int>& data, const vector<int>& V, E mod) {
   v = MatrixPower(m, 4, v, mod);
   int64 s = 0;
   for (auto i : v) s += i;
-  // cout << s << endl;
+  // std::cout << s << std::endl;
   if (show) {
-    cout << tr.Elapsed().Format() << endl;
+    std::cout << tr.Elapsed().Format() << std::endl;
   }
   assert(s == 247446585411LL);
   sort(all(v));
@@ -145,7 +145,7 @@ SL void TestEigenHelperMethod() {
         2, 100000, 1000000007);
   }
 
-  cout << tr.Elapsed().Format() << endl;
+  std::cout << tr.Elapsed().Format() << std::endl;
 }
 
 SL void TestPeHelperMethod() {
@@ -206,7 +206,7 @@ SL void TestPeHelperMethod() {
         },
         2, 100000, 1000000007);
   }
-  cout << tr.Elapsed().Format() << endl;
+  std::cout << tr.Elapsed().Format() << std::endl;
 }
 
 SL void MatMulTest() {
@@ -230,9 +230,9 @@ SL void MatMulTest() {
     v = MatrixPower(m, 4, v, mod);
     int64 s = 0;
     for (auto i : v) s += i;
-    // cout << s << endl;
+    // std::cout << s << std::endl;
     if (show) {
-      cout << tr.Elapsed().Format() << endl;
+      std::cout << tr.Elapsed().Format() << std::endl;
     }
     assert(s == 256670487618LL);
     sort(all(v));
@@ -249,22 +249,22 @@ SL void MatMulTest() {
     v = MatrixPower(m, 4, v, mod);
     int64 s = 0;
     for (auto i : v) s += i;
-    // cout << s << endl;
+    // std::cout << s << std::endl;
     if (show) {
-      cout << tr.Elapsed().Format() << endl;
+      std::cout << tr.Elapsed().Format() << std::endl;
     }
     assert(s == 247446585411LL);
     sort(all(v));
   }
   if (show) {
-    cout << endl;
+    std::cout << std::endl;
   }
 
   TimeRecorder tr;
   TestEigen<int128>(data, V, mod);
 
   if (show) {
-    cout << endl;
+    std::cout << std::endl;
   }
 
   TestEigen<NModNumber<CCMod64<mod>, APSB<int64, int64>>>(data, V);
@@ -280,7 +280,7 @@ SL void MatMulTest() {
   TestEigen<NModNumber<DefaultMod, APSBL<int128>>>(data, V);
 
   if (show) {
-    cout << endl;
+    std::cout << std::endl;
   }
 
   TestEigen<NModNumberM<CCMod64<mod>, APSB<int64, int64>>>(data, V);
@@ -296,22 +296,22 @@ SL void MatMulTest() {
   TestEigen<NModNumberM<DefaultMod, APSBL<int128>>>(data, V);
 
   if (show) {
-    cout << endl;
+    std::cout << std::endl;
   }
   TestEigenHelperMethod();
   if (show) {
-    cout << endl;
+    std::cout << std::endl;
   }
-  cout << "Eigen " << tr.Elapsed().Format() << endl;
+  std::cout << "Eigen " << tr.Elapsed().Format() << std::endl;
   if (show) {
-    cout << endl;
+    std::cout << std::endl;
   }
 
   tr.Record();
   TestPe<int128>(data, V, mod);
 
   if (show) {
-    cout << endl;
+    std::cout << std::endl;
   }
 
   TestPe<NModNumber<CCMod64<mod>, APSB<int64, int64>>>(data, V);
@@ -327,7 +327,7 @@ SL void MatMulTest() {
   TestPe<NModNumber<DefaultMod, APSBL<int128>>>(data, V);
 
   if (show) {
-    cout << endl;
+    std::cout << std::endl;
   }
   TestPe<NModNumberM<CCMod64<mod>, APSB<int64, int64>>>(data, V);
   TestPe<NModNumberM<CCMod64<mod>, APSB<int64, int128>>>(data, V);
@@ -342,10 +342,10 @@ SL void MatMulTest() {
   TestPe<NModNumberM<DefaultMod, APSBL<int128>>>(data, V);
 
   if (show) {
-    cout << endl;
+    std::cout << std::endl;
   }
   TestPeHelperMethod();
-  cout << "Pe " << tr.Elapsed().Format() << endl;
+  std::cout << "Pe " << tr.Elapsed().Format() << std::endl;
 }
 
 PE_REGISTER_TEST(&MatMulTest, "MatMulTest", SUPER);

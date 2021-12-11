@@ -9,7 +9,7 @@ int main() {
            "A^2 x1 x2 - 4 B^2 x1 x2 + 4 x1^3 x2 + 2 A^2 x2^2 + 2 B^2 x2^2 - "
            "6 x1^2 x2^2 + 4 x1 x2^3 - x2^4)/(2 Sqrt(x1^2 - 2 x1 x2 + "
            "x2^2))")) {
-    cout << a << endl;
+    std::cout << a << std::endl;
   }
   // output:
   // sqrt(-A * A * A * A + 2 * A * A * B * B - B * B * B * B + 2 * A * A * x1 *
@@ -20,7 +20,7 @@ int main() {
   // * sqrt(x1 * x1 - 2 * x1 * x2 + x2 * x2))
   // Convert mathematica expression to cpp using modular arithmetic.
   for (auto a : mma::CompileMod("(a^4+a b)*7/b")) {
-    cout << a << endl;
+    std::cout << a << std::endl;
   }
   // output:
   // int64 foo(int64 a, int64 b, int64 mod) {

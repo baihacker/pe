@@ -21,8 +21,8 @@ SL void RandomTest() {
     int t2 = clock();
     auto ans2 = fft::PolyMulFftSmall(x, y, mod);
     int t3 = clock();
-    // cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << " " << (t3-t1)*1e-3 <<
-    // endl;
+    // std::cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << " " << (t3-t1)*1e-3
+    // << std::endl;
 
     assert(ans0 == ans1);
     assert(ans0 == ans2);
@@ -42,7 +42,7 @@ SL void RandomTest() {
     int t1 = clock();
     auto ans1 = fft::PolyMulFft(x, y, mod);
     int t2 = clock();
-    // cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << endl;
+    // std::cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << std::endl;
 
     assert(ans0 == ans1);
   }
@@ -61,7 +61,7 @@ SL void RandomTest() {
     int t1 = clock();
     auto ans1 = fft::PolyMulFft(x, y, mod);
     int t2 = clock();
-    // cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << endl;
+    // std::cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << std::endl;
 
     assert(ans0 == ans1);
   }
@@ -82,8 +82,8 @@ SL void LimitTest() {
     int t2 = clock();
     auto ans2 = fft::PolyMulFftSmall(x, y, mod);
     int t3 = clock();
-    // cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << " " << (t3-t1)*1e-3 <<
-    // endl;
+    // std::cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << " " << (t3-t1)*1e-3
+    // << std::endl;
 
     assert(ans0 == ans1);
     assert(ans0 == ans2);
@@ -100,7 +100,7 @@ SL void LimitTest() {
     int t1 = clock();
     auto ans1 = fft::PolyMulFft(x, y, mod);
     int t2 = clock();
-    // cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << endl;
+    // std::cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << std::endl;
     assert(ans0 == ans1);
   }
   {
@@ -115,7 +115,7 @@ SL void LimitTest() {
     int t1 = clock();
     auto ans1 = fft::PolyMulFft(x, y, mod);
     int t2 = clock();
-    // cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << endl;
+    // std::cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << std::endl;
     assert(ans0 == ans1);
   }
 }

@@ -3,24 +3,24 @@
 namespace bi_test {
 template <typename T>
 SL void TestConstructorInternal() {
-  // cout << typeid(T).name() << endl;
-  // cout << BigInteger(T()) << endl;
-  // cout << BigInteger(T(0)) << " " << BigInteger(T(1)) << endl;
-  // cout << BigInteger(std::numeric_limits<T>::min()) << " "
-  //      << std::numeric_limits<T>::min() << endl;
-  // cout << BigInteger(std::numeric_limits<T>::max()) << " "
-  //      << std::numeric_limits<T>::max() << endl;
+  // std::cout << typeid(T).name() << std::endl;
+  // std::cout << BigInteger(T()) << std::endl;
+  // std::cout << BigInteger(T(0)) << " " << BigInteger(T(1)) << std::endl;
+  // std::cout << BigInteger(std::numeric_limits<T>::min()) << " "
+  //      << std::numeric_limits<T>::min() << std::endl;
+  // std::cout << BigInteger(std::numeric_limits<T>::max()) << " "
+  //      << std::numeric_limits<T>::max() << std::endl;
 
   assert(BigInteger(std::numeric_limits<T>::min()).ToInt<T>() ==
          std::numeric_limits<T>::min());
   assert(BigInteger(std::numeric_limits<T>::max()).ToInt<T>() ==
          std::numeric_limits<T>::max());
 
-  // cout << endl;
+  // std::cout << std::endl;
 }
 
 SL void TestConstructor() {
-  // cout << BigInteger() << endl;
+  // std::cout << BigInteger() << std::endl;
   BigInteger x;
   // TestConstructorInternal<bool>();
   TestConstructorInternal<char>();
@@ -352,7 +352,7 @@ SL void TestUtilities() {
   TimeRecorder tr;
   BigInteger v(1);
   for (int i = 1; i <= 100000; ++i) v *= i;
-  // cout << tr.Elapsed().Format() << " " << v.bitCount() << endl;
+  // std::cout << tr.Elapsed().Format() << " " << v.bitCount() << std::endl;
 }
 
 SL void BiTest() {

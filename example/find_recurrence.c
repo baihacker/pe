@@ -23,7 +23,7 @@ int main() {
       .set_max_abs_coe(4)   // Tune the coefficient manually
       .set_leading(2);      // Tune the leading manually
 
-  cout << helper << endl << endl;
+  std::cout << helper << std::endl << std::endl;
 
   // The output of the generated mathematica command is
   const string result =

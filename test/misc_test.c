@@ -53,7 +53,7 @@ SL void CountPtInCircleTest() {
     int64 u = CountPtInCircleQ1(i);
     int64 v = CountPtInCircleQ1Bf(i);
     if (u != v) {
-      cerr << i << " " << u << " " << v << endl;
+      std::cerr << i << " " << u << " " << v << std::endl;
     }
     assert(u == v);
   }
@@ -65,7 +65,7 @@ SL void CountPtInCircleTest() {
       int64 u = CountPtInCircleQ1(target);
       int64 v = CountPtInCircleQ1Bf(target);
       if (u != v) {
-        cerr << target << " " << u << " " << v << endl;
+        std::cerr << target << " " << u << " " << v << std::endl;
       }
       assert(u == v);
     }
@@ -82,7 +82,7 @@ SL void SumSigma0Test() {
     int64 v = SumSigma0Bf(i);
     auto w = min25::sigma0_sum_fast(i);
     if (u != v || v != w || u != w) {
-      cerr << i << " " << u << " " << v << " " << w << endl;
+      std::cerr << i << " " << u << " " << v << " " << w << std::endl;
     }
     assert(u == v);
     assert(u == w);
@@ -97,7 +97,7 @@ SL void SumSigma0Test() {
       int64 v = SumSigma0Bf(target);
       auto w = min25::sigma0_sum_fast(target);
       if (u != v || v != w || u != w) {
-        cerr << target << " " << u << " " << v << " " << w << endl;
+        std::cerr << target << " " << u << " " << v << " " << w << std::endl;
       }
       assert(u == v);
       assert(u == w);

@@ -42,21 +42,21 @@ int main() {
     const int64 ans1 = LinearRecurrence({1LL, 1LL}, init, mod, n);
     // Use matric multiplication to compute the nth element.
     const int64 ans2 = solve_nth(n);
-    cout << "n = " << n << endl;
-    cout << "Ans0 = " << ans0 << endl;
-    cout << "Ans1 = " << ans1 << endl;
-    cout << "Ans2 = " << ans2 << endl;
-    cout << endl;
+    std::cout << "n = " << n << std::endl;
+    std::cout << "Ans0 = " << ans0 << std::endl;
+    std::cout << "Ans1 = " << ans1 << std::endl;
+    std::cout << "Ans2 = " << ans2 << std::endl;
+    std::cout << std::endl;
   }
 
   for (int64 n = 1; n <= 1000000000; n *= 10) {
     // The minimal initial element count is: 2 * (order + 1) + 1
     const int64 ans1 = LinearRecurrenceSum({1LL, 1LL}, init, mod, n);
     const int64 ans2 = solve_nth_sum(n);
-    cout << "n = " << n << endl;
-    cout << "Ans1 = " << ans1 << endl;
-    cout << "Ans2 = " << ans2 << endl;
-    cout << endl;
+    std::cout << "n = " << n << std::endl;
+    std::cout << "Ans1 = " << ans1 << std::endl;
+    std::cout << "Ans2 = " << ans2 << std::endl;
+    std::cout << std::endl;
   }
   return 0;
 }

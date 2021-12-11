@@ -460,7 +460,7 @@ SL REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
     RETURN(std::tuple<int, T, T>)
-        CrtN(const vector<T>& val, const vector<T>& mod) {
+        CrtN(const std::vector<T>& val, const std::vector<T>& mod) {
   return CrtN<T>(&val[0], &mod[0], val.size());
 }
 
@@ -777,7 +777,7 @@ SL REQUIRES((IsNModNumber<T>::value)) RETURN(void) InitComb(T (*comb)[D]) {
 namespace pr {
 
 // test, find the primitive of a prime
-SL bool IsPr(int64 x, int64 p, const vector<std::pair<int64, int>>& f) {
+SL bool IsPr(int64 x, int64 p, const std::vector<std::pair<int64, int>>& f) {
   return std::none_of(std::begin(f), std::end(f),
                       [=](const std::pair<int64, int>& it) {
                         return PowerModEx(x, (p - 1) / it.first, p) == 1;
@@ -796,7 +796,7 @@ SL int64 FindPr(int64 p) {
   return -1;
 }
 
-SL int64 FindPr(int64 p, const vector<std::pair<int64, int>>& fp1) {
+SL int64 FindPr(int64 p, const std::vector<std::pair<int64, int>>& fp1) {
   if (p <= 1) return -1;
   if (p == 2) return 1;
   for (int64 i = 2;; ++i) {
@@ -915,34 +915,34 @@ SL int64 SquareRootModImpl(int64 n, int64 p) {
   }
 }
 
-SL vector<int64> SquareRootMod(int64 n, int64 p) {
+SL std::vector<int64> SquareRootMod(int64 n, int64 p) {
   const int64 x = SquareRootModImpl(n, p);
   if (x != -1) {
     const int64 y = x == 0 ? 0 : p - x;
-    return x == y ? vector<int64>{x} : vector<int64>{x, y};
+    return x == y ? std::vector<int64>{x} : std::vector<int64>{x, y};
   } else {
-    return vector<int64>{};
+    return std::vector<int64>{};
   }
 }
 
-SL vector<int64> RootMod(int64 a, int64 n, int64 p, int64 retCnt = -1) {
+SL std::vector<int64> RootMod(int64 a, int64 n, int64 p, int64 retCnt = -1) {
   if (p == 2) {
-    return vector<int64>{a};
+    return std::vector<int64>{a};
   }
   if (a == 0) {
-    return vector<int64>{0};
+    return std::vector<int64>{0};
   }
   pr::IndSolver sv(p);
   const int64 r = sv(a);
-  if (r == -1) return vector<int64>{};
+  if (r == -1) return std::vector<int64>{};
   // x^n = a mod p
   // n log_x = r mod q
   const int64 q = p - 1;
   int64 u, v;
   if (SolveLinearEquation(n % q, r % q, q, u, v) == 0) {
-    return vector<int64>{};
+    return std::vector<int64>{};
   }
-  vector<int64> result;
+  std::vector<int64> result;
   int64 coe = PowerModEx(sv.pr(), v, p);
   int64 x = PowerModEx(sv.pr(), u, p);
   int64 oldx = x;
@@ -959,7 +959,7 @@ SL vector<int64> RootMod(int64 a, int64 n, int64 p, int64 retCnt = -1) {
 
 #if PE_HAS_INT128
 namespace two_squares_internal {
-SL void FactorizeByPmask(int64 n, vector<std::pair<int64, int>>& ret) {
+SL void FactorizeByPmask(int64 n, std::vector<std::pair<int64, int>>& ret) {
   while (n != 1) {
     int now = pmask[n];
     int c = 0;
@@ -967,7 +967,7 @@ SL void FactorizeByPmask(int64 n, vector<std::pair<int64, int>>& ret) {
     if (c) {
       if ((now & 3) == 3) {
         if (IsOdd(c)) {
-          vector<std::pair<int64, int>>{}.swap(ret);
+          std::vector<std::pair<int64, int>>{}.swap(ret);
           return;
         }
       }
@@ -977,8 +977,8 @@ SL void FactorizeByPmask(int64 n, vector<std::pair<int64, int>>& ret) {
 }
 
 // n > 2
-SL vector<std::pair<int64, int>> Factorize(int64 n) {
-  vector<std::pair<int64, int>> ret;
+SL std::vector<std::pair<int64, int>> Factorize(int64 n) {
+  std::vector<std::pair<int64, int>> ret;
 
   int p2 = 0;
   while (IsEven(n)) n >>= 1, ++p2;
@@ -999,7 +999,7 @@ SL vector<std::pair<int64, int>> Factorize(int64 n) {
     if (c) {
       if ((p & 3) == 3) {
         if (IsOdd(c)) {
-          return vector<std::pair<int64, int>>();
+          return std::vector<std::pair<int64, int>>();
         }
       }
       ret.emplace_back(p, c);
@@ -1007,7 +1007,7 @@ SL vector<std::pair<int64, int>> Factorize(int64 n) {
   }
   if (n != 1) {
     if ((n & 3) == 3) {
-      return vector<std::pair<int64, int>>();
+      return std::vector<std::pair<int64, int>>();
     }
     ret.emplace_back(n, 1);
   }
@@ -1025,16 +1025,16 @@ SL void GaussMul(int64& x, int64& y, int64 a, int64 b) {
 // 4k+1 primes p = x^2+y^2 (x >= 0, y >= 0)
 // 2 = 1^2 + 1^2
 // 0, 1 are handled as special case.
-SL vector<std::pair<int64, int64>> PrimeTwoSquares(const int64 p) {
+SL std::vector<std::pair<int64, int64>> PrimeTwoSquares(const int64 p) {
   if (p == 0) {
-    return vector<std::pair<int64, int64>>{{0LL, 0LL}};
+    return std::vector<std::pair<int64, int64>>{{0LL, 0LL}};
   } else if (p == 1) {
-    return vector<std::pair<int64, int64>>{{0LL, 1LL}};
+    return std::vector<std::pair<int64, int64>>{{0LL, 1LL}};
   } else if (p == 2) {
-    return vector<std::pair<int64, int64>>{{1LL, 1LL}};
+    return std::vector<std::pair<int64, int64>>{{1LL, 1LL}};
   }
   if ((p & 3) != 1) {
-    return vector<std::pair<int64, int64>>{};
+    return std::vector<std::pair<int64, int64>>{};
   }
   int128 y = 1, x = 2;
   for (x = 2; PowerModEx(x, (p - 1) >> 1, p) != p - 1; ++x) {
@@ -1055,11 +1055,12 @@ SL vector<std::pair<int64, int64>> PrimeTwoSquares(const int64 p) {
   if (y < 0) y = -y;
   if (x < 0) x = -x;
   if (x > y) std::swap(x, y);
-  return vector<std::pair<int64, int64>>{{x, y}};
+  return std::vector<std::pair<int64, int64>>{{x, y}};
 }
 
-SL void TwoSquaresImpl(int now, const vector<std::pair<int64, int>>& f, int64 u,
-                       int64 v, vector<std::pair<int64, int64>>& result) {
+SL void TwoSquaresImpl(int now, const std::vector<std::pair<int64, int>>& f,
+                       int64 u, int64 v,
+                       std::vector<std::pair<int64, int64>>& result) {
   if (now == sz(f)) {
     u = Abs(u), v = Abs(v);
     if (u > v) std::swap(u, v);
@@ -1079,7 +1080,7 @@ SL void TwoSquaresImpl(int now, const vector<std::pair<int64, int>>& f, int64 u,
     } else {
       auto t = PrimeTwoSquares(item.first);
       const int64 a = t[0].first, b = t[0].second;
-      vector<std::pair<int64, int64>> U, V;
+      std::vector<std::pair<int64, int64>> U, V;
       {
         int64 x = 1, y = 0;
         for (int i = 0; i <= item.second; ++i) {
@@ -1102,21 +1103,21 @@ SL void TwoSquaresImpl(int now, const vector<std::pair<int64, int>>& f, int64 u,
   }
 }
 
-SL vector<std::pair<int64, int64>> TwoSquaresImpl(
-    const vector<std::pair<int64, int>>& f) {
-  vector<std::pair<int64, int64>> ret;
+SL std::vector<std::pair<int64, int64>> TwoSquaresImpl(
+    const std::vector<std::pair<int64, int>>& f) {
+  std::vector<std::pair<int64, int64>> ret;
   TwoSquaresImpl(0, f, 1, 0, ret);
   std::sort(all(ret));
   ret.resize(unique(ret.begin(), ret.end()) - ret.begin());
   return ret;
 }
 
-SL vector<std::pair<int64, int64>> TwoSquares(
-    const vector<std::pair<int64, int>>& f) {
+SL std::vector<std::pair<int64, int64>> TwoSquares(
+    const std::vector<std::pair<int64, int>>& f) {
   for (auto& iter : f) {
     if ((iter.first & 3) == 3) {
       if (IsOdd(iter.second)) {
-        return vector<std::pair<int64, int64>>{};
+        return std::vector<std::pair<int64, int64>>{};
       }
     }
   }
@@ -1124,22 +1125,22 @@ SL vector<std::pair<int64, int64>> TwoSquares(
 }
 
 // Represent n as two squares: n = x^2 + y^2 where 0 <= x <= y.
-SL vector<std::pair<int64, int64>> TwoSquares(const int64 n) {
+SL std::vector<std::pair<int64, int64>> TwoSquares(const int64 n) {
   if (n == 0) {
-    return vector<std::pair<int64, int64>>{{0LL, 0LL}};
+    return std::vector<std::pair<int64, int64>>{{0LL, 0LL}};
   } else if (n == 1) {
-    return vector<std::pair<int64, int64>>{{0LL, 1LL}};
+    return std::vector<std::pair<int64, int64>>{{0LL, 1LL}};
   } else if (n == 2) {
-    return vector<std::pair<int64, int64>>{{1LL, 1LL}};
+    return std::vector<std::pair<int64, int64>>{{1LL, 1LL}};
   }
   auto f = two_squares_internal::Factorize(n);
   if (sz(f) == 0) {
-    return vector<std::pair<int64, int64>>{};
+    return std::vector<std::pair<int64, int64>>{};
   }
   return TwoSquaresImpl(f);
 }
 
-SL void ExpandTwoSquares(vector<std::pair<int64, int64>>& ret,
+SL void ExpandTwoSquares(std::vector<std::pair<int64, int64>>& ret,
                          std::pair<int64, int64> p) {
   ret.emplace_back(p.first, p.second);
   if (p.first != 0) {
@@ -1153,12 +1154,12 @@ SL void ExpandTwoSquares(vector<std::pair<int64, int64>>& ret,
   }
 }
 
-SL vector<std::pair<int64, int64>> TwoSquaresFull(const int64 n) {
+SL std::vector<std::pair<int64, int64>> TwoSquaresFull(const int64 n) {
   if (n == 0) {
-    return vector<std::pair<int64, int64>>{{0LL, 0LL}};
+    return std::vector<std::pair<int64, int64>>{{0LL, 0LL}};
   }
   auto tmp = TwoSquares(n);
-  vector<std::pair<int64, int64>> ret;
+  std::vector<std::pair<int64, int64>> ret;
   ret.reserve(tmp.size() * 4);
   for (auto& iter : tmp) {
     ExpandTwoSquares(ret, iter);
@@ -1173,7 +1174,7 @@ SL vector<std::pair<int64, int64>> TwoSquaresFull(const int64 n) {
 template <typename T>
 SL std::vector<int> ToBaseK(T n, int k, int width = 0) {
   if (n == 0) {
-    return width <= 1 ? vector<int>{0} : vector<int>(width, 0);
+    return width <= 1 ? std::vector<int>{0} : std::vector<int>(width, 0);
   }
   PE_ASSERT(n >= 0 || k < 0);
   PE_ASSERT(Abs(k) >= 2);

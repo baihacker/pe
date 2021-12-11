@@ -27,8 +27,8 @@ int main() {
 
   {
     // Fibonacci sequence
-    vector<int64> A{1, -1, -1};
-    vector<int64> B{1};
+    std::vector<int64> A{1, -1, -1};
+    std::vector<int64> B{1};
 
     TimeRecorder tr;
     std::cerr << GfAt({A, mod}, {B, mod}, 99999) << std::endl;

@@ -1,8 +1,8 @@
 #include "pe_test.h"
 
 namespace poly_div_test {
-using poly_div_t = vector<uint64> (*)(const vector<uint64>&,
-                                      const vector<uint64>&, int64);
+using poly_div_t = std::vector<uint64> (*)(const std::vector<uint64>&,
+                                           const std::vector<uint64>&, int64);
 struct DivImpl {
   poly_div_t impl;
   int size;  // 0:small, 1:large
@@ -31,7 +31,7 @@ SL void TestImpl(int dp, int size, int n, int64 mod) {
   fprintf(stderr, "%-8s : data = %s, size = %d, n = %d, mod = %lld\n", "config",
           data_policy[dp], size, n, (long long)mod);
 
-  vector<uint64> x, y;
+  std::vector<uint64> x, y;
   srand(123456789);
   if (dp == 0) {
     for (int i = 0; i < n; ++i) x.push_back((uint64)CRand63() % mod);
@@ -45,7 +45,7 @@ SL void TestImpl(int dp, int size, int n, int64 mod) {
 
   const int M = sizeof(div_impl) / sizeof(div_impl[0]);
 
-  vector<uint64> expected;
+  std::vector<uint64> expected;
   for (int i = 0; i < M; ++i) {
     auto who = div_impl[i];
     if (i > 0) {
@@ -94,7 +94,7 @@ SL void PolyDivPerformanceTest() {
 
     const int M = sizeof(div_impl) / sizeof(div_impl[0]);
 
-    vector<uint64> expected;
+    std::vector<uint64> expected;
     for (int i = 0; i < M; ++i) {
       auto who = div_impl[i];
 
@@ -106,7 +106,7 @@ SL void PolyDivPerformanceTest() {
           continue;
         }
         const int size = 1 << n;
-        vector<uint64> x, y;
+        std::vector<uint64> x, y;
         for (int i = 0; i < size; ++i) x.push_back((uint64)CRand63() % mod);
         for (int i = 0; i < size / 2; ++i) y.push_back((uint64)CRand63() % mod);
         x[size - 1] = y[size / 2 - 1] = 1;

@@ -7,7 +7,7 @@ const int64 mod = 1000000007;
 const int show = 1;
 
 template <typename E>
-void TestEigen(const vector<int>& data, const vector<int>& V) {
+void TestEigen(const std::vector<int>& data, const std::vector<int>& V) {
   std::vector<E> v(K, 0);
   EigenMatrix<E> m = EigenMatrix<E>::Zero(K, K);
 
@@ -27,7 +27,7 @@ void TestEigen(const vector<int>& data, const vector<int>& V) {
 }
 
 template <typename E>
-void TestEigen(const vector<int>& data, const vector<int>& V, E mod) {
+void TestEigen(const std::vector<int>& data, const std::vector<int>& V, E mod) {
   std::vector<E> v(K, 0);
   EigenMatrix<E> m = EigenMatrix<E>::Zero(K, K);
 
@@ -47,7 +47,7 @@ void TestEigen(const vector<int>& data, const vector<int>& V, E mod) {
 }
 
 template <typename E>
-void TestPe(const vector<int>& data, const vector<int>& V) {
+void TestPe(const std::vector<int>& data, const std::vector<int>& V) {
   std::vector<E> v(K, 0);
   PeMatrix<E> m(K, K);
 
@@ -67,7 +67,7 @@ void TestPe(const vector<int>& data, const vector<int>& V) {
 }
 
 template <typename E>
-void TestPe(const vector<int>& data, const vector<int>& V, E mod) {
+void TestPe(const std::vector<int>& data, const std::vector<int>& V, E mod) {
   std::vector<E> v(K, 0);
   PeMatrix<E> m(K, K);
 
@@ -211,11 +211,11 @@ SL void TestPeHelperMethod() {
 
 SL void MatMulTest() {
   DefaultMod::Set(mod);
-  vector<int> data;
+  std::vector<int> data;
   for (int i = 0; i < K; ++i) {
     for (int j = 0; j < K; ++j) data.push_back(j * K + i);
   }
-  vector<int> V;
+  std::vector<int> V;
   V.reserve(K);
   for (int i = 0; i < K; ++i) V.push_back(i);
   {

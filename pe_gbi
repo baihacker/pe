@@ -381,7 +381,7 @@ SL REQUIRES((is_gbi<GBI>::value)) RETURN(std::tuple<int, GBI, GBI>)
 
 template <typename GBI>
 SL REQUIRES((is_gbi<GBI>::value)) RETURN(std::tuple<int, GBI, GBI>)
-    CrtN(const vector<GBI>& val, const vector<GBI>& mod) {
+    CrtN(const std::vector<GBI>& val, const std::vector<GBI>& mod) {
   return CrtN<GBI>(&val[0], &mod[0], val.size());
 }
 
@@ -437,15 +437,15 @@ std::ostream& operator<<(std::ostream& o, const GbiFraction<T>& f) {
 // f[0], f[1], f[2], ..., f[data.size()-1]
 // https://en.wikipedia.org/wiki/Continued_fraction#Some_useful_theorems
 template <typename GBI, typename T>
-SL vector<GbiFraction<GBI>> FromContinuedFractionN(const vector<T>& data,
-                                                   int pos = -1) {
+SL std::vector<GbiFraction<GBI>> FromContinuedFractionN(
+    const std::vector<T>& data, int pos = -1) {
   const int size = static_cast<int>(data.size());
   const int n = pos < 0 ? size : std::min(size, pos + 1);
   if (n == 0) {
-    return vector<GbiFraction<GBI>>();
+    return std::vector<GbiFraction<GBI>>();
   }
 
-  vector<GBI> p(n + 1), q(n + 1);
+  std::vector<GBI> p(n + 1), q(n + 1);
   p[0] = 1, q[0] = 0;
   p[1] = data[0], q[1] = 1;
 
@@ -454,7 +454,7 @@ SL vector<GbiFraction<GBI>> FromContinuedFractionN(const vector<T>& data,
     q[i] = q[i - 1] * data[i - 1] + q[i - 2];
   }
 
-  vector<GbiFraction<GBI>> result(n);
+  std::vector<GbiFraction<GBI>> result(n);
   for (int i = 0; i < n; ++i) {
     result[i].a = std::move(p[i + 1]), result[i].b = std::move(q[i + 1]);
   }
@@ -464,7 +464,8 @@ SL vector<GbiFraction<GBI>> FromContinuedFractionN(const vector<T>& data,
 
 // Find f[pos] if pos >= 0 else f[data.size()-1]
 template <typename GBI, typename T>
-SL GbiFraction<GBI> FromContinuedFraction(const vector<T>& data, int pos = -1) {
+SL GbiFraction<GBI> FromContinuedFraction(const std::vector<T>& data,
+                                          int pos = -1) {
   const int size = static_cast<int>(data.size());
   const int n = pos < 0 ? size - 1 : std::min(size - 1, pos);
   PE_ASSERT(n >= 0);
@@ -506,8 +507,8 @@ SL GBI FindIntegerPart(const GBI& a, const GBI& q, const GBI& b, const GBI& c) {
 // convert p sqrt(q) to continued fraction
 // q is square free
 template <typename GBI>
-SL vector<GBI> ToContinuedFraction(int64 p, int64 q, int n) {
-  vector<GBI> result;
+SL std::vector<GBI> ToContinuedFraction(int64 p, int64 q, int n) {
+  std::vector<GBI> result;
   GBI a = Gbi<GBI>::Of(p), f = Gbi<GBI>::Of(q), b = 0, c = 1;
   // (a f^(1/2) + b) / c
   GBI val = FindIntegerPart(a, f, b, c);

@@ -30,31 +30,32 @@ SL void PolyMulWrapper(const T* X, int64 n, const T* Y, int64 m, T* result,
 }
 
 template <typename T>
-SL void AdjustPolyLeadingZero(vector<T>& v) {
+SL void AdjustPolyLeadingZero(std::vector<T>& v) {
   int64 now = static_cast<int64>(v.size()) - 1;
   while (now > 0 && v[now] == 0) --now;
   v.resize(now + 1);
 }
 
-#define POLY_MUL_IMPL(PolyMul, PolyMulInternal)                             \
-  template <typename T>                                                     \
-  SL void PolyMul(const T* X, int64 n, const T* Y, int64 m, T* result,      \
-                  int64 mod) {                                              \
-    using unsignedT = typename pe_make_unsigned<T>::type;                   \
-    PolyMulWrapper<unsignedT>(reinterpret_cast<const unsignedT*>(X), n,     \
-                              reinterpret_cast<const unsignedT*>(Y), m,     \
-                              reinterpret_cast<unsignedT*>(result), mod,    \
-                              &PolyMulInternal<unsignedT>);                 \
-  }                                                                         \
-                                                                            \
-  template <typename T>                                                     \
-  SL vector<T> PolyMul(const vector<T>& X, const vector<T>& Y, int64 mod) { \
-    const int64 n = static_cast<int64>(X.size());                           \
-    const int64 m = static_cast<int64>(Y.size());                           \
-    const int64 ret_size = n + m - 1;                                       \
-    vector<T> result(ret_size);                                             \
-    PolyMul(&X[0], n, &Y[0], m, &result[0], mod);                           \
-    return result;                                                          \
+#define POLY_MUL_IMPL(PolyMul, PolyMulInternal)                               \
+  template <typename T>                                                       \
+  SL void PolyMul(const T* X, int64 n, const T* Y, int64 m, T* result,        \
+                  int64 mod) {                                                \
+    using unsignedT = typename pe_make_unsigned<T>::type;                     \
+    PolyMulWrapper<unsignedT>(reinterpret_cast<const unsignedT*>(X), n,       \
+                              reinterpret_cast<const unsignedT*>(Y), m,       \
+                              reinterpret_cast<unsignedT*>(result), mod,      \
+                              &PolyMulInternal<unsignedT>);                   \
+  }                                                                           \
+                                                                              \
+  template <typename T>                                                       \
+  SL std::vector<T> PolyMul(const std::vector<T>& X, const std::vector<T>& Y, \
+                            int64 mod) {                                      \
+    const int64 n = static_cast<int64>(X.size());                             \
+    const int64 m = static_cast<int64>(Y.size());                             \
+    const int64 ret_size = n + m - 1;                                         \
+    std::vector<T> result(ret_size);                                          \
+    PolyMul(&X[0], n, &Y[0], m, &result[0], mod);                             \
+    return result;                                                            \
   }
 
 // For input:
@@ -78,13 +79,13 @@ SL void AdjustPolyLeadingZero(vector<T>& v) {
                                                                                \
   template <typename T>                                                        \
   SL REQUIRES((is_native_integer<T>::value))                                   \
-      RETURN(std::tuple<vector<T>, vector<T>>)                                 \
-          PolyDivAndMod(const vector<T>& X, const vector<T>& Y, int64 mod) {   \
+      RETURN(std::tuple<std::vector<T>, std::vector<T>>) PolyDivAndMod(        \
+          const std::vector<T>& X, const std::vector<T>& Y, int64 mod) {       \
     const int64 n = static_cast<int64>(X.size());                              \
     const int64 m = static_cast<int64>(Y.size());                              \
                                                                                \
-    vector<T> q(std::max<int64>(n - m + 1, 1LL));                              \
-    vector<T> r(m);                                                            \
+    std::vector<T> q(std::max<int64>(n - m + 1, 1LL));                         \
+    std::vector<T> r(m);                                                       \
     PolyDivAndMod(&X[0], n, &Y[0], m, &q[0], &r[0], mod);                      \
                                                                                \
     r[m] = 0;                                                                  \
@@ -100,12 +101,12 @@ SL void AdjustPolyLeadingZero(vector<T>& v) {
   }                                                                            \
                                                                                \
   template <typename T>                                                        \
-  SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)                 \
-      PolyDiv(const vector<T>& X, const vector<T>& Y, int64 mod) {             \
+  SL REQUIRES((is_native_integer<T>::value)) RETURN(std::vector<T>)            \
+      PolyDiv(const std::vector<T>& X, const std::vector<T>& Y, int64 mod) {   \
     const int64 n = static_cast<int64>(X.size());                              \
     const int64 m = static_cast<int64>(Y.size());                              \
                                                                                \
-    vector<T> q(std::max<int64>(n - m + 1, 1LL));                              \
+    std::vector<T> q(std::max<int64>(n - m + 1, 1LL));                         \
     PolyDiv(&X[0], n, &Y[0], m, &q[0], mod);                                   \
     return std::move(q);                                                       \
   }
@@ -118,12 +119,12 @@ SL void AdjustPolyLeadingZero(vector<T>& v) {
   }                                                                            \
                                                                                \
   template <typename T>                                                        \
-  SL REQUIRES((is_native_integer<T>::value)) RETURN(vector<T>)                 \
-      PolyMod(const vector<T>& X, const vector<T>& Y, int64 mod) {             \
+  SL REQUIRES((is_native_integer<T>::value)) RETURN(std::vector<T>)            \
+      PolyMod(const std::vector<T>& X, const std::vector<T>& Y, int64 mod) {   \
     const int64 n = static_cast<int64>(X.size());                              \
     const int64 m = static_cast<int64>(Y.size());                              \
                                                                                \
-    vector<T> r(m);                                                            \
+    std::vector<T> r(m);                                                       \
     PolyMod(&X[0], n, &Y[0], m, &r[0], mod);                                   \
     AdjustPolyLeadingZero(r);                                                  \
     return std::move(r);                                                       \

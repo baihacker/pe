@@ -6,9 +6,9 @@ const int64 mod = 1000000007;
 SL void GfTest() {
   {
     // Fibonacci sequence
-    vector<int64> A{1, -1, -1};
-    vector<int64> B{0, 1};
-    vector<int64> result{0, 1};
+    std::vector<int64> A{1, -1, -1};
+    std::vector<int64> B{0, 1};
+    std::vector<int64> result{0, 1};
     for (int i = 2; i <= 30; ++i) {
       result.push_back(AddMod(result[i - 2], result[i - 1], mod));
     }
@@ -48,11 +48,11 @@ SL void GfTest() {
       }
     }
     auto gfresult =
-        GfFirst({vector<int64>(coe, coe + 92), mod}, {{1}, mod}, 10000);
+        GfFirst({std::vector<int64>(coe, coe + 92), mod}, {{1}, mod}, 10000);
     for (int i = 0; i <= 10000; ++i) assert(dp[i] == gfresult[i]);
 
     std::string mine = ToString(
-        GfAt({vector<int64>(coe, coe + 92), mod}, {{1}, mod}, 100000000));
+        GfAt({std::vector<int64>(coe, coe + 92), mod}, {{1}, mod}, 100000000));
     std::string expected = ToString("66666793333412666685000001"_bi % mod);
     assert(mine == expected);
   }
@@ -85,12 +85,12 @@ PE_REGISTER_TEST(&MinimalPolynomialTest, "MinimalPolynomialTest", SMALL);
 
 SL void PolyMultiPointEvaluationTest() {
   srand(123456789);
-  vector<int64> data;
+  std::vector<int64> data;
   int n = 5000;
   const int64 mod = 1000000007;
   for (int i = 1; i <= n; ++i) data.push_back(i);
   NModPoly p(data, mod);
-  vector<int64> v;
+  std::vector<int64> v;
   for (int i = 1; i <= n; ++i) v.push_back(i % 10007);
   {
     TimeRecorder tr;
@@ -124,10 +124,10 @@ PE_REGISTER_TEST(&PolyMultiPointEvaluationTest, "PolyMultiPointEvaluationTest",
 
 SL void PolyBatchMulTest() {
   const int mod = 10007;
-  vector<int64> data{1, 1, 2, 1, 3, 1};
+  std::vector<int64> data{1, 1, 2, 1, 3, 1};
   auto result = PolyBatchMul(data, mod);
 
-  vector<int64> expected{6, 11, 6, 1};
+  std::vector<int64> expected{6, 11, 6, 1};
   assert(expected == result);
 }
 PE_REGISTER_TEST(&PolyBatchMulTest, "PolyBatchMulTest", SMALL);

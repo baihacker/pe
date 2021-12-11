@@ -14,7 +14,7 @@
 // B[1] = -1/2
 // invs[n] should be available.
 SL void InitBernoulliNumber(int64* dest, int64 n, int64* invs, int64 mod) {
-  vector<uint64> t(n);
+  std::vector<uint64> t(n);
   uint64 v = 1;
   for (int64 i = 0; i < n; ++i) {
     v = MulModEx(v, invs[i + 1], mod);
@@ -32,7 +32,7 @@ SL void InitBernoulliNumber(int64* dest, int64 n, int64* invs, int64 mod) {
 }
 
 SL void InitBernoulliNumber(int64* dest, int64 n, int64 mod) {
-  vector<uint64> invs(n + 1);
+  std::vector<uint64> invs(n + 1);
   InitInv(reinterpret_cast<int64*>(&invs[0]), n, mod);
   InitBernoulliNumber(dest, n, reinterpret_cast<int64*>(&invs[0]), mod);
 }
@@ -40,9 +40,9 @@ SL void InitBernoulliNumber(int64* dest, int64 n, int64 mod) {
 // Returns [n, 0], [n, 1], ..., [n, n]
 // The nth row of the stirling number of the first kind.
 // Formula: x^(n) rising factorial
-SL vector<int64> GenStirling1(int64 n, int64 mod, int has_sign = 0) {
+SL std::vector<int64> GenStirling1(int64 n, int64 mod, int has_sign = 0) {
   PE_ASSERT(n > 0);
-  vector<int64> t(2 * n);
+  std::vector<int64> t(2 * n);
   if (has_sign) {
     for (int64 i = 0, j = 0; i < 2 * n; i += 2, ++j) {
       t[i] = j == 0 ? 0 : mod - j;
@@ -61,10 +61,10 @@ SL vector<int64> GenStirling1(int64 n, int64 mod, int has_sign = 0) {
 // The nth column of the stirling number of the first kind.
 // Formula: ((-log(1-x))^m)/m!
 // http://oeis.org/A008275
-SL vector<int64> GenStirling1Column(int64 n, int64 m, int64 mod) {
-  vector<int64> a = PolyLog(vector<int64>{1, mod - 1}, m + 1, mod);
+SL std::vector<int64> GenStirling1Column(int64 n, int64 m, int64 mod) {
+  std::vector<int64> a = PolyLog(std::vector<int64>{1, mod - 1}, m + 1, mod);
   for (auto& i : a) i = i == 0 ? 0 : mod - i;
-  vector<int64> b{1};
+  std::vector<int64> b{1};
   for (int64 t = n; t > 0; t >>= 1) {
     if (t & 1) {
       b = PolyMul(b, a, mod);
@@ -94,9 +94,9 @@ SL vector<int64> GenStirling1Column(int64 n, int64 m, int64 mod) {
 // Returns {n, 0}, {n, 1}, ..., {n, n}
 // The nth row of the stirling number of the second kind.
 // Formula: (the point value egf of x^n) * (e^(-x))
-SL vector<int64> GenStirling2(int64 n, int64 mod) {
+SL std::vector<int64> GenStirling2(int64 n, int64 mod) {
   // x^n at {0, 1, 2, ..., n}
-  vector<int64> a(n + 1);
+  std::vector<int64> a(n + 1);
   int64 now = 1;
   for (int64 i = 1; i <= n; ++i) now = MulModEx(now, i, mod);
   now = ModInv(now, mod);
@@ -105,8 +105,8 @@ SL vector<int64> GenStirling2(int64 n, int64 mod) {
     if (i > 0) now = MulModEx(now, i, mod);
   }
   // e^(-x)
-  vector<int64> b = PolyExp(vector<int64>{0, mod - 1}, n + 1, mod);
-  vector<int64> c = PolyMul(a, b, mod);
+  std::vector<int64> b = PolyExp(std::vector<int64>{0, mod - 1}, n + 1, mod);
+  std::vector<int64> c = PolyMul(a, b, mod);
   c.resize(n + 1);
   return c;
 }
@@ -115,8 +115,9 @@ SL vector<int64> GenStirling2(int64 n, int64 mod) {
 // Returns empty vector if there is no integer solution.
 // Complexity: O(size(A) * n)
 // Consider PolyMul(A.inv(n+1), B)[n] if it has a better complexity.
-SL vector<int64> GfFirst(const vector<int64>& A, const vector<int64>& B,
-                         const int64 n, const int64 mod) {
+SL std::vector<int64> GfFirst(const std::vector<int64>& A,
+                              const std::vector<int64>& B, const int64 n,
+                              const int64 mod) {
   const int sa = static_cast<int>(A.size());
   const int sb = static_cast<int>(B.size());
   PE_ASSERT(sa > 0);
@@ -124,9 +125,9 @@ SL vector<int64> GfFirst(const vector<int64>& A, const vector<int64>& B,
 
   int64 v, u;
   int has = SolveLinearEquation<int64>(A[0], 1, mod, v, u);
-  if (!has) return vector<int64>();
+  if (!has) return std::vector<int64>();
 
-  vector<int64> result(n + 1, 0);
+  std::vector<int64> result(n + 1, 0);
 
   // if u < mod, we have more than one solution.
   PE_ASSERT(u == mod);
@@ -148,15 +149,16 @@ SL vector<int64> GfFirst(const vector<int64>& A, const vector<int64>& B,
 // Returns empty vector if there is no integer solution.
 // Complexity: O(size(A) * n)
 // Consider PolyMul(A.inv(n+1), B)[n] if it has a better complexity.
-SL vector<int64> GfFirst(const NModPoly& A, const NModPoly& B, const int64 n) {
+SL std::vector<int64> GfFirst(const NModPoly& A, const NModPoly& B,
+                              const int64 n) {
   return GfFirst(A.data, B.data, n, A.mod);
 }
 
 // Finds the coefficient of x^n of f such that: A*f = B
 // Returns -1 if there is no integer solution.
 // O(MatrixMultiplicationComplexity(size(A)) * log n) for big n
-SL int64 GfAt(const vector<int64>& A, const vector<int64>& B, const int64 n,
-              const int64 mod) {
+SL int64 GfAt(const std::vector<int64>& A, const std::vector<int64>& B,
+              const int64 n, const int64 mod) {
   const int sa = static_cast<int>(A.size());
   const int sb = static_cast<int>(B.size());
   PE_ASSERT(sa > 0);
@@ -167,7 +169,7 @@ SL int64 GfAt(const vector<int64>& A, const vector<int64>& B, const int64 n,
   if (!has) return -1;
 
   const int64 m = std::min(static_cast<int64>(std::max(sa - 1, sb - 1)), n);
-  vector<int64> result(m + 1, 0);
+  std::vector<int64> result(m + 1, 0);
 
   // if u < mod, we have more than one solution.
   PE_ASSERT(u == mod);
@@ -347,7 +349,7 @@ SL int64 NthElement(const NModPoly& s, int64 n, int min_use = 2) {
   return -1;
 }
 
-SL int64 NthElement(const vector<int64>& s, const int64 mod, int64 n,
+SL int64 NthElement(const std::vector<int64>& s, const int64 mod, int64 n,
                     int min_use = 2) {
   if (n < static_cast<int>(s.size())) {
     return s[static_cast<int>(n)];
@@ -365,8 +367,9 @@ SL int64 NthElement(const vector<int64>& s, const int64 mod, int64 n,
 // Returns a[n].
 // Recurrence: a[i+1] = a[i] * rec[0] + a[i-1] * rec[1] ...
 // Initial terms: init = {a0, a1, a2, ...}
-SL int64 LinearRecurrence(const vector<int64>& rec, const vector<int64>& init,
-                          const int64 mod, int64 n) {
+SL int64 LinearRecurrence(const std::vector<int64>& rec,
+                          const std::vector<int64>& init, const int64 mod,
+                          int64 n) {
   if (n < static_cast<int>(init.size())) {
     return init[static_cast<int>(n)];
   }
@@ -374,7 +377,7 @@ SL int64 LinearRecurrence(const vector<int64>& rec, const vector<int64>& init,
   PE_ASSERT(init.size() >= rec.size());
 
   const int m = static_cast<int>(rec.size());
-  vector<int64> data(m + 1, 0);
+  std::vector<int64> data(m + 1, 0);
   for (int i = 0; i < m; ++i) data[m - 1 - i] = RegulateMod(-rec[i], mod);
   data[m] = 1;
   return NthElement(NModPoly(init, mod), n, NModPoly(std::move(data), mod));
@@ -383,8 +386,8 @@ SL int64 LinearRecurrence(const vector<int64>& rec, const vector<int64>& init,
 // Returns sum(a[i], 0 <= i <= n).
 // Recurrence: a[i+1] = a[i] * rec[0] + a[i-1] * rec[1] ...
 // Initial terms: init = {a0, a1, a2, ...}
-SL int64 LinearRecurrenceSum(const vector<int64>& rec,
-                             const vector<int64>& init, const int64 mod,
+SL int64 LinearRecurrenceSum(const std::vector<int64>& rec,
+                             const std::vector<int64>& init, const int64 mod,
                              int64 n) {
   if (n < static_cast<int>(init.size())) {
     int64 ret = 0;
@@ -398,7 +401,7 @@ SL int64 LinearRecurrenceSum(const vector<int64>& rec,
 
   const int m = static_cast<int>(rec.size());
   auto each = init;
-  vector<int64> sum(2 * (m + 2), 0);
+  std::vector<int64> sum(2 * (m + 2), 0);
   sum[0] = each[0];
   for (int i = 1; i < 2 * m + 4; ++i) {
     if (i < m) {

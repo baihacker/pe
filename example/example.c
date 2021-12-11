@@ -329,15 +329,15 @@ void LinearRecurrenceExample() {
   {
     // a[i+1] = a[i] * rec[0] + a[i-1] * rec[1] ...
     // a[0] = init[0], a[1] = init[1], ...
-    vector<int64> rec{1, 1};
-    vector<int64> init{1, 1};
+    std::vector<int64> rec{1, 1};
+    std::vector<int64> init{1, 1};
     for (int i = 2; i <= 5; ++i) {
       std::cout << LinearRecurrence(rec, init, mod, i) << std::endl;
     }
   }
   {
-    vector<int64> rec{1, 1};
-    vector<int64> init{1, 1};
+    std::vector<int64> rec{1, 1};
+    std::vector<int64> init{1, 1};
     for (int i = 0; i <= 5; ++i) {
       std::cout << LinearRecurrenceSum(rec, init, mod, i) << std::endl;
     }
@@ -427,7 +427,7 @@ void MultiprecisionFloatNumberExample() {
 void PolynomialMultiplicationExample() {
   std::cout << std::endl << __func__ << std::endl;
 
-  vector<int64> a, b;
+  std::vector<int64> a, b;
   for (int i = 0; i < 100000; ++i) {
     a.push_back(i);
     b.push_back(i);

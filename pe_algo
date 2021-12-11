@@ -109,9 +109,9 @@ struct FactModer {
  private:
   uint64 p_;
   uint64 q_;
-  vector<uint64> pre_fact_, pre_fact_inv_;
-  vector<uint64> g0_, g1_, g2_, g3_;
-  vector<uint64> v_;
+  std::vector<uint64> pre_fact_, pre_fact_inv_;
+  std::vector<uint64> g0_, g1_, g2_, g3_;
+  std::vector<uint64> v_;
 };
 
 // Calculates: (0! + 1! + 2! + ... + n!) % p
@@ -130,19 +130,19 @@ struct FactSumModer {
     uint64 ret = 1;
 
     // Prepare data for computing P
-    vector<uint64> X((m - 1) * 2);
+    std::vector<uint64> X((m - 1) * 2);
     for (int i = 0; i < m - 1; ++i) {
       X[i * 2] = i + 1;
       X[i * 2 + 1] = m;
     }
 
-    vector<uint64> V(m);
+    std::vector<uint64> V(m);
     for (int i = 0; i < m; ++i) {
       V[i] = i;
     }
 
     // Compute P
-    vector<uint64> YQ;
+    std::vector<uint64> YQ;
     auto YP = PolyBatchMulAcc(X, 0, static_cast<int>(m - 1), YQ, p_);
     YP[0] = AddMod(YP[0], 1, p_);
     auto P = PolyMultipointEvaluate(YP, V, p_);
@@ -202,8 +202,8 @@ struct FactSumModer {
  private:
   uint64 p_;
   uint64 q_;
-  vector<uint64> preFact_;
-  vector<uint64> preFactSum_;
+  std::vector<uint64> preFact_;
+  std::vector<uint64> preFactSum_;
 };
 
 // Calculates x^n % mod using pre-computed x^(2^(i))
@@ -247,7 +247,7 @@ struct PowerModer {
 
  private:
   int64 x_, mod_, f_;
-  vector<int64> powers_, ppowers_;
+  std::vector<int64> powers_, ppowers_;
 };
 
 // Calculates x^n % mod.
@@ -309,8 +309,8 @@ struct PowerModerEx {
 
  private:
   int64 x_, mod_, f_, lgf_, mask_, c_;
-  vector<int64> powers_;
-  vector<vector<int64>> ppowers_;
+  std::vector<int64> powers_;
+  std::vector<std::vector<int64>> ppowers_;
 };
 
 // Calculates C(n, m) % P where P is prime
@@ -443,14 +443,14 @@ struct CombModer {
 
  private:
   int64 p_, f_;
-  vector<int64> fac_, ifac_;
+  std::vector<int64> fac_, ifac_;
 };
 
 // Calculates Binomial(n, m) % mod
 SL int64 ShortCombMod(int64 n, int64 m, int64 mod) {
   if (m > n || m < 0) return 0;
   if (n - m < m) m = n - m;
-  vector<int64> data;
+  std::vector<int64> data;
   for (int64 i = n; i >= n - m + 1; --i) data.push_back(i);
   const int size = static_cast<int>(data.size());
   for (int i = 2; i <= m; ++i) {
@@ -529,12 +529,12 @@ struct PowerSumModer {
   void Init(int maxk = 128) {
     maxk_ = maxk;
 
-    vector<vector<int64>>(maxk_ + 1).swap(p_);
+    std::vector<std::vector<int64>>(maxk_ + 1).swap(p_);
     for (int i = 0; i <= maxk_; ++i) {
-      vector<int64>(maxk_ + 1).swap(p_[i]);
+      std::vector<int64>(maxk_ + 1).swap(p_[i]);
     }
 
-    vector<int64>(maxk_ + 2).swap(invs_);
+    std::vector<int64>(maxk_ + 2).swap(invs_);
 
     InitInv(&invs_[0], maxk_ + 1, mod_);
     for (int i = 0; i <= maxk_; ++i) {
@@ -618,8 +618,8 @@ struct PowerSumModer {
  private:
   int64 mod_;
   int maxk_;
-  vector<vector<int64>> p_;
-  vector<int64> invs_;
+  std::vector<std::vector<int64>> p_;
+  std::vector<int64> invs_;
 };
 
 // Calculates (1^k + 2^k + ... + n^k) % mod based on Bernoulli number
@@ -636,8 +636,8 @@ struct PowerSumModerB {
   void Init(int64 maxk = 128) {
     maxk_ = maxk;
 
-    vector<int64>(maxk_ + 1).swap(bnl_);
-    vector<int64>(maxk_ + 2).swap(invs_);
+    std::vector<int64>(maxk_ + 1).swap(bnl_);
+    std::vector<int64>(maxk_ + 2).swap(invs_);
 
     InitInv(&invs_[0], maxk_ + 1, mod_);
     InitBernoulliNumber(&bnl_[0], maxk_ + 1, &invs_[0], mod_);
@@ -719,8 +719,8 @@ struct PowerSumModerB {
  private:
   int64 mod_;
   int64 maxk_;
-  vector<int64> bnl_;
-  vector<int64> invs_;
+  std::vector<int64> bnl_;
+  std::vector<int64> invs_;
 };
 
 // Calculates (1^k + 2^k + ... + n^k) % mod based on Bernoulli number
@@ -737,8 +737,8 @@ struct PowerSumModerB1 {
   void Init(int64 maxk = 128) {
     maxk_ = maxk;
 
-    vector<int64>(maxk_ + 1).swap(bnl_);
-    vector<int64>(maxk_ + 2).swap(invs_);
+    std::vector<int64>(maxk_ + 1).swap(bnl_);
+    std::vector<int64>(maxk_ + 2).swap(invs_);
 
     InitInv(&invs_[0], maxk_ + 1, mod_);
     InitBernoulliNumber(&bnl_[0], maxk_ + 1, &invs_[0], mod_);
@@ -817,8 +817,8 @@ struct PowerSumModerB1 {
  private:
   int64 mod_;
   int64 maxk_;
-  vector<int64> bnl_;
-  vector<int64> invs_;
+  std::vector<int64> bnl_;
+  std::vector<int64> invs_;
 };
 
 // Calculates (1^k + 2^k + ... + n^k) % mod
@@ -1312,7 +1312,7 @@ struct SFCounter {
 
  private:
   int64 pivot_;
-  vector<int64> pre_;
+  std::vector<int64> pre_;
   std::unordered_map<int64, int64> mem_;
 };
 
@@ -1359,7 +1359,7 @@ struct MuSummer {
 
  private:
   int64 pivot_;
-  vector<T> pre_;
+  std::vector<T> pre_;
   std::unordered_map<int64, T> mem_;
 };
 
@@ -1436,10 +1436,10 @@ struct MuPhiSummer {
  private:
   int64 pivot_;
 
-  vector<T> pre_sum_mu_;
+  std::vector<T> pre_sum_mu_;
   std::unordered_map<int64, T> mem_sum_mu_;
 
-  vector<T> pre_sum_phi_;
+  std::vector<T> pre_sum_phi_;
   std::unordered_map<int64, T> mem_sum_phi_;
 };
 
@@ -1492,7 +1492,7 @@ struct Sigma0Summer {
  private:
   int64 pivot_;
 
-  vector<T> pre_;
+  std::vector<T> pre_;
   std::unordered_map<int64, T> mem_;
 };
 
@@ -1576,10 +1576,10 @@ struct MuPhiSumModer {
   int64 mod_;
   int64 pivot_;
 
-  vector<int64> pre_sum_mu_;
+  std::vector<int64> pre_sum_mu_;
   std::unordered_map<int64, int64> mem_sum_mu_;
 
-  vector<int64> pre_sum_phi_;
+  std::vector<int64> pre_sum_phi_;
   std::unordered_map<int64, int64> mem_sum_phi_;
 };
 
@@ -1638,7 +1638,7 @@ struct Sigma0SumModer {
   int64 mod_;
   int64 pivot_;
 
-  vector<int64> pre_;
+  std::vector<int64> pre_;
   std::unordered_map<int64, int64> mem_;
 };
 
@@ -1838,7 +1838,7 @@ SL DVA<T> PrimeS0Parallel(const int64 n) {
   const int64 ks = dva.key_size;
   auto* keys = &dva.keys[0];
   auto* values = &dva.values[0];
-  vector<T> tmpdata(ks);
+  std::vector<T> tmpdata(ks);
   auto* tmp = &tmpdata[0];
 
   for (auto& key : dva.FKeys()) dva[key] = key - 1;
@@ -1914,7 +1914,7 @@ SL DVA<T> PrimeS1Parallel(const int64 n) {
   const int64 ks = dva.key_size;
   auto* keys = &dva.keys[0];
   auto* values = &dva.values[0];
-  vector<T> tmpdata(ks);
+  std::vector<T> tmpdata(ks);
   auto* tmp = &tmpdata[0];
 
   for (auto& key : dva.FKeys()) {
@@ -2105,8 +2105,8 @@ SL DVA<int64> PrimeSkEx(const int64 n, int k, int64* PK = nullptr) {
 }
 
 template <typename T>
-SL vector<DVA<T>> PrimeS0PModEven(int64 n, int pmod) {
-  vector<DVA<T>> result;
+SL std::vector<DVA<T>> PrimeS0PModEven(int64 n, int pmod) {
+  std::vector<DVA<T>> result;
   result.reserve(pmod);
   for (int i = 0; i < pmod; ++i) result.emplace_back(n);
 
@@ -2139,8 +2139,8 @@ SL vector<DVA<T>> PrimeS0PModEven(int64 n, int pmod) {
 }
 
 template <typename T>
-SL vector<DVA<T>> PrimeS0PModOdd(int64 n, int pmod) {
-  vector<DVA<T>> result;
+SL std::vector<DVA<T>> PrimeS0PModOdd(int64 n, int pmod) {
+  std::vector<DVA<T>> result;
   result.reserve(pmod);
   for (int i = 0; i < pmod; ++i) result.emplace_back(n);
 
@@ -2169,13 +2169,13 @@ SL vector<DVA<T>> PrimeS0PModOdd(int64 n, int pmod) {
 // Calculates sum(1, 1 <= prime i <= j) for j in [1, 2, 3, ..., n/3, n/2, n].
 // result[x] is for the prime where p % pmod = x.
 template <typename T>
-SL vector<DVA<T>> PrimeS0PMod(int64 n, int pmod) {
+SL std::vector<DVA<T>> PrimeS0PMod(int64 n, int pmod) {
   return pmod & 1 ? PrimeS0PModOdd<T>(n, pmod) : PrimeS0PModEven<T>(n, pmod);
 }
 
 template <typename T>
-SL vector<DVA<T>> PrimeS1PmodEven(int64 n, int pmod) {
-  vector<DVA<T>> result;
+SL std::vector<DVA<T>> PrimeS1PmodEven(int64 n, int pmod) {
+  std::vector<DVA<T>> result;
   for (int i = 0; i < pmod; ++i) result.emplace_back(n);
 
   for (int i = 1; i < pmod; i += 2) {
@@ -2212,8 +2212,8 @@ SL vector<DVA<T>> PrimeS1PmodEven(int64 n, int pmod) {
 }
 
 template <typename T>
-SL vector<DVA<T>> PrimeS1PModOdd(int64 n, int pmod) {
-  vector<DVA<T>> result;
+SL std::vector<DVA<T>> PrimeS1PModOdd(int64 n, int pmod) {
+  std::vector<DVA<T>> result;
   for (int i = 0; i < pmod; ++i) result.emplace_back(n);
 
   for (int i = 0; i < pmod; ++i) {
@@ -2249,15 +2249,15 @@ SL vector<DVA<T>> PrimeS1PModOdd(int64 n, int pmod) {
 // Calculates sum(i, 1 <= prime i <= j) for j in [1, 2, 3, ..., n/3, n/2, n].
 // result[x] is for the prime where p % pmod = x.
 template <typename T>
-SL vector<DVA<T>> PrimeS1PMod(int64 n, int pmod) {
+SL std::vector<DVA<T>> PrimeS1PMod(int64 n, int pmod) {
   return pmod & 1 ? PrimeS1PModOdd<T>(n, pmod) : PrimeS1PmodEven<T>(n, pmod);
 }
 
 template <int64 mod>
-SL vector<DVA<NModNumber<CCMod64<mod>>>> PrimeSkPMod(const int64 n, int k,
-                                                     int pmod) {
+SL std::vector<DVA<NModNumber<CCMod64<mod>>>> PrimeSkPMod(const int64 n, int k,
+                                                          int pmod) {
   using MT = NModNumber<CCMod64<mod>>;
-  vector<DVA<MT>> result;
+  std::vector<DVA<MT>> result;
   for (int i = 0; i < pmod; ++i) result.emplace_back(n);
 
   PowerSumModerB psm(mod);
@@ -2268,7 +2268,7 @@ SL vector<DVA<NModNumber<CCMod64<mod>>>> PrimeSkPMod(const int64 n, int k,
   const int key_size = static_cast<int>(dva.key_size);
   RUBit<MT> tree(key_size);
 
-  vector<int64> vec;
+  std::vector<int64> vec;
   MT power_pmod = 1;
   // Expand (pmod * x + i) ^ k
   for (int c = 0; c <= k; ++c, power_pmod *= pmod) {
@@ -2742,7 +2742,7 @@ struct PerfectPowerCounter {
 // See pe466, Lucy_Hedgehog's post.
 template <typename T>
 struct NotDivCounter {
-  T NotDivCoprimeImpl(T n, const vector<int64>& L, int i) {
+  T NotDivCoprimeImpl(T n, const std::vector<int64>& L, int i) {
     T ret = n;
     for (int j = 0; j < i; ++j) {
       const auto x = L[j];
@@ -2754,27 +2754,27 @@ struct NotDivCounter {
 
   // Counts #{i | i ∤ L[j] and 1 <= i <= n}.
   // It's required that the integers in L are pairwise coprime.
-  T NotDivCoprime(T n, const vector<int64>& L) {
+  T NotDivCoprime(T n, const std::vector<int64>& L) {
     const int size = sz(L);
     if (size == 0) return n;
     if (CheckSorted(L)) return NotDivCoprimeImpl(n, L, size);
 
-    vector<int64> LL(L);
+    std::vector<int64> LL(L);
     std::sort(LL.begin(), LL.end());
     return NotDivCoprimeImpl(n, LL, size);
   }
 
-  T NotDivImpl(T n, const vector<int64>& L) {
+  T NotDivImpl(T n, const std::vector<int64>& L) {
     const int size = sz(L);
     if (size == 0) return n;
 
-    vector<int> flag(size, 0);
+    std::vector<int> flag(size, 0);
     for (int i = 0; i < size; ++i) {
       for (int j = i + 1; j < size; ++j) {
         if (L[j] % L[i] == 0) flag[j] = 1;
       }
     }
-    vector<int64> R;
+    std::vector<int64> R;
     for (int i = 0; i < size; ++i) {
       if (flag[i] == 0) R.push_back(L[i]);
     }
@@ -2783,22 +2783,22 @@ struct NotDivCounter {
       const int64 p = plist[i];
       if (p > L[size - 1]) break;
 
-      vector<int64> D;
+      std::vector<int64> D;
       for (auto& iter : R) {
         if (iter % p == 0) D.push_back(iter);
       }
       if (sz(D) < 2) continue;
-      vector<int64> C;
+      std::vector<int64> C;
       for (auto& iter : R) {
         if (iter % p) C.push_back(iter);
       }
-      vector<int64> B(C);
+      std::vector<int64> B(C);
       for (auto& iter : D) B.push_back(iter / p);
       std::sort(B.begin(), B.end());
       return NotDivImpl(n, C) - NotDivImpl(n / p, C) + NotDivImpl(n / p, B);
     }
 
-    std::pair<T, vector<int64>> key{n, R};
+    std::pair<T, std::vector<int64>> key{n, R};
     auto where = mem_.find(key);
     if (where != mem_.end()) return where->second;
     return mem_[key] = NotDivCoprime(n, R);
@@ -2806,17 +2806,17 @@ struct NotDivCounter {
 
   // Counts #{i | i ∤ L[j] and 1 <= i <= n}.
   // It's NOT required that the integers in L are pairwise coprime.
-  T NotDiv(T n, const vector<int64>& L) {
+  T NotDiv(T n, const std::vector<int64>& L) {
     const int size = sz(L);
     if (size == 0) return n;
     if (CheckSorted(L)) return NotDivImpl(n, L);
 
-    vector<int64> LL(L);
+    std::vector<int64> LL(L);
     std::sort(LL.begin(), LL.end());
     return NotDivImpl(n, LL);
   }
 
-  int CheckSorted(const vector<int64>& L) {
+  int CheckSorted(const std::vector<int64>& L) {
     const int size = sz(L);
     for (int i = 0; i + 1 < size; ++i) {
       if (L[i] > L[i + 1]) {
@@ -2827,13 +2827,13 @@ struct NotDivCounter {
   }
 
  private:
-  std::map<std::pair<T, vector<int64>>, T> mem_;
+  std::map<std::pair<T, std::vector<int64>>, T> mem_;
 };
 
 // Counts #{i | i ∤ L[j] and 1 <= i <= n}.
 // It's required that the integers in L are pairwise coprime.
 template <typename T>
-SL T CountNotDivImpl(T n, const vector<T>& L, T* mask, int* bc) {
+SL T CountNotDivImpl(T n, const std::vector<T>& L, T* mask, int* bc) {
   if (n <= 0) return 0;
   const int size = sz(L);
   if (size == 0) return n;
@@ -2854,13 +2854,13 @@ SL T CountNotDivImpl(T n, const vector<T>& L, T* mask, int* bc) {
 // Counts #{i | i ∤ L[j] and 1 <= i <= n}.
 // It's required that the integers in L are pairwise coprime.
 template <typename T>
-SL T CountNotDiv(T n, const vector<T>& L, int* bc) {
+SL T CountNotDiv(T n, const std::vector<T>& L, int* bc) {
   if (n <= 0) return n;
   const int size = sz(L);
   if (size == 0) return n;
 
   const int limit = 1 << size;
-  vector<T> mask(limit);
+  std::vector<T> mask(limit);
   mask[0] = 1;
   for (int i = 0; i < size; ++i) {
     mask[1 << i] = L[i];
@@ -2877,14 +2877,14 @@ SL T CountNotDiv(T n, const vector<T>& L, int* bc) {
 // Counts #{i | i ∤ L[j] and 1 <= i <= n}.
 // It's required that the integers in L are pairwise coprime.
 template <typename T>
-SL T CountNotDiv(T n, const vector<T>& L) {
+SL T CountNotDiv(T n, const std::vector<T>& L) {
   if (n <= 0) return n;
   const int size = sz(L);
   if (size == 0) return n;
 
   const int limit = 1 << size;
-  vector<T> mask(limit);
-  vector<int> bc(limit);
+  std::vector<T> mask(limit);
+  std::vector<int> bc(limit);
   mask[0] = 1;
   for (int i = 0; i < size; ++i) {
     mask[1 << i] = L[i];
@@ -2974,14 +2974,14 @@ struct DfaCounter {
 
   template <typename U>
   CT Cal(U n) {
-    vector<int> dig;
+    std::vector<int> dig;
     for (auto x = n; !IsZero(x); x /= number_base_) {
       dig.push_back(ToInt<int>(x % number_base_));
     }
     return Cal(dig);
   }
 
-  CT Cal(const vector<int>& dig) {
+  CT Cal(const std::vector<int>& dig) {
     if (prepared_ == 0) {
       Prepare();
       prepared_ = 1;
@@ -3033,7 +3033,7 @@ struct DfaCounter {
   int max_len_ = 0;
   DArray<int, 2> dfa_;
   DArray<CT, 2> dp_;
-  vector<int> target_state_;
+  std::vector<int> target_state_;
 };
 
 // Calculates the sum of the power of the integers accepted by a DFA.
@@ -3122,7 +3122,7 @@ struct DfaSummer {
 
   template <typename U>
   CT Cal(U n, int target_power = 0) {
-    vector<int> dig;
+    std::vector<int> dig;
     for (auto x = n; !IsZero(x); x /= number_base_) {
       dig.push_back(ToInt<int>(x % number_base_));
     }
@@ -3130,7 +3130,7 @@ struct DfaSummer {
     return Cal(dig, target_power);
   }
 
-  CT Cal(const vector<int>& dig, int target_power = 0) {
+  CT Cal(const std::vector<int>& dig, int target_power = 0) {
     if (prepared_ == 0) {
       Prepare();
       prepared_ = 1;
@@ -3187,8 +3187,8 @@ struct DfaSummer {
   int max_len_ = 0;
   DArray<int, 2> dfa_;
   DArray<CT, 3> dp_;
-  vector<int> target_state_;
-  vector<CT> base_power_;
+  std::vector<int> target_state_;
+  std::vector<CT> base_power_;
   DArray<CT, 2> choose;
 };
 
@@ -3214,7 +3214,7 @@ struct CarlitzWordsCounter {
     return MulModEx(t, ifac_[a - b], mod_);
   }
 
-  int64 Cal(vector<int64> vec) {
+  int64 Cal(std::vector<int64> vec) {
     if (vec.size() == 1) {
       return vec[0] == 1 ? 1 : 0;
     }
@@ -3223,7 +3223,7 @@ struct CarlitzWordsCounter {
     if (where != cache_.end()) {
       return where->second;
     }
-    vector<int64> it{1};
+    std::vector<int64> it{1};
     const int64 vsize = sz(vec);
     for (int64 i = 0; i < vsize; i += 2) {
       auto L = MakeLaguerrePoly(vec[i], IsEven(vec[i]) ? 1 : -1);
@@ -3237,8 +3237,8 @@ struct CarlitzWordsCounter {
     return cache_[vec] = ret;
   }
 
-  vector<int64> MakeLaguerrePoly(int64 n, int sgn = 1) {
-    vector<int64> ret(n + 1, 0);
+  std::vector<int64> MakeLaguerrePoly(int64 n, int sgn = 1) {
+    std::vector<int64> ret(n + 1, 0);
     for (int i = 1; i <= n; ++i) {
       int64 curr = RegulateMod(IsEven(i) ? sgn : -sgn, mod_);
       curr = MulModEx(curr, Comb(n - 1, n - i), mod_);
@@ -3248,10 +3248,10 @@ struct CarlitzWordsCounter {
     return ret;
   }
 
-  vector<int64> ToInternal(const vector<int64>& v) {
+  std::vector<int64> ToInternal(const std::vector<int64>& v) {
     std::map<int64, int64> m;
     for (auto& iter : v) m[iter]++;
-    vector<int64> t;
+    std::vector<int64> t;
     for (auto& iter : m) t.push_back(iter.first), t.push_back(iter.second);
     return t;
   }
@@ -3259,8 +3259,8 @@ struct CarlitzWordsCounter {
  private:
   int64 maxf_;
   int64 mod_;
-  std::map<vector<int64>, int64> cache_;
-  vector<int64> fac_;
-  vector<int64> ifac_;
+  std::map<std::vector<int64>, int64> cache_;
+  std::vector<int64> fac_;
+  std::vector<int64> ifac_;
 };
 #endif

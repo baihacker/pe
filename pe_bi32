@@ -25,7 +25,7 @@ struct BiAllocatorStd {
 
 template <int SIZE>
 struct BiAllocatorFixedSizeImpl {
-  vector<unsigned int*> available;
+  std::vector<unsigned int*> available;
   int top;
 
   BiAllocatorFixedSizeImpl() { top = 0; }
@@ -129,7 +129,7 @@ class BigInteger {
 
   template <typename T,
             typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
-  BigInteger(const vector<T>& v) : BigInteger(zero_initialize_tag) {
+  BigInteger(const std::vector<T>& v) : BigInteger(zero_initialize_tag) {
     if (v.empty()) {
       Reserve(1);
       data_[0] = 0;
@@ -528,8 +528,8 @@ class BigInteger {
       return 1;
     }
 
-    vector<unsigned int> rb;
-    vector<unsigned int> rr = AbsDivInternal<unsigned int>(
+    std::vector<unsigned int> rb;
+    std::vector<unsigned int> rr = AbsDivInternal<unsigned int>(
         l.ToBinVector<unsigned int>(), r.ToBinVector<unsigned int>(), rb);
     remain = BigInteger(rb);
     return rr;
@@ -550,16 +550,17 @@ class BigInteger {
       return 1;
     }
 
-    vector<unsigned int> rb;
-    vector<unsigned int> rr = AbsDivInternal<unsigned int>(
+    std::vector<unsigned int> rb;
+    std::vector<unsigned int> rr = AbsDivInternal<unsigned int>(
         l.ToBinVector<unsigned int>(), r.ToBinVector<unsigned int>(), rb);
     return rr;
   }
 
   template <typename T>
-  static vector<T> AbsDivInternal(const vector<T>& l, const vector<T>& r,
-                                  vector<T>& remain) {
-    vector<T> result;
+  static std::vector<T> AbsDivInternal(const std::vector<T>& l,
+                                       const std::vector<T>& r,
+                                       std::vector<T>& remain) {
+    std::vector<T> result;
     remain = l;
 
     const int divR = static_cast<int>(r.size());
@@ -982,7 +983,7 @@ class BigInteger {
   }
 
   template <typename T>
-  static void FixSize(vector<T>& v) {
+  static void FixSize(std::vector<T>& v) {
     if (v.empty()) v.push_back(0);
     int now = static_cast<int>(v.size()) - 1;
     while (now > 0 && v[now] == 0) --now;
@@ -1105,8 +1106,8 @@ class BigInteger {
 
   template <typename T>
   REQUIRES((is_native_integer<T>::value))
-  RETURN(vector<T>) ToBinVector() const {
-    vector<T> ret;
+  RETURN(std::vector<T>) ToBinVector() const {
+    std::vector<T> ret;
     for (int i = 0; i <= pos_; ++i) {
       auto t = data_[i];
       for (int j = 0; j < 32; ++j) ret.push_back(t & 1), t >>= 1;
@@ -1569,7 +1570,7 @@ inline REQUIRES(
     return l;
   }
   const int bitCnt = l.BitHeight();
-  vector<unsigned int> v(n + bitCnt, 0);
+  std::vector<unsigned int> v(n + bitCnt, 0);
   for (int i = 0, j = n; i < bitCnt; ++i, ++j) {
     const int x = i >> BigInteger::div32_bit;
     const int y = i & BigInteger::mod32_mask;
@@ -1598,7 +1599,7 @@ inline REQUIRES(
     return 0;
   }
 
-  vector<unsigned int> v(bitCnt - n, 0);
+  std::vector<unsigned int> v(bitCnt - n, 0);
   for (int i = n, j = 0; i < bitCnt; ++i, ++j) {
     const int x = i >> BigInteger::div32_bit;
     const int y = i & BigInteger::mod32_mask;

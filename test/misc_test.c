@@ -15,13 +15,13 @@ SL void MiscTest() {
     assert(FAbs(v[i] - 1) < 1e-10);
   }
 
-  auto vtos = [=](const vector<int64>& vec) {
+  auto vtos = [=](const std::vector<int64>& vec) {
     std::stringstream ss;
     ss << vec;
     return ss.str();
   };
 
-  vector<int64> vec;
+  std::vector<int64> vec;
   assert(vtos(vec) == "{}");
 
   vec.push_back(1);

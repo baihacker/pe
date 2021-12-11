@@ -45,25 +45,25 @@ PE_REGISTER_TEST(&GcdTest, "GcdTest", SMALL);
 
 SL void GetFactorsTest() {
   auto result = GetFactors(1);
-  assert(result == vector<int64>{1});
+  assert(result == std::vector<int64>{1});
 
   result = GetFactors(2);
-  assert(result == vector<int64>({1, 2}));
+  assert(result == std::vector<int64>({1, 2}));
 
   result = GetFactors(3);
-  assert(result == vector<int64>({1, 3}));
+  assert(result == std::vector<int64>({1, 3}));
 
   result = GetFactors(4);
-  assert(result == vector<int64>({1, 2, 4}));
+  assert(result == std::vector<int64>({1, 2, 4}));
 
   result = GetFactors(12);
   std::sort(all(result));
-  assert(result == vector<int64>({1, 2, 3, 4, 6, 12}));
+  assert(result == std::vector<int64>({1, 2, 3, 4, 6, 12}));
 
   for (int64 limit = -1; limit <= 20; ++limit) {
     auto result = GetFactors(12, limit);
     std::sort(all(result));
-    vector<int64> expected;
+    std::vector<int64> expected;
     for (auto iter : {1, 2, 3, 4, 6, 12}) {
       if (limit < 0 || iter <= limit) {
         expected.push_back(iter);
@@ -99,7 +99,7 @@ SL void SquareRootModTest() {
     const int64 p = plist[i];
     int cnt = 0;
     for (int n = 0; n < p; ++n) {
-      vector<int64> ans = SquareRootMod(n, p);
+      std::vector<int64> ans = SquareRootMod(n, p);
       for (auto x : ans) {
         assert(x * x % p == n);
       }

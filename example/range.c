@@ -42,7 +42,7 @@ void irange_pointer() {
 
 void irange_vector() {
   {
-    vector<int> a{1, 2, 3, 4, 5, 6};
+    std::vector<int> a{1, 2, 3, 4, 5, 6};
     for (auto iter : IRange(a)) {
       std::cout << iter.i << " " << iter.v << std::endl;
       ++iter.v;
@@ -52,7 +52,7 @@ void irange_vector() {
     }
   }
   {
-    const vector<int> a{1, 2, 3, 4, 5, 6};
+    const std::vector<int> a{1, 2, 3, 4, 5, 6};
     for (auto iter : IRange(a)) {
       std::cout << iter.i << " " << iter.v << std::endl;
       // ++iter.v; not allowed
@@ -114,7 +114,7 @@ void irange_number_range() {
 
 void irange_irange() {
   {
-    vector<int> a{1, 2, 3, 4, 5, 6};
+    std::vector<int> a{1, 2, 3, 4, 5, 6};
     for (auto iter : IRange(IRange(a))) {
       std::cout << iter.i << " " << iter.v.i << " " << iter.v.v << std::endl;
       ++iter.v.v;
@@ -160,7 +160,7 @@ void range_array_reduce() {
 void range_vector_reduce() {
   // Sequential
   {
-    vector<int> a{1, 2, 3, 4, 5, 6};
+    std::vector<int> a{1, 2, 3, 4, 5, 6};
     std::cout << Range(a).Reduce(ru::Add<int64>()) << std::endl;
     std::cout << Range(a).Reduce(0, [](int& a, int b) -> void { a += b; })
               << std::endl;
@@ -168,7 +168,7 @@ void range_vector_reduce() {
 
   // Parallel
   {
-    vector<int> a{1, 2, 3, 4, 5, 6};
+    std::vector<int> a{1, 2, 3, 4, 5, 6};
     std::cout << Range(a).PReduce(ru::Add<int64>()) << std::endl;
     std::cout << Range(a).PReduce(0, [](int& a, int b) -> void { a += b; })
               << std::endl;
@@ -272,7 +272,7 @@ void range_number_range_reduce() {
 
 void range_general_example() {
   int a[6] = {1, 2, 3, 4, 5, 6};
-  vector<int> x{3, 4, 5, 6};
+  std::vector<int> x{3, 4, 5, 6};
   std::map<int, int> mem;
   mem[1] = 2;
   mem[2] = 4;
@@ -324,7 +324,7 @@ void range_general_example() {
   }
 
   std::cout
-      << Range(static_cast<const vector<int>&>(x)).Reduce(ru::Add<int64>())
+      << Range(static_cast<const std::vector<int>&>(x)).Reduce(ru::Add<int64>())
       << std::endl;
 
   std::cout << Range(x.begin(), x.end()).Reduce(ru::Add<int64>()) << std::endl;
@@ -373,7 +373,7 @@ void range_general_example() {
   // std::cout << range(mem).PReduce({0,0}, [](auto a, auto b) ->
   // std::pair<const int, int> {return {0, a.second + b.second};}, 2) <<
   // std::endl;
-  vector<Pt> y;
+  std::vector<Pt> y;
   y.pb({1, 2});
   y.pb({3, 4});
   std::cout << Range(y).PReduce(ru::Reducer<Pt>({0, 0}, [=](Pt& r, Pt v) {

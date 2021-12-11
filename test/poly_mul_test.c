@@ -2,8 +2,8 @@
 
 namespace poly_mul_test {
 #if HAS_POLY_MUL_FLINT || HAS_POLY_MUL_NTT64
-using poly_mul_t = vector<uint64> (*)(const vector<uint64>&,
-                                      const vector<uint64>&, int64);
+using poly_mul_t = std::vector<uint64> (*)(const std::vector<uint64>&,
+                                           const std::vector<uint64>&, int64);
 struct MulImpl {
   poly_mul_t impl;
   int size;  // 1: coe < 1e18; 3: coe < 1e28; 4: coe < 1e35
@@ -54,7 +54,7 @@ SL void TestImpl(int dp, int size, int n, int64 mod) {
   fprintf(stderr, "%-8s : data = %s, size = %d, n = %d, mod = %lld\n", "config",
           data_policy[dp], size, n, (long long)mod);
 
-  vector<uint64> x, y;
+  std::vector<uint64> x, y;
   srand(123456789);
   if (dp == 0) {
     for (int i = 0; i < n; ++i) {
@@ -69,7 +69,7 @@ SL void TestImpl(int dp, int size, int n, int64 mod) {
 
   const int M = sizeof(mul_impl) / sizeof(mul_impl[0]);
 
-  vector<uint64> expected;
+  std::vector<uint64> expected;
   for (int i = 0; i < M; ++i) {
     auto who = mul_impl[i];
     if (i > 0) {
@@ -129,7 +129,7 @@ SL void PolyMulPerformanceTest() {
 
     const int M = sizeof(mul_impl) / sizeof(mul_impl[0]);
 
-    vector<uint64> expected;
+    std::vector<uint64> expected;
     for (int i = 0; i < M; ++i) {
       auto who = mul_impl[i];
       if (who.size < level) continue;
@@ -138,7 +138,7 @@ SL void PolyMulPerformanceTest() {
       srand(314159);
       for (int n = 10; n <= 20; ++n) {
         const int size = 1 << n;
-        vector<uint64> x, y;
+        std::vector<uint64> x, y;
         for (int i = 0; i < size; ++i) {
           x.push_back((uint64)CRand63() % mod),
               y.push_back((uint64)CRand63() % mod);

@@ -151,14 +151,14 @@ struct RangeBase {
     auto data = ToVector();
     const int size = sz(data);
     if (size == 0) {
-      return vector<value_type>{};
+      return std::vector<value_type>{};
     }
 
     partition_size =
         CalculateDefaultPartitionSize(size, thread_number, partition_size);
 
-    vector<vector<value_type>> tmp(thread_number);
-    vector<value_type> vec;
+    std::vector<std::vector<value_type>> tmp(thread_number);
+    std::vector<value_type> vec;
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, partition_size) \
     num_threads(thread_number)
@@ -222,7 +222,7 @@ struct RangeBase {
     partition_size =
         CalculateDefaultPartitionSize(size, thread_number, partition_size);
 
-    vector<VT> tmp(thread_number, reducer.GetInitValue());
+    std::vector<VT> tmp(thread_number, reducer.GetInitValue());
 #pragma omp parallel for schedule(dynamic, partition_size) \
     num_threads(thread_number)
     for (int i = 0; i < size; ++i) {
@@ -267,7 +267,7 @@ struct RangeBase {
     partition_size =
         CalculateDefaultPartitionSize(size, thread_number, partition_size);
 
-    vector<VT> tmp(thread_number, v);
+    std::vector<VT> tmp(thread_number, v);
 #pragma omp parallel for schedule(dynamic, partition_size) \
     num_threads(thread_number)
     for (int i = 0; i < size; ++i) {
@@ -301,7 +301,7 @@ struct RangeBase {
     partition_size =
         CalculateDefaultPartitionSize(size, thread_number, partition_size);
 
-    vector<VT> tmp(thread_number, v);
+    std::vector<VT> tmp(thread_number, v);
 #pragma omp parallel for schedule(dynamic, partition_size) \
     num_threads(thread_number)
     for (int i = 0; i < size; ++i) {
@@ -333,13 +333,13 @@ struct RangeBase {
     auto data = ToVector();
     const int size = sz(data);
     if (size == 0) {
-      return vector<TT>{};
+      return std::vector<TT>{};
     }
 
     partition_size =
         CalculateDefaultPartitionSize(size, thread_number, partition_size);
 
-    vector<TT> vec(size);
+    std::vector<TT> vec(size);
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, partition_size) \
     num_threads(thread_number)
@@ -638,13 +638,13 @@ struct NumberRange : public RangeBase<NumberRange<ET>, NumberIter<ET>> {
                                   int64 partition_size = 0) const {
     const int64 size = e_ - b_;
     if (size == 0) {
-      return vector<value_type>{};
+      return std::vector<value_type>{};
     }
     partition_size = RangeBase<NumberRange<ET>, NumberIter<ET>>::
         CalculateDefaultPartitionSize(size, thread_number, partition_size);
 
-    vector<vector<value_type>> tmp(thread_number);
-    vector<value_type> vec;
+    std::vector<std::vector<value_type>> tmp(thread_number);
+    std::vector<value_type> vec;
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, partition_size) \
     num_threads(thread_number)
@@ -694,7 +694,7 @@ struct NumberRange : public RangeBase<NumberRange<ET>, NumberIter<ET>> {
     partition_size = RangeBase<NumberRange<ET>, NumberIter<ET>>::
         CalculateDefaultPartitionSize(size, thread_number, partition_size);
 
-    vector<VT> tmp(thread_number, reducer.GetInitValue());
+    std::vector<VT> tmp(thread_number, reducer.GetInitValue());
 #pragma omp parallel for schedule(dynamic, partition_size) \
     num_threads(thread_number)
     for (value_type i = b_; i < e_; ++i) {
@@ -725,7 +725,7 @@ struct NumberRange : public RangeBase<NumberRange<ET>, NumberIter<ET>> {
     partition_size = RangeBase<NumberRange<ET>, NumberIter<ET>>::
         CalculateDefaultPartitionSize(size, thread_number, partition_size);
 
-    vector<VT> tmp(thread_number, v);
+    std::vector<VT> tmp(thread_number, v);
 #pragma omp parallel for schedule(dynamic, partition_size) \
     num_threads(thread_number)
     for (value_type i = b_; i < e_; ++i) {
@@ -756,7 +756,7 @@ struct NumberRange : public RangeBase<NumberRange<ET>, NumberIter<ET>> {
     partition_size = RangeBase<NumberRange<ET>, NumberIter<ET>>::
         CalculateDefaultPartitionSize(size, thread_number, partition_size);
 
-    vector<VT> tmp(thread_number, v);
+    std::vector<VT> tmp(thread_number, v);
 #pragma omp parallel for schedule(dynamic, partition_size) \
     num_threads(thread_number)
     for (value_type i = b_; i < e_; ++i) {
@@ -780,12 +780,12 @@ struct NumberRange : public RangeBase<NumberRange<ET>, NumberIter<ET>> {
                        int64 partition_size = kDefaultPartitionSize) const {
     const int64 size = e_ - b_;
     if (size == 0) {
-      return vector<TT>{};
+      return std::vector<TT>{};
     }
     partition_size = RangeBase<NumberRange<ET>, NumberIter<ET>>::
         CalculateDefaultPartitionSize(size, thread_number, partition_size);
 
-    vector<TT> vec(size);
+    std::vector<TT> vec(size);
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, partition_size) \
     num_threads(thread_number)
@@ -964,15 +964,15 @@ template <typename ET>
 struct VectorRange
     : public RangeBase<
           VectorRange<ET>,
-          ContainerRangeIter<typename vector<ET>::const_iterator>> {
-  using IT = typename vector<ET>::const_iterator;
+          ContainerRangeIter<typename std::vector<ET>::const_iterator>> {
+  using IT = typename std::vector<ET>::const_iterator;
   using iterator = ContainerRangeIter<IT>;
   using const_iterator = iterator;
   using value_type = typename iterator::value_type;
 
-  VectorRange(const vector<ET>& vec) : vec_(vec) {}
+  VectorRange(const std::vector<ET>& vec) : vec_(vec) {}
 
-  VectorRange(vector<ET>&& vec) : vec_(std::move(vec)) {}
+  VectorRange(std::vector<ET>&& vec) : vec_(std::move(vec)) {}
 
   ContainerRangeIter<IT> begin() const {
     return ContainerRangeIter<IT>{vec_.begin()};
@@ -983,7 +983,7 @@ struct VectorRange
 
   int64 CountImpl() const { return static_cast<int64>(vec_.size()); }
 
-  vector<ET> vec_;
+  std::vector<ET> vec_;
 };
 
 template <typename CT>
@@ -1285,12 +1285,12 @@ struct ArrayRangeI {
 };
 
 template <typename T>
-SL ArrayRangeI<T> IRange(vector<T>& v) {
+SL ArrayRangeI<T> IRange(std::vector<T>& v) {
   return ArrayRangeI<T>{&v[0], sz(v)};
 }
 
 template <typename T>
-SL ArrayRangeI<const T> IRange(const vector<T>& v) {
+SL ArrayRangeI<const T> IRange(const std::vector<T>& v) {
   return ArrayRangeI<const T>{&v[0], sz(v)};
 }
 
@@ -1321,12 +1321,12 @@ SL auto IRange(const CT& v) -> ContainerRangeI<typename CT::const_iterator> {
   return ContainerRangeI<typename CT::const_iterator>{v.begin(), v.end()};
 }
 
-SL vector<std::pair<int64, int64>> MakeSegment(int64 s, int64 e, int64 b) {
+SL std::vector<std::pair<int64, int64>> MakeSegment(int64 s, int64 e, int64 b) {
   if (s > e) {
-    return vector<std::pair<int64, int64>>();
+    return std::vector<std::pair<int64, int64>>();
   }
   int64 cnt = (e - s + 1 + b - 1) / b;
-  vector<std::pair<int64, int64>> ret(cnt);
+  std::vector<std::pair<int64, int64>> ret(cnt);
   int64 x = 0, y = s - 1;
   for (int64 i = 0; i < cnt; ++i) {
     x = y + 1;

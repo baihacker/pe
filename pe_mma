@@ -28,22 +28,22 @@ namespace mma {
 // implemented in pe_poly_algo. The implementation uses Berlekamp Massey
 // algorithm.
 template <typename T>
-SL void ValidateAll(const vector<T>& values, const std::string& result,
+SL void ValidateAll(const std::vector<T>& values, const std::string& result,
                     T leading = 1);
 
 template <typename T>
 struct FRHelper {
-  FRHelper& set_values(const vector<T>& values) {
+  FRHelper& set_values(const std::vector<T>& values) {
     values_ = values;
     return *this;
   }
 
-  FRHelper& set_check_points(const vector<int>& check_points) {
+  FRHelper& set_check_points(const std::vector<int>& check_points) {
     check_points_ = check_points;
     return *this;
   }
 
-  FRHelper& set_offsets(const vector<int>& offsets) {
+  FRHelper& set_offsets(const std::vector<int>& offsets) {
     offsets_ = offsets;
     return *this;
   }
@@ -65,10 +65,10 @@ struct FRHelper {
 
   std::ostream& Generate(std::ostream& o) const {
     const int test_size = sz(check_points_);
-    vector<vector<T>> them;
+    std::vector<std::vector<T>> them;
     for (int i = 0; i < test_size; ++i) {
       int64 it = check_points_[i];
-      vector<T> eq;
+      std::vector<T> eq;
       for (auto offset : offsets_) {
         PE_ASSERT(it >= offset);
         auto val = values_[it - offset];
@@ -81,7 +81,7 @@ struct FRHelper {
       them.push_back(eq);
     }
 
-    vector<std::string> vars;
+    std::vector<std::string> vars;
     for (auto offset : offsets_) {
       for (int k = 0; k <= max_degree_; ++k) {
         char buff[30];
@@ -127,22 +127,22 @@ struct FRHelper {
     mma::ValidateAll<T>(values_, result, leading_);
   }
 
-  void Validate(const vector<T>& values, const std::string& result) {
+  void Validate(const std::vector<T>& values, const std::string& result) {
     mma::ValidateAll<T>(values, result, leading_);
   }
 
-  vector<T> values_;
-  vector<int> check_points_;
-  vector<int> offsets_;
+  std::vector<T> values_;
+  std::vector<int> check_points_;
+  std::vector<int> offsets_;
   int max_degree_ = 1;
   int max_abs_coe_ = -1;
   T leading_ = 1;
 };
 
-SL std::map<int, vector<int64>> ParseSolution(const std::string& text) {
+SL std::map<int, std::vector<int64>> ParseSolution(const std::string& text) {
   size_t start = 0U;
   size_t end = text.find(',');
-  vector<std::string> tokens;
+  std::vector<std::string> tokens;
   while (end != std::string::npos) {
     tokens.push_back(text.substr(start, end - start));
     start = end + 1;
@@ -150,7 +150,7 @@ SL std::map<int, vector<int64>> ParseSolution(const std::string& text) {
   }
   tokens.push_back(text.substr(start));
 
-  std::map<int, vector<int64>> result;
+  std::map<int, std::vector<int64>> result;
   for (const auto& iter : tokens) {
     int offset, degree;
     int64 value;
@@ -177,9 +177,9 @@ SL std::map<int, vector<int64>> ParseSolution(const std::string& text) {
   return result;
 }
 
-SL vector<std::string> ParseSolutionList(const std::string& text) {
+SL std::vector<std::string> ParseSolutionList(const std::string& text) {
   const int n = static_cast<int>(text.size());
-  vector<std::string> result;
+  std::vector<std::string> result;
   for (int curr = 0, depth = 0, last = 1; curr < n; ++curr) {
     const int it = text[curr];
     if (it == '{') {
@@ -199,11 +199,11 @@ SL vector<std::string> ParseSolutionList(const std::string& text) {
 }
 
 template <typename T>
-SL void ValidateOne(const vector<T>& values, const std::string& result,
+SL void ValidateOne(const std::vector<T>& values, const std::string& result,
                     T leading = 1) {
   std::cout << "Validate " << result << std::endl;
   int offset = 0, deg = 0;
-  std::map<int, vector<int64>> ans = ParseSolution(result);
+  std::map<int, std::vector<int64>> ans = ParseSolution(result);
   for (auto& iter : ans) {
     if (iter.first > offset) {
       offset = iter.first;
@@ -245,7 +245,7 @@ SL void ValidateOne(const vector<T>& values, const std::string& result,
 }
 
 template <typename T>
-SL void ValidateAll(const vector<T>& values, const std::string& result,
+SL void ValidateAll(const std::vector<T>& values, const std::string& result,
                     T leading) {
   for (auto ans : ParseSolutionList(result)) {
     ValidateOne(values, ans, leading);
@@ -262,12 +262,12 @@ SL std::ostream& operator<<(std::ostream& o, const mma::FRHelper<T>& frh) {
 struct IntPoly {
   IntPoly() = default;
 
-  void Reset(const vector<std::string>& variables) {
+  void Reset(const std::vector<std::string>& variables) {
     this->variables = variables;
     n = static_cast<int>(variables.size());
   }
 
-  void Add(const vector<int64>& p, int64 v) {
+  void Add(const std::vector<int64>& p, int64 v) {
     const int len = static_cast<int>(p.size());
     if (n == 0) {
       n = len;
@@ -307,8 +307,8 @@ struct IntPoly {
     return o << "]";
   }
 
-  vector<std::string> variables;
-  std::map<vector<int64>, int64> vals;
+  std::vector<std::string> variables;
+  std::map<std::vector<int64>, int64> vals;
   int n = 0;
 };
 
@@ -319,7 +319,7 @@ std::ostream& operator<<(std::ostream& o, const IntPoly& ip) {
 struct IntPoly2D {
   IntPoly2D(int n1 = 1, int n2 = -1, int n3 = -1) { Reset(n1, n2, n3); }
 
-  void Reset(const vector<std::string>& vars, int n1, int n2 = -1,
+  void Reset(const std::vector<std::string>& vars, int n1, int n2 = -1,
              int n3 = -1) {
     this->vars = vars;
     Reset(n1, n2, n3);
@@ -367,7 +367,7 @@ struct IntPoly2D {
     return Power(v1, a) * Power(v2, b);
   }
 
-  void Add(const vector<int64>& p, int64 v) {
+  void Add(const std::vector<int64>& p, int64 v) {
     const int len = static_cast<int>(p.size());
     PE_ASSERT(len == 2);
     auto where = vals.find(p);
@@ -378,7 +378,7 @@ struct IntPoly2D {
     }
   }
 
-  std::ostream& Show(std::ostream& o, const vector<int64>& v) {
+  std::ostream& Show(std::ostream& o, const std::vector<int64>& v) {
     const int len = static_cast<int>(v.size());
     PE_ASSERT(vcnt == len);
     int id = 0;
@@ -442,7 +442,7 @@ struct IntPoly2D {
       o << " == " << iter.second;
     }
     o << "}, ";
-    vector<std::string> vars;
+    std::vector<std::string> vars;
     vars.reserve(vcnt);
     for (int i = 0; i < vcnt; ++i) vars.pb(std::string("x") + ToString(i));
     PPrintVec(o, vars);
@@ -451,9 +451,9 @@ struct IntPoly2D {
 
   int n1, n2, n3;
   int vcnt;
-  std::map<vector<int64>, int64> vals;
-  vector<std::string> vars{"x", "y"};
-  vector<std::string> symbols;
+  std::map<std::vector<int64>, int64> vals;
+  std::vector<std::string> vars{"x", "y"};
+  std::vector<std::string> symbols;
 };
 
 std::ostream& operator<<(std::ostream& o, const IntPoly2D& ip) {
@@ -828,7 +828,7 @@ struct MmaExpParser {
     return Parse();
   }
 
-  // void ExpressionList(MmaExpTree* tree, vector<MmaExpTree*>& result) {
+  // void ExpressionList(MmaExpTree* tree, std::vector<MmaExpTree*>& result) {
   //   if (!tree) return;
   //   if (tree->nodeType == COMMA) {
   //     ExpressionList(tree->left, result);
@@ -844,7 +844,7 @@ struct MmaExpParser {
   //   } else if (tree->nodeType == VAR) {
   //     return tree->value = vars[tree->token];
   //   } else if (tree->nodeType == FUN) {
-  //     vector<MmaExpTree*> para;
+  //     std::vector<MmaExpTree*> para;
   //     ExpressionList(tree->right, para);
   //     if (tree->token == "min") {
   //       if (para.size() == 0) return tree->value = 0;
@@ -1018,8 +1018,8 @@ struct MmaExpCompiler {
 struct MmaModExpCompiler {
   std::map<std::string, int> expToId;
   std::set<std::string> varset;
-  vector<std::string> vars;
-  vector<std::string> result;
+  std::vector<std::string> vars;
+  std::vector<std::string> result;
   void CompileImpl(MmaExpTree* tree, int has_mod = 1) {
     char buff[512];
     switch (tree->nodeType) {
@@ -1113,8 +1113,8 @@ struct MmaModExpCompiler {
   }
 };
 
-vector<std::string> CompileMod(const std::string& s,
-                               const std::string& funName = "foo") {
+std::vector<std::string> CompileMod(const std::string& s,
+                                    const std::string& funName = "foo") {
   MmaExpParser parser;
   auto t = parser.Parse(s);
   MmaModExpCompiler compiler;
@@ -1123,13 +1123,13 @@ vector<std::string> CompileMod(const std::string& s,
   return compiler.result;
 }
 
-vector<std::string> Compile(const std::string& s) {
+std::vector<std::string> Compile(const std::string& s) {
   MmaExpParser parser;
   auto t = parser.Parse(s);
   MmaExpCompiler compiler;
   compiler.Compile(t);
   MmaExpTree::DestroyTree(t);
-  return vector<std::string>{compiler.result};
+  return std::vector<std::string>{compiler.result};
 }
 }  // namespace mma
 #endif

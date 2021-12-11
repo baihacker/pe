@@ -8,7 +8,7 @@ SL void RandomTest() {
     // 8e13
     // 1e5+19
     const int64 mod = 100019;
-    vector<uint64> x, y;
+    std::vector<uint64> x, y;
     for (int i = 0; i < 7000; ++i) {
       x.push_back((uint64)CRand63() % mod),
           y.push_back((uint64)CRand63() % mod);
@@ -31,7 +31,7 @@ SL void RandomTest() {
     // 1e15
     // 1e9+7
     const int64 mod = 1000000007;
-    vector<uint64> x, y;
+    std::vector<uint64> x, y;
     for (int i = 0; i < 1020000; ++i) {
       x.push_back((uint64)CRand63() % mod),
           y.push_back((uint64)CRand63() % mod);
@@ -50,7 +50,7 @@ SL void RandomTest() {
     // 8e14
     // 1e10+19
     const int64 mod = 10000000019;
-    vector<uint64> x, y;
+    std::vector<uint64> x, y;
     for (int i = 0; i < 80000; ++i) {
       x.push_back((uint64)CRand63() % mod),
           y.push_back((uint64)CRand63() % mod);
@@ -72,7 +72,7 @@ SL void LimitTest() {
     // 10018*10018*2048=205537943552 2.06e11
     // 1e5+19
     const int64 mod = 100019;
-    vector<uint64> x, y;
+    std::vector<uint64> x, y;
     for (int i = 0; i < 2048; ++i) x.push_back(mod - 1), y.push_back(mod - 1);
 
     int t0 = clock();
@@ -92,7 +92,7 @@ SL void LimitTest() {
     // 1000000007*339750=339750002378250=3.39e14
     // 1e9+7
     const int64 mod = 1000000007;
-    vector<uint64> x, y;
+    std::vector<uint64> x, y;
     for (int i = 0; i < 339750; ++i) x.push_back(mod - 1), y.push_back(mod - 1);
 
     int t0 = clock();
@@ -107,7 +107,7 @@ SL void LimitTest() {
     // 10000000019*44064=440640000837216=4.4e14
     // 1e10+19
     const int64 mod = 10000000019;
-    vector<uint64> x, y;
+    std::vector<uint64> x, y;
     for (int i = 0; i < 44064; ++i) x.push_back(mod - 1), y.push_back(mod - 1);
 
     int t0 = clock();

@@ -37,7 +37,7 @@ SL void BiMulTestImpl(int x, int y) {
           A.push_back(rand());
           B.push_back(rand());
         }
-        string expectedResult;
+        std::string expectedResult;
         {
           mpz_class a = s1;
           mpz_class b = s2;
@@ -48,7 +48,7 @@ SL void BiMulTestImpl(int x, int y) {
           ss << c;
           ss >> expectedResult;
         }
-        string myResult;
+        std::string myResult;
         {
           bi a = s1;
           bi b = s2;
@@ -96,8 +96,8 @@ SL void BiDivTestMediumImpl(int x, int y) {
                 }
               }
             }
-            string expectedResult1;
-            string expectedResult2;
+            std::string expectedResult1;
+            std::string expectedResult2;
             {
               mpz_class a = s1;
               mpz_class b = s2;
@@ -111,15 +111,15 @@ SL void BiDivTestMediumImpl(int x, int y) {
               ss << d;
               ss >> expectedResult2;
             }
-            string myResult1;
-            string myResult2;
+            std::string myResult1;
+            std::string myResult2;
             {
               bi a = s1;
               bi b = s2;
               for (auto& iter : A) a *= iter;
               for (auto& iter : B) b *= iter;
               bi c, d;
-              tie(c, d) = Div(a, b);
+              std::tie(c, d) = Div(a, b);
               std::stringstream ss;
               ss << c;
               ss >> myResult1;

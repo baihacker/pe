@@ -88,7 +88,7 @@ class BigInteger {
     sign_ = 0;
   }
 
-  BigInteger(const string& str) : BigInteger(zero_initialize_tag) {
+  BigInteger(const std::string& str) : BigInteger(zero_initialize_tag) {
     const int n = static_cast<int>(str.size());
     if (n == 0) {
       Reserve(1);
@@ -750,14 +750,14 @@ class BigInteger {
        sizeof(T) <= 8)) RETURN(BigInteger)
   operator/(const BigInteger& l, T r);
 
-  friend inline tuple<BigInteger, BigInteger> DivInternal(const BigInteger& l,
-                                                          const BigInteger& r);
+  friend inline std::tuple<BigInteger, BigInteger> DivInternal(
+      const BigInteger& l, const BigInteger& r);
 
   template <typename T>
   friend inline REQUIRES(
       (is_native_integer<T>::value &&
        !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
-       sizeof(T) <= 8)) RETURN(tuple<BigInteger, T>)
+       sizeof(T) <= 8)) RETURN(std::tuple<BigInteger, T>)
       DivInternal(const BigInteger& l, T r);
 
   template <typename T>
@@ -1061,7 +1061,7 @@ class BigInteger {
     return ret + hiCnt;
   }
 
-  string ToString() const {
+  std::string ToString() const {
     BigInteger t(*this);
     std::vector<unsigned int> mods;
     t.FixPos();
@@ -1093,7 +1093,7 @@ class BigInteger {
     return ss.str();
   }
 
-  string to_string() const { return ToString(); }
+  std::string to_string() const { return ToString(); }
 
   void Dump() const {
     dbg(sign_);
@@ -1366,7 +1366,7 @@ inline REQUIRES(
 
 inline BigInteger operator/(const BigInteger& l, const BigInteger& r) {
   BigInteger u, v;
-  tie(u, v) = DivInternal(l, r);
+  std::tie(u, v) = DivInternal(l, r);
   return u;
 }
 
@@ -1378,12 +1378,12 @@ inline REQUIRES(
 operator/(const BigInteger& l, T r) {
   BigInteger u;
   T v;
-  tie(u, v) = DivInternal(l, r);
+  std::tie(u, v) = DivInternal(l, r);
   return u;
 }
 
-inline tuple<BigInteger, BigInteger> DivInternal(const BigInteger& l,
-                                                 const BigInteger& r) {
+inline std::tuple<BigInteger, BigInteger> DivInternal(const BigInteger& l,
+                                                      const BigInteger& r) {
   if (l.IsZero() && r.IsZero()) {
     return std::make_tuple(1, 0);
   }
@@ -1422,7 +1422,7 @@ template <typename T>
 inline REQUIRES(
     (is_native_integer<T>::value &&
      !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
-     sizeof(T) <= 8)) RETURN(tuple<BigInteger, T>)
+     sizeof(T) <= 8)) RETURN(std::tuple<BigInteger, T>)
     DivInternal(const BigInteger& l, T r) {
   if (l.IsZero() && r == 0) {
     return std::make_tuple(1, 0);
@@ -1483,7 +1483,7 @@ inline REQUIRES(
 
 inline BigInteger operator%(const BigInteger& l, const BigInteger& r) {
   BigInteger u, v;
-  tie(u, v) = DivInternal(l, r);
+  std::tie(u, v) = DivInternal(l, r);
   return v;
 }
 
@@ -1495,7 +1495,7 @@ inline REQUIRES(
 operator%(const BigInteger& l, T r) {
   BigInteger u;
   T v;
-  tie(u, v) = DivInternal(l, r);
+  std::tie(u, v) = DivInternal(l, r);
   if (l.sign() < 0) {
     v = BigInteger::NegValue(v);
   }
@@ -1617,7 +1617,7 @@ inline std::ostream& operator<<(std::ostream& o, const BigInteger& bi) {
 }
 
 inline BigInteger operator"" _bi(const char* sv, size_t /*sc*/) {
-  return BigInteger(string(sv));
+  return BigInteger(std::string(sv));
 }
 
 inline BigInteger operator"" _bi(unsigned long long v) { return BigInteger(v); }
@@ -1632,7 +1632,7 @@ struct Gbi<BigInteger> {
     return BigInteger(value);
   }
 
-  static BigInteger Of(const string& s) { return BigInteger(s); }
+  static BigInteger Of(const std::string& s) { return BigInteger(s); }
 };
 
 SL int IsZero(const BigInteger& x) { return x.IsZero(); }
@@ -1647,7 +1647,8 @@ SL unsigned int LowerBits(const BigInteger& x) {
   return static_cast<unsigned int>(x[0]);
 }
 
-SL tuple<BigInteger, BigInteger> Div(const BigInteger& l, const BigInteger& r) {
+SL std::tuple<BigInteger, BigInteger> Div(const BigInteger& l,
+                                          const BigInteger& r) {
   return DivInternal(l, r);
 }
 
@@ -1661,9 +1662,9 @@ SL T ToFloat(const BigInteger& x) {
   return x.ToFloat<T>();
 }
 
-SL string ToString(const BigInteger& x) { return x.ToString(); }
+SL std::string ToString(const BigInteger& x) { return x.ToString(); }
 
-SL string to_string(const BigInteger& x) { return ToString(x); }
+SL std::string to_string(const BigInteger& x) { return ToString(x); }
 
 #if PE_HAS_CPP20
 static_assert(PeGbi<BigInteger>);

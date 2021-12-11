@@ -23,7 +23,7 @@ void TestEigen(const vector<int>& data, const vector<int>& V) {
     std::cout << tr.Elapsed().Format() << std::endl;
   }
   assert(s == 247446585411LL);
-  sort(all(v));
+  std::sort(all(v));
 }
 
 template <typename E>
@@ -43,7 +43,7 @@ void TestEigen(const vector<int>& data, const vector<int>& V, E mod) {
     std::cout << tr.Elapsed().Format() << std::endl;
   }
   assert(s == 247446585411LL);
-  sort(all(v));
+  std::sort(all(v));
 }
 
 template <typename E>
@@ -63,7 +63,7 @@ void TestPe(const vector<int>& data, const vector<int>& V) {
     std::cout << tr.Elapsed().Format() << std::endl;
   }
   assert(s == 247446585411LL);
-  sort(all(v));
+  std::sort(all(v));
 }
 
 template <typename E>
@@ -83,7 +83,7 @@ void TestPe(const vector<int>& data, const vector<int>& V, E mod) {
     std::cout << tr.Elapsed().Format() << std::endl;
   }
   assert(s == 247446585411LL);
-  sort(all(v));
+  std::sort(all(v));
 }
 
 SL void TestEigenHelperMethod() {
@@ -235,7 +235,7 @@ SL void MatMulTest() {
       std::cout << tr.Elapsed().Format() << std::endl;
     }
     assert(s == 256670487618LL);
-    sort(all(v));
+    std::sort(all(v));
   }
   {
     using E = int128;
@@ -254,7 +254,7 @@ SL void MatMulTest() {
       std::cout << tr.Elapsed().Format() << std::endl;
     }
     assert(s == 247446585411LL);
-    sort(all(v));
+    std::sort(all(v));
   }
   if (show) {
     std::cout << std::endl;

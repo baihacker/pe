@@ -79,7 +79,7 @@ SL void TestAssignmentOperator() {
   TestAssignmentInternal<uint128>();
 #endif
 
-  string s = "123456789123456789123456789";
+  std::string s = "123456789123456789123456789";
   MpInteger x;
   x = s;
   assert(x.ToString() == s);

@@ -50,7 +50,7 @@ class SavePolicy {
 
 class KVPersistance : public SavePolicy<KVPersistance> {
  public:
-  KVPersistance(const string& path, bool check = false)
+  KVPersistance(const std::string& path, bool check = false)
       : path_(path), check_(check) {
     Load();
   }
@@ -63,7 +63,7 @@ class KVPersistance : public SavePolicy<KVPersistance> {
     FILE* fp = fopen(path_.c_str(), "r");
     if (!fp) return;
 
-    vector<pair<int64, int64> > vec;
+    vector<std::pair<int64, int64> > vec;
     int64 k, v;
     while (fscanf(fp, "%I64d %I64d", &k, &v) == 2) vec.emplace_back(k, v);
     fclose(fp);
@@ -81,7 +81,7 @@ class KVPersistance : public SavePolicy<KVPersistance> {
         }
       }
     }
-    kv_ = std::move(map<int64, int64>(vec.begin(), vec.end()));
+    kv_ = std::move(std::map<int64, int64>(vec.begin(), vec.end()));
   }
 
   void Save() {
@@ -91,7 +91,7 @@ class KVPersistance : public SavePolicy<KVPersistance> {
       fprintf(fp, "%I64d %I64d\n", iter.first, iter.second);
     }
     fclose(fp);
-    string cmd = "copy " + path_ + " " + path_ + ".bak /Y";
+    std::string cmd = "copy " + path_ + " " + path_ + ".bak /Y";
     system(cmd.c_str());
     OnSaved();
   }
@@ -117,20 +117,20 @@ class KVPersistance : public SavePolicy<KVPersistance> {
     OnUpdated();
   }
 
-  map<int64, int64>& storage() { return kv_; }
+  std::map<int64, int64>& storage() { return kv_; }
 
   int64 size() const { return kv_.size(); }
 
-  void Visit(const function<bool(int64, int64)>& f) {
+  void Visit(const std::function<bool(int64, int64)>& f) {
     for (auto& iter : kv_) {
       if (!f(iter.first, iter.second)) break;
     }
   }
 
  private:
-  string path_;
+  std::string path_;
   bool check_;
-  map<int64, int64> kv_;
+  std::map<int64, int64> kv_;
 };
 
 #endif

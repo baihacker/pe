@@ -18,7 +18,7 @@ void init() {
   for (int i = 1; i <= 500; ++i) fac[i] = fac[i - 1] * i;
 }
 bi dp[N + 1];
-map<int128, bi> orz[N + 1];
+std::map<int128, bi> orz[N + 1];
 int main() {
   init();
   dp[0] = 1;
@@ -27,7 +27,7 @@ int main() {
     std::cerr << i << " ";
     for (int j = N; j >= i; --j) {
       bi total = 0;
-      map<int128, bi> inc;
+      std::map<int128, bi> inc;
       const int curr_step = i;
       const int n = j;
       for (int x = 1; x * curr_step <= n; ++x) {

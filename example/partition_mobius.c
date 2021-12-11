@@ -23,7 +23,7 @@ int64 dfs(int now, int s) {
 
 int64 solve0() { return dfs(1, S); }
 
-map<vi, int64> cache;
+std::map<vi, int64> cache;
 int64 compute(vi coe) {
   // sum(coe[i] * x_i) = S
   auto where = cache.find(coe);
@@ -43,11 +43,11 @@ int64 solve1() {
   vi pattern{1, 2, 3, 4, 5};
   MT ret = 0;
   for (auto p : Partition::GenPartitions(5)) {
-    map<int, int> mem;
+    std::map<int, int> mem;
     for (int i = 0; i < 5; ++i) mem[p.colors[i]] += pattern[i];
     vi key;
     for (auto& i : mem) key.pb(i.second);
-    sort(all(key));
+    std::sort(all(key));
     ret += compute(key) * pm.Cal(p) % mod;
   }
   return ret.value();

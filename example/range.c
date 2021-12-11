@@ -62,14 +62,14 @@ void irange_vector() {
 
 void irange_set() {
   {
-    set<int> a{1, 2, 3, 4, 5, 6};
+    std::set<int> a{1, 2, 3, 4, 5, 6};
     for (auto iter : IRange(a)) {
       std::cout << iter.i << " " << iter.v << std::endl;
       // ++iter.v; not allowed
     }
   }
   {
-    const set<int> a{1, 2, 3, 4, 5, 6};
+    const std::set<int> a{1, 2, 3, 4, 5, 6};
     for (auto iter : IRange(a)) {
       std::cout << iter.i << " " << iter.v << std::endl;
       // ++iter.v; not allowed
@@ -79,7 +79,7 @@ void irange_set() {
 
 void irange_map() {
   {
-    map<int, int> a;
+    std::map<int, int> a;
     a[5] = 10, a[7] = 20;
     for (auto iter : IRange(a)) {
       std::cout << iter.i << " " << iter.v.first << " " << iter.v.second
@@ -92,9 +92,9 @@ void irange_map() {
     }
   }
   {
-    map<int, int> t;
+    std::map<int, int> t;
     t[5] = 10, t[7] = 20;
-    const map<int, int> a = t;
+    const std::map<int, int> a = t;
     for (auto iter : IRange(a)) {
       std::cout << iter.i << " " << iter.v.first << " " << iter.v.second
                 << std::endl;
@@ -182,7 +182,7 @@ void range_vector_reduce() {
 void range_set_reduce() {
   // Sequential
   {
-    set<int> a{1, 2, 3, 4, 5, 6};
+    std::set<int> a{1, 2, 3, 4, 5, 6};
     std::cout << Range(a).Reduce(ru::Add<int64>()) << std::endl;
     std::cout << Range(a).Reduce(0, [](int& a, int b) -> void { a += b; })
               << std::endl;
@@ -190,7 +190,7 @@ void range_set_reduce() {
 
   // Parallel
   {
-    set<int> a{1, 2, 3, 4, 5, 6};
+    std::set<int> a{1, 2, 3, 4, 5, 6};
     std::cout << Range(a).PReduce(ru::Add<int64>()) << std::endl;
     std::cout << Range(a).PReduce(0, [](int& a, int b) -> void { a += b; })
               << std::endl;
@@ -204,11 +204,13 @@ void range_set_reduce() {
 void range_map_reduce() {
   // Sequential
   {
-    map<int, int> a;
+    std::map<int, int> a;
     a[1] = 2;
     a[2] = 3;
-    std::cout << Range(a).Reduce(ru::Add<int64, pair<const int, int>>(
-                     [=](pair<const int, int> x) -> int64 { return x.second; }))
+    std::cout << Range(a).Reduce(ru::Add<int64, std::pair<const int, int>>(
+                     [=](std::pair<const int, int> x) -> int64 {
+                       return x.second;
+                     }))
               << std::endl;
 
     std::cout << Range(a).Map<int64>([](auto& a) { return a.second; }).Sum()
@@ -217,11 +219,13 @@ void range_map_reduce() {
 
   // Parallel
   {
-    map<int, int> a;
+    std::map<int, int> a;
     a[1] = 2;
     a[2] = 3;
-    std::cout << Range(a).PReduce(ru::Add<int64, pair<const int, int>>(
-                     [=](pair<const int, int> x) -> int64 { return x.second; }))
+    std::cout << Range(a).PReduce(ru::Add<int64, std::pair<const int, int>>(
+                     [=](std::pair<const int, int> x) -> int64 {
+                       return x.second;
+                     }))
               << std::endl;
     std::cout << Range(a).PMap<int64>([](auto& a) { return a.second; }).Sum()
               << std::endl;
@@ -269,7 +273,7 @@ void range_number_range_reduce() {
 void range_general_example() {
   int a[6] = {1, 2, 3, 4, 5, 6};
   vector<int> x{3, 4, 5, 6};
-  map<int, int> mem;
+  std::map<int, int> mem;
   mem[1] = 2;
   mem[2] = 4;
 
@@ -355,8 +359,10 @@ void range_general_example() {
   std::cout << Range(1, 10000000 + 1).PReduce(ru::Add<int64>()) << std::endl;
 
   // Reduce on mem
-  std::cout << Range(mem).PReduce(ru::Add<int64, pair<const int, int>>(
-                   [=](pair<const int, int> x) -> int64 { return x.second; }))
+  std::cout << Range(mem).PReduce(ru::Add<int64, std::pair<const int, int>>(
+                   [=](std::pair<const int, int> x) -> int64 {
+                     return x.second;
+                   }))
             << std::endl;
   std::cout << Range(1, 10000000 + 1)
                    .Map<int64>([](auto a) { return a; })
@@ -364,8 +370,9 @@ void range_general_example() {
                        0, [=](int64& r, int v) { r += v; }))
             << std::endl;
   // Error
-  // std::cout << range(mem).PReduce({0,0}, [](auto a, auto b) -> pair<const
-  // int, int> {return {0, a.second + b.second};}, 2) << std::endl;
+  // std::cout << range(mem).PReduce({0,0}, [](auto a, auto b) ->
+  // std::pair<const int, int> {return {0, a.second + b.second};}, 2) <<
+  // std::endl;
   vector<Pt> y;
   y.pb({1, 2});
   y.pb({3, 4});

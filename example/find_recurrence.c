@@ -26,7 +26,7 @@ int main() {
   std::cout << helper << std::endl << std::endl;
 
   // The output of the generated mathematica command is
-  const string result =
+  const std::string result =
       "{{x1p0 -> 0, x1p1 -> -2, x1p2 -> 2, x1p3 -> 0, x1p4 -> 0, x1p5 "
       "-> 0, x2p0 -> 0, x2p1 -> 1, x2p2 -> -2, x2p3 -> 1, x2p4 -> 0, "
       "x2p5 -> 0}}";

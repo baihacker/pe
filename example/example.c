@@ -127,7 +127,7 @@ void NtExample() {
     int have;
     // The solution are x + k m where k is an integer.
     int64 x, m;
-    tie(have, x, m) = Crt2<int64>(1, 3, 2, 5);
+    std::tie(have, x, m) = Crt2<int64>(1, 3, 2, 5);
     // Output 1 7 15 since the solutions are 7 + k * 15.
     std::cout << have << " " << x << " " << m << std::endl;
 

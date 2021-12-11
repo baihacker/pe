@@ -111,9 +111,9 @@ SL void PkSumModTest() {
   const int64 mod = 4000000000000000037;
   PowerSumModerB moder(mod, 7);
   auto p1_impl = [=](int64 n, int64 mod) -> int64 { return P1SumMod(n, mod); };
-  function<int64(int64, int64)> them[]{p1_impl,   p1_impl,   &P2SumMod,
-                                       &P3SumMod, &P4SumMod, &P5SumMod,
-                                       &P6SumMod, &P7SumMod};
+  std::function<int64(int64, int64)> them[]{p1_impl,   p1_impl,   &P2SumMod,
+                                            &P3SumMod, &P4SumMod, &P5SumMod,
+                                            &P6SumMod, &P7SumMod};
   for (int k = 1; k <= 7; ++k) {
     for (int offset = -100; offset < 100; ++offset) {
       const int64 n = mod + offset;

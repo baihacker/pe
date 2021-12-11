@@ -16,7 +16,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(Mpz) MPZ(const T& v) {
   return Mpz(v);
 }
 
-SL Mpz MPZ(const string& s) { return Mpz(s.c_str(), 10); }
+SL Mpz MPZ(const std::string& s) { return Mpz(s.c_str(), 10); }
 
 SL Mpz MPZ(int64 v) { return v == 0 ? 0 : Mpz(ToString(v).c_str(), 10); }
 
@@ -36,7 +36,7 @@ struct Gbi<Mpz> {
     return MPZ(value);
   }
 
-  static Mpz Of(const string& s) { return MPZ(s); }
+  static Mpz Of(const std::string& s) { return MPZ(s); }
 };
 
 SL int IsZero(const Mpz& x) { return mpz_sgn(x.get_mpz_t()) == 0; }
@@ -91,15 +91,15 @@ SL T ToFloat(const Mpz& x) {
   return sgn > 0 ? r : -r;
 }
 
-SL string ToString(const Mpz& x) {
+SL std::string ToString(const Mpz& x) {
   std::stringstream ss;
   ss << x;
   return ss.str();
 }
 
-SL string to_string(const Mpz& x) { return ToString(x); }
+SL std::string to_string(const Mpz& x) { return ToString(x); }
 
-SL tuple<Mpz, Mpz> Div(const Mpz& l, const Mpz& r) {
+SL std::tuple<Mpz, Mpz> Div(const Mpz& l, const Mpz& r) {
   return {Mpz(l / r), Mpz(l % r)};
 }
 
@@ -224,7 +224,7 @@ class MpInteger {
 
   MpInteger(unsigned long val) { mpz_init_set_ui(z, val); }
 
-  MpInteger(const string& s) { mpz_init_set_str(z, s.c_str(), 10); }
+  MpInteger(const std::string& s) { mpz_init_set_str(z, s.c_str(), 10); }
 
   MpInteger(const char* s) { mpz_init_set_str(z, s, 10); }
 
@@ -276,7 +276,7 @@ class MpInteger {
     return *this;
   }
 
-  MpInteger& operator=(const string& s) {
+  MpInteger& operator=(const std::string& s) {
     mpz_set_str(z, s.c_str(), 10);
     return *this;
   }
@@ -574,19 +574,19 @@ class MpInteger {
 
   int BitCount() const { return mpz_popcount(z); }
 
-  string ToString(int base = 10) const {
+  std::string ToString(int base = 10) const {
     size_t sz = mpz_sizeinbase(z, base) + 1;
 
     char* buff = new char[sz + 1];
     if (buff != nullptr) {
       gmp_sprintf(buff, "%Zd", z);
     }
-    string ret(buff);
+    std::string ret(buff);
     delete[] buff;
     return ret;
   }
 
-  string to_string(int base = 10) const { return ToString(base); }
+  std::string to_string(int base = 10) const { return ToString(base); }
 
   template <typename T>
   REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
@@ -931,13 +931,13 @@ std::ostream& operator<<(std::ostream& o, const MpInteger& val) {
 }
 
 inline MpInteger operator"" _mpi(const char* sv, size_t /*sc*/) {
-  return MpInteger(string(sv));
+  return MpInteger(std::string(sv));
 }
 
 inline MpInteger operator"" _mpi(unsigned long long v) { return MpInteger(v); }
 
 inline MpInteger operator"" _bn(const char* sv, size_t /*sc*/) {
-  return MpInteger(string(sv));
+  return MpInteger(std::string(sv));
 }
 
 inline MpInteger operator"" _bn(unsigned long long v) { return MpInteger(v); }
@@ -952,7 +952,7 @@ struct Gbi<MpInteger> {
     return MpInteger(value);
   }
 
-  static MpInteger Of(const string& s) { return MpInteger(s); }
+  static MpInteger Of(const std::string& s) { return MpInteger(s); }
 };
 
 SL int IsZero(const MpInteger& x) { return x.IsZero(); }
@@ -980,11 +980,12 @@ SL T ToFloat(const MpInteger& x) {
   return x.ToFloat<T>();
 }
 
-SL string ToString(const MpInteger& x) { return x.ToString(); }
+SL std::string ToString(const MpInteger& x) { return x.ToString(); }
 
-SL string to_string(const MpInteger& x) { return ToString(x); }
+SL std::string to_string(const MpInteger& x) { return ToString(x); }
 
-SL tuple<MpInteger, MpInteger> Div(const MpInteger& l, const MpInteger& r) {
+SL std::tuple<MpInteger, MpInteger> Div(const MpInteger& l,
+                                        const MpInteger& r) {
   return {l / r, l % r};
 }
 

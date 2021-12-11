@@ -12,7 +12,7 @@ int main() {
 
   TimeRecorder tr;
   ParallelSort<30>(data, data + N);
-  // sort(data, data+N);
+  // std::sort(data, data+N);
   dbg("sorted");
 
   std::cerr << tr.Elapsed().Format() << std::endl;

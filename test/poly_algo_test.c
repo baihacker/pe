@@ -51,9 +51,9 @@ SL void GfTest() {
         GfFirst({vector<int64>(coe, coe + 92), mod}, {{1}, mod}, 10000);
     for (int i = 0; i <= 10000; ++i) assert(dp[i] == gfresult[i]);
 
-    string mine = ToString(
+    std::string mine = ToString(
         GfAt({vector<int64>(coe, coe + 92), mod}, {{1}, mod}, 100000000));
-    string expected = ToString("66666793333412666685000001"_bi % mod);
+    std::string expected = ToString("66666793333412666685000001"_bi % mod);
     assert(mine == expected);
   }
 }

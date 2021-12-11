@@ -29,7 +29,7 @@ void dfs(int now, const SymPoly<int64>& p) {
       std::cout << std::endl;
     }
   } else {
-    string me = "c" + ToString(now);
+    std::string me = "c" + ToString(now);
     for (int i = -1; i <= 2; ++i) {
       his[now] = i;
       dfs(now + 1, p.Replace(me, i));

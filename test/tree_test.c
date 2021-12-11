@@ -10,7 +10,7 @@ SL void RuBitTest() {
       for (int i = 0; i < 100; ++i) {
         int u = rand() % n + 1, v = rand() % n + 1;
         int w = rand() % n - 50;
-        if (u > v) swap(u, v);
+        if (u > v) std::swap(u, v);
         tree.Update(u, v, w);
         for (int j = u; j <= v; ++j) data[j] += w;
       }
@@ -30,7 +30,7 @@ SL void RsqBitTest() {
     if (rand() % 2 == 0) {
       for (int i = 0; i < 100; ++i) {
         int u = rand() % n + 1, v = rand() % n + 1;
-        if (u > v) swap(u, v);
+        if (u > v) std::swap(u, v);
         int s = 0;
         for (int j = u; j <= v; ++j) s += data[j];
         assert(tree.Query(u, v) == s);

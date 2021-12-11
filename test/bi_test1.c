@@ -44,7 +44,7 @@ SL void BiMulTestImpl(int x, int y) {
           for (auto& iter : A) a *= iter;
           for (auto& iter : B) b *= iter;
           mpz_class c = a * b;
-          stringstream ss;
+          std::stringstream ss;
           ss << c;
           ss >> expectedResult;
         }
@@ -55,7 +55,7 @@ SL void BiMulTestImpl(int x, int y) {
           for (auto& iter : A) a *= iter;
           for (auto& iter : B) b *= iter;
           bi c = a * b;
-          stringstream ss;
+          std::stringstream ss;
           ss << c;
           ss >> myResult;
         }
@@ -105,7 +105,7 @@ SL void BiDivTestMediumImpl(int x, int y) {
               for (auto& iter : B) b *= iter;
               mpz_class c = a / b;
               mpz_class d = a % b;
-              stringstream ss;
+              std::stringstream ss;
               ss << c;
               ss >> expectedResult1;
               ss << d;
@@ -120,7 +120,7 @@ SL void BiDivTestMediumImpl(int x, int y) {
               for (auto& iter : B) b *= iter;
               bi c, d;
               tie(c, d) = Div(a, b);
-              stringstream ss;
+              std::stringstream ss;
               ss << c;
               ss >> myResult1;
               ss << d;

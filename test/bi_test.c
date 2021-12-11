@@ -6,15 +6,15 @@ SL void TestConstructorInternal() {
   // cout << typeid(T).name() << endl;
   // cout << BigInteger(T()) << endl;
   // cout << BigInteger(T(0)) << " " << BigInteger(T(1)) << endl;
-  // cout << BigInteger(numeric_limits<T>::min()) << " "
-  //      << numeric_limits<T>::min() << endl;
-  // cout << BigInteger(numeric_limits<T>::max()) << " "
-  //      << numeric_limits<T>::max() << endl;
+  // cout << BigInteger(std::numeric_limits<T>::min()) << " "
+  //      << std::numeric_limits<T>::min() << endl;
+  // cout << BigInteger(std::numeric_limits<T>::max()) << " "
+  //      << std::numeric_limits<T>::max() << endl;
 
-  assert(BigInteger(numeric_limits<T>::min()).ToInt<T>() ==
-         numeric_limits<T>::min());
-  assert(BigInteger(numeric_limits<T>::max()).ToInt<T>() ==
-         numeric_limits<T>::max());
+  assert(BigInteger(std::numeric_limits<T>::min()).ToInt<T>() ==
+         std::numeric_limits<T>::min());
+  assert(BigInteger(std::numeric_limits<T>::max()).ToInt<T>() ==
+         std::numeric_limits<T>::max());
 
   // cout << endl;
 }
@@ -48,11 +48,11 @@ SL void TestAssignmentInternal() {
   x = T();
   assert(x.ToInt<T>() == T());
 
-  x = numeric_limits<T>::max();
-  assert(x.ToInt<T>() == numeric_limits<T>::max());
+  x = std::numeric_limits<T>::max();
+  assert(x.ToInt<T>() == std::numeric_limits<T>::max());
 
-  x = numeric_limits<T>::min();
-  assert(x.ToInt<T>() == numeric_limits<T>::min());
+  x = std::numeric_limits<T>::min();
+  assert(x.ToInt<T>() == std::numeric_limits<T>::min());
 }
 
 SL void TestAssignmentOperator() {

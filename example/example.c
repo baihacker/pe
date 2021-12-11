@@ -95,9 +95,9 @@ void NtExample() {
   {
     auto t = ExGcd<int>(24, 36);
     // x * 24 + y * 36 = d (greatest common divisor)
-    auto d = get<0>(t);
-    auto x = get<1>(t);
-    auto y = get<2>(t);
+    auto d = std::get<0>(t);
+    auto x = std::get<1>(t);
+    auto y = std::get<2>(t);
     // -1 1 12
     cout << x << " " << y << " " << d << endl;
     cout << x * 24 + y * 36 << endl;
@@ -113,10 +113,10 @@ void NtExample() {
     // Solve 3 * x = 4 (mod 7)
     auto t = SolveLinearEquation(3, 4, 7);
     // Whether the solution exists.
-    auto have = get<0>(t);
+    auto have = std::get<0>(t);
     // The solutions are x + k m where k is an integer.
-    auto x = get<1>(t);
-    auto m = get<2>(t);
+    auto x = std::get<1>(t);
+    auto m = std::get<2>(t);
     // Output 1 4 7 since the solutions are 6 + k * 7.
     cout << have << " " << x << " " << m << endl;
   }

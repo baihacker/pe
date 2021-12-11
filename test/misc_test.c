@@ -16,7 +16,7 @@ SL void MiscTest() {
   }
 
   auto vtos = [=](const vector<int64>& vec) {
-    stringstream ss;
+    std::stringstream ss;
     ss << vec;
     return ss.str();
   };

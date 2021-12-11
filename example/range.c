@@ -131,7 +131,9 @@ struct Pt {
   // operator int() const { return a; }
 };
 
-ostream& operator<<(ostream& o, const Pt& p) { return o << p.a << " " << p.b; }
+std::ostream& operator<<(std::ostream& o, const Pt& p) {
+  return o << p.a << " " << p.b;
+}
 
 void range_array_reduce() {
   // Sequential

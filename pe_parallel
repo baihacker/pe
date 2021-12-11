@@ -60,15 +60,15 @@ class MultiThreadsTaskRunner {
     InitializeCriticalSection(&request_access_);
     has_new_request_ = CreateEvent(nullptr, FALSE, FALSE, nullptr);
     request_removed_ = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-    threads_count_ = max(threads, static_cast<int>(min_thread));
-    threads_count_ = min(threads_count_, static_cast<int>(max_thread));
+    threads_count_ = std::max(threads, static_cast<int>(min_thread));
+    threads_count_ = std::min(threads_count_, static_cast<int>(max_thread));
     worker_ptr_ = worker;
     for (int i = 0; i < threads_count_; ++i) {
       threads_context_[i].idx = i;
       threads_context_[i].worker_ptr = worker_ptr_;
       threads_context_[i].host = this;
       threads_handle_[i] = reinterpret_cast<HANDLE>(_beginthreadex(
-          nullptr, max(stack, 100 * (1 << 20)), WorkThread,
+          nullptr, std::max(stack, 100 * (1 << 20)), WorkThread,
           reinterpret_cast<void*>(&threads_context_[i]), 0, nullptr));
     }
     start_ = GetTickCount();

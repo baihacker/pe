@@ -40,7 +40,7 @@ int main() {
         bi magic = t / fac[x] * u;
         total += magic * dp[n - curr_step * x];
         foreach (it, orz[n - x * curr_step]) {
-          int128 d = __gcd((int128)curr_step, it.first);
+          int128 d = Gcd((int128)curr_step, it.first);
           int128 now = curr_step / d * it.first;
           inc[now] += it.second * magic;
         }

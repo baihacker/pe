@@ -238,9 +238,9 @@ class BigInteger {
     sign_ = 0;
   }
 
-  BigInteger(const BigInteger& other, int minBuffer)
+  BigInteger(const BigInteger& other, int min_buffer)
       : BigInteger(zero_initialize_tag) {
-    Reserve(std::max(other.buffer_length_, minBuffer));
+    Reserve(std::max(other.buffer_length_, min_buffer));
     sign_ = other.sign_;
     pos_ = other.pos_;
     std::copy(other.data_, other.data_ + other.pos_ + 1, data_);
@@ -272,18 +272,18 @@ class BigInteger {
       return a > b ? 1 : -1;
     }
 
-    int posL = l.pos_;
-    int posR = r.pos_;
+    int left_pos = l.pos_;
+    int right_pos = r.pos_;
 
-    if (posL != posR) {
-      return posL > posR ? 1 : -1;
+    if (left_pos != right_pos) {
+      return left_pos > right_pos ? 1 : -1;
     }
 
-    for (; posL >= 0 && l[posL] == r[posL]; --posL) {
+    for (; left_pos >= 0 && l[left_pos] == r[left_pos]; --left_pos) {
       ;
     }
 
-    return posL >= 0 ? (l[posL] > r[posL] ? 1 : -1) : 0;
+    return left_pos >= 0 ? (l[left_pos] > r[left_pos] ? 1 : -1) : 0;
   }
 
   static BigInteger AbsAdd(const BigInteger& l, const BigInteger& r) {
@@ -300,21 +300,21 @@ class BigInteger {
 
     l.Reserve(l.size() + r.size() + 1);
 
-    const int maxPos = std::max(l.pos_, r.pos_);
-    const int minPos = std::min(l.pos_, r.pos_);
+    const int max_pos = std::max(l.pos_, r.pos_);
+    const int min_pos = std::min(l.pos_, r.pos_);
 
     int idx = 0;
     unsigned int inc = 0;
 
-    while (idx <= minPos) {
+    while (idx <= min_pos) {
       uint64 t = static_cast<uint64>(l[idx]) + r[idx] + inc;
       l[idx++] = t & max_32bit_value;
       inc = t >> 32;
     }
 
-    const auto* largeData = l.pos_ > r.pos_ ? l.data_ : r.data_;
-    while (idx <= maxPos) {
-      uint64 t = static_cast<uint64>(largeData[idx]) + inc;
+    const auto* large_data = l.pos_ > r.pos_ ? l.data_ : r.data_;
+    while (idx <= max_pos) {
+      uint64 t = static_cast<uint64>(large_data[idx]) + inc;
       l[idx++] = t & max_32bit_value;
       inc = t >> 32;
     }
@@ -341,29 +341,29 @@ class BigInteger {
       return;
     }
 
-    int maxPos = l.pos_;
-    int minPos = r.pos_;
+    int max_pos = l.pos_;
+    int min_pos = r.pos_;
 
     unsigned int borrow = 0;
-    for (int curr = 0; curr <= minPos; ++curr) {
-      unsigned int nextBorrow = 0;
+    for (int curr = 0; curr <= min_pos; ++curr) {
+      unsigned int next_borrow = 0;
       uint64 t = l[curr];
       while (t < static_cast<uint64>(r[curr]) + borrow) {
-        nextBorrow++;
+        next_borrow++;
         t += bit32_value;
       }
       l[curr] = static_cast<unsigned>(t - r[curr] - borrow);
-      borrow = nextBorrow;
+      borrow = next_borrow;
     }
-    for (int curr = minPos + 1; curr <= maxPos; ++curr) {
-      unsigned int nextBorrow = 0;
+    for (int curr = min_pos + 1; curr <= max_pos; ++curr) {
+      unsigned int next_borrow = 0;
       uint64 t = l[curr];
       while (t < borrow) {
-        nextBorrow++;
+        next_borrow++;
         t += bit32_value;
       }
       l[curr] = static_cast<unsigned>(t - borrow);
-      borrow = nextBorrow;
+      borrow = next_borrow;
     }
     l.FixPos();
   }
@@ -383,17 +383,17 @@ class BigInteger {
       Y[i << 1] = r[i] & 65535;
       Y[(i << 1) + 1] = r[i] >> 16;
     }
-    const int allocateSize = n + m + 8;
-    const int resultSize = n + m - 1;
+    const int allocate_size = n + m + 8;
+    const int result_size = n + m - 1;
     auto result = ntt32::PolyMulSmall(X, Y, 0);
-    result.resize(allocateSize);
+    result.resize(allocate_size);
     uint64 inc = 0;
-    for (int i = 0; i < resultSize; ++i) {
+    for (int i = 0; i < result_size; ++i) {
       uint64 t = inc + result[i];
       result[i] = t & 65535u;
       inc = t >> 16;
     }
-    int now = resultSize;
+    int now = result_size;
     while (inc > 0) {
       result[now++] = inc & 65535u;
       inc >>= 16;
@@ -429,10 +429,10 @@ class BigInteger {
       // If the cost of ntt is less than normal multiplication, then use ntt.
       const uint64 cost1 = static_cast<uint64>(l.size()) * r.size();
       const uint64 len = (l.size() + r.size()) << 1;
-      int64 alignedLen = 1;
+      int64 aligned_len = 1;
       int bit = 1;
-      while (alignedLen < static_cast<int64>(len)) alignedLen <<= 1, ++bit;
-      const uint64 cost2 = alignedLen * bit * 3;
+      while (aligned_len < static_cast<int64>(len)) aligned_len <<= 1, ++bit;
+      const uint64 cost2 = aligned_len * bit * 3;
 
       if (cost2 * 2 < cost1) {
         return AbsMulNtt(l, r);
@@ -440,19 +440,19 @@ class BigInteger {
     }
 #endif
 
-    const int posL = l.pos_;
-    const int posR = r.pos_;
+    const int left_pos = l.pos_;
+    const int right_pos = r.pos_;
 
-    const int newSize = l.size() + r.size() + 1;
+    const int new_size = l.size() + r.size() + 1;
 
-    BigInteger ret(newSize, alloc_mem_tag);
-    std::fill(ret.data_, ret.data_ + newSize, 0);
+    BigInteger ret(new_size, alloc_mem_tag);
+    std::fill(ret.data_, ret.data_ + new_size, 0);
 
-    for (int i = 0; i <= posR; ++i) {
+    for (int i = 0; i <= right_pos; ++i) {
       auto t = r[i];
       uint64 inc = 0;
       int j = 0;
-      for (; j <= posL; ++j) {
+      for (; j <= left_pos; ++j) {
         inc += static_cast<uint64>(t) * l[j] + ret[i + j];
         ret[i + j] = inc & max_32bit_value;
         inc >>= 32;
@@ -461,7 +461,7 @@ class BigInteger {
         ret[i + j++] = inc & max_32bit_value;
       }
     }
-    ret.pos_ = posL + posR + 2;
+    ret.pos_ = left_pos + right_pos + 2;
     ret.FixPos();
     return ret;
   }
@@ -563,11 +563,11 @@ class BigInteger {
     std::vector<T> result;
     remain = l;
 
-    const int divR = static_cast<int>(r.size());
+    const int r_size = static_cast<int>(r.size());
     int pos = static_cast<int>(l.size()) - 1;
-    int end = pos - divR + 1;
+    int end = pos - r_size + 1;
     for (; end >= 0;) {
-      if (pos - end + 1 < divR) {
+      if (pos - end + 1 < r_size) {
         result.push_back(0);
         --end;
         continue;
@@ -577,8 +577,8 @@ class BigInteger {
         continue;
       }
       int gt = 1;
-      if (pos - end + 1 == divR) {
-        for (int i = pos, j = divR - 1; i >= end; --i, --j) {
+      if (pos - end + 1 == r_size) {
+        for (int i = pos, j = r_size - 1; i >= end; --i, --j) {
           if (remain[i] < r[j]) {
             gt = 0;
             break;
@@ -595,26 +595,26 @@ class BigInteger {
 
       int borrow = 0;
       int i = end, j = 0;
-      for (; j < divR; ++i, ++j) {
-        int nextBorrow = 0;
+      for (; j < r_size; ++i, ++j) {
+        int next_borrow = 0;
         auto t = remain[i];
         while (t < r[j] + borrow) {
           t += 2;
-          ++nextBorrow;
+          ++next_borrow;
         }
         remain[i] = t - r[j] - borrow;
-        borrow = nextBorrow;
+        borrow = next_borrow;
       }
 
       for (; i <= pos; ++i) {
-        int nextBorrow = 0;
+        int next_borrow = 0;
         int t = remain[i];
         while (t < borrow) {
           t += 2;
-          ++nextBorrow;
+          ++next_borrow;
         }
         remain[i] = t - borrow;
-        borrow = nextBorrow;
+        borrow = next_borrow;
       }
       --end;
     }
@@ -673,9 +673,9 @@ class BigInteger {
     }
 #if !PE_HAS_INT128
     if (sizeof(T) > 4) {
-      BigInteger tRemain;
-      l = AbsDiv(l, BigInteger(r), tRemain);
-      remain = tRemain.ToInt<T>();
+      BigInteger tmp_remain;
+      l = AbsDiv(l, BigInteger(r), tmp_remain);
+      remain = tmp_remain.ToInt<T>();
       return;
     }
 #else
@@ -887,8 +887,8 @@ class BigInteger {
       return *this;
     }
     using unsignedT = typename pe_make_unsigned<T>::type;
-    unsignedT absValue = AbsValue(other);
-    AbsMulInplace(*this, absValue);
+    unsignedT abs_value = AbsValue(other);
+    AbsMulInplace(*this, abs_value);
     sign_ = sign_ * (other > 0 ? 1 : -1);
     return *this;
   }
@@ -990,24 +990,24 @@ class BigInteger {
     v.resize(now + 1);
   }
 
-  void Reserve(int newSize) {
-    PE_ASSERT(newSize > 0);
-    unsigned int* oldData = nullptr;
+  void Reserve(int new_size) {
+    PE_ASSERT(new_size > 0);
+    unsigned int* old_data = nullptr;
     if (data_) {
-      if (newSize > buffer_length_) {
-        oldData = data_;
+      if (new_size > buffer_length_) {
+        old_data = data_;
       } else {
         return;
       }
     }
 
-    data_ = BiAllocator::Allocate(newSize);
-    if (oldData != nullptr) {
+    data_ = BiAllocator::Allocate(new_size);
+    if (old_data != nullptr) {
       // copy used data only.
-      std::copy(oldData, oldData + pos_ + 1, data_);
-      BiAllocator::Deallocate(oldData);
+      std::copy(old_data, old_data + pos_ + 1, data_);
+      BiAllocator::Deallocate(old_data);
     }
-    buffer_length_ = newSize;
+    buffer_length_ = new_size;
   }
 
  public:
@@ -1348,9 +1348,9 @@ inline REQUIRES(
   if (r == 0 || l.IsZero()) return 0;
 
   using unsignedT = typename pe_make_unsigned<T>::type;
-  unsignedT absValue = BigInteger::AbsValue(r);
+  unsignedT abs_value = BigInteger::AbsValue(r);
   const int s = l.sign() * (r > 0 ? 1 : -1);
-  BigInteger ret(BigInteger::AbsMul(l, absValue));
+  BigInteger ret(BigInteger::AbsMul(l, abs_value));
   ret.sign_ = s;
 
   return ret;
@@ -1404,10 +1404,10 @@ inline std::tuple<BigInteger, BigInteger> DivInternal(const BigInteger& l,
 
     return std::make_tuple(std::move(ret), std::move(x));
   } else {
-    uint64 absValue = r.ToInt<uint64>();
+    uint64 abs_value = r.ToInt<uint64>();
     uint64 x;
     BigInteger ret(l);
-    BigInteger::AbsDivInplace(ret, absValue, x);
+    BigInteger::AbsDivInplace(ret, abs_value, x);
     ret.sign_ = l.sign() * (r.sign() > 0 ? 1 : -1);
     ret.FixPos();
 
@@ -1434,10 +1434,10 @@ inline REQUIRES(
 
   const int signl = l.sign_;
   using unsignedT = typename pe_make_unsigned<T>::type;
-  unsignedT absValue = BigInteger::AbsValue(r);
+  unsignedT abs_value = BigInteger::AbsValue(r);
   unsignedT x;
   BigInteger ret(l);
-  BigInteger::AbsDivInplace(ret, absValue, x);
+  BigInteger::AbsDivInplace(ret, abs_value, x);
   ret.sign_ = signl * (r > 0 ? 1 : -1);
   ret.FixPos();
   if (l.sign_ < 0) {
@@ -1469,13 +1469,13 @@ inline REQUIRES(
     return;
   }
   using unsignedT = typename pe_make_unsigned<T>::type;
-  unsignedT absValue = BigInteger::AbsValue(r);
-  unsignedT remainT;
+  unsignedT abs_value = BigInteger::AbsValue(r);
+  unsignedT tmp_remain;
   const int signl = l.sign_;
-  BigInteger::AbsDivInplace(l, absValue, remainT);
+  BigInteger::AbsDivInplace(l, abs_value, tmp_remain);
   l.sign_ = signl * (r > 0 ? 1 : -1);
   l.FixPos();
-  remain = static_cast<T>(remainT);
+  remain = static_cast<T>(tmp_remain);
   if (signl < 0) {
     PE_ASSERT(remain == 0 || !pe_is_unsigned<T>::value);
     remain = BigInteger::NegValue(remain);
@@ -1508,12 +1508,12 @@ inline BigInteger operator&(const BigInteger& l, const BigInteger& r) {
     return l.ToInt<uint64>() & r.ToInt<uint64>();
   }
 
-  const int minPos = std::min(l.pos_, r.pos_);
-  BigInteger ret(minPos + 1, alloc_mem_tag);
-  for (int i = 0; i <= minPos; ++i) {
+  const int min_pos = std::min(l.pos_, r.pos_);
+  BigInteger ret(min_pos + 1, alloc_mem_tag);
+  for (int i = 0; i <= min_pos; ++i) {
     ret[i] = l[i] & r[i];
   }
-  ret.pos_ = minPos;
+  ret.pos_ = min_pos;
   ret.sign_ = 1;
   ret.FixPos();
   return ret;
@@ -1524,15 +1524,15 @@ inline BigInteger operator^(const BigInteger& l, const BigInteger& r) {
     return l.ToInt<uint64>() ^ r.ToInt<uint64>();
   }
 
-  const int maxPos = std::max(l.pos_, r.pos_);
-  BigInteger ret(maxPos + 1, alloc_mem_tag);
-  for (int i = 0; i <= maxPos; ++i) {
+  const int max_pos = std::max(l.pos_, r.pos_);
+  BigInteger ret(max_pos + 1, alloc_mem_tag);
+  for (int i = 0; i <= max_pos; ++i) {
     unsigned int t = 0;
     if (i <= l.pos_) t ^= l[i];
     if (i <= r.pos_) t ^= r[i];
     ret[i] = t;
   }
-  ret.pos_ = maxPos;
+  ret.pos_ = max_pos;
   ret.sign_ = 1;
   ret.FixPos();
   return ret;
@@ -1543,15 +1543,15 @@ inline BigInteger operator|(const BigInteger& l, const BigInteger& r) {
     return l.ToInt<uint64>() | r.ToInt<uint64>();
   }
 
-  const int maxPos = std::max(l.pos_, r.pos_);
-  BigInteger ret(maxPos + 1, alloc_mem_tag);
-  for (int i = 0; i <= maxPos; ++i) {
+  const int max_pos = std::max(l.pos_, r.pos_);
+  BigInteger ret(max_pos + 1, alloc_mem_tag);
+  for (int i = 0; i <= max_pos; ++i) {
     unsigned int t = 0;
     if (i <= l.pos_) t |= l[i];
     if (i <= r.pos_) t |= r[i];
     ret[i] = t;
   }
-  ret.pos_ = maxPos;
+  ret.pos_ = max_pos;
   ret.sign_ = 1;
   ret.FixPos();
   return ret;
@@ -1569,9 +1569,9 @@ inline REQUIRES(
   if (n == 0) {
     return l;
   }
-  const int bitCnt = l.BitHeight();
-  std::vector<unsigned int> v(n + bitCnt, 0);
-  for (int i = 0, j = n; i < bitCnt; ++i, ++j) {
+  const int bit_cnt = l.BitHeight();
+  std::vector<unsigned int> v(n + bit_cnt, 0);
+  for (int i = 0, j = n; i < bit_cnt; ++i, ++j) {
     const int x = i >> BigInteger::div32_bit;
     const int y = i & BigInteger::mod32_mask;
     v[j] = (l[x] >> y) & 1;
@@ -1594,13 +1594,13 @@ inline REQUIRES(
   if (n == 0) {
     return l;
   }
-  const int bitCnt = l.BitHeight();
-  if (n >= bitCnt) {
+  const int bit_cnt = l.BitHeight();
+  if (n >= bit_cnt) {
     return 0;
   }
 
-  std::vector<unsigned int> v(bitCnt - n, 0);
-  for (int i = n, j = 0; i < bitCnt; ++i, ++j) {
+  std::vector<unsigned int> v(bit_cnt - n, 0);
+  for (int i = n, j = 0; i < bit_cnt; ++i, ++j) {
     const int x = i >> BigInteger::div32_bit;
     const int y = i & BigInteger::mod32_mask;
     v[j] = (l[x] >> y) & 1;

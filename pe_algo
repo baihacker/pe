@@ -3099,21 +3099,23 @@ struct DfaSummer {
     for (int i = 1; i <= max_len_; ++i) {
       for (int j = 0; j < state_count_; ++j) {
         auto to = dfa_[j];
+        CT tmp = 0;
         for (int k = 0; k < number_base_; ++k) {
-          dp_[0][i][j] += dp_[0][i - 1][to[k]];
+          tmp += dp_[0][i - 1][to[k]];
         }
+        dp_[0][i][j] = tmp;
         for (int p = 1; p <= max_power_; ++p) {
+          CT tmp = 0;
           for (int k = 0; k < number_base_; ++k) {
-            CT v = 0;
             CT a = 1;
             CT each = k * base_power_[i - 1];
             int state = to[k];
             for (int t = 0; t <= p; ++t) {
-              v += choose[p][t] * a * dp_[p - t][i - 1][state];
+              tmp += choose[p][t] * a * dp_[p - t][i - 1][state];
               a *= each;
             }
-            dp_[p][i][j] += v;
           }
+          dp_[p][i][j] = tmp;
         }
       }
     }

@@ -124,7 +124,7 @@ struct FactSumModer {
 
   int64 Cal(uint64 n) {
     if (n >= p_) n = p_ - 1;
-    if (n < q_) return preFactSum_[n];
+    if (n < q_) return pre_fact_sum_[n];
 
     auto m = static_cast<int64>(sqrt(n));
     uint64 ret = 1;
@@ -190,20 +190,20 @@ struct FactSumModer {
     while (q_ * q_ < p_) ++q_;
     q_ <<= 1;
     q_ += 1;
-    preFact_.resize(q_);
-    preFactSum_.resize(q_);
-    InitSeqProd2<uint64>(&preFact_[0], nullptr, q_ - 1, p_);
-    preFactSum_[0] = preFact_[0];
+    pre_fact_.resize(q_);
+    pre_fact_sum_.resize(q_);
+    InitSeqProd2<uint64>(&pre_fact_[0], nullptr, q_ - 1, p_);
+    pre_fact_sum_[0] = pre_fact_[0];
     for (int i = 1; i < q_; ++i) {
-      preFactSum_[i] = AddMod(preFactSum_[i - 1], preFact_[i], p_);
+      pre_fact_sum_[i] = AddMod(pre_fact_sum_[i - 1], pre_fact_[i], p_);
     }
   }
 
  private:
   uint64 p_;
   uint64 q_;
-  std::vector<uint64> preFact_;
-  std::vector<uint64> preFactSum_;
+  std::vector<uint64> pre_fact_;
+  std::vector<uint64> pre_fact_sum_;
 };
 
 // Calculates x^n % mod using pre-computed x^(2^(i))
@@ -657,7 +657,7 @@ struct PowerSumModerB {
 
     int64 ret = 0;
 
-    int64 invn = PowerModEx(n % mod_, mod_ - 2, mod_);
+    const int64 invn = PowerModEx(n % mod_, mod_ - 2, mod_);
     int64 c = PowerModEx(n % mod_, k + 1, mod_);
 
     for (int64 i = 0; i <= k; ++i) {
@@ -686,7 +686,7 @@ struct PowerSumModerB {
 
     int64 ret = 0;
 
-    int64 invn = PowerModEx(n % mod_, mod_ - 2, mod_);
+    const int64 invn = PowerModEx(n % mod_, mod_ - 2, mod_);
     int64 c = PowerModEx(n % mod_, k + 1, mod_);
 
     int64 d = 0;
@@ -2643,8 +2643,8 @@ int64 CountPythagoreanTriple(int64 n) {
 // See https://oeis.org/A101930
 int64 CountPythagoreanTripleEx(int64 n) {
   auto _ = PrimeS0PMod<int64>(n, 4);
-  auto ps1 = _[1];
-  auto ps3 = _[3];
+  auto ps1 = std::move(_[1]);
+  auto ps3 = std::move(_[3]);
   std::function<int64(int, int64, int64, int64, int, int64)> dfs =
       [&](int limit, int64 n, int64 val, int64 c, int evmp,
           int64 vmp) -> int64 {
@@ -2692,9 +2692,8 @@ struct PerfectPowerCounter {
     std::fill(pre_[0], pre_[0] + 20, 0);
     pre_[0][0] = 1;
     for (int i = 2; i <= pivot_; ++i) {
-      auto f = Factorize(i);
       int d = 0;
-      for (auto& iter : f) d = Gcd(d, iter.second);
+      for (auto& iter : Factorize(i)) d = Gcd(d, iter.second);
       for (int j = 0; j <= 19; ++j) pre_[i][j] = pre_[i - 1][j];
       pre_[i][d]++;
     }

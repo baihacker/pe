@@ -1,5 +1,5 @@
 #include "pe.hpp"
-
+using namespace pe;
 template <typename GBI>
 void demo() {
   vi data{1, 2, 2, 2, 2, 2, 2, 2, 2, 2};

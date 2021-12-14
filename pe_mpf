@@ -6,6 +6,7 @@
 #include "pe_nt"
 #include "pe_mpz"
 
+namespace pe {
 #if PE_HAS_CPP20
 template <class T>
 concept PeFloatArithmeticOperation = requires(T v) {
@@ -126,7 +127,7 @@ class Mpf {
 
   Mpf(double t) { mpf_init_set_d(f, t); }
 
-  Mpf(long double t) : Mpf(std::to_string(t)) {}
+  Mpf(long double t) : Mpf(pe::to_string(t)) {}
 
   Mpf(const std::string& s) : Mpf(s.c_str()) {}
 
@@ -283,7 +284,7 @@ class Mpf {
     std::string temp(buff);
     std::string t =
         temp.substr(0, offset) + std::string(".") + temp.substr(offset);
-    if (e - 1 != 0) t = t + "e" + ::ToString(e - 1);
+    if (e - 1 != 0) t = t + "e" + pe::ToString(e - 1);
     return t;
   }
 
@@ -391,6 +392,8 @@ SL Mpf floor(const Mpf& f) { return f.Floor(); }
 
 SL Mpf trunc(const Mpf& f) { return f.Trunc(); }
 
+SL std::string to_string(const Mpf& f, int dig = 20) { return f.ToString(dig); }
+
 MpInteger& MpInteger::operator=(const Mpf& o) {
   mpz_set_f(z, o.mpf());
   return *this;
@@ -398,6 +401,7 @@ MpInteger& MpInteger::operator=(const Mpf& o) {
 #if PE_HAS_CPP20
 static_assert(PeFloat<Mpf>);
 #endif
+}  // namespace pe
 #else
 #define HAS_MPF 0
 #endif

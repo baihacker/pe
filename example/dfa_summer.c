@@ -1,4 +1,5 @@
 #include <pe.hpp>
+using namespace pe;
 
 // Compute the 3rd power of the number which contains 3.
 const int64 mod = 1000000007;

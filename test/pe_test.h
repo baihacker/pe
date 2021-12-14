@@ -3,6 +3,7 @@
 
 #define PE_TEST_MODE
 #include <pe>
+using namespace pe;
 
 using TestMethodT = std::function<void()>;
 

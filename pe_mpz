@@ -6,28 +6,37 @@
 #include "pe_type_traits"
 #include "pe_fraction"
 
-// Adapter for mpz_class
 #if defined(__GMP_PLUSPLUS__)
 #define HAS_MPZ 1
-using Mpz = mpz_class;
+
+// Adapter for mpz_class
+
+// mpz_class a member of global namespace, if the following helper methods are
+// defined in namespace pe, they are not considered as candidates in name
+// resolutation phase and the compiler will find some other declarations. It is
+// possible that thoses found declaration have no implementation. e.g. the
+// methods declared in pe_gbi.
+
+using Mpz = ::mpz_class;
 
 template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(Mpz) MPZ(const T& v) {
+SL REQUIRES((pe::is_native_integer<T>::value)) RETURN(Mpz) MPZ(const T& v) {
   return Mpz(v);
 }
 
 SL Mpz MPZ(const std::string& s) { return Mpz(s.c_str(), 10); }
 
-SL Mpz MPZ(int64 v) { return v == 0 ? 0 : Mpz(ToString(v).c_str(), 10); }
+SL Mpz MPZ(int64 v) { return v == 0 ? 0 : Mpz(pe::ToString(v).c_str(), 10); }
 
-SL Mpz MPZ(uint64 v) { return v == 0 ? 0 : Mpz(ToString(v).c_str(), 10); }
+SL Mpz MPZ(uint64 v) { return v == 0 ? 0 : Mpz(pe::ToString(v).c_str(), 10); }
 
 #if PE_HAS_INT128
-SL Mpz MPZ(int128 v) { return v == 0 ? 0 : Mpz(ToString(v).c_str(), 10); }
+SL Mpz MPZ(int128 v) { return v == 0 ? 0 : Mpz(pe::ToString(v).c_str(), 10); }
 
-SL Mpz MPZ(uint128 v) { return v == 0 ? 0 : Mpz(ToString(v).c_str(), 10); }
+SL Mpz MPZ(uint128 v) { return v == 0 ? 0 : Mpz(pe::ToString(v).c_str(), 10); }
 #endif
 
+namespace pe {
 template <>
 struct Gbi<Mpz> {
   template <typename T,
@@ -38,6 +47,7 @@ struct Gbi<Mpz> {
 
   static Mpz Of(const std::string& s) { return MPZ(s); }
 };
+}  // namespace pe
 
 SL int IsZero(const Mpz& x) { return mpz_sgn(x.get_mpz_t()) == 0; }
 
@@ -65,7 +75,7 @@ SL T ToInt(const Mpz& x) {
   const int size = sgn > 0 ? val[0]._mp_size : -val[0]._mp_size;
   const auto* data = val[0]._mp_d;
 
-  typename AtLeastInt64<T>::type r = 0;
+  typename pe::AtLeastInt64<T>::type r = 0;
   for (int i = size - 1; i >= 0; --i) {
     r = (r << sizeof(mp_limb_t) * 4);
     r = (r << sizeof(mp_limb_t) * 4) | data[i];
@@ -106,94 +116,41 @@ SL std::tuple<Mpz, Mpz> Div(const Mpz& l, const Mpz& r) {
 // Extra operations
 
 template <typename T>
-SL REQUIRES((is_native_integer<T>::value && sizeof(T) > 4)) RETURN(T) operator%(
-    const Mpz& v, const T& mod) {
+SL REQUIRES((pe::is_native_integer<T>::value && sizeof(T) > 4)) RETURN(T)
+operator%(const Mpz& v, const T& mod) {
   return ToInt<T>(v % MPZ(mod));
 }
 
-#if 0
-// Compute n! mod p^e
-// Note: if i % p == 0, then the contribution of i is 1.
-// The complexity is at least max(e*e, p*e)
-// It is slow if N is very big, e.g. N = 10^10000. ((10^10000)! mod p^e)
-template <>
-struct FactPPowerModer<Mpz> {
-  std::vector<Mpz> F;
-  int64 p;
-  int64 e;
-  Mpz mpzP;
-  Mpz mod;
-  Mpz phi;
-
-  FactPPowerModer(const int64 p, const int64 e) : p(p), e(e) {
-    int64 pe = p * e;
-    mpzP = MPZ(p);
-    mod = Power(mpzP, e);
-    phi = Power(mpzP, (e - 1)) * MPZ(p - 1);
-    F.resize(pe + 1, 1);
-    for (int i = 1; i <= pe; ++i) {
-      if (i % p == 0)
-        F[i] = F[i - 1];
-      else
-        F[i] = F[i - 1] * i % mod;
-    }
-  }
-
-  Mpz Cal(const Mpz& N) {
-    Mpz u(N / mpzP);
-    Mpz v(N % mpzP);
-    auto vv = ToInt<int64>(v);
-    int64 r = (e + 1) >> 1;
-
-    Mpz ret = 1;
-    // F(up, p)
-    const Mpz u2 = u * u;
-
-    for (int j = 1; j <= r; ++j) {
-      Mpz beta_numer = u;
-      Mpz beta_denom = j;
-      const int j2 = j * j;
-      for (int i = 1; i <= r; ++i)
-        if (i != j) beta_numer *= u2 - i * i, beta_denom *= j2 - i * i;
-      Mpz beta = beta_numer / beta_denom % phi;
-      if (IntSign(beta) < 0) beta += phi;
-      ret = ret * PowerMod(F[j * p], beta, mod) % mod;
-    }
-
-    if (p == 2) {
-      int64 left_mod4 = ((LowerBits(u * mpzP + 1) & 4) >> 1) + 1;
-      int64 right_mod4 = LowerBits(ret) & 3;
-      if (left_mod4 != right_mod4) {
-        ret = (mod - ret) % mod;
-      }
-    }
-
-    // F(v, p)
-    ret = ret * F[vv] % mod;
-
-    // (p + v, v)_p
-    for (int j = 1; j < e; ++j) {
-      Mpz base = F[j * p + vv] * ModInv(Mpz(F[vv] * F[j * p]), mod) % mod;
-      Mpz alpha_numer = u;
-      Mpz alpha_denom = j;
-      for (int i = 1; i < e; ++i)
-        if (i != j) {
-          alpha_numer *= u - i;
-          alpha_denom *= j - i;
-        }
-      Mpz alpha = alpha_numer / alpha_denom % phi;
-      if (IntSign(alpha) < 0) alpha += phi;
-      ret = ret * PowerMod(base, alpha, mod) % mod;
-    }
-
-    return ret;
-  }
-};
-#endif
+namespace pe {
+using ::Abs;
+using ::Div;
+using ::FAbs;
+using ::IntSign;
+using ::IsEven;
+using ::IsOdd;
+using ::IsZero;
+using ::LowerBits;
+using ::Mpz;
+using ::MPZ;
+using ::to_string;
+using ::ToFloat;
+using ::ToInt;
+using ::ToString;
+}  // namespace pe
 
 #else
 #define HAS_MPZ 0
 #endif
+
+namespace pe {
+template <typename T>
+REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
+RETURN(void) __InitMpz(mpz_t z, T value);
+
+template <typename T>
+REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value &&
+          !std::is_same<T, bool>::value))
+RETURN(void) __InitMpz(mpz_t z, T value);
 
 // Adapter of mpz_t
 class Mpf;
@@ -204,12 +161,12 @@ class MpInteger {
 
   template <typename T>
   friend REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
-      RETURN(void) __InitMpz(mpz_t z, T value);
+      RETURN(void) pe::__InitMpz(mpz_t z, T value);
 
   template <typename T>
   friend REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value &&
-                   !std::is_same<T, bool>::value)) RETURN(void)
-      __InitMpz(mpz_t z, T value);
+                   !std::is_same<T, bool>::value))
+      RETURN(void) pe::__InitMpz(mpz_t z, T value);
 
  public:
   MpInteger() {
@@ -538,7 +495,7 @@ class MpInteger {
   }
 
  public:
-  int size() const { return ::Abs(z[0]._mp_size); }
+  int size() const { return pe::Abs(z[0]._mp_size); }
 
   mp_limb_t* data() { return z[0]._mp_d; }
 
@@ -930,18 +887,6 @@ std::ostream& operator<<(std::ostream& o, const MpInteger& val) {
   return o << val.ToString();
 }
 
-inline MpInteger operator"" _mpi(const char* sv, size_t /*sc*/) {
-  return MpInteger(std::string(sv));
-}
-
-inline MpInteger operator"" _mpi(unsigned long long v) { return MpInteger(v); }
-
-inline MpInteger operator"" _bn(const char* sv, size_t /*sc*/) {
-  return MpInteger(std::string(sv));
-}
-
-inline MpInteger operator"" _bn(unsigned long long v) { return MpInteger(v); }
-
 using bn = MpInteger;
 
 template <>
@@ -1036,6 +981,23 @@ MpInteger Gcd(const MpInteger& l, const MpInteger& r) {
 static_assert(PeGbi<MpInteger>);
 static_assert(PeFraction<Fraction<MpInteger> >);
 #endif
+}  // namespace pe
+
+inline pe::MpInteger operator"" _mpi(const char* sv, size_t /*sc*/) {
+  return pe::MpInteger(std::string(sv));
+}
+
+inline pe::MpInteger operator"" _mpi(unsigned long long v) {
+  return pe::MpInteger(v);
+}
+
+inline pe::MpInteger operator"" _bn(const char* sv, size_t /*sc*/) {
+  return pe::MpInteger(std::string(sv));
+}
+
+inline pe::MpInteger operator"" _bn(unsigned long long v) {
+  return pe::MpInteger(v);
+}
 
 #endif  // end ENABLE_GMP
 

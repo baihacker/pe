@@ -1,4 +1,5 @@
 #include <pe.hpp>
+using namespace pe;
 
 const int n = 1000000;
 const int64 mod = 1000000007;

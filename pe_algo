@@ -8,6 +8,7 @@
 #include "pe_array"
 #include "pe_parallel_algo"
 
+namespace pe {
 // Calculates n! % p.
 // Algorithm source: https://min-25.hatenablog.com/entry/2017/04/10/215046
 // Complexity: M(p^(1/2))
@@ -1278,15 +1279,15 @@ SL int64 GpSumMod(int64 x, int64 a, int64 b, int64 mod, int64 zero_p_zero = 1) {
 // Calculates the number of square free number no more than n.
 // If n is no more than pivot, use a pre-computed table.
 struct SFCounter {
-  SFCounter(int64 pivot_ = ::maxp) : pivot_(pivot_) {
-    if (::maxp > 0) {
+  SFCounter(int64 pivot_ = pe::maxp) : pivot_(pivot_) {
+    if (pe::maxp > 0) {
       Init(pivot_);
     }
   }
 
   ~SFCounter() = default;
 
-  void Init(int64 pivot = ::maxp) {
+  void Init(int64 pivot = pe::maxp) {
     pivot_ = pivot;
     pre_.resize(pivot_ + 1);
     pre_[0] = 0;
@@ -1319,23 +1320,23 @@ struct SFCounter {
 // Calculates mu(1) + mu(2) + ... + mu(n).
 template <typename T = int64>
 struct MuSummer {
-  MuSummer(int64 pivot = ::maxp) : pivot_(pivot) {
-    if (::maxp > 0) {
+  MuSummer(int64 pivot = pe::maxp) : pivot_(pivot) {
+    if (pe::maxp > 0) {
       Init(pivot_);
     }
   }
 
   ~MuSummer() = default;
 
-  void Init(int64 pivot = ::maxp) {
+  void Init(int64 pivot = pe::maxp) {
     pivot_ = pivot;
 
-    PE_ASSERT(pivot_ <= ::maxp);
+    PE_ASSERT(pivot_ <= pe::maxp);
 
     pre_.resize(pivot_ + 1);
     pre_[0] = 0;
     for (int i = 1; i <= pivot_; ++i) {
-      pre_[i] = ::mu[i] + pre_[i - 1];
+      pre_[i] = pe::mu[i] + pre_[i - 1];
     }
   }
 
@@ -1366,25 +1367,25 @@ struct MuSummer {
 // Calculates mu(1) + mu(2) + ... + mu(n) or phi(1) + phi(2) + ... + phi(n)
 template <typename T = int64>
 struct MuPhiSummer {
-  MuPhiSummer(int64 pivot = ::maxp) : pivot_(pivot) {
-    if (::maxp > 0) {
+  MuPhiSummer(int64 pivot = pe::maxp) : pivot_(pivot) {
+    if (pe::maxp > 0) {
       Init(pivot_);
     }
   }
 
   ~MuPhiSummer() = default;
 
-  void Init(int64 pivot = ::maxp) {
+  void Init(int64 pivot = pe::maxp) {
     pivot_ = pivot;
 
-    PE_ASSERT(pivot <= ::maxp);
+    PE_ASSERT(pivot <= pe::maxp);
 
     pre_sum_mu_.resize(pivot + 1);
     pre_sum_phi_.resize(pivot + 1);
     pre_sum_mu_[0] = pre_sum_phi_[0] = 0;
     for (int i = 1; i <= pivot; ++i) {
-      pre_sum_mu_[i] = ::mu[i] + pre_sum_mu_[i - 1];
-      pre_sum_phi_[i] = ::phi[i] + pre_sum_phi_[i - 1];
+      pre_sum_mu_[i] = pe::mu[i] + pre_sum_mu_[i - 1];
+      pre_sum_phi_[i] = pe::phi[i] + pre_sum_phi_[i - 1];
     }
   }
 
@@ -1447,18 +1448,18 @@ struct MuPhiSummer {
 // sigma0(i) is the number of the divisors of i.
 template <typename T = int64>
 struct Sigma0Summer {
-  Sigma0Summer(int64 pivot = ::maxp) : pivot_(pivot) {
-    if (::maxp > 0) {
+  Sigma0Summer(int64 pivot = pe::maxp) : pivot_(pivot) {
+    if (pe::maxp > 0) {
       Init(pivot_);
     }
   }
 
   ~Sigma0Summer() = default;
 
-  void Init(int64 pivot = ::maxp) {
+  void Init(int64 pivot = pe::maxp) {
     pivot_ = pivot;
 
-    PE_ASSERT(pivot <= ::maxp);
+    PE_ASSERT(pivot <= pe::maxp);
 
     pre_.resize(pivot + 1);
     std::fill(pre_.begin(), pre_.end(), 0);
@@ -1500,25 +1501,25 @@ struct Sigma0Summer {
 // (phi(1) + phi(2) + ... + phi(n)) % mod.
 // If n is no more than pivot, use a pre-computed table.
 struct MuPhiSumModer {
-  MuPhiSumModer(int64 mod, int64 pivot = ::maxp) : mod_(mod), pivot_(pivot) {
-    if (::maxp > 0) {
+  MuPhiSumModer(int64 mod, int64 pivot = pe::maxp) : mod_(mod), pivot_(pivot) {
+    if (pe::maxp > 0) {
       Init(pivot_);
     }
   }
 
   ~MuPhiSumModer() = default;
 
-  void Init(int64 pivot = ::maxp) {
+  void Init(int64 pivot = pe::maxp) {
     pivot_ = pivot;
 
-    PE_ASSERT(pivot <= ::maxp);
+    PE_ASSERT(pivot <= pe::maxp);
 
     pre_sum_mu_.resize(pivot + 1);
     pre_sum_phi_.resize(pivot + 1);
     pre_sum_mu_[0] = pre_sum_phi_[0] = 0;
     for (int i = 1; i <= pivot; ++i) {
-      pre_sum_mu_[i] = ::mu[i] + pre_sum_mu_[i - 1];
-      pre_sum_phi_[i] = (::phi[i] + pre_sum_phi_[i - 1]) % mod_;
+      pre_sum_mu_[i] = pe::mu[i] + pre_sum_mu_[i - 1];
+      pre_sum_phi_[i] = (pe::phi[i] + pre_sum_phi_[i - 1]) % mod_;
       if (pre_sum_mu_[i] < 0) {
         pre_sum_mu_[i] += mod_;
       } else if (pre_sum_mu_[i] >= mod_) {
@@ -1586,18 +1587,18 @@ struct MuPhiSumModer {
 // Calculates (sigma0(1) + sigma0(2) + ... + sigma0(n)) % mod.
 // sigma0(i) is the number of the divisors of i.
 struct Sigma0SumModer {
-  Sigma0SumModer(int64 mod, int64 pivot = ::maxp) : mod_(mod), pivot_(pivot) {
-    if (::maxp > 0) {
+  Sigma0SumModer(int64 mod, int64 pivot = pe::maxp) : mod_(mod), pivot_(pivot) {
+    if (pe::maxp > 0) {
       Init(pivot_);
     }
   }
 
   ~Sigma0SumModer() = default;
 
-  void Init(int64 pivot = ::maxp) {
+  void Init(int64 pivot = pe::maxp) {
     pivot_ = pivot;
 
-    PE_ASSERT(pivot <= ::maxp);
+    PE_ASSERT(pivot <= pe::maxp);
 
     pre_.resize(pivot + 1);
     std::fill(pre_.begin(), pre_.end(), 0);
@@ -2335,8 +2336,8 @@ SL std::vector<DVA<NModNumber<CCMod64<mod>>>> PrimeSkPMod(const int64 n, int k,
 
 // A helper class used to calculate pi(n) with cache.
 struct CachedPi {
-  CachedPi(int pivot_ = ::maxp) : pivot_(pivot_) {
-    if (::maxp > 0) {
+  CachedPi(int pivot_ = pe::maxp) : pivot_(pivot_) {
+    if (pe::maxp > 0) {
       Init(pivot_);
     }
   }
@@ -3266,4 +3267,5 @@ struct CarlitzWordsCounter {
   std::vector<int64> fac_;
   std::vector<int64> ifac_;
 };
+}  // namespace pe
 #endif

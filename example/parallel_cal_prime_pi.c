@@ -1,4 +1,5 @@
 #include <pe.hpp>
+using namespace pe;
 
 const int TN = 8;
 int64 CalPi0(int64 n) {

@@ -1,4 +1,5 @@
 #include <pe.hpp>
+using namespace pe;
 
 int main() {
   PE_INIT(maxp = 2000000);

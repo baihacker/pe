@@ -1,4 +1,5 @@
 #include <pe.hpp>
+using namespace pe;
 
 const int S = 500;
 // The number of non-negative solution for

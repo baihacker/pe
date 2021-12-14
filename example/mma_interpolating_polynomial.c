@@ -1,4 +1,5 @@
 #include <pe.hpp>
+using namespace pe;
 
 int64 f(int64 x) { return 1 + 2 * x + 3 * x * x + 4 * x * x * x; }
 

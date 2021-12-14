@@ -1,4 +1,5 @@
 #include <pe.hpp>
+using namespace pe;
 
 // Count the number which contains 3.
 

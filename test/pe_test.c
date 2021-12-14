@@ -51,7 +51,8 @@ SL bool IsEnabledTestSize(TestSize size) {
 }
 
 int main() {
-  pe().set_cal_phi()
+  PeInitializer()
+      .set_cal_phi()
       .set_cal_mu()
       .set_fft_k()
       .set_ntt32_k()

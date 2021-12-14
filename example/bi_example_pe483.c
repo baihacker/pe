@@ -6,6 +6,7 @@
 // N = 150:           55335570173801.14
 // output:            55335570173801
 #include <pe.hpp>
+using namespace pe;
 const int N = 100;
 bi choose[505][505];
 bi fac[501];

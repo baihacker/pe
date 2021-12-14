@@ -1,4 +1,5 @@
 #include <pe.hpp>
+using namespace pe;
 
 // Guess the solution to a^2=b^2+c^2+bc where
 // a = t1, b = t2, c = t3, c7 = 1, c8 = 0, c9 = -1

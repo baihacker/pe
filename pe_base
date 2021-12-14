@@ -111,15 +111,7 @@
 
 // using namespace std;
 
-using int64 = std::int64_t;
-using uint64 = std::uint64_t;
-using int32 = std::int32_t;
-using uint32 = std::uint32_t;
-
-using vi = std::vector<int>;
-using mii = std::map<int, int>;
-using si = std::set<int>;
-
+// pe macros
 #define all_impl(x) (x).begin(), (x).end()
 #define all(x) (x).begin(), (x).end()
 #define pb push_back
@@ -179,6 +171,57 @@ using si = std::set<int>;
     return PE_CONCAT(name, __LINE__);                                   \
   }
 
+#if ENABLE_OPENMP
+#define tid omp_get_thread_num
+#endif
+
+// namespace rules
+// 1. A specialized version of std template will be added to std.
+//    e.g. numeric_limits for int128.
+// 2. A std entity which is not available in old std will be added to std.
+//    e.g. remove_cvref is not available before c++17.
+// 3. The function (new function or overloaded function) for a type is added to
+//    the namespace of that type itself.
+//    e.g. int128, __float128, mpz_class are in global namespace
+//    e.g. BigInteger, MpInteger are in namespace pe.
+// 4. In addition to 3, if these functions are not operator and they are not in
+//    pe, add them to pe.
+//    e.g. IsEven for mpz_class is defined in global namespace and added to pe.
+// 5. operator "" _suffix is added to global namespace.
+//    e.g. operator "" x where x is one of {_i128, _u128, _bi, _mpi, _bn}.
+
+namespace pe {
+using int64 = std::int64_t;
+using uint64 = std::uint64_t;
+using int32 = std::int32_t;
+using uint32 = std::uint32_t;
+
+using vi = std::vector<int>;
+using mii = std::map<int, int>;
+using si = std::set<int>;
+
+// pe will add more overloaded version for the following functions.
+using std::abs;
+using std::ceil;
+using std::fabs;
+using std::floor;
+using std::to_string;
+using std::trunc;
+
+// About numbers
+
+// Integer limits check
+static_assert(sizeof(int) >= 4, "sizeof(int) >= 4");
+
+// Square overflow integers
+// x * x > 2^63 - 1 for x > PE_SOI63
+static const int64 PE_SOI63 = 3037000499LL;
+
+// x * x > 2^64 - 1 for x > PE_SOI64
+static const int64 PE_SOI64 = 4294967295LL;
+
+// Util functions
+
 template <typename T>
 SL void cmax(T& a, const T& b) {
   if (b > a) a = b;
@@ -211,6 +254,36 @@ SL std::vector<T> UniqueVector(std::vector<T> v) {
   return v;
 }
 
+template <typename T>
+std::ostream& PPrintVec(std::ostream& o, const std::vector<T>& v) {
+  const auto n = static_cast<int64>(v.size());
+  if (n == 0) {
+    return o;
+  }
+
+  if (n == 1) {
+    return o << v[0];
+  }
+
+  o << "{" << v[0];
+  for (int64 i = 1; i < n; ++i) {
+    o << ", " << v[i];
+  }
+  return o << "}";
+}
+}  // namespace pe
+
+// The following names are visible outside of pe.
+using int64 = pe::int64;
+using uint64 = pe::uint64;
+using int32 = pe::int32;
+using uint32 = pe::uint32;
+
+using vi = pe::vi;
+using mii = pe::mii;
+using si = pe::si;
+
+namespace std {
 template <typename T1, typename T2>
 SL std::ostream& operator<<(std::ostream& o, const std::pair<T1, T2>& v);
 
@@ -285,43 +358,10 @@ SL std::ostream& operator<<(std::ostream& o,
   return o << "}";
 }
 
-template <typename T>
-std::ostream& PPrintVec(std::ostream& o, const std::vector<T>& v) {
-  const auto n = static_cast<int64>(v.size());
-  if (n == 0) {
-    return o;
-  }
-
-  if (n == 1) {
-    return o << v[0];
-  }
-
-  o << "{" << v[0];
-  for (int64 i = 1; i < n; ++i) {
-    o << ", " << v[i];
-  }
-  return o << "}";
-}
-
 template <typename T1, typename T2>
 SL std::ostream& operator<<(std::ostream& o, const std::pair<T1, T2>& v) {
   return o << "(" << v.first << ", " << v.second << ")";
 }
-
-#if ENABLE_OPENMP
-#define tid omp_get_thread_num
-#endif
-
-// About numbers
-
-// Integer limits check
-static_assert(sizeof(int) >= 4, "sizeof(int) >= 4");
-
-// Square overflow integers
-// x * x > 2^63 - 1 for x > PE_SOI63
-static const int64 PE_SOI63 = 3037000499LL;
-
-// x * x > 2^64 - 1 for x > PE_SOI64
-static const int64 PE_SOI64 = 4294967295LL;
+}  // namespace std
 
 #endif

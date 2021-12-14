@@ -1,4 +1,5 @@
 #include <pe.hpp>
+using namespace pe;
 
 // http://oeis.org/A001499
 // Oeis gives two recurrence formula:

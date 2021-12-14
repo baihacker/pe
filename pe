@@ -155,8 +155,12 @@
 
 #if TRY_TO_USE_INT128 && defined(__SIZEOF_INT128__)
 #define PE_HAS_INT128 1
+namespace pe {
 using int128 = __int128;
 using uint128 = unsigned __int128;
+}  // namespace pe
+using int128 = pe::int128;
+using uint128 = pe::uint128;
 #else
 #define PE_HAS_INT128 0
 #endif
@@ -316,6 +320,7 @@ extern "C" {
 
 #if defined(COMPILER_MSVC)
 #include <iostream>
+// Not in pe namespace
 static inline std::ostream& operator<<(std::ostream& o, __mpz_struct const* x) {
   size_t sz = mpz_sizeinbase(x, 10) + 1;
   char* buff = new char[sz + 1];
@@ -535,6 +540,7 @@ static inline std::ostream& operator<<(std::ostream& o, __mpz_struct const* x) {
 #include "pe_sym_poly"
 #include "pe_db"
 
+namespace pe {
 struct PeInitializer {
   PeInitializer& set_max_prime(int64 maxp = 1000000) {
     this->maxp = maxp;
@@ -640,8 +646,8 @@ struct PeInitializer {
 
   int64 default_mod = 1;
 };
+}  // namespace pe
 
-PeInitializer pe() { return PeInitializer(); }
 #define PE_ADD_DOT_IMPL_0(...)
 #define PE_ADD_DOT_IMPL_1(I, ...) .I
 #define PE_ADD_DOT_IMPL_2(I, ...) .I, PE_ADD_DOT_IMPL_1(__VA_ARGS__)
@@ -664,5 +670,5 @@ PeInitializer pe() { return PeInitializer(); }
 
 #define PE_ADD_DOT(...) PE_ADD_DOT_IMPL(PE_NARG(__VA_ARGS__), __VA_ARGS__)
 
-#define PE_INIT(...) (PeInitializer{PE_ADD_DOT(__VA_ARGS__)}).Init()
+#define PE_INIT(...) (pe::PeInitializer{PE_ADD_DOT(__VA_ARGS__)}).Init()
 #endif

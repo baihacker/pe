@@ -1,4 +1,5 @@
 #include <pe.hpp>
+using namespace pe;
 
 // Given the number of each letter, find the number of words without adjacent
 // letter of the same

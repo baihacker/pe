@@ -1,4 +1,5 @@
 #include <pe.hpp>
+using namespace pe;
 
 const int64 N = 1000000000;
 LargeMemory lm;

@@ -1,4 +1,5 @@
 #include <pe.hpp>
+using namespace pe;
 
 void irange_array() {
   {
@@ -402,7 +403,7 @@ void range_example() {
 }
 
 int main() {
-  pe().set_max_prime(2000000).Init();
+  PeInitializer().set_max_prime(2000000).Init();
   irange_example();
   range_example();
   return 0;

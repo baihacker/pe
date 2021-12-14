@@ -1,4 +1,5 @@
 #include <pe.hpp>
+using namespace pe;
 
 // f(n) = the number of divisors of n
 

@@ -1,4 +1,5 @@
 #include <pe.hpp>
+using namespace pe;
 
 void MakeDb() {
   PeDb db("D:/");

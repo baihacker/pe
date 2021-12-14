@@ -1,4 +1,5 @@
 #include <pe.hpp>
+using namespace pe;
 
 const int sample_count = 1000000;
 

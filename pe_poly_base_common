@@ -36,16 +36,16 @@ SL void AdjustPolyLeadingZero(std::vector<T>& v) {
   while (now > 0 && v[now] == 0) --now;
   v.resize(now + 1);
 }
-}  // namespace pe
+
 #define POLY_MUL_IMPL(PolyMul, PolyMulInternal)                               \
   template <typename T>                                                       \
   SL void PolyMul(const T* X, int64 n, const T* Y, int64 m, T* result,        \
                   int64 mod) {                                                \
     using unsignedT = typename pe_make_unsigned<T>::type;                     \
-    pe::PolyMulWrapper<unsignedT>(reinterpret_cast<const unsignedT*>(X), n,   \
-                                  reinterpret_cast<const unsignedT*>(Y), m,   \
-                                  reinterpret_cast<unsignedT*>(result), mod,  \
-                                  &PolyMulInternal<unsignedT>);               \
+    PolyMulWrapper<unsignedT>(reinterpret_cast<const unsignedT*>(X), n,       \
+                              reinterpret_cast<const unsignedT*>(Y), m,       \
+                              reinterpret_cast<unsignedT*>(result), mod,      \
+                              &PolyMulInternal<unsignedT>);                   \
   }                                                                           \
                                                                               \
   template <typename T>                                                       \
@@ -90,7 +90,7 @@ SL void AdjustPolyLeadingZero(std::vector<T>& v) {
     PolyDivAndMod(&X[0], n, &Y[0], m, &q[0], &r[0], mod);                      \
                                                                                \
     r[m] = 0;                                                                  \
-    pe::AdjustPolyLeadingZero(r);                                              \
+    AdjustPolyLeadingZero(r);                                                  \
     return std::make_tuple(std::move(q), std::move(r));                        \
   }
 
@@ -130,5 +130,5 @@ SL void AdjustPolyLeadingZero(std::vector<T>& v) {
     AdjustPolyLeadingZero(r);                                                  \
     return std::move(r);                                                       \
   }
-
+}  // namespace pe
 #endif

@@ -38,8 +38,8 @@ C++ dev environment that supports C++17 or above.
 See [example.c](https://github.com/baihacker/pe/blob/master/example/example.c) for quick start.
 
 ## File list:
-* pe: Including all the files except pe_config and pe.hpp.
-* pe.hpp: The file for generating precompile header.
+* pe: Including all the implementation files.
+* pe.hpp: The file for generating precompile header. It only includes pe.
 * pe_algo: Algorithms.
 * pe_array: An array implementation with compiling time dimension length. The element count can be more than the limit of int32 and you can specify customized allocator.
 * pe_base: Some pre-including headers. Some macros and typedef. Some basic inline functions.
@@ -52,7 +52,9 @@ See [example.c](https://github.com/baihacker/pe/blob/master/example/example.c) f
 * pe_fraction: Fraction arithmetic.
 * pe_gbi: general big integer. The content corresponds to pe_nt.
 * pe_geometry: Support Point2D and Point3D.
+* pe_initializer: The helper class and macros used to initialize the library.
 * pe_int128: Support to output int128 and the corresponding type traits.
+* pe_internal: Include configurations, define necessary types/macros and include third party libraries.
 * pe_io: methods and macros that simplify or fasten reading from and writing std io.
 * pe_mat: Matrix operations.
 * pe_memory: Memory manipulation such as allocating large memory. (windows only)

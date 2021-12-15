@@ -436,8 +436,8 @@ std::ostream& operator<<(std::ostream& o, const GbiFraction<T>& f) {
   return o << f.a << "/" << f.b;
 }
 
-// Find f[0], f[1], f[2], ..., f[pos] if pos >= 0 else
-// f[0], f[1], f[2], ..., f[data.size()-1]
+// Returns f[0], f[1], f[2], ..., f[min(pos, data.size()-1)] if pos >= 0
+// Returns f[0], f[1], f[2], ..., f[data.size()-1] if pos < 0
 // https://en.wikipedia.org/wiki/Continued_fraction#Some_useful_theorems
 template <typename GBI, typename T>
 SL std::vector<GbiFraction<GBI>> FromContinuedFractionN(
@@ -465,7 +465,8 @@ SL std::vector<GbiFraction<GBI>> FromContinuedFractionN(
   return result;
 }
 
-// Find f[pos] if pos >= 0 else f[data.size()-1]
+// Returns f[min(pos, data.size()-1)] if pos >= 0
+// Returns f[data.size()-1] if pos < 0
 template <typename GBI, typename T>
 SL GbiFraction<GBI> FromContinuedFraction(const std::vector<T>& data,
                                           int pos = -1) {
@@ -541,9 +542,21 @@ SL std::vector<GBI> ToContinuedFraction(int64 p, int64 q, int n) {
   return result;
 }
 
-#define FromCfN pe::FromContinuedFractionN
-#define FromCf pe::FromContinuedFraction
-#define ToCf pe::ToContinuedFraction
+template <typename GBI, typename T>
+SL std::vector<GbiFraction<GBI>> FromCfN(const std::vector<T>& data,
+                                         int pos = -1) {
+  return FromContinuedFractionN<GBI, T>(data, pos);
+}
+
+template <typename GBI, typename T>
+SL GbiFraction<GBI> FromCf(const std::vector<T>& data, int pos = -1) {
+  return FromContinuedFraction<GBI, T>(data, pos);
+}
+
+template <typename GBI>
+SL std::vector<GBI> ToCf(int64 p, int64 q, int n) {
+  return ToContinuedFraction<GBI>(p, q, n);
+}
 
 // Compute n! mod p^e
 // Note: if i % p == 0, then the contribution of i is 1.

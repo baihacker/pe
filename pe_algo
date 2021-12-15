@@ -856,9 +856,9 @@ SL void InitPowerSumMod(int64 n, const int maxk, int64* result, T (*comb)[D],
 }
 
 // Calculates (1 + 2 + 3 + ... + n) % mod.
-SL int64 ApSumMod(int64 n, int64 mod) {
+SL int64 P1SumMod(int64 n, int64 mod) {
   if (n == 0) return 0;
-  if (n < 0) return RegulateMod(-ApSumMod(-n, mod), mod);
+  if (n < 0) return RegulateMod(-P1SumMod(-n, mod), mod);
   return n & 1 ? MulModEx(((n + 1) >> 1) % mod, n % mod, mod)
                : MulModEx((n >> 1) % mod, (n + 1) % mod, mod);
 }
@@ -866,7 +866,7 @@ SL int64 ApSumMod(int64 n, int64 mod) {
 // Calculates sum of arithmetic progression modulo mod.
 // a <= b, a + delta, a + 2 delta, ..., a + maxk detla <= b for delta >= 0 or
 // a >= b, a + delta, a + 2 delta, ..., a + maxk delta >= b for delta < 0
-SL int64 ApSumMod(int64 a, int64 b, int64 mod, int64 delta = 1) {
+SL int64 P1SumMod(int64 a, int64 b, int64 mod, int64 delta = 1) {
   if (delta == 0) {
     PE_ASSERT(a == b);
     return a;
@@ -877,13 +877,13 @@ SL int64 ApSumMod(int64 a, int64 b, int64 mod, int64 delta = 1) {
   PE_ASSERT(maxk >= 0);
   const int64 t0 = MulModEx((maxk + 1) % mod, RegulateMod(a, mod), mod);
   // delta, 2 delta, maxk delta
-  const int64 t1 = MulModEx(RegulateMod(delta, mod), ApSumMod(maxk, mod), mod);
+  const int64 t1 = MulModEx(RegulateMod(delta, mod), P1SumMod(maxk, mod), mod);
   return AddMod(t0, t1, mod);
 }
 
 // Calculates (1^2 + 2^2 + 3^2 + ... + n^2) % mod.
 // Assume no overflow for 2 * n + 1.
-SL int64 SquareSumMod(int64 n, int64 mod) {
+SL int64 P2SumMod(int64 n, int64 mod) {
   if (n <= 0) return 0;
   // n*(n + 1)*(2 n + 1)/6
   int64 a = n, b = n + 1, c = 2 * n + 1;
@@ -911,16 +911,16 @@ SL int64 SquareSumMod(int64 n, int64 mod) {
 }
 
 // Calculates (1^3 + 2^3 + 3^3 + ... + n^3) % mod.
-SL int64 CubeSumMod(int64 n, int64 mod) {
+SL int64 P3SumMod(int64 n, int64 mod) {
   if (n <= 0) return 0;
   // (n*(n + 1)/2)^2
-  const int64 a = ApSumMod(n, mod);
+  const int64 a = P1SumMod(n, mod);
   return MulModEx(a, a, mod);
 }
 
 // Calculates (1^4 + 2^4 + 3^4 + ... + n^4) % mod.
 // Assume no overflow for 2 * n.
-SL int64 QuadSumMod(int64 n, int64 mod) {
+SL int64 P4SumMod(int64 n, int64 mod) {
   if (n <= 0) return 0;
   // (3*n*(n + 1) - 1)*(2*n + 1)*(n + 1)*n/30
   // Handle (2*n + 1)*(n + 1)*n/6
@@ -986,7 +986,7 @@ SL int64 QuadSumMod(int64 n, int64 mod) {
 
 // Calculates (1^5 + 2^5 + 3^5 + ... + n^5) % mod.
 // Assume no overflow for 2 * n.
-SL int64 PentSumMod(int64 n, int64 mod) {
+SL int64 P5SumMod(int64 n, int64 mod) {
   if (n <= 0) return 0;
   // n^2*(n + 1)^2*(2*n^2 + 2*n - 1)/12
   // Handle (n (n + 1))^2/4
@@ -1017,7 +1017,7 @@ SL int64 PentSumMod(int64 n, int64 mod) {
 
 // Calculates (1^6 + 2^6 + 3^6 + ... + n^6) % mod.
 // Assume no overflow for 2 * n.
-SL int64 HexaSumMod(int64 n, int64 mod) {
+SL int64 P6SumMod(int64 n, int64 mod) {
   if (n <= 0) return 0;
   // n*(1 + n)*(1 + 2*n)*(1 - 3*n + 6*n^3 + 3*n^4)/42
   // Handle n*(1 + n)*(1 + 2*n)/6
@@ -1104,7 +1104,7 @@ SL int64 HexaSumMod(int64 n, int64 mod) {
 
 // Calculates (1^7 + 2^7 + 3^7 + ... + n^7) % mod.
 // Assume no overflow for 2 * n.
-SL int64 HeptSumMod(int64 n, int64 mod) {
+SL int64 P7SumMod(int64 n, int64 mod) {
   if (n <= 0) return 0;
   // n^2 * (1 + n)^2 * (2 - 4 n - n^2 + 6 n^3 + 3 n^4)/24
   // Handle (n (n + 1))^2/4
@@ -1150,13 +1150,37 @@ SL int64 HeptSumMod(int64 n, int64 mod) {
   return MulModEx(AddMod(t0, t1, mod), t2, mod);
 }
 
-#define P1SumMod pe::ApSumMod
-#define P2SumMod pe::SquareSumMod
-#define P3SumMod pe::CubeSumMod
-#define P4SumMod pe::QuadSumMod
-#define P5SumMod pe::PentSumMod
-#define P6SumMod pe::HexaSumMod
-#define P7SumMod pe::HeptSumMod
+SL int64 ApSumMod(int64 n, int64 mod) {
+  return P1SumMod(n, mod);
+}
+
+SL int64 ApSumMod(int64 a, int64 b, int64 mod, int64 delta = 1) {
+  return P1SumMod(a, b, mod, delta);
+}
+
+SL int64 SquareSumMod(int64 n, int64 mod) {
+  return P2SumMod(n, mod);
+}
+
+SL int64 CubeSumMod(int64 n, int64 mod) {
+  return P3SumMod(n, mod);
+}
+
+SL int64 QuadSumMod(int64 n, int64 mod) {
+  return P4SumMod(n, mod);
+}
+
+SL int64 PentSumMod(int64 n, int64 mod) {
+  return P5SumMod(n, mod);
+}
+
+SL int64 HexaSumMod(int64 n, int64 mod) {
+  return P6SumMod(n, mod);
+}
+
+SL int64 HeptSumMod(int64 n, int64 mod) {
+  return P7SumMod(n, mod);
+}
 
 #if 0
 // Sum of geometric progression

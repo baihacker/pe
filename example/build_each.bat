@@ -1,25 +1,2 @@
-pe++.py bi_example_pe483.c
-pe++.py billion_sort.c
-pe++.py continued_fraction.c
-pe++.py count_carlitz_words.c
-pe++.py dfa_counter.c
-pe++.py dfa_summer.c
-pe++.py example.c
-pe++.py find_recurrence.c
-pe++.py linear_recurrence.c
-pe++.py matrix_power.c
-pe++.py mma_interpolating_polynomial.c
-pe++.py mma_to_cpp.c
-pe++.py mod_number.c
-pe++.py multiplicative_function_prefix_sum_common_function.c
-pe++.py multiplicative_function_prefix_sum_mavlue_base_ex.c
-pe++.py parallel_cal_prime_pi.c
-pe++.py partition_mobius.c
-pe++.py pe_db.c
-pe++.py poly.c
-pe++.py power_sum.c
-pe++.py prime_power_sum.c
-pe++.py random_sample.c
-pe++.py range.c
-pe++.py sym_poly.c
+build_each.py
 pause

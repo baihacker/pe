@@ -3,8 +3,11 @@
 
 // General big integer.
 
+#include "pe_base"
+#include "pe_int128"
 #include "pe_type_traits"
 #include "pe_nt"
+#include "pe_fraction"
 
 namespace pe {
 // Each gbi implements this class. It should provide a method "Of" to convert
@@ -388,64 +391,16 @@ SL REQUIRES((is_gbi<GBI>::value)) RETURN(std::tuple<int, GBI, GBI>)
   return CrtN<GBI>(&val[0], &mod[0], val.size());
 }
 
-template <typename GBI>
-struct GbiFraction {
-  GbiFraction(const GBI& u = 0, const GBI& v = 1) : a(u), b(v) {
-    GBI d = Gcd(Abs(a), Abs(b));
-    if (d > 1) a /= d, b /= d;
-    if (b < 0) b = -b, a = -a;
-  }
-  int operator<(const GbiFraction& o) const { return a * o.b < b * o.a; }
-  int operator<=(const GbiFraction& o) const { return a * o.b <= b * o.a; }
-  int operator>(const GbiFraction& o) const { return a * o.b > b * o.a; }
-  int operator>=(const GbiFraction& o) const { return a * o.b >= b * o.a; }
-  int operator==(const GbiFraction& o) const { return a * o.b == b * o.a; }
-  int operator!=(const GbiFraction& o) const { return a * o.b != b * o.a; }
-  GbiFraction operator+(const GbiFraction& o) const {
-    return GbiFraction(a * o.b + o.a * b, b * o.b);
-  }
-  GbiFraction operator-(const GbiFraction& o) const {
-    return GbiFraction(a * o.b - o.a * b, b * o.b);
-  }
-  GbiFraction operator*(const GbiFraction& o) const {
-    return GbiFraction(a * o.a, b * o.b);
-  }
-  GbiFraction operator/(const GbiFraction& o) const {
-    return GbiFraction(a * o.b, b * o.a);
-  }
-  double ToDouble() { return 1. * ToFloat<double>(a) / ToFloat<double>(b); }
-  long double ToLongDouble() {
-    return static_cast<long double>(1.) * ToFloat<long double>(a) /
-           ToFloat<long double>(b);
-  }
-  GBI a, b;
-};
-
-template <typename T>
-GbiFraction<T> operator+(const GbiFraction<T>& f) {
-  return f;
-}
-
-template <typename T>
-GbiFraction<T> operator-(const GbiFraction<T>& f) {
-  return GbiFraction<T>(-f.a, f.b);
-}
-
-template <typename T>
-std::ostream& operator<<(std::ostream& o, const GbiFraction<T>& f) {
-  return o << f.a << "/" << f.b;
-}
-
 // Returns f[0], f[1], f[2], ..., f[min(pos, data.size()-1)] if pos >= 0
 // Returns f[0], f[1], f[2], ..., f[data.size()-1] if pos < 0
 // https://en.wikipedia.org/wiki/Continued_fraction#Some_useful_theorems
 template <typename GBI, typename T>
-SL std::vector<GbiFraction<GBI>> FromContinuedFractionN(
+SL std::vector<Fraction<GBI>> FromContinuedFractionN(
     const std::vector<T>& data, int pos = -1) {
   const int size = static_cast<int>(data.size());
   const int n = pos < 0 ? size : std::min(size, pos + 1);
   if (n == 0) {
-    return std::vector<GbiFraction<GBI>>();
+    return std::vector<Fraction<GBI>>();
   }
 
   std::vector<GBI> p(n + 1), q(n + 1);
@@ -457,7 +412,7 @@ SL std::vector<GbiFraction<GBI>> FromContinuedFractionN(
     q[i] = q[i - 1] * data[i - 1] + q[i - 2];
   }
 
-  std::vector<GbiFraction<GBI>> result(n);
+  std::vector<Fraction<GBI>> result(n);
   for (int i = 0; i < n; ++i) {
     result[i].a = std::move(p[i + 1]), result[i].b = std::move(q[i + 1]);
   }
@@ -468,7 +423,7 @@ SL std::vector<GbiFraction<GBI>> FromContinuedFractionN(
 // Returns f[min(pos, data.size()-1)] if pos >= 0
 // Returns f[data.size()-1] if pos < 0
 template <typename GBI, typename T>
-SL GbiFraction<GBI> FromContinuedFraction(const std::vector<T>& data,
+SL Fraction<GBI> FromContinuedFraction(const std::vector<T>& data,
                                           int pos = -1) {
   const int size = static_cast<int>(data.size());
   const int n = pos < 0 ? size - 1 : std::min(size - 1, pos);
@@ -483,7 +438,7 @@ SL GbiFraction<GBI> FromContinuedFraction(const std::vector<T>& data,
     q0 = std::move(q1), q1 = std::move(q);
   }
 
-  GbiFraction<GBI> t;
+  Fraction<GBI> t;
   t.a = p1, t.b = q1;
   return t;
 }
@@ -543,13 +498,13 @@ SL std::vector<GBI> ToContinuedFraction(int64 p, int64 q, int n) {
 }
 
 template <typename GBI, typename T>
-SL std::vector<GbiFraction<GBI>> FromCfN(const std::vector<T>& data,
+SL std::vector<Fraction<GBI>> FromCfN(const std::vector<T>& data,
                                          int pos = -1) {
   return FromContinuedFractionN<GBI, T>(data, pos);
 }
 
 template <typename GBI, typename T>
-SL GbiFraction<GBI> FromCf(const std::vector<T>& data, int pos = -1) {
+SL Fraction<GBI> FromCf(const std::vector<T>& data, int pos = -1) {
   return FromContinuedFraction<GBI, T>(data, pos);
 }
 

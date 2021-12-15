@@ -34,7 +34,7 @@ def main():
       tempf.write(content.encode('utf8'))
     print('Compile %s' % file)
     start_time = time.perf_counter_ns()
-    ret = os.system('pe++.py main.cc')
+    ret = os.system('pe++.py main.cc -hc')
     time_usage = FormatNs(time.perf_counter_ns() - start_time)
     if os.path.exists('main.cc'):
       os.remove('main.cc')

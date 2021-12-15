@@ -28,7 +28,7 @@ def main():
       continue
     print('Compile %s' % file)
     start_time = time.perf_counter_ns()
-    ret = os.system('pe++.py %s' % file)
+    ret = os.system('pe++.py %s -hc' % file)
     time_usage = FormatNs(time.perf_counter_ns() - start_time)
     print('Done, return code = %d, time usage = %s' % (ret, time_usage))
     print()

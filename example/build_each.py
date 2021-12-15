@@ -9,15 +9,15 @@ import time
 CURRENT_DIRECTORY = os.getcwd()
 
 
-def TimePartsFromNs(duration):
+def DurationPartsFromNs(duration):
   min_part = duration // 1000000000 // 60
   sec_part = duration // 1000000000 % 60
   millisec_part = duration // 1000000 % 1000
   return (min_part, sec_part, millisec_part)
 
 
-def FormatTimeNs(duration):
-  return '%d:%02d.%03d' % TimePartsFromNs(duration)
+def FormatNs(duration):
+  return '%d:%02d.%03d' % DurationPartsFromNs(duration)
 
 
 def main():
@@ -29,7 +29,7 @@ def main():
     print('Compile %s' % file)
     start_time = time.perf_counter_ns()
     ret = os.system('pe++.py %s' % file)
-    time_usage = FormatTimeNs(time.perf_counter_ns() - start_time)
+    time_usage = FormatNs(time.perf_counter_ns() - start_time)
     print('Done, return code = %d, time usage = %s' % (ret, time_usage))
     print()
     if ret != 0:

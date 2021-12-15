@@ -1,0 +1,142 @@
+#ifndef PE_INITIALIZER_
+#define PE_INITIALIZER_
+
+#include "pe_base"
+#include "pe_mod"
+#include "pe_nt"
+#include "pe_fft"
+#include "pe_poly"
+#include "pe_parallel"
+
+namespace pe {
+struct PeInitializer {
+  PeInitializer& set_max_prime(int64 maxp = 1000000) {
+    this->maxp = maxp;
+    return *this;
+  }
+
+  PeInitializer& set_cal_phi(int cal_phi = 1) {
+    this->cal_phi = cal_phi;
+    return *this;
+  }
+
+  PeInitializer& set_cal_mu(int cal_mu = 1) {
+    this->cal_mu = cal_mu;
+    return *this;
+  }
+
+  PeInitializer& set_cal_rad(int cal_rad = 1) {
+    this->cal_rad = cal_rad;
+    return *this;
+  }
+
+  PeInitializer& set_fft_k(int fft_k = 22) {
+    this->fft_k = fft_k;
+    return *this;
+  }
+
+  PeInitializer& set_ntt32_k(int ntt32_k = 22) {
+    this->ntt32_k = ntt32_k;
+    return *this;
+  }
+
+  PeInitializer& set_ntt64_k(int ntt64_k = 22) {
+    this->ntt64_k = ntt64_k;
+    return *this;
+  }
+
+  PeInitializer& set_mod(int64 default_mod = 1000000007) {
+    this->default_mod = default_mod;
+    return *this;
+  }
+
+  void Init() {
+    InitNt();
+    InitParallel();
+    InitFft(fft_k);
+    InitNtt32(ntt32_k);
+    InitNtt64(ntt64_k);
+    DefaultMod::Set(default_mod);
+  }
+
+  void InitNt() {
+    DeinitPrimes();
+    INIT_MAXP(maxp);
+    if (cal_phi == 0 && cal_mu == 0 && cal_rad == 0) {
+      InitPrimes();
+    } else {
+      InitPrimes(cal_phi, cal_mu, cal_rad);
+    }
+  }
+
+  void InitParallel() {
+#if ENABLE_OPENMP
+    omp_set_nested(1);
+    omp_set_dynamic(1);
+#if !defined(COMPILER_MSVC)
+    omp_set_max_active_levels(7);
+#endif
+#endif
+
+#if PLATFORM_WIN
+    SetProcessPriority(PRIORITY_IDLE);
+#endif
+  }
+
+  void InitFft(int k = 22) {
+    if (k >= 0) {
+      fft::InitFftK(k);
+    }
+  }
+
+  void InitNtt32(int k = 22) {
+    if (k >= 0) {
+      ntt32::InitNtt(k);
+    }
+  }
+
+  void InitNtt64(int k = 22) {
+#if PE_HAS_INT128
+    if (k >= 0) {
+      ntt64::InitNtt(k);
+    }
+#endif
+  }
+
+  int64 maxp = 1000000;
+  int cal_phi = 0;
+  int cal_mu = 0;
+  int cal_rad = 0;
+
+  int fft_k = -1;
+  int ntt32_k = -1;
+  int ntt64_k = -1;
+
+  int64 default_mod = 1;
+};
+}  // namespace pe
+
+#define PE_ADD_DOT_IMPL_0(...)
+#define PE_ADD_DOT_IMPL_1(I, ...) .I
+#define PE_ADD_DOT_IMPL_2(I, ...) .I, PE_ADD_DOT_IMPL_1(__VA_ARGS__)
+#define PE_ADD_DOT_IMPL_3(I, ...) .I, PE_ADD_DOT_IMPL_2(__VA_ARGS__)
+#define PE_ADD_DOT_IMPL_4(I, ...) .I, PE_ADD_DOT_IMPL_3(__VA_ARGS__)
+#define PE_ADD_DOT_IMPL_5(I, ...) .I, PE_ADD_DOT_IMPL_4(__VA_ARGS__)
+#define PE_ADD_DOT_IMPL_6(I, ...) .I, PE_ADD_DOT_IMPL_5(__VA_ARGS__)
+#define PE_ADD_DOT_IMPL_7(I, ...) .I, PE_ADD_DOT_IMPL_6(__VA_ARGS__)
+#define PE_ADD_DOT_IMPL_8(I, ...) .I, PE_ADD_DOT_IMPL_7(__VA_ARGS__)
+#define PE_ADD_DOT_IMPL_9(I, ...) .I, PE_ADD_DOT_IMPL_8(__VA_ARGS__)
+#define PE_ADD_DOT_IMPL_10(I, ...) .I, PE_ADD_DOT_IMPL_9(__VA_ARGS__)
+#define PE_ADD_DOT_IMPL_11(I, ...) .I, PE_ADD_DOT_IMPL_10(__VA_ARGS__)
+#define PE_ADD_DOT_IMPL_12(I, ...) .I, PE_ADD_DOT_IMPL_11(__VA_ARGS__)
+#define PE_ADD_DOT_IMPL_13(I, ...) .I, PE_ADD_DOT_IMPL_12(__VA_ARGS__)
+#define PE_ADD_DOT_IMPL_14(I, ...) .I, PE_ADD_DOT_IMPL_13(__VA_ARGS__)
+#define PE_ADD_DOT_IMPL_15(I, ...) .I, PE_ADD_DOT_IMPL_14(__VA_ARGS__)
+#define PE_ADD_DOT_IMPL_16(I, ...) .I, PE_ADD_DOT_IMPL_15(__VA_ARGS__)
+
+#define PE_ADD_DOT_IMPL(n, ...) PE_CONCAT(PE_ADD_DOT_IMPL_, n)(__VA_ARGS__)
+
+#define PE_ADD_DOT(...) PE_ADD_DOT_IMPL(PE_NARG(__VA_ARGS__), __VA_ARGS__)
+
+#define PE_INIT(...) (pe::PeInitializer{PE_ADD_DOT(__VA_ARGS__)}).Init()
+#endif

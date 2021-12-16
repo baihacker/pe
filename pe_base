@@ -130,7 +130,13 @@
 
 #define dbg(x) std::cerr << (#x) << " = " << (x) << std::endl
 
+// Gets the argument count of a macro.
 // https://stackoverflow.com/questions/2124339/c-preprocessor-va-args-number-of-arguments
+// Example usage:
+// #define FOO_IMPL_1(I, ...) ...
+// #define FOO_IMPL_2(I, ...) ...
+// #define FOO_IMPL(n, ...) PE_CONCAT(FOO_IMPL_, n)(__VA_ARGS__)
+// #define FOO(...) FOO_IMPL(PE_NARG(__VA_ARGS__), __VA_ARGS__)
 #ifdef COMPILER_CLANG
 #define PE_NARG(...) PE_NARG_(0, ##__VA_ARGS__, PE_RSEQ_N())
 #else
@@ -150,9 +156,11 @@
       27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, \
       9, 8, 7, 6, 5, 4, 3, 2, 1, 0
 
+// Concats two symbols.
 #define PE_CONCAT_IMPL(x, y) x##y
 #define PE_CONCAT(x, y) PE_CONCAT_IMPL(x, y)
 
+// Converts a symbol to string.
 #define PE_STR_IMPL(x) #x
 #define PE_STR(x) PE_STR_IMPL(x)
 
@@ -162,19 +170,29 @@
 #define PE_ASSERT(x)
 #endif
 
-#define PE_MEM(IT, OT, name)                                            \
-  std::map<IT, OT> PE_CONCAT(name, __LINE__);                           \
-  OT PE_CONCAT(name, _c)(IT x) {                                        \
-    auto where = PE_CONCAT(name, __LINE__).find(x);                     \
-    if (where != PE_CONCAT(name, __LINE__).end()) return where->second; \
-    return PE_CONCAT(name, __LINE__)[x] = name(x);                      \
-  }                                                                     \
-  std::map<IT, OT>& PE_CONCAT(name, _map)() {                           \
-    return PE_CONCAT(name, __LINE__);                                   \
+// For a known function <name>(IT) -> OT, this macro
+// 1. Defines a map with key type = IT and value type = TO to memorize the
+// values.
+// 2. Defines a function named <name>_c which can utilize the map defined in 1
+// as cache to retrieve values.
+// 3. Defines a function named <name>_map to get the map defined in 1.
+#define PE_MEM(IT, OT, name)                        \
+  std::map<IT, OT> PE_CONCAT(name, __LINE__);       \
+                                                    \
+  SL OT PE_CONCAT(name, _c)(IT x) {                 \
+    auto where = PE_CONCAT(name, __LINE__).find(x); \
+    if (where != PE_CONCAT(name, __LINE__).end()) { \
+      return where->second;                         \
+    }                                               \
+    return PE_CONCAT(name, __LINE__)[x] = name(x);  \
+  }                                                 \
+                                                    \
+  SL std::map<IT, OT>& PE_CONCAT(name, _map)() {    \
+    return PE_CONCAT(name, __LINE__);               \
   }
 
 #if ENABLE_OPENMP
-#define tid omp_get_thread_num
+SL int tid(void) { return omp_get_thread_num(); }
 #endif
 
 // namespace rules

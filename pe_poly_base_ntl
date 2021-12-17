@@ -12,6 +12,7 @@
 
 namespace pe {
 namespace poly_ntl {
+namespace poly_ntl_internal {
 template <typename T>
 SL void InitNModPoly(NTL::ZZ_pX& p, const T* x, int64 n, int64 mod) {
   NTL::ZZ tmp(0);
@@ -71,8 +72,8 @@ SL void CopyNModPoly(NTL::zz_pX& p, T* x, int64 n, long /*mod*/) {
 }
 
 template <typename T>
-SL void PolyMulSmallModInternal(const T* X, int64 n, const T* Y, int64 m,
-                                T* result, int64 mod) {
+SL void PolyMulSmallModImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
+                            int64 mod) {
   NTL::zz_p::init(static_cast<long>(mod));
 
   NTL::zz_pX x, y, z;
@@ -85,8 +86,8 @@ SL void PolyMulSmallModInternal(const T* X, int64 n, const T* Y, int64 m,
 }
 
 template <typename T>
-SL void PolyMulLargeModInternal(const T* X, int64 n, const T* Y, int64 m,
-                                T* result, int64 mod) {
+SL void PolyMulLargeModImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
+                            int64 mod) {
   NTL::ZZ tmp(0);
   ZZFromBytes(tmp, reinterpret_cast<const unsigned char*>(&mod), sizeof(T));
   NTL::ZZ_p::init(tmp);
@@ -101,23 +102,25 @@ SL void PolyMulLargeModInternal(const T* X, int64 n, const T* Y, int64 m,
 }
 
 template <typename T>
-SL void PolyMulInternal(const T* X, int64 n, const T* Y, int64 m, T* result,
-                        int64 mod) {
+SL void PolyMulImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
+                    int64 mod) {
   if (mod < NTL_SP_BOUND) {
-    PolyMulSmallModInternal(X, n, Y, m, result, mod);
+    PolyMulSmallModImpl(X, n, Y, m, result, mod);
   } else {
-    PolyMulLargeModInternal(X, n, Y, m, result, mod);
+    PolyMulLargeModImpl(X, n, Y, m, result, mod);
   }
 }
+}  // namespace poly_ntl_internal
 
-POLY_MUL_IMPL(PolyMulSmallMod, poly_ntl::PolyMulSmallModInternal)
-POLY_MUL_IMPL(PolyMulLargeMod, poly_ntl::PolyMulLargeModInternal)
-POLY_MUL_IMPL(PolyMul, poly_ntl::PolyMulInternal)
+POLY_MUL_IMPL(PolyMulSmallMod, poly_ntl_internal::PolyMulSmallModImpl)
+POLY_MUL_IMPL(PolyMulLargeMod, poly_ntl_internal::PolyMulLargeModImpl)
+POLY_MUL_IMPL(PolyMul, poly_ntl_internal::PolyMulImpl)
 
+namespace poly_ntl_internal {
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    PolyDivAndModSmallModInternal(const T* X, int64 n, const T* Y, int64 m,
-                                  T* q, T* r, int64 mod) {
+    PolyDivAndModSmallModImpl(const T* X, int64 n, const T* Y, int64 m, T* q,
+                              T* r, int64 mod) {
   if (m > n) {
     if (r) {
       std::copy(X, X + n, r);
@@ -158,8 +161,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    PolyDivAndModLargeModInternal(const T* X, int64 n, const T* Y, int64 m,
-                                  T* q, T* r, int64 mod) {
+    PolyDivAndModLargeModImpl(const T* X, int64 n, const T* Y, int64 m, T* q,
+                              T* r, int64 mod) {
   if (m > n) {
     if (r) {
       std::copy(X, X + n, r);
@@ -202,26 +205,27 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    PolyDivAndModInternal(const T* X, int64 n, const T* Y, int64 m, T* q, T* r,
-                          int64 mod) {
+    PolyDivAndModImpl(const T* X, int64 n, const T* Y, int64 m, T* q, T* r,
+                      int64 mod) {
   if (mod < NTL_SP_BOUND) {
-    PolyDivAndModSmallModInternal<T>(X, n, Y, m, q, r, mod);
+    PolyDivAndModSmallModImpl<T>(X, n, Y, m, q, r, mod);
   } else {
-    PolyDivAndModLargeModInternal<T>(X, n, Y, m, q, r, mod);
+    PolyDivAndModLargeModImpl<T>(X, n, Y, m, q, r, mod);
   }
 }
+}  // namespace poly_ntl_internal
 
 POLY_DIV_AND_MOD_IMPL(PolyDivAndModSmallMod,
-                      poly_ntl::PolyDivAndModSmallModInternal)
+                      poly_ntl_internal::PolyDivAndModSmallModImpl)
 POLY_DIV_IMPL(PolyDivSmallMod, poly_ntl::PolyDivAndModSmallMod)
 POLY_MOD_IMPL(PolyModSmallMod, poly_ntl::PolyDivAndModSmallMod)
 
 POLY_DIV_AND_MOD_IMPL(PolyDivAndModLargeMod,
-                      poly_ntl::PolyDivAndModLargeModInternal)
+                      poly_ntl_internal::PolyDivAndModLargeModImpl)
 POLY_DIV_IMPL(PolyDivLargeMod, poly_ntl::PolyDivAndModLargeMod)
 POLY_MOD_IMPL(PolyModLargeMod, poly_ntl::PolyDivAndModLargeMod)
 
-POLY_DIV_AND_MOD_IMPL(PolyDivAndMod, poly_ntl::PolyDivAndModInternal)
+POLY_DIV_AND_MOD_IMPL(PolyDivAndMod, poly_ntl_internal::PolyDivAndModImpl)
 POLY_DIV_IMPL(PolyDiv, poly_ntl::PolyDivAndMod)
 POLY_MOD_IMPL(PolyMod, poly_ntl::PolyDivAndMod)
 }  // namespace poly_ntl

@@ -531,7 +531,7 @@ class BigInteger {
     }
 
     std::vector<unsigned int> rb;
-    std::vector<unsigned int> rr = AbsDivInternal<unsigned int>(
+    std::vector<unsigned int> rr = AbsDivImpl<unsigned int>(
         l.ToBinVector<unsigned int>(), r.ToBinVector<unsigned int>(), rb);
     remain = BigInteger(rb);
     return rr;
@@ -553,13 +553,13 @@ class BigInteger {
     }
 
     std::vector<unsigned int> rb;
-    std::vector<unsigned int> rr = AbsDivInternal<unsigned int>(
+    std::vector<unsigned int> rr = AbsDivImpl<unsigned int>(
         l.ToBinVector<unsigned int>(), r.ToBinVector<unsigned int>(), rb);
     return rr;
   }
 
   template <typename T>
-  static std::vector<T> AbsDivInternal(const std::vector<T>& l,
+  static std::vector<T> AbsDivImpl(const std::vector<T>& l,
                                        const std::vector<T>& r,
                                        std::vector<T>& remain) {
     std::vector<T> result;
@@ -753,7 +753,7 @@ class BigInteger {
        sizeof(T) <= 8)) RETURN(BigInteger)
   operator/(const BigInteger& l, T r);
 
-  friend inline std::tuple<BigInteger, BigInteger> DivInternal(
+  friend inline std::tuple<BigInteger, BigInteger> DivImpl(
       const BigInteger& l, const BigInteger& r);
 
   template <typename T>
@@ -761,7 +761,7 @@ class BigInteger {
       (is_native_integer<T>::value &&
        !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
        sizeof(T) <= 8)) RETURN(std::tuple<BigInteger, T>)
-      DivInternal(const BigInteger& l, T r);
+      DivImpl(const BigInteger& l, T r);
 
   template <typename T>
   friend inline REQUIRES(
@@ -1369,7 +1369,7 @@ inline REQUIRES(
 
 inline BigInteger operator/(const BigInteger& l, const BigInteger& r) {
   BigInteger u, v;
-  std::tie(u, v) = DivInternal(l, r);
+  std::tie(u, v) = DivImpl(l, r);
   return u;
 }
 
@@ -1381,11 +1381,11 @@ inline REQUIRES(
 operator/(const BigInteger& l, T r) {
   BigInteger u;
   T v;
-  std::tie(u, v) = DivInternal(l, r);
+  std::tie(u, v) = DivImpl(l, r);
   return u;
 }
 
-inline std::tuple<BigInteger, BigInteger> DivInternal(const BigInteger& l,
+inline std::tuple<BigInteger, BigInteger> DivImpl(const BigInteger& l,
                                                       const BigInteger& r) {
   if (l.IsZero() && r.IsZero()) {
     return std::make_tuple(1, 0);
@@ -1426,7 +1426,7 @@ inline REQUIRES(
     (is_native_integer<T>::value &&
      !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
      sizeof(T) <= 8)) RETURN(std::tuple<BigInteger, T>)
-    DivInternal(const BigInteger& l, T r) {
+    DivImpl(const BigInteger& l, T r) {
   if (l.IsZero() && r == 0) {
     return std::make_tuple(1, 0);
   }
@@ -1486,7 +1486,7 @@ inline REQUIRES(
 
 inline BigInteger operator%(const BigInteger& l, const BigInteger& r) {
   BigInteger u, v;
-  std::tie(u, v) = DivInternal(l, r);
+  std::tie(u, v) = DivImpl(l, r);
   return v;
 }
 
@@ -1498,7 +1498,7 @@ inline REQUIRES(
 operator%(const BigInteger& l, T r) {
   BigInteger u;
   T v;
-  std::tie(u, v) = DivInternal(l, r);
+  std::tie(u, v) = DivImpl(l, r);
   if (l.sign() < 0) {
     v = BigInteger::NegValue(v);
   }
@@ -1646,7 +1646,7 @@ SL unsigned int LowerBits(const BigInteger& x) {
 
 SL std::tuple<BigInteger, BigInteger> Div(const BigInteger& l,
                                           const BigInteger& r) {
-  return DivInternal(l, r);
+  return DivImpl(l, r);
 }
 
 template <typename T>

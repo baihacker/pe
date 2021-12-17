@@ -8,6 +8,12 @@
 
 namespace pe {
 namespace fft {
+// Test result about the limitation of each method:
+//                       expr         random       limit
+// PolyMulFft            mod^2*n      1e15         3.39e14
+//                                    8e14         4.40e14
+// PolyMulFftSmall       mod*n        7e13         2.06e11
+namespace fft_internal {
 // http://uoj.ac/submission/49836
 struct Complex {
   double x{0}, y{0};
@@ -77,8 +83,8 @@ SL void Fft(Complex* a, const int n, int f = 0) {
   }
 }
 
-SL void PolyMulFftInternal(uint64* x, uint64* y, uint64* z, const int n,
-                           int64 mod) {
+SL void PolyMulFftImpl(uint64* x, uint64* y, uint64* z, const int n,
+                       int64 mod) {
   auto m = static_cast<int64>(sqrt(mod));
   while (m * m < mod) ++m;
   std::vector<Complex> a(n), b(n);
@@ -139,8 +145,8 @@ SL void PolyMulFftInternal(uint64* x, uint64* y, uint64* z, const int n,
   }
 }
 
-SL void PolyMulFftSmallInternal(uint64* x, uint64* y, uint64* z, const int n,
-                                int64 mod) {
+SL void PolyMulFftSmallImpl(uint64* x, uint64* y, uint64* z, const int n,
+                            int64 mod) {
   std::vector<Complex> a(n), b(n);
   for (int i = 0; i < n; ++i) a[i] = Complex(double(x[i]), 0);
   for (int i = 0; i < n; ++i) b[i] = Complex(double(y[i]), 0);
@@ -168,8 +174,8 @@ SL void PolyMulFftSmallInternal(uint64* x, uint64* y, uint64* z, const int n,
     z[i] = uint64(a[i].x + 0.01) % mod;
   }
 }
-
-#define POLY_MULL_FFT_IMPL(PolyMulFft, PolyMulFftInternal)             \
+}  // namespace fft_internal
+#define POLY_MULL_FFT_IMPL(PolyMulFft, PolyMulFftImpl)                 \
   template <typename T>                                                \
   SL void PolyMulFft(const T* x, const int n, const T* y, const int m, \
                      T* result, int64 mod) {                           \
@@ -183,7 +189,7 @@ SL void PolyMulFftSmallInternal(uint64* x, uint64* y, uint64* z, const int n,
     std::copy(y, y + m, &yy[0]);                                       \
     std::fill(yy.begin() + m, yy.end(), 0);                            \
                                                                        \
-    PolyMulFftInternal(&xx[0], &yy[0], &zz[0], p, mod);                \
+    PolyMulFftImpl(&xx[0], &yy[0], &zz[0], p, mod);                    \
                                                                        \
     std::copy(zz.begin(), zz.begin() + n + m - 1, result);             \
   }                                                                    \
@@ -200,14 +206,10 @@ SL void PolyMulFftSmallInternal(uint64* x, uint64* y, uint64* z, const int n,
     return std::move(z);                                               \
   }
 
-POLY_MULL_FFT_IMPL(PolyMulFft, PolyMulFftInternal)
-POLY_MULL_FFT_IMPL(PolyMulFftSmall, PolyMulFftSmallInternal)
+using fft_internal::InitFftK;
+POLY_MULL_FFT_IMPL(PolyMulFft, fft_internal::PolyMulFftImpl)
+POLY_MULL_FFT_IMPL(PolyMulFftSmall, fft_internal::PolyMulFftSmallImpl)
 
-// Test result about the limitation of each method:
-//                       expr         random       limit
-// PolyMulFft            mod^2*n      1e15         3.39e14
-//                                    8e14         4.40e14
-// PolyMulFftSmall       mod*n        7e13         2.06e11
 }  // namespace fft
 }  // namespace pe
 #endif

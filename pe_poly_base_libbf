@@ -11,11 +11,12 @@
 #define HAS_POLY_MUL_LIBBF 1
 
 namespace pe {
+
+namespace poly_libbf {
+namespace poly_libbf_internal {
 extern "C" {
 void* PeBfRealloc(void*, void* ptr, size_t size) { return realloc(ptr, size); }
 }
-
-namespace poly_libbf {
 template <typename T>
 SL void BfNttInit(const T* X, int64 n, bf_context_t* context, bf_t* target) {
   bf_init(context, target);
@@ -36,7 +37,7 @@ SL void BfNttInit(const T* X, int64 n, bf_context_t* context, bf_t* target) {
 SL void BfNttDeinit(bf_t* target) { bf_delete(target); }
 
 template <typename T>
-SL void PolyMulInternal(const T* X, int64 n, const T* Y, int64 m, T* result,
+SL void PolyMulImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
                         int64 mod) {
   bf_t x, y;
   bf_context_t bf_context;
@@ -89,8 +90,9 @@ SL void PolyMulInternal(const T* X, int64 n, const T* Y, int64 m, T* result,
 
   bf_context_end(&bf_context);
 }
+}  // namespace poly_libbf_internal
 
-POLY_MUL_IMPL(PolyMul, poly_libbf::PolyMulInternal)
+POLY_MUL_IMPL(PolyMul, poly_libbf_internal::PolyMulImpl)
 
 }  // namespace poly_libbf
 }  // namespace pe

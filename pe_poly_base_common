@@ -37,7 +37,7 @@ SL void AdjustPolyLeadingZero(std::vector<T>& v) {
   v.resize(now + 1);
 }
 
-#define POLY_MUL_IMPL(PolyMul, PolyMulInternal)                               \
+#define POLY_MUL_IMPL(PolyMul, PolyMulImpl)                                   \
   template <typename T>                                                       \
   SL void PolyMul(const T* X, int64 n, const T* Y, int64 m, T* result,        \
                   int64 mod) {                                                \
@@ -45,7 +45,7 @@ SL void AdjustPolyLeadingZero(std::vector<T>& v) {
     PolyMulWrapper<unsignedT>(reinterpret_cast<const unsignedT*>(X), n,       \
                               reinterpret_cast<const unsignedT*>(Y), m,       \
                               reinterpret_cast<unsignedT*>(result), mod,      \
-                              &PolyMulInternal<unsignedT>);                   \
+                              &PolyMulImpl<unsignedT>);                       \
   }                                                                           \
                                                                               \
   template <typename T>                                                       \
@@ -66,32 +66,32 @@ SL void AdjustPolyLeadingZero(std::vector<T>& v) {
 // deg q = std::max(deg X - deg Y + 1, 1)
 // For C-style method: deg r = deg Y (with possible leading zeros)
 // For C++ style method: deg r <= deg Y (the leading zeros are ignored)
-#define POLY_DIV_AND_MOD_IMPL(PolyDivAndMod, PolyDivAndModInternal)            \
-  template <typename T>                                                        \
-  SL REQUIRES((is_native_integer<T>::value)) RETURN(void)                      \
-      PolyDivAndMod(const T* X, const int64 n, const T* Y, const int64 m,      \
-                    T* q, T* r, int64 mod) {                                   \
-    using unsignedT = typename pe_make_unsigned<T>::type;                      \
-    PolyDivAndModInternal<unsignedT>(reinterpret_cast<const unsignedT*>(X), n, \
-                                     reinterpret_cast<const unsignedT*>(Y), m, \
-                                     reinterpret_cast<unsignedT*>(q),          \
-                                     reinterpret_cast<unsignedT*>(r), mod);    \
-  }                                                                            \
-                                                                               \
-  template <typename T>                                                        \
-  SL REQUIRES((is_native_integer<T>::value))                                   \
-      RETURN(std::tuple<std::vector<T>, std::vector<T>>) PolyDivAndMod(        \
-          const std::vector<T>& X, const std::vector<T>& Y, int64 mod) {       \
-    const int64 n = static_cast<int64>(X.size());                              \
-    const int64 m = static_cast<int64>(Y.size());                              \
-                                                                               \
-    std::vector<T> q(std::max<int64>(n - m + 1, 1LL));                         \
-    std::vector<T> r(m);                                                       \
-    PolyDivAndMod(&X[0], n, &Y[0], m, &q[0], &r[0], mod);                      \
-                                                                               \
-    r[m] = 0;                                                                  \
-    AdjustPolyLeadingZero(r);                                                  \
-    return std::make_tuple(std::move(q), std::move(r));                        \
+#define POLY_DIV_AND_MOD_IMPL(PolyDivAndMod, PolyDivAndModImpl)            \
+  template <typename T>                                                    \
+  SL REQUIRES((is_native_integer<T>::value)) RETURN(void)                  \
+      PolyDivAndMod(const T* X, const int64 n, const T* Y, const int64 m,  \
+                    T* q, T* r, int64 mod) {                               \
+    using unsignedT = typename pe_make_unsigned<T>::type;                  \
+    PolyDivAndModImpl<unsignedT>(reinterpret_cast<const unsignedT*>(X), n, \
+                                 reinterpret_cast<const unsignedT*>(Y), m, \
+                                 reinterpret_cast<unsignedT*>(q),          \
+                                 reinterpret_cast<unsignedT*>(r), mod);    \
+  }                                                                        \
+                                                                           \
+  template <typename T>                                                    \
+  SL REQUIRES((is_native_integer<T>::value))                               \
+      RETURN(std::tuple<std::vector<T>, std::vector<T>>) PolyDivAndMod(    \
+          const std::vector<T>& X, const std::vector<T>& Y, int64 mod) {   \
+    const int64 n = static_cast<int64>(X.size());                          \
+    const int64 m = static_cast<int64>(Y.size());                          \
+                                                                           \
+    std::vector<T> q(std::max<int64>(n - m + 1, 1LL));                     \
+    std::vector<T> r(m);                                                   \
+    PolyDivAndMod(&X[0], n, &Y[0], m, &q[0], &r[0], mod);                  \
+                                                                           \
+    r[m] = 0;                                                              \
+    AdjustPolyLeadingZero(r);                                              \
+    return std::make_tuple(std::move(q), std::move(r));                    \
   }
 
 #define POLY_DIV_IMPL(PolyDiv, PolyDivAndMod)                                  \

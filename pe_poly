@@ -128,43 +128,36 @@ SL NModPoly PolyInv(const NModPoly& x, int64 n) {
   return NModPoly(PolyInv(x.data, n, x.mod), x.mod);
 }
 
-SL std::tuple<NModPoly, NModPoly> PolyDivAndMod(const NModPoly& x,
-                                                const NModPoly& y) {
-  std::vector<int64> q, r;
-  std::tie(q, r) = PolyDivAndMod(x.data, y.data, x.mod);
-  return std::make_tuple(NModPoly(std::move(q), x.mod),
-                         NModPoly(std::move(r), x.mod));
-}
-
-#define PPOLY_DIV_AND_MOD_IMPL(PolyDivAndMod, PolyDivAndModInternal)   \
+#define PPOLY_DIV_AND_MOD_IMPL(PolyDivAndMod, PolyDivAndModImpl)       \
   SL std::tuple<NModPoly, NModPoly> PolyDivAndMod(const NModPoly& X,   \
                                                   const NModPoly& Y) { \
     std::vector<int64> q, r;                                           \
-    std::tie(q, r) = PolyDivAndMod(X.data, Y.data, X.mod);             \
+    std::tie(q, r) = PolyDivAndModImpl(X.data, Y.data, X.mod);         \
     return std::make_tuple(NModPoly(std::move(q), X.mod),              \
                            NModPoly(std::move(r), X.mod));             \
   }
 
-#define PPOLY_DIV_IMPL(PolyDiv, PolyDivAndMod)                \
-  SL NModPoly PolyDiv(const NModPoly& X, const NModPoly& Y) { \
-    return NModPoly(PolyDiv(X.data, Y.data, X.mod), X.mod);   \
+#define PPOLY_DIV_IMPL(PolyDiv, PolyDivImpl)                    \
+  SL NModPoly PolyDiv(const NModPoly& X, const NModPoly& Y) {   \
+    return NModPoly(PolyDivImpl(X.data, Y.data, X.mod), X.mod); \
   }
 
-#define PPOLY_MOD_IMPL(PolyMod, PolyDivAndMod)                \
-  SL NModPoly PolyMod(const NModPoly& X, const NModPoly& Y) { \
-    return NModPoly(PolyMod(X.data, Y.data, X.mod), X.mod);   \
+#define PPOLY_MOD_IMPL(PolyMod, PolyModImpl)                    \
+  SL NModPoly PolyMod(const NModPoly& X, const NModPoly& Y) {   \
+    return NModPoly(PolyModImpl(X.data, Y.data, X.mod), X.mod); \
   }
 
-PPOLY_DIV_AND_MOD_IMPL(PolyDivAndModDc, PolyDivAndModDcInternal)
-PPOLY_DIV_IMPL(PolyDivDc, PolyDivAndModDc)
-PPOLY_MOD_IMPL(PolyModDc, PolyDivAndModDc)
+PPOLY_DIV_AND_MOD_IMPL(PolyDivAndModDc, pe::PolyDivAndModDc)
+PPOLY_DIV_IMPL(PolyDivDc, pe::PolyDivDc)
+PPOLY_MOD_IMPL(PolyModDc, pe::PolyModDc)
 
-PPOLY_DIV_AND_MOD_IMPL(PolyDivAndModNormal, PolyDivAndModNormalInternal)
-PPOLY_DIV_IMPL(PolyDivNormal, PolyDivAndModNormal)
-PPOLY_MOD_IMPL(PolyModNormal, PolyDivAndModNormal)
+PPOLY_DIV_AND_MOD_IMPL(PolyDivAndModNormal, pe::PolyDivAndModNormal)
+PPOLY_DIV_IMPL(PolyDivNormal, pe::PolyDivNormal)
+PPOLY_MOD_IMPL(PolyModNormal, pe::PolyModNormal)
 
-PPOLY_DIV_IMPL(PolyDiv, PolyDivAndMod)
-PPOLY_MOD_IMPL(PolyMod, PolyDivAndMod)
+PPOLY_DIV_AND_MOD_IMPL(PolyDivAndMod, pe::PolyDivAndMod)
+PPOLY_DIV_IMPL(PolyDiv, pe::PolyDiv)
+PPOLY_MOD_IMPL(PolyMod, pe::PolyMod)
 
 inline NModPoly NModPoly::Inv(int64 n) const {
   // It is assumed that mod is a prime

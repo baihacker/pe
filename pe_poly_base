@@ -8,10 +8,98 @@
 #include "pe_nt"
 
 #include "pe_poly_base_common"
+
+// Each of the following included files contains a third party polynomial
+// operation function implementations. It is not necessary that each file should
+// implement every function.
 #include "pe_poly_base_flint"
 #include "pe_poly_base_ntl"
 #include "pe_poly_base_min_25"
 #include "pe_poly_base_libbf"
+
+// This file is the pe library's polynomial operation implementation.
+//
+// This file will decide whether to use third party library implementations.
+
+// Polynomial multiplication
+//
+// It has different polynomial multiplication implementations.
+//
+// Naming conventions:
+//   [implementation namespace ::]PolyMul[implementation suffix][scalability
+// suffix]
+//
+//   implementation namespace is one of:
+//     ntt32 (32 bit internal mod)
+//     ntt64 (64 bit internal mod)
+//     poly_min25
+//     poly_libbf
+//     poly_flint
+//     poly_ntl
+//
+//   implementation suffix:
+//     Dc: divide and conquer
+//
+//   scalability suffix:
+//     SmallMod: mod is a small
+//     LargeMod: mod is a large
+//     Small: (mod-1)^2*n is relative small
+//     Large: (mod-1)^2*n is relative large
+//     Prime: mod is a prime
+//     NMod: mod is not necessary to be a prime
+//
+// Template parameters:
+//   T: native integer which can be promoted to uint64
+//
+// Availabilities:
+// ntt32 small : always available
+// ntt32 large : always available
+// ntt64 small : always available
+// ntt64 large : always available
+// min25 small : requires int128
+// min25 large : requires int128
+// libbf       : enable libbf && LIMB_BITS >= 64
+// flint prime : enable flint && GMP_LIMB_BITS >= 64
+// flint nmod  : enable flint && GMP_LIMB_BITS >= 64
+// ntl small   : enable ntl
+// ntl large   : enable ntl
+//
+// Constraints:
+// mod < 2^62 in all implementation.
+//
+// ntt32 small
+// (mod-1)^2*n < 4593671624212873217                              4.5e18
+//
+// ntt32 large
+// (mod-1)^2*n < 14797252050511790781119856641                    1.4e28
+//
+// ntt64 small
+// (mod-1)^2*n < 1945555039024054273                              1.9e18
+//
+// ntt64 large
+// (mod-1)^2*n < 350480037951100867051507526341230593             3.5e35
+//
+// min25 small
+// (mod-1)^2*n < 1128298388379402241                              1.1e18
+//
+// min25 large
+// (mod-1)^2*n < 1265198875113262859862934516672757761            1.2e36
+//
+// flint prime
+// mod is a word size prime
+//
+// flint nmod
+// mod is a word size number
+//
+// libbf
+// (mod-1)^2*n < 340282366920938463463374607431768211456 (2^128)  3.4e38
+//
+// ntl small mod
+// mod < 2^30 if sizeof(long) = 4
+// mod < 2^50 if sizeof(long) = 8
+//
+// ntl large mod
+// no constraints
 
 namespace pe {
 namespace ntt_base {
@@ -253,28 +341,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
 // Multiply two polynomials.
 // The length of result is at least n + m - 1.
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    PolyMulLarge(const T* X, const int64 n, const T* Y, const int64 m,
-                 T* result, int64 mod) {
-  using unsignedT = typename pe_make_unsigned<T>::type;
-  PolyMulWrapper<unsignedT>(reinterpret_cast<const unsignedT*>(X), n,
-                            reinterpret_cast<const unsignedT*>(Y), m,
-                            reinterpret_cast<unsignedT*>(result), mod,
-                            &PolyMulLargeInternal<unsignedT>);
-}
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(std::vector<T>)
-    PolyMulLarge(const std::vector<T>& X, const std::vector<T>& Y, int64 mod) {
-  const auto n = static_cast<int64>(X.size());
-  const auto m = static_cast<int64>(Y.size());
-
-  std::vector<T> result(n + m - 1);
-  PolyMulLarge(&X[0], n, &Y[0], m, &result[0], mod);
-
-  return result;
-}
+POLY_MUL_IMPL(PolyMulLarge, PolyMulLargeInternal)
 
 #define HAS_POLY_MUL_NTT32_SMALL 1
 struct NttSmallConstant {
@@ -344,28 +411,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
 // Multiply two polynomials.
 // The length of result is at least n + m - 1.
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    PolyMulSmall(const T* X, const int64 n, const T* Y, const int64 m,
-                 T* result, int64 mod) {
-  using unsignedT = typename pe_make_unsigned<T>::type;
-  PolyMulWrapper<unsignedT>(reinterpret_cast<const unsignedT*>(X), n,
-                            reinterpret_cast<const unsignedT*>(Y), m,
-                            reinterpret_cast<unsignedT*>(result), mod,
-                            &PolyMulSmallInternal<unsignedT>);
-}
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(std::vector<T>)
-    PolyMulSmall(const std::vector<T>& X, const std::vector<T>& Y, int64 mod) {
-  const auto n = static_cast<int64>(X.size());
-  const auto m = static_cast<int64>(Y.size());
-
-  std::vector<T> result(n + m - 1);
-  PolyMulSmall(&X[0], n, &Y[0], m, &result[0], mod);
-
-  return result;
-}
+POLY_MUL_IMPL(PolyMulSmall, PolyMulSmallInternal)
 }  // namespace ntt32
 
 #define HAS_POLY_MUL_NTT64 1
@@ -583,28 +629,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
 // Multiply two polynomials.
 // The length of result is at least n + m - 1.
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    PolyMulLarge(const T* X, const int64 n, const T* Y, const int64 m,
-                 T* result, int64 mod) {
-  using unsignedT = typename pe_make_unsigned<T>::type;
-  PolyMulWrapper<unsignedT>(reinterpret_cast<const unsignedT*>(X), n,
-                            reinterpret_cast<const unsignedT*>(Y), m,
-                            reinterpret_cast<unsignedT*>(result), mod,
-                            &PolyMulLargeInternal<unsignedT>);
-}
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(std::vector<T>)
-    PolyMulLarge(const std::vector<T>& X, const std::vector<T>& Y, int64 mod) {
-  const auto n = static_cast<int64>(X.size());
-  const auto m = static_cast<int64>(Y.size());
-
-  std::vector<T> result(n + m - 1);
-  PolyMulLarge(&X[0], n, &Y[0], m, &result[0], mod);
-
-  return result;
-}
+POLY_MUL_IMPL(PolyMulLarge, PolyMulLargeInternal)
 
 // Multiply two polynomials.
 // Make sure the length of result is at least: n + m - 1
@@ -664,28 +689,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
 // Multiply two polynomials.
 // The length of result is at least n + m - 1.
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
-    PolyMulSmall(const T* X, const int64 n, const T* Y, const int64 m,
-                 T* result, int64 mod) {
-  using unsignedT = typename pe_make_unsigned<T>::type;
-  PolyMulWrapper<unsignedT>(reinterpret_cast<const unsignedT*>(X), n,
-                            reinterpret_cast<const unsignedT*>(Y), m,
-                            reinterpret_cast<unsignedT*>(result), mod,
-                            &PolyMulSmallInternal<unsignedT>);
-}
-
-template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(std::vector<T>)
-    PolyMulSmall(const std::vector<T>& X, const std::vector<T>& Y, int64 mod) {
-  const auto n = static_cast<int64>(X.size());
-  const auto m = static_cast<int64>(Y.size());
-
-  std::vector<T> result(n + m - 1);
-  PolyMulSmall(&X[0], n, &Y[0], m, &result[0], mod);
-
-  return result;
-}
+POLY_MUL_IMPL(PolyMulSmall, PolyMulSmallInternal)
 }  // namespace ntt64
 
 template <typename T>
@@ -915,7 +919,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   const int isBig = std::max(n, m) >= 50;
   if (isBig) {
 #if HAS_POLY_MUL_FLINT
-    poly_flint::PolyMulNmod(&X[0], n, &Y[0], m, result, mod);
+    poly_flint::PolyMulNMod(&X[0], n, &Y[0], m, result, mod);
 #elif HAS_POLY_MUL_MIN25
     poly_min25::PolyMulLarge(&X[0], n, &Y[0], m, result, mod);
 #elif HAS_POLY_MUL_NTT32
@@ -1972,76 +1976,5 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(std::vector<T>)
   return PolyBatchMulAcc(X, 0, X.size() / 2, C, mod);
 }
 #endif
-
-// Name convention:
-//   [implementation namespace ::]PolyMul[implementation suffix][scalability
-// suffix]
-//
-//   implementation namespace is one of:
-//     ntt32 (32 bit internal mod)
-//     ntt64 (64 bit internal mod)
-//     poly_min25
-//     poly_libbf
-//     poly_flint
-//
-//   scalability uffix: see the contstraints
-//
-//   implementation suffix:
-//     dc: divide and conquer
-//
-// Template parameters:
-//   T:
-//     native integer which can be promoted to uint64
-//
-// Availability
-// ntt32 small : always available
-// ntt32 large : always available
-// ntt64 small : always available
-// ntt64 large : always available
-// min25 small : requires int128
-// min25 large : requires int128
-// libbf       : enable libbf && LIMB_BITS >= 64
-// flint prime : enable flint && GMP_LIMB_BITS >= 64
-// flint nmod  : enable flint && GMP_LIMB_BITS >= 64
-// ntl small   : enable ntl
-// ntl large   : enable ntl
-//
-// Constraints
-// mod < 2^62 in all implementation.
-//
-// ntt32 small
-// (mod-1)^2*n < 4593671624212873217                              4.5e18
-//
-// ntt32 large
-// (mod-1)^2*n < 14797252050511790781119856641                    1.4e28
-//
-// ntt64 small
-// (mod-1)^2*n < 1945555039024054273                              1.9e18
-//
-// ntt64 large
-// (mod-1)^2*n < 350480037951100867051507526341230593             3.5e35
-//
-// min25 small
-// (mod-1)^2*n < 1128298388379402241                              1.1e18
-//
-// min25 large
-// (mod-1)^2*n < 1265198875113262859862934516672757761            1.2e36
-//
-// flint prime
-// mod is a word size prime
-//
-// flint nmod
-// mod is a word size number
-//
-// libbf
-// (mod-1)^2*n < 340282366920938463463374607431768211456 (2^128)  3.4e38
-//
-// ntl small mod
-// mod < 2^30 if sizeof(long) = 4
-// mod < 2^50 if sizeof(long) = 8
-//
-// ntl large mod
-// no constraints
-
 }  // namespace pe
 #endif

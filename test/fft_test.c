@@ -15,7 +15,7 @@ SL void RandomTest() {
     }
 
     int t0 = clock();
-    auto ans0 = poly_flint::PolyMulNmod(x, y, mod);
+    auto ans0 = poly_flint::PolyMulNMod(x, y, mod);
     int t1 = clock();
     auto ans1 = fft::PolyMulFft(x, y, mod);
     int t2 = clock();
@@ -38,7 +38,7 @@ SL void RandomTest() {
     }
 
     int t0 = clock();
-    auto ans0 = poly_flint::PolyMulNmod(x, y, mod);
+    auto ans0 = poly_flint::PolyMulNMod(x, y, mod);
     int t1 = clock();
     auto ans1 = fft::PolyMulFft(x, y, mod);
     int t2 = clock();
@@ -57,7 +57,7 @@ SL void RandomTest() {
     }
 
     int t0 = clock();
-    auto ans0 = poly_flint::PolyMulNmod(x, y, mod);
+    auto ans0 = poly_flint::PolyMulNMod(x, y, mod);
     int t1 = clock();
     auto ans1 = fft::PolyMulFft(x, y, mod);
     int t2 = clock();
@@ -76,7 +76,7 @@ SL void LimitTest() {
     for (int i = 0; i < 2048; ++i) x.push_back(mod - 1), y.push_back(mod - 1);
 
     int t0 = clock();
-    auto ans0 = poly_flint::PolyMulNmod(x, y, mod);
+    auto ans0 = poly_flint::PolyMulNMod(x, y, mod);
     int t1 = clock();
     auto ans1 = fft::PolyMulFft(x, y, mod);
     int t2 = clock();
@@ -96,7 +96,7 @@ SL void LimitTest() {
     for (int i = 0; i < 339750; ++i) x.push_back(mod - 1), y.push_back(mod - 1);
 
     int t0 = clock();
-    auto ans0 = poly_flint::PolyMulNmod(x, y, mod);
+    auto ans0 = poly_flint::PolyMulNMod(x, y, mod);
     int t1 = clock();
     auto ans1 = fft::PolyMulFft(x, y, mod);
     int t2 = clock();
@@ -111,7 +111,7 @@ SL void LimitTest() {
     for (int i = 0; i < 44064; ++i) x.push_back(mod - 1), y.push_back(mod - 1);
 
     int t0 = clock();
-    auto ans0 = poly_flint::PolyMulNmod(x, y, mod);
+    auto ans0 = poly_flint::PolyMulNMod(x, y, mod);
     int t1 = clock();
     auto ans1 = fft::PolyMulFft(x, y, mod);
     int t2 = clock();

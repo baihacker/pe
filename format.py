@@ -1,7 +1,5 @@
 #! python2
 import os
-import sys
-import shutil
 import subprocess
 
 CURRENT_DIRECTORY = os.getcwd()
@@ -10,7 +8,7 @@ CURRENT_DIRECTORY = os.getcwd()
 compile_commands_template = '[{ "directory": "$(CURRENT_DIRECTORY)", "file": "pe", "arguments": ["clang++.exe", "-xc++", "pe", "--driver-mode=g++", "-c", "--std=c++17", "-O3", "-march=native", "-mtune=native", "--target=x86_64-w64-windows-gnu", "-fopenmp"]}]'
 
 
-def tidy():
+def tidy_code():
   with open('compile_commands.json', 'wb') as tempf:
     tempf.write(
         compile_commands_template.replace(
@@ -22,23 +20,23 @@ def tidy():
   os.remove('format-fixes.yaml')
 
 
-def format():
-  for rt, dirs, files in os.walk(CURRENT_DIRECTORY):
-    if rt.find(".git") != -1:
+def format_code():
+  for rt, _, files in os.walk(CURRENT_DIRECTORY):
+    if rt.find('.git') != -1:
       continue
     for f in files:
       fpath = os.path.join(rt, f)
-      filename, fileExtension = os.path.splitext(fpath)
+      _, file_ext_name = os.path.splitext(fpath)
       if f in ['parallel_cal_prime_pi.c']:
         continue
-      if len(fileExtension) == 0 or fileExtension in [
+      if len(file_ext_name) == 0 or file_ext_name in [
           '.h', '.hpp', '.c', '.cxx', '.cpp'
       ]:
-        print fpath
-        ret = subprocess.call(
-            'clang-format -style=Google -sort-includes=0 -i %s' % fpath)
+        print(fpath)
+        subprocess.call('clang-format -style=Google -sort-includes=0 -i %s' %
+                        fpath)
 
 
-if __name__ == "__main__":
-  tidy()
-  #format()
+if __name__ == '__main__':
+  tidy_code()
+  #format_code()

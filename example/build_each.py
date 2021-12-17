@@ -2,8 +2,6 @@
 # -*- coding: UTF-8 -*-
 import os
 import sys
-import shutil
-import subprocess
 import time
 
 CURRENT_DIRECTORY = os.getcwd()
@@ -23,7 +21,7 @@ def FormatNs(duration):
 def main():
   ret = 0
   for file in os.listdir(CURRENT_DIRECTORY):
-    filename, file_ext_name = os.path.splitext(file)
+    _, file_ext_name = os.path.splitext(file)
     if file_ext_name != '.c':
       continue
     print('Compile %s' % file)
@@ -40,5 +38,5 @@ def main():
   return ret
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
   sys.exit(main())

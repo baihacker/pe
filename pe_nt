@@ -172,8 +172,9 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T) SqrtI(T v) {
 }
 #endif
 
+namespace pe_internal {
 template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) RootIInternal(T v, int n) {
+SL REQUIRES((is_native_integer<T>::value)) RETURN(T) RootIImpl(T v, int n) {
   // n > 2 && v > 1
   T r = static_cast<T>(
       pow(static_cast<long double>(v), static_cast<long double>(1.) / n));
@@ -198,6 +199,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T) RootIInternal(T v, int n) {
     r = nextr;
   }
 }
+}  // namespace pe_internal
 
 template <typename T>
 SL REQUIRES((is_native_integer<T>::value)) RETURN(T) RootI(T v, int n) {
@@ -219,7 +221,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T) RootI(T v, int n) {
     PE_ASSERT(v > 0);
     return SqrtI(v);
   }
-  return v > 0 ? RootIInternal(v, n) : -RootIInternal(-v, n);
+  return v > 0 ? pe_internal::RootIImpl(v, n) : -pe_internal::RootIImpl(-v, n);
 }
 
 SL int64 SquareRootSafe(int64 n) {

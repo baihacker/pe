@@ -2,7 +2,7 @@
 
 namespace bi_test {
 template <typename T>
-SL void TestConstructorInternal() {
+SL void TestConstructorImpl() {
   // std::cout << typeid(T).name() << std::endl;
   // std::cout << BigInteger(T()) << std::endl;
   // std::cout << BigInteger(T(0)) << " " << BigInteger(T(1)) << std::endl;
@@ -22,28 +22,28 @@ SL void TestConstructorInternal() {
 SL void TestConstructor() {
   // std::cout << BigInteger() << std::endl;
   BigInteger x;
-  // TestConstructorInternal<bool>();
-  TestConstructorInternal<char>();
-  TestConstructorInternal<signed char>();
-  TestConstructorInternal<unsigned char>();
-  TestConstructorInternal<short>();
-  TestConstructorInternal<int>();
-  TestConstructorInternal<long>();
-  TestConstructorInternal<long long>();
+  // TestConstructorImpl<bool>();
+  TestConstructorImpl<char>();
+  TestConstructorImpl<signed char>();
+  TestConstructorImpl<unsigned char>();
+  TestConstructorImpl<short>();
+  TestConstructorImpl<int>();
+  TestConstructorImpl<long>();
+  TestConstructorImpl<long long>();
 #if PE_HAS_INT128
-  TestConstructorInternal<int128>();
+  TestConstructorImpl<int128>();
 #endif
-  TestConstructorInternal<unsigned short>();
-  TestConstructorInternal<unsigned int>();
-  TestConstructorInternal<unsigned long>();
-  TestConstructorInternal<unsigned long long>();
+  TestConstructorImpl<unsigned short>();
+  TestConstructorImpl<unsigned int>();
+  TestConstructorImpl<unsigned long>();
+  TestConstructorImpl<unsigned long long>();
 #if PE_HAS_INT128
-  TestConstructorInternal<uint128>();
+  TestConstructorImpl<uint128>();
 #endif
 }
 
 template <typename T>
-SL void TestAssignmentInternal() {
+SL void TestAssignmentImpl() {
   BigInteger x;
   x = T();
   assert(x.ToInt<T>() == T());
@@ -56,23 +56,23 @@ SL void TestAssignmentInternal() {
 }
 
 SL void TestAssignmentOperator() {
-  // TestAssignmentInternal<bool>();
-  TestAssignmentInternal<char>();
-  TestAssignmentInternal<signed char>();
-  TestAssignmentInternal<unsigned char>();
-  TestAssignmentInternal<short>();
-  TestAssignmentInternal<int>();
-  TestAssignmentInternal<long>();
-  TestAssignmentInternal<long long>();
+  // TestAssignmentImpl<bool>();
+  TestAssignmentImpl<char>();
+  TestAssignmentImpl<signed char>();
+  TestAssignmentImpl<unsigned char>();
+  TestAssignmentImpl<short>();
+  TestAssignmentImpl<int>();
+  TestAssignmentImpl<long>();
+  TestAssignmentImpl<long long>();
 #if PE_HAS_INT128
-  TestAssignmentInternal<int128>();
+  TestAssignmentImpl<int128>();
 #endif
-  TestAssignmentInternal<unsigned short>();
-  TestAssignmentInternal<unsigned int>();
-  TestAssignmentInternal<unsigned long>();
-  TestAssignmentInternal<unsigned long long>();
+  TestAssignmentImpl<unsigned short>();
+  TestAssignmentImpl<unsigned int>();
+  TestAssignmentImpl<unsigned long>();
+  TestAssignmentImpl<unsigned long long>();
 #if PE_HAS_INT128
-  TestAssignmentInternal<uint128>();
+  TestAssignmentImpl<uint128>();
 #endif
 
   std::string s = "123456789123456789123456789";
@@ -82,7 +82,7 @@ SL void TestAssignmentOperator() {
 }
 
 template <typename T>
-SL void TestAsmdInternal() {
+SL void TestAsmdImpl() {
   BigInteger x;
   x += T(1);
   x = x + T(1);
@@ -114,23 +114,23 @@ SL void TestAsmdInternal() {
 }
 
 SL void TestAsmdOperator() {
-  // TestAsmdInternal<bool>();
-  TestAsmdInternal<char>();
-  TestAsmdInternal<signed char>();
-  TestAsmdInternal<unsigned char>();
-  TestAsmdInternal<short>();
-  TestAsmdInternal<int>();
-  TestAsmdInternal<long>();
-  TestAsmdInternal<long long>();
+  // TestAsmdImpl<bool>();
+  TestAsmdImpl<char>();
+  TestAsmdImpl<signed char>();
+  TestAsmdImpl<unsigned char>();
+  TestAsmdImpl<short>();
+  TestAsmdImpl<int>();
+  TestAsmdImpl<long>();
+  TestAsmdImpl<long long>();
 #if PE_HAS_INT128
-  TestAsmdInternal<int128>();
+  TestAsmdImpl<int128>();
 #endif
-  TestAsmdInternal<unsigned short>();
-  TestAsmdInternal<unsigned int>();
-  TestAsmdInternal<unsigned long>();
-  TestAsmdInternal<unsigned long long>();
+  TestAsmdImpl<unsigned short>();
+  TestAsmdImpl<unsigned int>();
+  TestAsmdImpl<unsigned long>();
+  TestAsmdImpl<unsigned long long>();
 #if PE_HAS_INT128
-  TestAsmdInternal<uint128>();
+  TestAsmdImpl<uint128>();
 #endif
 
   for (int A : {-10000, 0, 10000}) {
@@ -257,7 +257,7 @@ SL void TestAsmdOperator() {
 }
 
 template <typename T>
-SL void TestCompareOperatorInternal() {
+SL void TestCompareOperatorImpl() {
   BigInteger x;
   assert((x == T(0)) == 1);
   assert((x > T(0)) == 0);
@@ -290,23 +290,23 @@ SL void TestCompareOperatorInternal() {
 }
 
 SL void TestCompareOperator() {
-  // TestCompareOperatorInternal<bool>();
-  TestCompareOperatorInternal<char>();
-  TestCompareOperatorInternal<signed char>();
-  TestCompareOperatorInternal<unsigned char>();
-  TestCompareOperatorInternal<short>();
-  TestCompareOperatorInternal<int>();
-  TestCompareOperatorInternal<long>();
-  TestCompareOperatorInternal<long long>();
+  // TestCompareOperatorImpl<bool>();
+  TestCompareOperatorImpl<char>();
+  TestCompareOperatorImpl<signed char>();
+  TestCompareOperatorImpl<unsigned char>();
+  TestCompareOperatorImpl<short>();
+  TestCompareOperatorImpl<int>();
+  TestCompareOperatorImpl<long>();
+  TestCompareOperatorImpl<long long>();
 #if PE_HAS_INT128
-  TestCompareOperatorInternal<int128>();
+  TestCompareOperatorImpl<int128>();
 #endif
-  TestCompareOperatorInternal<unsigned short>();
-  TestCompareOperatorInternal<unsigned int>();
-  TestCompareOperatorInternal<unsigned long>();
-  TestCompareOperatorInternal<unsigned long long>();
+  TestCompareOperatorImpl<unsigned short>();
+  TestCompareOperatorImpl<unsigned int>();
+  TestCompareOperatorImpl<unsigned long>();
+  TestCompareOperatorImpl<unsigned long long>();
 #if PE_HAS_INT128
-  TestCompareOperatorInternal<uint128>();
+  TestCompareOperatorImpl<uint128>();
 #endif
 }
 

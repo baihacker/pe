@@ -10,7 +10,7 @@
 #include "pe_poly_base_common"
 
 // Each of the following included files contains a third party polynomial
-// operation function implementations. It is not necessary that each file should
+// operation function implementations. It is NOT necessary that each file should
 // implement every function.
 #include "pe_poly_base_flint"
 #include "pe_poly_base_ntl"
@@ -52,53 +52,64 @@
 //   T: native integer which can be promoted to uint64
 //
 // Availabilities:
-// ntt32 small : always available
-// ntt32 large : always available
-// ntt64 small : always available
-// ntt64 large : always available
-// min25 small : requires int128
-// min25 large : requires int128
-// libbf       : enable libbf && LIMB_BITS >= 64
-// flint prime : enable flint && GMP_LIMB_BITS >= 64
-// flint nmod  : enable flint && GMP_LIMB_BITS >= 64
-// ntl small   : enable ntl
-// ntl large   : enable ntl
+// PolyMulDc                 : always available
+// ntt32::PolyMulSmall       : always available
+// ntt32::PolyMulLarge       : always available
+// ntt64::PolyMulSmall       : always available
+// ntt64::PolyMulLarge       : always available
+// poly_min25::PolyMulSmall  : requires int128
+// poly_min25::PolyMulLarge  : requires int128
+// poly_libbf::PolyMul       : enable libbf && LIMB_BITS >= 64
+// poly_flint::PolyMulPrime  : enable flint && GMP_LIMB_BITS >= 64
+// poly_flint::PolyMulNMod   : enable flint && GMP_LIMB_BITS >= 64
+// poly_ntl::PolyMulSmallMod : enable ntl
+// poly_ntl::PolyMulLargeMod : enable ntl
+// poly_ntl::PolyMul         : enable ntl
+//
+// ntt32::PolyMul      = ntt32::PolyMulLarge
+// ntt64::PolyMul      = ntt64::PolyMulLarge
+// poly_min25::PolyMul = poly_min25::PolyMulLarge
+// poly_flint::PolyMul = poly_flint::PolyMulNMod
+// poly_ntl::PolyMul   = if mod is small then poly_ntl::PolyMulSmallMod
+//                       else poly_ntl::PolyMulLargeMod
+//
+// PolyMul will choose an implementation from the aboves.
 //
 // Constraints:
 // mod < 2^62 in all implementation.
 //
-// ntt32 small
+// ntt32::PolyMulSmall
 // (mod-1)^2*n < 4593671624212873217                              4.5e18
 //
-// ntt32 large
+// ntt32::PolyMulLarge
 // (mod-1)^2*n < 14797252050511790781119856641                    1.4e28
 //
-// ntt64 small
+// ntt64::PolyMulSmall
 // (mod-1)^2*n < 1945555039024054273                              1.9e18
 //
-// ntt64 large
+// ntt64::PolyMulLarge
 // (mod-1)^2*n < 350480037951100867051507526341230593             3.5e35
 //
-// min25 small
+// poly_min25::PolyMulSmall
 // (mod-1)^2*n < 1128298388379402241                              1.1e18
 //
-// min25 large
+// poly_min25::PolyMulLarge
 // (mod-1)^2*n < 1265198875113262859862934516672757761            1.2e36
 //
-// flint prime
-// mod is a word size prime
-//
-// flint nmod
-// mod is a word size number
-//
-// libbf
+// poly_libbf::PolyMul
 // (mod-1)^2*n < 340282366920938463463374607431768211456 (2^128)  3.4e38
 //
-// ntl small mod
+// poly_flint::PolyMulPrime
+// mod is a word size prime
+//
+// poly_flint::PolyMulNMod
+// mod is a word size number
+//
+// poly_ntl::PolyMulSmallMod
 // mod < 2^30 if sizeof(long) = 4
 // mod < 2^50 if sizeof(long) = 8
 //
-// ntl large mod
+// poly_ntl::PolyMulLargeMod
 // no constraints
 
 namespace pe {

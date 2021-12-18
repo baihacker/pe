@@ -16,13 +16,11 @@ MulImpl mul_impl[] = {
 #else
     {&ntt64::PolyMulLarge<uint64>, 4, "ntt64 l"},
 #endif
-#if HAS_POLY_MUL_NTT32_SMALL
-    {&ntt32::PolyMulSmall<uint64>, 1, "ntt32 s"},
-#endif
 #if HAS_POLY_MUL_NTT32
+    {&ntt32::PolyMulSmall<uint64>, 1, "ntt32 s"},
     {&ntt32::PolyMulLarge<uint64>, 3, "ntt32 l"},
 #endif
-#if HAS_POLY_MUL_NTT64_SMALL
+#if HAS_POLY_MUL_NTT64
     {&ntt64::PolyMulSmall<uint64>, 1, "ntt64 s"},
 #endif
 #if HAS_POLY_MUL_FLINT && HAS_POLY_MUL_NTT64

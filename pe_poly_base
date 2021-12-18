@@ -132,6 +132,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 
 // mod is 32 bit
 namespace ntt32 {
+#define HAS_POLY_MUL_NTT32 1
+
 struct NttMod32 {
   // mod = r * 2 ^ k + 1
   // mod is prime
@@ -242,8 +244,7 @@ void InitNtt(int k = 22) {
   nttMod3.InitPreOmg(k);
 }
 
-#define HAS_POLY_MUL_NTT32_SMALL 1
-
+// The small version uses two modulus.
 struct NttSmallConstant {
   static constexpr uint64 M1 = 2013265921;
   static constexpr uint64 M2 = 2281701377;
@@ -302,9 +303,9 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
   for (int64 i = 0; i < resultSize; ++i) {
     const uint64 a = tresult[0][i];
     const uint64 b = tresult[1][i];
-    const uint64 c = b >= a ? b - a : b + NttSmallConstant::M2 - a;
-    const uint64 d = c * NttSmallConstant::INV_M1__M2 % NttSmallConstant::M2;
-    const uint64 t = d * NttSmallConstant::M1 + a;
+    const uint64 x = b >= a ? b - a : b + NttSmallConstant::M2 - a;
+    const uint64 y = x * NttSmallConstant::INV_M1__M2 % NttSmallConstant::M2;
+    const uint64 t = y * NttSmallConstant::M1 + a;
     result[i] = mod > 0 ? t % mod : t;
   }
 }
@@ -313,14 +314,13 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 // The length of result is at least n + m - 1.
 POLY_MUL_IMPL(PolyMulSmall, PolyMulSmallImpl)
 
-// Need int128 to handle the big polynomial coefficient.
-#define HAS_POLY_MUL_NTT32 1
+#define NTT32_DIRECT_INT128_IMPLEMENTATION 0
 
 struct NttConstant {
   static constexpr uint64 M1 = 2013265921;
   static constexpr uint64 M2 = 2281701377;
   static constexpr uint64 M3 = 3221225473;
-#if 0 && PE_HAS_INT128
+#if PE_HAS_INT128 && NTT32_DIRECT_INT128_IMPLEMENTATION
   static constexpr uint64 M12 = M1 * M2;
   static constexpr uint64 M13 = M1 * M3;
   static constexpr uint64 M23 = M2 * M3;
@@ -390,7 +390,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 #pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
 #endif
   for (int64 i = 0; i < resultSize; ++i) {
-#if 0 && PE_HAS_INT128
+#if PE_HAS_INT128 && NTT32_DIRECT_INT128_IMPLEMENTATION
     const uint128 a = tresult[0][i] * NttConstant::M23M;
     const uint128 b = tresult[1][i] * NttConstant::M13M;
     const uint128 c = tresult[2][i] * NttConstant::M12M;
@@ -428,6 +428,8 @@ POLY_MUL_IMPL(PolyMulLarge, PolyMulLargeImpl)
 
 // mod is 64 bit
 namespace ntt64 {
+#define HAS_POLY_MUL_NTT64 1
+
 struct NttMod64 {
   // mod = r * 2 ^ k + 1
   // mod is prime
@@ -559,8 +561,6 @@ void InitNtt(int k = 22) {
   nttMod2.InitPreOmg(k);
 }
 
-#define HAS_POLY_MUL_NTT64_SMALL 1
-
 // Multiply two polynomials.
 // Make sure the length of result is at least: n + m - 1
 template <typename T>
@@ -620,8 +620,6 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(void)
 // Multiply two polynomials.
 // The length of result is at least n + m - 1.
 POLY_MUL_IMPL(PolyMulSmall, PolyMulSmallImpl)
-
-#define HAS_POLY_MUL_NTT64 1
 
 struct NttConstant {
   static constexpr uint64 M1 = 180143985094819841ull;

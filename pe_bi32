@@ -10,6 +10,7 @@
 #include "pe_gbi"
 
 namespace pe {
+namespace pe_internal {
 static const struct alloc_mem {
 } alloc_mem_tag;
 
@@ -60,9 +61,10 @@ struct BiAllocatorFixedSize {
     allocator_impl.Deallocate(data);
   }
 };
+}  // namespace pe_internal
 
 // Configuration of BigInteger.
-using BiAllocator = BiAllocatorStd;
+using BiAllocator = pe_internal::BiAllocatorStd;
 
 class BigInteger {
  public:
@@ -84,13 +86,14 @@ class BigInteger {
 
  public:
   // constructors, destructors, value semantics.
-  BigInteger() : BigInteger(zero_initialize_tag) {
+  BigInteger() : BigInteger(pe_internal::zero_initialize_tag) {
     Reserve(1);
     data_[0] = 0;
     sign_ = 0;
   }
 
-  BigInteger(const std::string& str) : BigInteger(zero_initialize_tag) {
+  BigInteger(const std::string& str)
+      : BigInteger(pe_internal::zero_initialize_tag) {
     const int n = static_cast<int>(str.size());
     if (n == 0) {
       Reserve(1);
@@ -131,7 +134,7 @@ class BigInteger {
 
   template <typename T,
             typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
-  BigInteger(const std::vector<T>& v) : BigInteger(zero_initialize_tag) {
+  BigInteger(const std::vector<T>& v) : BigInteger(pe_internal::zero_initialize_tag) {
     if (v.empty()) {
       Reserve(1);
       data_[0] = 0;
@@ -166,18 +169,20 @@ class BigInteger {
 
   template <typename T,
             typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(void)>
-  BigInteger(T value) : BigInteger(zero_initialize_tag) {
+  BigInteger(T value) : BigInteger(pe_internal::zero_initialize_tag) {
     __InitBigInteger(*this, value);
   }
 
-  BigInteger(const BigInteger& other) : BigInteger(zero_initialize_tag) {
+  BigInteger(const BigInteger& other)
+      : BigInteger(pe_internal::zero_initialize_tag) {
     Reserve(other.buffer_length_);
     sign_ = other.sign_;
     pos_ = other.pos_;
     std::copy(other.data_, other.data_ + other.pos_ + 1, data_);
   }
 
-  BigInteger(BigInteger&& other) noexcept : BigInteger(zero_initialize_tag) {
+  BigInteger(BigInteger&& other) noexcept
+      : BigInteger(pe_internal::zero_initialize_tag) {
     std::swap(data_, other.data_);
     std::swap(buffer_length_, other.buffer_length_);
     std::swap(sign_, other.sign_);
@@ -234,21 +239,22 @@ class BigInteger {
 
  private:
   // Internal constructor
-  BigInteger(int size, alloc_mem) : BigInteger(zero_initialize_tag) {
+  BigInteger(int size, pe_internal::alloc_mem)
+      : BigInteger(pe_internal::zero_initialize_tag) {
     Reserve(size);
     data_[0] = 0;
     sign_ = 0;
   }
 
   BigInteger(const BigInteger& other, int min_buffer)
-      : BigInteger(zero_initialize_tag) {
+      : BigInteger(pe_internal::zero_initialize_tag) {
     Reserve(std::max(other.buffer_length_, min_buffer));
     sign_ = other.sign_;
     pos_ = other.pos_;
     std::copy(other.data_, other.data_ + other.pos_ + 1, data_);
   }
 
-  BigInteger(zero_initialize)
+  BigInteger(pe_internal::zero_initialize)
       : data_(nullptr), buffer_length_(0), sign_(0), pos_(0) {}
 
  private:
@@ -370,7 +376,7 @@ class BigInteger {
     l.FixPos();
   }
 
-#if HAS_POLY_MUL_NTT32_SMALL
+#if HAS_POLY_MUL_NTT32
   static BigInteger AbsMulNtt(const BigInteger& l, const BigInteger& r) {
     const int n = l.size() << 1;
     const int m = r.size() << 1;
@@ -404,7 +410,7 @@ class BigInteger {
       result[now++] = 0;
     }
 
-    BigInteger ret(now >> 1, alloc_mem_tag);
+    BigInteger ret(now >> 1, pe_internal::alloc_mem_tag);
     for (int i = 0; i < now; i += 2) {
       ret[i >> 1] = static_cast<unsigned>((result[i + 1] << 16) | result[i]);
     }
@@ -426,7 +432,7 @@ class BigInteger {
       return AbsMul(r, l.ToInt<uint64>());
     }
 
-#if HAS_POLY_MUL_NTT32_SMALL
+#if HAS_POLY_MUL_NTT32
     {
       // If the cost of ntt is less than normal multiplication, then use ntt.
       const uint64 cost1 = static_cast<uint64>(l.size()) * r.size();
@@ -447,7 +453,7 @@ class BigInteger {
 
     const int new_size = l.size() + r.size() + 1;
 
-    BigInteger ret(new_size, alloc_mem_tag);
+    BigInteger ret(new_size, pe_internal::alloc_mem_tag);
     std::fill(ret.data_, ret.data_ + new_size, 0);
 
     for (int i = 0; i <= right_pos; ++i) {
@@ -560,8 +566,8 @@ class BigInteger {
 
   template <typename T>
   static std::vector<T> AbsDivImpl(const std::vector<T>& l,
-                                       const std::vector<T>& r,
-                                       std::vector<T>& remain) {
+                                   const std::vector<T>& r,
+                                   std::vector<T>& remain) {
     std::vector<T> result;
     remain = l;
 
@@ -753,8 +759,8 @@ class BigInteger {
        sizeof(T) <= 8)) RETURN(BigInteger)
   operator/(const BigInteger& l, T r);
 
-  friend inline std::tuple<BigInteger, BigInteger> DivImpl(
-      const BigInteger& l, const BigInteger& r);
+  friend inline std::tuple<BigInteger, BigInteger> DivImpl(const BigInteger& l,
+                                                           const BigInteger& r);
 
   template <typename T>
   friend inline REQUIRES(
@@ -1386,7 +1392,7 @@ operator/(const BigInteger& l, T r) {
 }
 
 inline std::tuple<BigInteger, BigInteger> DivImpl(const BigInteger& l,
-                                                      const BigInteger& r) {
+                                                  const BigInteger& r) {
   if (l.IsZero() && r.IsZero()) {
     return std::make_tuple(1, 0);
   }
@@ -1511,7 +1517,7 @@ inline BigInteger operator&(const BigInteger& l, const BigInteger& r) {
   }
 
   const int min_pos = std::min(l.pos_, r.pos_);
-  BigInteger ret(min_pos + 1, alloc_mem_tag);
+  BigInteger ret(min_pos + 1, pe_internal::alloc_mem_tag);
   for (int i = 0; i <= min_pos; ++i) {
     ret[i] = l[i] & r[i];
   }
@@ -1527,7 +1533,7 @@ inline BigInteger operator^(const BigInteger& l, const BigInteger& r) {
   }
 
   const int max_pos = std::max(l.pos_, r.pos_);
-  BigInteger ret(max_pos + 1, alloc_mem_tag);
+  BigInteger ret(max_pos + 1, pe_internal::alloc_mem_tag);
   for (int i = 0; i <= max_pos; ++i) {
     unsigned int t = 0;
     if (i <= l.pos_) t ^= l[i];
@@ -1546,7 +1552,7 @@ inline BigInteger operator|(const BigInteger& l, const BigInteger& r) {
   }
 
   const int max_pos = std::max(l.pos_, r.pos_);
-  BigInteger ret(max_pos + 1, alloc_mem_tag);
+  BigInteger ret(max_pos + 1, pe_internal::alloc_mem_tag);
   for (int i = 0; i <= max_pos; ++i) {
     unsigned int t = 0;
     if (i <= l.pos_) t |= l[i];

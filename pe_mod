@@ -52,6 +52,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T) RegulateMod(T a, T mod) {
   return RegulateMod<T, T>(a, mod);
 }
 
+namespace pe_internal {
 template <typename T, typename M>
 SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
     RETURN_T(IntPromotionT(T, M)) AddModImpl(T a, T b, M mod) {
@@ -69,19 +70,14 @@ SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
   return a0;
 #endif
 }
+}  // namespace pe_internal
 
 template <typename T1, typename T2, typename M>
 SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
              is_native_integer<M>::value)) RETURN_T(IntPromotionT(T1, T2, M))
     AddMod(T1 a, T2 b, M mod) {
   using T = typename BiggerIntegralN<T1, T2>::type;
-  return AddModImpl<T, M>(a, b, mod);
-}
-
-template <typename T, typename M>
-SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
-    RETURN(IntPromotion(T, M)) SubModImpl(T a, T b, M mod) {
-  return a >= b ? a - b : mod - b + a;
+  return pe_internal::AddModImpl<T, M>(a, b, mod);
 }
 
 template <typename M, typename T>
@@ -104,19 +100,29 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
   return ret;
 }
 
+namespace pe_internal {
+template <typename T, typename M>
+SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
+    RETURN(IntPromotion(T, M)) SubModImpl(T a, T b, M mod) {
+  return a >= b ? a - b : mod - b + a;
+}
+}  // namespace pe_internal
+
 template <typename T1, typename T2, typename M>
 SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
              is_native_integer<M>::value)) RETURN_T(IntPromotionT(T1, T2, M))
     SubMod(T1 a, T2 b, M mod) {
   using T = typename BiggerIntegralN<T1, T2>::type;
-  return SubModImpl<T, M>(a, b, mod);
+  return pe_internal::SubModImpl<T, M>(a, b, mod);
 }
 
+namespace pe_internal {
 template <typename T, typename M>
 SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
     RETURN_T(IntPromotionT(T, M)) MulModImpl(T a, T b, M mod) {
   return a * b % mod;
 }
+}  // namespace pe_internal
 
 template <typename T1, typename T2, typename M>
 SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
@@ -124,7 +130,7 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
     RETURN_T(IntPromotionT(T1, T2, int64, M)) MulMod(T1 a, T2 b, M mod) {
   using T = typename BiggerIntegralN<T1, T2>::type;
   using atLeastInt64T = typename AtLeastInt64<T>::type;
-  return MulModImpl<atLeastInt64T, M>(a, b, mod);
+  return pe_internal::MulModImpl<atLeastInt64T, M>(a, b, mod);
 }
 
 template <typename M, typename T>
@@ -151,9 +157,12 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
 }
 
 #if PE_HAS_INT128
+// Returns a % b.
+// If possible, it uses an assembly language implementation which requires a / b
+// <= uint64_max, otherwise an exception is thrown.
+// The common use case is a = x * y whwere x < b and y < b.
 SL uint64 Mod128And64(uint128 a, uint64 b) {
 #if defined(COMPILER_GNU) && PE_X86_64
-  // Note: if a / b > uint64_max, an exception is thrown.
   uint64 q, r;
   __asm__("divq\t%4"
           : "=a"(q), "=d"(r)
@@ -262,7 +271,7 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
   using ResultType = typename BiggerIntegralN<atLeastInt64T, T>::type;
 
 #if defined(COMPILER_GNU) && PE_X86_64
-  // We have a disassembly version
+  // We have an assembly version
   return static_cast<ResultType>(MulModExDis<ResultType>(a, b, mod));
 #else
   if (mod <= PE_SOI63) {
@@ -406,6 +415,7 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
   return ret;
 }
 
+namespace pe_internal {
 template <typename T1, typename T2, typename M>
 SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
              is_native_integer<M>::value)) RETURN_T(IntPromotionT(T1, M))
@@ -422,15 +432,17 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
   }
   return ret;
 }
+}  // namespace pe_internal
 
 template <typename T1, typename T2, typename M>
 SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
              is_native_integer<M>::value)) RETURN_T(IntPromotionT(T1, int64, M))
     PowerMod(T1 x, T2 n, M mod) {
   using atLeastInt64T1 = typename AtLeastInt64<T1>::type;
-  return PowerModImpl<atLeastInt64T1, T2, M>(x, n, mod);
+  return pe_internal::PowerModImpl<atLeastInt64T1, T2, M>(x, n, mod);
 }
 
+namespace pe_internal {
 template <typename T1, typename T2, typename M>
 SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
              is_native_integer<M>::value)) RETURN_T(IntPromotionT(T1, M))
@@ -447,13 +459,14 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
   }
   return ret;
 }
+}  // namespace pe_internal
 
 template <typename T1, typename T2, typename M>
 SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
              is_native_integer<M>::value)) RETURN_T(IntPromotionT(T1, int64, M))
     PowerModEx(T1 x, T2 n, M mod) {
   using atLeastInt64T1 = typename AtLeastInt64<T1>::type;
-  return PowerModExImpl<atLeastInt64T1, T2, M>(x, n, mod);
+  return pe_internal::PowerModExImpl<atLeastInt64T1, T2, M>(x, n, mod);
 }
 
 template <typename T>
@@ -470,6 +483,7 @@ template <typename TH, typename... TT>
 SL REQUIRES((sizeof...(TT) >= 2)) RETURN(IntPromotion(TH, TT...))
     Gcd(TH a, TT... b);
 
+namespace pe_internal {
 template <typename T, typename M>
 SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
     RETURN_T(IntPromotionT(T, M))
@@ -497,6 +511,7 @@ SL REQUIRES((is_native_integer<T>::value && is_native_integer<M>::value))
   }
   return ret;
 }
+}  // namespace pe_internal
 
 template <typename T1, typename T2 = T1, typename M>
 SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
@@ -505,13 +520,16 @@ SL REQUIRES((is_native_integer<T1>::value && is_native_integer<T2>::value &&
         FracMod(const std::vector<T1>& a, const std::vector<T2>& b, M mod) {
   using T = typename BiggerIntegralN<T1, T2>::type;
   using atLeastInt64T = typename AtLeastInt64<T>::type;
-  return FracModImpl<atLeastInt64T, M>(
+  return pe_internal::FracModImpl<atLeastInt64T, M>(
       std::vector<atLeastInt64T>(a.begin(), a.end()),
       std::vector<atLeastInt64T>(b.begin(), b.end()), mod);
 }
 
+namespace pe_internal {
 struct init_direct_t {};
 static const init_direct_t __init_direct{};
+}  // namespace pe_internal
+
 struct fake_int128 {};
 enum class ModContextType { STATIC, DYNAMIC };
 
@@ -692,7 +710,7 @@ struct NModNumber {
             typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
   NModNumber(T value) : NModNumber(static_cast<ints>(value % MC::Mod())) {}
 
-  NModNumber(ints value, init_direct_t) : value_(value) {}
+  NModNumber(ints value, pe_internal::init_direct_t) : value_(value) {}
 
   static NModNumber OfValue(const ints value) { return NModNumber(value); }
 
@@ -709,7 +727,7 @@ struct NModNumber {
   }
 
   NModNumber operator++(int) {
-    NModNumber t(value_, __init_direct);
+    NModNumber t(value_, pe_internal::__init_direct);
     ++*this;
     return t;
   }
@@ -725,15 +743,17 @@ struct NModNumber {
   }
 
   NModNumber operator--(int) {
-    NModNumber t(value_, __init_direct);
+    NModNumber t(value_, pe_internal::__init_direct);
     --*this;
     return t;
   }
 
-  NModNumber operator+() const { return NModNumber(value_, __init_direct); }
+  NModNumber operator+() const {
+    return NModNumber(value_, pe_internal::__init_direct);
+  }
 
   NModNumber operator-() const {
-    return NModNumber(AP::Sub(0, value_, Mod()), __init_direct);
+    return NModNumber(AP::Sub(0, value_, Mod()), pe_internal::__init_direct);
   }
 
   NModNumber& operator*=(const NModNumber& y) {
@@ -771,7 +791,8 @@ struct NModNumber {
 
  public:
   friend NModNumber operator+(const NModNumber& x, const NModNumber& y) {
-    return NModNumber(AP::Add(x.value_, y.value_, MC::Mod()), __init_direct);
+    return NModNumber(AP::Add(x.value_, y.value_, MC::Mod()),
+                      pe_internal::__init_direct);
   }
 
   template <typename T>
@@ -787,11 +808,13 @@ struct NModNumber {
   }
 
   friend NModNumber operator-(const NModNumber& x, const NModNumber& y) {
-    return NModNumber(AP::Sub(x.value_, y.value_, Mod()), __init_direct);
+    return NModNumber(AP::Sub(x.value_, y.value_, Mod()),
+                      pe_internal::__init_direct);
   }
 
   friend NModNumber operator*(const NModNumber& x, const NModNumber& y) {
-    return NModNumber(AP::Mul(x.value_, y.value_, Mod()), __init_direct);
+    return NModNumber(AP::Mul(x.value_, y.value_, Mod()),
+                      pe_internal::__init_direct);
   }
 
   friend std::ostream& operator<<(std::ostream& o, const NModNumber& m) {
@@ -879,7 +902,7 @@ struct NModNumberM {
   NModNumberM(T value, const MC& mc = MC())
       : NModNumberM(static_cast<ints>(value % mc.Mod()), mc) {}
 
-  NModNumberM(ints value, const MC& mc, init_direct_t)
+  NModNumberM(ints value, const MC& mc, pe_internal::init_direct_t)
       : value_(value), mc(mc) {}
 
   NModNumberM OfValue(const ints value) const { return NModNumberM(value, mc); }
@@ -897,7 +920,7 @@ struct NModNumberM {
   }
 
   NModNumberM operator++(int) {
-    NModNumberM t(value_, mc, __init_direct);
+    NModNumberM t(value_, mc, pe_internal::__init_direct);
     ++*this;
     return t;
   }
@@ -913,17 +936,18 @@ struct NModNumberM {
   }
 
   NModNumberM operator--(int) {
-    NModNumberM t(value_, __init_direct);
+    NModNumberM t(value_, pe_internal::__init_direct);
     --*this;
     return t;
   }
 
   NModNumberM operator+() const {
-    return NModNumberM(value_, mc, __init_direct);
+    return NModNumberM(value_, mc, pe_internal::__init_direct);
   }
 
   NModNumberM operator-() const {
-    return NModNumberM(AP::Sub(0, value_, Mod()), mc, __init_direct);
+    return NModNumberM(AP::Sub(0, value_, Mod()), mc,
+                       pe_internal::__init_direct);
   }
 
   NModNumberM& operator*=(const NModNumberM& y) {
@@ -962,7 +986,7 @@ struct NModNumberM {
  public:
   friend NModNumberM operator+(const NModNumberM& x, const NModNumberM& y) {
     return NModNumberM(AP::Add(x.value_, y.value_, x.Mod()), x.mc,
-                       __init_direct);
+                       pe_internal::__init_direct);
   }
 
   template <typename T>
@@ -979,7 +1003,7 @@ struct NModNumberM {
 
   friend NModNumberM operator-(const NModNumberM& x, const NModNumberM& y) {
     return NModNumberM(AP::Sub(x.value_, y.value_, x.Mod()), x.mc,
-                       __init_direct);
+                       pe_internal::__init_direct);
   }
 
   template <typename T>
@@ -996,7 +1020,7 @@ struct NModNumberM {
 
   friend NModNumberM operator*(const NModNumberM& x, const NModNumberM& y) {
     return NModNumberM(AP::Mul(x.value_, y.value_, x.Mod()), x.mc,
-                       __init_direct);
+                       pe_internal::__init_direct);
   }
 
   template <typename T>
@@ -1180,42 +1204,60 @@ SL REQUIRES((IsNModNumber<T1>::value && is_native_integer<T2>::value &&
 }
 
 #if PE_HAS_CPP20
+#define PE_MOD_ARTHMETIC_OPERATION_IMPL(type) \
+  v + static_cast<type>(1);                   \
+  v - static_cast<type>(1);                   \
+  v* static_cast<type>(1);                    \
+  static_cast<type>(1) + v;                   \
+  static_cast<type>(1) - v;                   \
+  static_cast<type>(1) * v
+
+#define PE_MOD_SELF_ARTHMETIC_OPERATION_IMPL(type) \
+  v += static_cast<type>(1);                       \
+  v -= static_cast<type>(1);                       \
+  v *= static_cast<type>(1)
+
 template <class T>
 concept PeModNumber = requires(T v) {
   requires static_cast<bool>(IsNModNumber<T>::value);
-  v + 1;
-  v - 1;
-  v * 1;
-  1 - v;
-  1 * v;
-  1 + v;
-  v + 1LL;
-  v - 1LL;
-  v * 1LL;
-  1LL + v;
-  1LL - v;
-  1LL * v;
+  PE_MOD_ARTHMETIC_OPERATION_IMPL(char);
+  PE_MOD_ARTHMETIC_OPERATION_IMPL(unsigned char);
+  PE_MOD_ARTHMETIC_OPERATION_IMPL(signed char);
+  PE_MOD_ARTHMETIC_OPERATION_IMPL(int);
+  PE_MOD_ARTHMETIC_OPERATION_IMPL(unsigned int);
+  PE_MOD_ARTHMETIC_OPERATION_IMPL(signed int);
+  PE_MOD_ARTHMETIC_OPERATION_IMPL(short int);
+  PE_MOD_ARTHMETIC_OPERATION_IMPL(unsigned short int);
+  PE_MOD_ARTHMETIC_OPERATION_IMPL(long int);
+  PE_MOD_ARTHMETIC_OPERATION_IMPL(signed long int);
+  PE_MOD_ARTHMETIC_OPERATION_IMPL(unsigned long int);
+  PE_MOD_ARTHMETIC_OPERATION_IMPL(long long int);
+  PE_MOD_ARTHMETIC_OPERATION_IMPL(signed long long int);
+  PE_MOD_ARTHMETIC_OPERATION_IMPL(unsigned long long int);
 #if PE_HAS_INT128
-  v + (int128)1;
-  v - (int128)1;
-  v*(int128)1;
-  (int128)1 + v;
-  (int128)1 - v;
-  (int128)1 * v;
+  PE_MOD_ARTHMETIC_OPERATION_IMPL(int128);
+  PE_MOD_ARTHMETIC_OPERATION_IMPL(uint128);
 #endif
   v + v;
   v - v;
   v* v;
-  v += 1;
-  v -= 1;
-  v *= 1;
-  v += 1LL;
-  v -= 1LL;
-  v *= 1LL;
+  PE_MOD_SELF_ARTHMETIC_OPERATION_IMPL(char);
+  PE_MOD_SELF_ARTHMETIC_OPERATION_IMPL(unsigned char);
+  PE_MOD_SELF_ARTHMETIC_OPERATION_IMPL(signed char);
+  PE_MOD_SELF_ARTHMETIC_OPERATION_IMPL(int);
+  PE_MOD_SELF_ARTHMETIC_OPERATION_IMPL(unsigned int);
+  PE_MOD_SELF_ARTHMETIC_OPERATION_IMPL(signed int);
+  PE_MOD_SELF_ARTHMETIC_OPERATION_IMPL(short int);
+  PE_MOD_SELF_ARTHMETIC_OPERATION_IMPL(unsigned short int);
+  PE_MOD_SELF_ARTHMETIC_OPERATION_IMPL(long int);
+  PE_MOD_SELF_ARTHMETIC_OPERATION_IMPL(signed long int);
+  PE_MOD_SELF_ARTHMETIC_OPERATION_IMPL(unsigned long int);
+  PE_MOD_SELF_ARTHMETIC_OPERATION_IMPL(long long int);
+  PE_MOD_SELF_ARTHMETIC_OPERATION_IMPL(signed long long int);
+  PE_MOD_SELF_ARTHMETIC_OPERATION_IMPL(unsigned long long int);
 #if PE_HAS_INT128
-  v += (int128)1;
-  v -= (int128)1;
-  v *= (int128)1;
+  PE_MOD_SELF_ARTHMETIC_OPERATION_IMPL(int128);
+  PE_MOD_SELF_ARTHMETIC_OPERATION_IMPL(uint128);
 #endif
   v += v;
   v -= v;
@@ -1225,6 +1267,9 @@ concept PeModNumber = requires(T v) {
   v++;
   v--;
 };
+#undef PE_MOD_ARTHMETIC_OPERATION_IMPL
+#undef PE_MOD_SELF_ARTHMETIC_OPERATION_IMPL
+
 static_assert(PeModNumber<NMod64<1000000007>>);
 static_assert(PeModNumber<TLNMod64<>>);
 static_assert(PeModNumber<NModM64<1000000007>>);

@@ -279,6 +279,7 @@ constexpr int64 sopp[] = {
 };
 constexpr int64 sopp_size = sizeof(sopp) / sizeof(sopp[0]);
 
+namespace pe_internal {
 SL int MrTestImpl(int s, int64 t, int64 n, int x) {
   // PE_ASSERT((n&1) == 0)
 
@@ -301,6 +302,7 @@ SL int MrTestImpl(int s, int64 t, int64 n, int x) {
   }
   return 0;
 }
+}  // namespace pe_internal
 
 SL int MrTest(int64 n, int x) {
   if (n <= 1) return 0;
@@ -310,7 +312,7 @@ SL int MrTest(int64 n, int x) {
   int64 t = n - 1;
   while ((t & 1) == 0) ++s, t >>= 1;
 
-  return MrTestImpl(s, t, n, x);
+  return pe_internal::MrTestImpl(s, t, n, x);
 }
 
 SL int IsPrimeEx(int64 n) {
@@ -330,12 +332,13 @@ SL int IsPrimeEx(int64 n) {
   for (int i = 0; i < sopp_size; ++i) {
     const int64 val = sopp[i];
     if (n == val) return 0;
-    if (!MrTestImpl(s, t, n, plist[i])) return 0;
+    if (!pe_internal::MrTestImpl(s, t, n, plist[i])) return 0;
     if (n < val) break;
   }
   return 1;
 }
 
+namespace pe_internal {
 SL std::vector<int64> GetFactorsImpl(
     const std::vector<std::pair<int64, int>>& f, const int64 maxv) {
   if (maxv == 0) {
@@ -368,14 +371,15 @@ SL std::vector<int64> GetFactorsImpl(
   result.resize(top);
   return std::move(result);
 }
+}  // namespace pe_internal
 
 SL std::vector<int64> GetFactors(const std::vector<std::pair<int64, int>>& f,
                                  int64 maxv = -1) {
-  return GetFactorsImpl(f, maxv);
+  return pe_internal::GetFactorsImpl(f, maxv);
 }
 
 SL std::vector<int64> GetFactors(int64 value, int64 maxv = -1) {
-  return GetFactorsImpl(Factorize(value), maxv);
+  return pe_internal::GetFactorsImpl(Factorize(value), maxv);
 }
 
 SL std::vector<int64> GetPrimeFactors(
@@ -401,6 +405,7 @@ SL std::vector<int64> GetPrimeFactors(int64 value) {
   return GetPrimeFactors(Factorize(value));
 }
 
+namespace pe_internal {
 SL std::vector<int64> GetRadFactorsImpl(
     const std::vector<std::pair<int64, int>>& f, const int64 maxv) {
   if (maxv == 0) {
@@ -431,16 +436,18 @@ SL std::vector<int64> GetRadFactorsImpl(
   result.resize(top);
   return std::move(result);
 }
+}  // namespace pe_internal
 
 SL std::vector<int64> GetRadFactors(const std::vector<std::pair<int64, int>>& f,
                                     int64 maxv = -1) {
-  return GetRadFactorsImpl(f, maxv);
+  return pe_internal::GetRadFactorsImpl(f, maxv);
 }
 
 SL std::vector<int64> GetRadFactors(int64 value, int64 maxv = -1) {
-  return GetRadFactorsImpl(Factorize(value), maxv);
+  return pe_internal::GetRadFactorsImpl(Factorize(value), maxv);
 }
 
+namespace pe_internal {
 SL std::vector<std::pair<int64, int>> GetRadFactorsWithMuImpl(
     const std::vector<std::pair<int64, int>>& f, const int64 maxv) {
   if (maxv == 0) {
@@ -472,15 +479,16 @@ SL std::vector<std::pair<int64, int>> GetRadFactorsWithMuImpl(
   result.resize(top);
   return std::move(result);
 }
+}  // namespace pe_internal
 
 SL std::vector<std::pair<int64, int>> GetRadFactorsWithMu(
     const std::vector<std::pair<int64, int>>& f, int64 maxv = -1) {
-  return GetRadFactorsWithMuImpl(f, maxv);
+  return pe_internal::GetRadFactorsWithMuImpl(f, maxv);
 }
 
 SL std::vector<std::pair<int64, int>> GetRadFactorsWithMu(int64 value,
                                                           int64 maxv = -1) {
-  return GetRadFactorsWithMuImpl(Factorize(value), maxv);
+  return pe_internal::GetRadFactorsWithMuImpl(Factorize(value), maxv);
 }
 
 SL int64 CalPhi(int64 n, const std::vector<std::pair<int64, int>>& fn) {
@@ -500,7 +508,8 @@ SL int64 CalPhi(int64 n) {
   return phi_n;
 }
 
-SL int64 CalMuByPmask(int64 n, int64 v = 1) {
+namespace pe_internal {
+SL int64 CalMuImplByPmask(int64 n, int64 v = 1) {
   while (n != 1) {
     const int now = pmask[n];
     int c = 0;
@@ -519,7 +528,7 @@ SL int64 CalMuImpl(int64 n) {
 
   for (int i = 0; i < pcnt; ++i) {
     if (n <= maxp) {
-      return CalMuByPmask(n, v);
+      return CalMuImplByPmask(n, v);
     }
     const int64 p = plist[i];
     const int64 test = p * p;
@@ -535,12 +544,13 @@ SL int64 CalMuImpl(int64 n) {
   if (n != 1) v = -v;
   return v;
 }
+}  // namespace pe_internal
 
 SL int64 CalMu(int64 n) {
   if (n <= 0) return 0;
   if (n == 1) return 1;
   if (mu && n <= maxp) return mu[n];
-  return CalMuImpl(n);
+  return pe_internal::CalMuImpl(n);
 }
 
 SL int64 CalMu(int64 n, const std::vector<std::pair<int64, int>>& fn) {
@@ -555,7 +565,8 @@ SL int64 CalMu(int64 n, const std::vector<std::pair<int64, int>>& fn) {
   return fn.size() & 1 ? -1 : 1;
 }
 
-SL int64 CalRadByPmask(int64 n, int64 v = 1) {
+namespace pe_internal {
+SL int64 CalRadImplByPmask(int64 n, int64 v = 1) {
   while (n != 1) {
     const int now = pmask[n];
     int c = 0;
@@ -570,7 +581,7 @@ SL int64 CalRadImpl(int64 n) {
 
   for (int i = 0; i < pcnt; ++i) {
     if (n <= maxp) {
-      return CalRadByPmask(n, v);
+      return CalRadImplByPmask(n, v);
     }
     const int64 p = plist[i];
     const int64 test = p * p;
@@ -582,12 +593,13 @@ SL int64 CalRadImpl(int64 n) {
   if (n != 1) v *= n;
   return v;
 }
+}  // namespace pe_internal
 
 SL int64 CalRad(int64 n) {
   if (n <= 0) return 0;
   if (n == 1) return 1;
   if (rad && n <= maxp) return rad[n];
-  return CalRadImpl(n);
+  return pe_internal::CalRadImpl(n);
 }
 
 SL int64 CalRad(int64 n, const std::vector<std::pair<int64, int>>& fn) {
@@ -812,7 +824,7 @@ SL std::vector<T> GetPrimesInRangePs(int64 start, int64 end) {
 #endif
 
 #if ENABLE_PRIME_SIEVE
-template<typename T = int64>
+template <typename T = int64>
 using PrimeEnumerator = PrimeEnumeratorPs<T>;
 
 template <typename T = int64>
@@ -820,7 +832,7 @@ SL std::vector<T> GetPrimesInRange(int64 start, int64 end) {
   return GetPrimesInRangePs(start, end);
 }
 #else
-template<typename T = int64>
+template <typename T = int64>
 using PrimeEnumerator = PrimeEnumeratorPe<T>;
 
 template <typename T = int64>

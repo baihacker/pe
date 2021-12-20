@@ -50,14 +50,14 @@ struct ValueHolder<uint64> {
   static const uint64 mods[];
 };
 const uint64 ValueHolder<uint64>::values[]{0u,
-                                           1ull,
-                                           2147483648ull,
-                                           2147483647ull,
-                                           9223372036854775807ull,
-                                           18446744073709551615ull};
-const uint64 ValueHolder<uint64>::mods[]{1ull, 2147483648ull, 2147483647ull,
-                                         9223372036854775807ull,
-                                         18446744073709551615ull};
+                                           1ULL,
+                                           2147483648ULL,
+                                           2147483647ULL,
+                                           9223372036854775807ULL,
+                                           18446744073709551615ULL};
+const uint64 ValueHolder<uint64>::mods[]{1ULL, 2147483648ULL, 2147483647ULL,
+                                         9223372036854775807ULL,
+                                         18446744073709551615ULL};
 
 SL void ModTest() {
 #define REGULATE_MOD_TEST(T1, T2)          \

@@ -20,10 +20,9 @@ compile_commands_template = """[{
 tidy_options = [
     '-checks=-*', 'google-readability-casting',
     'google-readability-braces-around-statements',
-    'google-readability-namespace-comments',
-    'google-readability-braces-around-statements', 'performance-*',
-    'modernize-use-*', '-modernize-use-trailing-return-type',
-    '-modernize-use-nodiscard', 'misc-unused-parameters'
+    'google-readability-namespace-comments', 'performance-*', 'modernize-use-*',
+    '-modernize-use-trailing-return-type', '-modernize-use-nodiscard',
+    'misc-unused-parameters'
 ]
 
 tidy_cmd = [

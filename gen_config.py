@@ -1,9 +1,6 @@
 #! python3
 # -*- coding: UTF-8 -*-
 import os
-import sys
-import shutil
-import subprocess
 
 CURRENT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 TARGET_FILENAME = 'pe_config'
@@ -38,8 +35,8 @@ def check_target(path):
   for folder in CHECKING_PATHS:
     if not os.path.exists(folder):
       continue
-    for iter in path:
-      if os.path.exists(os.path.join(folder, iter)):
+    for i in path:
+      if os.path.exists(os.path.join(folder, i)):
         return True
   return False
 
@@ -67,5 +64,5 @@ def main():
     tempf.write('\r\n'.join(content).encode('utf8'))
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
   main()

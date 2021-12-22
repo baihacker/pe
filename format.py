@@ -47,9 +47,7 @@ def should_format(filename):
 
   _, file_ext_name = os.path.splitext(filename)
 
-  return len(file_ext_name) == 0 or file_ext_name in [
-      '.h', '.hpp', '.c', '.cxx', '.cpp'
-  ]
+  return file_ext_name in ['', '.h', '.hpp', '.c', '.cxx', '.cpp']
 
 
 def format_code():

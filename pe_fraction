@@ -128,12 +128,25 @@ struct Fraction {
     b = std::move(o.b);
     return *this;
   }
+#if PE_HAS_CPP20
+  int operator<=>(const Fraction& o) const {
+    auto t = a * o.b - b * o.a;
+    return t < 0 ? -1 : t > 0;
+  }
+  int operator==(const Fraction& o) const {
+    return (this->operator<=>(o)) == 0;
+  }
+  int operator!=(const Fraction& o) const {
+    return (this->operator<=>(o)) != 0;
+  }
+#else
   int operator<(const Fraction& o) const { return a * o.b < b * o.a; }
   int operator<=(const Fraction& o) const { return a * o.b <= b * o.a; }
   int operator>(const Fraction& o) const { return a * o.b > b * o.a; }
   int operator>=(const Fraction& o) const { return a * o.b >= b * o.a; }
   int operator==(const Fraction& o) const { return a * o.b == b * o.a; }
   int operator!=(const Fraction& o) const { return a * o.b != b * o.a; }
+#endif
   Fraction& operator+=(const Fraction& o) {
     return *this = Fraction(a * o.b + o.a * b, b * o.b);
   }

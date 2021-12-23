@@ -66,6 +66,21 @@ struct BiAllocatorFixedSize {
 // Configuration of BigInteger.
 using BiAllocator = pe_internal::BiAllocatorStd;
 
+// Class layout principle:
+// Idealy, if a method A uses method B, B should be declared before A.
+
+// Class layout:
+// Usefule constants
+// Utility function for constructors
+// Constructor and operator=
+// Internal constructors
+// Implementation internals
+// Normal methods
+// Integer concept methods
+// Unary operators
+// Self operators
+// Friend binary operators
+// Member fields
 class BigInteger {
  public:
   static constexpr unsigned int max_32bit_value = 0xFFFFFFFF;
@@ -76,13 +91,97 @@ class BigInteger {
   static constexpr unsigned int div32_bit = 5;
   static constexpr unsigned int mod32_mask = 31;
 
+ private:
   template <typename T>
-  friend REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
-      RETURN(void) __InitBigInteger(BigInteger& b, T value);
+  static REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value))
+      RETURN(void) __InitBigInteger(BigInteger& b, T value) {
+    if (value == 0) {
+      b.Reserve(1);
+      b.data_[0] = 0;
+      b.sign_ = 0;
+      return;
+    }
+
+    if (sizeof(T) <= 8) {
+      b.ResetAbs(value);
+    } else {
+      int need = 0;
+      for (auto t = value; t > 0; ++need) {
+#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
+        t >>= 16;
+        t >>= 16;
+#else
+        t >>= 32;
+#endif
+      }
+      b.Reserve(need);
+
+      b.pos_ = -1;
+      for (auto t = value; t > 0;) {
+        b.data_[++b.pos_] = t & BigInteger::max_32bit_value;
+#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
+        t >>= 16;
+        t >>= 16;
+#else
+        t >>= 32;
+#endif
+      }
+    }
+    b.sign_ = 1;
+  }
 
   template <typename T>
-  friend REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value))
-      RETURN(void) __InitBigInteger(BigInteger& b, T value);
+  static REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
+      RETURN(void) __InitBigInteger(BigInteger& b, T value) {
+    if (value == 0) {
+      b.Reserve(1);
+      b.data_[0] = 0;
+      b.sign_ = 0;
+      return;
+    }
+
+    using unsignedT = typename pe_make_unsigned<T>::type;
+    if (value > 0) {
+      __InitBigInteger<unsignedT>(b, static_cast<unsignedT>(value));
+    } else {
+      // Note: it works for value = T::min()
+      __InitBigInteger<unsignedT>(b, static_cast<unsignedT>(-value));
+      b.sign_ = -1;
+    }
+  }
+
+  void Reserve(int new_size) {
+    PE_ASSERT(new_size > 0);
+    unsigned int* old_data = nullptr;
+    if (data_) {
+      if (new_size > buffer_length_) {
+        old_data = data_;
+      } else {
+        return;
+      }
+    }
+
+    data_ = BiAllocator::Allocate(new_size);
+    if (old_data != nullptr) {
+      // copy used data only.
+      std::copy(old_data, old_data + pos_ + 1, data_);
+      BiAllocator::Deallocate(old_data);
+    }
+    buffer_length_ = new_size;
+  }
+
+  void FixPos() const {
+    while (pos_ > 0 && data_[pos_] == 0) --pos_;
+    if (pos_ == 0 && data_[0] == 0) sign_ = 0;
+  }
+
+  template <typename T>
+  static void FixSize(std::vector<T>& v) {
+    if (v.empty()) v.push_back(0);
+    int now = static_cast<int>(v.size()) - 1;
+    while (now > 0 && v[now] == 0) --now;
+    v.resize(now + 1);
+  }
 
  public:
   // constructors, destructors, value semantics.
@@ -214,6 +313,28 @@ class BigInteger {
     return *this = BigInteger(value);
   }
 
+ private:
+  // Internal constructor
+  BigInteger(int size, pe_internal::alloc_mem)
+      : BigInteger(pe_internal::zero_initialize_tag) {
+    Reserve(size);
+    data_[0] = 0;
+    sign_ = 0;
+  }
+
+  BigInteger(const BigInteger& other, int min_buffer)
+      : BigInteger(pe_internal::zero_initialize_tag) {
+    Reserve(std::max(other.buffer_length_, min_buffer));
+    sign_ = other.sign_;
+    pos_ = other.pos_;
+    std::copy(other.data_, other.data_ + other.pos_ + 1, data_);
+  }
+
+  BigInteger(pe_internal::zero_initialize)
+      : data_(nullptr), buffer_length_(0), sign_(0), pos_(0) {}
+
+ private:
+  // Implementation internals
   template <typename T>
   SL REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value)) RETURN(T)
       AbsValue(T x) {
@@ -238,27 +359,6 @@ class BigInteger {
     return x;
   }
 
- private:
-  // Internal constructor
-  BigInteger(int size, pe_internal::alloc_mem)
-      : BigInteger(pe_internal::zero_initialize_tag) {
-    Reserve(size);
-    data_[0] = 0;
-    sign_ = 0;
-  }
-
-  BigInteger(const BigInteger& other, int min_buffer)
-      : BigInteger(pe_internal::zero_initialize_tag) {
-    Reserve(std::max(other.buffer_length_, min_buffer));
-    sign_ = other.sign_;
-    pos_ = other.pos_;
-    std::copy(other.data_, other.data_ + other.pos_ + 1, data_);
-  }
-
-  BigInteger(pe_internal::zero_initialize)
-      : data_(nullptr), buffer_length_(0), sign_(0), pos_(0) {}
-
- private:
   void ResetAbs(uint64 v) {
     if (v <= max_32bit_value) {
       Reserve(1);
@@ -272,7 +372,6 @@ class BigInteger {
     }
   }
 
- private:
   static int AbsCompare(const BigInteger& l, const BigInteger& r) {
     if (l.size() <= 2 && r.size() <= 2) {
       const uint64 a = l.ToInt<uint64>();
@@ -717,98 +816,173 @@ class BigInteger {
   }
 
  public:
-// compare operators
-#if PE_HAS_CPP20
-  friend inline int operator<=>(const BigInteger& l, const BigInteger& r);
-  friend inline int operator==(const BigInteger& l, const BigInteger& r);
-  friend inline int operator!=(const BigInteger& l, const BigInteger& r);
+  const unsigned int* data() const { return data_; }
+  unsigned int* data() { return data_; }
+  int size() const { return pos_ + 1; }
+  unsigned int operator[](int idx) const { return data_[idx]; }
+  unsigned int& operator[](int idx) { return data_[idx]; }
+  int sign() const { return sign_; }
+
+  int CompareTo(const BigInteger& other) const {
+    if (sign_ != other.sign_) {
+      return sign_ < other.sign_ ? -1 : 1;
+    }
+    if (sign_ == 0) {
+      return 0;
+    }
+    const int t = BigInteger::AbsCompare(*this, other);
+    return sign_ > 0 ? t : -t;
+  }
+
+  int IntSign() const { return sign_; }
+  bool IsZero() const { return sign_ == 0; }
+  int IsEven() const { return data_[0] & 1 ? 0 : 1; }
+  int IsOdd() const { return data_[0] & 1 ? 1 : 0; }
+
+  void SetBit(int idx) {
+    const int x = idx >> div32_bit;
+    const int y = idx & mod32_mask;
+    data_[x] = pe::SetBit(data_[x], y);
+  }
+
+  void ResetBit(int idx) {
+    const int x = idx >> div32_bit;
+    const int y = idx & mod32_mask;
+    data_[x] = pe::ResetBit(data_[x], y);
+  }
+
+  int GetBit(int idx) const {
+    const int x = idx >> div32_bit;
+    const int y = idx & mod32_mask;
+    return x > pos_ ? 0 : (data_[x] >> y) & 1;
+  }
+
+  void RevBit(int idx) {
+    const int x = idx >> div32_bit;
+    const int y = idx & mod32_mask;
+    data_[x] = pe::RevBit(data_[x], y);
+  }
+
+  int BitCount() const {
+    int ret = 0;
+    for (int i = pos_; i >= 0; --i) ret += pe_popcount(data_[i]);
+    return ret;
+  }
+
+  int BitHeight() const {
+    int ret = pos_ << div32_bit;
+    int hiCnt = 0;
+    unsigned int v = data_[pos_];
+    for (unsigned int x = 1; v; ++hiCnt, x <<= 1, v >>= 1) {
+      ;
+    }
+    return ret + hiCnt;
+  }
+
+  std::string ToString() const {
+    BigInteger t(*this);
+    std::vector<unsigned int> mods;
+    t.FixPos();
+    std::stringstream ss;
+    if (t.sign_ == -1) ss << "-";
+
+    do {
+      uint64 add = 0;
+      for (int i = t.pos_; i > 0; --i) {
+        const uint64 x = add + t.data_[i];
+        const uint64 next_add = (x % output_mod) << 32;
+        t.data_[i] = static_cast<unsigned>(x / output_mod);
+        add = next_add;
+      }
+      uint64 x = add + t.data_[0];
+      t.data_[0] = static_cast<unsigned>(x / output_mod);
+      mods.push_back(x % output_mod);
+      t.FixPos();
+    } while (!t.IsZero());
+
+    int idx = static_cast<int>(mods.size()) - 1;
+    char buff[32];
+    sprintf(buff, "%u", mods[idx--]);
+    ss << buff;
+    for (; idx >= 0; --idx) {
+      sprintf(buff, "%0*u", output_mod_dig, mods[idx]);
+      ss << buff;
+    }
+    return ss.str();
+  }
+
+  std::string to_string() const { return ToString(); }
+
+  BigInteger Difference(const BigInteger& other) const {
+    int t = CompareTo(other);
+    if (t == 0) {
+      return 0;
+    }
+    return t > 0 ? AbsSub(*this, other) : AbsSub(other, *this);
+  }
+
+  void Dump() const {
+    dbg(sign_);
+    dbg(pos_);
+    dbg(buffer_length_);
+    for (int i = 0; i <= pos_; ++i) std::cerr << data_[i] << ",";
+    std::cerr << std::endl;
+  }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value))
+  RETURN(std::vector<T>) ToBinVector(int fix_size = 1) const {
+    std::vector<T> ret;
+    for (int i = 0; i <= pos_; ++i) {
+      auto t = data_[i];
+      for (int j = 0; j < 32; ++j) ret.push_back(t & 1), t >>= 1;
+    }
+    if (fix_size) {
+      FixSize(ret);
+    }
+    return ret;
+  }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
+  RETURN(T) ToInt() const {
+    using unsignedT = typename pe_make_unsigned<T>::type;
+    unsignedT v = ToInt<unsignedT>();
+    if (sign() < 0) {
+      v = ~v + 1;
+    }
+    return static_cast<T>(v);
+  }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value))
+  RETURN(T) ToInt() const {
+    T result = 0;
+    for (int i = pos_; i >= 0; --i) {
+#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
+      result <<= 16;
+      result = (result << 16) | data_[i];
 #else
-  friend inline int operator<(const BigInteger& l, const BigInteger& r);
-  friend inline int operator<=(const BigInteger& l, const BigInteger& r);
-  friend inline int operator>(const BigInteger& l, const BigInteger& r);
-  friend inline int operator>=(const BigInteger& l, const BigInteger& r);
-  friend inline int operator==(const BigInteger& l, const BigInteger& r);
-  friend inline int operator!=(const BigInteger& l, const BigInteger& r);
+      result = (result << 32) | data_[i];
 #endif
-
-  // binary operators
-  friend inline BigInteger operator+(const BigInteger& l, const BigInteger& r);
-  friend inline BigInteger operator-(const BigInteger& l, const BigInteger& r);
-
-  friend inline BigInteger operator*(const BigInteger& l, const BigInteger& r);
+    }
+    return result;
+  }
 
   template <typename T>
-  friend inline REQUIRES(
-      (is_native_integer<T>::value &&
-       !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
-      RETURN(BigInteger)
-      operator*(const BigInteger& l, T r);
-
-  template <typename T>
-  friend inline REQUIRES(
-      (is_native_integer<T>::value &&
-       !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
-      RETURN(BigInteger)
-      operator*(T l, const BigInteger& r);
-
-  friend inline BigInteger operator/(const BigInteger& l, const BigInteger& r);
-
-  template <typename T>
-  friend inline REQUIRES(
-      (is_native_integer<T>::value &&
-       !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
-       sizeof(T) <= 8)) RETURN(BigInteger)
-  operator/(const BigInteger& l, T r);
-
-  friend inline std::tuple<BigInteger, BigInteger> DivImpl(const BigInteger& l,
-                                                           const BigInteger& r);
-
-  template <typename T>
-  friend inline REQUIRES(
-      (is_native_integer<T>::value &&
-       !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
-       sizeof(T) <= 8)) RETURN(std::tuple<BigInteger, T>)
-      DivImpl(const BigInteger& l, T r);
-
-  template <typename T>
-  friend inline REQUIRES(
-      (is_native_integer<T>::value &&
-       !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
-      RETURN(void) DivInplace(BigInteger& l, T r, T& remain);
-
-  friend inline BigInteger operator%(const BigInteger& l, const BigInteger& r);
-
-  template <typename T>
-  friend inline REQUIRES(
-      (is_native_integer<T>::value &&
-       !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
-       sizeof(T) <= 8)) RETURN(BigInteger)
-  operator%(const BigInteger& l, T r);
-
-  friend inline BigInteger operator&(const BigInteger& l, const BigInteger& r);
-  friend inline BigInteger operator^(const BigInteger& l, const BigInteger& r);
-  friend inline BigInteger operator|(const BigInteger& l, const BigInteger& r);
-
-  template <typename T>
-  friend inline REQUIRES(
-      (is_native_integer<T>::value &&
-       !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
-      RETURN(BigInteger)
-      operator<<(const BigInteger& l, T n);
-
-  template <typename T>
-  friend inline REQUIRES(
-      (is_native_integer<T>::value &&
-       !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
-      RETURN(BigInteger)
-      operator>>(const BigInteger& l, T n);
-
-  friend std::ostream& operator<<(std::ostream& o, const BigInteger& bi);
+  T ToFloat() const {
+    T result = 0;
+    for (int i = pos_; i >= 0; --i) result = result * 4294967296 + data_[i];
+    if (sign_ < 0) {
+      result = -result;
+    }
+    return result;
+  }
 
  public:
+  // Operators
   const BigInteger& operator+() const { return *this; }
 
-  // Operators
   BigInteger operator-() const {
     BigInteger ret(*this);
     ret.sign_ = -ret.sign_;
@@ -985,180 +1159,398 @@ class BigInteger {
     return ret;
   }
 
- private:
-  void FixPos() const {
-    while (pos_ > 0 && data_[pos_] == 0) --pos_;
-    if (pos_ == 0 && data_[0] == 0) sign_ = 0;
-  }
-
-  template <typename T>
-  static void FixSize(std::vector<T>& v) {
-    if (v.empty()) v.push_back(0);
-    int now = static_cast<int>(v.size()) - 1;
-    while (now > 0 && v[now] == 0) --now;
-    v.resize(now + 1);
-  }
-
-  void Reserve(int new_size) {
-    PE_ASSERT(new_size > 0);
-    unsigned int* old_data = nullptr;
-    if (data_) {
-      if (new_size > buffer_length_) {
-        old_data = data_;
-      } else {
-        return;
-      }
-    }
-
-    data_ = BiAllocator::Allocate(new_size);
-    if (old_data != nullptr) {
-      // copy used data only.
-      std::copy(old_data, old_data + pos_ + 1, data_);
-      BiAllocator::Deallocate(old_data);
-    }
-    buffer_length_ = new_size;
-  }
-
  public:
-  const unsigned int* data() const { return data_; }
-  unsigned int* data() { return data_; }
-  int size() const { return pos_ + 1; }
+  // All the binary operators are friend operators
 
-  int sign() const { return sign_; }
-  bool IsZero() const { return sign_ == 0; }
-  int IsEven() const { return data_[0] & 1 ? 0 : 1; }
-  int IsOdd() const { return data_[0] & 1 ? 1 : 0; }
-  unsigned int operator[](int idx) const { return data_[idx]; }
-  unsigned int& operator[](int idx) { return data_[idx]; }
+  // Comparison operators
 
-  void SetBit(int idx) {
-    const int x = idx >> div32_bit;
-    const int y = idx & mod32_mask;
-    data_[x] = pe::SetBit(data_[x], y);
+#if PE_HAS_CPP20
+  friend inline int operator<=>(const BigInteger& l, const BigInteger& r) {
+    return l.CompareTo(r);
   }
-
-  void ResetBit(int idx) {
-    const int x = idx >> div32_bit;
-    const int y = idx & mod32_mask;
-    data_[x] = pe::ResetBit(data_[x], y);
+  friend inline int operator==(const BigInteger& l, const BigInteger& r) {
+    return l.CompareTo(r) == 0;
   }
-
-  int GetBit(int idx) const {
-    const int x = idx >> div32_bit;
-    const int y = idx & mod32_mask;
-    return x > pos_ ? 0 : (data_[x] >> y) & 1;
+  friend inline int operator!=(const BigInteger& l, const BigInteger& r) {
+    return l.CompareTo(r) != 0;
   }
-
-  void RevBit(int idx) {
-    const int x = idx >> div32_bit;
-    const int y = idx & mod32_mask;
-    data_[x] = pe::RevBit(data_[x], y);
-  }
-
-  int BitCount() const {
-    int ret = 0;
-    for (int i = pos_; i >= 0; --i) ret += pe_popcount(data_[i]);
-    return ret;
-  }
-
-  int BitHeight() const {
-    int ret = pos_ << div32_bit;
-    int hiCnt = 0;
-    unsigned int v = data_[pos_];
-    for (unsigned int x = 1; v; ++hiCnt, x <<= 1, v >>= 1) {
-      ;
-    }
-    return ret + hiCnt;
-  }
-
-  std::string ToString() const {
-    BigInteger t(*this);
-    std::vector<unsigned int> mods;
-    t.FixPos();
-    std::stringstream ss;
-    if (t.sign_ == -1) ss << "-";
-
-    do {
-      uint64 add = 0;
-      for (int i = t.pos_; i > 0; --i) {
-        const uint64 x = add + t.data_[i];
-        const uint64 next_add = (x % output_mod) << 32;
-        t.data_[i] = static_cast<unsigned>(x / output_mod);
-        add = next_add;
-      }
-      uint64 x = add + t.data_[0];
-      t.data_[0] = static_cast<unsigned>(x / output_mod);
-      mods.push_back(x % output_mod);
-      t.FixPos();
-    } while (!t.IsZero());
-
-    int idx = static_cast<int>(mods.size()) - 1;
-    char buff[32];
-    sprintf(buff, "%u", mods[idx--]);
-    ss << buff;
-    for (; idx >= 0; --idx) {
-      sprintf(buff, "%0*u", output_mod_dig, mods[idx]);
-      ss << buff;
-    }
-    return ss.str();
-  }
-
-  std::string to_string() const { return ToString(); }
-
-  void Dump() const {
-    dbg(sign_);
-    dbg(pos_);
-    dbg(buffer_length_);
-    for (int i = 0; i <= pos_; ++i) std::cerr << data_[i] << ",";
-    std::cerr << std::endl;
-  }
-
-  template <typename T>
-  REQUIRES((is_native_integer<T>::value))
-  RETURN(std::vector<T>) ToBinVector() const {
-    std::vector<T> ret;
-    for (int i = 0; i <= pos_; ++i) {
-      auto t = data_[i];
-      for (int j = 0; j < 32; ++j) ret.push_back(t & 1), t >>= 1;
-    }
-    FixSize(ret);
-    return ret;
-  }
-
-  template <typename T>
-  REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
-  RETURN(T) ToInt() const {
-    using unsignedT = typename pe_make_unsigned<T>::type;
-    unsignedT v = ToInt<unsignedT>();
-    if (sign() < 0) {
-      v = ~v + 1;
-    }
-    return static_cast<T>(v);
-  }
-
-  template <typename T>
-  REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value))
-  RETURN(T) ToInt() const {
-    T result = 0;
-    for (int i = pos_; i >= 0; --i) {
-#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
-      result <<= 16;
-      result = (result << 16) | data_[i];
 #else
-      result = (result << 32) | data_[i];
-#endif
+  friend inline int operator<(const BigInteger& l, const BigInteger& r) {
+    const int s1 = l.sign_;
+    const int s2 = r.sign_;
+
+    if (s1 < 0) {
+      return s2 >= 0 || BigInteger::AbsCompare(l, r) > 0;
+    } else if (s1 > 0) {
+      return s2 > 0 && BigInteger::AbsCompare(l, r) < 0;
+    } else {
+      return s2 > 0;
     }
-    return result;
+  }
+
+  friend inline int operator<=(const BigInteger& l, const BigInteger& r) {
+    const int s1 = l.sign_;
+    const int s2 = r.sign_;
+
+    if (s1 < 0) {
+      return s2 >= 0 || BigInteger::AbsCompare(l, r) >= 0;
+    } else if (s1 > 0) {
+      return s2 > 0 && BigInteger::AbsCompare(l, r) <= 0;
+    } else {
+      return s2 >= 0;
+    }
+  }
+
+  friend inline int operator>(const BigInteger& l, const BigInteger& r) {
+    const int s1 = l.sign_;
+    const int s2 = r.sign_;
+
+    if (s1 < 0) {
+      return s2 < 0 && BigInteger::AbsCompare(l, r) < 0;
+    } else if (s1 > 0) {
+      return s2 <= 0 || BigInteger::AbsCompare(l, r) > 0;
+    } else {
+      return s2 < 0;
+    }
+  }
+
+  friend inline int operator>=(const BigInteger& l, const BigInteger& r) {
+    const int s1 = l.sign_;
+    const int s2 = r.sign_;
+
+    if (s1 < 0) {
+      return s2 < 0 && BigInteger::AbsCompare(l, r) <= 0;
+    } else if (s1 > 0) {
+      return s2 <= 0 || BigInteger::AbsCompare(l, r) >= 0;
+    } else {
+      return s2 <= 0;
+    }
+  }
+
+  friend inline int operator==(const BigInteger& l, const BigInteger& r) {
+    return l.sign_ == r.sign_ && BigInteger::AbsCompare(l, r) == 0;
+  }
+
+  friend inline int operator!=(const BigInteger& l, const BigInteger& r) {
+    return !(l == r);
+  }
+#endif
+  friend inline BigInteger operator+(const BigInteger& l, const BigInteger& r) {
+    BigInteger ret(l);
+    ret += r;
+    return ret;
+  }
+
+  friend inline BigInteger operator-(const BigInteger& l, const BigInteger& r) {
+    if (r.IsZero()) {
+      return l;
+    } else if (l.IsZero()) {
+      return -r;
+    } else if (l.sign() != r.sign()) {
+      BigInteger t(l);
+      BigInteger::AbsAddInplace(t, r);
+      return t;
+    } else {
+      int c = BigInteger::AbsCompare(l, r);
+      if (c == 0) {
+        return 0;
+      } else if (c > 0) {
+        BigInteger t(l);
+        BigInteger::AbsSubInplace(t, r);
+        return t;
+      } else {
+        BigInteger t(r);
+        BigInteger::AbsSubInplace(t, l);
+        t.sign_ = -r.sign_;
+        return t;
+      }
+    }
+  }
+
+  friend inline BigInteger operator*(const BigInteger& l, const BigInteger& r) {
+    if (l.IsZero() || r.IsZero()) return 0;
+
+    const int s = l.sign() * (r > 0 ? 1 : -1);
+    BigInteger ret(BigInteger::AbsMul(l, r));
+    ret.sign_ = s;
+
+    return ret;
   }
 
   template <typename T>
-  T ToFloat() const {
-    T result = 0;
-    for (int i = pos_; i >= 0; --i) result = result * 4294967296 + data_[i];
-    if (sign_ < 0) {
-      result = -result;
+  friend inline REQUIRES(
+      (is_native_integer<T>::value &&
+       !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
+      RETURN(BigInteger)
+      operator*(const BigInteger& l, T r) {
+    if (r == 0 || l.IsZero()) return 0;
+
+    using unsignedT = typename pe_make_unsigned<T>::type;
+    unsignedT abs_value = BigInteger::AbsValue(r);
+    const int s = l.sign() * (r > 0 ? 1 : -1);
+    BigInteger ret(BigInteger::AbsMul(l, abs_value));
+    ret.sign_ = s;
+
+    return ret;
+  }
+
+  template <typename T>
+  friend inline REQUIRES(
+      (is_native_integer<T>::value &&
+       !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
+      RETURN(BigInteger)
+      operator*(T l, const BigInteger& r) {
+    return r * l;
+  }
+
+  friend inline BigInteger operator/(const BigInteger& l, const BigInteger& r) {
+    BigInteger u, v;
+    std::tie(u, v) = DivImpl(l, r);
+    return u;
+  }
+
+  template <typename T>
+  friend inline REQUIRES(
+      (is_native_integer<T>::value &&
+       !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
+       sizeof(T) <= 8)) RETURN(BigInteger)
+  operator/(const BigInteger& l, T r) {
+    BigInteger u;
+    T v;
+    std::tie(u, v) = DivImpl(l, r);
+    return u;
+  }
+
+  friend inline std::tuple<BigInteger, BigInteger> DivImpl(
+      const BigInteger& l, const BigInteger& r) {
+    if (l.IsZero() && r.IsZero()) {
+      return std::make_tuple(1, 0);
     }
-    return result;
+    if (l.IsZero() || r.IsZero()) {
+      return std::make_tuple(0, 0);
+    }
+
+    if (r.size() > 2) {
+      BigInteger x;
+      BigInteger ret(BigInteger::AbsDiv(l, r, x));
+      ret.sign_ = l.sign_ * r.sign_;
+      ret.FixPos();
+      if (l.sign_ < 0) {
+        x.sign_ = -x.sign_;
+      }
+      x.FixPos();
+
+      return std::make_tuple(std::move(ret), std::move(x));
+    } else {
+      uint64 abs_value = r.ToInt<uint64>();
+      uint64 x;
+      BigInteger ret(l);
+      BigInteger::AbsDivInplace(ret, abs_value, x);
+      ret.sign_ = l.sign() * (r.sign() > 0 ? 1 : -1);
+      ret.FixPos();
+
+      BigInteger remain(x);
+      if (l.sign_ < 0) {
+        remain.sign_ = -remain.sign_;
+      }
+      return std::make_tuple(std::move(ret), std::move(remain));
+    }
+  }
+
+  template <typename T>
+  friend inline REQUIRES(
+      (is_native_integer<T>::value &&
+       !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
+       sizeof(T) <= 8)) RETURN(std::tuple<BigInteger, T>)
+      DivImpl(const BigInteger& l, T r) {
+    if (l.IsZero() && r == 0) {
+      return std::make_tuple(1, 0);
+    }
+    if (l.IsZero() || r == 0) {
+      return std::make_tuple(0, 0);
+    }
+
+    const int signl = l.sign_;
+    using unsignedT = typename pe_make_unsigned<T>::type;
+    unsignedT abs_value = BigInteger::AbsValue(r);
+    unsignedT x;
+    BigInteger ret(l);
+    BigInteger::AbsDivInplace(ret, abs_value, x);
+    ret.sign_ = signl * (r > 0 ? 1 : -1);
+    ret.FixPos();
+    if (l.sign_ < 0) {
+      PE_ASSERT(x == 0 || !pe_is_unsigned<T>::value);
+      x = BigInteger::AbsValue(x);
+    }
+
+    return std::make_tuple(std::move(ret), static_cast<T>(x));
+  }
+
+  template <typename T>
+  friend inline REQUIRES(
+      (is_native_integer<T>::value &&
+       !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
+      RETURN(void) DivInplace(BigInteger& l, T r, T& remain) {
+    if (l.IsZero() && r == 0) {
+      l = 1;
+      remain = 0;
+      return;
+    }
+
+    if (l.IsZero() || r == 0) {
+      if (!l.IsZero()) {
+        l.pos_ = 0;
+        l.data_[0] = 0;
+        l.sign_ = 0;
+      }
+      remain = 0;
+      return;
+    }
+    using unsignedT = typename pe_make_unsigned<T>::type;
+    unsignedT abs_value = BigInteger::AbsValue(r);
+    unsignedT tmp_remain;
+    const int signl = l.sign_;
+    BigInteger::AbsDivInplace(l, abs_value, tmp_remain);
+    l.sign_ = signl * (r > 0 ? 1 : -1);
+    l.FixPos();
+    remain = static_cast<T>(tmp_remain);
+    if (signl < 0) {
+      PE_ASSERT(remain == 0 || !pe_is_unsigned<T>::value);
+      remain = BigInteger::NegValue(remain);
+    }
+  }
+
+  friend inline BigInteger operator%(const BigInteger& l, const BigInteger& r) {
+    BigInteger u, v;
+    std::tie(u, v) = DivImpl(l, r);
+    return v;
+  }
+
+  template <typename T>
+  friend inline REQUIRES(
+      (is_native_integer<T>::value &&
+       !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
+       sizeof(T) <= 8)) RETURN(BigInteger)
+  operator%(const BigInteger& l, T r) {
+    BigInteger u;
+    T v;
+    std::tie(u, v) = DivImpl(l, r);
+    if (l.sign() < 0) {
+      v = BigInteger::NegValue(v);
+    }
+    return v;
+  }
+
+  friend inline BigInteger operator&(const BigInteger& l, const BigInteger& r) {
+    if (l.size() <= 2 && r.size() <= 2) {
+      return l.ToInt<uint64>() & r.ToInt<uint64>();
+    }
+
+    const int min_pos = std::min(l.pos_, r.pos_);
+    BigInteger ret(min_pos + 1, pe_internal::alloc_mem_tag);
+    for (int i = 0; i <= min_pos; ++i) {
+      ret[i] = l[i] & r[i];
+    }
+    ret.pos_ = min_pos;
+    ret.sign_ = 1;
+    ret.FixPos();
+    return ret;
+  }
+  friend inline BigInteger operator^(const BigInteger& l, const BigInteger& r) {
+    if (l.size() <= 2 && r.size() <= 2) {
+      return l.ToInt<uint64>() ^ r.ToInt<uint64>();
+    }
+
+    const int max_pos = std::max(l.pos_, r.pos_);
+    BigInteger ret(max_pos + 1, pe_internal::alloc_mem_tag);
+    for (int i = 0; i <= max_pos; ++i) {
+      unsigned int t = 0;
+      if (i <= l.pos_) t ^= l[i];
+      if (i <= r.pos_) t ^= r[i];
+      ret[i] = t;
+    }
+    ret.pos_ = max_pos;
+    ret.sign_ = 1;
+    ret.FixPos();
+    return ret;
+  }
+  friend inline BigInteger operator|(const BigInteger& l, const BigInteger& r) {
+    if (l.size() <= 2 && r.size() <= 2) {
+      return l.ToInt<uint64>() | r.ToInt<uint64>();
+    }
+
+    const int max_pos = std::max(l.pos_, r.pos_);
+    BigInteger ret(max_pos + 1, pe_internal::alloc_mem_tag);
+    for (int i = 0; i <= max_pos; ++i) {
+      unsigned int t = 0;
+      if (i <= l.pos_) t |= l[i];
+      if (i <= r.pos_) t |= r[i];
+      ret[i] = t;
+    }
+    ret.pos_ = max_pos;
+    ret.sign_ = 1;
+    ret.FixPos();
+    return ret;
+  }
+
+  template <typename T>
+  friend inline REQUIRES(
+      (is_native_integer<T>::value &&
+       !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
+      RETURN(BigInteger)
+      operator<<(const BigInteger& l, T n) {
+    if (l.sign() == 0) {
+      return 0;
+    }
+    if (n == 0) {
+      return l;
+    }
+    const int bit_cnt = l.BitHeight();
+    std::vector<unsigned int> v(n + bit_cnt, 0);
+    for (int i = 0, j = n; i < bit_cnt; ++i, ++j) {
+      const int x = i >> BigInteger::div32_bit;
+      const int y = i & BigInteger::mod32_mask;
+      v[j] = (l[x] >> y) & 1;
+    }
+    BigInteger ret(v);
+    ret.sign_ = l.sign_;
+    ret.FixPos();
+    return ret;
+  }
+
+  template <typename T>
+  friend inline REQUIRES(
+      (is_native_integer<T>::value &&
+       !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
+      RETURN(BigInteger)
+      operator>>(const BigInteger& l, T n) {
+    if (l.sign() == 0) {
+      return 0;
+    }
+    if (n == 0) {
+      return l;
+    }
+    const int bit_cnt = l.BitHeight();
+    if (n >= bit_cnt) {
+      return 0;
+    }
+
+    std::vector<unsigned int> v(bit_cnt - n, 0);
+    for (int i = n, j = 0; i < bit_cnt; ++i, ++j) {
+      const int x = i >> BigInteger::div32_bit;
+      const int y = i & BigInteger::mod32_mask;
+      v[j] = (l[x] >> y) & 1;
+    }
+
+    BigInteger ret(v);
+    ret.sign_ = l.sign_;
+    ret.FixPos();
+
+    return ret;
+  }
+
+  friend std::ostream& operator<<(std::ostream& o, const BigInteger& bi) {
+    return o << bi.ToString();
   }
 
  private:
@@ -1167,464 +1559,6 @@ class BigInteger {
   mutable int pos_;
   mutable int sign_;
 };
-
-template <typename T>
-REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
-RETURN(void) __InitBigInteger(BigInteger& b, T value) {
-  if (value == 0) {
-    b.Reserve(1);
-    b.data_[0] = 0;
-    b.sign_ = 0;
-    return;
-  }
-
-  using unsignedT = typename pe_make_unsigned<T>::type;
-  if (value > 0) {
-    __InitBigInteger<unsignedT>(b, static_cast<unsignedT>(value));
-  } else {
-    // Note: it works for value = T::min()
-    __InitBigInteger<unsignedT>(b, static_cast<unsignedT>(-value));
-    b.sign_ = -1;
-  }
-}
-
-template <typename T>
-REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value))
-RETURN(void) __InitBigInteger(BigInteger& b, T value) {
-  if (value == 0) {
-    b.Reserve(1);
-    b.data_[0] = 0;
-    b.sign_ = 0;
-    return;
-  }
-
-  if (sizeof(T) <= 8) {
-    b.ResetAbs(value);
-  } else {
-    int need = 0;
-    for (auto t = value; t > 0; ++need) {
-#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
-      t >>= 16;
-      t >>= 16;
-#else
-      t >>= 32;
-#endif
-    }
-    b.Reserve(need);
-
-    b.pos_ = -1;
-    for (auto t = value; t > 0;) {
-      b.data_[++b.pos_] = t & BigInteger::max_32bit_value;
-#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
-      t >>= 16;
-      t >>= 16;
-#else
-      t >>= 32;
-#endif
-    }
-  }
-  b.sign_ = 1;
-}
-
-#if PE_HAS_CPP20
-int operator<=>(const BigInteger& l, const BigInteger& r) {
-  if (l.sign_ != r.sign_) {
-    return l.sign_ < r.sign_ ? -1 : 1;
-  }
-  if (l.sign_ == 0) {
-    return 0;
-  }
-  const int t = BigInteger::AbsCompare(l, r);
-  return l.sign_ > 0 ? t : -t;
-}
-int operator==(const BigInteger& l, const BigInteger& r) {
-  return (l <=> r) == 0;
-}
-
-int operator!=(const BigInteger& l, const BigInteger& r) {
-  return (l <=> r) != 0;
-}
-#else
-inline int operator<(const BigInteger& l, const BigInteger& r) {
-  const int s1 = l.sign_;
-  const int s2 = r.sign_;
-
-  if (s1 < 0) {
-    return s2 >= 0 || BigInteger::AbsCompare(l, r) > 0;
-  } else if (s1 > 0) {
-    return s2 > 0 && BigInteger::AbsCompare(l, r) < 0;
-  } else {
-    return s2 > 0;
-  }
-}
-
-inline int operator<=(const BigInteger& l, const BigInteger& r) {
-  const int s1 = l.sign_;
-  const int s2 = r.sign_;
-
-  if (s1 < 0) {
-    return s2 >= 0 || BigInteger::AbsCompare(l, r) >= 0;
-  } else if (s1 > 0) {
-    return s2 > 0 && BigInteger::AbsCompare(l, r) <= 0;
-  } else {
-    return s2 >= 0;
-  }
-}
-
-inline int operator>(const BigInteger& l, const BigInteger& r) {
-  const int s1 = l.sign_;
-  const int s2 = r.sign_;
-
-  if (s1 < 0) {
-    return s2 < 0 && BigInteger::AbsCompare(l, r) < 0;
-  } else if (s1 > 0) {
-    return s2 <= 0 || BigInteger::AbsCompare(l, r) > 0;
-  } else {
-    return s2 < 0;
-  }
-}
-
-inline int operator>=(const BigInteger& l, const BigInteger& r) {
-  const int s1 = l.sign_;
-  const int s2 = r.sign_;
-
-  if (s1 < 0) {
-    return s2 < 0 && BigInteger::AbsCompare(l, r) <= 0;
-  } else if (s1 > 0) {
-    return s2 <= 0 || BigInteger::AbsCompare(l, r) >= 0;
-  } else {
-    return s2 <= 0;
-  }
-}
-
-inline int operator==(const BigInteger& l, const BigInteger& r) {
-  return l.sign_ == r.sign_ && BigInteger::AbsCompare(l, r) == 0;
-}
-
-inline int operator!=(const BigInteger& l, const BigInteger& r) {
-  return !(l == r);
-}
-#endif
-
-inline BigInteger operator+(const BigInteger& l, const BigInteger& r) {
-  BigInteger ret(l);
-  ret += r;
-  return ret;
-}
-
-inline BigInteger operator-(const BigInteger& l, const BigInteger& r) {
-  if (r.IsZero()) {
-    return l;
-  } else if (l.IsZero()) {
-    return -r;
-  } else if (l.sign() != r.sign()) {
-    BigInteger t(l);
-    BigInteger::AbsAddInplace(t, r);
-    return t;
-  } else {
-    int c = BigInteger::AbsCompare(l, r);
-    if (c == 0) {
-      return 0;
-    } else if (c > 0) {
-      BigInteger t(l);
-      BigInteger::AbsSubInplace(t, r);
-      return t;
-    } else {
-      BigInteger t(r);
-      BigInteger::AbsSubInplace(t, l);
-      t.sign_ = -r.sign_;
-      return t;
-    }
-  }
-}
-
-inline BigInteger operator*(const BigInteger& l, const BigInteger& r) {
-  if (l.IsZero() || r.IsZero()) return 0;
-
-  const int s = l.sign() * (r > 0 ? 1 : -1);
-  BigInteger ret(BigInteger::AbsMul(l, r));
-  ret.sign_ = s;
-
-  return ret;
-}
-
-template <typename T>
-inline REQUIRES(
-    (is_native_integer<T>::value &&
-     !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
-    RETURN(BigInteger)
-    operator*(const BigInteger& l, T r) {
-  if (r == 0 || l.IsZero()) return 0;
-
-  using unsignedT = typename pe_make_unsigned<T>::type;
-  unsignedT abs_value = BigInteger::AbsValue(r);
-  const int s = l.sign() * (r > 0 ? 1 : -1);
-  BigInteger ret(BigInteger::AbsMul(l, abs_value));
-  ret.sign_ = s;
-
-  return ret;
-}
-
-template <typename T>
-inline REQUIRES(
-    (is_native_integer<T>::value &&
-     !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
-    RETURN(BigInteger)
-    operator*(T l, const BigInteger& r) {
-  return r * l;
-}
-
-inline BigInteger operator/(const BigInteger& l, const BigInteger& r) {
-  BigInteger u, v;
-  std::tie(u, v) = DivImpl(l, r);
-  return u;
-}
-
-template <typename T>
-inline REQUIRES(
-    (is_native_integer<T>::value &&
-     !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
-     sizeof(T) <= 8)) RETURN(BigInteger)
-operator/(const BigInteger& l, T r) {
-  BigInteger u;
-  T v;
-  std::tie(u, v) = DivImpl(l, r);
-  return u;
-}
-
-inline std::tuple<BigInteger, BigInteger> DivImpl(const BigInteger& l,
-                                                  const BigInteger& r) {
-  if (l.IsZero() && r.IsZero()) {
-    return std::make_tuple(1, 0);
-  }
-  if (l.IsZero() || r.IsZero()) {
-    return std::make_tuple(0, 0);
-  }
-
-  if (r.size() > 2) {
-    BigInteger x;
-    BigInteger ret(BigInteger::AbsDiv(l, r, x));
-    ret.sign_ = l.sign_ * r.sign_;
-    ret.FixPos();
-    if (l.sign_ < 0) {
-      x.sign_ = -x.sign_;
-    }
-    x.FixPos();
-
-    return std::make_tuple(std::move(ret), std::move(x));
-  } else {
-    uint64 abs_value = r.ToInt<uint64>();
-    uint64 x;
-    BigInteger ret(l);
-    BigInteger::AbsDivInplace(ret, abs_value, x);
-    ret.sign_ = l.sign() * (r.sign() > 0 ? 1 : -1);
-    ret.FixPos();
-
-    BigInteger remain(x);
-    if (l.sign_ < 0) {
-      remain.sign_ = -remain.sign_;
-    }
-    return std::make_tuple(std::move(ret), std::move(remain));
-  }
-}
-
-template <typename T>
-inline REQUIRES(
-    (is_native_integer<T>::value &&
-     !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
-     sizeof(T) <= 8)) RETURN(std::tuple<BigInteger, T>)
-    DivImpl(const BigInteger& l, T r) {
-  if (l.IsZero() && r == 0) {
-    return std::make_tuple(1, 0);
-  }
-  if (l.IsZero() || r == 0) {
-    return std::make_tuple(0, 0);
-  }
-
-  const int signl = l.sign_;
-  using unsignedT = typename pe_make_unsigned<T>::type;
-  unsignedT abs_value = BigInteger::AbsValue(r);
-  unsignedT x;
-  BigInteger ret(l);
-  BigInteger::AbsDivInplace(ret, abs_value, x);
-  ret.sign_ = signl * (r > 0 ? 1 : -1);
-  ret.FixPos();
-  if (l.sign_ < 0) {
-    PE_ASSERT(x == 0 || !pe_is_unsigned<T>::value);
-    x = BigInteger::AbsValue(x);
-  }
-
-  return std::make_tuple(std::move(ret), static_cast<T>(x));
-}
-
-template <typename T>
-inline REQUIRES(
-    (is_native_integer<T>::value &&
-     !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
-    RETURN(void) DivInplace(BigInteger& l, T r, T& remain) {
-  if (l.IsZero() && r == 0) {
-    l = 1;
-    remain = 0;
-    return;
-  }
-
-  if (l.IsZero() || r == 0) {
-    if (!l.IsZero()) {
-      l.pos_ = 0;
-      l.data_[0] = 0;
-      l.sign_ = 0;
-    }
-    remain = 0;
-    return;
-  }
-  using unsignedT = typename pe_make_unsigned<T>::type;
-  unsignedT abs_value = BigInteger::AbsValue(r);
-  unsignedT tmp_remain;
-  const int signl = l.sign_;
-  BigInteger::AbsDivInplace(l, abs_value, tmp_remain);
-  l.sign_ = signl * (r > 0 ? 1 : -1);
-  l.FixPos();
-  remain = static_cast<T>(tmp_remain);
-  if (signl < 0) {
-    PE_ASSERT(remain == 0 || !pe_is_unsigned<T>::value);
-    remain = BigInteger::NegValue(remain);
-  }
-}
-
-inline BigInteger operator%(const BigInteger& l, const BigInteger& r) {
-  BigInteger u, v;
-  std::tie(u, v) = DivImpl(l, r);
-  return v;
-}
-
-template <typename T>
-inline REQUIRES(
-    (is_native_integer<T>::value &&
-     !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
-     sizeof(T) <= 8)) RETURN(BigInteger)
-operator%(const BigInteger& l, T r) {
-  BigInteger u;
-  T v;
-  std::tie(u, v) = DivImpl(l, r);
-  if (l.sign() < 0) {
-    v = BigInteger::NegValue(v);
-  }
-  return v;
-}
-
-inline BigInteger operator&(const BigInteger& l, const BigInteger& r) {
-  if (l.size() <= 2 && r.size() <= 2) {
-    return l.ToInt<uint64>() & r.ToInt<uint64>();
-  }
-
-  const int min_pos = std::min(l.pos_, r.pos_);
-  BigInteger ret(min_pos + 1, pe_internal::alloc_mem_tag);
-  for (int i = 0; i <= min_pos; ++i) {
-    ret[i] = l[i] & r[i];
-  }
-  ret.pos_ = min_pos;
-  ret.sign_ = 1;
-  ret.FixPos();
-  return ret;
-}
-
-inline BigInteger operator^(const BigInteger& l, const BigInteger& r) {
-  if (l.size() <= 2 && r.size() <= 2) {
-    return l.ToInt<uint64>() ^ r.ToInt<uint64>();
-  }
-
-  const int max_pos = std::max(l.pos_, r.pos_);
-  BigInteger ret(max_pos + 1, pe_internal::alloc_mem_tag);
-  for (int i = 0; i <= max_pos; ++i) {
-    unsigned int t = 0;
-    if (i <= l.pos_) t ^= l[i];
-    if (i <= r.pos_) t ^= r[i];
-    ret[i] = t;
-  }
-  ret.pos_ = max_pos;
-  ret.sign_ = 1;
-  ret.FixPos();
-  return ret;
-}
-
-inline BigInteger operator|(const BigInteger& l, const BigInteger& r) {
-  if (l.size() <= 2 && r.size() <= 2) {
-    return l.ToInt<uint64>() | r.ToInt<uint64>();
-  }
-
-  const int max_pos = std::max(l.pos_, r.pos_);
-  BigInteger ret(max_pos + 1, pe_internal::alloc_mem_tag);
-  for (int i = 0; i <= max_pos; ++i) {
-    unsigned int t = 0;
-    if (i <= l.pos_) t |= l[i];
-    if (i <= r.pos_) t |= r[i];
-    ret[i] = t;
-  }
-  ret.pos_ = max_pos;
-  ret.sign_ = 1;
-  ret.FixPos();
-  return ret;
-}
-
-template <typename T>
-inline REQUIRES(
-    (is_native_integer<T>::value &&
-     !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
-    RETURN(BigInteger)
-    operator<<(const BigInteger& l, T n) {
-  if (l.sign() == 0) {
-    return 0;
-  }
-  if (n == 0) {
-    return l;
-  }
-  const int bit_cnt = l.BitHeight();
-  std::vector<unsigned int> v(n + bit_cnt, 0);
-  for (int i = 0, j = n; i < bit_cnt; ++i, ++j) {
-    const int x = i >> BigInteger::div32_bit;
-    const int y = i & BigInteger::mod32_mask;
-    v[j] = (l[x] >> y) & 1;
-  }
-  BigInteger ret(v);
-  ret.sign_ = l.sign_;
-  ret.FixPos();
-  return ret;
-}
-
-template <typename T>
-inline REQUIRES(
-    (is_native_integer<T>::value &&
-     !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
-    RETURN(BigInteger)
-    operator>>(const BigInteger& l, T n) {
-  if (l.sign() == 0) {
-    return 0;
-  }
-  if (n == 0) {
-    return l;
-  }
-  const int bit_cnt = l.BitHeight();
-  if (n >= bit_cnt) {
-    return 0;
-  }
-
-  std::vector<unsigned int> v(bit_cnt - n, 0);
-  for (int i = n, j = 0; i < bit_cnt; ++i, ++j) {
-    const int x = i >> BigInteger::div32_bit;
-    const int y = i & BigInteger::mod32_mask;
-    v[j] = (l[x] >> y) & 1;
-  }
-
-  BigInteger ret(v);
-  ret.sign_ = l.sign_;
-  ret.FixPos();
-
-  return ret;
-}
-
-inline std::ostream& operator<<(std::ostream& o, const BigInteger& bi) {
-  return o << bi.ToString();
-}
 
 using bi = BigInteger;
 

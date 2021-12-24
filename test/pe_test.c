@@ -1,5 +1,8 @@
 #include "pe_test.h"
 
+#if 0
+#include "extended_int_test.c"
+#else
 #include "algo_test.c"
 #include "array_test.c"
 #include "bi_test.c"
@@ -26,6 +29,7 @@
 #include "prime_pi_sum_test.c"
 #include "square_root_test.c"
 #include "tree_test.c"
+#endif
 
 static TimeUsage __time_usage;
 

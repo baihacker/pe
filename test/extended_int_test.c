@@ -1,10 +1,15 @@
 #include "pe_test.h"
 
-#if PE_HAS_INT128
 namespace extended_int_test {
-// using UInt128 = pe::ExtendedUnsignedInt<uint64>;
+#if PE_HAS_INT128 && 0
 using UInt256 = pe::ExtendedUnsignedInt<uint128>;
 using UInt512 = pe::ExtendedUnsignedInt<UInt256>;
+using UIn1024 = pe::ExtendedUnsignedInt<UInt512>;
+#else
+using UInt128 = pe::ExtendedUnsignedInt<uint64>;
+using UInt256 = pe::ExtendedUnsignedInt<UInt128>;
+using UInt512 = pe::ExtendedUnsignedInt<UInt256>;
+#endif
 using TestT = UInt512;
 template <typename T>
 SL void TestConstructorImpl() {
@@ -24,8 +29,6 @@ SL void TestConstructor() {
   TestT x;
   TestConstructorImpl<bool>();
   TestConstructorImpl<char>();
-  TestConstructorImpl<signed char>();
-  TestConstructorImpl<unsigned char>();
   TestConstructorImpl<short>();
   TestConstructorImpl<int>();
   TestConstructorImpl<long>();
@@ -33,6 +36,7 @@ SL void TestConstructor() {
 #if PE_HAS_INT128
   TestConstructorImpl<int128>();
 #endif
+  TestConstructorImpl<unsigned char>();
   TestConstructorImpl<unsigned short>();
   TestConstructorImpl<unsigned int>();
   TestConstructorImpl<unsigned long>();
@@ -58,8 +62,6 @@ SL void TestAssignmentImpl() {
 SL void TestAssignmentOperator() {
   // TestAssignmentImpl<bool>();
   TestAssignmentImpl<char>();
-  TestAssignmentImpl<signed char>();
-  TestAssignmentImpl<unsigned char>();
   TestAssignmentImpl<short>();
   TestAssignmentImpl<int>();
   TestAssignmentImpl<long>();
@@ -67,6 +69,7 @@ SL void TestAssignmentOperator() {
 #if PE_HAS_INT128
   TestAssignmentImpl<int128>();
 #endif
+  TestAssignmentImpl<unsigned char>();
   TestAssignmentImpl<unsigned short>();
   TestAssignmentImpl<unsigned int>();
   TestAssignmentImpl<unsigned long>();
@@ -116,8 +119,6 @@ SL void TestAsmdImpl() {
 SL void TestAsmdOperator() {
   // TestAsmdImpl<bool>();
   TestAsmdImpl<char>();
-  TestAsmdImpl<signed char>();
-  TestAsmdImpl<unsigned char>();
   TestAsmdImpl<short>();
   TestAsmdImpl<int>();
   TestAsmdImpl<long>();
@@ -125,6 +126,7 @@ SL void TestAsmdOperator() {
 #if PE_HAS_INT128
   TestAsmdImpl<int128>();
 #endif
+  TestAsmdImpl<unsigned char>();
   TestAsmdImpl<unsigned short>();
   TestAsmdImpl<unsigned int>();
   TestAsmdImpl<unsigned long>();
@@ -134,126 +136,128 @@ SL void TestAsmdOperator() {
 #endif
 
   for (int A : {-10000, 0, 10000}) {
-    for (int a = A - 10; a <= A + 10; ++a) {
-      for (int b = -10; b <= 10; ++b)
-        if (a >= 0 && b >= 0) {
-          assert((TestT(a) + TestT(b)).ToInt<int>() == (a + b));
-          assert((TestT(a) += TestT(b)).ToInt<int>() == (a + b));
-          assert((TestT(a) - TestT(b)).ToInt<int>() == (a - b));
-          assert((TestT(a) -= TestT(b)).ToInt<int>() == (a - b));
-          assert((TestT(a) * TestT(b)).ToInt<int>() == (a * b));
-          assert((TestT(a) *= TestT(b)).ToInt<int>() == (a * b));
-          if (b != 0) {
-            assert((TestT(a) / TestT(b)).ToInt<int>() == (a / b));
-            assert((TestT(a) /= TestT(b)).ToInt<int>() == (a / b));
-            assert((TestT(a) % TestT(b)).ToInt<int>() == (a % b));
-            assert((TestT(a) %= TestT(b)).ToInt<int>() == (a % b));
-          }
-          if (a >= 0 && b >= 0) {
-            assert((TestT(a) | TestT(b)).ToInt<int>() == (a | b));
-            assert((TestT(a) |= TestT(b)).ToInt<int>() == (a | b));
-            assert((TestT(a) & TestT(b)).ToInt<int>() == (a & b));
-            assert((TestT(a) &= TestT(b)).ToInt<int>() == (a & b));
-            assert((TestT(a) ^ TestT(b)).ToInt<int>() == (a ^ b));
-            assert((TestT(a) ^= TestT(b)).ToInt<int>() == (a ^ b));
-          }
-
-          assert((TestT(a) + b).ToInt<int>() == (a + b));
-          assert((TestT(a) += b).ToInt<int>() == (a + b));
-          assert((TestT(a) - b).ToInt<int>() == (a - b));
-          assert((TestT(a) -= b).ToInt<int>() == (a - b));
-          assert((TestT(a) * b).ToInt<int>() == (a * b));
-          assert((TestT(a) *= b).ToInt<int>() == (a * b));
-          if (b != 0) {
-            assert((TestT(a) / b).ToInt<int>() == (a / b));
-            assert((TestT(a) /= b).ToInt<int>() == (a / b));
-            assert((TestT(a) % b).ToInt<int>() == (a % b));
-            assert((TestT(a) %= b).ToInt<int>() == (a % b));
-          }
-          if (a >= 0 && b >= 0) {
-            assert((TestT(a) | b).ToInt<int>() == (a | b));
-            assert((TestT(a) |= b).ToInt<int>() == (a | b));
-            assert((TestT(a) & b).ToInt<int>() == (a & b));
-            assert((TestT(a) &= b).ToInt<int>() == (a & b));
-            assert((TestT(a) ^ b).ToInt<int>() == (a ^ b));
-            assert((TestT(a) ^= b).ToInt<int>() == (a ^ b));
-          }
-
-          assert((a + TestT(b)).ToInt<int>() == (a + b));
-          assert((a - TestT(b)).ToInt<int>() == (a - b));
-          assert((a * TestT(b)).ToInt<int>() == (a * b));
-          if (b != 0) {
-            assert((a / TestT(b)).ToInt<int>() == (a / b));
-            assert((a % TestT(b)).ToInt<int>() == (a % b));
-          }
-          if (a >= 0 && b >= 0) {
-            assert((a | TestT(b)).ToInt<int>() == (a | b));
-            assert((a & TestT(b)).ToInt<int>() == (a & b));
-            assert((a ^ TestT(b)).ToInt<int>() == (a ^ b));
-          }
+    for (int i = A - 10; i <= A + 10; ++i) {
+      for (int j = -10; j <= 10; ++j) {
+        unsigned int a = i;
+        unsigned int b = j;
+        assert((TestT(a) + TestT(b)).ToInt<int>() == (a + b));
+        assert((TestT(a) += TestT(b)).ToInt<int>() == (a + b));
+        assert((TestT(a) - TestT(b)).ToInt<int>() == (a - b));
+        assert((TestT(a) -= TestT(b)).ToInt<int>() == (a - b));
+        assert((TestT(a) * TestT(b)).ToInt<int>() == (a * b));
+        assert((TestT(a) *= TestT(b)).ToInt<int>() == (a * b));
+        if (b != 0) {
+          assert((TestT(a) / TestT(b)).ToInt<int>() == (a / b));
+          assert((TestT(a) /= TestT(b)).ToInt<int>() == (a / b));
+          assert((TestT(a) % TestT(b)).ToInt<int>() == (a % b));
+          assert((TestT(a) %= TestT(b)).ToInt<int>() == (a % b));
         }
+        if (a >= 0 && b >= 0) {
+          assert((TestT(a) | TestT(b)).ToInt<int>() == (a | b));
+          assert((TestT(a) |= TestT(b)).ToInt<int>() == (a | b));
+          assert((TestT(a) & TestT(b)).ToInt<int>() == (a & b));
+          assert((TestT(a) &= TestT(b)).ToInt<int>() == (a & b));
+          assert((TestT(a) ^ TestT(b)).ToInt<int>() == (a ^ b));
+          assert((TestT(a) ^= TestT(b)).ToInt<int>() == (a ^ b));
+        }
+
+        assert((TestT(a) + b).ToInt<int>() == (a + b));
+        assert((TestT(a) += b).ToInt<int>() == (a + b));
+        assert((TestT(a) - b).ToInt<int>() == (a - b));
+        assert((TestT(a) -= b).ToInt<int>() == (a - b));
+        assert((TestT(a) * b).ToInt<int>() == (a * b));
+        assert((TestT(a) *= b).ToInt<int>() == (a * b));
+        if (b != 0) {
+          assert((TestT(a) / b).ToInt<int>() == (a / b));
+          assert((TestT(a) /= b).ToInt<int>() == (a / b));
+          assert((TestT(a) % b).ToInt<int>() == (a % b));
+          assert((TestT(a) %= b).ToInt<int>() == (a % b));
+        }
+        if (a >= 0 && b >= 0) {
+          assert((TestT(a) | b).ToInt<int>() == (a | b));
+          assert((TestT(a) |= b).ToInt<int>() == (a | b));
+          assert((TestT(a) & b).ToInt<int>() == (a & b));
+          assert((TestT(a) &= b).ToInt<int>() == (a & b));
+          assert((TestT(a) ^ b).ToInt<int>() == (a ^ b));
+          assert((TestT(a) ^= b).ToInt<int>() == (a ^ b));
+        }
+
+        assert((a + TestT(b)).ToInt<int>() == (a + b));
+        assert((a - TestT(b)).ToInt<int>() == (a - b));
+        assert((a * TestT(b)).ToInt<int>() == (a * b));
+        if (b != 0) {
+          assert((a / TestT(b)).ToInt<int>() == (a / b));
+          assert((a % TestT(b)).ToInt<int>() == (a % b));
+        }
+        if (a >= 0 && b >= 0) {
+          assert((a | TestT(b)).ToInt<int>() == (a | b));
+          assert((a & TestT(b)).ToInt<int>() == (a & b));
+          assert((a ^ TestT(b)).ToInt<int>() == (a ^ b));
+        }
+      }
     }
   }
 
   for (int64 A : {-10000000000LL, -10000LL, 0LL, 10000LL, 10000000000LL}) {
-    for (int64 a = A - 10; a <= A + 10; ++a) {
-      for (int64 b = -10; b <= 10; ++b)
-        if (a >= 0 && b >= 0) {
-          assert((TestT(a) + TestT(b)).ToInt<int64>() == (a + b));
-          assert((TestT(a) += TestT(b)).ToInt<int64>() == (a + b));
-          assert((TestT(a) - TestT(b)).ToInt<int64>() == (a - b));
-          assert((TestT(a) -= TestT(b)).ToInt<int64>() == (a - b));
-          assert((TestT(a) * TestT(b)).ToInt<int64>() == (a * b));
-          assert((TestT(a) *= TestT(b)).ToInt<int64>() == (a * b));
-          if (b != 0) {
-            assert((TestT(a) / TestT(b)).ToInt<int64>() == (a / b));
-            assert((TestT(a) /= TestT(b)).ToInt<int64>() == (a / b));
-            assert((TestT(a) % TestT(b)).ToInt<int64>() == (a % b));
-            assert((TestT(a) %= TestT(b)).ToInt<int64>() == (a % b));
-          }
-          if (a >= 0 && b >= 0) {
-            assert((TestT(a) | TestT(b)).ToInt<int64>() == (a | b));
-            assert((TestT(a) |= TestT(b)).ToInt<int64>() == (a | b));
-            assert((TestT(a) & TestT(b)).ToInt<int64>() == (a & b));
-            assert((TestT(a) &= TestT(b)).ToInt<int64>() == (a & b));
-            assert((TestT(a) ^ TestT(b)).ToInt<int64>() == (a ^ b));
-            assert((TestT(a) ^= TestT(b)).ToInt<int64>() == (a ^ b));
-          }
-
-          assert((TestT(a) + b).ToInt<int64>() == (a + b));
-          assert((TestT(a) += b).ToInt<int64>() == (a + b));
-          assert((TestT(a) - b).ToInt<int64>() == (a - b));
-          assert((TestT(a) -= b).ToInt<int64>() == (a - b));
-          assert((TestT(a) * b).ToInt<int64>() == (a * b));
-          assert((TestT(a) *= b).ToInt<int64>() == (a * b));
-          if (b != 0) {
-            assert((TestT(a) / b).ToInt<int64>() == (a / b));
-            assert((TestT(a) /= b).ToInt<int64>() == (a / b));
-            assert((TestT(a) % b).ToInt<int64>() == (a % b));
-            assert((TestT(a) %= b).ToInt<int64>() == (a % b));
-          }
-          if (a >= 0 && b >= 0) {
-            assert((TestT(a) | b).ToInt<int64>() == (a | b));
-            assert((TestT(a) |= b).ToInt<int64>() == (a | b));
-            assert((TestT(a) & b).ToInt<int64>() == (a & b));
-            assert((TestT(a) &= b).ToInt<int64>() == (a & b));
-            assert((TestT(a) ^ b).ToInt<int64>() == (a ^ b));
-            assert((TestT(a) ^= b).ToInt<int64>() == (a ^ b));
-          }
-
-          assert((a + TestT(b)).ToInt<int64>() == (a + b));
-          assert((a - TestT(b)).ToInt<int64>() == (a - b));
-          assert((a * TestT(b)).ToInt<int64>() == (a * b));
-          if (b != 0) {
-            assert((a / TestT(b)).ToInt<int64>() == (a / b));
-            assert((a % TestT(b)).ToInt<int64>() == (a % b));
-          }
-          if (a >= 0 && b >= 0) {
-            assert((a | TestT(b)).ToInt<int64>() == (a | b));
-            assert((a & TestT(b)).ToInt<int64>() == (a & b));
-            assert((a ^ TestT(b)).ToInt<int64>() == (a ^ b));
-          }
+    for (int64 i = A - 10; i <= A + 10; ++i) {
+      for (int64 j = -10; j <= 10; ++j) {
+        uint64 a = i;
+        uint64 b = j;
+        assert((TestT(a) + TestT(b)).ToInt<int64>() == (a + b));
+        assert((TestT(a) += TestT(b)).ToInt<int64>() == (a + b));
+        assert((TestT(a) - TestT(b)).ToInt<int64>() == (a - b));
+        assert((TestT(a) -= TestT(b)).ToInt<int64>() == (a - b));
+        assert((TestT(a) * TestT(b)).ToInt<int64>() == (a * b));
+        assert((TestT(a) *= TestT(b)).ToInt<int64>() == (a * b));
+        if (b != 0) {
+          assert((TestT(a) / TestT(b)).ToInt<int64>() == (a / b));
+          assert((TestT(a) /= TestT(b)).ToInt<int64>() == (a / b));
+          assert((TestT(a) % TestT(b)).ToInt<int64>() == (a % b));
+          assert((TestT(a) %= TestT(b)).ToInt<int64>() == (a % b));
         }
+        if (a >= 0 && b >= 0) {
+          assert((TestT(a) | TestT(b)).ToInt<int64>() == (a | b));
+          assert((TestT(a) |= TestT(b)).ToInt<int64>() == (a | b));
+          assert((TestT(a) & TestT(b)).ToInt<int64>() == (a & b));
+          assert((TestT(a) &= TestT(b)).ToInt<int64>() == (a & b));
+          assert((TestT(a) ^ TestT(b)).ToInt<int64>() == (a ^ b));
+          assert((TestT(a) ^= TestT(b)).ToInt<int64>() == (a ^ b));
+        }
+
+        assert((TestT(a) + b).ToInt<int64>() == (a + b));
+        assert((TestT(a) += b).ToInt<int64>() == (a + b));
+        assert((TestT(a) - b).ToInt<int64>() == (a - b));
+        assert((TestT(a) -= b).ToInt<int64>() == (a - b));
+        assert((TestT(a) * b).ToInt<int64>() == (a * b));
+        assert((TestT(a) *= b).ToInt<int64>() == (a * b));
+        if (b != 0) {
+          assert((TestT(a) / b).ToInt<int64>() == (a / b));
+          assert((TestT(a) /= b).ToInt<int64>() == (a / b));
+          assert((TestT(a) % b).ToInt<int64>() == (a % b));
+          assert((TestT(a) %= b).ToInt<int64>() == (a % b));
+        }
+        if (a >= 0 && b >= 0) {
+          assert((TestT(a) | b).ToInt<int64>() == (a | b));
+          assert((TestT(a) |= b).ToInt<int64>() == (a | b));
+          assert((TestT(a) & b).ToInt<int64>() == (a & b));
+          assert((TestT(a) &= b).ToInt<int64>() == (a & b));
+          assert((TestT(a) ^ b).ToInt<int64>() == (a ^ b));
+          assert((TestT(a) ^= b).ToInt<int64>() == (a ^ b));
+        }
+
+        assert((a + TestT(b)).ToInt<int64>() == (a + b));
+        assert((a - TestT(b)).ToInt<int64>() == (a - b));
+        assert((a * TestT(b)).ToInt<int64>() == (a * b));
+        if (b != 0) {
+          assert((a / TestT(b)).ToInt<int64>() == (a / b));
+          assert((a % TestT(b)).ToInt<int64>() == (a % b));
+        }
+        if (a >= 0 && b >= 0) {
+          assert((a | TestT(b)).ToInt<int64>() == (a | b));
+          assert((a & TestT(b)).ToInt<int64>() == (a & b));
+          assert((a ^ TestT(b)).ToInt<int64>() == (a ^ b));
+        }
+      }
     }
   }
 }
@@ -294,8 +298,6 @@ SL void TestCompareOperatorImpl() {
 SL void TestCompareOperator() {
   // TestCompareOperatorImpl<bool>();
   TestCompareOperatorImpl<char>();
-  TestCompareOperatorImpl<signed char>();
-  TestCompareOperatorImpl<unsigned char>();
   TestCompareOperatorImpl<short>();
   TestCompareOperatorImpl<int>();
   TestCompareOperatorImpl<long>();
@@ -303,6 +305,7 @@ SL void TestCompareOperator() {
 #if PE_HAS_INT128
   TestCompareOperatorImpl<int128>();
 #endif
+  TestCompareOperatorImpl<unsigned char>();
   TestCompareOperatorImpl<unsigned short>();
   TestCompareOperatorImpl<unsigned int>();
   TestCompareOperatorImpl<unsigned long>();
@@ -337,10 +340,10 @@ SL void TestBitOperator() {
   x = x ^ y;
   assert(x.ToInt<int>() == 1);
 }
-/*
+
 SL void TestUtilities() {
-  PowerMod(TestT(5), 10, TestT("123456789"));
-  PowerMod(TestT(5), TestT(10), TestT("123456789"));
+  // PowerMod(TestT(5), 10, TestT("123456789"));
+  // PowerMod(TestT(5), TestT(10), TestT("123456789"));
 
   Power(TestT(2), 10u);
   Power(TestT(2), 10);
@@ -356,15 +359,14 @@ SL void TestUtilities() {
   for (int i = 1; i <= 100000; ++i) v *= i;
   // std::cout << tr.Elapsed().Format() << " " << v.bitCount() << std::endl;
 }
-*/
+
 SL void ExtendedIntTest() {
   TestConstructor();
   TestAssignmentOperator();
   TestAsmdOperator();
   TestCompareOperator();
   TestBitOperator();
-  /*TestUtilities();*/
+  TestUtilities();
 }
-PE_REGISTER_TEST(&ExtendedIntTest, "ExtendedIntTest", SMALL);
+PE_REGISTER_TEST(&ExtendedIntTest, "ExtendedIntTest", SPECIFIED);
 }  // namespace extended_int_test
-#endif

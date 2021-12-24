@@ -9,6 +9,8 @@
 
 namespace pe {
 // Extended integers
+
+// Extended unsigned integer.
 template <typename UT, bool is_native>
 struct ExtendedUnsignedIntImpl;
 
@@ -21,6 +23,7 @@ struct ExtendedUnsignedIntImpl<UT, true> {
   constexpr static UT quarter_mask =
       (static_cast<UT>(1) << quarter_bitcount) - 1;
 
+  // The corresponding native integer type.
   using NT = UT;
 
  private:
@@ -136,7 +139,7 @@ struct ExtendedUnsignedIntImpl<UT, true> {
     v.resize(now + 1);
   }
 
-  std::vector<uint32_t> To32Bits(int fix_size = 1) const {
+  std::vector<uint32_t> ToUInt32Vector(int fix_size = 1) const {
     const int each = sizeof(UT) / sizeof(uint32_t);
 
     std::vector<uint32_t> r;
@@ -169,7 +172,7 @@ struct ExtendedUnsignedIntImpl<UT, true> {
     return r;
   }
 
-  void From32Bits(const std::vector<uint32_t>& bits32) {
+  void FromUInt32Vector(const std::vector<uint32_t>& bits32) {
     const int each = sizeof(UT) / sizeof(int32_t);
 
     hi_ = 0;
@@ -195,7 +198,7 @@ struct ExtendedUnsignedIntImpl<UT, true> {
     }
   }
 
-  std::vector<uint32_t> ToBits(int fix_size = 1) const {
+  std::vector<uint32_t> ToBinaryVector(int fix_size = 1) const {
     std::vector<uint32_t> r;
     r.reserve(bitcount);
     UT t = low_;
@@ -216,7 +219,7 @@ struct ExtendedUnsignedIntImpl<UT, true> {
     return r;
   }
 
-  void FromBits(const std::vector<uint32_t>& bits) {
+  void FromBinaryVector(const std::vector<uint32_t>& bits) {
     hi_ = 0;
     for (int i = std::min(bitcount - 1, static_cast<int>(bits.size()) - 1);
          i >= half_bitcount; --i) {
@@ -328,9 +331,9 @@ struct ExtendedUnsignedIntImpl<UT, true> {
     std::vector<uint32_t> remain;
 
     std::vector<uint32_t> result =
-        DivImplInternal(ToBits(), other.ToBits(), remain);
+        DivImplInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
 
-    FromBits(result);
+    FromBinaryVector(result);
 
     return *this;
   }
@@ -370,10 +373,10 @@ struct ExtendedUnsignedIntImpl<UT, true> {
     std::vector<uint32_t> remain;
 
     std::vector<uint32_t> result =
-        DivImplInternal(ToBits(), other.ToBits(), remain);
+        DivImplInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
 
-    FromBits(result);
-    r.FromBits(remain);
+    FromBinaryVector(result);
+    r.FromBinaryVector(remain);
 
     return *this;
   }
@@ -406,17 +409,20 @@ struct ExtendedUnsignedIntImpl<UT, true> {
 
     std::vector<uint32_t> remain;
 
-    DivImplInternal(ToBits(), other.ToBits(), remain);
+    DivImplInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
 
-    FromBits(remain);
+    FromBinaryVector(remain);
 
     return *this;
   }
 
  public:
   UT& low() { return low_; }
+
   UT& hi() { return hi_; }
+
   UT low() const { return low_; }
+
   UT hi() const { return hi_; }
 
   int sign() const { return low_ || hi_ ? 1 : 0; }
@@ -430,10 +436,18 @@ struct ExtendedUnsignedIntImpl<UT, true> {
   }
 
   int IntSign() const { return low_ || hi_ ? 1 : 0; }
+
   int IsZero() const { return IntSign() == 0; }
+
   int IsEven() const { return low_ & 1 ? 0 : 1; }
+
   int IsOdd() const { return low_ & 1 ? 1 : 0; }
+
   unsigned int LowerBits() const { return static_cast<uint32_t>(low_); }
+
+  ExtendedUnsignedIntImpl Abs() const { return *this; }
+
+  ExtendedUnsignedIntImpl FAbs() const { return *this; }
 
   template <typename T>
   REQUIRES((is_native_integer<T>::value && sizeof(T) <= sizeof(UT)))
@@ -451,7 +465,7 @@ struct ExtendedUnsignedIntImpl<UT, true> {
 
   template <typename T>
   T ToFloat() const {
-    auto t = To32Bits();
+    auto t = ToUInt32Vector();
     const int size = t.size();
     T r = 0;
     for (int i = size - 1; i >= 0; --i) {
@@ -527,15 +541,17 @@ struct ExtendedUnsignedIntImpl<UT, true> {
       return "0";
     }
     if (hi_ == 0) {
-      return pe::to_string(low_);
+      return pe::ToString(low_);
     }
 
-    std::vector<uint32_t> bits32 = To32Bits();
+    std::vector<uint32_t> bits32 = ToUInt32Vector();
     std::vector<uint32_t> mods;
 
     std::stringstream ss;
+
     int idx = bits32.size() - 1;
     while (bits32[idx] == 0) --idx;
+
     do {
       uint64 add = 0;
       for (int i = idx; i > 0; --i) {
@@ -595,6 +611,7 @@ struct ExtendedUnsignedIntImpl<UT, true> {
  public:
   // Operators
   const ExtendedUnsignedIntImpl& operator+() const { return *this; }
+
   const ExtendedUnsignedIntImpl& operator-() const {
     ExtendedUnsignedIntImpl ret(*this);
     FlipBits();
@@ -1094,14 +1111,14 @@ struct ExtendedUnsignedIntImpl<UT, false> {
     v.resize(now + 1);
   }
 
-  std::vector<uint32_t> To32Bits(int fix_size = 1) const {
+  std::vector<uint32_t> ToUInt32Vector(int fix_size = 1) const {
     const int each = sizeof(UT) / sizeof(uint32_t);
 
     std::vector<uint32_t> r;
     r.reserve(each * 2);
-    for (auto& iter : low_.To32Bits(0)) r.push_back(iter);
+    for (auto& iter : low_.ToUInt32Vector(0)) r.push_back(iter);
     if (!fix_size || !hi_.IsZero()) {
-      for (auto& iter : hi_.To32Bits(0)) r.push_back(iter);
+      for (auto& iter : hi_.ToUInt32Vector(0)) r.push_back(iter);
     }
     if (fix_size) {
       FixSize(r);
@@ -1109,7 +1126,7 @@ struct ExtendedUnsignedIntImpl<UT, false> {
     return r;
   }
 
-  void From32Bits(const std::vector<uint32_t>& bits32) {
+  void FromUInt32Vector(const std::vector<uint32_t>& bits32) {
     const int each = sizeof(UT) / sizeof(int32_t);
     hi_.MakeZero();
     for (int i = std::min(2 * each - 1, static_cast<int>(bits32.size()));
@@ -1124,12 +1141,12 @@ struct ExtendedUnsignedIntImpl<UT, false> {
     }
   }
 
-  std::vector<uint32_t> ToBits(int fix_size = 1) const {
+  std::vector<uint32_t> ToBinaryVector(int fix_size = 1) const {
     std::vector<uint32_t> r;
     r.reserve(bitcount);
-    for (auto& iter : low_.ToBits(0)) r.push_back(iter);
+    for (auto& iter : low_.ToBinaryVector(0)) r.push_back(iter);
     if (!fix_size || !hi_.IsZero()) {
-      for (auto& iter : hi_.ToBits(0)) r.push_back(iter);
+      for (auto& iter : hi_.ToBinaryVector(0)) r.push_back(iter);
     }
     if (fix_size) {
       FixSize(r);
@@ -1137,7 +1154,7 @@ struct ExtendedUnsignedIntImpl<UT, false> {
     return r;
   }
 
-  void FromBits(const std::vector<uint32_t>& bits) {
+  void FromBinaryVector(const std::vector<uint32_t>& bits) {
     low_.MakeZero();
     hi_.MakeZero();
     for (int i = 0; i < bits.size(); ++i)
@@ -1249,9 +1266,9 @@ struct ExtendedUnsignedIntImpl<UT, false> {
     std::vector<uint32_t> remain;
 
     std::vector<uint32_t> result =
-        DivImplInternal(ToBits(), other.ToBits(), remain);
+        DivImplInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
 
-    FromBits(result);
+    FromBinaryVector(result);
 
     return *this;
   }
@@ -1292,10 +1309,10 @@ struct ExtendedUnsignedIntImpl<UT, false> {
     std::vector<uint32_t> remain;
 
     std::vector<uint32_t> result =
-        DivImplInternal(ToBits(), other.ToBits(), remain);
+        DivImplInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
 
-    FromBits(result);
-    r.FromBits(remain);
+    FromBinaryVector(result);
+    r.FromBinaryVector(remain);
 
     return *this;
   }
@@ -1330,17 +1347,20 @@ struct ExtendedUnsignedIntImpl<UT, false> {
 
     std::vector<uint32_t> remain;
 
-    DivImplInternal(ToBits(), other.ToBits(), remain);
+    DivImplInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
 
-    FromBits(remain);
+    FromBinaryVector(remain);
 
     return *this;
   }
 
  public:
   UT& low() { return low_; }
+
   UT& hi() { return hi_; }
+
   UT low() const { return low_; }
+
   UT hi() const { return hi_; }
 
   int sign() const { return low_.IntSign() || hi_.IntSign() ? 1 : 0; }
@@ -1354,10 +1374,18 @@ struct ExtendedUnsignedIntImpl<UT, false> {
   }
 
   int IntSign() const { return low_.IntSign() || low_.IntSign() ? 1 : 0; }
+
   int IsZero() const { return IntSign() == 0; }
+
   int IsEven() const { return LowerBits() & 1 ? 0 : 1; }
+
   int IsOdd() const { return LowerBits() & 1 ? 1 : 0; }
+
   unsigned int LowerBits() const { return low_.LowerBits(); }
+
+  ExtendedUnsignedIntImpl Abs() const { return *this; }
+
+  ExtendedUnsignedIntImpl FAbs() const { return *this; }
 
   template <typename T>
   REQUIRES((is_native_integer<T>::value && sizeof(T) <= sizeof(UT)))
@@ -1375,7 +1403,7 @@ struct ExtendedUnsignedIntImpl<UT, false> {
 
   template <typename T>
   T ToFloat() const {
-    auto t = To32Bits();
+    auto t = ToUInt32Vector();
     const int size = t.size();
     T r = 0;
     for (int i = size - 1; i >= 0; --i) {
@@ -1427,7 +1455,7 @@ struct ExtendedUnsignedIntImpl<UT, false> {
       return low_.ToString();
     }
 
-    std::vector<uint32_t> bits32 = To32Bits();
+    std::vector<uint32_t> bits32 = ToUInt32Vector();
     std::vector<uint32_t> mods;
 
     std::stringstream ss;
@@ -1492,6 +1520,7 @@ struct ExtendedUnsignedIntImpl<UT, false> {
  public:
   // Operators
   const ExtendedUnsignedIntImpl& operator+() const { return *this; }
+
   const ExtendedUnsignedIntImpl& operator-() const {
     ExtendedUnsignedIntImpl ret(*this);
     FlipBits();
@@ -1875,19 +1904,21 @@ SL int IsOdd(const ExtendedUnsignedIntImpl<UT, is_native_integer>& x) {
 }
 
 template <typename UT, bool is_native_integer>
-SL int Abs(const ExtendedUnsignedIntImpl<UT, is_native_integer>& x) {
-  return x;
-}
-
-template <typename UT, bool is_native_integer>
-SL int FAbs(const ExtendedUnsignedIntImpl<UT, is_native_integer>& x) {
-  return x;
-}
-
-template <typename UT, bool is_native_integer>
 SL unsigned int LowerBits(
     const ExtendedUnsignedIntImpl<UT, is_native_integer>& x) {
   return x.LowerBits();
+}
+
+template <typename UT, bool is_native_integer>
+SL ExtendedUnsignedIntImpl<UT, is_native_integer> Abs(
+    const ExtendedUnsignedIntImpl<UT, is_native_integer>& x) {
+  return x;
+}
+
+template <typename UT, bool is_native_integer>
+SL ExtendedUnsignedIntImpl<UT, is_native_integer> FAbs(
+    const ExtendedUnsignedIntImpl<UT, is_native_integer>& x) {
+  return x;
 }
 
 template <typename UT, bool is_native_integer>
@@ -1917,6 +1948,18 @@ SL T ToFloat(const ExtendedUnsignedIntImpl<UT, is_native_integer>& x) {
   return x.template ToFloat<T>();
 }
 
+template <typename UT, bool is_native_integer>
+SL std::string ToString(
+    const ExtendedUnsignedIntImpl<UT, is_native_integer>& x) {
+  return x.ToString();
+}
+
+template <typename UT, bool is_native_integer>
+SL std::string to_string(
+    const ExtendedUnsignedIntImpl<UT, is_native_integer>& x) {
+  return ToString(x);
+}
+
 template <typename UT, bool is_native_integer, typename T2>
 SL REQUIRES((pe::is_native_integer<T2>::value))
     RETURN(ExtendedUnsignedIntImpl<UT, is_native_integer>)
@@ -1930,16 +1973,17 @@ SL REQUIRES((pe::is_native_integer<T2>::value))
   return ret;
 }
 
-template <typename UT, bool is_native_integer>
-SL std::string ToString(
-    const ExtendedUnsignedIntImpl<UT, is_native_integer>& x) {
-  return x.ToString();
-}
-
-template <typename UT, bool is_native_integer>
-SL std::string to_string(
-    const ExtendedUnsignedIntImpl<UT, is_native_integer>& x) {
-  return ToString(x);
+template <typename UT, bool is_native_integer, typename T2, typename T3>
+SL REQUIRES((pe::is_native_integer<T2>::value))
+    RETURN(ExtendedUnsignedIntImpl<UT, is_native_integer>)
+        Power(ExtendedUnsignedIntImpl<UT, is_native_integer> x, T2 n, T3 mod) {
+  PE_ASSERT(n >= 0);
+  ExtendedUnsignedIntImpl<UT, is_native_integer> ret = 1;
+  for (; n > 0; n >>= 1) {
+    if (n & 1) ret = ret * x % mod;
+    if (n > 1) x = x * x % mod;
+  }
+  return ret;
 }
 
 template <typename UT>

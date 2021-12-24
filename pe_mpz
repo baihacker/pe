@@ -146,15 +146,6 @@ using ::ToString;
 #endif
 
 namespace pe {
-template <typename T>
-REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
-RETURN(void) __InitMpz(mpz_t z, T value);
-
-template <typename T>
-REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value &&
-          !std::is_same<T, bool>::value))
-RETURN(void) __InitMpz(mpz_t z, T value);
-
 // Adapter of mpz_t
 class Mpf;
 class MpInteger {
@@ -163,13 +154,60 @@ class MpInteger {
   static constexpr mp_limb_t LIMB_MASK = -1;
 
   template <typename T>
-  friend REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
-      RETURN(void) pe::__InitMpz(mpz_t z, T value);
+  REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value &&
+            !std::is_same<T, bool>::value))
+  RETURN(void) FromNativeInt(T value) {
+    if (value == 0) {
+      mpz_init(z);
+      return;
+    }
+    int cnt = 0;
+    for (auto v = value; v;) {
+      ++cnt;
+#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
+      v >>= MpInteger::LIMB_BIT / 4;
+      v >>= MpInteger::LIMB_BIT / 4;
+      v >>= MpInteger::LIMB_BIT / 4;
+      v >>= MpInteger::LIMB_BIT / 4;
+#else
+      v >>= MpInteger::LIMB_BIT / 2;
+      v >>= MpInteger::LIMB_BIT / 2;
+#endif
+    }
+    mpz_init2(z, cnt * MpInteger::LIMB_BIT * cnt);
+    auto* t = z->_mp_d;
+    for (int i = 0; i < cnt; ++i) {
+      *t++ = MpInteger::LIMB_MASK & value;
+#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
+      value >>= MpInteger::LIMB_BIT / 4;
+      value >>= MpInteger::LIMB_BIT / 4;
+      value >>= MpInteger::LIMB_BIT / 4;
+      value >>= MpInteger::LIMB_BIT / 4;
+#else
+      value >>= MpInteger::LIMB_BIT / 2;
+      value >>= MpInteger::LIMB_BIT / 2;
+#endif
+    }
+    z->_mp_size = cnt;
+  }
 
   template <typename T>
-  friend REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value &&
-                   !std::is_same<T, bool>::value))
-      RETURN(void) pe::__InitMpz(mpz_t z, T value);
+  REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
+  RETURN(void) FromNativeInt(T value) {
+    if (value == 0) {
+      mpz_init(z);
+      return;
+    }
+
+    using unsignedT = typename pe_make_unsigned<T>::type;
+    if (value > 0) {
+      FromNativeInt<unsignedT>(static_cast<unsignedT>(value));
+    } else {
+      // Note: it works for value = T::min()
+      FromNativeInt<unsignedT>(static_cast<unsignedT>(-value));
+      z->_mp_size = -z->_mp_size;
+    }
+  }
 
  public:
   MpInteger() {
@@ -193,7 +231,7 @@ class MpInteger {
   template <typename T,
             typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(void)>
   MpInteger(T value) {
-    __InitMpz(z, value);
+    FromNativeInt(value);
   }
 
   MpInteger(const MpInteger& o) { mpz_init_set(z, o.z); }
@@ -256,109 +294,148 @@ class MpInteger {
     return *this;
   }
 
+  // Defiend in pe_mpf
   inline MpInteger& operator=(const Mpf& o);
 
  public:
-// compare operators
-#if PE_HAS_CPP20
-  friend inline int operator<=>(const MpInteger& l, const MpInteger& r);
-  friend inline int operator==(const MpInteger& l, const MpInteger& r);
-  friend inline int operator!=(const MpInteger& l, const MpInteger& r);
+  __mpz_struct* mpz() { return z; }
+
+  const __mpz_struct* mpz() const { return z; }
+
+  int size() const { return pe::Abs(z[0]._mp_size); }
+
+  mp_limb_t* data() { return z[0]._mp_d; }
+
+  const mp_limb_t* data() const { return z[0]._mp_d; }
+
+  mp_limb_t operator[](int idx) const { return data()[idx]; }
+
+  mp_limb_t& operator[](int idx) { return data()[idx]; }
+
+  int sign() const { return mpz_sgn(z); }
+
+  int CompareTo(const MpInteger& other) const { return mpz_cmp(z, other.z); }
+
+  int IntSign() const { return mpz_sgn(z); }
+
+  int IsZero() const { return IntSign() == 0; }
+
+  int IsEven() const { return mpz_even_p(z) ? 1 : 0; }
+
+  int IsOdd() const { return mpz_odd_p(z) ? 1 : 0; }
+
+  MpInteger Abs() const {
+    MpInteger t;
+    mpz_abs(t.z, z);
+    return t;
+  }
+
+  MpInteger FAbs() const {
+    MpInteger t;
+    mpz_abs(t.z, z);
+    return t;
+  }
+
+  unsigned int LowerBits() const {
+    return static_cast<unsigned int>(data()[0]);
+  }
+
+  void SetBit(int idx) { mpz_setbit(z, idx); }
+
+  void ResetBit(int idx) { mpz_clrbit(z, idx); }
+
+  int GetBit(int idx) const { return mpz_tstbit(z, idx); }
+
+  void RevBit(int idx) { mpz_combit(z, idx); }
+
+  int BitCount() const { return mpz_popcount(z); }
+
+  std::string ToString(int base = 10) const {
+    size_t sz = mpz_sizeinbase(z, base) + 1;
+
+    char* buff = new char[sz + 1];
+    if (buff != nullptr) {
+      gmp_sprintf(buff, "%Zd", z);
+    }
+    std::string ret(buff);
+    delete[] buff;
+    return ret;
+  }
+
+  std::string to_string(int base = 10) const { return ToString(base); }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
+  RETURN(T) ToInt() const {
+    using unsignedT = typename pe_make_unsigned<T>::type;
+    unsignedT v = ToInt<unsignedT>();
+    if (IntSign() < 0) {
+      v = ~v + 1;
+    }
+    return static_cast<T>(v);
+  }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value))
+  RETURN(T) ToInt() const {
+    T result = 0;
+    const auto* buff = data();
+    for (int i = size() - 1; i >= 0; --i) {
+#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
+      result <<= sizeof(mp_limb_t) * 2;
+      result <<= sizeof(mp_limb_t) * 2;
+      result <<= sizeof(mp_limb_t) * 2;
+      result = static_cast<T>((result << sizeof(mp_limb_t) * 2) | buff[i]);
 #else
-  friend inline int operator<(const MpInteger& l, const MpInteger& r);
-  friend inline int operator<=(const MpInteger& l, const MpInteger& r);
-  friend inline int operator>(const MpInteger& l, const MpInteger& r);
-  friend inline int operator>=(const MpInteger& l, const MpInteger& r);
-  friend inline int operator==(const MpInteger& l, const MpInteger& r);
-  friend inline int operator!=(const MpInteger& l, const MpInteger& r);
+      result = (result << sizeof(mp_limb_t) * 8) | buff[i];
 #endif
+    }
+    return result;
+  }
 
-  // binary operators
-  friend inline MpInteger operator+(const MpInteger& l, const MpInteger& r);
   template <typename T>
-  friend inline REQUIRES((is_native_integer<T>::value &&
-                          (std::is_same<T, unsigned int>::value ||
-                           std::is_same<T, unsigned long>::value)))
-      RETURN(MpInteger)
-      operator+(const MpInteger& l, T r);
-  template <typename T>
-  friend inline REQUIRES((is_native_integer<T>::value &&
-                          (std::is_same<T, unsigned int>::value ||
-                           std::is_same<T, unsigned long>::value)))
-      RETURN(MpInteger)
-      operator+(T l, const MpInteger& r);
+  T ToFloat() const {
+    T result = 0;
+    const auto* buff = data();
+    T each = 1;
+    for (int i = 0; i < 8; ++i) {
+      each *= 1LL << sizeof(mp_limb_t);
+    }
+    for (int i = size() - 1; i >= 0; --i) {
+      result = result * 4294967296 + buff[i];
+    }
+    if (IntSign() < 0) {
+      result = -result;
+    }
+    return result;
+  }
 
-  friend inline MpInteger operator-(const MpInteger& l, const MpInteger& r);
-  template <typename T>
-  friend inline REQUIRES((is_native_integer<T>::value &&
-                          (std::is_same<T, unsigned int>::value ||
-                           std::is_same<T, unsigned long>::value)))
-      RETURN(MpInteger)
-      operator-(const MpInteger& l, T r);
-  template <typename T>
-  friend inline REQUIRES((is_native_integer<T>::value &&
-                          (std::is_same<T, unsigned int>::value ||
-                           std::is_same<T, unsigned long>::value)))
-      RETURN(MpInteger)
-      operator-(T l, const MpInteger& r);
+  MpInteger NRootI(int n) const {
+    MpInteger ret;
+    mpz_root(ret.mpz(), mpz(), n);
+    return std::move(ret);
+  }
 
-  friend inline MpInteger operator*(const MpInteger& l, const MpInteger& r);
-  template <typename T>
-  friend inline REQUIRES((is_native_integer<T>::value &&
-                          (std::is_same<T, int>::value ||
-                           std::is_same<T, long>::value))) RETURN(MpInteger)
-  operator*(const MpInteger& l, T r);
-  template <typename T>
-  friend inline REQUIRES((is_native_integer<T>::value &&
-                          (std::is_same<T, int>::value ||
-                           std::is_same<T, long>::value))) RETURN(MpInteger)
-  operator*(T l, const MpInteger& r);
-  template <typename T>
-  friend inline REQUIRES((is_native_integer<T>::value &&
-                          (std::is_same<T, unsigned int>::value ||
-                           std::is_same<T, unsigned long>::value)))
-      RETURN(MpInteger)
-      operator*(const MpInteger& l, T r);
-  template <typename T>
-  friend inline REQUIRES((is_native_integer<T>::value &&
-                          (std::is_same<T, unsigned int>::value ||
-                           std::is_same<T, unsigned long>::value)))
-      RETURN(MpInteger)
-      operator*(T l, const MpInteger& r);
+  MpInteger SqrtI() const {
+    MpInteger ret;
+    mpz_sqrt(ret.mpz(), mpz());
+    return std::move(ret);
+  }
 
-  friend inline MpInteger operator/(const MpInteger& l, const MpInteger& r);
-  template <typename T>
-  friend inline REQUIRES(
-      (is_native_integer<T>::value &&
-       !std::is_same<typename std::remove_cvref<T>::type, MpInteger>::value &&
-       (std::is_same<T, unsigned int>::value ||
-        std::is_same<T, unsigned long>::value))) RETURN(MpInteger)
-  operator/(const MpInteger& l, T r);
+ public:
+  // Operators
+  const MpInteger& operator+() const { return *this; }
 
-  friend inline MpInteger operator%(const MpInteger& l, const MpInteger& r);
-  template <typename T>
-  friend inline REQUIRES(
-      (is_native_integer<T>::value &&
-       !std::is_same<typename std::remove_cvref<T>::type, MpInteger>::value &&
-       (std::is_same<T, unsigned int>::value ||
-        std::is_same<T, unsigned long>::value))) RETURN(MpInteger)
-  operator%(const MpInteger& l, T r);
+  const MpInteger operator-() const {
+    MpInteger ret(*this);
+    mpz_neg(ret.z, ret.z);
+    return ret;
+  }
 
-  friend inline MpInteger operator>>(const MpInteger& l, const MpInteger& cnt);
-  friend inline MpInteger operator>>(const MpInteger& l, int cnt);
-  friend inline MpInteger operator<<(const MpInteger& l, const MpInteger& cnt);
-  friend inline MpInteger operator<<(const MpInteger& l, int cnt);
-
-  friend inline MpInteger operator&(const MpInteger& l, const MpInteger& r);
-  friend inline MpInteger operator|(const MpInteger& l, const MpInteger& r);
-  friend inline MpInteger operator^(const MpInteger& l, const MpInteger& r);
-  friend inline MpInteger operator~(const MpInteger& o);
-
-  friend inline std::ostream& operator<<(std::ostream& o, const MpInteger& val);
-
-  MpInteger& operator+=(const MpInteger& o) {
-    mpz_add(z, z, o.z);
-    return *this;
+  MpInteger operator~() const {
+    MpInteger ret;
+    mpz_com(ret.z, z);
+    return ret;
   }
 
   template <typename T>
@@ -430,18 +507,13 @@ class MpInteger {
     return *this;
   }
 
-  MpInteger& operator<<=(int cnt) {
-    mpz_mul_2exp(z, z, cnt);
-    return *this;
-  }
-
-  MpInteger& operator>>=(int cnt) {
-    mpz_tdiv_q_2exp(z, z, cnt);
-    return *this;
-  }
-
   MpInteger& operator&=(const MpInteger& o) {
     mpz_and(z, z, o.z);
+    return *this;
+  }
+
+  MpInteger& operator^=(const MpInteger& o) {
+    mpz_xor(z, z, o.z);
     return *this;
   }
 
@@ -450,8 +522,13 @@ class MpInteger {
     return *this;
   }
 
-  MpInteger& operator^=(const MpInteger& o) {
-    mpz_xor(z, z, o.z);
+  MpInteger& operator>>=(int cnt) {
+    mpz_tdiv_q_2exp(z, z, cnt);
+    return *this;
+  }
+
+  MpInteger& operator<<=(int cnt) {
+    mpz_mul_2exp(z, z, cnt);
     return *this;
   }
 
@@ -477,418 +554,242 @@ class MpInteger {
     return ret;
   }
 
-  const MpInteger& operator+() const { return *this; }
-
-  const MpInteger operator-() const {
-    MpInteger ret(*this);
-    mpz_neg(ret.z, ret.z);
-    return ret;
-  }
-
-  MpInteger NRootI(int n) const {
-    MpInteger ret;
-    mpz_root(ret.mpz(), mpz(), n);
-    return std::move(ret);
-  }
-
-  MpInteger SqrtI() const {
-    MpInteger ret;
-    mpz_sqrt(ret.mpz(), mpz());
-    return std::move(ret);
-  }
-
  public:
-  int size() const { return pe::Abs(z[0]._mp_size); }
-
-  mp_limb_t* data() { return z[0]._mp_d; }
-
-  const mp_limb_t* data() const { return z[0]._mp_d; }
-
-  int sign() const { return mpz_sgn(z); }
-
-  int Sign() const { return mpz_sgn(z); }
-
-  int IsZero() const { return Sign() == 0; }
-
-  int IsEven() const { return mpz_even_p(z) ? 1 : 0; }
-
-  int IsOdd() const { return mpz_odd_p(z) ? 1 : 0; }
-
-  MpInteger Abs() const {
-    MpInteger t;
-    mpz_abs(t.z, z);
-    return t;
+// compare operators
+#if PE_HAS_CPP20
+  friend inline int operator<=>(const MpInteger& l, const MpInteger& r) {
+    return mpz_cmp(l.z, r.z);
   }
 
-  mp_limb_t operator[](int idx) const { return data()[idx]; }
+  friend inline int operator==(const MpInteger& l, const MpInteger& r) {
+    return (l <=> r) == 0;
+  }
 
-  mp_limb_t& operator[](int idx) { return data()[idx]; }
+  friend inline int operator!=(const MpInteger& l, const MpInteger& r) {
+    return (l <=> r) != 0;
+  }
+#else
+  friend inline int operator<(const MpInteger& l, const MpInteger& r) {
+    return mpz_cmp(l.z, r.z) < 0;
+  }
 
-  void SetBit(int idx) { mpz_setbit(z, idx); }
+  friend inline int operator<=(const MpInteger& l, const MpInteger& r) {
+    return mpz_cmp(l.z, r.z) <= 0;
+  }
 
-  void ResetBit(int idx) { mpz_clrbit(z, idx); }
+  friend inline int operator>(const MpInteger& l, const MpInteger& r) {
+    return mpz_cmp(l.z, r.z) > 0;
+  }
 
-  int GetBit(int idx) const { return mpz_tstbit(z, idx); }
+  friend inline int operator>=(const MpInteger& l, const MpInteger& r) {
+    return mpz_cmp(l.z, r.z) >= 0;
+  }
 
-  void RevBit(int idx) { mpz_combit(z, idx); }
+  friend inline int operator==(const MpInteger& l, const MpInteger& r) {
+    return mpz_cmp(l.z, r.z) == 0;
+  }
 
-  int BitCount() const { return mpz_popcount(z); }
+  friend inline int operator!=(const MpInteger& l, const MpInteger& r) {
+    return mpz_cmp(l.z, r.z) != 0;
+  }
+#endif
 
-  std::string ToString(int base = 10) const {
-    size_t sz = mpz_sizeinbase(z, base) + 1;
-
-    char* buff = new char[sz + 1];
-    if (buff != nullptr) {
-      gmp_sprintf(buff, "%Zd", z);
-    }
-    std::string ret(buff);
-    delete[] buff;
+  // binary operators
+  friend inline MpInteger operator+(const MpInteger& l, const MpInteger& r) {
+    MpInteger ret;
+    mpz_add(ret.z, l.z, r.z);
     return ret;
   }
 
-  std::string to_string(int base = 10) const { return ToString(base); }
-
   template <typename T>
-  REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
-  RETURN(T) ToInt() const {
-    using unsignedT = typename pe_make_unsigned<T>::type;
-    unsignedT v = ToInt<unsignedT>();
-    if (Sign() < 0) {
-      v = ~v + 1;
-    }
-    return static_cast<T>(v);
+  friend inline REQUIRES((is_native_integer<T>::value &&
+                          (std::is_same<T, unsigned int>::value ||
+                           std::is_same<T, unsigned long>::value)))
+      RETURN(MpInteger)
+      operator+(const MpInteger& l, T r) {
+    MpInteger ret;
+    mpz_add_ui(ret.z, l.z, r);
+    return ret;
   }
 
   template <typename T>
-  REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value))
-  RETURN(T) ToInt() const {
-    T result = 0;
-    const auto* buff = data();
-    for (int i = size() - 1; i >= 0; --i) {
-#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
-      result <<= sizeof(mp_limb_t) * 2;
-      result <<= sizeof(mp_limb_t) * 2;
-      result <<= sizeof(mp_limb_t) * 2;
-      result = static_cast<T>((result << sizeof(mp_limb_t) * 2) | buff[i]);
-#else
-      result = (result << sizeof(mp_limb_t) * 8) | buff[i];
-#endif
-    }
-    return result;
+  friend inline REQUIRES((is_native_integer<T>::value &&
+                          (std::is_same<T, unsigned int>::value ||
+                           std::is_same<T, unsigned long>::value)))
+      RETURN(MpInteger)
+      operator+(T l, const MpInteger& r) {
+    MpInteger ret;
+    mpz_add_ui(ret.z, r.z, l);
+    return ret;
+  }
+
+  friend inline MpInteger operator-(const MpInteger& l, const MpInteger& r) {
+    MpInteger ret;
+    mpz_sub(ret.z, l.z, r.z);
+    return ret;
   }
 
   template <typename T>
-  T ToFloat() const {
-    T result = 0;
-    const auto* buff = data();
-    T each = 1;
-    for (int i = 0; i < 8; ++i) {
-      each *= 1LL << sizeof(mp_limb_t);
-    }
-    for (int i = size() - 1; i >= 0; --i) {
-      result = result * 4294967296 + buff[i];
-    }
-    if (Sign() < 0) {
-      result = -result;
-    }
-    return result;
+  friend inline REQUIRES((is_native_integer<T>::value &&
+                          (std::is_same<T, unsigned int>::value ||
+                           std::is_same<T, unsigned long>::value)))
+      RETURN(MpInteger)
+      operator-(const MpInteger& l, T r) {
+    MpInteger ret;
+    mpz_sub_ui(ret.z, l.z, r);
+    return ret;
   }
 
-  __mpz_struct* mpz() { return z; }
-  const __mpz_struct* mpz() const { return z; }
+  template <typename T>
+  friend inline REQUIRES((is_native_integer<T>::value &&
+                          (std::is_same<T, unsigned int>::value ||
+                           std::is_same<T, unsigned long>::value)))
+      RETURN(MpInteger)
+      operator-(T l, const MpInteger& r) {
+    MpInteger ret;
+    mpz_ui_sub(ret.z, l, r.z);
+    return ret;
+  }
+
+  friend inline MpInteger operator*(const MpInteger& l, const MpInteger& r) {
+    MpInteger ret;
+    mpz_mul(ret.z, l.z, r.z);
+    return ret;
+  }
+
+  template <typename T>
+  friend inline REQUIRES((is_native_integer<T>::value &&
+                          (std::is_same<T, int>::value ||
+                           std::is_same<T, long>::value))) RETURN(MpInteger)
+  operator*(const MpInteger& l, T r) {
+    MpInteger ret;
+    mpz_mul_si(ret.z, l.z, r);
+    return ret;
+  }
+
+  template <typename T>
+  friend inline REQUIRES((is_native_integer<T>::value &&
+                          (std::is_same<T, int>::value ||
+                           std::is_same<T, long>::value))) RETURN(MpInteger)
+  operator*(T l, const MpInteger& r) {
+    MpInteger ret;
+    mpz_mul_si(ret.z, r.z, l);
+    return ret;
+  }
+
+  template <typename T>
+  friend inline REQUIRES((is_native_integer<T>::value &&
+                          (std::is_same<T, unsigned int>::value ||
+                           std::is_same<T, unsigned long>::value)))
+      RETURN(MpInteger)
+      operator*(const MpInteger& l, T r) {
+    MpInteger ret;
+    mpz_mul_ui(ret.z, l.z, r);
+    return ret;
+  }
+
+  template <typename T>
+  friend inline REQUIRES((is_native_integer<T>::value &&
+                          (std::is_same<T, unsigned int>::value ||
+                           std::is_same<T, unsigned long>::value)))
+      RETURN(MpInteger)
+      operator*(T l, const MpInteger& r) {
+    MpInteger ret;
+    mpz_mul_ui(ret.z, r.z, l);
+    return ret;
+  }
+
+  friend inline MpInteger operator/(const MpInteger& l, const MpInteger& r) {
+    MpInteger ret;
+    mpz_tdiv_q(ret.z, l.z, r.z);
+    return ret;
+  }
+
+  template <typename T>
+  friend inline REQUIRES(
+      (is_native_integer<T>::value &&
+       !std::is_same<typename std::remove_cvref<T>::type, MpInteger>::value &&
+       (std::is_same<T, unsigned int>::value ||
+        std::is_same<T, unsigned long>::value))) RETURN(MpInteger)
+  operator/(const MpInteger& l, T r) {
+    MpInteger ret;
+    mpz_tdiv_q_ui(ret.z, l.z, r);
+    return ret;
+  }
+
+  friend inline MpInteger operator%(const MpInteger& l, const MpInteger& r) {
+    MpInteger ret;
+    mpz_tdiv_r(ret.z, l.z, r.z);
+    return ret;
+  }
+
+  template <typename T>
+  friend inline REQUIRES(
+      (is_native_integer<T>::value &&
+       !std::is_same<typename std::remove_cvref<T>::type, MpInteger>::value &&
+       (std::is_same<T, unsigned int>::value ||
+        std::is_same<T, unsigned long>::value))) RETURN(MpInteger)
+  operator%(const MpInteger& l, T r) {
+    MpInteger ret;
+    mpz_tdiv_r_ui(ret.z, l.z, r);
+    return ret;
+  }
+
+  friend inline MpInteger operator>>(const MpInteger& l, const MpInteger& cnt) {
+    MpInteger ret;
+    mpz_tdiv_q_2exp(ret.z, l.z, cnt.ToInt<int>());
+    return ret;
+  }
+
+  friend inline MpInteger operator>>(const MpInteger& l, int cnt) {
+    MpInteger ret;
+    mpz_tdiv_q_2exp(ret.z, l.z, cnt);
+    return ret;
+  }
+
+  friend inline MpInteger operator<<(const MpInteger& l, const MpInteger& cnt) {
+    MpInteger ret;
+    mpz_mul_2exp(ret.z, l.z, cnt.ToInt<int>());
+    return ret;
+  }
+
+  friend inline MpInteger operator<<(const MpInteger& l, int cnt) {
+    MpInteger ret;
+    mpz_mul_2exp(ret.z, l.z, cnt);
+    return ret;
+  }
+
+  friend inline MpInteger operator&(const MpInteger& l, const MpInteger& r) {
+    MpInteger ret;
+    mpz_and(ret.z, l.z, r.z);
+    return ret;
+  }
+
+  friend inline MpInteger operator|(const MpInteger& l, const MpInteger& r) {
+    MpInteger ret;
+    mpz_ior(ret.z, l.z, r.z);
+    return ret;
+  }
+
+  friend inline MpInteger operator^(const MpInteger& l, const MpInteger& r) {
+    MpInteger ret;
+    mpz_xor(ret.z, l.z, r.z);
+    return ret;
+  }
+
+  friend inline std::ostream& operator<<(std::ostream& o,
+                                         const MpInteger& val) {
+    return o << val.ToString();
+  }
+
+  MpInteger& operator+=(const MpInteger& o) {
+    mpz_add(z, z, o.z);
+    return *this;
+  }
 
  private:
   mpz_t z;
 };
-
-template <typename T>
-REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
-RETURN(void) __InitMpz(mpz_t z, T value) {
-  if (value == 0) {
-    mpz_init(z);
-    return;
-  }
-
-  using unsignedT = typename pe_make_unsigned<T>::type;
-  if (value > 0) {
-    __InitMpz<unsignedT>(z, static_cast<unsignedT>(value));
-  } else {
-    // Note: it works for value = T::min()
-    __InitMpz<unsignedT>(z, static_cast<unsignedT>(-value));
-    z->_mp_size = -z->_mp_size;
-  }
-}
-
-template <typename T>
-REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value &&
-          !std::is_same<T, bool>::value))
-RETURN(void) __InitMpz(mpz_t z, T value) {
-  if (value == 0) {
-    mpz_init(z);
-    return;
-  }
-  int cnt = 0;
-  for (auto v = value; v;) {
-    ++cnt;
-#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
-    v >>= MpInteger::LIMB_BIT / 4;
-    v >>= MpInteger::LIMB_BIT / 4;
-    v >>= MpInteger::LIMB_BIT / 4;
-    v >>= MpInteger::LIMB_BIT / 4;
-#else
-    v >>= MpInteger::LIMB_BIT / 2;
-    v >>= MpInteger::LIMB_BIT / 2;
-#endif
-  }
-  mpz_init2(z, cnt * MpInteger::LIMB_BIT * cnt);
-  auto* t = z->_mp_d;
-  for (int i = 0; i < cnt; ++i) {
-    *t++ = MpInteger::LIMB_MASK & value;
-#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
-    value >>= MpInteger::LIMB_BIT / 4;
-    value >>= MpInteger::LIMB_BIT / 4;
-    value >>= MpInteger::LIMB_BIT / 4;
-    value >>= MpInteger::LIMB_BIT / 4;
-#else
-    value >>= MpInteger::LIMB_BIT / 2;
-    value >>= MpInteger::LIMB_BIT / 2;
-#endif
-  }
-  z->_mp_size = cnt;
-}
-
-// Operators
-#if PE_HAS_CPP20
-int operator<=>(const MpInteger& l, const MpInteger& r) {
-  return mpz_cmp(l.z, r.z);
-}
-
-int operator==(const MpInteger& l, const MpInteger& r) {
-  return (l <=> r) == 0;
-}
-
-int operator!=(const MpInteger& l, const MpInteger& r) {
-  return (l <=> r) != 0;
-}
-#else
-int operator<(const MpInteger& l, const MpInteger& r) {
-  return mpz_cmp(l.z, r.z) < 0;
-}
-
-int operator<=(const MpInteger& l, const MpInteger& r) {
-  return mpz_cmp(l.z, r.z) <= 0;
-}
-
-int operator>(const MpInteger& l, const MpInteger& r) {
-  return mpz_cmp(l.z, r.z) > 0;
-}
-
-int operator>=(const MpInteger& l, const MpInteger& r) {
-  return mpz_cmp(l.z, r.z) >= 0;
-}
-
-int operator==(const MpInteger& l, const MpInteger& r) {
-  return mpz_cmp(l.z, r.z) == 0;
-}
-
-int operator!=(const MpInteger& l, const MpInteger& r) {
-  return mpz_cmp(l.z, r.z) != 0;
-}
-#endif
-
-MpInteger operator+(const MpInteger& l, const MpInteger& r) {
-  MpInteger ret;
-  mpz_add(ret.z, l.z, r.z);
-  return ret;
-}
-
-template <typename T>
-REQUIRES((is_native_integer<T>::value &&
-          (std::is_same<T, unsigned int>::value ||
-           std::is_same<T, unsigned long>::value)))
-RETURN(MpInteger)
-operator+(const MpInteger& l, T r) {
-  MpInteger ret;
-  mpz_add_ui(ret.z, l.z, r);
-  return ret;
-}
-
-template <typename T>
-REQUIRES((is_native_integer<T>::value &&
-          (std::is_same<T, unsigned int>::value ||
-           std::is_same<T, unsigned long>::value)))
-RETURN(MpInteger)
-operator+(T l, const MpInteger& r) {
-  MpInteger ret;
-  mpz_add_ui(ret.z, r.z, l);
-  return ret;
-}
-
-MpInteger operator-(const MpInteger& l, const MpInteger& r) {
-  MpInteger ret;
-  mpz_sub(ret.z, l.z, r.z);
-  return ret;
-}
-
-template <typename T>
-REQUIRES((is_native_integer<T>::value &&
-          (std::is_same<T, unsigned int>::value ||
-           std::is_same<T, unsigned long>::value)))
-RETURN(MpInteger)
-operator-(const MpInteger& l, T r) {
-  MpInteger ret;
-  mpz_sub_ui(ret.z, l.z, r);
-  return ret;
-}
-
-template <typename T>
-REQUIRES((is_native_integer<T>::value &&
-          (std::is_same<T, unsigned int>::value ||
-           std::is_same<T, unsigned long>::value)))
-RETURN(MpInteger)
-operator-(T l, const MpInteger& r) {
-  MpInteger ret;
-  mpz_ui_sub(ret.z, l, r.z);
-  return ret;
-}
-
-MpInteger operator*(const MpInteger& l, const MpInteger& r) {
-  MpInteger ret;
-  mpz_mul(ret.z, l.z, r.z);
-  return ret;
-}
-
-template <typename T>
-REQUIRES((is_native_integer<T>::value &&
-          (std::is_same<T, int>::value || std::is_same<T, long>::value)))
-RETURN(MpInteger)
-operator*(const MpInteger& l, T r) {
-  MpInteger ret;
-  mpz_mul_si(ret.z, l.z, r);
-  return ret;
-}
-
-template <typename T>
-REQUIRES((is_native_integer<T>::value &&
-          (std::is_same<T, int>::value || std::is_same<T, long>::value)))
-RETURN(MpInteger)
-operator*(T l, const MpInteger& r) {
-  MpInteger ret;
-  mpz_mul_si(ret.z, r.z, l);
-  return ret;
-}
-
-template <typename T>
-REQUIRES((is_native_integer<T>::value &&
-          (std::is_same<T, unsigned int>::value ||
-           std::is_same<T, unsigned long>::value)))
-RETURN(MpInteger)
-operator*(const MpInteger& l, T r) {
-  MpInteger ret;
-  mpz_mul_ui(ret.z, l.z, r);
-  return ret;
-}
-
-template <typename T>
-REQUIRES((is_native_integer<T>::value &&
-          (std::is_same<T, unsigned int>::value ||
-           std::is_same<T, unsigned long>::value)))
-RETURN(MpInteger)
-operator*(T l, const MpInteger& r) {
-  MpInteger ret;
-  mpz_mul_ui(ret.z, r.z, l);
-  return ret;
-}
-
-MpInteger operator/(const MpInteger& l, const MpInteger& r) {
-  MpInteger ret;
-  mpz_tdiv_q(ret.z, l.z, r.z);
-  return ret;
-}
-
-template <typename T>
-REQUIRES(
-    (is_native_integer<T>::value &&
-     !std::is_same<typename std::remove_cvref<T>::type, MpInteger>::value &&
-     (std::is_same<T, unsigned int>::value ||
-      std::is_same<T, unsigned long>::value)))
-RETURN(MpInteger)
-operator/(const MpInteger& l, T r) {
-  MpInteger ret;
-  mpz_tdiv_q_ui(ret.z, l.z, r);
-  return ret;
-}
-
-MpInteger operator%(const MpInteger& l, const MpInteger& r) {
-  MpInteger ret;
-  mpz_tdiv_r(ret.z, l.z, r.z);
-  return ret;
-}
-
-template <typename T>
-REQUIRES(
-    (is_native_integer<T>::value &&
-     !std::is_same<typename std::remove_cvref<T>::type, MpInteger>::value &&
-     (std::is_same<T, unsigned int>::value ||
-      std::is_same<T, unsigned long>::value)))
-RETURN(MpInteger)
-operator%(const MpInteger& l, T r) {
-  MpInteger ret;
-  mpz_tdiv_r_ui(ret.z, l.z, r);
-  return ret;
-}
-
-MpInteger operator<<(const MpInteger& l, const MpInteger& cnt) {
-  MpInteger ret;
-  mpz_mul_2exp(ret.z, l.z, cnt.ToInt<int>());
-  return ret;
-}
-
-MpInteger operator<<(const MpInteger& l, int cnt) {
-  MpInteger ret;
-  mpz_mul_2exp(ret.z, l.z, cnt);
-  return ret;
-}
-
-MpInteger operator>>(const MpInteger& l, const MpInteger& cnt) {
-  MpInteger ret;
-  mpz_tdiv_q_2exp(ret.z, l.z, cnt.ToInt<int>());
-  return ret;
-}
-
-MpInteger operator>>(const MpInteger& l, int cnt) {
-  MpInteger ret;
-  mpz_tdiv_q_2exp(ret.z, l.z, cnt);
-  return ret;
-}
-
-MpInteger operator&(const MpInteger& l, const MpInteger& r) {
-  MpInteger ret;
-  mpz_and(ret.z, l.z, r.z);
-  return ret;
-}
-
-MpInteger operator|(const MpInteger& l, const MpInteger& r) {
-  MpInteger ret;
-  mpz_ior(ret.z, l.z, r.z);
-  return ret;
-}
-
-MpInteger operator^(const MpInteger& l, const MpInteger& r) {
-  MpInteger ret;
-  mpz_xor(ret.z, l.z, r.z);
-  return ret;
-}
-
-MpInteger operator~(const MpInteger& o) {
-  MpInteger ret;
-  mpz_com(ret.z, o.z);
-  return ret;
-}
-
-std::ostream& operator<<(std::ostream& o, const MpInteger& val) {
-  return o << val.ToString();
-}
 
 using bn = MpInteger;
 
@@ -905,15 +806,13 @@ struct Gbi<MpInteger> {
 
 SL int IsZero(const MpInteger& x) { return x.IsZero(); }
 
-SL int IntSign(const MpInteger& x) { return x.Sign(); }
+SL int IntSign(const MpInteger& x) { return x.IntSign(); }
 
 SL int IsEven(const MpInteger& x) { return x.IsEven(); }
 
 SL int IsOdd(const MpInteger& x) { return x.IsOdd(); }
 
-SL unsigned int LowerBits(const MpInteger& x) {
-  return static_cast<unsigned int>(x[0]);
-}
+SL unsigned int LowerBits(const MpInteger& x) { return x.LowerBits(); }
 
 SL MpInteger Abs(const MpInteger& x) { return x.Abs(); }
 
@@ -937,44 +836,44 @@ SL std::tuple<MpInteger, MpInteger> Div(const MpInteger& l,
   return {l / r, l % r};
 }
 
-MpInteger PowerMod(const MpInteger& base, const MpInteger& n,
-                   const MpInteger& mod) {
-  MpInteger ret;
-  mpz_powm(ret.mpz(), base.mpz(), n.mpz(), mod.mpz());
-  return ret;
-}
-
 template <typename T>
-REQUIRES((is_native_integer<T>::value &&
-          (std::is_same<T, unsigned int>::value ||
-           std::is_same<T, unsigned long>::value)))
-RETURN(MpInteger) PowerMod(const MpInteger& base, T n, const MpInteger& mod) {
-  MpInteger ret;
-  mpz_powm(ret.mpz(), base.mpz(), n, mod.mpz());
-  return ret;
-}
-
-template <typename T>
-REQUIRES((is_native_integer<T>::value &&
-          (std::is_same<T, unsigned int>::value ||
-           std::is_same<T, unsigned long>::value)))
-RETURN(MpInteger) Power(const MpInteger& base, T n) {
+SL REQUIRES((is_native_integer<T>::value &&
+             (std::is_same<T, unsigned int>::value ||
+              std::is_same<T, unsigned long>::value))) RETURN(MpInteger)
+    Power(const MpInteger& base, T n) {
   MpInteger ret;
   mpz_pow_ui(ret.mpz(), base.mpz(), n);
   return ret;
 }
 
 template <typename T>
-REQUIRES((is_native_integer<T>::value &&
-          (std::is_same<T, int>::value || std::is_same<T, long>::value)))
-RETURN(MpInteger) Power(const MpInteger& base, T n) {
+SL REQUIRES((is_native_integer<T>::value &&
+             (std::is_same<T, int>::value || std::is_same<T, long>::value)))
+    RETURN(MpInteger) Power(const MpInteger& base, T n) {
   using unsignedT = typename pe_make_unsigned<T>::type;
   MpInteger ret;
   mpz_pow_ui(ret.mpz(), base.mpz(), static_cast<unsignedT>(n));
   return ret;
 }
 
-MpInteger Gcd(const MpInteger& l, const MpInteger& r) {
+SL MpInteger PowerMod(const MpInteger& base, const MpInteger& n,
+                      const MpInteger& mod) {
+  MpInteger ret;
+  mpz_powm(ret.mpz(), base.mpz(), n.mpz(), mod.mpz());
+  return ret;
+}
+
+template <typename T>
+SL REQUIRES((is_native_integer<T>::value &&
+             (std::is_same<T, unsigned int>::value ||
+              std::is_same<T, unsigned long>::value))) RETURN(MpInteger)
+    PowerMod(const MpInteger& base, T n, const MpInteger& mod) {
+  MpInteger ret;
+  mpz_powm(ret.mpz(), base.mpz(), n, mod.mpz());
+  return ret;
+}
+
+SL MpInteger Gcd(const MpInteger& l, const MpInteger& r) {
   MpInteger ret;
   mpz_gcd(ret.mpz(), l.mpz(), r.mpz());
   return ret;

@@ -93,17 +93,17 @@ class BigInteger {
 
  private:
   template <typename T>
-  static REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value))
-      RETURN(void) __InitBigInteger(BigInteger& b, T value) {
+  REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value))
+  RETURN(void) FromNativeInt(T value) {
     if (value == 0) {
-      b.Reserve(1);
-      b.data_[0] = 0;
-      b.sign_ = 0;
+      Reserve(1);
+      data_[0] = 0;
+      sign_ = 0;
       return;
     }
 
     if (sizeof(T) <= 8) {
-      b.ResetAbs(value);
+      SetNativeUInt64(value);
     } else {
       int need = 0;
       for (auto t = value; t > 0; ++need) {
@@ -114,11 +114,11 @@ class BigInteger {
         t >>= 32;
 #endif
       }
-      b.Reserve(need);
+      Reserve(need);
 
-      b.pos_ = -1;
+      pos_ = -1;
       for (auto t = value; t > 0;) {
-        b.data_[++b.pos_] = t & BigInteger::max_32bit_value;
+        data_[++pos_] = t & BigInteger::max_32bit_value;
 #if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
         t >>= 16;
         t >>= 16;
@@ -127,26 +127,26 @@ class BigInteger {
 #endif
       }
     }
-    b.sign_ = 1;
+    sign_ = 1;
   }
 
   template <typename T>
-  static REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
-      RETURN(void) __InitBigInteger(BigInteger& b, T value) {
+  REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
+  RETURN(void) FromNativeInt(T value) {
     if (value == 0) {
-      b.Reserve(1);
-      b.data_[0] = 0;
-      b.sign_ = 0;
+      Reserve(1);
+      data_[0] = 0;
+      sign_ = 0;
       return;
     }
 
     using unsignedT = typename pe_make_unsigned<T>::type;
     if (value > 0) {
-      __InitBigInteger<unsignedT>(b, static_cast<unsignedT>(value));
+      FromNativeInt<unsignedT>(static_cast<unsignedT>(value));
     } else {
       // Note: it works for value = T::min()
-      __InitBigInteger<unsignedT>(b, static_cast<unsignedT>(-value));
-      b.sign_ = -1;
+      FromNativeInt<unsignedT>(static_cast<unsignedT>(-value));
+      sign_ = -1;
     }
   }
 
@@ -270,7 +270,7 @@ class BigInteger {
   template <typename T,
             typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(void)>
   BigInteger(T value) : BigInteger(pe_internal::zero_initialize_tag) {
-    __InitBigInteger(*this, value);
+    FromNativeInt(value);
   }
 
   BigInteger(const BigInteger& other)
@@ -335,31 +335,50 @@ class BigInteger {
 
  private:
   // Implementation internals
+
+  // Operations on native integer.
   template <typename T>
   SL REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value)) RETURN(T)
-      AbsValue(T x) {
+      GetAbsValue(T x) {
     return x >= 0 ? x : -x;
   }
 
   template <typename T>
   SL REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value))
-      RETURN(T) AbsValue(T x) {
+      RETURN(T) GetAbsValue(T x) {
     return x;
   }
 
   template <typename T>
   SL REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value)) RETURN(T)
-      NegValue(T x) {
+      GetNegValue(T x) {
     return -x;
   }
 
   template <typename T>
   SL REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value))
-      RETURN(T) NegValue(T x) {
+      RETURN(T) GetNegValue(T x) {
     return x;
   }
 
-  void ResetAbs(uint64 v) {
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value))
+  RETURN(std::vector<T>) ToBinaryVector(int fix_size = 1) const {
+    std::vector<T> ret;
+    for (int i = 0; i <= pos_; ++i) {
+      auto t = data_[i];
+      for (int j = 0; j < 32; ++j) {
+        ret.push_back(t & 1);
+        t >>= 1;
+      }
+    }
+    if (fix_size) {
+      FixSize(ret);
+    }
+    return ret;
+  }
+
+  void SetNativeUInt64(uint64 v) {
     if (v <= max_32bit_value) {
       Reserve(1);
       data_[0] = static_cast<unsigned>(v);
@@ -402,7 +421,7 @@ class BigInteger {
 
   static void AbsAddInplace(BigInteger& l, const BigInteger& r) {
     if (l.size() <= 2 && r.size() <= 1 || l.size() <= 1 && r.size() <= 2) {
-      l.ResetAbs(l.ToInt<uint64>() + r.ToInt<uint64>());
+      l.SetNativeUInt64(l.ToInt<uint64>() + r.ToInt<uint64>());
       return;
     }
 
@@ -445,7 +464,7 @@ class BigInteger {
     PE_ASSERT(BigInteger::AbsCompare(l, r) >= 0);
 
     if (l.size() <= 2 && r.size() <= 2) {
-      l.ResetAbs(l.ToInt<uint64>() - r.ToInt<uint64>());
+      l.SetNativeUInt64(l.ToInt<uint64>() - r.ToInt<uint64>());
       return;
     }
 
@@ -594,7 +613,7 @@ class BigInteger {
     }
 
     if (l.size() <= 1) {
-      l.ResetAbs(static_cast<uint64>(l[0]) * r);
+      l.SetNativeUInt64(static_cast<uint64>(l[0]) * r);
       return;
     }
 
@@ -638,7 +657,7 @@ class BigInteger {
 
     std::vector<unsigned int> rb;
     std::vector<unsigned int> rr = AbsDivImpl<unsigned int>(
-        l.ToBinVector<unsigned int>(), r.ToBinVector<unsigned int>(), rb);
+        l.ToBinaryVector<unsigned int>(), r.ToBinaryVector<unsigned int>(), rb);
     remain = BigInteger(rb);
     return rr;
   }
@@ -660,7 +679,7 @@ class BigInteger {
 
     std::vector<unsigned int> rb;
     std::vector<unsigned int> rr = AbsDivImpl<unsigned int>(
-        l.ToBinVector<unsigned int>(), r.ToBinVector<unsigned int>(), rb);
+        l.ToBinaryVector<unsigned int>(), r.ToBinaryVector<unsigned int>(), rb);
     return rr;
   }
 
@@ -776,7 +795,7 @@ class BigInteger {
       const uint64 a = l.ToInt<uint64>();
       const uint64 b = r;
       remain = static_cast<T>(a % b);
-      l.ResetAbs(a / b);
+      l.SetNativeUInt64(a / b);
       return;
     }
 #if !PE_HAS_INT128
@@ -838,6 +857,47 @@ class BigInteger {
   bool IsZero() const { return sign_ == 0; }
   int IsEven() const { return data_[0] & 1 ? 0 : 1; }
   int IsOdd() const { return data_[0] & 1 ? 1 : 0; }
+  unsigned int LowerBits() const {
+    return static_cast<unsigned int>(data_[0]);
+  }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
+  RETURN(T) ToInt() const {
+    using unsignedT = typename pe_make_unsigned<T>::type;
+    unsignedT v = ToInt<unsignedT>();
+    if (IntSign() < 0) {
+      v = ~v + 1;
+    }
+    return static_cast<T>(v);
+  }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value))
+  RETURN(T) ToInt() const {
+    T result = 0;
+    for (int i = pos_; i >= 0; --i) {
+#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
+      result <<= 16;
+      result = (result << 16) | data_[i];
+#else
+      result = (result << 32) | data_[i];
+#endif
+    }
+    return result;
+  }
+
+  template <typename T>
+  T ToFloat() const {
+    T result = 0;
+    for (int i = pos_; i >= 0; --i) {
+      result = result * 4294967296 + data_[i];
+    }
+    if (sign_ < 0) {
+      result = -result;
+    }
+    return result;
+  }
 
   void SetBit(int idx) {
     const int x = idx >> div32_bit;
@@ -884,7 +944,9 @@ class BigInteger {
     std::vector<unsigned int> mods;
     t.FixPos();
     std::stringstream ss;
-    if (t.sign_ == -1) ss << "-";
+    if (t.sign_ == -1) {
+      ss << "-";
+    }
 
     do {
       uint64 add = 0;
@@ -929,56 +991,6 @@ class BigInteger {
     std::cerr << std::endl;
   }
 
-  template <typename T>
-  REQUIRES((is_native_integer<T>::value))
-  RETURN(std::vector<T>) ToBinVector(int fix_size = 1) const {
-    std::vector<T> ret;
-    for (int i = 0; i <= pos_; ++i) {
-      auto t = data_[i];
-      for (int j = 0; j < 32; ++j) ret.push_back(t & 1), t >>= 1;
-    }
-    if (fix_size) {
-      FixSize(ret);
-    }
-    return ret;
-  }
-
-  template <typename T>
-  REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
-  RETURN(T) ToInt() const {
-    using unsignedT = typename pe_make_unsigned<T>::type;
-    unsignedT v = ToInt<unsignedT>();
-    if (sign() < 0) {
-      v = ~v + 1;
-    }
-    return static_cast<T>(v);
-  }
-
-  template <typename T>
-  REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value))
-  RETURN(T) ToInt() const {
-    T result = 0;
-    for (int i = pos_; i >= 0; --i) {
-#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
-      result <<= 16;
-      result = (result << 16) | data_[i];
-#else
-      result = (result << 32) | data_[i];
-#endif
-    }
-    return result;
-  }
-
-  template <typename T>
-  T ToFloat() const {
-    T result = 0;
-    for (int i = pos_; i >= 0; --i) result = result * 4294967296 + data_[i];
-    if (sign_ < 0) {
-      result = -result;
-    }
-    return result;
-  }
-
  public:
   // Operators
   const BigInteger& operator+() const { return *this; }
@@ -991,10 +1003,12 @@ class BigInteger {
 
   BigInteger operator~() const {
     BigInteger ret(*this);
-    for (int i = 0; i < ret.pos_; ++i) ret[i] ^= max_32bit_value;
+    for (int i = 0; i < ret.pos_; ++i) {
+      ret[i] ^= max_32bit_value;
+    }
     unsigned int y = ret[ret.pos_];
-    for (unsigned int x = 1; y; ret[ret.pos_] ^= x, x <<= 1, y >>= 1) {
-      ;
+    for (unsigned int x = 1; y; x <<= 1, y >>= 1) {
+      ret[ret.pos_] ^= x;
     }
 
     ret.FixPos();
@@ -1070,7 +1084,7 @@ class BigInteger {
       return *this;
     }
     using unsignedT = typename pe_make_unsigned<T>::type;
-    unsignedT abs_value = AbsValue(other);
+    unsignedT abs_value = GetAbsValue(other);
     AbsMulInplace(*this, abs_value);
     sign_ = sign_ * (other > 0 ? 1 : -1);
     return *this;
@@ -1286,7 +1300,7 @@ class BigInteger {
     if (r == 0 || l.IsZero()) return 0;
 
     using unsignedT = typename pe_make_unsigned<T>::type;
-    unsignedT abs_value = BigInteger::AbsValue(r);
+    unsignedT abs_value = BigInteger::GetAbsValue(r);
     const int s = l.sign() * (r > 0 ? 1 : -1);
     BigInteger ret(BigInteger::AbsMul(l, abs_value));
     ret.sign_ = s;
@@ -1372,7 +1386,7 @@ class BigInteger {
 
     const int signl = l.sign_;
     using unsignedT = typename pe_make_unsigned<T>::type;
-    unsignedT abs_value = BigInteger::AbsValue(r);
+    unsignedT abs_value = BigInteger::GetAbsValue(r);
     unsignedT x;
     BigInteger ret(l);
     BigInteger::AbsDivInplace(ret, abs_value, x);
@@ -1380,7 +1394,7 @@ class BigInteger {
     ret.FixPos();
     if (l.sign_ < 0) {
       PE_ASSERT(x == 0 || !pe_is_unsigned<T>::value);
-      x = BigInteger::AbsValue(x);
+      x = BigInteger::GetAbsValue(x);
     }
 
     return std::make_tuple(std::move(ret), static_cast<T>(x));
@@ -1407,7 +1421,7 @@ class BigInteger {
       return;
     }
     using unsignedT = typename pe_make_unsigned<T>::type;
-    unsignedT abs_value = BigInteger::AbsValue(r);
+    unsignedT abs_value = BigInteger::GetAbsValue(r);
     unsignedT tmp_remain;
     const int signl = l.sign_;
     BigInteger::AbsDivInplace(l, abs_value, tmp_remain);
@@ -1416,7 +1430,7 @@ class BigInteger {
     remain = static_cast<T>(tmp_remain);
     if (signl < 0) {
       PE_ASSERT(remain == 0 || !pe_is_unsigned<T>::value);
-      remain = BigInteger::NegValue(remain);
+      remain = BigInteger::GetNegValue(remain);
     }
   }
 
@@ -1436,7 +1450,7 @@ class BigInteger {
     T v;
     std::tie(u, v) = DivImpl(l, r);
     if (l.sign() < 0) {
-      v = BigInteger::NegValue(v);
+      v = BigInteger::GetNegValue(v);
     }
     return v;
   }
@@ -1582,7 +1596,7 @@ SL int IsEven(const BigInteger& x) { return x.IsEven(); }
 SL int IsOdd(const BigInteger& x) { return x.IsOdd(); }
 
 SL unsigned int LowerBits(const BigInteger& x) {
-  return static_cast<unsigned int>(x[0]);
+  return x.LowerBits();
 }
 
 SL std::tuple<BigInteger, BigInteger> Div(const BigInteger& l,
@@ -1599,6 +1613,8 @@ template <typename T>
 SL T ToFloat(const BigInteger& x) {
   return x.ToFloat<T>();
 }
+
+// Power operation has a default implementation
 
 SL std::string ToString(const BigInteger& x) { return x.ToString(); }
 

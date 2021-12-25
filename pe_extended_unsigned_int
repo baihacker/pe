@@ -42,9 +42,10 @@ struct ExtendedUnsignedIntImpl<ET, true> {
 
   constexpr static ET hibit_mask = (static_cast<ET>(1) << (half_bitcount - 1));
 
+  using UnsignedT = ExtendedUnsignedIntImpl<ET, true>;
+
   // The corresponding native integer type.
   using NT = ET;
-  using UnsignedT = ExtendedUnsignedIntImpl<ET, true>;
 
  protected:
   template <typename T>
@@ -82,20 +83,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     FromNativeInt<unsignedT>(static_cast<unsignedT>(v));
   }
 
- public:
-  ExtendedUnsignedIntImpl(ET low = 0) : low_(low), hi_(0) {}
-  ExtendedUnsignedIntImpl(ET low, ET hi) : low_(low), hi_(hi) {}
-
-  template <typename T,
-            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
-  ExtendedUnsignedIntImpl(T v) : low_(0), hi_(0) {
-    FromNativeInt<T>(v);
-  }
-
-  ExtendedUnsignedIntImpl(const ExtendedUnsignedIntImpl& other)
-      : low_(other.low_), hi_(other.hi_) {}
-
-  ExtendedUnsignedIntImpl(const std::string& str) {
+  void FromString(const std::string& str) {
     const int n = static_cast<int>(str.size());
     if (n == 0) return;
     int idx = 0;
@@ -117,17 +105,22 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     }
   }
 
-  ExtendedUnsignedIntImpl& operator=(const ExtendedUnsignedIntImpl& other) {
-    low_ = other.low_;
-    hi_ = other.hi_;
-    return *this;
+ public:
+  ExtendedUnsignedIntImpl(ET low = 0) : low_(low), hi_(0) {}
+  ExtendedUnsignedIntImpl(ET low, ET hi) : low_(low), hi_(hi) {}
+
+  template <typename T,
+            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
+  ExtendedUnsignedIntImpl(T v) : low_(0), hi_(0) {
+    FromNativeInt<T>(v);
   }
 
-  ExtendedUnsignedIntImpl& operator=(const ExtendedUnsignedIntImpl&& other) {
-    low_ = std::move(other.low_);
-    hi_ = std::move(other.hi_);
-    return *this;
+  ExtendedUnsignedIntImpl(const std::string& str) : low_(0), hi_(0) {
+    FromString(str);
   }
+
+  ExtendedUnsignedIntImpl(const ExtendedUnsignedIntImpl& other)
+      : low_(other.low_), hi_(other.hi_) {}
 
   ExtendedUnsignedIntImpl& operator=(const ET& other) {
     low_ = other;
@@ -140,6 +133,24 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   ExtendedUnsignedIntImpl& operator=(const T& other) {
     low_ = hi_ = 0;
     FromNativeInt<T>(other);
+    return *this;
+  }
+
+  ExtendedUnsignedIntImpl& operator=(const std::string& str) {
+    MakeZeroBits();
+    FromString(str);
+    return *this;
+  }
+
+  ExtendedUnsignedIntImpl& operator=(const ExtendedUnsignedIntImpl& other) {
+    low_ = other.low_;
+    hi_ = other.hi_;
+    return *this;
+  }
+
+  ExtendedUnsignedIntImpl& operator=(const ExtendedUnsignedIntImpl&& other) {
+    low_ = std::move(other.low_);
+    hi_ = std::move(other.hi_);
     return *this;
   }
 
@@ -1130,17 +1141,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     FromNativeInt<unsignedT>(static_cast<unsignedT>(v));
   }
 
- public:
-  ExtendedUnsignedIntImpl(ET low = 0) : low_(low), hi_(0) {}
-  ExtendedUnsignedIntImpl(ET low, ET hi) : low_(low), hi_(hi) {}
-
-  template <typename T,
-            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
-  ExtendedUnsignedIntImpl(T v) : low_(0), hi_(0) {
-    FromNativeInt<T>(v);
-  }
-
-  ExtendedUnsignedIntImpl(const std::string& str) {
+  void FromString(const std::string& str) {
     const int n = static_cast<int>(str.size());
     if (n == 0) return;
     int idx = 0;
@@ -1152,7 +1153,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
       ++idx;
     }
     while (idx < n && std::isdigit(str[idx])) {
-      *this *= *this * 10;
+      *this *= 10;
       *this += str[idx] - '0';
       ++idx;
     }
@@ -1162,20 +1163,22 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     }
   }
 
+ public:
+  ExtendedUnsignedIntImpl(ET low = 0) : low_(low), hi_(0) {}
+  ExtendedUnsignedIntImpl(ET low, ET hi) : low_(low), hi_(hi) {}
+
+  template <typename T,
+            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
+  ExtendedUnsignedIntImpl(T v) : low_(0), hi_(0) {
+    FromNativeInt<T>(v);
+  }
+
+  ExtendedUnsignedIntImpl(const std::string& str) : low_(0), hi_(0) {
+    FromString(str);
+  }
+
   ExtendedUnsignedIntImpl(const ExtendedUnsignedIntImpl& other)
       : low_(other.low_), hi_(other.hi_) {}
-
-  ExtendedUnsignedIntImpl& operator=(const ExtendedUnsignedIntImpl& other) {
-    low_ = other.low_;
-    hi_ = other.hi_;
-    return *this;
-  }
-
-  ExtendedUnsignedIntImpl& operator=(const ExtendedUnsignedIntImpl&& other) {
-    low_ = std::move(other.low_);
-    hi_ = std::move(other.hi_);
-    return *this;
-  }
 
   ExtendedUnsignedIntImpl& operator=(const ET& other) {
     low_ = other;
@@ -1188,6 +1191,24 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   ExtendedUnsignedIntImpl& operator=(const T& other) {
     MakeZeroBits();
     FromNativeInt<T>(other);
+    return *this;
+  }
+
+  ExtendedUnsignedIntImpl& operator=(const std::string& str) {
+    MakeZeroBits();
+    FromString(str);
+    return *this;
+  }
+
+  ExtendedUnsignedIntImpl& operator=(const ExtendedUnsignedIntImpl& other) {
+    low_ = other.low_;
+    hi_ = other.hi_;
+    return *this;
+  }
+
+  ExtendedUnsignedIntImpl& operator=(const ExtendedUnsignedIntImpl&& other) {
+    low_ = std::move(other.low_);
+    hi_ = std::move(other.hi_);
     return *this;
   }
 
@@ -2132,10 +2153,26 @@ SL REQUIRES((pe::is_native_integer<T2>::value))
   return ret;
 }
 
-template <typename ET, bool is_native_integer, typename T2, typename T3>
+template <typename ET, bool is_native_integer, typename T2>
 SL REQUIRES((pe::is_native_integer<T2>::value))
     RETURN(ExtendedUnsignedIntImpl<ET, is_native_integer>)
-        Power(ExtendedUnsignedIntImpl<ET, is_native_integer> x, T2 n, T3 mod) {
+        PowerMod(ExtendedUnsignedIntImpl<ET, is_native_integer> x, T2 n,
+                 const ExtendedUnsignedIntImpl<ET, is_native_integer>& mod) {
+  PE_ASSERT(n >= 0);
+  ExtendedUnsignedIntImpl<ET, is_native_integer> ret = 1;
+  for (; n > 0; n >>= 1) {
+    if (n & 1) ret = ret * x % mod;
+    if (n > 1) x = x * x % mod;
+  }
+  return ret;
+}
+
+template <typename ET, bool is_native_integer, typename T2, typename T3>
+SL REQUIRES((pe::is_native_integer<T2>::value &&
+             pe::is_native_integer<T3>::value))
+    RETURN(ExtendedUnsignedIntImpl<ET, is_native_integer>)
+        PowerMod(ExtendedUnsignedIntImpl<ET, is_native_integer> x, T2 n,
+                 T3 mod) {
   PE_ASSERT(n >= 0);
   ExtendedUnsignedIntImpl<ET, is_native_integer> ret = 1;
   for (; n > 0; n >>= 1) {

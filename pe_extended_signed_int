@@ -18,10 +18,8 @@ struct ExtendedSignedIntImpl;
 template <typename ET>
 struct ExtendedSignedIntImpl<ET, true>
     : public ExtendedUnsignedIntImpl<ET, true> {
-  // The corresponding native integer type.
-  using NT = ET;
-  using UnsignedT = ExtendedUnsignedIntImpl<ET, true>;
   using base = ExtendedUnsignedIntImpl<ET, true>;
+  using UnsignedT = ExtendedUnsignedIntImpl<ET, true>;
 
  public:
   ExtendedSignedIntImpl(ET low = 0) : base(low) {}
@@ -35,18 +33,6 @@ struct ExtendedSignedIntImpl<ET, true>
 
   ExtendedSignedIntImpl(const ExtendedSignedIntImpl& other) : base(other) {}
 
-  ExtendedSignedIntImpl& operator=(const ExtendedSignedIntImpl& other) {
-    base::low_ = other.low();
-    base::hi_ = other.hi();
-    return *this;
-  }
-
-  ExtendedSignedIntImpl& operator=(const ExtendedSignedIntImpl&& other) {
-    base::low_ = std::move(other.low());
-    base::hi_ = std::move(other.hi());
-    return *this;
-  }
-
   ExtendedSignedIntImpl& operator=(const ET& other) {
     base::low_ = other;
     base::hi_ = 0;
@@ -56,8 +42,24 @@ struct ExtendedSignedIntImpl<ET, true>
   template <typename T,
             typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
   ExtendedSignedIntImpl& operator=(const T& other) {
-    base::MakeZeroBits();
-    base::template FromNativeInt<T>(other);
+    base::operator=(other);
+    return *this;
+  }
+
+  ExtendedSignedIntImpl& operator=(const std::string& str) {
+    base::operator=(str);
+    return *this;
+  }
+
+  ExtendedSignedIntImpl& operator=(const ExtendedSignedIntImpl& other) {
+    base::low_ = other.low();
+    base::hi_ = other.hi();
+    return *this;
+  }
+
+  ExtendedSignedIntImpl& operator=(const ExtendedSignedIntImpl&& other) {
+    base::low_ = std::move(other.low());
+    base::hi_ = std::move(other.hi());
     return *this;
   }
 
@@ -533,9 +535,8 @@ struct ExtendedSignedIntImpl<ET, true>
 template <typename ET>
 struct ExtendedSignedIntImpl<ET, false>
     : public ExtendedUnsignedIntImpl<ET, false> {
-  using NT = typename ET::NT;
-  using UnsignedT = ExtendedUnsignedIntImpl<ET, false>;
   using base = ExtendedUnsignedIntImpl<ET, false>;
+  using UnsignedT = ExtendedUnsignedIntImpl<ET, false>;
 
  public:
   ExtendedSignedIntImpl(ET low = 0) : base(low) {}
@@ -550,18 +551,6 @@ struct ExtendedSignedIntImpl<ET, false>
   ExtendedSignedIntImpl(const ExtendedSignedIntImpl& other)
       : base(other.low(), other.hi()) {}
 
-  ExtendedSignedIntImpl& operator=(const ExtendedSignedIntImpl& other) {
-    base::low_ = other.low();
-    base::hi_ = other.hi();
-    return *this;
-  }
-
-  ExtendedSignedIntImpl& operator=(const ExtendedSignedIntImpl&& other) {
-    base::low_ = std::move(other.low());
-    base::hi_ = std::move(other.hi());
-    return *this;
-  }
-
   ExtendedSignedIntImpl& operator=(const ET& other) {
     base::low_ = other;
     base::hi_.MakeZeroBits();
@@ -571,8 +560,24 @@ struct ExtendedSignedIntImpl<ET, false>
   template <typename T,
             typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
   ExtendedSignedIntImpl& operator=(const T& other) {
-    base::MakeZeroBits();
-    base::template FromNativeInt<T>(other);
+    base::operator=(other);
+    return *this;
+  }
+
+  ExtendedSignedIntImpl& operator=(const std::string& str) {
+    base::operator=(str);
+    return *this;
+  }
+
+  ExtendedSignedIntImpl& operator=(const ExtendedSignedIntImpl& other) {
+    base::low_ = other.low();
+    base::hi_ = other.hi();
+    return *this;
+  }
+
+  ExtendedSignedIntImpl& operator=(const ExtendedSignedIntImpl&& other) {
+    base::low_ = std::move(other.low());
+    base::hi_ = std::move(other.hi());
     return *this;
   }
 
@@ -1166,10 +1171,25 @@ SL REQUIRES((pe::is_native_integer<T2>::value))
   return ret;
 }
 
-template <typename ET, bool is_native_integer, typename T2, typename T3>
+template <typename ET, bool is_native_integer, typename T2>
 SL REQUIRES((pe::is_native_integer<T2>::value))
     RETURN(ExtendedSignedIntImpl<ET, is_native_integer>)
-        Power(ExtendedSignedIntImpl<ET, is_native_integer> x, T2 n, T3 mod) {
+        PowerMod(ExtendedSignedIntImpl<ET, is_native_integer> x, T2 n,
+                 const ExtendedSignedIntImpl<ET, is_native_integer>& mod) {
+  PE_ASSERT(n >= 0);
+  ExtendedSignedIntImpl<ET, is_native_integer> ret = 1;
+  for (; n > 0; n >>= 1) {
+    if (n & 1) ret = ret * x % mod;
+    if (n > 1) x = x * x % mod;
+  }
+  return ret;
+}
+
+template <typename ET, bool is_native_integer, typename T2, typename T3>
+SL REQUIRES((pe::is_native_integer<T2>::value &&
+             pe::is_native_integer<T3>::value))
+    RETURN(ExtendedSignedIntImpl<ET, is_native_integer>)
+        PowerMod(ExtendedSignedIntImpl<ET, is_native_integer> x, T2 n, T3 mod) {
   PE_ASSERT(n >= 0);
   ExtendedSignedIntImpl<ET, is_native_integer> ret = 1;
   for (; n > 0; n >>= 1) {

@@ -90,7 +90,8 @@ struct ExtendedUnsignedIntImpl<ET, true> {
       ++idx;
     }
     while (idx < n && std::isdigit(str[idx])) {
-      *this = *this * 10 + (str[idx] - '0');
+      *this *= 10;
+      *this += str[idx] - '0';
       ++idx;
     }
     if (neg) {
@@ -120,12 +121,14 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   template <typename T,
             typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
   ExtendedUnsignedIntImpl& operator=(const T& other) {
-    MakeZeroBits();
+    low_ = hi_ = 0;
     FromNativeInt<T>(other);
     return *this;
   }
 
  public:
+  void MakeAbs() {}
+
   void FlipBits() {
     low_ = ~low_;
     hi_ = ~hi_;
@@ -155,6 +158,67 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     } else {
       ShiftRight(cnt);
     }
+  }
+
+  void SetBit(int idx) {
+    if (idx < half_bitcount) {
+      low_ |= static_cast<ET>(1) << idx;
+    } else {
+      hi_ |= static_cast<ET>(1) << (idx - half_bitcount);
+    }
+  }
+
+  void ResetBit(int idx) {
+    if (idx < half_bitcount) {
+      low_ &= ~(static_cast<ET>(1) << idx);
+    } else {
+      hi_ &= ~(static_cast<ET>(1) << (idx - half_bitcount));
+    }
+  }
+
+  int GetBit(int idx) const {
+    if (idx < half_bitcount) {
+      return low_ & (static_cast<ET>(1) << idx) ? 1 : 0;
+    } else {
+      return hi_ & (static_cast<ET>(1) << (idx - half_bitcount)) ? 1 : 0;
+    }
+  }
+
+  void RevBit(int idx) {
+    if (idx < half_bitcount) {
+      low_ ^= static_cast<ET>(1) << idx;
+    } else {
+      hi_ ^= static_cast<ET>(1) << (idx - half_bitcount);
+    }
+  }
+
+  int BitCount() const {
+    const int each = sizeof(ET) / sizeof(uint32_t);
+
+    int ret = 0;
+    ET t = low_;
+    for (int i = 0; t && i < each; ++i) {
+      ret += pe_popcount(static_cast<uint32_t>(t));
+#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
+      t >>= 16;
+      t >>= 16;
+#else
+      t >>= 32;
+#endif
+    }
+
+    t = hi_;
+    for (int i = 0; t && i < each; ++i) {
+      ret += pe_popcount(static_cast<uint32_t>(t));
+#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
+      t >>= 16;
+      t >>= 16;
+#else
+      t >>= 32;
+#endif
+    }
+
+    return ret;
   }
 
   void ShiftRight(int cnt) {
@@ -687,67 +751,6 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     return r;
   }
 
-  void SetBit(int idx) {
-    if (idx < half_bitcount) {
-      low_ |= static_cast<ET>(1) << idx;
-    } else {
-      hi_ |= static_cast<ET>(1) << (idx - half_bitcount);
-    }
-  }
-
-  void ResetBit(int idx) {
-    if (idx < half_bitcount) {
-      low_ &= ~(static_cast<ET>(1) << idx);
-    } else {
-      hi_ &= ~(static_cast<ET>(1) << (idx - half_bitcount));
-    }
-  }
-
-  int GetBit(int idx) const {
-    if (idx < half_bitcount) {
-      return low_ & (static_cast<ET>(1) << idx) ? 1 : 0;
-    } else {
-      return hi_ & (static_cast<ET>(1) << (idx - half_bitcount)) ? 1 : 0;
-    }
-  }
-
-  void RevBit(int idx) {
-    if (idx < half_bitcount) {
-      low_ ^= static_cast<ET>(1) << idx;
-    } else {
-      hi_ ^= static_cast<ET>(1) << (idx - half_bitcount);
-    }
-  }
-
-  int BitCount() const {
-    const int each = sizeof(ET) / sizeof(uint32_t);
-
-    int ret = 0;
-    ET t = low_;
-    for (int i = 0; t && i < each; ++i) {
-      ret += pe_popcount(static_cast<uint32_t>(t));
-#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
-      t >>= 16;
-      t >>= 16;
-#else
-      t >>= 32;
-#endif
-    }
-
-    t = hi_;
-    for (int i = 0; t && i < each; ++i) {
-      ret += pe_popcount(static_cast<uint32_t>(t));
-#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
-      t >>= 16;
-      t >>= 16;
-#else
-      t >>= 32;
-#endif
-    }
-
-    return ret;
-  }
-
   std::string ToString() const {
     const uint32_t output_mod = 1000000000;
     if (IsZero()) {
@@ -1131,7 +1134,8 @@ struct ExtendedUnsignedIntImpl<ET, false> {
       ++idx;
     }
     while (idx < n && std::isdigit(str[idx])) {
-      *this = *this * 10 + (str[idx] - '0');
+      *this *= *this * 10;
+      *this += str[idx] - '0';
       ++idx;
     }
     if (neg) {
@@ -1170,6 +1174,8 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
  public:
+  void MakeAbs();
+
   void FlipBits() {
     low_.FlipBits();
     hi_.FlipBits();
@@ -1188,6 +1194,40 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   int GetHighestBit() const { return hi_.GetHighestBit(); }
+
+  void SetBit(int idx) {
+    if (idx < half_bitcount) {
+      low_.SetBit(idx);
+    } else {
+      hi_.SetBit(idx - half_bitcount);
+    }
+  }
+
+  void ResetBit(int idx) {
+    if (idx < half_bitcount) {
+      low_.ResetBit(idx);
+    } else {
+      hi_.ResetBit(idx - half_bitcount);
+    }
+  }
+
+  int GetBit(int idx) const {
+    if (idx < half_bitcount) {
+      return low_.GetBit(idx);
+    } else {
+      return hi_.GetBit(idx - half_bitcount);
+    }
+  }
+
+  void RevBit(int idx) {
+    if (idx < half_bitcount) {
+      low_.RevBit(idx);
+    } else {
+      hi_.RevBit(idx - half_bitcount);
+    }
+  }
+
+  int BitCount() const { return hi_.BitCount() + low_.BitCount(); }
 
   void ArithmeticShiftRight(int cnt) {
     if (GetHighestBit()) {
@@ -1627,40 +1667,6 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     }
     return r;
   }
-
-  void SetBit(int idx) {
-    if (idx < half_bitcount) {
-      low_.SetBit(idx);
-    } else {
-      hi_.SetBit(idx - half_bitcount);
-    }
-  }
-
-  void ResetBit(int idx) {
-    if (idx < half_bitcount) {
-      low_.ResetBit(idx);
-    } else {
-      hi_.ResetBit(idx - half_bitcount);
-    }
-  }
-
-  int GetBit(int idx) const {
-    if (idx < half_bitcount) {
-      return low_.GetBit(idx);
-    } else {
-      return hi_.GetBit(idx - half_bitcount);
-    }
-  }
-
-  void RevBit(int idx) {
-    if (idx < half_bitcount) {
-      low_.RevBit(idx);
-    } else {
-      hi_.RevBit(idx - half_bitcount);
-    }
-  }
-
-  int BitCount() const { return hi_.BitCount() + low_.BitCount(); }
 
   std::string ToString() const {
     const uint32_t output_mod = 1000000000;

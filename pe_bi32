@@ -639,53 +639,6 @@ class BigInteger {
     return *this;
   }
 
-  static BigInteger AbsDiv(const BigInteger& l, const BigInteger& r,
-                           BigInteger& remain) {
-    if (l.size() <= 2 && r.size() <= 2) {
-      const uint64 a = l.ToInt<uint64>();
-      const uint64 b = r.ToInt<uint64>();
-      remain = a % b;
-      return a / b;
-    }
-
-    const int t = l.AbsCompareTo(r);
-    if (t < 0) {
-      remain = l;
-      return 0;
-    }
-    if (t == 0) {
-      remain = 0;
-      return 1;
-    }
-
-    std::vector<unsigned int> rb;
-    std::vector<unsigned int> rr = AbsDivImpl<unsigned int>(
-        l.ToBinaryVector<unsigned int>(), r.ToBinaryVector<unsigned int>(), rb);
-    remain = BigInteger(rb);
-    return rr;
-  }
-
-  static BigInteger AbsDiv(const BigInteger& l, const BigInteger& r) {
-    if (l.size() <= 2 && r.size() <= 2) {
-      const uint64 a = l.ToInt<uint64>();
-      const uint64 b = r.ToInt<uint64>();
-      return a / b;
-    }
-
-    const int t = l.AbsCompareTo(r);
-    if (t < 0) {
-      return 0;
-    }
-    if (t == 0) {
-      return 1;
-    }
-
-    std::vector<unsigned int> rb;
-    std::vector<unsigned int> rr = AbsDivImpl<unsigned int>(
-        l.ToBinaryVector<unsigned int>(), r.ToBinaryVector<unsigned int>(), rb);
-    return rr;
-  }
-
   template <typename T>
   static std::vector<T> AbsDivImpl(const std::vector<T>& l,
                                    const std::vector<T>& r,
@@ -756,40 +709,63 @@ class BigInteger {
     return result;
   }
 
-  template <typename T>
-  static BigInteger AbsDiv(const BigInteger& l, T r, T& remain) {
-    static_assert(pe_is_unsigned<T>::value, "T must be unsigned");
-    static_assert(sizeof(T) <= 8, "T must be at most 64-bit");
-    if (l.size() <= 2) {
+  BigInteger& AbsDividedBy(const BigInteger& r) {
+    auto& l = *this;
+    if (l.size() <= 2 && r.size() <= 2) {
       const uint64 a = l.ToInt<uint64>();
-      const uint64 b = r;
+      const uint64 b = r.ToInt<uint64>();
+      return SetNativeUInt64(a / b);
+    }
+
+    const int t = l.AbsCompareTo(r);
+    if (t < 0) {
+      return SetNativeUInt64(0);
+    }
+    if (t == 0) {
+      return SetNativeUInt64(1);
+    }
+
+    std::vector<unsigned int> rb;
+    std::vector<unsigned int> rr = AbsDivImpl<unsigned int>(
+        l.ToBinaryVector<unsigned int>(), r.ToBinaryVector<unsigned int>(), rb);
+
+    *this = BigInteger(rr);
+
+    return *this;
+  }
+
+  BigInteger& AbsDividedBy(const BigInteger& r, BigInteger& remain) {
+    auto& l = *this;
+    if (l.size() <= 2 && r.size() <= 2) {
+      const uint64 a = l.ToInt<uint64>();
+      const uint64 b = r.ToInt<uint64>();
       remain = a % b;
-      return a / b;
+      return l.SetNativeUInt64(a / b);
     }
 
-    BigInteger t(l);
-    AbsDivInplace(t, r, remain);
-    return t;
+    const int t = l.AbsCompareTo(r);
+    if (t < 0) {
+      remain = l;
+      return l.SetNativeUInt64(0);
+    }
+    if (t == 0) {
+      remain = 0;
+      return l.SetNativeUInt64(1);
+    }
+
+    std::vector<unsigned int> rb;
+    std::vector<unsigned int> rr = AbsDivImpl<unsigned int>(
+        l.ToBinaryVector<unsigned int>(), r.ToBinaryVector<unsigned int>(), rb);
+    remain = BigInteger(rb);
+
+    *this = BigInteger(rr);
+
+    return *this;
   }
 
   template <typename T>
-  static BigInteger AbsDiv(const BigInteger& l, T r) {
-    static_assert(pe_is_unsigned<T>::value, "T must be unsigned");
-    static_assert(sizeof(T) <= 8, "T must be at most 64-bit");
-    if (l.size() <= 2) {
-      const uint64 a = l.ToInt<uint64>();
-      const uint64 b = r;
-      return a / b;
-    }
-
-    BigInteger t(l);
-    T remain;
-    AbsDivInplace(t, r, remain);
-    return t;
-  }
-
-  template <typename T>
-  static void AbsDivInplace(BigInteger& l, T r, T& remain) {
+  BigInteger& AbsDividedBy(T r, T& remain) {
+    auto& l = *this;
     static_assert(pe_is_unsigned<T>::value, "T must be unsigned");
     static_assert(sizeof(T) <= 8, "T must be at most 64-bit");
 
@@ -798,15 +774,15 @@ class BigInteger {
       const uint64 a = l.ToInt<uint64>();
       const uint64 b = r;
       remain = static_cast<T>(a % b);
-      l.SetNativeUInt64(a / b);
-      return;
+
+      return l.SetNativeUInt64(a / b);
     }
 #if !PE_HAS_INT128
     if (sizeof(T) > 4) {
       BigInteger tmp_remain;
-      l = AbsDiv(l, BigInteger(r), tmp_remain);
+      l.AbsDividedBy(BigInteger(r), tmp_remain);
       remain = tmp_remain.ToInt<T>();
-      return;
+      return *this;
     }
 #else
     if (r <= max_32bit_value) {
@@ -835,6 +811,28 @@ class BigInteger {
       l.FixPos();
     }
 #endif
+
+    return *this;
+  }
+
+  template <typename T>
+  BigInteger& AbsDividedBy(T r) {
+    auto& l = *this;
+    static_assert(pe_is_unsigned<T>::value, "T must be unsigned");
+    static_assert(sizeof(T) <= 8, "T must be at most 64-bit");
+    if (l.size() <= 2) {
+      const uint64 a = l.ToInt<uint64>();
+      const uint64 b = r;
+      return SetNativeUInt64(a / b);
+    }
+
+    BigInteger t(l);
+    T remain;
+    t.AbsDividedBy(r, remain);
+
+    *this = std::move(t);
+
+    return *this;
   }
 
  public:
@@ -1358,7 +1356,8 @@ class BigInteger {
 
     if (r.size() > 2) {
       BigInteger x;
-      BigInteger ret(BigInteger::AbsDiv(l, r, x));
+      BigInteger ret(l);
+      ret.AbsDividedBy(r, x);
       ret.sign_ = l.sign_ * r.sign_;
       ret.FixPos();
       if (l.sign_ < 0) {
@@ -1371,7 +1370,7 @@ class BigInteger {
       uint64 abs_value = r.ToInt<uint64>();
       uint64 x;
       BigInteger ret(l);
-      BigInteger::AbsDivInplace(ret, abs_value, x);
+      ret.AbsDividedBy(abs_value, x);
       ret.sign_ = l.sign() * (r.sign() > 0 ? 1 : -1);
       ret.FixPos();
 
@@ -1401,7 +1400,7 @@ class BigInteger {
     unsignedT abs_value = BigInteger::GetAbsValue(r);
     unsignedT x;
     BigInteger ret(l);
-    BigInteger::AbsDivInplace(ret, abs_value, x);
+    ret.AbsDividedBy(abs_value, x);
     ret.sign_ = signl * (r > 0 ? 1 : -1);
     ret.FixPos();
     if (l.sign_ < 0) {
@@ -1436,7 +1435,7 @@ class BigInteger {
     unsignedT abs_value = BigInteger::GetAbsValue(r);
     unsignedT tmp_remain;
     const int signl = l.sign_;
-    BigInteger::AbsDivInplace(l, abs_value, tmp_remain);
+    l.AbsDividedBy(abs_value, tmp_remain);
     l.sign_ = signl * (r > 0 ? 1 : -1);
     l.FixPos();
     remain = static_cast<T>(tmp_remain);

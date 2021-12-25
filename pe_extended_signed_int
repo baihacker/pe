@@ -15,324 +15,57 @@ template <typename ET, bool is_native>
 struct ExtendedSignedIntImpl;
 
 template <typename ET>
-struct ExtendedSignedIntImpl<ET, true> {
-  constexpr static int quarter_bitcount = sizeof(ET) * 4;
-  constexpr static int half_bitcount = quarter_bitcount * 2;
-  constexpr static int bitcount = half_bitcount * 2;
-
-  constexpr static ET quarter_mask =
-      (static_cast<ET>(1) << quarter_bitcount) - 1;
-
-  constexpr static ET hibit_mask = (static_cast<ET>(1) << (half_bitcount - 1));
-
+struct ExtendedSignedIntImpl<ET, true> : public UIntPairImpl<ET, true> {
   // The corresponding native integer type.
   using NT = ET;
 
- private:
-  template <typename T>
-  REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value &&
-            sizeof(T) <= sizeof(ET)))
-  RETURN(void) FromNativeInt(T v) {
-    low_ = v;
-  }
-
-  template <typename T>
-  REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value &&
-            sizeof(T) > sizeof(ET)))
-  RETURN(void) FromNativeInt(T v) {
-    low_ = v;
-    hi_ = v >> half_bitcount;
-  }
-
-  template <typename T>
-  REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value &&
-            sizeof(T) <= sizeof(ET)))
-  RETURN(void) FromNativeInt(T v) {
-    if (v >= 0) {
-      low_ = v;
-    } else {
-      low_ = v;
-      hi_ = -1;
-    }
-  }
-
-  template <typename T>
-  REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value &&
-            sizeof(T) > sizeof(ET)))
-  RETURN(void) FromNativeInt(T v) {
-    using unsignedT = typename pe_make_unsigned<T>::type;
-    FromNativeInt<unsignedT>(static_cast<unsignedT>(v));
-  }
+  using base = UIntPairImpl<ET, true>;
 
  public:
-  ExtendedSignedIntImpl(ET low = 0) : low_(low), hi_(0) {}
-  ExtendedSignedIntImpl(ET low, ET hi) : low_(low), hi_(hi) {}
+  ExtendedSignedIntImpl(ET low = 0) : base(low) {}
+  ExtendedSignedIntImpl(ET low, ET hi) : base(low, hi) {}
 
   template <typename T,
             typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
-  ExtendedSignedIntImpl(T v) : low_(0), hi_(0) {
-    FromNativeInt<T>(v);
-  }
+  ExtendedSignedIntImpl(T v) : base(v) {}
 
-  ExtendedSignedIntImpl(const std::string& str) : low_(0), hi_(0) {
-    const int n = static_cast<int>(str.size());
-    if (n == 0) return;
-    int idx = 0;
-    int neg = 0;
-    if (str[idx] == '-') {
-      ++idx;
-      neg = 1;
-    } else if (str[idx] == '+') {
-      ++idx;
-    }
-    while (idx < n && std::isdigit(str[idx])) {
-      *this = *this * 10 + (str[idx] - '0');
-      ++idx;
-    }
-    if (neg) {
-      FlipBits();
-      AddOne();
-    }
-  }
+  ExtendedSignedIntImpl(const std::string& str) : base(str) {}
 
   ExtendedSignedIntImpl(const ExtendedSignedIntImpl& other)
-      : low_(other.low_), hi_(other.hi_) {}
+      : base(other.low(), other.hi()) {}
 
   ExtendedSignedIntImpl& operator=(const ExtendedSignedIntImpl& other) {
-    low_ = other.low_;
-    hi_ = other.hi_;
+    base::low_ = other.low();
+    base::hi_ = other.hi();
     return *this;
   }
 
   ExtendedSignedIntImpl& operator=(const ExtendedSignedIntImpl&& other) {
-    low_ = std::move(other.low_);
-    hi_ = std::move(other.hi_);
+    base::low_ = std::move(other.low());
+    base::hi_ = std::move(other.hi());
     return *this;
   }
 
   ExtendedSignedIntImpl& operator=(const ET& other) {
-    low_ = other;
-    hi_ = 0;
+    base::low_ = other;
+    base::hi_ = 0;
     return *this;
   }
 
   template <typename T,
             typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
   ExtendedSignedIntImpl& operator=(const T& other) {
-    MakeZeroBits();
-    FromNativeInt<T>(other);
+    base::MakeZeroBits();
+    base::template FromNativeInt<T>(other);
     return *this;
   }
 
  public:
-  void FlipBits() {
-    low_ = ~low_;
-    hi_ = ~hi_;
-  }
-
-  void MakeZeroBits() {
-    low_ = 0;
-    hi_ = 0;
-  }
-
   void MakeAbs() {
-    if (GetHighestBit()) {
-      FlipBits();
-      AddOne();
+    if (base::GetHighestBit()) {
+      base::FlipBits();
+      base::AddOne();
     }
-  }
-
-  void AddOne() {
-    ++low_;
-    if (low_ == 0) {
-      ++hi_;
-    }
-  }
-
-  int GetHighestBit() const { return hi_ & hibit_mask ? 1 : 0; }
-
-  ET GetQuarter(int i) const {
-    switch (i & 3) {
-      case 0:
-        return low_ & quarter_mask;
-      case 1:
-        return low_ >> quarter_bitcount;
-      case 2:
-        return hi_ & quarter_mask;
-      case 3:
-        return hi_ >> quarter_bitcount;
-    }
-    return 0;
-  }
-
-  template <typename T>
-  static void FixSize(std::vector<T>& v) {
-    if (v.empty()) v.push_back(0);
-    int now = static_cast<int>(v.size()) - 1;
-    while (now > 0 && v[now] == 0) --now;
-    v.resize(now + 1);
-  }
-
-  std::vector<uint32_t> ToUInt32Vector(int fix_size = 1) const {
-    const int each = sizeof(ET) / sizeof(uint32_t);
-
-    std::vector<uint32_t> r;
-    r.reserve(each * 2);
-    ET t = low_;
-    for (int i = 0; i < each; ++i) {
-      r.push_back(static_cast<uint32_t>(t));
-#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
-      t >>= 16;
-      t >>= 16;
-#else
-      t >>= 32;
-#endif
-    }
-    if (!fix_size || hi_) {
-      t = hi_;
-      for (int i = 0; i < each; ++i) {
-        r.push_back(static_cast<uint32_t>(t));
-#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
-        t >>= 16;
-        t >>= 16;
-#else
-        t >>= 32;
-#endif
-      }
-    }
-    if (fix_size) {
-      FixSize(r);
-    }
-    return r;
-  }
-
-  void FromUInt32Vector(const std::vector<uint32_t>& bits32) {
-    const int each = sizeof(ET) / sizeof(int32_t);
-
-    hi_ = 0;
-    for (int i = std::min(2 * each - 1, static_cast<int>(bits32.size()));
-         i >= each; --i) {
-#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
-      hi_ <<= 16;
-      hi_ = (hi_ << 16) | bits32[i];
-#else
-      hi_ = (hi_ << 32) | bits32[i];
-#endif
-    }
-
-    low_ = 0;
-    for (int i = std::min(each - 1, static_cast<int>(bits32.size())); i >= 0;
-         --i) {
-#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
-      low_ <<= 16;
-      low_ = (low_ << 16) | bits32[i];
-#else
-      low_ = (low_ << 32) | bits32[i];
-#endif
-    }
-  }
-
-  std::vector<uint32_t> ToBinaryVector(int fix_size = 1) const {
-    std::vector<uint32_t> r;
-    r.reserve(bitcount);
-    ET t = low_;
-    for (int i = 0; i < half_bitcount; ++i) {
-      r.push_back(t & 1);
-      t >>= 1;
-    }
-    if (!fix_size || hi_) {
-      t = hi_;
-      for (int i = 0; i < half_bitcount; ++i) {
-        r.push_back(t & 1);
-        t >>= 1;
-      }
-    }
-    if (fix_size) {
-      FixSize(r);
-    }
-    return r;
-  }
-
-  void FromBinaryVector(const std::vector<uint32_t>& bits) {
-    hi_ = 0;
-    for (int i = std::min(bitcount - 1, static_cast<int>(bits.size()) - 1);
-         i >= half_bitcount; --i) {
-      hi_ = (hi_ << 1) | bits[i];
-    }
-
-    low_ = 0;
-    for (int i = std::min(half_bitcount - 1, static_cast<int>(bits.size()) - 1);
-         i >= 0; --i) {
-      low_ = (low_ << 1) | bits[i];
-    }
-  }
-
-  static std::vector<uint32_t> UIntDivImplInternal(
-      const std::vector<uint32_t>& l, const std::vector<uint32_t>& r,
-      std::vector<uint32_t>& remain) {
-    std::vector<uint32_t> result;
-    remain = l;
-
-    const int r_size = static_cast<int>(r.size());
-    int pos = static_cast<int>(l.size()) - 1;
-    int end = pos - r_size + 1;
-    for (; end >= 0;) {
-      if (pos - end + 1 < r_size) {
-        result.push_back(0);
-        --end;
-        continue;
-      }
-      if (remain[pos] == 0) {
-        --pos;
-        continue;
-      }
-      int gt = 1;
-      if (pos - end + 1 == r_size) {
-        for (int i = pos, j = r_size - 1; i >= end; --i, --j) {
-          if (remain[i] < r[j]) {
-            gt = 0;
-            break;
-          } else if (remain[i] > r[j]) {
-            break;
-          }
-        }
-      }
-      result.push_back(gt);
-      if (gt == 0) {
-        --end;
-        continue;
-      }
-
-      int borrow = 0;
-      int i = end, j = 0;
-      for (; j < r_size; ++i, ++j) {
-        int next_borrow = 0;
-        auto t = remain[i];
-        while (t < r[j] + borrow) {
-          t += 2;
-          ++next_borrow;
-        }
-        remain[i] = t - r[j] - borrow;
-        borrow = next_borrow;
-      }
-
-      for (; i <= pos; ++i) {
-        int next_borrow = 0;
-        int t = remain[i];
-        while (t < borrow) {
-          t += 2;
-          ++next_borrow;
-        }
-        remain[i] = t - borrow;
-        borrow = next_borrow;
-      }
-      --end;
-    }
-
-    if (result.size() == 0) result.push_back(0);
-    std::reverse(result.begin(), result.end());
-
-    return result;
   }
 
   ExtendedSignedIntImpl& DivImpl(const ExtendedSignedIntImpl& other) {
@@ -349,28 +82,16 @@ struct ExtendedSignedIntImpl<ET, true> {
     }
 
     MakeAbs();
-    ExtendedSignedIntImpl x = other.Abs();
 
-    int t = CompareTo(other);
-    if (t == 0) {
-      low_ = 1;
-      hi_ = 0;
-    } else if (t < 0) {
-      low_ = hi_ = 0;
-    } else if (hi_ == 0) {
-      low_ /= x.low_;
+    if (s2 > 0) {
+      base::DividedBy(other);
     } else {
-      std::vector<uint32_t> remain;
-
-      std::vector<uint32_t> result =
-          UIntDivImplInternal(ToBinaryVector(), x.ToBinaryVector(), remain);
-
-      FromBinaryVector(result);
+      base::DividedBy(other.Abs());
     }
 
     if (s1 * s2 < 0) {
-      FlipBits();
-      AddOne();
+      base::FlipBits();
+      base::AddOne();
     }
 
     return *this;
@@ -393,29 +114,16 @@ struct ExtendedSignedIntImpl<ET, true> {
     }
 
     MakeAbs();
-    ExtendedSignedIntImpl x = other.Abs();
 
-    int t = CompareTo(x);
-    if (t == 0) {
-      low_ = 1;
-      hi_ = 0;
-    } else if (t < 0) {
-      low_ = hi_ = 0;
-    } else if (hi_ == 0) {
-      low_ /= x.low_;
+    if (s2 > 0) {
+      base::DividedBy(other, r);
     } else {
-      std::vector<uint32_t> remain;
-
-      std::vector<uint32_t> result =
-          UIntDivImplInternal(ToBinaryVector(), x.ToBinaryVector(), remain);
-
-      FromBinaryVector(result);
-      r.FromBinaryVector(remain);
+      base::DividedBy(other.Abs(), r);
     }
 
     if (s1 * s2 < 0) {
-      FlipBits();
-      AddOne();
+      base::FlipBits();
+      base::AddOne();
     }
 
     if (s1 < 0) {
@@ -435,54 +143,31 @@ struct ExtendedSignedIntImpl<ET, true> {
     PE_ASSERT(s2 != 0);
 
     if (other.hi_ == 0 && other.low_ == 1) {
-      MakeZeroBits();
+      base::MakeZeroBits();
       return *this;
     }
 
     MakeAbs();
-    ExtendedSignedIntImpl x = other.Abs();
 
-    int t = CompareTo(x);
-    if (t == 0) {
-      low_ = 1;
-      hi_ = 0;
-    } else if (t < 0) {
-      low_ = hi_ = 0;
-    } else if (hi_ == 0) {
-      low_ /= x.low_;
+    if (s2 > 0) {
+      base::Modulo(other);
     } else {
-      std::vector<uint32_t> remain;
-
-      UIntDivImplInternal(ToBinaryVector(), x.ToBinaryVector(), remain);
-
-      FromBinaryVector(remain);
+      base::Modulo(other.Abs());
     }
 
     if (s1 < 0) {
-      FlipBits();
-      AddOne();
+      base::FlipBits();
+      base::AddOne();
     }
     return *this;
   }
 
  public:
-  ET& low() { return low_; }
+  using base::low;
 
-  ET& hi() { return hi_; }
+  using base::hi;
 
-  ET low() const { return low_; }
-
-  ET hi() const { return hi_; }
-
-  int sign() const { return GetHighestBit() ? -1 : (IsZero() ? 0 : 1); }
-
-  int UIntCompareTo(const ExtendedSignedIntImpl& other) const {
-    if (hi_ != other.hi_) {
-      return hi_ < other.hi_ ? -1 : hi_ > other.hi_;
-    } else {
-      return low_ < other.low_ ? -1 : low_ > other.low_;
-    }
-  }
+  int sign() const { return base::GetHighestBit() ? -1 : (IsZero() ? 0 : 1); }
 
   int CompareTo(const ExtendedSignedIntImpl& other) const {
     int s1 = IntSign();
@@ -494,21 +179,23 @@ struct ExtendedSignedIntImpl<ET, true> {
       return 0;
     }
     if (s1 < 0) {
-      return -UIntCompareTo(other);
+      return -base::CompareTo(other);
     } else {
-      return UIntCompareTo(other);
+      return base::CompareTo(other);
     }
   }
 
-  int IntSign() const { return GetHighestBit() ? -1 : (IsZero() ? 0 : 1); }
+  int IntSign() const {
+    return base::GetHighestBit() ? -1 : (IsZero() ? 0 : 1);
+  }
 
-  int IsZero() const { return low_ == 0 && hi_ == 0; }
+  using base::IsEven;
 
-  int IsEven() const { return low_ & 1 ? 0 : 1; }
+  using base::IsOdd;
 
-  int IsOdd() const { return low_ & 1 ? 1 : 0; }
+  using base::IsZero;
 
-  unsigned int LowerBits() const { return static_cast<uint32_t>(low_); }
+  using base::LowerBits;
 
   ExtendedSignedIntImpl Abs() const {
     ExtendedSignedIntImpl ret(*this);
@@ -530,173 +217,39 @@ struct ExtendedSignedIntImpl<ET, true> {
     return ret;
   }
 
-  template <typename T>
-  REQUIRES((is_native_integer<T>::value && sizeof(T) <= sizeof(ET)))
-  RETURN(T) ToInt() const {
-    return static_cast<T>(low_);
-  }
-
-  template <typename T>
-  REQUIRES((is_native_integer<T>::value && sizeof(T) > sizeof(ET)))
-  RETURN(T) ToInt() const {
-    using unsignedT = typename pe_make_unsigned<T>::type;
-    return static_cast<T>((static_cast<unsignedT>(hi_) << half_bitcount) |
-                          static_cast<unsignedT>(low_));
-  }
+  using base::ToInt;
 
   template <typename T>
   T ToFloat() const {
     if (IntSign() >= 0) {
-      auto t = ToUInt32Vector();
-      const int size = t.size();
-      T r = 0;
-      for (int i = size - 1; i >= 0; --i) {
-        r = r * 4294967296 + t[i];
-      }
-      return r;
+      return base::template ToFloat<T>();
     } else {
-      return -ExtendedSignedIntImpl(*this).Abs().template ToFloat<T>();
+      return -Abs().template ToFloat<T>();
     }
-  }
-
-  void SetBit(int idx) {
-    if (idx < half_bitcount) {
-      low_ |= static_cast<ET>(1) << idx;
-    } else {
-      hi_ |= static_cast<ET>(1) << (idx - half_bitcount);
-    }
-  }
-
-  void ResetBit(int idx) {
-    if (idx < half_bitcount) {
-      low_ &= ~(static_cast<ET>(1) << idx);
-    } else {
-      hi_ &= ~(static_cast<ET>(1) << (idx - half_bitcount));
-    }
-  }
-
-  int GetBit(int idx) const {
-    if (idx < half_bitcount) {
-      return low_ & (static_cast<ET>(1) << idx) ? 1 : 0;
-    } else {
-      return hi_ & (static_cast<ET>(1) << (idx - half_bitcount)) ? 1 : 0;
-    }
-  }
-
-  void RevBit(int idx) {
-    if (idx < half_bitcount) {
-      low_ ^= static_cast<ET>(1) << idx;
-    } else {
-      hi_ ^= static_cast<ET>(1) << (idx - half_bitcount);
-    }
-  }
-
-  int BitCount() const {
-    const int each = sizeof(ET) / sizeof(uint32_t);
-
-    int ret = 0;
-    ET t = low_;
-    for (int i = 0; t && i < each; ++i) {
-      ret += pe_popcount(static_cast<uint32_t>(t));
-#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
-      t >>= 16;
-      t >>= 16;
-#else
-      t >>= 32;
-#endif
-    }
-
-    t = hi_;
-    for (int i = 0; t && i < each; ++i) {
-      ret += pe_popcount(static_cast<uint32_t>(t));
-#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
-      t >>= 16;
-      t >>= 16;
-#else
-      t >>= 32;
-#endif
-    }
-
-    return ret;
   }
 
   std::string ToString() const {
-    const uint32_t output_mod = 1000000000;
     if (IsZero()) {
       return "0";
     }
-    if (hi_ == 0) {
-      return pe::ToString(low_);
+    if (base::hi_ == 0) {
+      return pe::ToString(base::low_);
     }
 
     int sign = IntSign();
 
-    std::vector<uint32_t> bits32 =
-        sign > 0 ? ToUInt32Vector() : Abs().ToUInt32Vector();
-    std::vector<uint32_t> mods;
-
-    std::stringstream ss;
-
-    if (sign < 0) {
-      ss << "-";
+    if (sign > 0) {
+      return base::ToString();
+    } else {
+      return "-" + Abs().ToString();
     }
-
-    int idx = bits32.size() - 1;
-    while (bits32[idx] == 0) --idx;
-
-    do {
-      uint64 add = 0;
-      for (int i = idx; i > 0; --i) {
-        const uint64 x = add + bits32[i];
-        const uint64 next_add = (x % output_mod) << 32;
-        bits32[i] = static_cast<unsigned>(x / output_mod);
-        add = next_add;
-      }
-      uint64 x = add + bits32[0];
-      bits32[0] = static_cast<unsigned>(x / output_mod);
-      mods.push_back(x % output_mod);
-      while (idx >= 0 && bits32[idx] == 0) --idx;
-    } while (idx >= 0);
-
-    idx = static_cast<int>(mods.size()) - 1;
-    char buff[32];
-    sprintf(buff, "%u", mods[idx--]);
-    ss << buff;
-    for (; idx >= 0; --idx) {
-      sprintf(buff, "%09u", mods[idx]);
-      ss << buff;
-    }
-    return ss.str();
   }
 
   std::string to_string() const { return ToString(); }
 
   ExtendedSignedIntImpl Difference(const ExtendedSignedIntImpl& other) const {
-    int t = UIntCompareTo(other);
-    if (t == 0) {
-      return 0;
-    }
-    if (t > 0) {
-      ET x = hi_ - other.hi_;
-      ET y;
-      if (low_ >= other.low_) {
-        y = low_ - other.low_;
-      } else {
-        y = low_ - other.low_;
-        --x;
-      }
-      return ExtendedSignedIntImpl(y, x);
-    } else {
-      ET x = other.hi_ - hi_;
-      ET y;
-      if (other.low_ >= low_) {
-        y = other.low_ - low_;
-      } else {
-        y = other.low_ - low_;
-        --x;
-      }
-      return ExtendedSignedIntImpl(y, x);
-    }
+    auto t = base::Difference(other);
+    return ExtendedSignedIntImpl(t.low(), t.hi());
   }
 
  public:
@@ -705,50 +258,22 @@ struct ExtendedSignedIntImpl<ET, true> {
 
   const ExtendedSignedIntImpl& operator-() const {
     ExtendedSignedIntImpl ret(*this);
-    FlipBits();
-    AddOne();
+    base::FlipBits();
+    base::AddOne();
     return ret;
   }
 
   ExtendedSignedIntImpl operator~() const {
-    return ExtendedSignedIntImpl(~low_, ~hi_);
+    return ExtendedSignedIntImpl(~base::low_, ~base::hi_);
   }
 
   ExtendedSignedIntImpl& operator+=(const ExtendedSignedIntImpl& other) {
-    if (IsZero()) {
-      low_ = other.low_;
-      hi_ = other.hi_;
-      return *this;
-    }
-
-    if (!other.IsZero()) {
-      ET x = other.low_ + low_;
-      ET y = other.hi_ + hi_;
-      if (other.low_ && low_ && (x < other.low_ || x < low_)) {
-        ++y;
-      }
-      low_ = x;
-      hi_ = y;
-    }
+    base::AddedBy(other);
     return *this;
   }
 
   ExtendedSignedIntImpl& operator+=(const ET& other) {
-    if (IsZero()) {
-      low_ = other;
-      hi_ = 0;
-      return *this;
-    }
-
-    if (other) {
-      ET x = low_ + other;
-      ET y = hi_;
-      if (low_ && other && (x < low_ || x < other)) {
-        ++y;
-      }
-      low_ = x;
-      hi_ = y;
-    }
+    base::AddedBy(other);
     return *this;
   }
 
@@ -778,41 +303,31 @@ struct ExtendedSignedIntImpl<ET, true> {
 
   ExtendedSignedIntImpl& operator*=(const ExtendedSignedIntImpl& other) {
     if (IsZero() || other.IsZero()) {
-      low_ = hi_ = 0;
+      base::low_ = base::hi_ = 0;
       return *this;
     }
 
     int s1 = IntSign();
     int s2 = other.IntSign();
-    ExtendedSignedIntImpl v1 = s1 > 0 ? *this : Abs();
-    ExtendedSignedIntImpl v2 = s2 > 0 ? other : other.Abs();
 
-    ET t[4] = {0};
-    for (int i = 0; i < 4; ++i)
-      for (int j = 0; j + i < 4; ++j) {
-        ET carry = v1.GetQuarter(i) * v2.other.GetQuarter(j);
-        for (int now = i + j; now < 4; ++now) {
-          ET x = t[now] + (carry & quarter_mask);
-          t[now] = x & quarter_mask;
-          carry = (x >> quarter_bitcount) + (carry >> quarter_bitcount);
-          if (carry == 0) {
-            break;
-          }
-        }
-      }
-    low_ = t[0] | (t[1] << quarter_bitcount);
-    hi_ = t[2] | (t[3] << quarter_bitcount);
+    MakeAbs();
+
+    if (s2 > 0) {
+      this->base::operator*=(other);
+    } else {
+      this->base::operator*=(other.Abs());
+    }
 
     if (s1 * s2 < 0) {
-      FlipBits();
-      AddOne();
+      base::FlipBits();
+      base::AddOne();
     }
     return *this;
   }
 
   ExtendedSignedIntImpl& operator*=(const ET& other) {
     if (IsZero() || other == 0) {
-      low_ = hi_ = 0;
+      base::low_ = base::hi_ = 0;
       return *this;
     }
 
@@ -836,101 +351,73 @@ struct ExtendedSignedIntImpl<ET, true> {
   }
 
   ExtendedSignedIntImpl& operator&=(const ExtendedSignedIntImpl& other) {
-    low_ &= other.low_;
-    hi_ &= other.hi_;
+    base::low_ &= other.low();
+    base::hi_ &= other.hi();
     return *this;
   }
 
   ExtendedSignedIntImpl& operator&=(const ET& other) {
-    low_ &= other;
-    hi_ = 0;
+    base::low_ &= other;
+    base::hi_ = 0;
     return *this;
   }
 
   ExtendedSignedIntImpl& operator^=(const ExtendedSignedIntImpl& other) {
-    low_ ^= other.low_;
-    hi_ ^= other.hi_;
+    base::low_ ^= other.low();
+    base::hi_ ^= other.hi();
     return *this;
   }
 
   ExtendedSignedIntImpl& operator^=(const ET& other) {
-    low_ ^= other;
+    base::low_ ^= other;
     return *this;
   }
 
   ExtendedSignedIntImpl& operator|=(const ExtendedSignedIntImpl& other) {
-    low_ |= other.low_;
-    hi_ |= other.hi_;
+    base::low_ |= other.low();
+    base::hi_ |= other.hi();
     return *this;
   }
 
   ExtendedSignedIntImpl& operator|=(const ET& other) {
-    low_ |= other;
+    base::low_ |= other;
     return *this;
   }
 
   ExtendedSignedIntImpl& operator>>=(int cnt) {
-    if (IntSign() >= 0) {
-      if (cnt >= bitcount) {
-        low_ = hi_ = 0;
-      } else if (cnt >= half_bitcount) {
-        low_ = hi_ >> (cnt - half_bitcount);
-        hi_ = 0;
-      } else {
-        ET mask = (static_cast<ET>(1) << cnt) - 1;
-        ET t = hi_ & mask;
-        hi_ >>= cnt;
-        low_ >>= cnt;
-        low_ |= t << (half_bitcount - cnt);
-      }
-    } else {
-      FlipBits();
-      AddOne();
-      *this >>= cnt;
-      FlipBits();
-      AddOne();
-    }
+    base::ArithmeticShiftRight(cnt);
     return *this;
   }
 
   ExtendedSignedIntImpl& operator<<=(int cnt) {
-    if (cnt >= bitcount) {
-      low_ = hi_ = 0;
-    } else if (cnt >= half_bitcount) {
-      hi_ = low_ << (cnt - half_bitcount);
-      low_ = 0;
-    } else {
-      ET t = low_ >> (half_bitcount - cnt);
-      hi_ = hi_ << cnt | t;
-      low_ <<= cnt;
-    }
+    base::ShiftLeft(cnt);
     return *this;
   }
 
   ExtendedSignedIntImpl& operator++() {
-    *this += 1;
+    base::AddOne();
     return *this;
   }
 
   ExtendedSignedIntImpl operator++(int) {
     ExtendedSignedIntImpl ret(*this);
-    *this += 1;
+    ++*this;
     return ret;
   }
 
   ExtendedSignedIntImpl& operator--() {
-    if (low_) {
-      --low_;
+    if (base::low_) {
+      --base::low_;
     } else {
-      --low_;
-      --hi_;
+      --base::low_;
+      --base::hi_;
     }
     return *this;
   }
 
   ExtendedSignedIntImpl operator--(int) {
     ExtendedSignedIntImpl ret(*this);
-    *this -= 1;
+    --*this;
     return ret;
   }
 
@@ -1040,288 +527,61 @@ struct ExtendedSignedIntImpl<ET, true> {
                                          const ExtendedSignedIntImpl& n) {
     return o << n.ToString();
   }
-
- private:
-  ET low_;
-  ET hi_;
 };
 
 template <typename ET>
-struct ExtendedSignedIntImpl<ET, false> {
-  constexpr static int quarter_bitcount = sizeof(ET) * 4;
-  constexpr static int half_bitcount = quarter_bitcount * 2;
-  constexpr static int bitcount = half_bitcount * 2;
-
+struct ExtendedSignedIntImpl<ET, false> : public UIntPairImpl<ET, false> {
   using NT = typename ET::NT;
-
- private:
-  template <typename T>
-  REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value &&
-            sizeof(T) <= sizeof(ET)))
-  RETURN(void) FromNativeInt(T v) {
-    low_ = v;
-  }
-
-  template <typename T>
-  REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value &&
-            sizeof(T) > sizeof(ET)))
-  RETURN(void) FromNativeInt(T v) {
-    low_ = v;
-    hi_ = v >> half_bitcount;
-  }
-
-  template <typename T>
-  REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value &&
-            sizeof(T) <= sizeof(ET)))
-  RETURN(void) FromNativeInt(T v) {
-    if (v >= 0) {
-      low_ = v;
-    } else {
-      low_ = v;
-      hi_.FlipBits();
-    }
-  }
-
-  template <typename T>
-  REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value &&
-            sizeof(T) > sizeof(ET)))
-  RETURN(void) FromNativeInt(T v) {
-    using unsignedT = typename pe_make_unsigned<T>::type;
-    FromNativeInt<unsignedT>(static_cast<unsignedT>(v));
-  }
+  using base = UIntPairImpl<ET, false>;
 
  public:
-  ExtendedSignedIntImpl(ET low = 0) : low_(low), hi_(0) {}
-  ExtendedSignedIntImpl(ET low, ET hi) : low_(low), hi_(hi) {}
+  ExtendedSignedIntImpl(ET low = 0) : base(low) {}
+  ExtendedSignedIntImpl(ET low, ET hi) : base(low, hi) {}
 
   template <typename T,
             typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
-  ExtendedSignedIntImpl(T v) : low_(0), hi_(0) {
-    FromNativeInt<T>(v);
-  }
+  ExtendedSignedIntImpl(T v) : base(v) {}
 
-  ExtendedSignedIntImpl(const std::string& str) : low_(0), hi_(0) {
-    const int n = static_cast<int>(str.size());
-    if (n == 0) return;
-    int idx = 0;
-    int neg = 0;
-    if (str[idx] == '-') {
-      ++idx;
-      neg = 1;
-    } else if (str[idx] == '+') {
-      ++idx;
-    }
-    while (idx < n && std::isdigit(str[idx])) {
-      *this = *this * 10 + (str[idx] - '0');
-      ++idx;
-    }
-    if (neg) {
-      FlipBits();
-      AddOne();
-    }
-  }
+  ExtendedSignedIntImpl(const std::string& str) : base(str) {}
 
   ExtendedSignedIntImpl(const ExtendedSignedIntImpl& other)
-      : low_(other.low_), hi_(other.hi_) {}
+      : base(other.low(), other.hi()) {}
 
   ExtendedSignedIntImpl& operator=(const ExtendedSignedIntImpl& other) {
-    low_ = other.low_;
-    hi_ = other.hi_;
+    base::low_ = other.low();
+    base::hi_ = other.hi();
     return *this;
   }
 
   ExtendedSignedIntImpl& operator=(const ExtendedSignedIntImpl&& other) {
-    low_ = std::move(other.low_);
-    hi_ = std::move(other.hi_);
+    base::low_ = std::move(other.low());
+    base::hi_ = std::move(other.hi());
     return *this;
   }
 
   ExtendedSignedIntImpl& operator=(const ET& other) {
-    low_ = other;
-    hi_.MakeZeroBits();
+    base::low_ = other;
+    base::hi_.MakeZeroBits();
     return *this;
   }
 
   template <typename T,
             typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
   ExtendedSignedIntImpl& operator=(const T& other) {
-    MakeZeroBits();
-    FromNativeInt<T>(other);
+    base::MakeZeroBits();
+    base::template FromNativeInt<T>(other);
     return *this;
   }
 
  public:
-  void FlipBits() {
-    low_.FlipBits();
-    hi_.FlipBits();
-  }
-
-  void MakeZeroBits() {
-    low_.MakeZeroBits();
-    hi_.MakeZeroBits();
-  }
-
   void MakeAbs() {
-    if (GetHighestBit()) {
-      FlipBits();
-      AddOne();
+    if (base::GetHighestBit()) {
+      base::FlipBits();
+      base::AddOne();
     }
   }
 
-  void AddOne() {
-    ++low_;
-    if (low_ == 0) {
-      ++hi_;
-    }
-  }
-
-  int GetHighestBit() const { return hi_.GetHighestBit(); }
-
-  ET GetQuarter(int i) const {
-    switch (i & 3) {
-      case 0:
-        return low_.low();
-      case 1:
-        return low_.hi();
-      case 2:
-        return hi_.low();
-      case 3:
-        return hi_.hi();
-    }
-    return 0;
-  }
-
-  template <typename T>
-  static void FixSize(std::vector<T>& v) {
-    if (v.empty()) v.push_back(0);
-    int now = static_cast<int>(v.size()) - 1;
-    while (now > 0 && v[now] == 0) --now;
-    v.resize(now + 1);
-  }
-
-  std::vector<uint32_t> ToUInt32Vector(int fix_size = 1) const {
-    const int each = sizeof(ET) / sizeof(uint32_t);
-
-    std::vector<uint32_t> r;
-    r.reserve(each * 2);
-    for (auto& iter : low_.ToUInt32Vector(0)) r.push_back(iter);
-    if (!fix_size || !hi_.IsZero()) {
-      for (auto& iter : hi_.ToUInt32Vector(0)) r.push_back(iter);
-    }
-    if (fix_size) {
-      FixSize(r);
-    }
-    return r;
-  }
-
-  void FromUInt32Vector(const std::vector<uint32_t>& bits32) {
-    const int each = sizeof(ET) / sizeof(int32_t);
-    hi_.MakeZeroBits();
-    for (int i = std::min(2 * each - 1, static_cast<int>(bits32.size()));
-         i >= each; --i) {
-      hi_ = (hi_ << 32) | bits32[i];
-    }
-
-    low_.MakeZeroBits();
-    for (int i = std::min(each - 1, static_cast<int>(bits32.size())); i >= 0;
-         --i) {
-      low_ = (low_ << 32) | bits32[i];
-    }
-  }
-
-  std::vector<uint32_t> ToBinaryVector(int fix_size = 1) const {
-    std::vector<uint32_t> r;
-    r.reserve(bitcount);
-    for (auto& iter : low_.ToBinaryVector(0)) r.push_back(iter);
-    if (!fix_size || !hi_.IsZero()) {
-      for (auto& iter : hi_.ToBinaryVector(0)) r.push_back(iter);
-    }
-    if (fix_size) {
-      FixSize(r);
-    }
-    return r;
-  }
-
-  void FromBinaryVector(const std::vector<uint32_t>& bits) {
-    low_.MakeZeroBits();
-    hi_.MakeZeroBits();
-    for (int i = 0; i < bits.size(); ++i)
-      if (bits[i]) {
-        if (i < half_bitcount) {
-          low_.SetBit(i);
-        } else if (i < bitcount) {
-          hi_.SetBit(i - half_bitcount);
-        }
-      }
-  }
-
-  static std::vector<uint32_t> UIntDivImplInternal(
-      const std::vector<uint32_t>& l, const std::vector<uint32_t>& r,
-      std::vector<uint32_t>& remain) {
-    std::vector<uint32_t> result;
-    remain = l;
-
-    const int r_size = static_cast<int>(r.size());
-    int pos = static_cast<int>(l.size()) - 1;
-    int end = pos - r_size + 1;
-    for (; end >= 0;) {
-      if (pos - end + 1 < r_size) {
-        result.push_back(0);
-        --end;
-        continue;
-      }
-      if (remain[pos] == 0) {
-        --pos;
-        continue;
-      }
-      int gt = 1;
-      if (pos - end + 1 == r_size) {
-        for (int i = pos, j = r_size - 1; i >= end; --i, --j) {
-          if (remain[i] < r[j]) {
-            gt = 0;
-            break;
-          } else if (remain[i] > r[j]) {
-            break;
-          }
-        }
-      }
-      result.push_back(gt);
-      if (gt == 0) {
-        --end;
-        continue;
-      }
-
-      int borrow = 0;
-      int i = end, j = 0;
-      for (; j < r_size; ++i, ++j) {
-        int next_borrow = 0;
-        auto t = remain[i];
-        while (t < r[j] + borrow) {
-          t += 2;
-          ++next_borrow;
-        }
-        remain[i] = t - r[j] - borrow;
-        borrow = next_borrow;
-      }
-
-      for (; i <= pos; ++i) {
-        int next_borrow = 0;
-        int t = remain[i];
-        while (t < borrow) {
-          t += 2;
-          ++next_borrow;
-        }
-        remain[i] = t - borrow;
-        borrow = next_borrow;
-      }
-      --end;
-    }
-
-    if (result.size() == 0) result.push_back(0);
-    std::reverse(result.begin(), result.end());
-
-    return result;
-  }
+  int GetHighestBit() const { return base::hi_.GetHighestBit(); }
 
   ExtendedSignedIntImpl& DivImpl(const ExtendedSignedIntImpl& other) {
     int s1 = IntSign();
@@ -1337,28 +597,16 @@ struct ExtendedSignedIntImpl<ET, false> {
     }
 
     MakeAbs();
-    ExtendedSignedIntImpl x = other.Abs();
 
-    int t = CompareTo(other);
-    if (t == 0) {
-      low_ = 1;
-      hi_ = 0;
-    } else if (t < 0) {
-      low_ = hi_ = 0;
-    } else if (hi_ == 0) {
-      low_ /= x.low_;
+    if (s2 > 0) {
+      base::DividedBy(other);
     } else {
-      std::vector<uint32_t> remain;
-
-      std::vector<uint32_t> result =
-          UIntDivImplInternal(ToBinaryVector(), x.ToBinaryVector(), remain);
-
-      FromBinaryVector(result);
+      base::DividedBy(other.Abs());
     }
 
     if (s1 * s2 < 0) {
-      FlipBits();
-      AddOne();
+      base::FlipBits();
+      base::AddOne();
     }
 
     return *this;
@@ -1381,29 +629,15 @@ struct ExtendedSignedIntImpl<ET, false> {
     }
 
     MakeAbs();
-    ExtendedSignedIntImpl x = other.Abs();
-
-    int t = CompareTo(x);
-    if (t == 0) {
-      low_ = 1;
-      hi_ = 0;
-    } else if (t < 0) {
-      low_ = hi_ = 0;
-    } else if (hi_ == 0) {
-      low_ /= x.low_;
+    if (s2 > 0) {
+      base::DividedBy(other, r);
     } else {
-      std::vector<uint32_t> remain;
-
-      std::vector<uint32_t> result =
-          UIntDivImplInternal(ToBinaryVector(), x.ToBinaryVector(), remain);
-
-      FromBinaryVector(result);
-      r.FromBinaryVector(remain);
+      base::DividedBy(other.Abs(), r);
     }
 
     if (s1 * s2 < 0) {
-      FlipBits();
-      AddOne();
+      base::FlipBits();
+      base::AddOne();
     }
 
     if (s1 < 0) {
@@ -1423,53 +657,31 @@ struct ExtendedSignedIntImpl<ET, false> {
     PE_ASSERT(s2 != 0);
 
     if (other.hi_ == 0 && other.low_ == 1) {
-      MakeZeroBits();
+      base::MakeZeroBits();
       return *this;
     }
 
     MakeAbs();
-    ExtendedSignedIntImpl x = other.Abs();
-
-    int t = CompareTo(x);
-    if (t == 0) {
-      low_ = 1;
-      hi_ = 0;
-    } else if (t < 0) {
-      low_ = hi_ = 0;
-    } else if (hi_ == 0) {
-      low_ /= x.low_;
+    if (s2 > 0) {
+      base::Modulo(other);
     } else {
-      std::vector<uint32_t> remain;
-
-      UIntDivImplInternal(ToBinaryVector(), x.ToBinaryVector(), remain);
-
-      FromBinaryVector(remain);
+      base::Modulo(other.Abs());
     }
 
     if (s1 < 0) {
-      FlipBits();
-      AddOne();
+      base::FlipBits();
+      base::AddOne();
     }
     return *this;
   }
 
  public:
-  ET& low() { return low_; }
+  using base::low;
 
-  ET& hi() { return hi_; }
+  using base::hi;
 
-  ET low() const { return low_; }
-
-  ET hi() const { return hi_; }
-
-  int sign() const { return low_.IntSign() || hi_.IntSign() ? 1 : 0; }
-
-  int UIntCompareTo(const ExtendedSignedIntImpl& other) const {
-    int t = hi_.UIntCompareTo(other.hi_);
-    if (t != 0) {
-      return t;
-    }
-    return low_.UIntCompareTo(other.low_);
+  int sign() const {
+    return base::low_.IntSign() || base::hi_.IntSign() ? 1 : 0;
   }
 
   int CompareTo(const ExtendedSignedIntImpl& other) const {
@@ -1482,21 +694,21 @@ struct ExtendedSignedIntImpl<ET, false> {
       return 0;
     }
     if (s1 < 0) {
-      return -UIntCompareTo(other);
+      return -base::CompareTo(other);
     } else {
-      return UIntCompareTo(other);
+      return base::CompareTo(other);
     }
   }
 
   int IntSign() const { return GetHighestBit() ? -1 : (IsZero() ? 0 : 1); }
 
-  int IsZero() const { return IntSign() == 0; }
+  using base::IsZero;
 
-  int IsEven() const { return LowerBits() & 1 ? 0 : 1; }
+  using base::IsEven;
 
-  int IsOdd() const { return LowerBits() & 1 ? 1 : 0; }
+  using base::IsOdd;
 
-  unsigned int LowerBits() const { return low_.LowerBits(); }
+  using base::LowerBits;
 
   ExtendedSignedIntImpl Abs() const {
     ExtendedSignedIntImpl ret(*this);
@@ -1518,180 +730,58 @@ struct ExtendedSignedIntImpl<ET, false> {
     return ret;
   }
 
-  template <typename T>
-  REQUIRES((is_native_integer<T>::value && sizeof(T) <= sizeof(ET)))
-  RETURN(T) ToInt() const {
-    return low_.template ToInt<T>();
-  }
-
-  template <typename T>
-  REQUIRES((is_native_integer<T>::value && sizeof(T) > sizeof(ET)))
-  RETURN(T) ToInt() const {
-    using unsignedT = typename pe_make_unsigned<T>::type;
-    return static_cast<T>(hi_.template ToInt<unsignedT>() << half_bitcount |
-                          low_.template ToInt<unsignedT>());
-  }
+  using base::ToInt;
 
   template <typename T>
   T ToFloat() const {
     if (IntSign() >= 0) {
-      auto t = ToUInt32Vector();
-      const int size = t.size();
-      T r = 0;
-      for (int i = size - 1; i >= 0; --i) {
-        r = r * 4294967296 + t[i];
-      }
-      return r;
+      return base::template ToFloat<T>();
     } else {
-      return -ExtendedSignedIntImpl(*this).Abs().template ToFloat<T>();
+      return -Abs().template ToFloat<T>();
     }
   }
-
-  void SetBit(int idx) {
-    if (idx < half_bitcount) {
-      low_.SetBit(idx);
-    } else {
-      hi_.SetBit(idx - half_bitcount);
-    }
-  }
-
-  void ResetBit(int idx) {
-    if (idx < half_bitcount) {
-      low_.ResetBit(idx);
-    } else {
-      hi_.ResetBit(idx - half_bitcount);
-    }
-  }
-
-  int GetBit(int idx) const {
-    if (idx < half_bitcount) {
-      return low_.GetBit(idx);
-    } else {
-      return hi_.GetBit(idx - half_bitcount);
-    }
-  }
-
-  void RevBit(int idx) {
-    if (idx < half_bitcount) {
-      low_.RevBit(idx);
-    } else {
-      hi_.RevBit(idx - half_bitcount);
-    }
-  }
-
-  int BitCount() const { return hi_.BitCount() + low_.BitCount(); }
 
   std::string ToString() const {
-    const uint32_t output_mod = 1000000000;
     if (IsZero()) {
       return "0";
     }
-    if (hi_ == 0) {
-      return pe::ToString(low_);
+    if (base::hi_ == 0) {
+      return pe::ToString(base::low_);
     }
 
     int sign = IntSign();
 
-    std::vector<uint32_t> bits32 =
-        sign > 0 ? ToUInt32Vector() : Abs().ToUInt32Vector();
-    std::vector<uint32_t> mods;
-
-    std::stringstream ss;
-
-    if (sign < 0) {
-      ss << "-";
+    if (sign > 0) {
+      return base::ToString();
+    } else {
+      return "-" + Abs().ToString();
     }
-
-    int idx = bits32.size() - 1;
-    while (bits32[idx] == 0) --idx;
-
-    do {
-      uint64 add = 0;
-      for (int i = idx; i > 0; --i) {
-        const uint64 x = add + bits32[i];
-        const uint64 next_add = (x % output_mod) << 32;
-        bits32[i] = static_cast<unsigned>(x / output_mod);
-        add = next_add;
-      }
-      uint64 x = add + bits32[0];
-      bits32[0] = static_cast<unsigned>(x / output_mod);
-      mods.push_back(x % output_mod);
-      while (idx >= 0 && bits32[idx] == 0) --idx;
-    } while (idx >= 0);
-
-    idx = static_cast<int>(mods.size()) - 1;
-    char buff[32];
-    sprintf(buff, "%u", mods[idx--]);
-    ss << buff;
-    for (; idx >= 0; --idx) {
-      sprintf(buff, "%09u", mods[idx]);
-      ss << buff;
-    }
-    return ss.str();
   }
 
   std::string to_string() const { return ToString(); }
 
   ExtendedSignedIntImpl Difference(const ExtendedSignedIntImpl& other) const {
-    int t = UIntCompareTo(other);
-    if (t == 0) {
-      return 0;
-    }
-    if (t > 0) {
-      ET x = hi_ - other.hi_;
-      ET y;
-      if (low_ >= other.low_) {
-        y = low_ - other.low_;
-      } else {
-        y = low_ - other.low_;
-        --x;
-      }
-      return ExtendedSignedIntImpl(y, x);
-    } else {
-      ET x = other.hi_ - hi_;
-      ET y;
-      if (other.low_ >= low_) {
-        y = other.low_ - low_;
-      } else {
-        y = other.low_ - low_;
-        --x;
-      }
-      return ExtendedSignedIntImpl(y, x);
-    }
+    auto t = base::Difference(other);
+    return ExtendedSignedIntImpl(t.low(), t.hi());
   }
 
  public:
   // Operators
-  const ExtendedSignedIntImpl& operator+() const { return *this; }
+  ExtendedSignedIntImpl operator+() const { return *this; }
 
-  const ExtendedSignedIntImpl& operator-() const {
+  ExtendedSignedIntImpl operator-() const {
     ExtendedSignedIntImpl ret(*this);
-    FlipBits();
-    AddOne();
+    base::FlipBits();
+    base::AddOne();
     return ret;
   }
 
   ExtendedSignedIntImpl operator~() const {
-    return ExtendedSignedIntImpl(~low_, ~hi_);
+    return ExtendedSignedIntImpl(~base::low_, ~base::hi_);
   }
 
   ExtendedSignedIntImpl& operator+=(const ExtendedSignedIntImpl& other) {
-    if (IsZero()) {
-      low_ = other.low_;
-      hi_ = other.hi_;
-      return *this;
-    }
-
-    if (!other.IsZero()) {
-      ET x = other.low_ + low_;
-      ET y = other.hi_ + hi_;
-      if (!other.low_.IsZero() && !low_.IsZero() &&
-          (x < other.low_ || x < low_)) {
-        ++y;
-      }
-      low_ = x;
-      hi_ = y;
-    }
+    base::AddedBy(other);
     return *this;
   }
 
@@ -1729,35 +819,25 @@ struct ExtendedSignedIntImpl<ET, false> {
 
   ExtendedSignedIntImpl& operator*=(const ExtendedSignedIntImpl& other) {
     if (IsZero() || other.IsZero()) {
-      low_.MakeZeroBits();
-      hi_.MakeZeroBits();
+      base::low_.MakeZeroBits();
+      base::hi_.MakeZeroBits();
       return *this;
     }
 
     int s1 = IntSign();
     int s2 = other.IntSign();
-    ExtendedSignedIntImpl v1 = s1 > 0 ? *this : Abs();
-    ExtendedSignedIntImpl v2 = s2 > 0 ? other : other.Abs();
 
-    ET t[4];
-    for (int i = 0; i < 4; ++i)
-      for (int j = 0; j + i < 4; ++j) {
-        ET carry = v1.GetQuarter(i) * v2.GetQuarter(j);
-        for (int now = i + j; now < 4; ++now) {
-          ET x = ET(t[now]) + ET(carry.low());
-          t[now] = x.low();
-          carry = ET(x.hi()) + ET(carry.hi());
-          if (carry.IsZero()) {
-            break;
-          }
-        }
-      }
-    low_ = t[0] | (t[1] << quarter_bitcount);
-    hi_ = t[2] | (t[3] << quarter_bitcount);
+    MakeAbs();
+
+    if (s2 > 0) {
+      this->base::operator*=(other);
+    } else {
+      this->base::operator*=(other.Abs());
+    }
 
     if (s1 * s2 < 0) {
-      FlipBits();
-      AddOne();
+      base::FlipBits();
+      base::AddOne();
     }
 
     return *this;
@@ -1802,8 +882,8 @@ struct ExtendedSignedIntImpl<ET, false> {
   }
 
   ExtendedSignedIntImpl& operator&=(const ExtendedSignedIntImpl& other) {
-    low_ &= other.low_;
-    hi_ &= other.hi_;
+    base::low_ &= other.low();
+    base::hi_ &= other.hi();
     return *this;
   }
 
@@ -1818,8 +898,8 @@ struct ExtendedSignedIntImpl<ET, false> {
   }
 
   ExtendedSignedIntImpl& operator^=(const ExtendedSignedIntImpl& other) {
-    low_ ^= other.low_;
-    hi_ ^= other.hi_;
+    base::low_ ^= other.low();
+    base::hi_ ^= other.hi();
     return *this;
   }
 
@@ -1834,8 +914,8 @@ struct ExtendedSignedIntImpl<ET, false> {
   }
 
   ExtendedSignedIntImpl& operator|=(const ExtendedSignedIntImpl& other) {
-    low_ |= other.low_;
-    hi_ |= other.hi_;
+    base::low_ |= other.low();
+    base::hi_ |= other.hi();
     return *this;
   }
 
@@ -1850,67 +930,39 @@ struct ExtendedSignedIntImpl<ET, false> {
   }
 
   ExtendedSignedIntImpl& operator>>=(int cnt) {
-    if (IntSign() >= 0) {
-      if (cnt >= bitcount) {
-        low_ = hi_ = 0;
-      } else if (cnt >= half_bitcount) {
-        low_ = hi_ >> (cnt - half_bitcount);
-        hi_ = 0;
-      } else {
-        ET mask = (static_cast<ET>(1) << cnt) - 1;
-        ET t = hi_ & mask;
-        hi_ >>= cnt;
-        low_ >>= cnt;
-        low_ |= t << (half_bitcount - cnt);
-      }
-    } else {
-      FlipBits();
-      AddOne();
-      *this >>= cnt;
-      FlipBits();
-      AddOne();
-    }
+    base::ArithmeticShiftRight(cnt);
     return *this;
   }
 
   ExtendedSignedIntImpl& operator<<=(int cnt) {
-    if (cnt >= bitcount) {
-      low_ = hi_ = 0;
-    } else if (cnt >= half_bitcount) {
-      hi_ = low_ << (cnt - half_bitcount);
-      low_ = 0;
-    } else {
-      ET t = low_ >> (half_bitcount - cnt);
-      hi_ = hi_ << cnt | t;
-      low_ <<= cnt;
-    }
+    base::ShiftLeft(cnt);
     return *this;
   }
 
   ExtendedSignedIntImpl& operator++() {
-    *this += 1;
+    base::AddOne();
     return *this;
   }
 
   ExtendedSignedIntImpl operator++(int) {
     ExtendedSignedIntImpl ret(*this);
-    *this += 1;
+    ++*this;
     return ret;
   }
 
   ExtendedSignedIntImpl& operator--() {
-    if (!low_.IsZero()) {
-      --low_;
+    if (!base::low_.IsZero()) {
+      --base::low_;
     } else {
-      --low_;
-      --hi_;
+      --base::low_;
+      --base::hi_;
     }
     return *this;
   }
 
   ExtendedSignedIntImpl operator--(int) {
     ExtendedSignedIntImpl ret(*this);
-    *this -= 1;
+    --*this;
     return ret;
   }
 
@@ -2020,10 +1072,6 @@ struct ExtendedSignedIntImpl<ET, false> {
                                          const ExtendedSignedIntImpl& n) {
     return o << n.ToString();
   }
-
- private:
-  ET low_;
-  ET hi_;
 };
 
 template <typename ET, bool is_native_integer>
@@ -2127,6 +1175,17 @@ SL REQUIRES((pe::is_native_integer<T2>::value))
   }
   return ret;
 }
+
+template <typename ET>
+using ExtendedSignedInt =
+    ExtendedSignedIntImpl<ET, is_native_integer<ET>::value>;
+
+#if PE_HAS_CPP20
+static_assert(PeNumberUtil<ExtendedSignedInt<uint64>>);
+#if PE_HAS_INT128
+static_assert(PeNumberUtil<ExtendedSignedInt<uint128>>);
+#endif
+#endif
 }  // namespace pe
 
 #endif

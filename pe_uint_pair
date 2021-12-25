@@ -76,7 +76,24 @@ struct UIntPairImpl<ET, true> {
   UIntPairImpl(const UIntPairImpl& other) : low_(other.low_), hi_(other.hi_) {}
 
   UIntPairImpl(const std::string& str) {
-    // TODO(baihacker): implement it
+    const int n = static_cast<int>(str.size());
+    if (n == 0) return;
+    int idx = 0;
+    int neg = 0;
+    if (str[idx] == '-') {
+      ++idx;
+      neg = 1;
+    } else if (str[idx] == '+') {
+      ++idx;
+    }
+    while (idx < n && std::isdigit(str[idx])) {
+      *this = *this * 10 + (str[idx] - '0');
+      ++idx;
+    }
+    if (neg) {
+      FlipBits();
+      AddOne();
+    }
   }
 
   UIntPairImpl& operator=(const UIntPairImpl& other) {
@@ -281,7 +298,7 @@ struct UIntPairImpl<ET, true> {
     }
   }
 
-  UIntPairImpl& UIntAddedBy(const UIntPairImpl& other) {
+  UIntPairImpl& AddedBy(const UIntPairImpl& other) {
     if (IsZero()) {
       low_ = other.low();
       hi_ = other.hi();
@@ -300,7 +317,7 @@ struct UIntPairImpl<ET, true> {
     return *this;
   }
 
-  UIntPairImpl& UIntAddedBy(const ET& other) {
+  UIntPairImpl& AddedBy(const ET& other) {
     if (IsZero()) {
       low_ = other;
       hi_ = 0;
@@ -319,7 +336,7 @@ struct UIntPairImpl<ET, true> {
     return *this;
   }
 
-  UIntPairImpl& UIntSubstract(const UIntPairImpl& other) {
+  UIntPairImpl& Substract(const UIntPairImpl& other) {
     if (other.IsZero()) {
       return *this;
     }
@@ -332,7 +349,7 @@ struct UIntPairImpl<ET, true> {
       return *this;
     }
 
-    int t = UIntCompareTo(other);
+    int t = CompareTo(other);
     if (t == 0) {
       low_ = hi_ = 0;
       return *this;
@@ -349,7 +366,7 @@ struct UIntPairImpl<ET, true> {
     return *this;
   }
 
-  UIntPairImpl& UIntSubstract(const ET& other) {
+  UIntPairImpl& Substract(const ET& other) {
     if (other == 0) {
       return *this;
     }
@@ -378,9 +395,9 @@ struct UIntPairImpl<ET, true> {
     return *this;
   }
 
-  static std::vector<uint32_t> UIntDivImplInternal(
-      const std::vector<uint32_t>& l, const std::vector<uint32_t>& r,
-      std::vector<uint32_t>& remain) {
+  static std::vector<uint32_t> DivideInternal(const std::vector<uint32_t>& l,
+                                              const std::vector<uint32_t>& r,
+                                              std::vector<uint32_t>& remain) {
     std::vector<uint32_t> result;
     remain = l;
 
@@ -446,7 +463,7 @@ struct UIntPairImpl<ET, true> {
     return result;
   }
 
-  UIntPairImpl& UIntDividedBy(const UIntPairImpl& other) {
+  UIntPairImpl& DividedBy(const UIntPairImpl& other) {
     if (IsZero()) {
       return *this;
     }
@@ -456,7 +473,7 @@ struct UIntPairImpl<ET, true> {
       return *this;
     }
 
-    int t = UIntCompareTo(other);
+    int t = CompareTo(other);
     if (t == 0) {
       low_ = 1;
       hi_ = 0;
@@ -476,14 +493,14 @@ struct UIntPairImpl<ET, true> {
     std::vector<uint32_t> remain;
 
     std::vector<uint32_t> result =
-        UIntDivImplInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
+        DivideInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
 
     FromBinaryVector(result);
 
     return *this;
   }
 
-  UIntPairImpl& UIntDividedBy(const UIntPairImpl& other, UIntPairImpl& r) {
+  UIntPairImpl& DividedBy(const UIntPairImpl& other, UIntPairImpl& r) {
     if (IsZero()) {
       r = 0;
       return *this;
@@ -517,7 +534,7 @@ struct UIntPairImpl<ET, true> {
     std::vector<uint32_t> remain;
 
     std::vector<uint32_t> result =
-        UIntDivImplInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
+        DivideInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
 
     FromBinaryVector(result);
     r.FromBinaryVector(remain);
@@ -525,7 +542,7 @@ struct UIntPairImpl<ET, true> {
     return *this;
   }
 
-  UIntPairImpl& UIntModulo(const UIntPairImpl& other) {
+  UIntPairImpl& Modulo(const UIntPairImpl& other) {
     if (IsZero()) {
       return *this;
     }
@@ -536,7 +553,7 @@ struct UIntPairImpl<ET, true> {
       return *this;
     }
 
-    int t = UIntCompareTo(other);
+    int t = CompareTo(other);
     if (t == 0) {
       low_ = hi_ = 0;
       return *this;
@@ -553,14 +570,14 @@ struct UIntPairImpl<ET, true> {
 
     std::vector<uint32_t> remain;
 
-    UIntDivImplInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
+    DivideInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
 
     FromBinaryVector(remain);
 
     return *this;
   }
 
-  UIntPairImpl& UIntMultiplyBy(const UIntPairImpl& other) {
+  UIntPairImpl& MultipliedBy(const UIntPairImpl& other) {
     if (IsZero() || other.IsZero()) {
       low_ = hi_ = 0;
       return *this;
@@ -584,7 +601,7 @@ struct UIntPairImpl<ET, true> {
     return *this;
   }
 
-  UIntPairImpl& UIntMultiplyBy(const ET& other) {
+  UIntPairImpl& MultipliedBy(const ET& other) {
     if (IsZero() || other == 0) {
       low_ = hi_ = 0;
       return *this;
@@ -619,7 +636,7 @@ struct UIntPairImpl<ET, true> {
 
   int sign() const { return low_ || hi_ ? 1 : 0; }
 
-  int UIntCompareTo(const UIntPairImpl& other) const {
+  int CompareTo(const UIntPairImpl& other) const {
     if (hi_ != other.hi_) {
       return hi_ < other.hi_ ? -1 : hi_ > other.hi_;
     } else {
@@ -772,7 +789,7 @@ struct UIntPairImpl<ET, true> {
   std::string to_string() const { return ToString(); }
 
   UIntPairImpl Difference(const UIntPairImpl& other) const {
-    int t = UIntCompareTo(other);
+    int t = CompareTo(other);
     if (t == 0) {
       return 0;
     }
@@ -813,46 +830,44 @@ struct UIntPairImpl<ET, true> {
   UIntPairImpl operator~() const { return UIntPairImpl(~low_, ~hi_); }
 
   UIntPairImpl& operator+=(const UIntPairImpl& other) {
-    UIntAddedBy(other);
+    AddedBy(other);
     return *this;
   }
 
   UIntPairImpl& operator+=(const ET& other) {
-    UIntAddedBy(other);
+    AddedBy(other);
     return *this;
   }
 
   UIntPairImpl& operator-=(const UIntPairImpl& other) {
-    UIntSubstract(other);
+    Substract(other);
     return *this;
   }
 
   UIntPairImpl& operator-=(const ET& other) {
-    UIntSubstract(other);
+    Substract(other);
     return *this;
   }
 
   UIntPairImpl& operator*=(const UIntPairImpl& other) {
-    UIntMultiplyBy(other);
+    MultipliedBy(other);
     return *this;
   }
 
   UIntPairImpl& operator*=(const ET& other) {
-    UIntMultiplyBy(other);
+    MultipliedBy(other);
     return *this;
   }
 
   UIntPairImpl& operator/=(const UIntPairImpl& other) {
-    return UIntDividedBy(other);
+    return DividedBy(other);
   }
 
   UIntPairImpl& operator/=(const ET& other) {
     return *this /= UIntPairImpl(other);
   }
 
-  UIntPairImpl& operator%=(const UIntPairImpl& other) {
-    return UIntModulo(other);
-  }
+  UIntPairImpl& operator%=(const UIntPairImpl& other) { return Modulo(other); }
 
   UIntPairImpl& operator%=(const ET& other) {
     return *this %= UIntPairImpl(other);
@@ -1085,7 +1100,24 @@ struct UIntPairImpl<ET, false> {
   }
 
   UIntPairImpl(const std::string& str) {
-    // TODO(baihacker): implement it
+    const int n = static_cast<int>(str.size());
+    if (n == 0) return;
+    int idx = 0;
+    int neg = 0;
+    if (str[idx] == '-') {
+      ++idx;
+      neg = 1;
+    } else if (str[idx] == '+') {
+      ++idx;
+    }
+    while (idx < n && std::isdigit(str[idx])) {
+      *this = *this * 10 + (str[idx] - '0');
+      ++idx;
+    }
+    if (neg) {
+      FlipBits();
+      AddOne();
+    }
   }
 
   UIntPairImpl(const UIntPairImpl& other) : low_(other.low_), hi_(other.hi_) {}
@@ -1254,7 +1286,7 @@ struct UIntPairImpl<ET, false> {
       }
   }
 
-  UIntPairImpl& UIntAddedBy(const UIntPairImpl& other) {
+  UIntPairImpl& AddedBy(const UIntPairImpl& other) {
     if (IsZero()) {
       low_ = other.low();
       hi_ = other.hi();
@@ -1274,7 +1306,7 @@ struct UIntPairImpl<ET, false> {
     return *this;
   }
 
-  UIntPairImpl& UIntSubstract(const UIntPairImpl& other) {
+  UIntPairImpl& Substract(const UIntPairImpl& other) {
     if (other.IsZero()) {
       return *this;
     }
@@ -1287,7 +1319,7 @@ struct UIntPairImpl<ET, false> {
       return *this;
     }
 
-    int t = UIntCompareTo(other);
+    int t = CompareTo(other);
     if (t == 0) {
       low_.MakeZeroBits();
       hi_.MakeZeroBits();
@@ -1305,7 +1337,7 @@ struct UIntPairImpl<ET, false> {
     return *this;
   }
 
-  UIntPairImpl& UIntMultiplyBy(const UIntPairImpl& other) {
+  UIntPairImpl& MultipliedBy(const UIntPairImpl& other) {
     if (IsZero() || other.IsZero()) {
       low_.MakeZeroBits();
       hi_.MakeZeroBits();
@@ -1330,9 +1362,9 @@ struct UIntPairImpl<ET, false> {
     return *this;
   }
 
-  static std::vector<uint32_t> UIntDivImplInternal(
-      const std::vector<uint32_t>& l, const std::vector<uint32_t>& r,
-      std::vector<uint32_t>& remain) {
+  static std::vector<uint32_t> DivideInternal(const std::vector<uint32_t>& l,
+                                              const std::vector<uint32_t>& r,
+                                              std::vector<uint32_t>& remain) {
     std::vector<uint32_t> result;
     remain = l;
 
@@ -1398,7 +1430,7 @@ struct UIntPairImpl<ET, false> {
     return result;
   }
 
-  UIntPairImpl& UIntDividedBy(const UIntPairImpl& other) {
+  UIntPairImpl& DividedBy(const UIntPairImpl& other) {
     if (IsZero()) {
       return *this;
     }
@@ -1408,7 +1440,7 @@ struct UIntPairImpl<ET, false> {
       return *this;
     }
 
-    int t = UIntCompareTo(other);
+    int t = CompareTo(other);
     if (t == 0) {
       low_ = 1;
       hi_.MakeZeroBits();
@@ -1429,14 +1461,14 @@ struct UIntPairImpl<ET, false> {
     std::vector<uint32_t> remain;
 
     std::vector<uint32_t> result =
-        UIntDivImplInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
+        DivideInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
 
     FromBinaryVector(result);
 
     return *this;
   }
 
-  UIntPairImpl& UIntDividedBy(const UIntPairImpl& other, UIntPairImpl& r) {
+  UIntPairImpl& DividedBy(const UIntPairImpl& other, UIntPairImpl& r) {
     if (IsZero()) {
       r.MakeZeroBits();
       return *this;
@@ -1471,7 +1503,7 @@ struct UIntPairImpl<ET, false> {
     std::vector<uint32_t> remain;
 
     std::vector<uint32_t> result =
-        UIntDivImplInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
+        DivideInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
 
     FromBinaryVector(result);
     r.FromBinaryVector(remain);
@@ -1479,7 +1511,7 @@ struct UIntPairImpl<ET, false> {
     return *this;
   }
 
-  UIntPairImpl& UIntModulo(const UIntPairImpl& other) {
+  UIntPairImpl& Modulo(const UIntPairImpl& other) {
     if (IsZero()) {
       return *this;
     }
@@ -1491,7 +1523,7 @@ struct UIntPairImpl<ET, false> {
       return *this;
     }
 
-    int t = UIntCompareTo(other);
+    int t = CompareTo(other);
     if (t == 0) {
       low_.MakeZeroBits();
       hi_.MakeZeroBits();
@@ -1509,7 +1541,7 @@ struct UIntPairImpl<ET, false> {
 
     std::vector<uint32_t> remain;
 
-    UIntDivImplInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
+    DivideInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
 
     FromBinaryVector(remain);
 
@@ -1527,12 +1559,12 @@ struct UIntPairImpl<ET, false> {
 
   int sign() const { return low_.IsZero() || hi_.IsZero() ? 1 : 0; }
 
-  int UIntCompareTo(const UIntPairImpl& other) const {
-    int t = hi_.UIntCompareTo(other.hi_);
+  int CompareTo(const UIntPairImpl& other) const {
+    int t = hi_.CompareTo(other.hi_);
     if (t != 0) {
       return t;
     }
-    return low_.UIntCompareTo(other.low_);
+    return low_.CompareTo(other.low_);
   }
 
   int IntSign() const { return low_.IsZero() || hi_.IsZero() ? 1 : 0; }
@@ -1651,7 +1683,7 @@ struct UIntPairImpl<ET, false> {
   std::string to_string() const { return ToString(); }
 
   UIntPairImpl Difference(const UIntPairImpl& other) const {
-    int t = UIntCompareTo(other);
+    int t = CompareTo(other);
     if (t == 0) {
       return 0;
     }
@@ -1680,21 +1712,19 @@ struct UIntPairImpl<ET, false> {
 
  public:
   // Operators
-  const UIntPairImpl& operator+() const { return *this; }
+  UIntPairImpl operator+() const { return *this; }
 
-  const UIntPairImpl& operator-() const {
+  UIntPairImpl operator-() const {
     UIntPairImpl ret(*this);
     FlipBits();
     AddOne();
     return ret;
   }
 
-  UIntPairImpl operator~() const {
-    return UIntPairImpl(~low_, ~hi_);
-  }
+  UIntPairImpl operator~() const { return UIntPairImpl(~low_, ~hi_); }
 
   UIntPairImpl& operator+=(const UIntPairImpl& other) {
-    UIntAddedBy(other);
+    AddedBy(other);
     return *this;
   }
 
@@ -1709,7 +1739,7 @@ struct UIntPairImpl<ET, false> {
   }
 
   UIntPairImpl& operator-=(const UIntPairImpl& other) {
-    UIntSubstract(other);
+    Substract(other);
     return *this;
   }
 
@@ -1724,7 +1754,7 @@ struct UIntPairImpl<ET, false> {
   }
 
   UIntPairImpl& operator*=(const UIntPairImpl& other) {
-    UIntMultiplyBy(other);
+    MultipliedBy(other);
     return *this;
   }
 
@@ -1739,7 +1769,7 @@ struct UIntPairImpl<ET, false> {
   }
 
   UIntPairImpl& operator/=(const UIntPairImpl& other) {
-    return DivImpl(other);
+    return DividedBy(other);
   }
 
   UIntPairImpl& operator/=(const ET& other) {
@@ -1752,9 +1782,7 @@ struct UIntPairImpl<ET, false> {
     return *this /= UIntPairImpl(other);
   }
 
-  UIntPairImpl& operator%=(const UIntPairImpl& other) {
-    return ModImpl(other);
-  }
+  UIntPairImpl& operator%=(const UIntPairImpl& other) { return Modulo(other); }
 
   UIntPairImpl& operator%=(const ET& other) {
     return *this %= UIntPairImpl(other);
@@ -1855,100 +1883,89 @@ struct UIntPairImpl<ET, false> {
   // All the binary operators are friend operators
   // Comparison operators
 #if PE_HAS_CPP20
-  friend inline int operator<=>(const UIntPairImpl& l,
-                                const UIntPairImpl& r) {
+  friend inline int operator<=>(const UIntPairImpl& l, const UIntPairImpl& r) {
     return l.CompareTo(r);
   }
-  friend inline int operator==(const UIntPairImpl& l,
-                               const UIntPairImpl& r) {
+  friend inline int operator==(const UIntPairImpl& l, const UIntPairImpl& r) {
     return l.CompareTo(r) == 0;
   }
-  friend inline int operator!=(const UIntPairImpl& l,
-                               const UIntPairImpl& r) {
+  friend inline int operator!=(const UIntPairImpl& l, const UIntPairImpl& r) {
     return l.CompareTo(r) != 0;
   }
 #else
-  friend inline int operator<(const UIntPairImpl& l,
-                              const UIntPairImpl& r) {
+  friend inline int operator<(const UIntPairImpl& l, const UIntPairImpl& r) {
     return l.CompareTo(r) < 0;
   }
-  friend inline int operator<=(const UIntPairImpl& l,
-                               const UIntPairImpl& r) {
+  friend inline int operator<=(const UIntPairImpl& l, const UIntPairImpl& r) {
     return l.CompareTo(r) <= 0;
   }
-  friend inline int operator>(const UIntPairImpl& l,
-                              const UIntPairImpl& r) {
+  friend inline int operator>(const UIntPairImpl& l, const UIntPairImpl& r) {
     return l.CompareTo(r) > 0;
   }
-  friend inline int operator>=(const UIntPairImpl& l,
-                               const UIntPairImpl& r) {
+  friend inline int operator>=(const UIntPairImpl& l, const UIntPairImpl& r) {
     return l.CompareTo(r) >= 0;
   }
-  friend inline int operator==(const UIntPairImpl& l,
-                               const UIntPairImpl& r) {
+  friend inline int operator==(const UIntPairImpl& l, const UIntPairImpl& r) {
     return l.CompareTo(r) == 0;
   }
-  friend inline int operator!=(const UIntPairImpl& l,
-                               const UIntPairImpl& r) {
+  friend inline int operator!=(const UIntPairImpl& l, const UIntPairImpl& r) {
     return l.CompareTo(r) != 0;
   }
 #endif
-  friend inline UIntPairImpl operator+(
-      const UIntPairImpl& l, const UIntPairImpl& r) {
+  friend inline UIntPairImpl operator+(const UIntPairImpl& l,
+                                       const UIntPairImpl& r) {
     UIntPairImpl ret(l);
     ret += r;
     return ret;
   }
-  friend inline UIntPairImpl operator-(
-      const UIntPairImpl& l, const UIntPairImpl& r) {
+  friend inline UIntPairImpl operator-(const UIntPairImpl& l,
+                                       const UIntPairImpl& r) {
     UIntPairImpl ret(l);
     ret -= r;
     return ret;
   }
-  friend inline UIntPairImpl operator*(
-      const UIntPairImpl& l, const UIntPairImpl& r) {
+  friend inline UIntPairImpl operator*(const UIntPairImpl& l,
+                                       const UIntPairImpl& r) {
     UIntPairImpl ret(l);
     ret *= r;
     return ret;
   }
-  friend inline UIntPairImpl operator/(
-      const UIntPairImpl& l, const UIntPairImpl& r) {
+  friend inline UIntPairImpl operator/(const UIntPairImpl& l,
+                                       const UIntPairImpl& r) {
     UIntPairImpl ret(l);
     ret /= r;
     return ret;
   }
-  friend inline UIntPairImpl operator%(
-      const UIntPairImpl& l, const UIntPairImpl& r) {
+  friend inline UIntPairImpl operator%(const UIntPairImpl& l,
+                                       const UIntPairImpl& r) {
     UIntPairImpl ret(l);
     ret %= r;
     return ret;
   }
-  friend inline UIntPairImpl operator&(
-      const UIntPairImpl& l, const UIntPairImpl& r) {
+  friend inline UIntPairImpl operator&(const UIntPairImpl& l,
+                                       const UIntPairImpl& r) {
     UIntPairImpl ret(l);
     ret &= r;
     return ret;
   }
-  friend inline UIntPairImpl operator^(
-      const UIntPairImpl& l, const UIntPairImpl& r) {
+  friend inline UIntPairImpl operator^(const UIntPairImpl& l,
+                                       const UIntPairImpl& r) {
     UIntPairImpl ret(l);
     ret ^= r;
     return ret;
   }
-  friend inline UIntPairImpl operator|(
-      const UIntPairImpl& l, const UIntPairImpl& r) {
+  friend inline UIntPairImpl operator|(const UIntPairImpl& l,
+                                       const UIntPairImpl& r) {
     UIntPairImpl ret(l);
     ret |= r;
     return ret;
   }
-  friend inline UIntPairImpl operator<<(
-      const UIntPairImpl& l, const int cnt) {
+  friend inline UIntPairImpl operator<<(const UIntPairImpl& l, const int cnt) {
     UIntPairImpl ret(l);
     ret <<= cnt;
     return ret;
   }
-  friend inline UIntPairImpl operator>>(
-      const UIntPairImpl& l, const int cnt) {
+  friend inline UIntPairImpl operator>>(const UIntPairImpl& l, const int cnt) {
     UIntPairImpl ret(l);
     ret >>= cnt;
     return ret;
@@ -1962,6 +1979,116 @@ struct UIntPairImpl<ET, false> {
   ET low_;
   ET hi_;
 };
+
+template <typename ET, bool is_native_integer>
+SL int IsZero(const UIntPairImpl<ET, is_native_integer>& x) {
+  return x.IsZero();
+}
+
+template <typename ET, bool is_native_integer>
+SL int IntSign(const UIntPairImpl<ET, is_native_integer>& x) {
+  return x.IntSign();
+}
+
+template <typename ET, bool is_native_integer>
+SL int IsEven(const UIntPairImpl<ET, is_native_integer>& x) {
+  return x.IsEven();
+}
+
+template <typename ET, bool is_native_integer>
+SL int IsOdd(const UIntPairImpl<ET, is_native_integer>& x) {
+  return x.IsOdd();
+}
+
+template <typename ET, bool is_native_integer>
+SL unsigned int LowerBits(const UIntPairImpl<ET, is_native_integer>& x) {
+  return x.LowerBits();
+}
+
+template <typename ET, bool is_native_integer>
+SL UIntPairImpl<ET, is_native_integer> Abs(
+    const UIntPairImpl<ET, is_native_integer>& x) {
+  return x;
+}
+
+template <typename ET, bool is_native_integer>
+SL UIntPairImpl<ET, is_native_integer> FAbs(
+    const UIntPairImpl<ET, is_native_integer>& x) {
+  return x;
+}
+
+template <typename ET, bool is_native_integer>
+SL int SameParity(const UIntPairImpl<ET, is_native_integer>& l,
+                  const UIntPairImpl<ET, is_native_integer>& r) {
+  return SameParity(l.LowerBits(), r.LowerBits());
+}
+
+template <typename ET, bool is_native_integer>
+SL std::tuple<UIntPairImpl<ET, is_native_integer>,
+              UIntPairImpl<ET, is_native_integer>>
+Div(const UIntPairImpl<ET, is_native_integer>& l,
+    const UIntPairImpl<ET, is_native_integer>& r) {
+  UIntPairImpl<ET, is_native_integer> remain;
+  UIntPairImpl<ET, is_native_integer> d(l);
+  d.DivImpl(r, remain);
+  return {d, remain};
+}
+
+template <typename T, typename ET, bool is_native_integer>
+SL T ToInt(const UIntPairImpl<ET, is_native_integer>& x) {
+  return x.template ToInt<T>();
+}
+
+template <typename T, typename ET, bool is_native_integer>
+SL T ToFloat(const UIntPairImpl<ET, is_native_integer>& x) {
+  return x.template ToFloat<T>();
+}
+
+template <typename ET, bool is_native_integer>
+SL std::string ToString(const UIntPairImpl<ET, is_native_integer>& x) {
+  return x.ToString();
+}
+
+template <typename ET, bool is_native_integer>
+SL std::string to_string(const UIntPairImpl<ET, is_native_integer>& x) {
+  return ToString(x);
+}
+
+template <typename ET, bool is_native_integer, typename T2>
+SL REQUIRES((pe::is_native_integer<T2>::value))
+    RETURN(UIntPairImpl<ET, is_native_integer>)
+        Power(UIntPairImpl<ET, is_native_integer> x, T2 n) {
+  PE_ASSERT(n >= 0);
+  UIntPairImpl<ET, is_native_integer> ret = 1;
+  for (; n > 0; n >>= 1) {
+    if (n & 1) ret *= x;
+    if (n > 1) x *= x;
+  }
+  return ret;
+}
+
+template <typename ET, bool is_native_integer, typename T2, typename T3>
+SL REQUIRES((pe::is_native_integer<T2>::value))
+    RETURN(UIntPairImpl<ET, is_native_integer>)
+        Power(UIntPairImpl<ET, is_native_integer> x, T2 n, T3 mod) {
+  PE_ASSERT(n >= 0);
+  UIntPairImpl<ET, is_native_integer> ret = 1;
+  for (; n > 0; n >>= 1) {
+    if (n & 1) ret = ret * x % mod;
+    if (n > 1) x = x * x % mod;
+  }
+  return ret;
+}
+
+template <typename ET>
+using UIntPair = UIntPairImpl<ET, is_native_integer<ET>::value>;
+
+#if PE_HAS_CPP20
+static_assert(PeNumberUtil<UIntPair<uint64>>);
+#if PE_HAS_INT128
+static_assert(PeNumberUtil<UIntPair<uint128>>);
+#endif
+#endif
 }  // namespace pe
 
 #endif

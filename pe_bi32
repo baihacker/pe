@@ -1085,7 +1085,15 @@ class BigInteger {
   }
 
   BigInteger& operator*=(const BigInteger& other) {
-    *this = *this * other;
+    if (IsZero() || other.IsZero()) {
+      pos_ = 0;
+      data_[0] = 0;
+      sign_ = 0;
+    } else {
+      const int s = sign() * (other > 0 ? 1 : -1);
+      AbsMultipliedBy(other);
+      sign_ = s;
+    }
     return *this;
   }
 
@@ -1103,8 +1111,10 @@ class BigInteger {
     }
     using unsignedT = typename pe_make_unsigned<T>::type;
     unsignedT abs_value = GetAbsValue(other);
+    const int s = sign_ * (other > 0 ? 1 : -1);
     AbsMultipliedBy(abs_value);
-    sign_ = sign_ * (other > 0 ? 1 : -1);
+    sign_ = s;
+
     return *this;
   }
 
@@ -1317,12 +1327,8 @@ class BigInteger {
       operator*(const BigInteger& l, T r) {
     if (r == 0 || l.IsZero()) return 0;
 
-    using unsignedT = typename pe_make_unsigned<T>::type;
-    unsignedT abs_value = BigInteger::GetAbsValue(r);
-    const int s = l.sign() * (r > 0 ? 1 : -1);
     BigInteger ret(l);
-    ret.AbsMultipliedBy(abs_value);
-    ret.sign_ = s;
+    ret *= r;
 
     return ret;
   }
@@ -1333,7 +1339,12 @@ class BigInteger {
        !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
       RETURN(BigInteger)
       operator*(T l, const BigInteger& r) {
-    return r * l;
+    if (l == 0 || r.IsZero()) return 0;
+
+    BigInteger ret(l);
+    ret *= r;
+
+    return ret;
   }
 
   friend inline BigInteger operator/(const BigInteger& l, const BigInteger& r) {

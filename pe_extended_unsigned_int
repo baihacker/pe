@@ -15,6 +15,22 @@ namespace pe {
 template <typename ET, bool is_native>
 struct ExtendedUnsignedIntImpl;
 
+template <typename ET, bool is_native>
+struct ExtractETImpl;
+
+template <typename ET>
+struct ExtractETImpl<ET, true> {
+  using type = typename pe::pe_make_unsigned<ET>::type;
+};
+
+template <typename ET>
+struct ExtractETImpl<ET, false> {
+  using type = typename ET::UnsignedT;
+};
+
+template <typename ET>
+struct ExtractET : public ExtractETImpl<ET, is_native_integer<ET>::value> {};
+
 template <typename ET>
 struct ExtendedUnsignedIntImpl<ET, true> {
   constexpr static int quarter_bitcount = sizeof(ET) * 4;
@@ -28,6 +44,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
 
   // The corresponding native integer type.
   using NT = ET;
+  using UnsignedT = ExtendedUnsignedIntImpl<ET, true>;
 
  protected:
   template <typename T>
@@ -1075,6 +1092,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   constexpr static int bitcount = half_bitcount * 2;
 
   using NT = typename ET::NT;
+  using UnsignedT = ExtendedUnsignedIntImpl<ET, false>;
 
  public:
   template <typename T>
@@ -2129,7 +2147,8 @@ SL REQUIRES((pe::is_native_integer<T2>::value))
 
 template <typename ET>
 using ExtendedUnsignedInt =
-    ExtendedUnsignedIntImpl<ET, is_native_integer<ET>::value>;
+    ExtendedUnsignedIntImpl<typename ExtractET<ET>::type,
+                            is_native_integer<ET>::value>;
 
 #if PE_HAS_CPP20
 static_assert(PeNumberUtil<ExtendedUnsignedInt<uint64>>);

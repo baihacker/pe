@@ -93,6 +93,7 @@ struct UIntPairImpl<ET, true> {
 
   UIntPairImpl& operator=(const ET& other) {
     low_ = other;
+    hi_ = 0;
     return *this;
   }
 
@@ -280,6 +281,103 @@ struct UIntPairImpl<ET, true> {
     }
   }
 
+  UIntPairImpl& UIntAddedBy(const UIntPairImpl& other) {
+    if (IsZero()) {
+      low_ = other.low();
+      hi_ = other.hi();
+      return *this;
+    }
+
+    if (!other.IsZero()) {
+      ET x = other.low() + low_;
+      ET y = other.hi() + hi_;
+      if (other.low_ && low_ && (x < other.low() || x < low_)) {
+        ++y;
+      }
+      low_ = x;
+      hi_ = y;
+    }
+    return *this;
+  }
+
+  UIntPairImpl& UIntAddedBy(const ET& other) {
+    if (IsZero()) {
+      low_ = other;
+      hi_ = 0;
+      return *this;
+    }
+
+    if (other) {
+      ET x = low_ + other;
+      ET y = hi_;
+      if (low_ && other && (x < low_ || x < other)) {
+        ++y;
+      }
+      low_ = x;
+      hi_ = y;
+    }
+    return *this;
+  }
+
+  UIntPairImpl& UIntSubstract(const UIntPairImpl& other) {
+    if (other.IsZero()) {
+      return *this;
+    }
+
+    if (IsZero()) {
+      low_ = other.low();
+      hi_ = other.hi();
+      FlipBits();
+      AddOne();
+      return *this;
+    }
+
+    int t = UIntCompareTo(other);
+    if (t == 0) {
+      low_ = hi_ = 0;
+      return *this;
+    } else {
+      UIntPairImpl d = Difference(other);
+      if (t < 0) {
+        d.FlipBits();
+        d.AddOne();
+      }
+      low_ = d.low();
+      hi_ = d.hi();
+    }
+
+    return *this;
+  }
+
+  UIntPairImpl& UIntSubstract(const ET& other) {
+    if (other == 0) {
+      return *this;
+    }
+
+    if (IsZero()) {
+      low_ = other;
+      FlipBits();
+      AddOne();
+      return *this;
+    }
+
+    int t = CompareTo(other);
+    if (t == 0) {
+      low_ = hi_ = 0;
+      return *this;
+    } else {
+      ExtendedUnsignedIntImpl d = Difference(other);
+      if (t < 0) {
+        d.FlipBits();
+        d.AddOne();
+      }
+      low_ = d.low();
+      hi_ = d.hi();
+    }
+
+    return *this;
+  }
+
   static std::vector<uint32_t> UIntDivImplInternal(
       const std::vector<uint32_t>& l, const std::vector<uint32_t>& r,
       std::vector<uint32_t>& remain) {
@@ -348,7 +446,7 @@ struct UIntPairImpl<ET, true> {
     return result;
   }
 
-  UIntPairImpl& UIntDivImpl(const UIntPairImpl& other) {
+  UIntPairImpl& UIntDividedBy(const UIntPairImpl& other) {
     if (IsZero()) {
       return *this;
     }
@@ -385,7 +483,7 @@ struct UIntPairImpl<ET, true> {
     return *this;
   }
 
-  UIntPairImpl& UIntDivImpl(const UIntPairImpl& other, UIntPairImpl& r) {
+  UIntPairImpl& UIntDividedBy(const UIntPairImpl& other, UIntPairImpl& r) {
     if (IsZero()) {
       r = 0;
       return *this;
@@ -427,7 +525,7 @@ struct UIntPairImpl<ET, true> {
     return *this;
   }
 
-  UIntPairImpl& UIntModImpl(const UIntPairImpl& other) {
+  UIntPairImpl& UIntModulo(const UIntPairImpl& other) {
     if (IsZero()) {
       return *this;
     }
@@ -462,6 +560,54 @@ struct UIntPairImpl<ET, true> {
     return *this;
   }
 
+  UIntPairImpl& UIntMultiplyBy(const UIntPairImpl& other) {
+    if (IsZero() || other.IsZero()) {
+      low_ = hi_ = 0;
+      return *this;
+    }
+    ET t[4] = {0};
+    for (int i = 0; i < 4; ++i)
+      for (int j = 0; j + i < 4; ++j) {
+        ET carry = GetQuarter(i) * other.GetQuarter(j);
+        for (int now = i + j; now < 4; ++now) {
+          ET x = t[now] + (carry & quarter_mask);
+          t[now] = x & quarter_mask;
+          carry = (x >> quarter_bitcount) + (carry >> quarter_bitcount);
+          if (carry == 0) {
+            break;
+          }
+        }
+      }
+    low_ = t[0] | (t[1] << quarter_bitcount);
+    hi_ = t[2] | (t[3] << quarter_bitcount);
+
+    return *this;
+  }
+
+  UIntPairImpl& UIntMultiplyBy(const ET& other) {
+    if (IsZero() || other == 0) {
+      low_ = hi_ = 0;
+      return *this;
+    }
+    ET t[4] = {0};
+    for (int i = 0; i < 4; ++i)
+      for (int j = 0; j < 2 && j + i < 4; ++j) {
+        ET carry = GetQuarter(i) *
+                   (j == 0 ? other & quarter_mask : other >> quarter_bitcount);
+        for (int now = i + j; now < 4; ++now) {
+          ET x = t[now] + (carry & quarter_mask);
+          t[now] = x & quarter_mask;
+          carry = (x >> quarter_bitcount) + (carry >> quarter_bitcount);
+          if (carry == 0) {
+            break;
+          }
+        }
+      }
+    low_ = t[0] | (t[1] << quarter_bitcount);
+    hi_ = t[2] | (t[3] << quarter_bitcount);
+    return *this;
+  }
+
  public:
   ET& low() { return low_; }
 
@@ -471,6 +617,8 @@ struct UIntPairImpl<ET, true> {
 
   ET hi() const { return hi_; }
 
+  int sign() const { return low_ || hi_ ? 1 : 0; }
+
   int UIntCompareTo(const UIntPairImpl& other) const {
     if (hi_ != other.hi_) {
       return hi_ < other.hi_ ? -1 : hi_ > other.hi_;
@@ -479,6 +627,8 @@ struct UIntPairImpl<ET, true> {
     }
   }
 
+  int IntSign() const { return low_ || hi_ ? 1 : 0; }
+
   int IsZero() const { return low_ == 0 && hi_ == 0; }
 
   int IsEven() const { return low_ & 1 ? 0 : 1; }
@@ -486,6 +636,10 @@ struct UIntPairImpl<ET, true> {
   int IsOdd() const { return low_ & 1 ? 1 : 0; }
 
   unsigned int LowerBits() const { return static_cast<uint32_t>(low_); }
+
+  UIntPairImpl Abs() const { return *this; }
+
+  UIntPairImpl FAbs() const { return *this; }
 
   template <typename T>
   REQUIRES((is_native_integer<T>::value && sizeof(T) <= sizeof(ET)))
@@ -499,6 +653,17 @@ struct UIntPairImpl<ET, true> {
     using unsignedT = typename pe_make_unsigned<T>::type;
     return static_cast<T>((static_cast<unsignedT>(hi_) << half_bitcount) |
                           static_cast<unsignedT>(low_));
+  }
+
+  template <typename T>
+  T ToFloat() const {
+    auto t = ToUInt32Vector();
+    const int size = t.size();
+    T r = 0;
+    for (int i = size - 1; i >= 0; --i) {
+      r = r * 4294967296 + t[i];
+    }
+    return r;
   }
 
   void SetBit(int idx) {
@@ -561,6 +726,50 @@ struct UIntPairImpl<ET, true> {
 
     return ret;
   }
+
+  std::string ToString() const {
+    const uint32_t output_mod = 1000000000;
+    if (IsZero()) {
+      return "0";
+    }
+    if (hi_ == 0) {
+      return pe::ToString(low_);
+    }
+
+    std::vector<uint32_t> bits32 = ToUInt32Vector();
+    std::vector<uint32_t> mods;
+
+    std::stringstream ss;
+
+    int idx = bits32.size() - 1;
+    while (bits32[idx] == 0) --idx;
+
+    do {
+      uint64 add = 0;
+      for (int i = idx; i > 0; --i) {
+        const uint64 x = add + bits32[i];
+        const uint64 next_add = (x % output_mod) << 32;
+        bits32[i] = static_cast<unsigned>(x / output_mod);
+        add = next_add;
+      }
+      uint64 x = add + bits32[0];
+      bits32[0] = static_cast<unsigned>(x / output_mod);
+      mods.push_back(x % output_mod);
+      while (idx >= 0 && bits32[idx] == 0) --idx;
+    } while (idx >= 0);
+
+    idx = static_cast<int>(mods.size()) - 1;
+    char buff[32];
+    sprintf(buff, "%u", mods[idx--]);
+    ss << buff;
+    for (; idx >= 0; --idx) {
+      sprintf(buff, "%09u", mods[idx]);
+      ss << buff;
+    }
+    return ss.str();
+  }
+
+  std::string to_string() const { return ToString(); }
 
   UIntPairImpl Difference(const UIntPairImpl& other) const {
     int t = UIntCompareTo(other);
@@ -649,6 +858,10 @@ struct UIntPairImpl<ET, false> {
     FromNativeInt<T>(v);
   }
 
+  UIntPairImpl(const std::string& str) {
+    // TODO(baihacker): implement it
+  }
+
   UIntPairImpl(const UIntPairImpl& other) : low_(other.low_), hi_(other.hi_) {}
 
   UIntPairImpl& operator=(const UIntPairImpl& other) {
@@ -665,6 +878,7 @@ struct UIntPairImpl<ET, false> {
 
   UIntPairImpl& operator=(const ET& other) {
     low_ = other;
+    hi_.MakeZeroBits();
     return *this;
   }
 
@@ -814,6 +1028,82 @@ struct UIntPairImpl<ET, false> {
       }
   }
 
+  UIntPairImpl& UIntAddedBy(const UIntPairImpl& other) {
+    if (IsZero()) {
+      low_ = other.low();
+      hi_ = other.hi();
+      return *this;
+    }
+
+    if (!other.IsZero()) {
+      ET x = other.low() + low_;
+      ET y = other.hi() + hi_;
+      if (!other.low().IsZero() && !low_.IsZero() &&
+          (x < other.low() || x < low_)) {
+        ++y;
+      }
+      low_ = x;
+      hi_ = y;
+    }
+    return *this;
+  }
+
+  UIntPairImpl& UIntSubstract(const UIntPairImpl& other) {
+    if (other.IsZero()) {
+      return *this;
+    }
+
+    if (IsZero()) {
+      low_ = other.low();
+      hi_ = other.hi();
+      FlipBits();
+      AddOne();
+      return *this;
+    }
+
+    int t = UIntCompareTo(other);
+    if (t == 0) {
+      low_.MakeZeroBits();
+      hi_.MakeZeroBits();
+      return *this;
+    } else {
+      UIntPairImpl d = Difference(other);
+      if (t < 0) {
+        d.FlipBits();
+        d.AddOne();
+      }
+      low_ = d.low_;
+      hi_ = d.hi_;
+    }
+
+    return *this;
+  }
+
+  UIntPairImpl& UIntMultiplyBy(const UIntPairImpl& other) {
+    if (IsZero() || other.IsZero()) {
+      low_.MakeZeroBits();
+      hi_.MakeZeroBits();
+      return *this;
+    }
+    ET t[4];
+    for (int i = 0; i < 4; ++i)
+      for (int j = 0; j + i < 4; ++j) {
+        ET carry = GetQuarter(i) * other.GetQuarter(j);
+        for (int now = i + j; now < 4; ++now) {
+          ET x = ET(t[now]) + ET(carry.low());
+          t[now] = x.low();
+          carry = ET(x.hi()) + ET(carry.hi());
+          if (carry.IsZero()) {
+            break;
+          }
+        }
+      }
+    low_ = t[0] | (t[1] << quarter_bitcount);
+    hi_ = t[2] | (t[3] << quarter_bitcount);
+
+    return *this;
+  }
+
   static std::vector<uint32_t> UIntDivImplInternal(
       const std::vector<uint32_t>& l, const std::vector<uint32_t>& r,
       std::vector<uint32_t>& remain) {
@@ -882,7 +1172,7 @@ struct UIntPairImpl<ET, false> {
     return result;
   }
 
-  UIntPairImpl& UIntDivImpl(const UIntPairImpl& other) {
+  UIntPairImpl& UIntDividedBy(const UIntPairImpl& other) {
     if (IsZero()) {
       return *this;
     }
@@ -920,7 +1210,7 @@ struct UIntPairImpl<ET, false> {
     return *this;
   }
 
-  UIntPairImpl& UIntDivImpl(const UIntPairImpl& other, UIntPairImpl& r) {
+  UIntPairImpl& UIntDividedBy(const UIntPairImpl& other, UIntPairImpl& r) {
     if (IsZero()) {
       r.MakeZeroBits();
       return *this;
@@ -963,7 +1253,7 @@ struct UIntPairImpl<ET, false> {
     return *this;
   }
 
-  UIntPairImpl& UIntModImpl(const UIntPairImpl& other) {
+  UIntPairImpl& UIntModulo(const UIntPairImpl& other) {
     if (IsZero()) {
       return *this;
     }
@@ -1009,6 +1299,8 @@ struct UIntPairImpl<ET, false> {
 
   ET hi() const { return hi_; }
 
+  int sign() const { return low_.IsZero() || hi_.IsZero() ? 1 : 0; }
+
   int UIntCompareTo(const UIntPairImpl& other) const {
     int t = hi_.UIntCompareTo(other.hi_);
     if (t != 0) {
@@ -1017,6 +1309,8 @@ struct UIntPairImpl<ET, false> {
     return low_.UIntCompareTo(other.low_);
   }
 
+  int IntSign() const { return low_.IsZero() || hi_.IsZero() ? 1 : 0; }
+
   int IsZero() const { return low_.IsZero() && hi_.IsZero(); }
 
   int IsEven() const { return LowerBits() & 1 ? 0 : 1; }
@@ -1024,6 +1318,10 @@ struct UIntPairImpl<ET, false> {
   int IsOdd() const { return LowerBits() & 1 ? 1 : 0; }
 
   unsigned int LowerBits() const { return low_.LowerBits(); }
+
+  UIntPairImpl Abs() const { return *this; }
+
+  UIntPairImpl FAbs() const { return *this; }
 
   template <typename T>
   REQUIRES((is_native_integer<T>::value && sizeof(T) <= sizeof(ET)))
@@ -1037,6 +1335,17 @@ struct UIntPairImpl<ET, false> {
     using unsignedT = typename pe_make_unsigned<T>::type;
     return static_cast<T>(hi_.template ToInt<unsignedT>() << half_bitcount |
                           low_.template ToInt<unsignedT>());
+  }
+
+  template <typename T>
+  T ToFloat() const {
+    auto t = ToUInt32Vector();
+    const int size = t.size();
+    T r = 0;
+    for (int i = size - 1; i >= 0; --i) {
+      r = r * 4294967296 + t[i];
+    }
+    return r;
   }
 
   void SetBit(int idx) {
@@ -1072,6 +1381,48 @@ struct UIntPairImpl<ET, false> {
   }
 
   int BitCount() const { return hi_.BitCount() + low_.BitCount(); }
+
+  std::string ToString() const {
+    const uint32_t output_mod = 1000000000;
+    if (IsZero()) {
+      return "0";
+    }
+    if (hi_.IsZero()) {
+      return low_.ToString();
+    }
+
+    std::vector<uint32_t> bits32 = ToUInt32Vector();
+    std::vector<uint32_t> mods;
+
+    std::stringstream ss;
+    int idx = bits32.size() - 1;
+    while (bits32[idx] == 0) --idx;
+    do {
+      uint64 add = 0;
+      for (int i = idx; i > 0; --i) {
+        const uint64 x = add + bits32[i];
+        const uint64 next_add = (x % output_mod) << 32;
+        bits32[i] = static_cast<unsigned>(x / output_mod);
+        add = next_add;
+      }
+      uint64 x = add + bits32[0];
+      bits32[0] = static_cast<unsigned>(x / output_mod);
+      mods.push_back(x % output_mod);
+      while (idx >= 0 && bits32[idx] == 0) --idx;
+    } while (idx >= 0);
+
+    idx = static_cast<int>(mods.size()) - 1;
+    char buff[32];
+    sprintf(buff, "%u", mods[idx--]);
+    ss << buff;
+    for (; idx >= 0; --idx) {
+      sprintf(buff, "%09u", mods[idx]);
+      ss << buff;
+    }
+    return ss.str();
+  }
+
+  std::string to_string() const { return ToString(); }
 
   UIntPairImpl Difference(const UIntPairImpl& other) const {
     int t = UIntCompareTo(other);

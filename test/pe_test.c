@@ -1,6 +1,6 @@
 #include "pe_test.h"
 
-#if 1
+#if 0
 #include "extended_int_test.c"
 #else
 #include "algo_test.c"

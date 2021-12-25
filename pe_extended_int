@@ -11,32 +11,32 @@ namespace pe {
 // Extended integers
 
 // Extended unsigned integer.
-template <typename UT, bool is_native>
+template <typename ET, bool is_native>
 struct ExtendedUnsignedIntImpl;
 
-template <typename UT>
-struct ExtendedUnsignedIntImpl<UT, true> {
-  constexpr static int quarter_bitcount = sizeof(UT) * 4;
+template <typename ET>
+struct ExtendedUnsignedIntImpl<ET, true> {
+  constexpr static int quarter_bitcount = sizeof(ET) * 4;
   constexpr static int half_bitcount = quarter_bitcount * 2;
   constexpr static int bitcount = half_bitcount * 2;
 
-  constexpr static UT quarter_mask =
-      (static_cast<UT>(1) << quarter_bitcount) - 1;
+  constexpr static ET quarter_mask =
+      (static_cast<ET>(1) << quarter_bitcount) - 1;
 
   // The corresponding native integer type.
-  using NT = UT;
+  using NT = ET;
 
  private:
   template <typename T>
   REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value &&
-            sizeof(T) <= sizeof(UT)))
+            sizeof(T) <= sizeof(ET)))
   RETURN(void) FromNativeInt(T v) {
     low_ = v;
   }
 
   template <typename T>
   REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value &&
-            sizeof(T) > sizeof(UT)))
+            sizeof(T) > sizeof(ET)))
   RETURN(void) FromNativeInt(T v) {
     low_ = v;
     hi_ = v >> half_bitcount;
@@ -44,7 +44,7 @@ struct ExtendedUnsignedIntImpl<UT, true> {
 
   template <typename T>
   REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value &&
-            sizeof(T) <= sizeof(UT)))
+            sizeof(T) <= sizeof(ET)))
   RETURN(void) FromNativeInt(T v) {
     if (v >= 0) {
       low_ = v;
@@ -56,15 +56,15 @@ struct ExtendedUnsignedIntImpl<UT, true> {
 
   template <typename T>
   REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value &&
-            sizeof(T) > sizeof(UT)))
+            sizeof(T) > sizeof(ET)))
   RETURN(void) FromNativeInt(T v) {
     using unsignedT = typename pe_make_unsigned<T>::type;
     FromNativeInt<unsignedT>(static_cast<unsignedT>(v));
   }
 
  public:
-  ExtendedUnsignedIntImpl(UT low = 0) : low_(low), hi_(0) {}
-  ExtendedUnsignedIntImpl(UT low, UT hi) : low_(low), hi_(hi) {}
+  ExtendedUnsignedIntImpl(ET low = 0) : low_(low), hi_(0) {}
+  ExtendedUnsignedIntImpl(ET low, ET hi) : low_(low), hi_(hi) {}
 
   template <typename T,
             typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
@@ -106,7 +106,7 @@ struct ExtendedUnsignedIntImpl<UT, true> {
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator=(const UT& other) {
+  ExtendedUnsignedIntImpl& operator=(const ET& other) {
     low_ = other;
     return *this;
   }
@@ -137,7 +137,7 @@ struct ExtendedUnsignedIntImpl<UT, true> {
     }
   }
 
-  UT GetQuarter(int i) const {
+  ET GetQuarter(int i) const {
     switch (i & 3) {
       case 0:
         return low_ & quarter_mask;
@@ -160,11 +160,11 @@ struct ExtendedUnsignedIntImpl<UT, true> {
   }
 
   std::vector<uint32_t> ToUInt32Vector(int fix_size = 1) const {
-    const int each = sizeof(UT) / sizeof(uint32_t);
+    const int each = sizeof(ET) / sizeof(uint32_t);
 
     std::vector<uint32_t> r;
     r.reserve(each * 2);
-    UT t = low_;
+    ET t = low_;
     for (int i = 0; i < each; ++i) {
       r.push_back(static_cast<uint32_t>(t));
 #if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
@@ -193,7 +193,7 @@ struct ExtendedUnsignedIntImpl<UT, true> {
   }
 
   void FromUInt32Vector(const std::vector<uint32_t>& bits32) {
-    const int each = sizeof(UT) / sizeof(int32_t);
+    const int each = sizeof(ET) / sizeof(int32_t);
 
     hi_ = 0;
     for (int i = std::min(2 * each - 1, static_cast<int>(bits32.size()));
@@ -221,7 +221,7 @@ struct ExtendedUnsignedIntImpl<UT, true> {
   std::vector<uint32_t> ToBinaryVector(int fix_size = 1) const {
     std::vector<uint32_t> r;
     r.reserve(bitcount);
-    UT t = low_;
+    ET t = low_;
     for (int i = 0; i < half_bitcount; ++i) {
       r.push_back(t & 1);
       t >>= 1;
@@ -437,13 +437,13 @@ struct ExtendedUnsignedIntImpl<UT, true> {
   }
 
  public:
-  UT& low() { return low_; }
+  ET& low() { return low_; }
 
-  UT& hi() { return hi_; }
+  ET& hi() { return hi_; }
 
-  UT low() const { return low_; }
+  ET low() const { return low_; }
 
-  UT hi() const { return hi_; }
+  ET hi() const { return hi_; }
 
   int sign() const { return low_ || hi_ ? 1 : 0; }
 
@@ -470,13 +470,13 @@ struct ExtendedUnsignedIntImpl<UT, true> {
   ExtendedUnsignedIntImpl FAbs() const { return *this; }
 
   template <typename T>
-  REQUIRES((is_native_integer<T>::value && sizeof(T) <= sizeof(UT)))
+  REQUIRES((is_native_integer<T>::value && sizeof(T) <= sizeof(ET)))
   RETURN(T) ToInt() const {
     return static_cast<T>(low_);
   }
 
   template <typename T>
-  REQUIRES((is_native_integer<T>::value && sizeof(T) > sizeof(UT)))
+  REQUIRES((is_native_integer<T>::value && sizeof(T) > sizeof(ET)))
   RETURN(T) ToInt() const {
     using unsignedT = typename pe_make_unsigned<T>::type;
     return static_cast<T>((static_cast<unsignedT>(hi_) << half_bitcount) |
@@ -496,41 +496,41 @@ struct ExtendedUnsignedIntImpl<UT, true> {
 
   void SetBit(int idx) {
     if (idx < half_bitcount) {
-      low_ |= static_cast<UT>(1) << idx;
+      low_ |= static_cast<ET>(1) << idx;
     } else {
-      hi_ |= static_cast<UT>(1) << (idx - half_bitcount);
+      hi_ |= static_cast<ET>(1) << (idx - half_bitcount);
     }
   }
 
   void ResetBit(int idx) {
     if (idx < half_bitcount) {
-      low_ &= ~(static_cast<UT>(1) << idx);
+      low_ &= ~(static_cast<ET>(1) << idx);
     } else {
-      hi_ &= ~(static_cast<UT>(1) << (idx - half_bitcount));
+      hi_ &= ~(static_cast<ET>(1) << (idx - half_bitcount));
     }
   }
 
   int GetBit(int idx) const {
     if (idx < half_bitcount) {
-      return low_ & (static_cast<UT>(1) << idx) ? 1 : 0;
+      return low_ & (static_cast<ET>(1) << idx) ? 1 : 0;
     } else {
-      return hi_ & (static_cast<UT>(1) << (idx - half_bitcount)) ? 1 : 0;
+      return hi_ & (static_cast<ET>(1) << (idx - half_bitcount)) ? 1 : 0;
     }
   }
 
   void RevBit(int idx) {
     if (idx < half_bitcount) {
-      low_ ^= static_cast<UT>(1) << idx;
+      low_ ^= static_cast<ET>(1) << idx;
     } else {
-      hi_ ^= static_cast<UT>(1) << (idx - half_bitcount);
+      hi_ ^= static_cast<ET>(1) << (idx - half_bitcount);
     }
   }
 
   int BitCount() const {
-    const int each = sizeof(UT) / sizeof(uint32_t);
+    const int each = sizeof(ET) / sizeof(uint32_t);
 
     int ret = 0;
-    UT t = low_;
+    ET t = low_;
     for (int i = 0; t && i < each; ++i) {
       ret += pe_popcount(static_cast<uint32_t>(t));
 #if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
@@ -606,8 +606,8 @@ struct ExtendedUnsignedIntImpl<UT, true> {
       return 0;
     }
     if (t > 0) {
-      UT x = hi_ - other.hi_;
-      UT y;
+      ET x = hi_ - other.hi_;
+      ET y;
       if (low_ >= other.low_) {
         y = low_ - other.low_;
       } else {
@@ -616,8 +616,8 @@ struct ExtendedUnsignedIntImpl<UT, true> {
       }
       return ExtendedUnsignedIntImpl(y, x);
     } else {
-      UT x = other.hi_ - hi_;
-      UT y;
+      ET x = other.hi_ - hi_;
+      ET y;
       if (other.low_ >= low_) {
         y = other.low_ - low_;
       } else {
@@ -651,8 +651,8 @@ struct ExtendedUnsignedIntImpl<UT, true> {
     }
 
     if (!other.IsZero()) {
-      UT x = other.low_ + low_;
-      UT y = other.hi_ + hi_;
+      ET x = other.low_ + low_;
+      ET y = other.hi_ + hi_;
       if (other.low_ && low_ && (x < other.low_ || x < low_)) {
         ++y;
       }
@@ -662,7 +662,7 @@ struct ExtendedUnsignedIntImpl<UT, true> {
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator+=(const UT& other) {
+  ExtendedUnsignedIntImpl& operator+=(const ET& other) {
     if (IsZero()) {
       low_ = other;
       hi_ = 0;
@@ -670,8 +670,8 @@ struct ExtendedUnsignedIntImpl<UT, true> {
     }
 
     if (other) {
-      UT x = low_ + other;
-      UT y = hi_;
+      ET x = low_ + other;
+      ET y = hi_;
       if (low_ && other && (x < low_ || x < other)) {
         ++y;
       }
@@ -711,7 +711,7 @@ struct ExtendedUnsignedIntImpl<UT, true> {
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator-=(const UT& other) {
+  ExtendedUnsignedIntImpl& operator-=(const ET& other) {
     if (other == 0) {
       return *this;
     }
@@ -745,12 +745,12 @@ struct ExtendedUnsignedIntImpl<UT, true> {
       low_ = hi_ = 0;
       return *this;
     }
-    UT t[4] = {0};
+    ET t[4] = {0};
     for (int i = 0; i < 4; ++i)
       for (int j = 0; j + i < 4; ++j) {
-        UT carry = GetQuarter(i) * other.GetQuarter(j);
+        ET carry = GetQuarter(i) * other.GetQuarter(j);
         for (int now = i + j; now < 4; ++now) {
-          UT x = t[now] + (carry & quarter_mask);
+          ET x = t[now] + (carry & quarter_mask);
           t[now] = x & quarter_mask;
           carry = (x >> quarter_bitcount) + (carry >> quarter_bitcount);
           if (carry == 0) {
@@ -764,18 +764,18 @@ struct ExtendedUnsignedIntImpl<UT, true> {
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator*=(const UT& other) {
+  ExtendedUnsignedIntImpl& operator*=(const ET& other) {
     if (IsZero() || other == 0) {
       low_ = hi_ = 0;
       return *this;
     }
-    UT t[4] = {0};
+    ET t[4] = {0};
     for (int i = 0; i < 4; ++i)
       for (int j = 0; j < 2 && j + i < 4; ++j) {
-        UT carry = GetQuarter(i) *
+        ET carry = GetQuarter(i) *
                    (j == 0 ? other & quarter_mask : other >> quarter_bitcount);
         for (int now = i + j; now < 4; ++now) {
-          UT x = t[now] + (carry & quarter_mask);
+          ET x = t[now] + (carry & quarter_mask);
           t[now] = x & quarter_mask;
           carry = (x >> quarter_bitcount) + (carry >> quarter_bitcount);
           if (carry == 0) {
@@ -793,7 +793,7 @@ struct ExtendedUnsignedIntImpl<UT, true> {
     return DivImpl(other);
   }
 
-  ExtendedUnsignedIntImpl& operator/=(const UT& other) {
+  ExtendedUnsignedIntImpl& operator/=(const ET& other) {
     return *this /= ExtendedUnsignedIntImpl(other);
   }
 
@@ -801,7 +801,7 @@ struct ExtendedUnsignedIntImpl<UT, true> {
     return ModImpl(other);
   }
 
-  ExtendedUnsignedIntImpl& operator%=(const UT& other) {
+  ExtendedUnsignedIntImpl& operator%=(const ET& other) {
     return *this %= ExtendedUnsignedIntImpl(other);
   }
 
@@ -811,7 +811,7 @@ struct ExtendedUnsignedIntImpl<UT, true> {
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator&=(const UT& other) {
+  ExtendedUnsignedIntImpl& operator&=(const ET& other) {
     low_ &= other;
     hi_ = 0;
     return *this;
@@ -823,7 +823,7 @@ struct ExtendedUnsignedIntImpl<UT, true> {
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator^=(const UT& other) {
+  ExtendedUnsignedIntImpl& operator^=(const ET& other) {
     low_ ^= other;
     return *this;
   }
@@ -834,7 +834,7 @@ struct ExtendedUnsignedIntImpl<UT, true> {
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator|=(const UT& other) {
+  ExtendedUnsignedIntImpl& operator|=(const ET& other) {
     low_ |= other;
     return *this;
   }
@@ -846,8 +846,8 @@ struct ExtendedUnsignedIntImpl<UT, true> {
       low_ = hi_ >> (cnt - half_bitcount);
       hi_ = 0;
     } else {
-      UT mask = (static_cast<UT>(1) << cnt) - 1;
-      UT t = hi_ & mask;
+      ET mask = (static_cast<ET>(1) << cnt) - 1;
+      ET t = hi_ & mask;
       hi_ >>= cnt;
       low_ >>= cnt;
       low_ |= t << (half_bitcount - cnt);
@@ -862,7 +862,7 @@ struct ExtendedUnsignedIntImpl<UT, true> {
       hi_ = low_ << (cnt - half_bitcount);
       low_ = 0;
     } else {
-      UT t = low_ >> (half_bitcount - cnt);
+      ET t = low_ >> (half_bitcount - cnt);
       hi_ = hi_ << cnt | t;
       low_ <<= cnt;
     }
@@ -1004,29 +1004,29 @@ struct ExtendedUnsignedIntImpl<UT, true> {
   }
 
  private:
-  UT low_;
-  UT hi_;
+  ET low_;
+  ET hi_;
 };
 
-template <typename UT>
-struct ExtendedUnsignedIntImpl<UT, false> {
-  constexpr static int quarter_bitcount = sizeof(UT) * 4;
+template <typename ET>
+struct ExtendedUnsignedIntImpl<ET, false> {
+  constexpr static int quarter_bitcount = sizeof(ET) * 4;
   constexpr static int half_bitcount = quarter_bitcount * 2;
   constexpr static int bitcount = half_bitcount * 2;
 
-  using NT = typename UT::NT;
+  using NT = typename ET::NT;
 
  private:
   template <typename T>
   REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value &&
-            sizeof(T) <= sizeof(UT)))
+            sizeof(T) <= sizeof(ET)))
   RETURN(void) FromNativeInt(T v) {
     low_ = v;
   }
 
   template <typename T>
   REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value &&
-            sizeof(T) > sizeof(UT)))
+            sizeof(T) > sizeof(ET)))
   RETURN(void) FromNativeInt(T v) {
     low_ = v;
     hi_ = v >> half_bitcount;
@@ -1034,7 +1034,7 @@ struct ExtendedUnsignedIntImpl<UT, false> {
 
   template <typename T>
   REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value &&
-            sizeof(T) <= sizeof(UT)))
+            sizeof(T) <= sizeof(ET)))
   RETURN(void) FromNativeInt(T v) {
     if (v >= 0) {
       low_ = v;
@@ -1046,19 +1046,19 @@ struct ExtendedUnsignedIntImpl<UT, false> {
 
   template <typename T>
   REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value &&
-            sizeof(T) > sizeof(UT)))
+            sizeof(T) > sizeof(ET)))
   RETURN(void) FromNativeInt(T v) {
     using unsignedT = typename pe_make_unsigned<T>::type;
     FromNativeInt<unsignedT>(static_cast<unsignedT>(v));
   }
 
  public:
-  ExtendedUnsignedIntImpl(UT low = 0) : low_(low), hi_(0) {}
-  ExtendedUnsignedIntImpl(UT low, UT hi) : low_(low), hi_(hi) {}
+  ExtendedUnsignedIntImpl(ET low = 0) : low_(low), hi_(0) {}
+  ExtendedUnsignedIntImpl(ET low, ET hi) : low_(low), hi_(hi) {}
 
   template <typename T,
             typename TT = REQUIRES((is_native_integer<T>::value &&
-                                    sizeof(T) <= sizeof(UT))) RETURN(T)>
+                                    sizeof(T) <= sizeof(ET))) RETURN(T)>
   ExtendedUnsignedIntImpl(T low) : low_(0), hi_(0) {
     FromNativeInt<T>(low);
   }
@@ -1097,7 +1097,7 @@ struct ExtendedUnsignedIntImpl<UT, false> {
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator=(const UT& other) {
+  ExtendedUnsignedIntImpl& operator=(const ET& other) {
     low_ = other;
     return *this;
   }
@@ -1129,7 +1129,7 @@ struct ExtendedUnsignedIntImpl<UT, false> {
     }
   }
 
-  UT GetQuarter(int i) const {
+  ET GetQuarter(int i) const {
     switch (i & 3) {
       case 0:
         return low_.low();
@@ -1152,7 +1152,7 @@ struct ExtendedUnsignedIntImpl<UT, false> {
   }
 
   std::vector<uint32_t> ToUInt32Vector(int fix_size = 1) const {
-    const int each = sizeof(UT) / sizeof(uint32_t);
+    const int each = sizeof(ET) / sizeof(uint32_t);
 
     std::vector<uint32_t> r;
     r.reserve(each * 2);
@@ -1167,7 +1167,7 @@ struct ExtendedUnsignedIntImpl<UT, false> {
   }
 
   void FromUInt32Vector(const std::vector<uint32_t>& bits32) {
-    const int each = sizeof(UT) / sizeof(int32_t);
+    const int each = sizeof(ET) / sizeof(int32_t);
     hi_.MakeZero();
     for (int i = std::min(2 * each - 1, static_cast<int>(bits32.size()));
          i >= each; --i) {
@@ -1395,13 +1395,13 @@ struct ExtendedUnsignedIntImpl<UT, false> {
   }
 
  public:
-  UT& low() { return low_; }
+  ET& low() { return low_; }
 
-  UT& hi() { return hi_; }
+  ET& hi() { return hi_; }
 
-  UT low() const { return low_; }
+  ET low() const { return low_; }
 
-  UT hi() const { return hi_; }
+  ET hi() const { return hi_; }
 
   int sign() const { return low_.IntSign() || hi_.IntSign() ? 1 : 0; }
 
@@ -1428,13 +1428,13 @@ struct ExtendedUnsignedIntImpl<UT, false> {
   ExtendedUnsignedIntImpl FAbs() const { return *this; }
 
   template <typename T>
-  REQUIRES((is_native_integer<T>::value && sizeof(T) <= sizeof(UT)))
+  REQUIRES((is_native_integer<T>::value && sizeof(T) <= sizeof(ET)))
   RETURN(T) ToInt() const {
     return low_.template ToInt<T>();
   }
 
   template <typename T>
-  REQUIRES((is_native_integer<T>::value && sizeof(T) > sizeof(UT)))
+  REQUIRES((is_native_integer<T>::value && sizeof(T) > sizeof(ET)))
   RETURN(T) ToInt() const {
     using unsignedT = typename pe_make_unsigned<T>::type;
     return static_cast<T>(hi_.template ToInt<unsignedT>() << half_bitcount |
@@ -1535,8 +1535,8 @@ struct ExtendedUnsignedIntImpl<UT, false> {
       return 0;
     }
     if (t > 0) {
-      UT x = hi_ - other.hi_;
-      UT y;
+      ET x = hi_ - other.hi_;
+      ET y;
       if (low_ >= other.low_) {
         y = low_ - other.low_;
       } else {
@@ -1545,8 +1545,8 @@ struct ExtendedUnsignedIntImpl<UT, false> {
       }
       return ExtendedUnsignedIntImpl(y, x);
     } else {
-      UT x = other.hi_ - hi_;
-      UT y;
+      ET x = other.hi_ - hi_;
+      ET y;
       if (other.low_ >= low_) {
         y = other.low_ - low_;
       } else {
@@ -1580,8 +1580,8 @@ struct ExtendedUnsignedIntImpl<UT, false> {
     }
 
     if (!other.IsZero()) {
-      UT x = other.low_ + low_;
-      UT y = other.hi_ + hi_;
+      ET x = other.low_ + low_;
+      ET y = other.hi_ + hi_;
       if (!other.low_.IsZero() && !low_.IsZero() &&
           (x < other.low_ || x < low_)) {
         ++y;
@@ -1592,7 +1592,7 @@ struct ExtendedUnsignedIntImpl<UT, false> {
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator+=(const UT& other) {
+  ExtendedUnsignedIntImpl& operator+=(const ET& other) {
     return *this += ExtendedUnsignedIntImpl(other);
   }
 
@@ -1633,7 +1633,7 @@ struct ExtendedUnsignedIntImpl<UT, false> {
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator-=(const UT& other) {
+  ExtendedUnsignedIntImpl& operator-=(const ET& other) {
     return *this -= ExtendedUnsignedIntImpl(other);
   }
 
@@ -1649,14 +1649,14 @@ struct ExtendedUnsignedIntImpl<UT, false> {
       hi_.MakeZero();
       return *this;
     }
-    UT t[4];
+    ET t[4];
     for (int i = 0; i < 4; ++i)
       for (int j = 0; j + i < 4; ++j) {
-        UT carry = GetQuarter(i) * other.GetQuarter(j);
+        ET carry = GetQuarter(i) * other.GetQuarter(j);
         for (int now = i + j; now < 4; ++now) {
-          UT x = UT(t[now]) + UT(carry.low());
+          ET x = ET(t[now]) + ET(carry.low());
           t[now] = x.low();
-          carry = UT(x.hi()) + UT(carry.hi());
+          carry = ET(x.hi()) + ET(carry.hi());
           if (carry.IsZero()) {
             break;
           }
@@ -1668,7 +1668,7 @@ struct ExtendedUnsignedIntImpl<UT, false> {
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator*=(const UT& other) {
+  ExtendedUnsignedIntImpl& operator*=(const ET& other) {
     return *this *= ExtendedUnsignedIntImpl(other);
   }
 
@@ -1682,7 +1682,7 @@ struct ExtendedUnsignedIntImpl<UT, false> {
     return DivImpl(other);
   }
 
-  ExtendedUnsignedIntImpl& operator/=(const UT& other) {
+  ExtendedUnsignedIntImpl& operator/=(const ET& other) {
     return *this /= ExtendedUnsignedIntImpl(other);
   }
 
@@ -1696,7 +1696,7 @@ struct ExtendedUnsignedIntImpl<UT, false> {
     return ModImpl(other);
   }
 
-  ExtendedUnsignedIntImpl& operator%=(const UT& other) {
+  ExtendedUnsignedIntImpl& operator%=(const ET& other) {
     return *this %= ExtendedUnsignedIntImpl(other);
   }
 
@@ -1718,7 +1718,7 @@ struct ExtendedUnsignedIntImpl<UT, false> {
     return *this &= ExtendedUnsignedIntImpl(other);
   }
 
-  ExtendedUnsignedIntImpl& operator&=(const UT& other) {
+  ExtendedUnsignedIntImpl& operator&=(const ET& other) {
     return *this &= ExtendedUnsignedIntImpl(other);
   }
 
@@ -1728,7 +1728,7 @@ struct ExtendedUnsignedIntImpl<UT, false> {
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator^=(const UT& other) {
+  ExtendedUnsignedIntImpl& operator^=(const ET& other) {
     return *this ^= ExtendedUnsignedIntImpl(other);
   }
 
@@ -1744,7 +1744,7 @@ struct ExtendedUnsignedIntImpl<UT, false> {
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator|=(const UT& other) {
+  ExtendedUnsignedIntImpl& operator|=(const ET& other) {
     return *this |= ExtendedUnsignedIntImpl(other);
   }
 
@@ -1761,8 +1761,8 @@ struct ExtendedUnsignedIntImpl<UT, false> {
       low_ = hi_ >> (cnt - half_bitcount);
       hi_ = 0;
     } else {
-      UT mask = (static_cast<UT>(1) << cnt) - 1;
-      UT t = hi_ & mask;
+      ET mask = (static_cast<ET>(1) << cnt) - 1;
+      ET t = hi_ & mask;
       hi_ >>= cnt;
       low_ >>= cnt;
       low_ |= t << (half_bitcount - cnt);
@@ -1777,7 +1777,7 @@ struct ExtendedUnsignedIntImpl<UT, false> {
       hi_ = low_ << (cnt - half_bitcount);
       low_ = 0;
     } else {
-      UT t = low_ >> (half_bitcount - cnt);
+      ET t = low_ >> (half_bitcount - cnt);
       hi_ = hi_ << cnt | t;
       low_ <<= cnt;
     }
@@ -1919,93 +1919,93 @@ struct ExtendedUnsignedIntImpl<UT, false> {
   }
 
  private:
-  UT low_;
-  UT hi_;
+  ET low_;
+  ET hi_;
 };
 
-template <typename UT, bool is_native_integer>
-SL int IsZero(const ExtendedUnsignedIntImpl<UT, is_native_integer>& x) {
+template <typename ET, bool is_native_integer>
+SL int IsZero(const ExtendedUnsignedIntImpl<ET, is_native_integer>& x) {
   return x.IsZero();
 }
 
-template <typename UT, bool is_native_integer>
-SL int IntSign(const ExtendedUnsignedIntImpl<UT, is_native_integer>& x) {
+template <typename ET, bool is_native_integer>
+SL int IntSign(const ExtendedUnsignedIntImpl<ET, is_native_integer>& x) {
   return x.IntSign();
 }
 
-template <typename UT, bool is_native_integer>
-SL int IsEven(const ExtendedUnsignedIntImpl<UT, is_native_integer>& x) {
+template <typename ET, bool is_native_integer>
+SL int IsEven(const ExtendedUnsignedIntImpl<ET, is_native_integer>& x) {
   return x.IsEven();
 }
 
-template <typename UT, bool is_native_integer>
-SL int IsOdd(const ExtendedUnsignedIntImpl<UT, is_native_integer>& x) {
+template <typename ET, bool is_native_integer>
+SL int IsOdd(const ExtendedUnsignedIntImpl<ET, is_native_integer>& x) {
   return x.IsOdd();
 }
 
-template <typename UT, bool is_native_integer>
+template <typename ET, bool is_native_integer>
 SL unsigned int LowerBits(
-    const ExtendedUnsignedIntImpl<UT, is_native_integer>& x) {
+    const ExtendedUnsignedIntImpl<ET, is_native_integer>& x) {
   return x.LowerBits();
 }
 
-template <typename UT, bool is_native_integer>
-SL ExtendedUnsignedIntImpl<UT, is_native_integer> Abs(
-    const ExtendedUnsignedIntImpl<UT, is_native_integer>& x) {
+template <typename ET, bool is_native_integer>
+SL ExtendedUnsignedIntImpl<ET, is_native_integer> Abs(
+    const ExtendedUnsignedIntImpl<ET, is_native_integer>& x) {
   return x;
 }
 
-template <typename UT, bool is_native_integer>
-SL ExtendedUnsignedIntImpl<UT, is_native_integer> FAbs(
-    const ExtendedUnsignedIntImpl<UT, is_native_integer>& x) {
+template <typename ET, bool is_native_integer>
+SL ExtendedUnsignedIntImpl<ET, is_native_integer> FAbs(
+    const ExtendedUnsignedIntImpl<ET, is_native_integer>& x) {
   return x;
 }
 
-template <typename UT, bool is_native_integer>
-SL int SameParity(const ExtendedUnsignedIntImpl<UT, is_native_integer>& l,
-                  const ExtendedUnsignedIntImpl<UT, is_native_integer>& r) {
+template <typename ET, bool is_native_integer>
+SL int SameParity(const ExtendedUnsignedIntImpl<ET, is_native_integer>& l,
+                  const ExtendedUnsignedIntImpl<ET, is_native_integer>& r) {
   return SameParity(l.LowerBits(), r.LowerBits());
 }
 
-template <typename UT, bool is_native_integer>
-SL std::tuple<ExtendedUnsignedIntImpl<UT, is_native_integer>,
-              ExtendedUnsignedIntImpl<UT, is_native_integer>>
-Div(const ExtendedUnsignedIntImpl<UT, is_native_integer>& l,
-    const ExtendedUnsignedIntImpl<UT, is_native_integer>& r) {
-  ExtendedUnsignedIntImpl<UT, is_native_integer> remain;
-  ExtendedUnsignedIntImpl<UT, is_native_integer> d(l);
+template <typename ET, bool is_native_integer>
+SL std::tuple<ExtendedUnsignedIntImpl<ET, is_native_integer>,
+              ExtendedUnsignedIntImpl<ET, is_native_integer>>
+Div(const ExtendedUnsignedIntImpl<ET, is_native_integer>& l,
+    const ExtendedUnsignedIntImpl<ET, is_native_integer>& r) {
+  ExtendedUnsignedIntImpl<ET, is_native_integer> remain;
+  ExtendedUnsignedIntImpl<ET, is_native_integer> d(l);
   d.DivImpl(r, remain);
   return {d, remain};
 }
 
-template <typename T, typename UT, bool is_native_integer>
-SL T ToInt(const ExtendedUnsignedIntImpl<UT, is_native_integer>& x) {
+template <typename T, typename ET, bool is_native_integer>
+SL T ToInt(const ExtendedUnsignedIntImpl<ET, is_native_integer>& x) {
   return x.template ToInt<T>();
 }
 
-template <typename T, typename UT, bool is_native_integer>
-SL T ToFloat(const ExtendedUnsignedIntImpl<UT, is_native_integer>& x) {
+template <typename T, typename ET, bool is_native_integer>
+SL T ToFloat(const ExtendedUnsignedIntImpl<ET, is_native_integer>& x) {
   return x.template ToFloat<T>();
 }
 
-template <typename UT, bool is_native_integer>
+template <typename ET, bool is_native_integer>
 SL std::string ToString(
-    const ExtendedUnsignedIntImpl<UT, is_native_integer>& x) {
+    const ExtendedUnsignedIntImpl<ET, is_native_integer>& x) {
   return x.ToString();
 }
 
-template <typename UT, bool is_native_integer>
+template <typename ET, bool is_native_integer>
 SL std::string to_string(
-    const ExtendedUnsignedIntImpl<UT, is_native_integer>& x) {
+    const ExtendedUnsignedIntImpl<ET, is_native_integer>& x) {
   return ToString(x);
 }
 
-template <typename UT, bool is_native_integer, typename T2>
+template <typename ET, bool is_native_integer, typename T2>
 SL REQUIRES((pe::is_native_integer<T2>::value))
-    RETURN(ExtendedUnsignedIntImpl<UT, is_native_integer>)
-        Power(ExtendedUnsignedIntImpl<UT, is_native_integer> x, T2 n) {
+    RETURN(ExtendedUnsignedIntImpl<ET, is_native_integer>)
+        Power(ExtendedUnsignedIntImpl<ET, is_native_integer> x, T2 n) {
   PE_ASSERT(n >= 0);
-  ExtendedUnsignedIntImpl<UT, is_native_integer> ret = 1;
+  ExtendedUnsignedIntImpl<ET, is_native_integer> ret = 1;
   for (; n > 0; n >>= 1) {
     if (n & 1) ret *= x;
     if (n > 1) x *= x;
@@ -2013,12 +2013,12 @@ SL REQUIRES((pe::is_native_integer<T2>::value))
   return ret;
 }
 
-template <typename UT, bool is_native_integer, typename T2, typename T3>
+template <typename ET, bool is_native_integer, typename T2, typename T3>
 SL REQUIRES((pe::is_native_integer<T2>::value))
-    RETURN(ExtendedUnsignedIntImpl<UT, is_native_integer>)
-        Power(ExtendedUnsignedIntImpl<UT, is_native_integer> x, T2 n, T3 mod) {
+    RETURN(ExtendedUnsignedIntImpl<ET, is_native_integer>)
+        Power(ExtendedUnsignedIntImpl<ET, is_native_integer> x, T2 n, T3 mod) {
   PE_ASSERT(n >= 0);
-  ExtendedUnsignedIntImpl<UT, is_native_integer> ret = 1;
+  ExtendedUnsignedIntImpl<ET, is_native_integer> ret = 1;
   for (; n > 0; n >>= 1) {
     if (n & 1) ret = ret * x % mod;
     if (n > 1) x = x * x % mod;
@@ -2026,9 +2026,9 @@ SL REQUIRES((pe::is_native_integer<T2>::value))
   return ret;
 }
 
-template <typename UT>
+template <typename ET>
 using ExtendedUnsignedInt =
-    ExtendedUnsignedIntImpl<UT, is_native_integer<UT>::value>;
+    ExtendedUnsignedIntImpl<ET, is_native_integer<ET>::value>;
 
 #if PE_HAS_CPP20
 static_assert(PeNumberUtil<ExtendedUnsignedInt<uint64>>);

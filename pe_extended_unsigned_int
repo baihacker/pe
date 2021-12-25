@@ -34,14 +34,14 @@ struct ExtendedUnsignedIntImpl<ET, true> : public UIntPairImpl<ET, true> {
   ExtendedUnsignedIntImpl(const ExtendedUnsignedIntImpl& other) : base(other) {}
 
   ExtendedUnsignedIntImpl& operator=(const ExtendedUnsignedIntImpl& other) {
-    base::low_ = other.low_;
-    base::hi_ = other.hi_;
+    base::low_ = other.low();
+    base::hi_ = other.hi();
     return *this;
   }
 
   ExtendedUnsignedIntImpl& operator=(const ExtendedUnsignedIntImpl&& other) {
-    base::low_ = std::move(other.low_);
-    base::hi_ = std::move(other.hi_);
+    base::low_ = std::move(other.low());
+    base::hi_ = std::move(other.hi());
     return *this;
   }
 
@@ -60,25 +60,28 @@ struct ExtendedUnsignedIntImpl<ET, true> : public UIntPairImpl<ET, true> {
   }
 
  public:
-  ExtendedUnsignedIntImpl& DivImpl(const ExtendedUnsignedIntImpl& other) {
+  void MakeAbs() {}
+  ExtendedUnsignedIntImpl& DividedBy(const ExtendedUnsignedIntImpl& other) {
     base::DividedBy(other);
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& DivImpl(const ExtendedUnsignedIntImpl& other,
-                                   ExtendedUnsignedIntImpl& r) {
-    base::DividedBy(other);
+  ExtendedUnsignedIntImpl& DividedBy(const ExtendedUnsignedIntImpl& other,
+                                     ExtendedUnsignedIntImpl& r) {
+    base::DividedBy(other, r);
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& ModImpl(const ExtendedUnsignedIntImpl& other) {
+  ExtendedUnsignedIntImpl& Modulo(const ExtendedUnsignedIntImpl& other) {
     base::Modulo(other);
     return *this;
   }
 
  public:
-  using base::hi;
   using base::low;
+
+  using base::hi;
+
   using base::sign;
 
   int CompareTo(const ExtendedUnsignedIntImpl& other) const {
@@ -165,7 +168,7 @@ struct ExtendedUnsignedIntImpl<ET, true> : public UIntPairImpl<ET, true> {
   }
 
   ExtendedUnsignedIntImpl& operator/=(const ExtendedUnsignedIntImpl& other) {
-    return DivImpl(other);
+    return DividedBy(other);
   }
 
   ExtendedUnsignedIntImpl& operator/=(const ET& other) {
@@ -173,7 +176,7 @@ struct ExtendedUnsignedIntImpl<ET, true> : public UIntPairImpl<ET, true> {
   }
 
   ExtendedUnsignedIntImpl& operator%=(const ExtendedUnsignedIntImpl& other) {
-    return ModImpl(other);
+    return Modulo(other);
   }
 
   ExtendedUnsignedIntImpl& operator%=(const ET& other) {
@@ -231,7 +234,7 @@ struct ExtendedUnsignedIntImpl<ET, true> : public UIntPairImpl<ET, true> {
 
   ExtendedUnsignedIntImpl operator++(int) {
     ExtendedUnsignedIntImpl ret(*this);
-    *this += 1;
+    ++*this;
     return ret;
   }
 
@@ -247,7 +250,7 @@ struct ExtendedUnsignedIntImpl<ET, true> : public UIntPairImpl<ET, true> {
 
   ExtendedUnsignedIntImpl operator--(int) {
     ExtendedUnsignedIntImpl ret(*this);
-    *this -= 1;
+    --*this;
     return ret;
   }
 
@@ -377,14 +380,14 @@ struct ExtendedUnsignedIntImpl<ET, false> : public UIntPairImpl<ET, false> {
   ExtendedUnsignedIntImpl(const ExtendedUnsignedIntImpl& other) : base(other) {}
 
   ExtendedUnsignedIntImpl& operator=(const ExtendedUnsignedIntImpl& other) {
-    base::low_ = other.low_;
-    base::hi_ = other.hi_;
+    base::low_ = other.low();
+    base::hi_ = other.hi();
     return *this;
   }
 
   ExtendedUnsignedIntImpl& operator=(const ExtendedUnsignedIntImpl&& other) {
-    base::low_ = std::move(other.low_);
-    base::hi_ = std::move(other.hi_);
+    base::low_ = std::move(other.low());
+    base::hi_ = std::move(other.hi());
     return *this;
   }
 
@@ -403,18 +406,20 @@ struct ExtendedUnsignedIntImpl<ET, false> : public UIntPairImpl<ET, false> {
   }
 
  public:
-  ExtendedUnsignedIntImpl& DivImpl(const ExtendedUnsignedIntImpl& other) {
+  void MakeAbs() {}
+
+  ExtendedUnsignedIntImpl& DividedBy(const ExtendedUnsignedIntImpl& other) {
     base::DividedBy(other);
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& DivImpl(const ExtendedUnsignedIntImpl& other,
-                                   ExtendedUnsignedIntImpl& r) {
+  ExtendedUnsignedIntImpl& DividedBy(const ExtendedUnsignedIntImpl& other,
+                                     ExtendedUnsignedIntImpl& r) {
     base::DividedBy(other);
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& ModImpl(const ExtendedUnsignedIntImpl& other) {
+  ExtendedUnsignedIntImpl& Modulo(const ExtendedUnsignedIntImpl& other) {
     base::Modulo(other);
     return *this;
   }
@@ -537,7 +542,7 @@ struct ExtendedUnsignedIntImpl<ET, false> : public UIntPairImpl<ET, false> {
   }
 
   ExtendedUnsignedIntImpl& operator/=(const ExtendedUnsignedIntImpl& other) {
-    return DivImpl(other);
+    return DividedBy(other);
   }
 
   ExtendedUnsignedIntImpl& operator/=(const ET& other) {
@@ -551,7 +556,7 @@ struct ExtendedUnsignedIntImpl<ET, false> : public UIntPairImpl<ET, false> {
   }
 
   ExtendedUnsignedIntImpl& operator%=(const ExtendedUnsignedIntImpl& other) {
-    return ModImpl(other);
+    return Modulo(other);
   }
 
   ExtendedUnsignedIntImpl& operator%=(const ET& other) {
@@ -808,7 +813,7 @@ Div(const ExtendedUnsignedIntImpl<ET, is_native_integer>& l,
     const ExtendedUnsignedIntImpl<ET, is_native_integer>& r) {
   ExtendedUnsignedIntImpl<ET, is_native_integer> remain;
   ExtendedUnsignedIntImpl<ET, is_native_integer> d(l);
-  d.DivImpl(r, remain);
+  d.DividedBy(r, remain);
   return {d, remain};
 }
 

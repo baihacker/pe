@@ -31,8 +31,7 @@ struct ExtendedSignedIntImpl<ET, true> : public UIntPairImpl<ET, true> {
 
   ExtendedSignedIntImpl(const std::string& str) : base(str) {}
 
-  ExtendedSignedIntImpl(const ExtendedSignedIntImpl& other)
-      : base(other.low(), other.hi()) {}
+  ExtendedSignedIntImpl(const ExtendedSignedIntImpl& other) : base(other) {}
 
   ExtendedSignedIntImpl& operator=(const ExtendedSignedIntImpl& other) {
     base::low_ = other.low();
@@ -68,7 +67,7 @@ struct ExtendedSignedIntImpl<ET, true> : public UIntPairImpl<ET, true> {
     }
   }
 
-  ExtendedSignedIntImpl& DivImpl(const ExtendedSignedIntImpl& other) {
+  ExtendedSignedIntImpl& DividedBy(const ExtendedSignedIntImpl& other) {
     int s1 = IntSign();
     int s2 = other.IntSign();
     if (s1 == 0) {
@@ -97,8 +96,8 @@ struct ExtendedSignedIntImpl<ET, true> : public UIntPairImpl<ET, true> {
     return *this;
   }
 
-  ExtendedSignedIntImpl& DivImpl(const ExtendedSignedIntImpl& other,
-                                 ExtendedSignedIntImpl& r) {
+  ExtendedSignedIntImpl& DividedBy(const ExtendedSignedIntImpl& other,
+                                   ExtendedSignedIntImpl& r) {
     int s1 = IntSign();
     int s2 = other.IntSign();
     if (s1 == 0) {
@@ -133,7 +132,7 @@ struct ExtendedSignedIntImpl<ET, true> : public UIntPairImpl<ET, true> {
     return *this;
   }
 
-  ExtendedSignedIntImpl& ModImpl(const ExtendedSignedIntImpl& other) {
+  ExtendedSignedIntImpl& Modulo(const ExtendedSignedIntImpl& other) {
     int s1 = IntSign();
     int s2 = other.IntSign();
     if (s1 == 0) {
@@ -254,9 +253,9 @@ struct ExtendedSignedIntImpl<ET, true> : public UIntPairImpl<ET, true> {
 
  public:
   // Operators
-  const ExtendedSignedIntImpl& operator+() const { return *this; }
+  ExtendedSignedIntImpl operator+() const { return *this; }
 
-  const ExtendedSignedIntImpl& operator-() const {
+  ExtendedSignedIntImpl operator-() const {
     ExtendedSignedIntImpl ret(*this);
     base::FlipBits();
     base::AddOne();
@@ -313,9 +312,9 @@ struct ExtendedSignedIntImpl<ET, true> : public UIntPairImpl<ET, true> {
     MakeAbs();
 
     if (s2 > 0) {
-      this->base::operator*=(other);
+      this->base::MultipliedBy(other);
     } else {
-      this->base::operator*=(other.Abs());
+      this->base::MultipliedBy(other.Abs());
     }
 
     if (s1 * s2 < 0) {
@@ -335,7 +334,7 @@ struct ExtendedSignedIntImpl<ET, true> : public UIntPairImpl<ET, true> {
   }
 
   ExtendedSignedIntImpl& operator/=(const ExtendedSignedIntImpl& other) {
-    return DivImpl(other);
+    return DividedBy(other);
   }
 
   ExtendedSignedIntImpl& operator/=(const ET& other) {
@@ -343,7 +342,7 @@ struct ExtendedSignedIntImpl<ET, true> : public UIntPairImpl<ET, true> {
   }
 
   ExtendedSignedIntImpl& operator%=(const ExtendedSignedIntImpl& other) {
-    return ModImpl(other);
+    return Modulo(other);
   }
 
   ExtendedSignedIntImpl& operator%=(const ET& other) {
@@ -581,9 +580,7 @@ struct ExtendedSignedIntImpl<ET, false> : public UIntPairImpl<ET, false> {
     }
   }
 
-  int GetHighestBit() const { return base::hi_.GetHighestBit(); }
-
-  ExtendedSignedIntImpl& DivImpl(const ExtendedSignedIntImpl& other) {
+  ExtendedSignedIntImpl& DividedBy(const ExtendedSignedIntImpl& other) {
     int s1 = IntSign();
     int s2 = other.IntSign();
     if (s1 == 0) {
@@ -612,8 +609,8 @@ struct ExtendedSignedIntImpl<ET, false> : public UIntPairImpl<ET, false> {
     return *this;
   }
 
-  ExtendedSignedIntImpl& DivImpl(const ExtendedSignedIntImpl& other,
-                                 ExtendedSignedIntImpl& r) {
+  ExtendedSignedIntImpl& DividedBy(const ExtendedSignedIntImpl& other,
+                                   ExtendedSignedIntImpl& r) {
     int s1 = IntSign();
     int s2 = other.IntSign();
     if (s1 == 0) {
@@ -647,7 +644,7 @@ struct ExtendedSignedIntImpl<ET, false> : public UIntPairImpl<ET, false> {
     return *this;
   }
 
-  ExtendedSignedIntImpl& ModImpl(const ExtendedSignedIntImpl& other) {
+  ExtendedSignedIntImpl& Modulo(const ExtendedSignedIntImpl& other) {
     int s1 = IntSign();
     int s2 = other.IntSign();
     if (s1 == 0) {
@@ -700,7 +697,7 @@ struct ExtendedSignedIntImpl<ET, false> : public UIntPairImpl<ET, false> {
     }
   }
 
-  int IntSign() const { return GetHighestBit() ? -1 : (IsZero() ? 0 : 1); }
+  int IntSign() const { return base::GetHighestBit() ? -1 : (IsZero() ? 0 : 1); }
 
   using base::IsZero;
 
@@ -830,9 +827,9 @@ struct ExtendedSignedIntImpl<ET, false> : public UIntPairImpl<ET, false> {
     MakeAbs();
 
     if (s2 > 0) {
-      this->base::operator*=(other);
+      this->MultipliedBy(other);
     } else {
-      this->base::operator*=(other.Abs());
+      this->MultipliedBy(other.Abs());
     }
 
     if (s1 * s2 < 0) {
@@ -854,7 +851,7 @@ struct ExtendedSignedIntImpl<ET, false> : public UIntPairImpl<ET, false> {
   }
 
   ExtendedSignedIntImpl& operator/=(const ExtendedSignedIntImpl& other) {
-    return DivImpl(other);
+    return DividedBy(other);
   }
 
   ExtendedSignedIntImpl& operator/=(const ET& other) {
@@ -868,7 +865,7 @@ struct ExtendedSignedIntImpl<ET, false> : public UIntPairImpl<ET, false> {
   }
 
   ExtendedSignedIntImpl& operator%=(const ExtendedSignedIntImpl& other) {
-    return ModImpl(other);
+    return Modulo(other);
   }
 
   ExtendedSignedIntImpl& operator%=(const ET& other) {
@@ -1125,7 +1122,7 @@ Div(const ExtendedSignedIntImpl<ET, is_native_integer>& l,
     const ExtendedSignedIntImpl<ET, is_native_integer>& r) {
   ExtendedSignedIntImpl<ET, is_native_integer> remain;
   ExtendedSignedIntImpl<ET, is_native_integer> d(l);
-  d.DivImpl(r, remain);
+  d.DividedBy(r, remain);
   return {d, remain};
 }
 

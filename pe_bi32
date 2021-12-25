@@ -836,6 +836,311 @@ class BigInteger {
   }
 
  public:
+  BigInteger& AddedBy(const BigInteger& other) {
+    if (other.IsZero()) {
+      // Do nothing
+    } else if (IsZero()) {
+      *this = other;
+    } else if (sign() == other.sign()) {
+      AbsAddedBy(other);
+    } else {
+      int c = AbsCompareTo(other);
+      if (c == 0) {
+        pos_ = 0;
+        data_[0] = 0;
+        sign_ = 0;
+      } else if (c > 0) {
+        AbsSubstract(other);
+      } else {
+        BigInteger t(other);
+        t.AbsSubstract(*this);
+        *this = std::move(t);
+      }
+    }
+    return *this;
+  }
+
+  BigInteger& Substract(const BigInteger& other) {
+    if (other.IsZero()) {
+      // Do nothing
+    } else if (IsZero()) {
+      *this = other;
+      sign_ = -other.sign_;
+    } else if (sign() != other.sign()) {
+      AbsAddedBy(other);
+    } else {
+      int c = AbsCompareTo(other);
+      if (c == 0) {
+        pos_ = 0;
+        data_[0] = 0;
+        sign_ = 0;
+      } else if (c > 0) {
+        AbsSubstract(other);
+      } else {
+        BigInteger t(other);
+        t.AbsSubstract(*this);
+        *this = std::move(t);
+        sign_ = -other.sign_;
+      }
+    }
+    return *this;
+  }
+
+  BigInteger& MultipliedBy(const BigInteger& other) {
+    if (IsZero() || other.IsZero()) {
+      pos_ = 0;
+      data_[0] = 0;
+      sign_ = 0;
+    } else {
+      const int s = sign() * (other > 0 ? 1 : -1);
+      AbsMultipliedBy(other);
+      sign_ = s;
+    }
+    return *this;
+  }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value))
+  RETURN(BigInteger&) MultipliedBy(T other) {
+    if (IsZero()) {
+      return *this;
+    }
+    if (other == 0) {
+      pos_ = 0;
+      data_[0] = 0;
+      sign_ = 0;
+      return *this;
+    }
+    using unsignedT = typename pe_make_unsigned<T>::type;
+    unsignedT abs_value = GetAbsValue(other);
+    const int s = sign_ * (other > 0 ? 1 : -1);
+    AbsMultipliedBy(abs_value);
+    sign_ = s;
+
+    return *this;
+  }
+
+  BigInteger& DividedBy(const BigInteger& r, BigInteger& remain) {
+    auto& l = *this;
+    if (l.IsZero() && r.IsZero()) {
+      remain = 0;
+      return SetNativeUInt64(1);
+    }
+    if (l.IsZero() || r.IsZero()) {
+      remain = 0;
+      return SetNativeUInt64(0);
+    }
+
+    if (r.size() > 2) {
+      BigInteger x;
+      BigInteger ret(l);
+      ret.AbsDividedBy(r, x);
+      ret.sign_ = l.sign_ * r.sign_;
+      ret.FixPos();
+      if (l.sign_ < 0) {
+        x.sign_ = -x.sign_;
+      }
+      x.FixPos();
+
+      *this = std::move(ret);
+      remain = std::move(x);
+
+      return *this;
+    } else {
+      uint64 abs_value = r.ToInt<uint64>();
+      uint64 x;
+      BigInteger ret(l);
+      ret.AbsDividedBy(abs_value, x);
+      ret.sign_ = l.sign() * (r.sign() > 0 ? 1 : -1);
+      ret.FixPos();
+
+      remain = x;
+      if (l.sign_ < 0) {
+        remain.sign_ = -remain.sign_;
+      }
+      *this = std::move(ret);
+      return *this;
+    }
+  }
+
+  BigInteger& DividedBy(const BigInteger& r) {
+    auto& l = *this;
+    if (l.IsZero() && r.IsZero()) {
+      return SetNativeUInt64(1);
+    }
+    if (l.IsZero() || r.IsZero()) {
+      return SetNativeUInt64(0);
+    }
+
+    if (r.size() > 2) {
+      BigInteger x;
+      BigInteger ret(l);
+      ret.AbsDividedBy(r, x);
+      ret.sign_ = l.sign_ * r.sign_;
+      ret.FixPos();
+      if (l.sign_ < 0) {
+        x.sign_ = -x.sign_;
+      }
+      x.FixPos();
+
+      *this = std::move(ret);
+
+      return *this;
+    } else {
+      uint64 abs_value = r.ToInt<uint64>();
+      uint64 x;
+      BigInteger ret(l);
+      ret.AbsDividedBy(abs_value, x);
+      ret.sign_ = l.sign() * (r.sign() > 0 ? 1 : -1);
+      ret.FixPos();
+
+      BigInteger remain(x);
+      if (l.sign_ < 0) {
+        remain.sign_ = -remain.sign_;
+      }
+      *this = std::move(ret);
+
+      return *this;
+    }
+  }
+
+  template <typename T>
+  REQUIRES(
+      (is_native_integer<T>::value &&
+       !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
+       sizeof(T) <= 8))
+  RETURN(BigInteger&) DividedBy(T r) {
+    auto& l = *this;
+    if (l.IsZero() && r == 0) {
+      r = 0;
+      return SetNativeUInt64(1);
+    }
+    if (l.IsZero() || r == 0) {
+      return SetNativeUInt64(0);
+    }
+
+    const int signl = l.sign_;
+    using unsignedT = typename pe_make_unsigned<T>::type;
+    unsignedT abs_value = BigInteger::GetAbsValue(r);
+    unsignedT x;
+    BigInteger ret(l);
+    ret.AbsDividedBy(abs_value, x);
+    ret.sign_ = signl * (r > 0 ? 1 : -1);
+    ret.FixPos();
+    if (l.sign_ < 0) {
+      PE_ASSERT(x == 0 || !pe_is_unsigned<T>::value);
+      x = BigInteger::GetAbsValue(x);
+    }
+
+    *this = std::move(ret);
+
+    return *this;
+  }
+
+  template <typename T>
+  REQUIRES(
+      (is_native_integer<T>::value &&
+       !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
+  RETURN(BigInteger&) DividedBy(T r, T& remain) {
+    auto& l = *this;
+    if (l.IsZero() && r == 0) {
+      remain = 0;
+      return SetNativeUInt64(1);
+    }
+
+    if (l.IsZero() || r == 0) {
+      remain = 0;
+      return SetNativeUInt64(0);
+    }
+
+    using unsignedT = typename pe_make_unsigned<T>::type;
+    unsignedT abs_value = BigInteger::GetAbsValue(r);
+    unsignedT tmp_remain;
+    const int signl = l.sign_;
+    l.AbsDividedBy(abs_value, tmp_remain);
+    l.sign_ = signl * (r > 0 ? 1 : -1);
+    l.FixPos();
+    remain = static_cast<T>(tmp_remain);
+    if (signl < 0) {
+      PE_ASSERT(remain == 0 || !pe_is_unsigned<T>::value);
+      remain = BigInteger::GetNegValue(remain);
+    }
+
+    return *this;
+  }
+
+  BigInteger& Modulo(const BigInteger& r) {
+    auto& l = *this;
+    if (l.IsZero() && r.IsZero()) {
+      return SetNativeUInt64(0);
+    }
+    if (l.IsZero() || r.IsZero()) {
+      return SetNativeUInt64(0);
+    }
+
+    if (r.size() > 2) {
+      BigInteger x;
+      BigInteger ret(l);
+      ret.AbsDividedBy(r, x);
+      ret.sign_ = l.sign_ * r.sign_;
+      ret.FixPos();
+      if (l.sign_ < 0) {
+        x.sign_ = -x.sign_;
+      }
+      x.FixPos();
+
+      *this = std::move(x);
+
+      return *this;
+    } else {
+      uint64 abs_value = r.ToInt<uint64>();
+      uint64 x;
+      BigInteger ret(l);
+      ret.AbsDividedBy(abs_value, x);
+      ret.sign_ = l.sign() * (r.sign() > 0 ? 1 : -1);
+      ret.FixPos();
+
+      int lsign = sign_;
+      *this = x;
+      if (lsign < 0) {
+        sign_ = -sign_;
+      }
+
+      return *this;
+    }
+  }
+
+  template <typename T>
+  REQUIRES(
+      (is_native_integer<T>::value &&
+       !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
+  RETURN(BigInteger&) Modulo(T r, T& remain) {
+    auto& l = *this;
+    if (l.IsZero() && r == 0) {
+      return SetNativeUInt64(0);
+    }
+
+    if (l.IsZero() || r == 0) {
+      return SetNativeUInt64(0);
+    }
+
+    using unsignedT = typename pe_make_unsigned<T>::type;
+    unsignedT abs_value = BigInteger::GetAbsValue(r);
+    unsignedT tmp_remain;
+    const int signl = l.sign_;
+    l.AbsDividedBy(abs_value, tmp_remain);
+    l.sign_ = signl * (r > 0 ? 1 : -1);
+    l.FixPos();
+    remain = static_cast<T>(tmp_remain);
+    if (signl < 0) {
+      PE_ASSERT(remain == 0 || !pe_is_unsigned<T>::value);
+      remain = BigInteger::GetNegValue(remain);
+    }
+
+    return *this = remain;
+  }
+
+ public:
   const unsigned int* data() const { return data_; }
 
   unsigned int* data() { return data_; }
@@ -1034,114 +1339,34 @@ class BigInteger {
     return ret;
   }
 
-  BigInteger& operator+=(const BigInteger& other) {
-    if (other.IsZero()) {
-      // Do nothing
-    } else if (IsZero()) {
-      *this = other;
-    } else if (sign() == other.sign()) {
-      AbsAddedBy(other);
-    } else {
-      int c = AbsCompareTo(other);
-      if (c == 0) {
-        pos_ = 0;
-        data_[0] = 0;
-        sign_ = 0;
-      } else if (c > 0) {
-        AbsSubstract(other);
-      } else {
-        BigInteger t(other);
-        t.AbsSubstract(*this);
-        *this = std::move(t);
-      }
-    }
-    return *this;
-  }
+  BigInteger& operator+=(const BigInteger& other) { return AddedBy(other); }
 
-  BigInteger& operator-=(const BigInteger& other) {
-    if (other.IsZero()) {
-      // Do nothing
-    } else if (IsZero()) {
-      *this = other;
-      sign_ = -other.sign_;
-    } else if (sign() != other.sign()) {
-      AbsAddedBy(other);
-    } else {
-      int c = AbsCompareTo(other);
-      if (c == 0) {
-        pos_ = 0;
-        data_[0] = 0;
-        sign_ = 0;
-      } else if (c > 0) {
-        AbsSubstract(other);
-      } else {
-        BigInteger t(other);
-        t.AbsSubstract(*this);
-        *this = std::move(t);
-        sign_ = -other.sign_;
-      }
-    }
-    return *this;
-  }
+  BigInteger& operator-=(const BigInteger& other) { return Substract(other); }
 
   BigInteger& operator*=(const BigInteger& other) {
-    if (IsZero() || other.IsZero()) {
-      pos_ = 0;
-      data_[0] = 0;
-      sign_ = 0;
-    } else {
-      const int s = sign() * (other > 0 ? 1 : -1);
-      AbsMultipliedBy(other);
-      sign_ = s;
-    }
-    return *this;
+    return MultipliedBy(other);
   }
 
   template <typename T>
   REQUIRES((is_native_integer<T>::value))
   RETURN(BigInteger&) operator*=(T other) {
-    if (IsZero()) {
-      return *this;
-    }
-    if (other == 0) {
-      pos_ = 0;
-      data_[0] = 0;
-      sign_ = 0;
-      return *this;
-    }
-    using unsignedT = typename pe_make_unsigned<T>::type;
-    unsignedT abs_value = GetAbsValue(other);
-    const int s = sign_ * (other > 0 ? 1 : -1);
-    AbsMultipliedBy(abs_value);
-    sign_ = s;
-
-    return *this;
+    return MultipliedBy(other);
   }
 
-  BigInteger& operator/=(const BigInteger& other) {
-    *this = *this / other;
-    return *this;
-  }
+  BigInteger& operator/=(const BigInteger& other) { return DividedBy(other); }
 
   template <typename T>
   REQUIRES((is_native_integer<T>::value && sizeof(T) <= 8))
   RETURN(BigInteger&) operator/=(T other) {
-    T r;
-    DivInplace(*this, other, r);
-    return *this;
+    return DividedBy(other);
   }
 
-  BigInteger& operator%=(const BigInteger& other) {
-    *this = *this % other;
-    return *this;
-  }
+  BigInteger& operator%=(const BigInteger& other) { return Modulo(other); }
 
   template <typename T>
   REQUIRES((is_native_integer<T>::value && sizeof(T) <= 8))
   RETURN(BigInteger&) operator%=(T other) {
-    T r;
-    DivInplace(*this, other, r);
-    return *this = r;
+    return Modulo(other);
   }
 
   BigInteger& operator&=(const BigInteger& other) {
@@ -1348,9 +1573,9 @@ class BigInteger {
   }
 
   friend inline BigInteger operator/(const BigInteger& l, const BigInteger& r) {
-    BigInteger u, v;
-    std::tie(u, v) = DivImpl(l, r);
-    return u;
+    BigInteger ret(l);
+    ret.DividedBy(r);
+    return ret;
   }
 
   template <typename T>
@@ -1359,116 +1584,15 @@ class BigInteger {
        !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
        sizeof(T) <= 8)) RETURN(BigInteger)
   operator/(const BigInteger& l, T r) {
-    BigInteger u;
-    T v;
-    std::tie(u, v) = DivImpl(l, r);
-    return u;
-  }
-
-  friend inline std::tuple<BigInteger, BigInteger> DivImpl(
-      const BigInteger& l, const BigInteger& r) {
-    if (l.IsZero() && r.IsZero()) {
-      return std::make_tuple(1, 0);
-    }
-    if (l.IsZero() || r.IsZero()) {
-      return std::make_tuple(0, 0);
-    }
-
-    if (r.size() > 2) {
-      BigInteger x;
-      BigInteger ret(l);
-      ret.AbsDividedBy(r, x);
-      ret.sign_ = l.sign_ * r.sign_;
-      ret.FixPos();
-      if (l.sign_ < 0) {
-        x.sign_ = -x.sign_;
-      }
-      x.FixPos();
-
-      return std::make_tuple(std::move(ret), std::move(x));
-    } else {
-      uint64 abs_value = r.ToInt<uint64>();
-      uint64 x;
-      BigInteger ret(l);
-      ret.AbsDividedBy(abs_value, x);
-      ret.sign_ = l.sign() * (r.sign() > 0 ? 1 : -1);
-      ret.FixPos();
-
-      BigInteger remain(x);
-      if (l.sign_ < 0) {
-        remain.sign_ = -remain.sign_;
-      }
-      return std::make_tuple(std::move(ret), std::move(remain));
-    }
-  }
-
-  template <typename T>
-  friend inline REQUIRES(
-      (is_native_integer<T>::value &&
-       !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
-       sizeof(T) <= 8)) RETURN(std::tuple<BigInteger, T>)
-      DivImpl(const BigInteger& l, T r) {
-    if (l.IsZero() && r == 0) {
-      return std::make_tuple(1, 0);
-    }
-    if (l.IsZero() || r == 0) {
-      return std::make_tuple(0, 0);
-    }
-
-    const int signl = l.sign_;
-    using unsignedT = typename pe_make_unsigned<T>::type;
-    unsignedT abs_value = BigInteger::GetAbsValue(r);
-    unsignedT x;
     BigInteger ret(l);
-    ret.AbsDividedBy(abs_value, x);
-    ret.sign_ = signl * (r > 0 ? 1 : -1);
-    ret.FixPos();
-    if (l.sign_ < 0) {
-      PE_ASSERT(x == 0 || !pe_is_unsigned<T>::value);
-      x = BigInteger::GetAbsValue(x);
-    }
-
-    return std::make_tuple(std::move(ret), static_cast<T>(x));
-  }
-
-  template <typename T>
-  friend inline REQUIRES(
-      (is_native_integer<T>::value &&
-       !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
-      RETURN(void) DivInplace(BigInteger& l, T r, T& remain) {
-    if (l.IsZero() && r == 0) {
-      l = 1;
-      remain = 0;
-      return;
-    }
-
-    if (l.IsZero() || r == 0) {
-      if (!l.IsZero()) {
-        l.pos_ = 0;
-        l.data_[0] = 0;
-        l.sign_ = 0;
-      }
-      remain = 0;
-      return;
-    }
-    using unsignedT = typename pe_make_unsigned<T>::type;
-    unsignedT abs_value = BigInteger::GetAbsValue(r);
-    unsignedT tmp_remain;
-    const int signl = l.sign_;
-    l.AbsDividedBy(abs_value, tmp_remain);
-    l.sign_ = signl * (r > 0 ? 1 : -1);
-    l.FixPos();
-    remain = static_cast<T>(tmp_remain);
-    if (signl < 0) {
-      PE_ASSERT(remain == 0 || !pe_is_unsigned<T>::value);
-      remain = BigInteger::GetNegValue(remain);
-    }
+    ret.DividedBy(r);
+    return ret;
   }
 
   friend inline BigInteger operator%(const BigInteger& l, const BigInteger& r) {
-    BigInteger u, v;
-    std::tie(u, v) = DivImpl(l, r);
-    return v;
+    BigInteger t(l), ret;
+    t.DividedBy(r, ret);
+    return ret;
   }
 
   template <typename T>
@@ -1477,13 +1601,9 @@ class BigInteger {
        !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
        sizeof(T) <= 8)) RETURN(BigInteger)
   operator%(const BigInteger& l, T r) {
-    BigInteger u;
-    T v;
-    std::tie(u, v) = DivImpl(l, r);
-    if (l.sign() < 0) {
-      v = BigInteger::GetNegValue(v);
-    }
-    return v;
+    BigInteger t(l), ret;
+    t.DividedBy(r, ret);
+    return ret;
   }
 
   friend inline BigInteger operator&(const BigInteger& l, const BigInteger& r) {
@@ -1630,7 +1750,9 @@ SL unsigned int LowerBits(const BigInteger& x) { return x.LowerBits(); }
 
 SL std::tuple<BigInteger, BigInteger> Div(const BigInteger& l,
                                           const BigInteger& r) {
-  return DivImpl(l, r);
+  BigInteger t(l), remain;
+  t.DividedBy(r, remain);
+  return {t, remain};
 }
 
 template <typename T>

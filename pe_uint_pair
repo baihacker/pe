@@ -366,7 +366,7 @@ struct UIntPairImpl<ET, true> {
       low_ = hi_ = 0;
       return *this;
     } else {
-      ExtendedUnsignedIntImpl d = Difference(other);
+      UIntPairImpl d = Difference(other);
       if (t < 0) {
         d.FlipBits();
         d.AddOne();
@@ -797,6 +797,232 @@ struct UIntPairImpl<ET, true> {
       }
       return UIntPairImpl(y, x);
     }
+  }
+
+ public:
+  // Operators
+  UIntPairImpl operator+() const { return *this; }
+
+  UIntPairImpl operator-() const {
+    UIntPairImpl ret(*this);
+    FlipBits();
+    AddOne();
+    return ret;
+  }
+
+  UIntPairImpl operator~() const { return UIntPairImpl(~low_, ~hi_); }
+
+  UIntPairImpl& operator+=(const UIntPairImpl& other) {
+    UIntAddedBy(other);
+    return *this;
+  }
+
+  UIntPairImpl& operator+=(const ET& other) {
+    UIntAddedBy(other);
+    return *this;
+  }
+
+  UIntPairImpl& operator-=(const UIntPairImpl& other) {
+    UIntSubstract(other);
+    return *this;
+  }
+
+  UIntPairImpl& operator-=(const ET& other) {
+    UIntSubstract(other);
+    return *this;
+  }
+
+  UIntPairImpl& operator*=(const UIntPairImpl& other) {
+    UIntMultiplyBy(other);
+    return *this;
+  }
+
+  UIntPairImpl& operator*=(const ET& other) {
+    UIntMultiplyBy(other);
+    return *this;
+  }
+
+  UIntPairImpl& operator/=(const UIntPairImpl& other) {
+    return UIntDividedBy(other);
+  }
+
+  UIntPairImpl& operator/=(const ET& other) {
+    return *this /= UIntPairImpl(other);
+  }
+
+  UIntPairImpl& operator%=(const UIntPairImpl& other) {
+    return UIntModulo(other);
+  }
+
+  UIntPairImpl& operator%=(const ET& other) {
+    return *this %= UIntPairImpl(other);
+  }
+
+  UIntPairImpl& operator&=(const UIntPairImpl& other) {
+    low_ &= other.low();
+    hi_ &= other.hi();
+    return *this;
+  }
+
+  UIntPairImpl& operator&=(const ET& other) {
+    low_ &= other;
+    hi_ = 0;
+    return *this;
+  }
+
+  UIntPairImpl& operator^=(const UIntPairImpl& other) {
+    low_ ^= other.low();
+    hi_ ^= other.hi();
+    return *this;
+  }
+
+  UIntPairImpl& operator^=(const ET& other) {
+    low_ ^= other;
+    return *this;
+  }
+
+  UIntPairImpl& operator|=(const UIntPairImpl& other) {
+    low_ |= other.low();
+    hi_ |= other.hi();
+    return *this;
+  }
+
+  UIntPairImpl& operator|=(const ET& other) {
+    low_ |= other;
+    return *this;
+  }
+
+  UIntPairImpl& operator>>=(int cnt) {
+    ShiftRight(cnt);
+    return *this;
+  }
+
+  UIntPairImpl& operator<<=(int cnt) {
+    ShiftLeft(cnt);
+    return *this;
+  }
+
+  UIntPairImpl& operator++() {
+    AddOne();
+    return *this;
+  }
+
+  UIntPairImpl operator++(int) {
+    UIntPairImpl ret(*this);
+    *this += 1;
+    return ret;
+  }
+
+  UIntPairImpl& operator--() {
+    if (low_) {
+      --low_;
+    } else {
+      --low_;
+      --hi_;
+    }
+    return *this;
+  }
+
+  UIntPairImpl operator--(int) {
+    UIntPairImpl ret(*this);
+    *this -= 1;
+    return ret;
+  }
+
+ public:
+  // All the binary operators are friend operators
+  // Comparison operators
+#if PE_HAS_CPP20
+  friend inline int operator<=>(const UIntPairImpl& l, const UIntPairImpl& r) {
+    return l.CompareTo(r);
+  }
+  friend inline int operator==(const UIntPairImpl& l, const UIntPairImpl& r) {
+    return l.CompareTo(r) == 0;
+  }
+  friend inline int operator!=(const UIntPairImpl& l, const UIntPairImpl& r) {
+    return l.CompareTo(r) != 0;
+  }
+#else
+  friend inline int operator<(const UIntPairImpl& l, const UIntPairImpl& r) {
+    return l.CompareTo(r) < 0;
+  }
+  friend inline int operator<=(const UIntPairImpl& l, const UIntPairImpl& r) {
+    return l.CompareTo(r) <= 0;
+  }
+  friend inline int operator>(const UIntPairImpl& l, const UIntPairImpl& r) {
+    return l.CompareTo(r) > 0;
+  }
+  friend inline int operator>=(const UIntPairImpl& l, const UIntPairImpl& r) {
+    return l.CompareTo(r) >= 0;
+  }
+  friend inline int operator==(const UIntPairImpl& l, const UIntPairImpl& r) {
+    return l.CompareTo(r) == 0;
+  }
+  friend inline int operator!=(const UIntPairImpl& l, const UIntPairImpl& r) {
+    return l.CompareTo(r) != 0;
+  }
+#endif
+  friend inline UIntPairImpl operator+(const UIntPairImpl& l,
+                                       const UIntPairImpl& r) {
+    UIntPairImpl ret(l);
+    ret += r;
+    return ret;
+  }
+  friend inline UIntPairImpl operator-(const UIntPairImpl& l,
+                                       const UIntPairImpl& r) {
+    UIntPairImpl ret(l);
+    ret -= r;
+    return ret;
+  }
+  friend inline UIntPairImpl operator*(const UIntPairImpl& l,
+                                       const UIntPairImpl& r) {
+    UIntPairImpl ret(l);
+    ret *= r;
+    return ret;
+  }
+  friend inline UIntPairImpl operator/(const UIntPairImpl& l,
+                                       const UIntPairImpl& r) {
+    UIntPairImpl ret(l);
+    ret /= r;
+    return ret;
+  }
+  friend inline UIntPairImpl operator%(const UIntPairImpl& l,
+                                       const UIntPairImpl& r) {
+    UIntPairImpl ret(l);
+    ret %= r;
+    return ret;
+  }
+  friend inline UIntPairImpl operator&(const UIntPairImpl& l,
+                                       const UIntPairImpl& r) {
+    UIntPairImpl ret(l);
+    ret &= r;
+    return ret;
+  }
+  friend inline UIntPairImpl operator^(const UIntPairImpl& l,
+                                       const UIntPairImpl& r) {
+    UIntPairImpl ret(l);
+    ret ^= r;
+    return ret;
+  }
+  friend inline UIntPairImpl operator|(const UIntPairImpl& l,
+                                       const UIntPairImpl& r) {
+    UIntPairImpl ret(l);
+    ret |= r;
+    return ret;
+  }
+  friend inline UIntPairImpl operator<<(const UIntPairImpl& l, const int cnt) {
+    UIntPairImpl ret(l);
+    ret <<= cnt;
+    return ret;
+  }
+  friend inline UIntPairImpl operator>>(const UIntPairImpl& l, const int cnt) {
+    UIntPairImpl ret(l);
+    ret >>= cnt;
+    return ret;
+  }
+  friend inline std::ostream& operator<<(std::ostream& o,
+                                         const UIntPairImpl& n) {
+    return o << n.ToString();
   }
 
  protected:
@@ -1450,6 +1676,286 @@ struct UIntPairImpl<ET, false> {
       }
       return UIntPairImpl(y, x);
     }
+  }
+
+ public:
+  // Operators
+  const UIntPairImpl& operator+() const { return *this; }
+
+  const UIntPairImpl& operator-() const {
+    UIntPairImpl ret(*this);
+    FlipBits();
+    AddOne();
+    return ret;
+  }
+
+  UIntPairImpl operator~() const {
+    return UIntPairImpl(~low_, ~hi_);
+  }
+
+  UIntPairImpl& operator+=(const UIntPairImpl& other) {
+    UIntAddedBy(other);
+    return *this;
+  }
+
+  UIntPairImpl& operator+=(const ET& other) {
+    return *this += UIntPairImpl(other);
+  }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value))
+  RETURN(UIntPairImpl&) operator+=(const T& other) {
+    return *this += UIntPairImpl(other);
+  }
+
+  UIntPairImpl& operator-=(const UIntPairImpl& other) {
+    UIntSubstract(other);
+    return *this;
+  }
+
+  UIntPairImpl& operator-=(const ET& other) {
+    return *this -= UIntPairImpl(other);
+  }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value))
+  RETURN(UIntPairImpl&) operator-=(const T& other) {
+    return *this -= UIntPairImpl(other);
+  }
+
+  UIntPairImpl& operator*=(const UIntPairImpl& other) {
+    UIntMultiplyBy(other);
+    return *this;
+  }
+
+  UIntPairImpl& operator*=(const ET& other) {
+    return *this *= UIntPairImpl(other);
+  }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value))
+  RETURN(UIntPairImpl&) operator*=(const T& other) {
+    return *this *= UIntPairImpl(other);
+  }
+
+  UIntPairImpl& operator/=(const UIntPairImpl& other) {
+    return DivImpl(other);
+  }
+
+  UIntPairImpl& operator/=(const ET& other) {
+    return *this /= UIntPairImpl(other);
+  }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value))
+  RETURN(UIntPairImpl&) operator/=(const T& other) {
+    return *this /= UIntPairImpl(other);
+  }
+
+  UIntPairImpl& operator%=(const UIntPairImpl& other) {
+    return ModImpl(other);
+  }
+
+  UIntPairImpl& operator%=(const ET& other) {
+    return *this %= UIntPairImpl(other);
+  }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value))
+  RETURN(UIntPairImpl&) operator%=(const T& other) {
+    return *this %= UIntPairImpl(other);
+  }
+
+  UIntPairImpl& operator&=(const UIntPairImpl& other) {
+    low_ &= other.low();
+    hi_ &= other.hi();
+    return *this;
+  }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value))
+  RETURN(UIntPairImpl&) operator&=(const T& other) {
+    return *this &= UIntPairImpl(other);
+  }
+
+  UIntPairImpl& operator&=(const ET& other) {
+    return *this &= UIntPairImpl(other);
+  }
+
+  UIntPairImpl& operator^=(const UIntPairImpl& other) {
+    low_ ^= other.low();
+    hi_ ^= other.hi();
+    return *this;
+  }
+
+  UIntPairImpl& operator^=(const ET& other) {
+    return *this ^= UIntPairImpl(other);
+  }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value))
+  RETURN(UIntPairImpl&) operator^=(const T& other) {
+    return *this ^= UIntPairImpl(other);
+  }
+
+  UIntPairImpl& operator|=(const UIntPairImpl& other) {
+    low_ |= other.low();
+    hi_ |= other.hi();
+    return *this;
+  }
+
+  UIntPairImpl& operator|=(const ET& other) {
+    return *this |= UIntPairImpl(other);
+  }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value))
+  RETURN(UIntPairImpl&) operator|=(const T& other) {
+    return *this |= UIntPairImpl(other);
+  }
+
+  UIntPairImpl& operator>>=(int cnt) {
+    ShiftRight(cnt);
+    return *this;
+  }
+
+  UIntPairImpl& operator<<=(int cnt) {
+    ShiftLeft(cnt);
+    return *this;
+  }
+
+  UIntPairImpl& operator++() {
+    AddOne();
+    return *this;
+  }
+
+  UIntPairImpl operator++(int) {
+    UIntPairImpl ret(*this);
+    *this += 1;
+    return ret;
+  }
+
+  UIntPairImpl& operator--() {
+    if (!low_.IsZero()) {
+      --low_;
+    } else {
+      --low_;
+      --hi_;
+    }
+    return *this;
+  }
+
+  UIntPairImpl operator--(int) {
+    UIntPairImpl ret(*this);
+    *this -= 1;
+    return ret;
+  }
+
+ public:
+  // All the binary operators are friend operators
+  // Comparison operators
+#if PE_HAS_CPP20
+  friend inline int operator<=>(const UIntPairImpl& l,
+                                const UIntPairImpl& r) {
+    return l.CompareTo(r);
+  }
+  friend inline int operator==(const UIntPairImpl& l,
+                               const UIntPairImpl& r) {
+    return l.CompareTo(r) == 0;
+  }
+  friend inline int operator!=(const UIntPairImpl& l,
+                               const UIntPairImpl& r) {
+    return l.CompareTo(r) != 0;
+  }
+#else
+  friend inline int operator<(const UIntPairImpl& l,
+                              const UIntPairImpl& r) {
+    return l.CompareTo(r) < 0;
+  }
+  friend inline int operator<=(const UIntPairImpl& l,
+                               const UIntPairImpl& r) {
+    return l.CompareTo(r) <= 0;
+  }
+  friend inline int operator>(const UIntPairImpl& l,
+                              const UIntPairImpl& r) {
+    return l.CompareTo(r) > 0;
+  }
+  friend inline int operator>=(const UIntPairImpl& l,
+                               const UIntPairImpl& r) {
+    return l.CompareTo(r) >= 0;
+  }
+  friend inline int operator==(const UIntPairImpl& l,
+                               const UIntPairImpl& r) {
+    return l.CompareTo(r) == 0;
+  }
+  friend inline int operator!=(const UIntPairImpl& l,
+                               const UIntPairImpl& r) {
+    return l.CompareTo(r) != 0;
+  }
+#endif
+  friend inline UIntPairImpl operator+(
+      const UIntPairImpl& l, const UIntPairImpl& r) {
+    UIntPairImpl ret(l);
+    ret += r;
+    return ret;
+  }
+  friend inline UIntPairImpl operator-(
+      const UIntPairImpl& l, const UIntPairImpl& r) {
+    UIntPairImpl ret(l);
+    ret -= r;
+    return ret;
+  }
+  friend inline UIntPairImpl operator*(
+      const UIntPairImpl& l, const UIntPairImpl& r) {
+    UIntPairImpl ret(l);
+    ret *= r;
+    return ret;
+  }
+  friend inline UIntPairImpl operator/(
+      const UIntPairImpl& l, const UIntPairImpl& r) {
+    UIntPairImpl ret(l);
+    ret /= r;
+    return ret;
+  }
+  friend inline UIntPairImpl operator%(
+      const UIntPairImpl& l, const UIntPairImpl& r) {
+    UIntPairImpl ret(l);
+    ret %= r;
+    return ret;
+  }
+  friend inline UIntPairImpl operator&(
+      const UIntPairImpl& l, const UIntPairImpl& r) {
+    UIntPairImpl ret(l);
+    ret &= r;
+    return ret;
+  }
+  friend inline UIntPairImpl operator^(
+      const UIntPairImpl& l, const UIntPairImpl& r) {
+    UIntPairImpl ret(l);
+    ret ^= r;
+    return ret;
+  }
+  friend inline UIntPairImpl operator|(
+      const UIntPairImpl& l, const UIntPairImpl& r) {
+    UIntPairImpl ret(l);
+    ret |= r;
+    return ret;
+  }
+  friend inline UIntPairImpl operator<<(
+      const UIntPairImpl& l, const int cnt) {
+    UIntPairImpl ret(l);
+    ret <<= cnt;
+    return ret;
+  }
+  friend inline UIntPairImpl operator>>(
+      const UIntPairImpl& l, const int cnt) {
+    UIntPairImpl ret(l);
+    ret >>= cnt;
+    return ret;
+  }
+  friend inline std::ostream& operator<<(std::ostream& o,
+                                         const UIntPairImpl& n) {
+    return o << n.ToString();
   }
 
  protected:

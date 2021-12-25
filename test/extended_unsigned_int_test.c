@@ -78,10 +78,10 @@ SL void TestAssignmentOperator() {
   TestAssignmentImpl<uint128>();
 #endif
 
-  /*std::string s = "123456789123456789123456789";
+  std::string s = "123456789123456789123456789";
   TestT x;
   x = s;
-  assert(x.ToString() == s);*/
+  assert(x.ToString() == s);
 }
 
 template <typename T>
@@ -342,14 +342,8 @@ SL void TestBitOperator() {
 }
 
 SL void TestUtilities() {
-  // PowerMod(TestT(5), 10, TestT("123456789"));
-  // PowerMod(TestT(5), TestT(10), TestT("123456789"));
-
   Power(TestT(2), 10u);
   Power(TestT(2), 10);
-
-  Gcd(12_bi, 8_bi);
-  123456789123456789_bi * 2 * 5_bi * "10"_bi;
 
   Power(TestT(2), 20);
   Power(TestT(2), 20LL);

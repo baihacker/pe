@@ -48,6 +48,12 @@ struct CheckConditionThen<true> {
 #define RETURN_T(...) template IdenticalTypeT<__VA_ARGS__>::type
 
 // pe type traits
+template <typename ET, bool is_native>
+struct ExtendedUnsignedIntImpl;
+
+template <typename ET, bool is_native>
+struct ExtendedSignedIntImpl;
+
 class BigInteger;
 
 #if ENABLE_GMP
@@ -75,6 +81,16 @@ struct is_native_integer<uint128> {
   enum { value = true };
 };
 #endif
+
+template <typename ET, bool is_native>
+struct is_native_integer<ExtendedUnsignedIntImpl<ET, is_native>> {
+  enum { value = false };
+};
+
+template <typename ET, bool is_native>
+struct is_native_integer<ExtendedSignedIntImpl<ET, is_native>> {
+  enum { value = false };
+};
 
 template <>
 struct is_native_integer<BigInteger> {
@@ -129,6 +145,11 @@ struct is_extended_integer<ExtendedUnsignedIntImpl<UT, is_native>> {
   enum { value = true };
 };
 
+template <typename ET, bool is_native>
+struct is_extended_integer<ExtendedSignedIntImpl<ET, is_native>> {
+  enum { value = true };
+};
+
 // is_general_integer
 template <typename T>
 struct is_general_integer {
@@ -150,6 +171,16 @@ struct is_general_integer<uint128> {
   enum { value = true };
 };
 #endif
+
+template <typename UT, bool is_native>
+struct is_general_integer<ExtendedUnsignedIntImpl<UT, is_native>> {
+  enum { value = true };
+};
+
+template <typename ET, bool is_native>
+struct is_general_integer<ExtendedSignedIntImpl<ET, is_native>> {
+  enum { value = true };
+};
 
 template <>
 struct is_general_integer<BigInteger> {
@@ -188,6 +219,16 @@ struct pe_is_signed<uint128> {
 };
 #endif
 
+template <typename UT, bool is_native>
+struct pe_is_signed<ExtendedUnsignedIntImpl<UT, is_native>> {
+  enum { value = false };
+};
+
+template <typename ET, bool is_native>
+struct pe_is_signed<ExtendedSignedIntImpl<ET, is_native>> {
+  enum { value = true };
+};
+
 // pe_is_unsigned
 template <typename T>
 struct pe_is_unsigned {
@@ -205,6 +246,16 @@ struct pe_is_unsigned<uint128> {
   enum { value = true };
 };
 #endif
+
+template <typename UT, bool is_native>
+struct pe_is_unsigned<ExtendedUnsignedIntImpl<UT, is_native>> {
+  enum { value = true };
+};
+
+template <typename ET, bool is_native>
+struct pe_is_unsigned<ExtendedSignedIntImpl<ET, is_native>> {
+  enum { value = false };
+};
 
 // pe_make_signed
 template <typename T>
@@ -224,6 +275,16 @@ struct pe_make_signed<uint128> {
 };
 #endif
 
+template <typename ET, bool is_native>
+struct pe_make_signed<ExtendedUnsignedIntImpl<ET, is_native>> {
+  using type = typename ExtendedUnsignedIntImpl<ET, is_native>::SignedT;
+};
+
+template <typename ET, bool is_native>
+struct pe_make_signed<ExtendedSignedIntImpl<ET, is_native>> {
+  using type = typename ExtendedSignedIntImpl<ET, is_native>::SignedT;
+};
+
 // pe_make_unsigned
 template <typename T>
 struct pe_make_unsigned {
@@ -241,6 +302,16 @@ struct pe_make_unsigned<uint128> {
   using type = uint128;
 };
 #endif
+
+template <typename ET, bool is_native>
+struct pe_make_unsigned<ExtendedUnsignedIntImpl<ET, is_native>> {
+  using type = typename ExtendedUnsignedIntImpl<ET, is_native>::UnsignedT;
+};
+
+template <typename ET, bool is_native>
+struct pe_make_unsigned<ExtendedSignedIntImpl<ET, is_native>> {
+  using type = typename ExtendedSignedIntImpl<ET, is_native>::UnsignedT;
+};
 
 // is_gbi
 template <typename T>

@@ -16,10 +16,11 @@ template <typename ET, bool is_native>
 struct ExtendedSignedIntImpl;
 
 template <typename ET>
-struct ExtendedSignedIntImpl<ET, true> : public ExtendedUnsignedIntImpl<ET, true> {
+struct ExtendedSignedIntImpl<ET, true>
+    : public ExtendedUnsignedIntImpl<ET, true> {
   // The corresponding native integer type.
   using NT = ET;
-
+  using UnsignedT = ExtendedUnsignedIntImpl<ET, true>;
   using base = ExtendedUnsignedIntImpl<ET, true>;
 
  public:
@@ -530,9 +531,11 @@ struct ExtendedSignedIntImpl<ET, true> : public ExtendedUnsignedIntImpl<ET, true
 };
 
 template <typename ET>
-struct ExtendedSignedIntImpl<ET, false> : public ExtendedUnsignedIntImpl<ET, false> {
+struct ExtendedSignedIntImpl<ET, false>
+    : public ExtendedUnsignedIntImpl<typename ET::UnsignedT, false> {
   using NT = typename ET::NT;
-  using base = ExtendedUnsignedIntImpl<ET, false>;
+  using UnsignedT = ExtendedUnsignedIntImpl<typename ET::UnsignedT, false>;
+  using base = ExtendedUnsignedIntImpl<typename ET::UnsignedT, false>;
 
  public:
   ExtendedSignedIntImpl(ET low = 0) : base(low) {}
@@ -698,7 +701,9 @@ struct ExtendedSignedIntImpl<ET, false> : public ExtendedUnsignedIntImpl<ET, fal
     }
   }
 
-  int IntSign() const { return base::GetHighestBit() ? -1 : (IsZero() ? 0 : 1); }
+  int IntSign() const {
+    return base::GetHighestBit() ? -1 : (IsZero() ? 0 : 1);
+  }
 
   using base::IsZero;
 

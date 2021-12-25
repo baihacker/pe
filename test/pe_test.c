@@ -1,6 +1,7 @@
 #include "pe_test.h"
 
-#if 1
+#if 0
+#include "extended_signed_int_test.c"
 #include "extended_unsigned_int_test.c"
 #else
 #include "algo_test.c"
@@ -10,6 +11,7 @@
 #include "bit_test.c"
 #include "comb_moder_test.c"
 #include "dva_test.c"
+#include "extended_signed_int_test.c"
 #include "extended_unsigned_int_test.c"
 #include "fact_ppower_mod_test.c"
 #include "init_inv_test.c"

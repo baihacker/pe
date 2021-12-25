@@ -1,0 +1,1110 @@
+#ifndef PE_UINT_PAIR_
+#define PE_UINT_PAIR_
+
+#include "pe_base"
+#include "pe_int128"
+#include "pe_type_traits"
+#include "pe_int"
+#include "pe_bit"
+
+namespace pe {
+// A pair of two unsigned integers
+
+template <typename ET, bool is_native>
+struct UIntPairImpl;
+
+template <typename ET>
+struct UIntPairImpl<ET, true> {
+  constexpr static int quarter_bitcount = sizeof(ET) * 4;
+  constexpr static int half_bitcount = quarter_bitcount * 2;
+  constexpr static int bitcount = half_bitcount * 2;
+
+  constexpr static ET quarter_mask =
+      (static_cast<ET>(1) << quarter_bitcount) - 1;
+
+  constexpr static ET hibit_mask = (static_cast<ET>(1) << (half_bitcount - 1));
+
+  // The corresponding native integer type.
+  using NT = ET;
+
+ protected:
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value &&
+            sizeof(T) <= sizeof(ET)))
+  RETURN(void) FromNativeInt(T v) {
+    low_ = v;
+  }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value &&
+            sizeof(T) > sizeof(ET)))
+  RETURN(void) FromNativeInt(T v) {
+    low_ = v;
+    hi_ = v >> half_bitcount;
+  }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value &&
+            sizeof(T) <= sizeof(ET)))
+  RETURN(void) FromNativeInt(T v) {
+    if (v >= 0) {
+      low_ = v;
+    } else {
+      low_ = v;
+      hi_ = -1;
+    }
+  }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value &&
+            sizeof(T) > sizeof(ET)))
+  RETURN(void) FromNativeInt(T v) {
+    using unsignedT = typename pe_make_unsigned<T>::type;
+    FromNativeInt<unsignedT>(static_cast<unsignedT>(v));
+  }
+
+ public:
+  UIntPairImpl(ET low = 0) : low_(low), hi_(0) {}
+  UIntPairImpl(ET low, ET hi) : low_(low), hi_(hi) {}
+
+  template <typename T,
+            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
+  UIntPairImpl(T v) : low_(0), hi_(0) {
+    FromNativeInt<T>(v);
+  }
+
+  UIntPairImpl(const UIntPairImpl& other) : low_(other.low_), hi_(other.hi_) {}
+
+  UIntPairImpl(const std::string& str) {
+    // TODO(baihacker): implement it
+  }
+
+  UIntPairImpl& operator=(const UIntPairImpl& other) {
+    low_ = other.low_;
+    hi_ = other.hi_;
+    return *this;
+  }
+
+  UIntPairImpl& operator=(const UIntPairImpl&& other) {
+    low_ = std::move(other.low_);
+    hi_ = std::move(other.hi_);
+    return *this;
+  }
+
+  UIntPairImpl& operator=(const ET& other) {
+    low_ = other;
+    return *this;
+  }
+
+  template <typename T,
+            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
+  UIntPairImpl& operator=(const T& other) {
+    MakeZeroBits();
+    FromNativeInt<T>(other);
+    return *this;
+  }
+
+ public:
+  void FlipBits() {
+    low_ = ~low_;
+    hi_ = ~hi_;
+  }
+
+  void MakeZeroBits() {
+    low_ = 0;
+    hi_ = 0;
+  }
+
+  void AddOne() {
+    ++low_;
+    if (low_ == 0) {
+      ++hi_;
+    }
+  }
+
+  int GetHighestBit() const { return hi_ & hibit_mask ? 1 : 0; }
+
+  void ArithmeticShiftRight(int cnt) {
+    if (GetHighestBit()) {
+      FlipBits();
+      AddOne();
+      *this >>= cnt;
+      FlipBits();
+      AddOne();
+    } else {
+      ShiftRight(cnt);
+    }
+  }
+
+  void ShiftRight(int cnt) {
+    if (cnt >= bitcount) {
+      low_ = hi_ = 0;
+    } else if (cnt >= half_bitcount) {
+      low_ = hi_ >> (cnt - half_bitcount);
+      hi_ = 0;
+    } else {
+      ET mask = (static_cast<ET>(1) << cnt) - 1;
+      ET t = hi_ & mask;
+      hi_ >>= cnt;
+      low_ >>= cnt;
+      low_ |= t << (half_bitcount - cnt);
+    }
+  }
+
+  void ShiftLeft(int cnt) {
+    if (cnt >= bitcount) {
+      low_ = hi_ = 0;
+    } else if (cnt >= half_bitcount) {
+      hi_ = low_ << (cnt - half_bitcount);
+      low_ = 0;
+    } else {
+      ET t = low_ >> (half_bitcount - cnt);
+      hi_ = hi_ << cnt | t;
+      low_ <<= cnt;
+    }
+  }
+
+  ET GetQuarter(int i) const {
+    switch (i & 3) {
+      case 0:
+        return low_ & quarter_mask;
+      case 1:
+        return low_ >> quarter_bitcount;
+      case 2:
+        return hi_ & quarter_mask;
+      case 3:
+        return hi_ >> quarter_bitcount;
+    }
+    return 0;
+  }
+
+  template <typename T>
+  static void FixSize(std::vector<T>& v) {
+    if (v.empty()) v.push_back(0);
+    int now = static_cast<int>(v.size()) - 1;
+    while (now > 0 && v[now] == 0) --now;
+    v.resize(now + 1);
+  }
+
+  std::vector<uint32_t> ToUInt32Vector(int fix_size = 1) const {
+    const int each = sizeof(ET) / sizeof(uint32_t);
+
+    std::vector<uint32_t> r;
+    r.reserve(each * 2);
+    ET t = low_;
+    for (int i = 0; i < each; ++i) {
+      r.push_back(static_cast<uint32_t>(t));
+#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
+      t >>= 16;
+      t >>= 16;
+#else
+      t >>= 32;
+#endif
+    }
+    if (!fix_size || hi_) {
+      t = hi_;
+      for (int i = 0; i < each; ++i) {
+        r.push_back(static_cast<uint32_t>(t));
+#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
+        t >>= 16;
+        t >>= 16;
+#else
+        t >>= 32;
+#endif
+      }
+    }
+    if (fix_size) {
+      FixSize(r);
+    }
+    return r;
+  }
+
+  void FromUInt32Vector(const std::vector<uint32_t>& bits32) {
+    const int each = sizeof(ET) / sizeof(int32_t);
+
+    hi_ = 0;
+    for (int i = std::min(2 * each - 1, static_cast<int>(bits32.size()));
+         i >= each; --i) {
+#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
+      hi_ <<= 16;
+      hi_ = (hi_ << 16) | bits32[i];
+#else
+      hi_ = (hi_ << 32) | bits32[i];
+#endif
+    }
+
+    low_ = 0;
+    for (int i = std::min(each - 1, static_cast<int>(bits32.size())); i >= 0;
+         --i) {
+#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
+      low_ <<= 16;
+      low_ = (low_ << 16) | bits32[i];
+#else
+      low_ = (low_ << 32) | bits32[i];
+#endif
+    }
+  }
+
+  std::vector<uint32_t> ToBinaryVector(int fix_size = 1) const {
+    std::vector<uint32_t> r;
+    r.reserve(bitcount);
+    ET t = low_;
+    for (int i = 0; i < half_bitcount; ++i) {
+      r.push_back(t & 1);
+      t >>= 1;
+    }
+    if (!fix_size || hi_) {
+      t = hi_;
+      for (int i = 0; i < half_bitcount; ++i) {
+        r.push_back(t & 1);
+        t >>= 1;
+      }
+    }
+    if (fix_size) {
+      FixSize(r);
+    }
+    return r;
+  }
+
+  void FromBinaryVector(const std::vector<uint32_t>& bits) {
+    hi_ = 0;
+    for (int i = std::min(bitcount - 1, static_cast<int>(bits.size()) - 1);
+         i >= half_bitcount; --i) {
+      hi_ = (hi_ << 1) | bits[i];
+    }
+
+    low_ = 0;
+    for (int i = std::min(half_bitcount - 1, static_cast<int>(bits.size()) - 1);
+         i >= 0; --i) {
+      low_ = (low_ << 1) | bits[i];
+    }
+  }
+
+  static std::vector<uint32_t> UIntDivImplInternal(
+      const std::vector<uint32_t>& l, const std::vector<uint32_t>& r,
+      std::vector<uint32_t>& remain) {
+    std::vector<uint32_t> result;
+    remain = l;
+
+    const int r_size = static_cast<int>(r.size());
+    int pos = static_cast<int>(l.size()) - 1;
+    int end = pos - r_size + 1;
+    for (; end >= 0;) {
+      if (pos - end + 1 < r_size) {
+        result.push_back(0);
+        --end;
+        continue;
+      }
+      if (remain[pos] == 0) {
+        --pos;
+        continue;
+      }
+      int gt = 1;
+      if (pos - end + 1 == r_size) {
+        for (int i = pos, j = r_size - 1; i >= end; --i, --j) {
+          if (remain[i] < r[j]) {
+            gt = 0;
+            break;
+          } else if (remain[i] > r[j]) {
+            break;
+          }
+        }
+      }
+      result.push_back(gt);
+      if (gt == 0) {
+        --end;
+        continue;
+      }
+
+      int borrow = 0;
+      int i = end, j = 0;
+      for (; j < r_size; ++i, ++j) {
+        int next_borrow = 0;
+        auto t = remain[i];
+        while (t < r[j] + borrow) {
+          t += 2;
+          ++next_borrow;
+        }
+        remain[i] = t - r[j] - borrow;
+        borrow = next_borrow;
+      }
+
+      for (; i <= pos; ++i) {
+        int next_borrow = 0;
+        int t = remain[i];
+        while (t < borrow) {
+          t += 2;
+          ++next_borrow;
+        }
+        remain[i] = t - borrow;
+        borrow = next_borrow;
+      }
+      --end;
+    }
+
+    if (result.size() == 0) result.push_back(0);
+    std::reverse(result.begin(), result.end());
+
+    return result;
+  }
+
+  UIntPairImpl& UIntDivImpl(const UIntPairImpl& other) {
+    if (IsZero()) {
+      return *this;
+    }
+    PE_ASSERT(!other.IsZero());
+
+    if (other.hi_ == 0 && other.low_ == 1) {
+      return *this;
+    }
+
+    int t = UIntCompareTo(other);
+    if (t == 0) {
+      low_ = 1;
+      hi_ = 0;
+      return *this;
+    }
+
+    if (t < 0) {
+      low_ = hi_ = 0;
+      return *this;
+    }
+
+    if (hi_ == 0) {
+      low_ /= other.low_;
+      return *this;
+    }
+
+    std::vector<uint32_t> remain;
+
+    std::vector<uint32_t> result =
+        UIntDivImplInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
+
+    FromBinaryVector(result);
+
+    return *this;
+  }
+
+  UIntPairImpl& UIntDivImpl(const UIntPairImpl& other, UIntPairImpl& r) {
+    if (IsZero()) {
+      r = 0;
+      return *this;
+    }
+    PE_ASSERT(!other.IsZero());
+
+    if (other.hi_ == 0 && other.low_ == 1) {
+      r = 0;
+      return *this;
+    }
+
+    int t = CompareTo(other);
+    if (t == 0) {
+      low_ = 1;
+      hi_ = 0;
+      r = 0;
+      return *this;
+    }
+
+    if (t < 0) {
+      low_ = hi_ = 0;
+      r = other;
+      return *this;
+    }
+
+    if (hi_ == 0) {
+      low_ /= other.low_;
+      return *this;
+    }
+
+    std::vector<uint32_t> remain;
+
+    std::vector<uint32_t> result =
+        UIntDivImplInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
+
+    FromBinaryVector(result);
+    r.FromBinaryVector(remain);
+
+    return *this;
+  }
+
+  UIntPairImpl& UIntModImpl(const UIntPairImpl& other) {
+    if (IsZero()) {
+      return *this;
+    }
+    PE_ASSERT(!other.IsZero());
+
+    if (other.hi_ == 0 && other.low_ == 1) {
+      low_ = hi_ = 0;
+      return *this;
+    }
+
+    int t = UIntCompareTo(other);
+    if (t == 0) {
+      low_ = hi_ = 0;
+      return *this;
+    }
+
+    if (t < 0) {
+      return *this;
+    }
+
+    if (hi_ == 0) {
+      low_ %= other.low_;
+      return *this;
+    }
+
+    std::vector<uint32_t> remain;
+
+    UIntDivImplInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
+
+    FromBinaryVector(remain);
+
+    return *this;
+  }
+
+ public:
+  ET& low() { return low_; }
+
+  ET& hi() { return hi_; }
+
+  ET low() const { return low_; }
+
+  ET hi() const { return hi_; }
+
+  int UIntCompareTo(const UIntPairImpl& other) const {
+    if (hi_ != other.hi_) {
+      return hi_ < other.hi_ ? -1 : hi_ > other.hi_;
+    } else {
+      return low_ < other.low_ ? -1 : low_ > other.low_;
+    }
+  }
+
+  int IsZero() const { return low_ == 0 && hi_ == 0; }
+
+  int IsEven() const { return low_ & 1 ? 0 : 1; }
+
+  int IsOdd() const { return low_ & 1 ? 1 : 0; }
+
+  unsigned int LowerBits() const { return static_cast<uint32_t>(low_); }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value && sizeof(T) <= sizeof(ET)))
+  RETURN(T) ToInt() const {
+    return static_cast<T>(low_);
+  }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value && sizeof(T) > sizeof(ET)))
+  RETURN(T) ToInt() const {
+    using unsignedT = typename pe_make_unsigned<T>::type;
+    return static_cast<T>((static_cast<unsignedT>(hi_) << half_bitcount) |
+                          static_cast<unsignedT>(low_));
+  }
+
+  void SetBit(int idx) {
+    if (idx < half_bitcount) {
+      low_ |= static_cast<ET>(1) << idx;
+    } else {
+      hi_ |= static_cast<ET>(1) << (idx - half_bitcount);
+    }
+  }
+
+  void ResetBit(int idx) {
+    if (idx < half_bitcount) {
+      low_ &= ~(static_cast<ET>(1) << idx);
+    } else {
+      hi_ &= ~(static_cast<ET>(1) << (idx - half_bitcount));
+    }
+  }
+
+  int GetBit(int idx) const {
+    if (idx < half_bitcount) {
+      return low_ & (static_cast<ET>(1) << idx) ? 1 : 0;
+    } else {
+      return hi_ & (static_cast<ET>(1) << (idx - half_bitcount)) ? 1 : 0;
+    }
+  }
+
+  void RevBit(int idx) {
+    if (idx < half_bitcount) {
+      low_ ^= static_cast<ET>(1) << idx;
+    } else {
+      hi_ ^= static_cast<ET>(1) << (idx - half_bitcount);
+    }
+  }
+
+  int BitCount() const {
+    const int each = sizeof(ET) / sizeof(uint32_t);
+
+    int ret = 0;
+    ET t = low_;
+    for (int i = 0; t && i < each; ++i) {
+      ret += pe_popcount(static_cast<uint32_t>(t));
+#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
+      t >>= 16;
+      t >>= 16;
+#else
+      t >>= 32;
+#endif
+    }
+
+    t = hi_;
+    for (int i = 0; t && i < each; ++i) {
+      ret += pe_popcount(static_cast<uint32_t>(t));
+#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
+      t >>= 16;
+      t >>= 16;
+#else
+      t >>= 32;
+#endif
+    }
+
+    return ret;
+  }
+
+  UIntPairImpl Difference(const UIntPairImpl& other) const {
+    int t = UIntCompareTo(other);
+    if (t == 0) {
+      return 0;
+    }
+    if (t > 0) {
+      ET x = hi_ - other.hi_;
+      ET y;
+      if (low_ >= other.low_) {
+        y = low_ - other.low_;
+      } else {
+        y = low_ - other.low_;
+        --x;
+      }
+      return UIntPairImpl(y, x);
+    } else {
+      ET x = other.hi_ - hi_;
+      ET y;
+      if (other.low_ >= low_) {
+        y = other.low_ - low_;
+      } else {
+        y = other.low_ - low_;
+        --x;
+      }
+      return UIntPairImpl(y, x);
+    }
+  }
+
+ protected:
+  ET low_;
+  ET hi_;
+};
+
+template <typename ET>
+struct UIntPairImpl<ET, false> {
+  constexpr static int quarter_bitcount = sizeof(ET) * 4;
+  constexpr static int half_bitcount = quarter_bitcount * 2;
+  constexpr static int bitcount = half_bitcount * 2;
+
+  using NT = typename ET::NT;
+
+ public:
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value &&
+            sizeof(T) <= sizeof(ET)))
+  RETURN(void) FromNativeInt(T v) {
+    low_ = v;
+  }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value &&
+            sizeof(T) > sizeof(ET)))
+  RETURN(void) FromNativeInt(T v) {
+    low_ = v;
+    hi_ = v >> half_bitcount;
+  }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value &&
+            sizeof(T) <= sizeof(ET)))
+  RETURN(void) FromNativeInt(T v) {
+    if (v >= 0) {
+      low_ = v;
+    } else {
+      low_ = v;
+      hi_.FlipBits();
+    }
+  }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value &&
+            sizeof(T) > sizeof(ET)))
+  RETURN(void) FromNativeInt(T v) {
+    using unsignedT = typename pe_make_unsigned<T>::type;
+    FromNativeInt<unsignedT>(static_cast<unsignedT>(v));
+  }
+
+ public:
+  UIntPairImpl(ET low = 0) : low_(low), hi_(0) {}
+  UIntPairImpl(ET low, ET hi) : low_(low), hi_(hi) {}
+
+  template <typename T,
+            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
+  UIntPairImpl(T v) : low_(0), hi_(0) {
+    FromNativeInt<T>(v);
+  }
+
+  UIntPairImpl(const UIntPairImpl& other) : low_(other.low_), hi_(other.hi_) {}
+
+  UIntPairImpl& operator=(const UIntPairImpl& other) {
+    low_ = other.low_;
+    hi_ = other.hi_;
+    return *this;
+  }
+
+  UIntPairImpl& operator=(const UIntPairImpl&& other) {
+    low_ = std::move(other.low_);
+    hi_ = std::move(other.hi_);
+    return *this;
+  }
+
+  UIntPairImpl& operator=(const ET& other) {
+    low_ = other;
+    return *this;
+  }
+
+  template <typename T,
+            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
+  UIntPairImpl& operator=(const T& other) {
+    MakeZeroBits();
+    FromNativeInt<T>(other);
+    return *this;
+  }
+
+ public:
+  void FlipBits() {
+    low_.FlipBits();
+    hi_.FlipBits();
+  }
+
+  void MakeZeroBits() {
+    low_.MakeZeroBits();
+    hi_.MakeZeroBits();
+  }
+
+  void AddOne() {
+    ++low_;
+    if (low_ == 0) {
+      ++hi_;
+    }
+  }
+
+  int GetHighestBit() const { return hi_.GetHighestBit(); }
+
+  void ArithmeticShiftRight(int cnt) {
+    if (GetHighestBit()) {
+      FlipBits();
+      AddOne();
+      *this >>= cnt;
+      FlipBits();
+      AddOne();
+    } else {
+      ShiftRight(cnt);
+    }
+  }
+
+  void ShiftRight(int cnt) {
+    if (cnt >= bitcount) {
+      low_ = hi_ = 0;
+    } else if (cnt >= half_bitcount) {
+      low_ = hi_ >> (cnt - half_bitcount);
+      hi_ = 0;
+    } else {
+      ET mask = (static_cast<ET>(1) << cnt) - 1;
+      ET t = hi_ & mask;
+      hi_ >>= cnt;
+      low_ >>= cnt;
+      low_ |= t << (half_bitcount - cnt);
+    }
+  }
+
+  void ShiftLeft(int cnt) {
+    if (cnt >= bitcount) {
+      MakeZeroBits();
+    } else if (cnt >= half_bitcount) {
+      hi_ = low_ << (cnt - half_bitcount);
+      low_.MakeZeroBits();
+    } else {
+      ET t = low_ >> (half_bitcount - cnt);
+      hi_ = hi_ << cnt | t;
+      low_ <<= cnt;
+    }
+  }
+
+  ET GetQuarter(int i) const {
+    switch (i & 3) {
+      case 0:
+        return low_.low();
+      case 1:
+        return low_.hi();
+      case 2:
+        return hi_.low();
+      case 3:
+        return hi_.hi();
+    }
+    return 0;
+  }
+
+  template <typename T>
+  static void FixSize(std::vector<T>& v) {
+    if (v.empty()) v.push_back(0);
+    int now = static_cast<int>(v.size()) - 1;
+    while (now > 0 && v[now] == 0) --now;
+    v.resize(now + 1);
+  }
+
+  std::vector<uint32_t> ToUInt32Vector(int fix_size = 1) const {
+    const int each = sizeof(ET) / sizeof(uint32_t);
+
+    std::vector<uint32_t> r;
+    r.reserve(each * 2);
+    for (auto& iter : low_.ToUInt32Vector(0)) r.push_back(iter);
+    if (!fix_size || !hi_.IsZero()) {
+      for (auto& iter : hi_.ToUInt32Vector(0)) r.push_back(iter);
+    }
+    if (fix_size) {
+      FixSize(r);
+    }
+    return r;
+  }
+
+  void FromUInt32Vector(const std::vector<uint32_t>& bits32) {
+    const int each = sizeof(ET) / sizeof(int32_t);
+    hi_.MakeZeroBits();
+    for (int i = std::min(2 * each - 1, static_cast<int>(bits32.size()));
+         i >= each; --i) {
+      hi_ = (hi_ << 32) | bits32[i];
+    }
+
+    low_.MakeZeroBits();
+    for (int i = std::min(each - 1, static_cast<int>(bits32.size())); i >= 0;
+         --i) {
+      low_ = (low_ << 32) | bits32[i];
+    }
+  }
+
+  std::vector<uint32_t> ToBinaryVector(int fix_size = 1) const {
+    std::vector<uint32_t> r;
+    r.reserve(bitcount);
+    for (auto& iter : low_.ToBinaryVector(0)) r.push_back(iter);
+    if (!fix_size || !hi_.IsZero()) {
+      for (auto& iter : hi_.ToBinaryVector(0)) r.push_back(iter);
+    }
+    if (fix_size) {
+      FixSize(r);
+    }
+    return r;
+  }
+
+  void FromBinaryVector(const std::vector<uint32_t>& bits) {
+    low_.MakeZeroBits();
+    hi_.MakeZeroBits();
+    for (int i = 0; i < bits.size(); ++i)
+      if (bits[i]) {
+        if (i < half_bitcount) {
+          low_.SetBit(i);
+        } else if (i < bitcount) {
+          hi_.SetBit(i - half_bitcount);
+        }
+      }
+  }
+
+  static std::vector<uint32_t> UIntDivImplInternal(
+      const std::vector<uint32_t>& l, const std::vector<uint32_t>& r,
+      std::vector<uint32_t>& remain) {
+    std::vector<uint32_t> result;
+    remain = l;
+
+    const int r_size = static_cast<int>(r.size());
+    int pos = static_cast<int>(l.size()) - 1;
+    int end = pos - r_size + 1;
+    for (; end >= 0;) {
+      if (pos - end + 1 < r_size) {
+        result.push_back(0);
+        --end;
+        continue;
+      }
+      if (remain[pos] == 0) {
+        --pos;
+        continue;
+      }
+      int gt = 1;
+      if (pos - end + 1 == r_size) {
+        for (int i = pos, j = r_size - 1; i >= end; --i, --j) {
+          if (remain[i] < r[j]) {
+            gt = 0;
+            break;
+          } else if (remain[i] > r[j]) {
+            break;
+          }
+        }
+      }
+      result.push_back(gt);
+      if (gt == 0) {
+        --end;
+        continue;
+      }
+
+      int borrow = 0;
+      int i = end, j = 0;
+      for (; j < r_size; ++i, ++j) {
+        int next_borrow = 0;
+        auto t = remain[i];
+        while (t < r[j] + borrow) {
+          t += 2;
+          ++next_borrow;
+        }
+        remain[i] = t - r[j] - borrow;
+        borrow = next_borrow;
+      }
+
+      for (; i <= pos; ++i) {
+        int next_borrow = 0;
+        int t = remain[i];
+        while (t < borrow) {
+          t += 2;
+          ++next_borrow;
+        }
+        remain[i] = t - borrow;
+        borrow = next_borrow;
+      }
+      --end;
+    }
+
+    if (result.size() == 0) result.push_back(0);
+    std::reverse(result.begin(), result.end());
+
+    return result;
+  }
+
+  UIntPairImpl& UIntDivImpl(const UIntPairImpl& other) {
+    if (IsZero()) {
+      return *this;
+    }
+    PE_ASSERT(!other.IsZero());
+
+    if (other.hi_ == 0 && other.low_ == 1) {
+      return *this;
+    }
+
+    int t = UIntCompareTo(other);
+    if (t == 0) {
+      low_ = 1;
+      hi_.MakeZeroBits();
+      return *this;
+    }
+
+    if (t < 0) {
+      low_.MakeZeroBits();
+      hi_.MakeZeroBits();
+      return *this;
+    }
+
+    if (hi_ == 0) {
+      low_ /= other.low_;
+      return *this;
+    }
+
+    std::vector<uint32_t> remain;
+
+    std::vector<uint32_t> result =
+        UIntDivImplInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
+
+    FromBinaryVector(result);
+
+    return *this;
+  }
+
+  UIntPairImpl& UIntDivImpl(const UIntPairImpl& other, UIntPairImpl& r) {
+    if (IsZero()) {
+      r.MakeZeroBits();
+      return *this;
+    }
+    PE_ASSERT(!other.IsZero());
+
+    if (other.hi_ == 0 && other.low_ == 1) {
+      r.MakeZeroBits();
+      return *this;
+    }
+
+    int t = CompareTo(other);
+    if (t == 0) {
+      low_ = 1;
+      hi_.MakeZeroBits();
+      r.MakeZeroBits();
+      return *this;
+    }
+
+    if (t < 0) {
+      low_.MakeZeroBits();
+      hi_.MakeZeroBits();
+      r = other;
+      return *this;
+    }
+
+    if (hi_ == 0) {
+      low_ /= other.low_;
+      return *this;
+    }
+
+    std::vector<uint32_t> remain;
+
+    std::vector<uint32_t> result =
+        UIntDivImplInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
+
+    FromBinaryVector(result);
+    r.FromBinaryVector(remain);
+
+    return *this;
+  }
+
+  UIntPairImpl& UIntModImpl(const UIntPairImpl& other) {
+    if (IsZero()) {
+      return *this;
+    }
+    PE_ASSERT(!other.IsZero());
+
+    if (other.hi_ == 0 && other.low_ == 1) {
+      low_.MakeZeroBits();
+      hi_.MakeZeroBits();
+      return *this;
+    }
+
+    int t = UIntCompareTo(other);
+    if (t == 0) {
+      low_.MakeZeroBits();
+      hi_.MakeZeroBits();
+      return *this;
+    }
+
+    if (t < 0) {
+      return *this;
+    }
+
+    if (hi_.IsZero()) {
+      low_ %= other.low_;
+      return *this;
+    }
+
+    std::vector<uint32_t> remain;
+
+    UIntDivImplInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
+
+    FromBinaryVector(remain);
+
+    return *this;
+  }
+
+ public:
+  ET& low() { return low_; }
+
+  ET& hi() { return hi_; }
+
+  ET low() const { return low_; }
+
+  ET hi() const { return hi_; }
+
+  int UIntCompareTo(const UIntPairImpl& other) const {
+    int t = hi_.UIntCompareTo(other.hi_);
+    if (t != 0) {
+      return t;
+    }
+    return low_.UIntCompareTo(other.low_);
+  }
+
+  int IsZero() const { return low_.IsZero() && hi_.IsZero(); }
+
+  int IsEven() const { return LowerBits() & 1 ? 0 : 1; }
+
+  int IsOdd() const { return LowerBits() & 1 ? 1 : 0; }
+
+  unsigned int LowerBits() const { return low_.LowerBits(); }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value && sizeof(T) <= sizeof(ET)))
+  RETURN(T) ToInt() const {
+    return low_.template ToInt<T>();
+  }
+
+  template <typename T>
+  REQUIRES((is_native_integer<T>::value && sizeof(T) > sizeof(ET)))
+  RETURN(T) ToInt() const {
+    using unsignedT = typename pe_make_unsigned<T>::type;
+    return static_cast<T>(hi_.template ToInt<unsignedT>() << half_bitcount |
+                          low_.template ToInt<unsignedT>());
+  }
+
+  void SetBit(int idx) {
+    if (idx < half_bitcount) {
+      low_.SetBit(idx);
+    } else {
+      hi_.SetBit(idx - half_bitcount);
+    }
+  }
+
+  void ResetBit(int idx) {
+    if (idx < half_bitcount) {
+      low_.ResetBit(idx);
+    } else {
+      hi_.ResetBit(idx - half_bitcount);
+    }
+  }
+
+  int GetBit(int idx) const {
+    if (idx < half_bitcount) {
+      return low_.GetBit(idx);
+    } else {
+      return hi_.GetBit(idx - half_bitcount);
+    }
+  }
+
+  void RevBit(int idx) {
+    if (idx < half_bitcount) {
+      low_.RevBit(idx);
+    } else {
+      hi_.RevBit(idx - half_bitcount);
+    }
+  }
+
+  int BitCount() const { return hi_.BitCount() + low_.BitCount(); }
+
+  UIntPairImpl Difference(const UIntPairImpl& other) const {
+    int t = UIntCompareTo(other);
+    if (t == 0) {
+      return 0;
+    }
+    if (t > 0) {
+      ET x = hi_ - other.hi_;
+      ET y;
+      if (low_ >= other.low_) {
+        y = low_ - other.low_;
+      } else {
+        y = low_ - other.low_;
+        --x;
+      }
+      return UIntPairImpl(y, x);
+    } else {
+      ET x = other.hi_ - hi_;
+      ET y;
+      if (other.low_ >= low_) {
+        y = other.low_ - low_;
+      } else {
+        y = other.low_ - low_;
+        --x;
+      }
+      return UIntPairImpl(y, x);
+    }
+  }
+
+ protected:
+  ET low_;
+  ET hi_;
+};
+}  // namespace pe
+
+#endif

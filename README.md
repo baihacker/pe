@@ -47,12 +47,16 @@ See [example.c](https://github.com/baihacker/pe/blob/master/example/example.c) f
 * pe_bit: Bit operation tricks.
 * pe_config: a centralized place the configure pe.
 * pe_db: load and save pre-calculated result such as prime pi and prime sum.
+* pe_extended_int: The extended integer.
+* pe_extended_signed_int: Extended signed integer.
+* pe_extended_unsigned_int: Extended unsigned integer.
 * pe_fft: Fast fourier transform and polynomial multiplication.
 * pe_float128: Unified float number functions of __float128.
 * pe_fraction: Fraction arithmetic.
 * pe_gbi: general big integer. The content corresponds to pe_nt.
 * pe_geometry: Support Point2D and Point3D.
 * pe_initializer: The helper class and macros used to initialize the library.
+* pe_int: Basic integer utilities.
 * pe_int128: Support to output int128 and the corresponding type traits.
 * pe_internal: Include configurations, define necessary types/macros and include third party libraries.
 * pe_io: methods and macros that simplify or fasten reading from and writing std io.

@@ -397,103 +397,6 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     }
   }
 
-  ExtendedUnsignedIntImpl& AddedBy(const ExtendedUnsignedIntImpl& other) {
-    if (IsZero()) {
-      low_ = other.low();
-      hi_ = other.hi();
-      return *this;
-    }
-
-    if (!other.IsZero()) {
-      ET x = other.low() + low_;
-      ET y = other.hi() + hi_;
-      if (other.low_ && low_ && (x < other.low() || x < low_)) {
-        ++y;
-      }
-      low_ = x;
-      hi_ = y;
-    }
-    return *this;
-  }
-
-  ExtendedUnsignedIntImpl& AddedBy(const ET& other) {
-    if (IsZero()) {
-      low_ = other;
-      hi_ = 0;
-      return *this;
-    }
-
-    if (other) {
-      ET x = low_ + other;
-      ET y = hi_;
-      if (low_ && other && (x < low_ || x < other)) {
-        ++y;
-      }
-      low_ = x;
-      hi_ = y;
-    }
-    return *this;
-  }
-
-  ExtendedUnsignedIntImpl& Substract(const ExtendedUnsignedIntImpl& other) {
-    if (other.IsZero()) {
-      return *this;
-    }
-
-    if (IsZero()) {
-      low_ = other.low();
-      hi_ = other.hi();
-      FlipBits();
-      AddOne();
-      return *this;
-    }
-
-    int t = CompareTo(other);
-    if (t == 0) {
-      low_ = hi_ = 0;
-      return *this;
-    } else {
-      ExtendedUnsignedIntImpl d = Difference(other);
-      if (t < 0) {
-        d.FlipBits();
-        d.AddOne();
-      }
-      low_ = d.low();
-      hi_ = d.hi();
-    }
-
-    return *this;
-  }
-
-  ExtendedUnsignedIntImpl& Substract(const ET& other) {
-    if (other == 0) {
-      return *this;
-    }
-
-    if (IsZero()) {
-      low_ = other;
-      FlipBits();
-      AddOne();
-      return *this;
-    }
-
-    int t = CompareTo(other);
-    if (t == 0) {
-      low_ = hi_ = 0;
-      return *this;
-    } else {
-      ExtendedUnsignedIntImpl d = Difference(other);
-      if (t < 0) {
-        d.FlipBits();
-        d.AddOne();
-      }
-      low_ = d.low();
-      hi_ = d.hi();
-    }
-
-    return *this;
-  }
-
   static std::vector<uint32_t> DivideInternal(const std::vector<uint32_t>& l,
                                               const std::vector<uint32_t>& r,
                                               std::vector<uint32_t>& remain) {
@@ -562,167 +465,116 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     return result;
   }
 
-  ExtendedUnsignedIntImpl& DividedBy(const ExtendedUnsignedIntImpl& other) {
-    if (IsZero()) {
-      return *this;
+  static void DivideInplace(ExtendedUnsignedIntImpl& self,
+                            const ExtendedUnsignedIntImpl& other) {
+    if (self.IsZero()) {
+      return;
     }
     PE_ASSERT(!other.IsZero());
 
     if (other.hi_ == 0 && other.low_ == 1) {
-      return *this;
+      return;
     }
 
-    int t = CompareTo(other);
+    int t = self.CompareTo(other);
     if (t == 0) {
-      low_ = 1;
-      hi_ = 0;
-      return *this;
+      self.low_ = 1;
+      self.hi_ = 0;
+      return;
     }
 
     if (t < 0) {
-      low_ = hi_ = 0;
-      return *this;
+      self.low_ = self.hi_ = 0;
+      return;
     }
 
-    if (hi_ == 0) {
-      low_ /= other.low_;
-      return *this;
+    if (self.hi_ == 0) {
+      self.low_ /= other.low_;
+      return;
     }
 
     std::vector<uint32_t> remain;
 
     std::vector<uint32_t> result =
-        DivideInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
+        DivideInternal(self.ToBinaryVector(), other.ToBinaryVector(), remain);
 
-    FromBinaryVector(result);
-
-    return *this;
+    self.FromBinaryVector(result);
   }
 
-  ExtendedUnsignedIntImpl& DividedBy(const ExtendedUnsignedIntImpl& other,
-                                     ExtendedUnsignedIntImpl& r) {
-    if (IsZero()) {
+  static void DivideInplace(ExtendedUnsignedIntImpl& self,
+                            const ExtendedUnsignedIntImpl& other,
+                            ExtendedUnsignedIntImpl& r) {
+    if (self.IsZero()) {
       r = 0;
-      return *this;
+      return;
     }
     PE_ASSERT(!other.IsZero());
 
     if (other.hi_ == 0 && other.low_ == 1) {
       r = 0;
-      return *this;
+      return;
     }
 
-    int t = CompareTo(other);
+    int t = self.CompareTo(other);
     if (t == 0) {
-      low_ = 1;
-      hi_ = 0;
+      self.low_ = 1;
+      self.hi_ = 0;
       r = 0;
-      return *this;
+      return;
     }
 
     if (t < 0) {
-      low_ = hi_ = 0;
+      self.low_ = self.hi_ = 0;
       r = other;
-      return *this;
+      return;
     }
 
-    if (hi_ == 0) {
-      low_ /= other.low_;
-      return *this;
+    if (self.hi_ == 0) {
+      self.low_ /= other.low_;
+      return;
     }
 
     std::vector<uint32_t> remain;
 
     std::vector<uint32_t> result =
-        DivideInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
+        DivideInternal(self.ToBinaryVector(), other.ToBinaryVector(), remain);
 
-    FromBinaryVector(result);
+    self.FromBinaryVector(result);
     r.FromBinaryVector(remain);
-
-    return *this;
   }
 
-  ExtendedUnsignedIntImpl& Modulo(const ExtendedUnsignedIntImpl& other) {
-    if (IsZero()) {
-      return *this;
+  static void RemainInplace(ExtendedUnsignedIntImpl& self,
+                            const ExtendedUnsignedIntImpl& other) {
+    if (self.IsZero()) {
+      return;
     }
     PE_ASSERT(!other.IsZero());
 
     if (other.hi_ == 0 && other.low_ == 1) {
-      low_ = hi_ = 0;
-      return *this;
+      self.low_ = self.hi_ = 0;
+      return;
     }
 
-    int t = CompareTo(other);
+    int t = self.CompareTo(other);
     if (t == 0) {
-      low_ = hi_ = 0;
-      return *this;
+      self.low_ = self.hi_ = 0;
+      return;
     }
 
     if (t < 0) {
-      return *this;
+      return;
     }
 
-    if (hi_ == 0) {
-      low_ %= other.low_;
-      return *this;
+    if (self.hi_ == 0) {
+      self.low_ %= other.low_;
+      return;
     }
 
     std::vector<uint32_t> remain;
 
-    DivideInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
+    DivideInternal(self.ToBinaryVector(), other.ToBinaryVector(), remain);
 
-    FromBinaryVector(remain);
-
-    return *this;
-  }
-
-  ExtendedUnsignedIntImpl& MultipliedBy(const ExtendedUnsignedIntImpl& other) {
-    if (IsZero() || other.IsZero()) {
-      low_ = hi_ = 0;
-      return *this;
-    }
-    ET t[4] = {0};
-    for (int i = 0; i < 4; ++i)
-      for (int j = 0; j + i < 4; ++j) {
-        ET carry = GetQuarter(i) * other.GetQuarter(j);
-        for (int now = i + j; now < 4; ++now) {
-          ET x = t[now] + (carry & quarter_mask);
-          t[now] = x & quarter_mask;
-          carry = (x >> quarter_bitcount) + (carry >> quarter_bitcount);
-          if (carry == 0) {
-            break;
-          }
-        }
-      }
-    low_ = t[0] | (t[1] << quarter_bitcount);
-    hi_ = t[2] | (t[3] << quarter_bitcount);
-
-    return *this;
-  }
-
-  ExtendedUnsignedIntImpl& MultipliedBy(const ET& other) {
-    if (IsZero() || other == 0) {
-      low_ = hi_ = 0;
-      return *this;
-    }
-    ET t[4] = {0};
-    for (int i = 0; i < 4; ++i)
-      for (int j = 0; j < 2 && j + i < 4; ++j) {
-        ET carry = GetQuarter(i) *
-                   (j == 0 ? other & quarter_mask : other >> quarter_bitcount);
-        for (int now = i + j; now < 4; ++now) {
-          ET x = t[now] + (carry & quarter_mask);
-          t[now] = x & quarter_mask;
-          carry = (x >> quarter_bitcount) + (carry >> quarter_bitcount);
-          if (carry == 0) {
-            break;
-          }
-        }
-      }
-    low_ = t[0] | (t[1] << quarter_bitcount);
-    hi_ = t[2] | (t[3] << quarter_bitcount);
-    return *this;
+    self.FromBinaryVector(remain);
   }
 
  public:
@@ -872,37 +724,153 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   }
 
   ExtendedUnsignedIntImpl& operator+=(const ExtendedUnsignedIntImpl& other) {
-    AddedBy(other);
+    if (IsZero()) {
+      low_ = other.low();
+      hi_ = other.hi();
+      return *this;
+    }
+
+    if (!other.IsZero()) {
+      ET x = other.low() + low_;
+      ET y = other.hi() + hi_;
+      if (other.low_ && low_ && (x < other.low() || x < low_)) {
+        ++y;
+      }
+      low_ = x;
+      hi_ = y;
+    }
     return *this;
   }
 
   ExtendedUnsignedIntImpl& operator+=(const ET& other) {
-    AddedBy(other);
+    if (IsZero()) {
+      low_ = other;
+      hi_ = 0;
+      return *this;
+    }
+
+    if (other) {
+      ET x = low_ + other;
+      ET y = hi_;
+      if (low_ && other && (x < low_ || x < other)) {
+        ++y;
+      }
+      low_ = x;
+      hi_ = y;
+    }
     return *this;
   }
 
   ExtendedUnsignedIntImpl& operator-=(const ExtendedUnsignedIntImpl& other) {
-    Substract(other);
+    if (other.IsZero()) {
+      return *this;
+    }
+
+    if (IsZero()) {
+      low_ = other.low();
+      hi_ = other.hi();
+      FlipBits();
+      AddOne();
+      return *this;
+    }
+
+    int t = CompareTo(other);
+    if (t == 0) {
+      low_ = hi_ = 0;
+      return *this;
+    } else {
+      ExtendedUnsignedIntImpl d = Difference(other);
+      if (t < 0) {
+        d.FlipBits();
+        d.AddOne();
+      }
+      low_ = d.low();
+      hi_ = d.hi();
+    }
+
     return *this;
   }
 
   ExtendedUnsignedIntImpl& operator-=(const ET& other) {
-    Substract(other);
+    if (other == 0) {
+      return *this;
+    }
+
+    if (IsZero()) {
+      low_ = other;
+      FlipBits();
+      AddOne();
+      return *this;
+    }
+
+    int t = CompareTo(other);
+    if (t == 0) {
+      low_ = hi_ = 0;
+      return *this;
+    } else {
+      ExtendedUnsignedIntImpl d = Difference(other);
+      if (t < 0) {
+        d.FlipBits();
+        d.AddOne();
+      }
+      low_ = d.low();
+      hi_ = d.hi();
+    }
+
     return *this;
   }
 
   ExtendedUnsignedIntImpl& operator*=(const ExtendedUnsignedIntImpl& other) {
-    MultipliedBy(other);
+    if (IsZero() || other.IsZero()) {
+      low_ = hi_ = 0;
+      return *this;
+    }
+    ET t[4] = {0};
+    for (int i = 0; i < 4; ++i)
+      for (int j = 0; j + i < 4; ++j) {
+        ET carry = GetQuarter(i) * other.GetQuarter(j);
+        for (int now = i + j; now < 4; ++now) {
+          ET x = t[now] + (carry & quarter_mask);
+          t[now] = x & quarter_mask;
+          carry = (x >> quarter_bitcount) + (carry >> quarter_bitcount);
+          if (carry == 0) {
+            break;
+          }
+        }
+      }
+    low_ = t[0] | (t[1] << quarter_bitcount);
+    hi_ = t[2] | (t[3] << quarter_bitcount);
+
     return *this;
   }
 
   ExtendedUnsignedIntImpl& operator*=(const ET& other) {
-    MultipliedBy(other);
+    if (IsZero() || other == 0) {
+      low_ = hi_ = 0;
+      return *this;
+    }
+    ET t[4] = {0};
+    for (int i = 0; i < 4; ++i)
+      for (int j = 0; j < 2 && j + i < 4; ++j) {
+        ET carry = GetQuarter(i) *
+                   (j == 0 ? other & quarter_mask : other >> quarter_bitcount);
+        for (int now = i + j; now < 4; ++now) {
+          ET x = t[now] + (carry & quarter_mask);
+          t[now] = x & quarter_mask;
+          carry = (x >> quarter_bitcount) + (carry >> quarter_bitcount);
+          if (carry == 0) {
+            break;
+          }
+        }
+      }
+    low_ = t[0] | (t[1] << quarter_bitcount);
+    hi_ = t[2] | (t[3] << quarter_bitcount);
     return *this;
   }
 
   ExtendedUnsignedIntImpl& operator/=(const ExtendedUnsignedIntImpl& other) {
-    return DividedBy(other);
+    DivideInplace(*this, other);
+    return *this;
   }
 
   ExtendedUnsignedIntImpl& operator/=(const ET& other) {
@@ -910,7 +878,8 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   }
 
   ExtendedUnsignedIntImpl& operator%=(const ExtendedUnsignedIntImpl& other) {
-    return Modulo(other);
+    RemainInplace(*this, other);
+    return *this;
   }
 
   ExtendedUnsignedIntImpl& operator%=(const ET& other) {
@@ -1391,82 +1360,6 @@ struct ExtendedUnsignedIntImpl<ET, false> {
       }
   }
 
-  ExtendedUnsignedIntImpl& AddedBy(const ExtendedUnsignedIntImpl& other) {
-    if (IsZero()) {
-      low_ = other.low();
-      hi_ = other.hi();
-      return *this;
-    }
-
-    if (!other.IsZero()) {
-      ET x = other.low() + low_;
-      ET y = other.hi() + hi_;
-      if (!other.low().IsZero() && !low_.IsZero() &&
-          (x < other.low() || x < low_)) {
-        ++y;
-      }
-      low_ = x;
-      hi_ = y;
-    }
-    return *this;
-  }
-
-  ExtendedUnsignedIntImpl& Substract(const ExtendedUnsignedIntImpl& other) {
-    if (other.IsZero()) {
-      return *this;
-    }
-
-    if (IsZero()) {
-      low_ = other.low();
-      hi_ = other.hi();
-      FlipBits();
-      AddOne();
-      return *this;
-    }
-
-    int t = CompareTo(other);
-    if (t == 0) {
-      low_.MakeZeroBits();
-      hi_.MakeZeroBits();
-      return *this;
-    } else {
-      ExtendedUnsignedIntImpl d = Difference(other);
-      if (t < 0) {
-        d.FlipBits();
-        d.AddOne();
-      }
-      low_ = d.low_;
-      hi_ = d.hi_;
-    }
-
-    return *this;
-  }
-
-  ExtendedUnsignedIntImpl& MultipliedBy(const ExtendedUnsignedIntImpl& other) {
-    if (IsZero() || other.IsZero()) {
-      low_.MakeZeroBits();
-      hi_.MakeZeroBits();
-      return *this;
-    }
-    ET t[4];
-    for (int i = 0; i < 4; ++i)
-      for (int j = 0; j + i < 4; ++j) {
-        ET carry = GetQuarter(i) * other.GetQuarter(j);
-        for (int now = i + j; now < 4; ++now) {
-          ET x = ET(t[now]) + ET(carry.low());
-          t[now] = x.low();
-          carry = ET(x.hi()) + ET(carry.hi());
-          if (carry.IsZero()) {
-            break;
-          }
-        }
-      }
-    low_ = t[0] | (t[1] << quarter_bitcount);
-    hi_ = t[2] | (t[3] << quarter_bitcount);
-
-    return *this;
-  }
-
   static std::vector<uint32_t> DivideInternal(const std::vector<uint32_t>& l,
                                               const std::vector<uint32_t>& r,
                                               std::vector<uint32_t>& remain) {
@@ -1535,123 +1428,120 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     return result;
   }
 
-  ExtendedUnsignedIntImpl& DividedBy(const ExtendedUnsignedIntImpl& other) {
-    if (IsZero()) {
-      return *this;
+  static void DivideInplace(ExtendedUnsignedIntImpl& self,
+                            const ExtendedUnsignedIntImpl& other) {
+    if (self.IsZero()) {
+      return;
     }
     PE_ASSERT(!other.IsZero());
 
     if (other.hi_ == 0 && other.low_ == 1) {
-      return *this;
+      return;
     }
 
-    int t = CompareTo(other);
+    int t = self.CompareTo(other);
     if (t == 0) {
-      low_ = 1;
-      hi_.MakeZeroBits();
-      return *this;
+      self.low_ = 1;
+      self.hi_.MakeZeroBits();
+      return;
     }
 
     if (t < 0) {
-      low_.MakeZeroBits();
-      hi_.MakeZeroBits();
-      return *this;
+      self.low_.MakeZeroBits();
+      self.hi_.MakeZeroBits();
+      return;
     }
 
-    if (hi_ == 0) {
-      low_ /= other.low_;
-      return *this;
+    if (self.hi_ == 0) {
+      self.low_ /= other.low_;
+      return;
     }
 
     std::vector<uint32_t> remain;
 
     std::vector<uint32_t> result =
-        DivideInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
+        DivideInternal(self.ToBinaryVector(), other.ToBinaryVector(), remain);
 
-    FromBinaryVector(result);
-
-    return *this;
+    self.FromBinaryVector(result);
   }
 
-  ExtendedUnsignedIntImpl& DividedBy(const ExtendedUnsignedIntImpl& other,
-                                     ExtendedUnsignedIntImpl& r) {
-    if (IsZero()) {
+  static void DivideInplace(ExtendedUnsignedIntImpl& self,
+                            const ExtendedUnsignedIntImpl& other,
+                            ExtendedUnsignedIntImpl& r) {
+    if (self.IsZero()) {
       r.MakeZeroBits();
-      return *this;
+      return;
     }
     PE_ASSERT(!other.IsZero());
 
     if (other.hi_ == 0 && other.low_ == 1) {
       r.MakeZeroBits();
-      return *this;
+      return;
     }
 
-    int t = CompareTo(other);
+    int t = self.CompareTo(other);
     if (t == 0) {
-      low_ = 1;
-      hi_.MakeZeroBits();
+      self.low_ = 1;
+      self.hi_.MakeZeroBits();
       r.MakeZeroBits();
-      return *this;
+      return;
     }
 
     if (t < 0) {
-      low_.MakeZeroBits();
-      hi_.MakeZeroBits();
+      self.low_.MakeZeroBits();
+      self.hi_.MakeZeroBits();
       r = other;
-      return *this;
+      return;
     }
 
-    if (hi_ == 0) {
-      low_ /= other.low_;
-      return *this;
+    if (self.hi_ == 0) {
+      self.low_ /= other.low_;
+      return;
     }
 
     std::vector<uint32_t> remain;
 
     std::vector<uint32_t> result =
-        DivideInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
+        DivideInternal(self.ToBinaryVector(), other.ToBinaryVector(), remain);
 
-    FromBinaryVector(result);
+    self.FromBinaryVector(result);
     r.FromBinaryVector(remain);
-
-    return *this;
   }
 
-  ExtendedUnsignedIntImpl& Modulo(const ExtendedUnsignedIntImpl& other) {
-    if (IsZero()) {
-      return *this;
+  static void RemainInplace(ExtendedUnsignedIntImpl& self,
+                            const ExtendedUnsignedIntImpl& other) {
+    if (self.IsZero()) {
+      return;
     }
     PE_ASSERT(!other.IsZero());
 
     if (other.hi_ == 0 && other.low_ == 1) {
-      low_.MakeZeroBits();
-      hi_.MakeZeroBits();
-      return *this;
+      self.low_.MakeZeroBits();
+      self.hi_.MakeZeroBits();
+      return;
     }
 
-    int t = CompareTo(other);
+    int t = self.CompareTo(other);
     if (t == 0) {
-      low_.MakeZeroBits();
-      hi_.MakeZeroBits();
-      return *this;
+      self.low_.MakeZeroBits();
+      self.hi_.MakeZeroBits();
+      return;
     }
 
     if (t < 0) {
-      return *this;
+      return;
     }
 
-    if (hi_.IsZero()) {
-      low_ %= other.low_;
-      return *this;
+    if (self.hi_.IsZero()) {
+      self.low_ %= other.low_;
+      return;
     }
 
     std::vector<uint32_t> remain;
 
-    DivideInternal(ToBinaryVector(), other.ToBinaryVector(), remain);
+    DivideInternal(self.ToBinaryVector(), other.ToBinaryVector(), remain);
 
-    FromBinaryVector(remain);
-
-    return *this;
+    self.FromBinaryVector(remain);
   }
 
  public:
@@ -1799,7 +1689,22 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   ExtendedUnsignedIntImpl& operator+=(const ExtendedUnsignedIntImpl& other) {
-    AddedBy(other);
+    if (IsZero()) {
+      low_ = other.low();
+      hi_ = other.hi();
+      return *this;
+    }
+
+    if (!other.IsZero()) {
+      ET x = other.low() + low_;
+      ET y = other.hi() + hi_;
+      if (!other.low().IsZero() && !low_.IsZero() &&
+          (x < other.low() || x < low_)) {
+        ++y;
+      }
+      low_ = x;
+      hi_ = y;
+    }
     return *this;
   }
 
@@ -1814,7 +1719,33 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   ExtendedUnsignedIntImpl& operator-=(const ExtendedUnsignedIntImpl& other) {
-    Substract(other);
+    if (other.IsZero()) {
+      return *this;
+    }
+
+    if (IsZero()) {
+      low_ = other.low();
+      hi_ = other.hi();
+      FlipBits();
+      AddOne();
+      return *this;
+    }
+
+    int t = CompareTo(other);
+    if (t == 0) {
+      low_.MakeZeroBits();
+      hi_.MakeZeroBits();
+      return *this;
+    } else {
+      ExtendedUnsignedIntImpl d = Difference(other);
+      if (t < 0) {
+        d.FlipBits();
+        d.AddOne();
+      }
+      low_ = d.low_;
+      hi_ = d.hi_;
+    }
+
     return *this;
   }
 
@@ -1829,7 +1760,27 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   ExtendedUnsignedIntImpl& operator*=(const ExtendedUnsignedIntImpl& other) {
-    MultipliedBy(other);
+    if (IsZero() || other.IsZero()) {
+      low_.MakeZeroBits();
+      hi_.MakeZeroBits();
+      return *this;
+    }
+    ET t[4];
+    for (int i = 0; i < 4; ++i)
+      for (int j = 0; j + i < 4; ++j) {
+        ET carry = GetQuarter(i) * other.GetQuarter(j);
+        for (int now = i + j; now < 4; ++now) {
+          ET x = ET(t[now]) + ET(carry.low());
+          t[now] = x.low();
+          carry = ET(x.hi()) + ET(carry.hi());
+          if (carry.IsZero()) {
+            break;
+          }
+        }
+      }
+    low_ = t[0] | (t[1] << quarter_bitcount);
+    hi_ = t[2] | (t[3] << quarter_bitcount);
+
     return *this;
   }
 
@@ -1844,7 +1795,8 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   ExtendedUnsignedIntImpl& operator/=(const ExtendedUnsignedIntImpl& other) {
-    return DividedBy(other);
+    DivideInplace(*this, other);
+    return *this;
   }
 
   ExtendedUnsignedIntImpl& operator/=(const ET& other) {
@@ -1858,7 +1810,8 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   ExtendedUnsignedIntImpl& operator%=(const ExtendedUnsignedIntImpl& other) {
-    return Modulo(other);
+    RemainInplace(*this, other);
+    return *this;
   }
 
   ExtendedUnsignedIntImpl& operator%=(const ET& other) {

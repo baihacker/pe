@@ -72,98 +72,97 @@ struct ExtendedSignedIntImpl<ET, true>
     }
   }
 
-  ExtendedSignedIntImpl& DividedBy(const ExtendedSignedIntImpl& other) {
-    int s1 = IntSign();
+  static void DivideInplace(ExtendedSignedIntImpl& self,
+                            const ExtendedSignedIntImpl& other) {
+    int s1 = self.IntSign();
     int s2 = other.IntSign();
     if (s1 == 0) {
-      return *this;
+      return;
     }
 
     PE_ASSERT(s2 != 0);
 
     if (other.hi_ == 0 && other.low_ == 1) {
-      return *this;
+      return;
     }
 
-    MakeAbs();
+    self.MakeAbs();
 
     if (s2 > 0) {
-      base::DividedBy(other);
+      self.base::operator/=(other);
     } else {
-      base::DividedBy(other.Abs());
+      self.base::operator/=(other.Abs());
     }
 
     if (s1 * s2 < 0) {
-      base::FlipBits();
-      base::AddOne();
+      self.base::FlipBits();
+      self.base::AddOne();
     }
-
-    return *this;
   }
 
-  ExtendedSignedIntImpl& DividedBy(const ExtendedSignedIntImpl& other,
-                                   ExtendedSignedIntImpl& r) {
-    int s1 = IntSign();
+  static void DivideInplace(ExtendedSignedIntImpl& self,
+                            const ExtendedSignedIntImpl& other,
+                            ExtendedSignedIntImpl& r) {
+    int s1 = self.IntSign();
     int s2 = other.IntSign();
     if (s1 == 0) {
       r.MakeZeroBits();
-      return *this;
+      return;
     }
 
     PE_ASSERT(s2 != 0);
 
     if (other.hi_ == 0 && other.low_ == 1) {
       r.MakeZeroBits();
-      return *this;
+      return;
     }
 
-    MakeAbs();
+    self.MakeAbs();
 
     if (s2 > 0) {
-      base::DividedBy(other, r);
+      self.base::operator/=(other, r);
     } else {
-      base::DividedBy(other.Abs(), r);
+      self.base::operator/=(other.Abs(), r);
     }
 
     if (s1 * s2 < 0) {
-      base::FlipBits();
-      base::AddOne();
+      self.base::FlipBits();
+      self.base::AddOne();
     }
 
     if (s1 < 0) {
       r.FlipBits();
       r.AddOne();
     }
-    return *this;
   }
 
-  ExtendedSignedIntImpl& Modulo(const ExtendedSignedIntImpl& other) {
-    int s1 = IntSign();
+  static void RemainInplace(ExtendedSignedIntImpl& self,
+                            const ExtendedSignedIntImpl& other) {
+    int s1 = self.IntSign();
     int s2 = other.IntSign();
     if (s1 == 0) {
-      return *this;
+      return;
     }
 
     PE_ASSERT(s2 != 0);
 
     if (other.hi_ == 0 && other.low_ == 1) {
-      base::MakeZeroBits();
-      return *this;
+      self.base::MakeZeroBits();
+      return;
     }
 
-    MakeAbs();
+    self.MakeAbs();
 
     if (s2 > 0) {
-      base::Modulo(other);
+      self.base::operator%=(other);
     } else {
-      base::Modulo(other.Abs());
+      self.base::operator%=(other.Abs());
     }
 
     if (s1 < 0) {
       base::FlipBits();
       base::AddOne();
     }
-    return *this;
   }
 
  public:
@@ -272,12 +271,12 @@ struct ExtendedSignedIntImpl<ET, true>
   }
 
   ExtendedSignedIntImpl& operator+=(const ExtendedSignedIntImpl& other) {
-    base::AddedBy(other);
+    base::operator+=(other);
     return *this;
   }
 
   ExtendedSignedIntImpl& operator+=(const ET& other) {
-    base::AddedBy(other);
+    base::operator+=(other);
     return *this;
   }
 
@@ -317,9 +316,9 @@ struct ExtendedSignedIntImpl<ET, true>
     MakeAbs();
 
     if (s2 > 0) {
-      this->base::MultipliedBy(other);
+      base::operator*=(other);
     } else {
-      this->base::MultipliedBy(other.Abs());
+      base::operator*=(other.Abs());
     }
 
     if (s1 * s2 < 0) {
@@ -339,7 +338,8 @@ struct ExtendedSignedIntImpl<ET, true>
   }
 
   ExtendedSignedIntImpl& operator/=(const ExtendedSignedIntImpl& other) {
-    return DividedBy(other);
+    DivideInplace(*this, other);
+    return *this;
   }
 
   ExtendedSignedIntImpl& operator/=(const ET& other) {
@@ -347,7 +347,8 @@ struct ExtendedSignedIntImpl<ET, true>
   }
 
   ExtendedSignedIntImpl& operator%=(const ExtendedSignedIntImpl& other) {
-    return Modulo(other);
+    RemainInplace(*this, other);
+    return *this;
   }
 
   ExtendedSignedIntImpl& operator%=(const ET& other) {
@@ -591,96 +592,95 @@ struct ExtendedSignedIntImpl<ET, false>
     }
   }
 
-  ExtendedSignedIntImpl& DividedBy(const ExtendedSignedIntImpl& other) {
-    int s1 = IntSign();
+  static void DivideInplace(ExtendedSignedIntImpl& self,
+                            const ExtendedSignedIntImpl& other) {
+    int s1 = self.IntSign();
     int s2 = other.IntSign();
     if (s1 == 0) {
-      return *this;
+      return;
     }
 
     PE_ASSERT(s2 != 0);
 
     if (other.hi_ == 0 && other.low_ == 1) {
-      return *this;
+      return;
     }
 
-    MakeAbs();
+    self.MakeAbs();
 
     if (s2 > 0) {
-      base::DividedBy(other);
+      self.base::operator/=(other);
     } else {
-      base::DividedBy(other.Abs());
+      self.base::operator/=(other.Abs());
     }
 
     if (s1 * s2 < 0) {
-      base::FlipBits();
-      base::AddOne();
+      self.base::FlipBits();
+      self.base::AddOne();
     }
-
-    return *this;
   }
 
-  ExtendedSignedIntImpl& DividedBy(const ExtendedSignedIntImpl& other,
-                                   ExtendedSignedIntImpl& r) {
-    int s1 = IntSign();
+  static void DivideInplace(ExtendedSignedIntImpl& self,
+                            const ExtendedSignedIntImpl& other,
+                            ExtendedSignedIntImpl& r) {
+    int s1 = self.IntSign();
     int s2 = other.IntSign();
     if (s1 == 0) {
       r.MakeZeroBits();
-      return *this;
+      return;
     }
 
     PE_ASSERT(s2 != 0);
 
     if (other.hi_ == 0 && other.low_ == 1) {
       r.MakeZeroBits();
-      return *this;
+      return;
     }
 
-    MakeAbs();
+    self.MakeAbs();
     if (s2 > 0) {
-      base::DividedBy(other, r);
+      self.base::operator/=(other, r);
     } else {
-      base::DividedBy(other.Abs(), r);
+      self.base::operator/=(other.Abs(), r);
     }
 
     if (s1 * s2 < 0) {
-      base::FlipBits();
-      base::AddOne();
+      self.base::FlipBits();
+      self.base::AddOne();
     }
 
     if (s1 < 0) {
       r.FlipBits();
       r.AddOne();
     }
-    return *this;
   }
 
-  ExtendedSignedIntImpl& Modulo(const ExtendedSignedIntImpl& other) {
-    int s1 = IntSign();
+  static void RemainInplace(ExtendedSignedIntImpl& self,
+                            const ExtendedSignedIntImpl& other) {
+    int s1 = self.IntSign();
     int s2 = other.IntSign();
     if (s1 == 0) {
-      return *this;
+      return;
     }
 
     PE_ASSERT(s2 != 0);
 
     if (other.hi_ == 0 && other.low_ == 1) {
-      base::MakeZeroBits();
-      return *this;
+      self.base::MakeZeroBits();
+      return;
     }
 
-    MakeAbs();
+    self.MakeAbs();
     if (s2 > 0) {
-      base::Modulo(other);
+      self.base::operator%=(other);
     } else {
-      base::Modulo(other.Abs());
+      self.base::operator%=(other.Abs());
     }
 
     if (s1 < 0) {
-      base::FlipBits();
-      base::AddOne();
+      self.base::FlipBits();
+      self.base::AddOne();
     }
-    return *this;
   }
 
  public:
@@ -791,7 +791,7 @@ struct ExtendedSignedIntImpl<ET, false>
   }
 
   ExtendedSignedIntImpl& operator+=(const ExtendedSignedIntImpl& other) {
-    base::AddedBy(other);
+    base::operator+=(other);
     return *this;
   }
 
@@ -840,9 +840,9 @@ struct ExtendedSignedIntImpl<ET, false>
     MakeAbs();
 
     if (s2 > 0) {
-      this->MultipliedBy(other);
+      base::operator*=(other);
     } else {
-      this->MultipliedBy(other.Abs());
+      base::operator*=(other.Abs());
     }
 
     if (s1 * s2 < 0) {
@@ -864,7 +864,8 @@ struct ExtendedSignedIntImpl<ET, false>
   }
 
   ExtendedSignedIntImpl& operator/=(const ExtendedSignedIntImpl& other) {
-    return DividedBy(other);
+    DivideInplace(*this, other);
+    return *this;
   }
 
   ExtendedSignedIntImpl& operator/=(const ET& other) {
@@ -878,7 +879,8 @@ struct ExtendedSignedIntImpl<ET, false>
   }
 
   ExtendedSignedIntImpl& operator%=(const ExtendedSignedIntImpl& other) {
-    return Modulo(other);
+    RemainInplace(*this, other);
+    return *this;
   }
 
   ExtendedSignedIntImpl& operator%=(const ET& other) {

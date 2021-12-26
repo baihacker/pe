@@ -1,8 +1,8 @@
 #include "pe_test.h"
 
 #if 0
-#include "bi_test.c"
-#include "bi_test1.c"
+#include "extended_signed_int_test.c"
+#include "extended_unsigned_int_test.c"
 #else
 #include "algo_test.c"
 #include "array_test.c"

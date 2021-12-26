@@ -114,6 +114,9 @@ SL void TestAsmdImpl() {
   x = x % T(2);
   x = 1;
   x = x % x;
+
+  x = 256;
+  Div(x, x);
 }
 
 SL void TestAsmdOperator() {

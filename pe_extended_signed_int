@@ -89,50 +89,50 @@ struct ExtendedSignedIntImpl<ET, true>
     self.MakeAbs();
 
     if (s2 > 0) {
-      self.base::operator/=(other);
+      base::DivideInplace(self, other);
     } else {
-      self.base::operator/=(other.Abs());
+      base::DivideInplace(self, other.Abs());
     }
 
     if (s1 * s2 < 0) {
-      self.base::FlipBits();
-      self.base::AddOne();
+      self.FlipBits();
+      self.AddOne();
     }
   }
 
   static void DivideInplace(ExtendedSignedIntImpl& self,
                             const ExtendedSignedIntImpl& other,
-                            ExtendedSignedIntImpl& r) {
+                            ExtendedSignedIntImpl& remain) {
     int s1 = self.IntSign();
     int s2 = other.IntSign();
     if (s1 == 0) {
-      r.MakeZeroBits();
+      remain.MakeZeroBits();
       return;
     }
 
     PE_ASSERT(s2 != 0);
 
     if (other.hi_ == 0 && other.low_ == 1) {
-      r.MakeZeroBits();
+      remain.MakeZeroBits();
       return;
     }
 
     self.MakeAbs();
 
     if (s2 > 0) {
-      self.base::operator/=(other, r);
+      base::DivideInplace(self, other, remain);
     } else {
-      self.base::operator/=(other.Abs(), r);
+      base::DivideInplace(self, other.Abs(), remain);
     }
 
     if (s1 * s2 < 0) {
-      self.base::FlipBits();
-      self.base::AddOne();
+      self.FlipBits();
+      self.AddOne();
     }
 
     if (s1 < 0) {
-      r.FlipBits();
-      r.AddOne();
+      remain.FlipBits();
+      remain.AddOne();
     }
   }
 
@@ -147,16 +147,16 @@ struct ExtendedSignedIntImpl<ET, true>
     PE_ASSERT(s2 != 0);
 
     if (other.hi_ == 0 && other.low_ == 1) {
-      self.base::MakeZeroBits();
+      self.MakeZeroBits();
       return;
     }
 
     self.MakeAbs();
 
     if (s2 > 0) {
-      self.base::operator%=(other);
+      base::RemainInplace(self, other);
     } else {
-      self.base::operator%=(other.Abs());
+      base::RemainInplace(self, other.Abs());
     }
 
     if (s1 < 0) {
@@ -609,49 +609,49 @@ struct ExtendedSignedIntImpl<ET, false>
     self.MakeAbs();
 
     if (s2 > 0) {
-      self.base::operator/=(other);
+      base::DivideInplace(self, other);
     } else {
-      self.base::operator/=(other.Abs());
+      base::DivideInplace(self, other.Abs());
     }
 
     if (s1 * s2 < 0) {
-      self.base::FlipBits();
-      self.base::AddOne();
+      self.FlipBits();
+      self.AddOne();
     }
   }
 
   static void DivideInplace(ExtendedSignedIntImpl& self,
                             const ExtendedSignedIntImpl& other,
-                            ExtendedSignedIntImpl& r) {
+                            ExtendedSignedIntImpl& remain) {
     int s1 = self.IntSign();
     int s2 = other.IntSign();
     if (s1 == 0) {
-      r.MakeZeroBits();
+      remain.MakeZeroBits();
       return;
     }
 
     PE_ASSERT(s2 != 0);
 
     if (other.hi_ == 0 && other.low_ == 1) {
-      r.MakeZeroBits();
+      remain.MakeZeroBits();
       return;
     }
 
     self.MakeAbs();
     if (s2 > 0) {
-      self.base::operator/=(other, r);
+      base::DivideInplace(self, other, remain);
     } else {
-      self.base::operator/=(other.Abs(), r);
+      base::DivideInplace(self, other.Abs(), remain);
     }
 
     if (s1 * s2 < 0) {
-      self.base::FlipBits();
-      self.base::AddOne();
+      self.FlipBits();
+      self.AddOne();
     }
 
     if (s1 < 0) {
-      r.FlipBits();
-      r.AddOne();
+      remain.FlipBits();
+      remain.AddOne();
     }
   }
 
@@ -666,20 +666,20 @@ struct ExtendedSignedIntImpl<ET, false>
     PE_ASSERT(s2 != 0);
 
     if (other.hi_ == 0 && other.low_ == 1) {
-      self.base::MakeZeroBits();
+      self.MakeZeroBits();
       return;
     }
 
     self.MakeAbs();
     if (s2 > 0) {
-      self.base::operator%=(other);
+      base::RemainInplace(self, other);
     } else {
-      self.base::operator%=(other.Abs());
+      base::RemainInplace(self, other.Abs());
     }
 
     if (s1 < 0) {
-      self.base::FlipBits();
-      self.base::AddOne();
+      self.FlipBits();
+      self.AddOne();
     }
   }
 
@@ -1137,7 +1137,7 @@ Div(const ExtendedSignedIntImpl<ET, is_native_integer>& l,
     const ExtendedSignedIntImpl<ET, is_native_integer>& r) {
   ExtendedSignedIntImpl<ET, is_native_integer> remain;
   ExtendedSignedIntImpl<ET, is_native_integer> d(l);
-  d.DividedBy(r, remain);
+  ExtendedSignedIntImpl<ET, is_native_integer>::DivideInplace(d, r, remain);
   return {d, remain};
 }
 

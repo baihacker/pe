@@ -503,15 +503,15 @@ struct ExtendedUnsignedIntImpl<ET, true> {
 
   static void DivideInplace(ExtendedUnsignedIntImpl& self,
                             const ExtendedUnsignedIntImpl& other,
-                            ExtendedUnsignedIntImpl& r) {
+                            ExtendedUnsignedIntImpl& remain) {
     if (self.IsZero()) {
-      r = 0;
+      remain = 0;
       return;
     }
     PE_ASSERT(!other.IsZero());
 
     if (other.hi_ == 0 && other.low_ == 1) {
-      r = 0;
+      remain = 0;
       return;
     }
 
@@ -519,13 +519,13 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     if (t == 0) {
       self.low_ = 1;
       self.hi_ = 0;
-      r = 0;
+      remain = 0;
       return;
     }
 
     if (t < 0) {
       self.low_ = self.hi_ = 0;
-      r = other;
+      remain = other;
       return;
     }
 
@@ -534,13 +534,13 @@ struct ExtendedUnsignedIntImpl<ET, true> {
       return;
     }
 
-    std::vector<uint32_t> remain;
+    std::vector<uint32_t> r;
 
     std::vector<uint32_t> result =
-        DivideInternal(self.ToBinaryVector(), other.ToBinaryVector(), remain);
+        DivideInternal(self.ToBinaryVector(), other.ToBinaryVector(), r);
 
     self.FromBinaryVector(result);
-    r.FromBinaryVector(remain);
+    remain.FromBinaryVector(r);
   }
 
   static void RemainInplace(ExtendedUnsignedIntImpl& self,
@@ -1467,15 +1467,15 @@ struct ExtendedUnsignedIntImpl<ET, false> {
 
   static void DivideInplace(ExtendedUnsignedIntImpl& self,
                             const ExtendedUnsignedIntImpl& other,
-                            ExtendedUnsignedIntImpl& r) {
+                            ExtendedUnsignedIntImpl& remain) {
     if (self.IsZero()) {
-      r.MakeZeroBits();
+      remain.MakeZeroBits();
       return;
     }
     PE_ASSERT(!other.IsZero());
 
     if (other.hi_ == 0 && other.low_ == 1) {
-      r.MakeZeroBits();
+      remain.MakeZeroBits();
       return;
     }
 
@@ -1483,14 +1483,14 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     if (t == 0) {
       self.low_ = 1;
       self.hi_.MakeZeroBits();
-      r.MakeZeroBits();
+      remain.MakeZeroBits();
       return;
     }
 
     if (t < 0) {
       self.low_.MakeZeroBits();
       self.hi_.MakeZeroBits();
-      r = other;
+      remain = other;
       return;
     }
 
@@ -1499,13 +1499,13 @@ struct ExtendedUnsignedIntImpl<ET, false> {
       return;
     }
 
-    std::vector<uint32_t> remain;
+    std::vector<uint32_t> r;
 
     std::vector<uint32_t> result =
-        DivideInternal(self.ToBinaryVector(), other.ToBinaryVector(), remain);
+        DivideInternal(self.ToBinaryVector(), other.ToBinaryVector(), r);
 
     self.FromBinaryVector(result);
-    r.FromBinaryVector(remain);
+    remain.FromBinaryVector(r);
   }
 
   static void RemainInplace(ExtendedUnsignedIntImpl& self,
@@ -2072,7 +2072,7 @@ Div(const ExtendedUnsignedIntImpl<ET, is_native_integer>& l,
     const ExtendedUnsignedIntImpl<ET, is_native_integer>& r) {
   ExtendedUnsignedIntImpl<ET, is_native_integer> remain;
   ExtendedUnsignedIntImpl<ET, is_native_integer> d(l);
-  d.DivImpl(r, remain);
+  ExtendedUnsignedIntImpl<ET, is_native_integer>::DivideInplace(d, r, remain);
   return {d, remain};
 }
 

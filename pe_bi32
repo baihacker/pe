@@ -454,13 +454,13 @@ class BigInteger {
     l.FixPos();
   }
 
-  static BigInteger AbsSub(const BigInteger& l, const BigInteger& r) {
+  static BigInteger AbsSubtract(const BigInteger& l, const BigInteger& r) {
     BigInteger ret(l);
-    AbsSubInplace(ret, r);
+    AbsSubtractInplace(ret, r);
     return ret;
   }
 
-  static void AbsSubInplace(BigInteger& l, const BigInteger& r) {
+  static void AbsSubtractInplace(BigInteger& l, const BigInteger& r) {
     PE_ASSERT(BigInteger::AbsCompare(l, r) >= 0);
 
     if (l.size() <= 2 && r.size() <= 2) {
@@ -496,7 +496,7 @@ class BigInteger {
   }
 
 #if HAS_POLY_MUL_NTT32
-  static BigInteger AbsMulNtt(const BigInteger& l, const BigInteger& r) {
+  static BigInteger AbsMultiplyNtt(const BigInteger& l, const BigInteger& r) {
     const int n = l.size() << 1;
     const int m = r.size() << 1;
 
@@ -540,15 +540,15 @@ class BigInteger {
   }
 #endif
 
-  static BigInteger AbsMul(const BigInteger& l, const BigInteger& r) {
+  static BigInteger AbsMultiply(const BigInteger& l, const BigInteger& r) {
     if (l.size() <= 1 && r.size() <= 1) {
       return static_cast<uint64>(l[0]) * r[0];
     }
     if (r.size() <= 1) {
-      return AbsMul(l, r.ToInt<uint64>());
+      return AbsMultiply(l, r.ToInt<uint64>());
     }
     if (l.size() <= 1) {
-      return AbsMul(r, l.ToInt<uint64>());
+      return AbsMultiply(r, l.ToInt<uint64>());
     }
 
 #if HAS_POLY_MUL_NTT32
@@ -562,7 +562,7 @@ class BigInteger {
       const uint64 cost2 = aligned_len * bit * 3;
 
       if (cost2 * 2 < cost1) {
-        return AbsMulNtt(l, r);
+        return AbsMultiplyNtt(l, r);
       }
     }
 #endif
@@ -594,21 +594,21 @@ class BigInteger {
   }
 
   template <typename T>
-  static BigInteger AbsMul(const BigInteger& l, T r) {
+  static BigInteger AbsMultiply(const BigInteger& l, T r) {
     static_assert(pe_is_unsigned<T>::value, "T must be unsigned");
     if (r > max_32bit_value) {
-      return AbsMul(l, BigInteger(r));
+      return AbsMultiply(l, BigInteger(r));
     }
     BigInteger ret(l, l.size() + BigInteger(r).size() + 1);
-    AbsMulInplace(ret, r);
+    AbsMultiplyInplace(ret, r);
     return ret;
   }
 
   template <typename T>
-  static void AbsMulInplace(BigInteger& l, T r) {
+  static void AbsMultiplyInplace(BigInteger& l, T r) {
     static_assert(pe_is_unsigned<T>::value, "T must be unsigned");
     if (r > max_32bit_value) {
-      l = AbsMul(l, BigInteger(r));
+      l = AbsMultiply(l, BigInteger(r));
       return;
     }
 
@@ -636,57 +636,10 @@ class BigInteger {
     l.FixPos();
   }
 
-  static BigInteger AbsDiv(const BigInteger& l, const BigInteger& r,
-                           BigInteger& remain) {
-    if (l.size() <= 2 && r.size() <= 2) {
-      const uint64 a = l.ToInt<uint64>();
-      const uint64 b = r.ToInt<uint64>();
-      remain = a % b;
-      return a / b;
-    }
-
-    const int t = AbsCompare(l, r);
-    if (t < 0) {
-      remain = l;
-      return 0;
-    }
-    if (t == 0) {
-      remain = 0;
-      return 1;
-    }
-
-    std::vector<unsigned int> rb;
-    std::vector<unsigned int> rr = AbsDivImpl<unsigned int>(
-        l.ToBinaryVector<unsigned int>(), r.ToBinaryVector<unsigned int>(), rb);
-    remain = BigInteger(rb);
-    return rr;
-  }
-
-  static BigInteger AbsDiv(const BigInteger& l, const BigInteger& r) {
-    if (l.size() <= 2 && r.size() <= 2) {
-      const uint64 a = l.ToInt<uint64>();
-      const uint64 b = r.ToInt<uint64>();
-      return a / b;
-    }
-
-    const int t = AbsCompare(l, r);
-    if (t < 0) {
-      return 0;
-    }
-    if (t == 0) {
-      return 1;
-    }
-
-    std::vector<unsigned int> rb;
-    std::vector<unsigned int> rr = AbsDivImpl<unsigned int>(
-        l.ToBinaryVector<unsigned int>(), r.ToBinaryVector<unsigned int>(), rb);
-    return rr;
-  }
-
   template <typename T>
-  static std::vector<T> AbsDivImpl(const std::vector<T>& l,
-                                   const std::vector<T>& r,
-                                   std::vector<T>& remain) {
+  static std::vector<T> AbsDivideInternal(const std::vector<T>& l,
+                                          const std::vector<T>& r,
+                                          std::vector<T>& remain) {
     std::vector<T> result;
     remain = l;
 
@@ -753,8 +706,55 @@ class BigInteger {
     return result;
   }
 
+  static BigInteger AbsDivide(const BigInteger& l, const BigInteger& r,
+                              BigInteger& remain) {
+    if (l.size() <= 2 && r.size() <= 2) {
+      const uint64 a = l.ToInt<uint64>();
+      const uint64 b = r.ToInt<uint64>();
+      remain = a % b;
+      return a / b;
+    }
+
+    const int t = AbsCompare(l, r);
+    if (t < 0) {
+      remain = l;
+      return 0;
+    }
+    if (t == 0) {
+      remain = 0;
+      return 1;
+    }
+
+    std::vector<unsigned int> rb;
+    std::vector<unsigned int> rr = AbsDivideInternal<unsigned int>(
+        l.ToBinaryVector<unsigned int>(), r.ToBinaryVector<unsigned int>(), rb);
+    remain = BigInteger(rb);
+    return rr;
+  }
+
+  static BigInteger AbsDivide(const BigInteger& l, const BigInteger& r) {
+    if (l.size() <= 2 && r.size() <= 2) {
+      const uint64 a = l.ToInt<uint64>();
+      const uint64 b = r.ToInt<uint64>();
+      return a / b;
+    }
+
+    const int t = AbsCompare(l, r);
+    if (t < 0) {
+      return 0;
+    }
+    if (t == 0) {
+      return 1;
+    }
+
+    std::vector<unsigned int> rb;
+    std::vector<unsigned int> rr = AbsDivideInternal<unsigned int>(
+        l.ToBinaryVector<unsigned int>(), r.ToBinaryVector<unsigned int>(), rb);
+    return rr;
+  }
+
   template <typename T>
-  static BigInteger AbsDiv(const BigInteger& l, T r, T& remain) {
+  static BigInteger AbsDivide(const BigInteger& l, T r, T& remain) {
     static_assert(pe_is_unsigned<T>::value, "T must be unsigned");
     static_assert(sizeof(T) <= 8, "T must be at most 64-bit");
     if (l.size() <= 2) {
@@ -765,12 +765,12 @@ class BigInteger {
     }
 
     BigInteger t(l);
-    AbsDivInplace(t, r, remain);
+    AbsDivideInplace(t, r, remain);
     return t;
   }
 
   template <typename T>
-  static BigInteger AbsDiv(const BigInteger& l, T r) {
+  static BigInteger AbsDivide(const BigInteger& l, T r) {
     static_assert(pe_is_unsigned<T>::value, "T must be unsigned");
     static_assert(sizeof(T) <= 8, "T must be at most 64-bit");
     if (l.size() <= 2) {
@@ -781,12 +781,12 @@ class BigInteger {
 
     BigInteger t(l);
     T remain;
-    AbsDivInplace(t, r, remain);
+    AbsDivideInplace(t, r, remain);
     return t;
   }
 
   template <typename T>
-  static void AbsDivInplace(BigInteger& l, T r, T& remain) {
+  static void AbsDivideInplace(BigInteger& l, T r, T& remain) {
     static_assert(pe_is_unsigned<T>::value, "T must be unsigned");
     static_assert(sizeof(T) <= 8, "T must be at most 64-bit");
 
@@ -801,7 +801,7 @@ class BigInteger {
 #if !PE_HAS_INT128
     if (sizeof(T) > 4) {
       BigInteger tmp_remain;
-      l = AbsDiv(l, BigInteger(r), tmp_remain);
+      l = AbsDivide(l, BigInteger(r), tmp_remain);
       remain = tmp_remain.ToInt<T>();
       return;
     }
@@ -836,10 +836,15 @@ class BigInteger {
 
  public:
   const unsigned int* data() const { return data_; }
+
   unsigned int* data() { return data_; }
+
   int size() const { return pos_ + 1; }
+
   unsigned int operator[](int idx) const { return data_[idx]; }
+
   unsigned int& operator[](int idx) { return data_[idx]; }
+
   int sign() const { return sign_; }
 
   int CompareTo(const BigInteger& other) const {
@@ -854,9 +859,13 @@ class BigInteger {
   }
 
   int IntSign() const { return sign_; }
+
   bool IsZero() const { return sign_ == 0; }
+
   int IsEven() const { return data_[0] & 1 ? 0 : 1; }
+
   int IsOdd() const { return data_[0] & 1 ? 1 : 0; }
+
   unsigned int LowerBits() const { return static_cast<unsigned int>(data_[0]); }
 
   template <typename T>
@@ -978,7 +987,7 @@ class BigInteger {
     if (t == 0) {
       return 0;
     }
-    return t > 0 ? AbsSub(*this, other) : AbsSub(other, *this);
+    return t > 0 ? AbsSubtract(*this, other) : AbsSubtract(other, *this);
   }
 
   void Dump() const {
@@ -1028,10 +1037,10 @@ class BigInteger {
         data_[0] = 0;
         sign_ = 0;
       } else if (c > 0) {
-        AbsSubInplace(*this, other);
+        AbsSubtractInplace(*this, other);
       } else {
         BigInteger t(other);
-        AbsSubInplace(t, *this);
+        AbsSubtractInplace(t, *this);
         *this = std::move(t);
       }
     }
@@ -1053,10 +1062,10 @@ class BigInteger {
         data_[0] = 0;
         sign_ = 0;
       } else if (c > 0) {
-        AbsSubInplace(*this, other);
+        AbsSubtractInplace(*this, other);
       } else {
         BigInteger t(other);
-        AbsSubInplace(t, *this);
+        AbsSubtractInplace(t, *this);
         *this = std::move(t);
         sign_ = -other.sign_;
       }
@@ -1083,8 +1092,9 @@ class BigInteger {
     }
     using unsignedT = typename pe_make_unsigned<T>::type;
     unsignedT abs_value = GetAbsValue(other);
-    AbsMulInplace(*this, abs_value);
-    sign_ = sign_ * (other > 0 ? 1 : -1);
+    const int s = sign_ * (other > 0 ? 1 : -1);
+    AbsMultiplyInplace(*this, abs_value);
+    sign_ = s;
     return *this;
   }
 
@@ -1097,7 +1107,7 @@ class BigInteger {
   REQUIRES((is_native_integer<T>::value && sizeof(T) <= 8))
   RETURN(BigInteger&) operator/=(T other) {
     T r;
-    DivInplace(*this, other, r);
+    DivideInplace(*this, other, r);
     return *this;
   }
 
@@ -1110,7 +1120,7 @@ class BigInteger {
   REQUIRES((is_native_integer<T>::value && sizeof(T) <= 8))
   RETURN(BigInteger&) operator%=(T other) {
     T r;
-    DivInplace(*this, other, r);
+    DivideInplace(*this, other, r);
     return *this = r;
   }
 
@@ -1246,9 +1256,28 @@ class BigInteger {
   }
 #endif
   friend inline BigInteger operator+(const BigInteger& l, const BigInteger& r) {
-    BigInteger ret(l);
-    ret += r;
-    return ret;
+    if (r.IsZero()) {
+      return l;
+    } else if (l.IsZero()) {
+      return r;
+    } else if (l.sign() == r.sign()) {
+      BigInteger t(l);
+      AbsAddInplace(t, r);
+      return t;
+    } else {
+      int c = AbsCompare(l, r);
+      if (c == 0) {
+        return 0;
+      } else if (c > 0) {
+        BigInteger t(l);
+        AbsSubtractInplace(t, r);
+        return t;
+      } else {
+        BigInteger t(r);
+        AbsSubtractInplace(t, l);
+        return t;
+      }
+    }
   }
 
   friend inline BigInteger operator-(const BigInteger& l, const BigInteger& r) {
@@ -1266,11 +1295,11 @@ class BigInteger {
         return 0;
       } else if (c > 0) {
         BigInteger t(l);
-        BigInteger::AbsSubInplace(t, r);
+        BigInteger::AbsSubtractInplace(t, r);
         return t;
       } else {
         BigInteger t(r);
-        BigInteger::AbsSubInplace(t, l);
+        BigInteger::AbsSubtractInplace(t, l);
         t.sign_ = -r.sign_;
         return t;
       }
@@ -1281,7 +1310,7 @@ class BigInteger {
     if (l.IsZero() || r.IsZero()) return 0;
 
     const int s = l.sign() * (r > 0 ? 1 : -1);
-    BigInteger ret(BigInteger::AbsMul(l, r));
+    BigInteger ret(BigInteger::AbsMultiply(l, r));
     ret.sign_ = s;
 
     return ret;
@@ -1298,7 +1327,7 @@ class BigInteger {
     using unsignedT = typename pe_make_unsigned<T>::type;
     unsignedT abs_value = BigInteger::GetAbsValue(r);
     const int s = l.sign() * (r > 0 ? 1 : -1);
-    BigInteger ret(BigInteger::AbsMul(l, abs_value));
+    BigInteger ret(BigInteger::AbsMultiply(l, abs_value));
     ret.sign_ = s;
 
     return ret;
@@ -1314,9 +1343,7 @@ class BigInteger {
   }
 
   friend inline BigInteger operator/(const BigInteger& l, const BigInteger& r) {
-    BigInteger u, v;
-    std::tie(u, v) = DivImpl(l, r);
-    return u;
+    return Divide(l, r);
   }
 
   template <typename T>
@@ -1325,24 +1352,24 @@ class BigInteger {
        !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
        sizeof(T) <= 8)) RETURN(BigInteger)
   operator/(const BigInteger& l, T r) {
-    BigInteger u;
     T v;
-    std::tie(u, v) = DivImpl(l, r);
-    return u;
+    return Divide(l, r, v);
   }
 
-  friend inline std::tuple<BigInteger, BigInteger> DivImpl(
-      const BigInteger& l, const BigInteger& r) {
+  friend inline BigInteger Divide(const BigInteger& l, const BigInteger& r,
+                                  BigInteger& remain) {
     if (l.IsZero() && r.IsZero()) {
-      return std::make_tuple(1, 0);
+      remain = 0;
+      return 1;
     }
     if (l.IsZero() || r.IsZero()) {
-      return std::make_tuple(0, 0);
+      remain = 0;
+      return 0;
     }
 
     if (r.size() > 2) {
       BigInteger x;
-      BigInteger ret(BigInteger::AbsDiv(l, r, x));
+      BigInteger ret(BigInteger::AbsDivide(l, r, x));
       ret.sign_ = l.sign_ * r.sign_;
       ret.FixPos();
       if (l.sign_ < 0) {
@@ -1350,20 +1377,54 @@ class BigInteger {
       }
       x.FixPos();
 
-      return std::make_tuple(std::move(ret), std::move(x));
+      remain = std::move(x);
+
+      return ret;
     } else {
       uint64 abs_value = r.ToInt<uint64>();
       uint64 x;
       BigInteger ret(l);
-      BigInteger::AbsDivInplace(ret, abs_value, x);
+      BigInteger::AbsDivideInplace(ret, abs_value, x);
       ret.sign_ = l.sign() * (r.sign() > 0 ? 1 : -1);
       ret.FixPos();
 
-      BigInteger remain(x);
+      remain = x;
       if (l.sign_ < 0) {
         remain.sign_ = -remain.sign_;
       }
-      return std::make_tuple(std::move(ret), std::move(remain));
+
+      return ret;
+    }
+  }
+
+  friend inline BigInteger Divide(const BigInteger& l, const BigInteger& r) {
+    if (l.IsZero() && r.IsZero()) {
+      return 1;
+    }
+    if (l.IsZero() || r.IsZero()) {
+      return 0;
+    }
+
+    if (r.size() > 2) {
+      BigInteger x;
+      BigInteger ret(BigInteger::AbsDivide(l, r, x));
+      ret.sign_ = l.sign_ * r.sign_;
+      ret.FixPos();
+      if (l.sign_ < 0) {
+        x.sign_ = -x.sign_;
+      }
+      x.FixPos();
+
+      return ret;
+    } else {
+      uint64 abs_value = r.ToInt<uint64>();
+      uint64 x;
+      BigInteger ret(l);
+      BigInteger::AbsDivideInplace(ret, abs_value, x);
+      ret.sign_ = l.sign() * (r.sign() > 0 ? 1 : -1);
+      ret.FixPos();
+
+      return ret;
     }
   }
 
@@ -1371,13 +1432,15 @@ class BigInteger {
   friend inline REQUIRES(
       (is_native_integer<T>::value &&
        !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
-       sizeof(T) <= 8)) RETURN(std::tuple<BigInteger, T>)
-      DivImpl(const BigInteger& l, T r) {
+       sizeof(T) <= 8)) RETURN(BigInteger)
+      Divide(const BigInteger& l, T r, T& remain) {
     if (l.IsZero() && r == 0) {
-      return std::make_tuple(1, 0);
+      remain = 0;
+      return 1;
     }
     if (l.IsZero() || r == 0) {
-      return std::make_tuple(0, 0);
+      remain = 0;
+      return 0;
     }
 
     const int signl = l.sign_;
@@ -1385,7 +1448,7 @@ class BigInteger {
     unsignedT abs_value = BigInteger::GetAbsValue(r);
     unsignedT x;
     BigInteger ret(l);
-    BigInteger::AbsDivInplace(ret, abs_value, x);
+    BigInteger::AbsDivideInplace(ret, abs_value, x);
     ret.sign_ = signl * (r > 0 ? 1 : -1);
     ret.FixPos();
     if (l.sign_ < 0) {
@@ -1393,14 +1456,16 @@ class BigInteger {
       x = BigInteger::GetAbsValue(x);
     }
 
-    return std::make_tuple(std::move(ret), static_cast<T>(x));
+    remain = static_cast<T>(x);
+
+    return ret;
   }
 
   template <typename T>
   friend inline REQUIRES(
       (is_native_integer<T>::value &&
        !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
-      RETURN(void) DivInplace(BigInteger& l, T r, T& remain) {
+      RETURN(void) DivideInplace(BigInteger& l, T r, T& remain) {
     if (l.IsZero() && r == 0) {
       l = 1;
       remain = 0;
@@ -1420,7 +1485,7 @@ class BigInteger {
     unsignedT abs_value = BigInteger::GetAbsValue(r);
     unsignedT tmp_remain;
     const int signl = l.sign_;
-    BigInteger::AbsDivInplace(l, abs_value, tmp_remain);
+    BigInteger::AbsDivideInplace(l, abs_value, tmp_remain);
     l.sign_ = signl * (r > 0 ? 1 : -1);
     l.FixPos();
     remain = static_cast<T>(tmp_remain);
@@ -1431,8 +1496,8 @@ class BigInteger {
   }
 
   friend inline BigInteger operator%(const BigInteger& l, const BigInteger& r) {
-    BigInteger u, v;
-    std::tie(u, v) = DivImpl(l, r);
+    BigInteger v;
+    Divide(l, r, v);
     return v;
   }
 
@@ -1444,7 +1509,7 @@ class BigInteger {
   operator%(const BigInteger& l, T r) {
     BigInteger u;
     T v;
-    std::tie(u, v) = DivImpl(l, r);
+    Divide(l, r, v);
     if (l.sign() < 0) {
       v = BigInteger::GetNegValue(v);
     }
@@ -1466,6 +1531,7 @@ class BigInteger {
     ret.FixPos();
     return ret;
   }
+
   friend inline BigInteger operator^(const BigInteger& l, const BigInteger& r) {
     if (l.size() <= 2 && r.size() <= 2) {
       return l.ToInt<uint64>() ^ r.ToInt<uint64>();
@@ -1484,6 +1550,7 @@ class BigInteger {
     ret.FixPos();
     return ret;
   }
+
   friend inline BigInteger operator|(const BigInteger& l, const BigInteger& r) {
     if (l.size() <= 2 && r.size() <= 2) {
       return l.ToInt<uint64>() | r.ToInt<uint64>();
@@ -1595,7 +1662,9 @@ SL unsigned int LowerBits(const BigInteger& x) { return x.LowerBits(); }
 
 SL std::tuple<BigInteger, BigInteger> Div(const BigInteger& l,
                                           const BigInteger& r) {
-  return DivImpl(l, r);
+  BigInteger remain;
+  BigInteger d = Divide(l, r, remain);
+  return {std::move(d), std::move(remain)};
 }
 
 template <typename T>

@@ -103,7 +103,7 @@ class BigInteger {
     }
 
     if (sizeof(T) <= 8) {
-      SetNativeUInt64(value);
+      SetNativeUInt64AndKeepSign(value);
     } else {
       int need = 0;
       for (auto t = value; t > 0; ++need) {
@@ -378,7 +378,7 @@ class BigInteger {
     return ret;
   }
 
-  void SetNativeUInt64(uint64 v) {
+  void SetNativeUInt64AndKeepSign(uint64 v) {
     if (v <= max_32bit_value) {
       Reserve(1);
       data_[0] = static_cast<unsigned>(v);
@@ -421,7 +421,7 @@ class BigInteger {
 
   static void AbsAddInplace(BigInteger& l, const BigInteger& r) {
     if (l.size() <= 2 && r.size() <= 1 || l.size() <= 1 && r.size() <= 2) {
-      l.SetNativeUInt64(l.ToInt<uint64>() + r.ToInt<uint64>());
+      l.SetNativeUInt64AndKeepSign(l.ToInt<uint64>() + r.ToInt<uint64>());
       return;
     }
 
@@ -464,7 +464,7 @@ class BigInteger {
     PE_ASSERT(BigInteger::AbsCompare(l, r) >= 0);
 
     if (l.size() <= 2 && r.size() <= 2) {
-      l.SetNativeUInt64(l.ToInt<uint64>() - r.ToInt<uint64>());
+      l.SetNativeUInt64AndKeepSign(l.ToInt<uint64>() - r.ToInt<uint64>());
       return;
     }
 
@@ -613,7 +613,7 @@ class BigInteger {
     }
 
     if (l.size() <= 1) {
-      l.SetNativeUInt64(static_cast<uint64>(l[0]) * r);
+      l.SetNativeUInt64AndKeepSign(static_cast<uint64>(l[0]) * r);
       return;
     }
 
@@ -795,7 +795,7 @@ class BigInteger {
       const uint64 a = l.ToInt<uint64>();
       const uint64 b = r;
       remain = static_cast<T>(a % b);
-      l.SetNativeUInt64(a / b);
+      l.SetNativeUInt64AndKeepSign(a / b);
       return;
     }
 #if !PE_HAS_INT128
@@ -857,9 +857,7 @@ class BigInteger {
   bool IsZero() const { return sign_ == 0; }
   int IsEven() const { return data_[0] & 1 ? 0 : 1; }
   int IsOdd() const { return data_[0] & 1 ? 1 : 0; }
-  unsigned int LowerBits() const {
-    return static_cast<unsigned int>(data_[0]);
-  }
+  unsigned int LowerBits() const { return static_cast<unsigned int>(data_[0]); }
 
   template <typename T>
   REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
@@ -1593,9 +1591,7 @@ SL int IsEven(const BigInteger& x) { return x.IsEven(); }
 
 SL int IsOdd(const BigInteger& x) { return x.IsOdd(); }
 
-SL unsigned int LowerBits(const BigInteger& x) {
-  return x.LowerBits();
-}
+SL unsigned int LowerBits(const BigInteger& x) { return x.LowerBits(); }
 
 SL std::tuple<BigInteger, BigInteger> Div(const BigInteger& l,
                                           const BigInteger& r) {

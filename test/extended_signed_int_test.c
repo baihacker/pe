@@ -11,21 +11,16 @@ using Int256 = pe::ExtendedSignedInt<Int128>;
 using Int512 = pe::ExtendedSignedInt<Int256>;
 #endif
 using TestT = Int512;
+
 template <typename T>
 SL void TestConstructorImpl() {
-  // assert(Int128(std::numeric_limits<T>::min()).ToInt<T>() ==
-  //       std::numeric_limits<T>::min());
-  // assert(Int128(std::numeric_limits<T>::max()).ToInt<T>() ==
-  //       std::numeric_limits<T>::max());
   assert(TestT(std::numeric_limits<T>::min()).ToInt<T>() ==
          std::numeric_limits<T>::min());
   assert(TestT(std::numeric_limits<T>::max()).ToInt<T>() ==
          std::numeric_limits<T>::max());
-  // std::cout << std::endl;
 }
 
 SL void TestConstructor() {
-  // std::cout << TestT() << std::endl;
   TestT x;
   TestConstructorImpl<bool>();
   TestConstructorImpl<char>();
@@ -44,6 +39,17 @@ SL void TestConstructor() {
 #if PE_HAS_INT128
   TestConstructorImpl<uint128>();
 #endif
+  std::string s = "123456789123456789123456789";
+  assert(TestT(s).ToString() == s);
+  s = "000000000";
+  assert(TestT(s).ToString() == "0");
+
+  s = "-123456789123456789123456789";
+  assert(TestT(s).ToString() == s);
+
+  assert(TestT(-1).BitCount() == sizeof(TestT) * 8);
+
+  assert((TestT(-1) >> 10).BitCount() == sizeof(TestT) * 8);
 }
 
 template <typename T>
@@ -114,6 +120,10 @@ SL void TestAsmdImpl() {
   x = x % T(2);
   x = 1;
   x = x % x;
+  ++x;
+  x++;
+  --x;
+  x--;
 }
 
 SL void TestAsmdOperator() {
@@ -260,6 +270,34 @@ SL void TestAsmdOperator() {
       }
     }
   }
+
+  for (int s1 = -1; s1 <= 1; s1 += 2)
+    for (int s2 = -1; s2 <= 1; s2 += 2)
+      for (int e1 = 10; e1 <= 30; e1 += 4) {
+        bi A = s1 * Power("10"_bi, e1);
+        for (int e2 = 10; e2 <= 30; e2 += 4) {
+          bi B = s2 * Power("10"_bi, e2);
+          for (int64 i = -10; i <= 10; ++i) {
+            for (int64 j = -10; j <= 10; ++j) {
+              bi a = A + i;
+              bi b = B + j;
+              TestT x = a.ToString();
+              TestT y = b.ToString();
+              assert((x + y).ToString() == (a + b).ToString());
+              assert((x - y).ToString() == (a - b).ToString());
+              assert((x * y).ToString() == (a * b).ToString());
+              assert((x / y).ToString() == (a / b).ToString());
+              assert((x % y).ToString() == (a % b).ToString());
+              bi aa, bb;
+              std::tie(aa, bb) = Div(a, b);
+              TestT xx, yy;
+              std::tie(xx, yy) = Div(x, y);
+              assert(xx.ToString() == aa.ToString());
+              assert(yy.ToString() == bb.ToString());
+            }
+          }
+        }
+      }
 }
 
 template <typename T>
@@ -375,5 +413,5 @@ SL void ExtendedSignedIntTest() {
   TestBitOperator();
   TestUtilities();
 }
-PE_REGISTER_TEST(&ExtendedSignedIntTest, "ExtendedSignedIntTest", SPECIFIED);
+PE_REGISTER_TEST(&ExtendedSignedIntTest, "ExtendedSignedIntTest", MEDIUM);
 }  // namespace extended_signed_int_test

@@ -11,21 +11,16 @@ using UInt256 = pe::ExtendedUnsignedInt<UInt128>;
 using UInt512 = pe::ExtendedUnsignedInt<UInt256>;
 #endif
 using TestT = UInt512;
+
 template <typename T>
 SL void TestConstructorImpl() {
-  // assert(UInt128(std::numeric_limits<T>::min()).ToInt<T>() ==
-  //       std::numeric_limits<T>::min());
-  // assert(UInt128(std::numeric_limits<T>::max()).ToInt<T>() ==
-  //       std::numeric_limits<T>::max());
   assert(TestT(std::numeric_limits<T>::min()).ToInt<T>() ==
          std::numeric_limits<T>::min());
   assert(TestT(std::numeric_limits<T>::max()).ToInt<T>() ==
          std::numeric_limits<T>::max());
-  // std::cout << std::endl;
 }
 
 SL void TestConstructor() {
-  // std::cout << TestT() << std::endl;
   TestT x;
   TestConstructorImpl<bool>();
   TestConstructorImpl<char>();
@@ -44,6 +39,15 @@ SL void TestConstructor() {
 #if PE_HAS_INT128
   TestConstructorImpl<uint128>();
 #endif
+
+  std::string s = "123456789123456789123456789";
+  assert(TestT(s).ToString() == s);
+  s = "000000000";
+  assert(TestT(s).ToString() == "0");
+
+  assert(TestT(-1).BitCount() == sizeof(TestT) * 8);
+
+  assert((TestT(-1) >> 10).BitCount() == sizeof(TestT) * 8 - 10);
 }
 
 template <typename T>
@@ -114,6 +118,11 @@ SL void TestAsmdImpl() {
   x = x % T(2);
   x = 1;
   x = x % x;
+
+  ++x;
+  x++;
+  --x;
+  x--;
 }
 
 SL void TestAsmdOperator() {
@@ -260,6 +269,34 @@ SL void TestAsmdOperator() {
       }
     }
   }
+
+  for (int e1 = 10; e1 <= 30; e1 += 4) {
+    bi A = Power("10"_bi, e1);
+    for (int e2 = 10; e2 <= 30; e2 += 4) {
+      bi B = Power("10"_bi, e2);
+      for (int64 i = -10; i <= 10; ++i) {
+        for (int64 j = -10; j <= 10; ++j) {
+          bi a = A + i;
+          bi b = B + j;
+          TestT x = a.ToString();
+          TestT y = b.ToString();
+          assert((x + y).ToString() == (a + b).ToString());
+          if (a >= b) {
+            assert((x - y).ToString() == (a - b).ToString());
+          }
+          assert((x * y).ToString() == (a * b).ToString());
+          assert((x / y).ToString() == (a / b).ToString());
+          assert((x % y).ToString() == (a % b).ToString());
+          bi aa, bb;
+          std::tie(aa, bb) = Div(a, b);
+          TestT xx, yy;
+          std::tie(xx, yy) = Div(x, y);
+          assert(xx.ToString() == aa.ToString());
+          assert(yy.ToString() == bb.ToString());
+        }
+      }
+    }
+  }
 }
 
 template <typename T>
@@ -375,6 +412,5 @@ SL void ExtendedUnsignedIntTest() {
   TestBitOperator();
   TestUtilities();
 }
-PE_REGISTER_TEST(&ExtendedUnsignedIntTest, "ExtendedUnsignedIntTest",
-                 SPECIFIED);
+PE_REGISTER_TEST(&ExtendedUnsignedIntTest, "ExtendedUnsignedIntTest", MEDIUM);
 }  // namespace extended_unsigned_int_test

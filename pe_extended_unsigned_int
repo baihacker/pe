@@ -180,18 +180,6 @@ struct ExtendedUnsignedIntImpl<ET, true> {
 
   int GetHighestBit() const { return hi_ & hibit_mask ? 1 : 0; }
 
-  void ArithmeticShiftRight(int cnt) {
-    if (GetHighestBit()) {
-      FlipBits();
-      AddOne();
-      *this >>= cnt;
-      FlipBits();
-      AddOne();
-    } else {
-      ShiftRight(cnt);
-    }
-  }
-
   void SetBit(int idx) {
     if (idx < half_bitcount) {
       low_ |= static_cast<ET>(1) << idx;
@@ -251,6 +239,17 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     }
 
     return ret;
+  }
+
+  void ArithmeticShiftRight(int cnt) {
+    if (GetHighestBit()) {
+      FlipBits();
+      AddOne();
+      ShiftRight(cnt);
+      FlipBits();
+    } else {
+      ShiftRight(cnt);
+    }
   }
 
   void ShiftRight(int cnt) {
@@ -524,12 +523,13 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     }
 
     if (t < 0) {
+      remain = self;
       self.low_ = self.hi_ = 0;
-      remain = other;
       return;
     }
 
     if (self.hi_ == 0) {
+      remain = self.low_ % other.low_;
       self.low_ /= other.low_;
       return;
     }
@@ -1201,7 +1201,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
 
   void AddOne() {
     ++low_;
-    if (low_ == 0) {
+    if (low_.IsZero()) {
       ++hi_;
     }
   }
@@ -1246,9 +1246,8 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     if (GetHighestBit()) {
       FlipBits();
       AddOne();
-      *this >>= cnt;
+      ShiftRight(cnt);
       FlipBits();
-      AddOne();
     } else {
       ShiftRight(cnt);
     }
@@ -1256,10 +1255,10 @@ struct ExtendedUnsignedIntImpl<ET, false> {
 
   void ShiftRight(int cnt) {
     if (cnt >= bitcount) {
-      low_ = hi_ = 0;
+      MakeZeroBits();
     } else if (cnt >= half_bitcount) {
       low_ = hi_ >> (cnt - half_bitcount);
-      hi_ = 0;
+      hi_.MakeZeroBits();
     } else {
       ET mask = (static_cast<ET>(1) << cnt) - 1;
       ET t = hi_ & mask;
@@ -1488,13 +1487,14 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     }
 
     if (t < 0) {
+      remain = self;
       self.low_.MakeZeroBits();
       self.hi_.MakeZeroBits();
-      remain = other;
       return;
     }
 
     if (self.hi_ == 0) {
+      remain = self.low_ % other.low_;
       self.low_ /= other.low_;
       return;
     }

@@ -114,9 +114,6 @@ SL void TestAsmdImpl() {
   x = x % T(2);
   x = 1;
   x = x % x;
-
-  x = 256;
-  Div(x, x);
 }
 
 SL void TestAsmdOperator() {
@@ -354,6 +351,19 @@ SL void TestUtilities() {
   TimeRecorder tr;
   TestT v(1);
   for (int i = 1; i <= 100000; ++i) v *= i;
+
+  TestT x(2);
+  Div(x, x);
+  IntSign(x);
+  IsZero(x);
+  IsEven(x);
+  IsOdd(x);
+  LowerBits(x);
+  Abs(x);
+  FAbs(x);
+  ToInt<int>(x);
+  ToFloat<float>(x);
+  ToFloat<double>(x);
   // std::cout << tr.Elapsed().Format() << " " << v.bitCount() << std::endl;
 }
 
@@ -365,5 +375,6 @@ SL void ExtendedUnsignedIntTest() {
   TestBitOperator();
   TestUtilities();
 }
-PE_REGISTER_TEST(&ExtendedUnsignedIntTest, "ExtendedUnsignedIntTest", SPECIFIED);
+PE_REGISTER_TEST(&ExtendedUnsignedIntTest, "ExtendedUnsignedIntTest",
+                 SPECIFIED);
 }  // namespace extended_unsigned_int_test

@@ -9,4 +9,35 @@
 #include "pe_extended_unsigned_int"
 #include "pe_extended_signed_int"
 
+namespace std {
+template <typename ET, bool is_native_integer>
+struct numeric_limits<pe::ExtendedUnsignedIntImpl<ET, is_native_integer>> {
+  using T = pe::ExtendedUnsignedIntImpl<ET, is_native_integer>;
+  static constexpr T max() { return -1; }
+  static constexpr T min() { return 0; }
+  static constexpr T lowest() { return min(); }
+  static constexpr bool is_signed = false;
+  static constexpr bool is_unsigned = true;
+  static constexpr bool is_integer = true;
+};
+
+template <typename ET, bool is_native_integer>
+struct numeric_limits<pe::ExtendedSignedIntImpl<ET, is_native_integer>> {
+  using T = pe::ExtendedSignedIntImpl<ET, is_native_integer>;
+  static constexpr T max() {
+    T t = -1;
+    t.ResetHighestBit();
+    return t;
+  }
+  static constexpr T min() {
+    T t = 0;
+    t.SetHighestBit();
+    return t;
+  }
+  static constexpr T lowest() { return min(); }
+  static constexpr bool is_signed = true;
+  static constexpr bool is_unsigned = false;
+  static constexpr bool is_integer = true;
+};
+}  // namespace std
 #endif

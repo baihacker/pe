@@ -105,11 +105,8 @@ SL void BiDivTestMediumImpl(int x, int y) {
               for (auto& iter : B) b *= iter;
               mpz_class c = a / b;
               mpz_class d = a % b;
-              std::stringstream ss;
-              ss << c;
-              ss >> expectedResult1;
-              ss << d;
-              ss >> expectedResult2;
+              expectedResult1 = ToString(c);
+              expectedResult2 = ToString(d);
             }
             std::string myResult1;
             std::string myResult2;
@@ -120,11 +117,8 @@ SL void BiDivTestMediumImpl(int x, int y) {
               for (auto& iter : B) b *= iter;
               bi c, d;
               std::tie(c, d) = Div(a, b);
-              std::stringstream ss;
-              ss << c;
-              ss >> myResult1;
-              ss << d;
-              ss >> myResult2;
+              myResult1 = ToString(c);
+              myResult2 = ToString(d);
             }
             assert(expectedResult1 == myResult1);
             assert(expectedResult2 == myResult2);

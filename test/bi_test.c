@@ -3,24 +3,13 @@
 namespace bi_test {
 template <typename T>
 SL void TestConstructorImpl() {
-  // std::cout << typeid(T).name() << std::endl;
-  // std::cout << BigInteger(T()) << std::endl;
-  // std::cout << BigInteger(T(0)) << " " << BigInteger(T(1)) << std::endl;
-  // std::cout << BigInteger(std::numeric_limits<T>::min()) << " "
-  //      << std::numeric_limits<T>::min() << std::endl;
-  // std::cout << BigInteger(std::numeric_limits<T>::max()) << " "
-  //      << std::numeric_limits<T>::max() << std::endl;
-
   assert(BigInteger(std::numeric_limits<T>::min()).ToInt<T>() ==
          std::numeric_limits<T>::min());
   assert(BigInteger(std::numeric_limits<T>::max()).ToInt<T>() ==
          std::numeric_limits<T>::max());
-
-  // std::cout << std::endl;
 }
 
 SL void TestConstructor() {
-  // std::cout << BigInteger() << std::endl;
   BigInteger x;
   // TestConstructorImpl<bool>();
   TestConstructorImpl<char>();
@@ -58,8 +47,6 @@ SL void TestAssignmentImpl() {
 SL void TestAssignmentOperator() {
   // TestAssignmentImpl<bool>();
   TestAssignmentImpl<char>();
-  TestAssignmentImpl<signed char>();
-  TestAssignmentImpl<unsigned char>();
   TestAssignmentImpl<short>();
   TestAssignmentImpl<int>();
   TestAssignmentImpl<long>();
@@ -67,6 +54,7 @@ SL void TestAssignmentOperator() {
 #if PE_HAS_INT128
   TestAssignmentImpl<int128>();
 #endif
+  TestAssignmentImpl<unsigned char>();
   TestAssignmentImpl<unsigned short>();
   TestAssignmentImpl<unsigned int>();
   TestAssignmentImpl<unsigned long>();
@@ -111,13 +99,16 @@ SL void TestAsmdImpl() {
   x = x % T(2);
   x = 1;
   x = x % x;
+
+  ++x;
+  x++;
+  --x;
+  x--;
 }
 
 SL void TestAsmdOperator() {
   // TestAsmdImpl<bool>();
   TestAsmdImpl<char>();
-  TestAsmdImpl<signed char>();
-  TestAsmdImpl<unsigned char>();
   TestAsmdImpl<short>();
   TestAsmdImpl<int>();
   TestAsmdImpl<long>();
@@ -125,6 +116,7 @@ SL void TestAsmdOperator() {
 #if PE_HAS_INT128
   TestAsmdImpl<int128>();
 #endif
+  TestAsmdImpl<unsigned char>();
   TestAsmdImpl<unsigned short>();
   TestAsmdImpl<unsigned int>();
   TestAsmdImpl<unsigned long>();
@@ -292,8 +284,6 @@ SL void TestCompareOperatorImpl() {
 SL void TestCompareOperator() {
   // TestCompareOperatorImpl<bool>();
   TestCompareOperatorImpl<char>();
-  TestCompareOperatorImpl<signed char>();
-  TestCompareOperatorImpl<unsigned char>();
   TestCompareOperatorImpl<short>();
   TestCompareOperatorImpl<int>();
   TestCompareOperatorImpl<long>();
@@ -301,6 +291,7 @@ SL void TestCompareOperator() {
 #if PE_HAS_INT128
   TestCompareOperatorImpl<int128>();
 #endif
+  TestCompareOperatorImpl<unsigned char>();
   TestCompareOperatorImpl<unsigned short>();
   TestCompareOperatorImpl<unsigned int>();
   TestCompareOperatorImpl<unsigned long>();

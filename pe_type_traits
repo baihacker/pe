@@ -376,6 +376,17 @@ struct make_const_arg_type {
       static_cast<int>(std::is_arithmetic<no_cvref_type>::value)>::type;
 };
 
+// predict_all
+template <template <typename T> class predict, typename TH, typename... TT>
+struct predict_all {
+  enum { value = predict<TH>::value && predict_all<predict, TT...>::value };
+};
+
+template <template <typename T> class predict, typename TH>
+struct predict_all<predict, TH> {
+  enum { value = predict<TH>::value };
+};
+
 // Integer type promotion
 template <typename T1, typename T2, bool ge, bool same>
 struct BiggerIntegralImpl {
@@ -425,7 +436,7 @@ struct BiggerIntegral<T, T> {
 };
 
 template <typename TH, typename... TT>
-struct BiggerIntegralN : private BiggerIntegralN<TT...> {
+struct BiggerIntegralN {
   using A = typename BiggerIntegralN<TT...>::type;
   using type = typename BiggerIntegral<TH, A>::type;
 };

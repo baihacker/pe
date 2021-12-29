@@ -392,12 +392,31 @@ struct BiggerIntegralImpl<T1, T2, true, true> {
   using type = typename pe_make_unsigned<T1>::type;
 };
 
+template <typename T1, typename T2, bool is_t1_gbi, bool is_t2_gbi>
+struct BiggerIntegralHandleGbi;
+
+template <typename T1, typename T2, bool is_t2_gbi>
+struct BiggerIntegralHandleGbi<T1, T2, true, is_t2_gbi> {
+  using type = T1;
+};
+
 template <typename T1, typename T2>
-struct BiggerIntegral {
+struct BiggerIntegralHandleGbi<T1, T2, false, true> {
+  using type = T2;
+};
+
+template <typename T1, typename T2>
+struct BiggerIntegralHandleGbi<T1, T2, false, false> {
   using U1 = typename pe_make_unsigned<T1>::type;
   using U2 = typename pe_make_unsigned<T2>::type;
   using type = typename BiggerIntegralImpl<T1, T2, (sizeof(T1) >= sizeof(T2)),
                                            std::is_same<U1, U2>::value>::type;
+};
+
+template <typename T1, typename T2>
+struct BiggerIntegral {
+  using type = typename BiggerIntegralHandleGbi<T1, T2, is_gbi<T1>::value,
+                                                is_gbi<T2>::value>::type;
 };
 
 template <typename T>

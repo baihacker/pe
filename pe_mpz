@@ -4,6 +4,7 @@
 #include "pe_base"
 #include "pe_int128"
 #include "pe_type_traits"
+#include "pe_extended_int"
 #include "pe_fraction"
 #include "pe_gbi"
 
@@ -209,6 +210,40 @@ class MpInteger {
     }
   }
 
+  void FromUInt32Vector(const std::vector<uint32_t>& v) {
+    if (v.empty()) {
+      mpz_init(z);
+      return;
+    }
+
+    const int n = static_cast<int>(v.size());
+    mpz_init2(z, v.size() * 32);
+
+    for (int i = n - 1; i >= 0; --i) {
+      mpz_mul_2exp(z, z, 32);
+      mpz_add_ui(z, z, v[i]);
+    }
+  }
+
+  template <typename T>
+  REQUIRES((is_extended_integer<T>::value && pe_is_unsigned<T>::value))
+  RETURN(void) FromExtendedInt(const T& value) {
+    FromUInt32Vector(value.ToUInt32Vector());
+  }
+
+  template <typename T>
+  REQUIRES((is_extended_integer<T>::value && pe_is_signed<T>::value))
+  RETURN(void) FromExtendedInt(const T& value) {
+    if (value.IntSign() >= 0) {
+      FromUInt32Vector(value.ToUInt32Vector());
+    } else {
+      T tmp = value;
+      tmp.MakeAbs();
+      FromUInt32Vector(tmp.ToUInt32Vector());
+      mpz_neg(z, z);
+    }
+  }
+
  public:
   MpInteger() {
     mpz_init(z);  // zero value
@@ -232,6 +267,18 @@ class MpInteger {
             typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(void)>
   MpInteger(T value) {
     FromNativeInt(value);
+  }
+
+  template <typename T,
+            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
+  MpInteger(const std::vector<T>& v) {
+    FromUInt32Vector(v);
+  }
+
+  template <typename T, typename TT = REQUIRES((is_extended_integer<T>::value))
+                            RETURN(void)>
+  MpInteger(const T& value) {
+    FromExtendedInt(value);
   }
 
   MpInteger(const MpInteger& o) { mpz_init_set(z, o.z); }

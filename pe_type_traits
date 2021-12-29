@@ -150,56 +150,100 @@ struct is_extended_integer<ExtendedSignedIntImpl<ET, is_native>> {
   enum { value = true };
 };
 
-// is_general_integer
-template <typename T>
-struct is_general_integer {
-  enum { value = std::is_integral<T>::value };
-};
-
-template <typename T>
-struct is_general_integer<T&> {
-  enum { value = is_general_integer<T>::value };
-};
-
-#if PE_HAS_INT128
-template <>
-struct is_general_integer<int128> {
-  enum { value = true };
-};
-template <>
-struct is_general_integer<uint128> {
-  enum { value = true };
-};
-#endif
-
 template <typename UT, bool is_native>
-struct is_general_integer<ExtendedUnsignedIntImpl<UT, is_native>> {
+struct is_extended_integer<ExtendedUnsignedIntImpl<UT, is_native>&> {
   enum { value = true };
 };
 
 template <typename ET, bool is_native>
-struct is_general_integer<ExtendedSignedIntImpl<ET, is_native>> {
+struct is_extended_integer<ExtendedSignedIntImpl<ET, is_native>&> {
+  enum { value = true };
+};
+
+template <typename UT, bool is_native>
+struct is_extended_integer<const ExtendedUnsignedIntImpl<UT, is_native>&> {
+  enum { value = true };
+};
+
+template <typename ET, bool is_native>
+struct is_extended_integer<const ExtendedSignedIntImpl<ET, is_native>&> {
+  enum { value = true };
+};
+
+// is_native_or_extended_integer
+template <typename T>
+struct is_native_or_extended_integer {
+  enum { value = is_native_integer<T>::value || is_extended_integer<T>::value };
+};
+
+// is_gbi
+template <typename T>
+struct is_gbi {
+  enum { value = false };
+};
+
+template <>
+struct is_gbi<BigInteger> {
   enum { value = true };
 };
 
 template <>
-struct is_general_integer<BigInteger> {
+struct is_gbi<BigInteger&> {
+  enum { value = true };
+};
+
+template <>
+struct is_gbi<const BigInteger&> {
   enum { value = true };
 };
 
 #if ENABLE_GMP
 template <>
-struct is_general_integer<MpInteger> {
+struct is_gbi<MpInteger> {
+  enum { value = true };
+};
+
+template <>
+struct is_gbi<MpInteger&> {
+  enum { value = true };
+};
+
+template <>
+struct is_gbi<const MpInteger&> {
   enum { value = true };
 };
 #endif
 
 #if defined(__GMP_PLUSPLUS__)
 template <>
-struct is_general_integer<mpz_class> {
+struct is_gbi<mpz_class> {
+  enum { value = true };
+};
+
+template <>
+struct is_gbi<mpz_class&> {
+  enum { value = true };
+};
+
+template <>
+struct is_gbi<const mpz_class&> {
   enum { value = true };
 };
 #endif
+
+// is_general_integer
+template <typename T>
+struct is_general_integer {
+  enum {
+    value = is_native_integer<T>::value || is_extended_integer<T>::value ||
+            is_gbi<T>::value
+  };
+};
+
+template <typename T>
+struct is_general_integer<T&> {
+  enum { value = is_general_integer<T>::value };
+};
 
 // pe_is_signed
 template <typename T>
@@ -312,61 +356,6 @@ template <typename ET, bool is_native>
 struct pe_make_unsigned<ExtendedSignedIntImpl<ET, is_native>> {
   using type = typename ExtendedSignedIntImpl<ET, is_native>::UnsignedT;
 };
-
-// is_gbi
-template <typename T>
-struct is_gbi {
-  enum { value = false };
-};
-
-template <>
-struct is_gbi<BigInteger> {
-  enum { value = true };
-};
-
-template <>
-struct is_gbi<BigInteger&> {
-  enum { value = true };
-};
-
-template <>
-struct is_gbi<const BigInteger&> {
-  enum { value = true };
-};
-
-#if ENABLE_GMP
-template <>
-struct is_gbi<MpInteger> {
-  enum { value = true };
-};
-
-template <>
-struct is_gbi<MpInteger&> {
-  enum { value = true };
-};
-
-template <>
-struct is_gbi<const MpInteger&> {
-  enum { value = true };
-};
-#endif
-
-#if defined(__GMP_PLUSPLUS__)
-template <>
-struct is_gbi<mpz_class> {
-  enum { value = true };
-};
-
-template <>
-struct is_gbi<mpz_class&> {
-  enum { value = true };
-};
-
-template <>
-struct is_gbi<const mpz_class&> {
-  enum { value = true };
-};
-#endif
 
 // make_const_arg_type
 template <typename T, int is_arithmetic_type>

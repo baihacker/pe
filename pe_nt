@@ -126,8 +126,8 @@ SL std::tuple<T1, int64> ExtractFactor(T1 A, T2 B) {
 
 // Greatest common divisor and extend greatest common divisor
 template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) Gcd(T m, T n) {
-  while (n != 0) {
+SL REQUIRES((is_native_or_extended_integer<T>::value)) RETURN(T) Gcd(T m, T n) {
+  while (!IsZero(n)) {
     T t = m % n;
     m = n;
     n = t;
@@ -137,7 +137,8 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T) Gcd(T m, T n) {
 
 // #if !defined(COMPILER_MSVC) && !PE_HAS_CPP17
 template <typename T0, typename T1>
-SL REQUIRES((is_native_integer<T0>::value && is_native_integer<T1>::value))
+SL REQUIRES((is_native_or_extended_integer<T0>::value &&
+             is_native_or_extended_integer<T1>::value))
     RETURN_T(IntPromotionT(T0, T1)) Gcd(T0 m, T1 n) {
   using ResultType = typename BiggerIntegralN<T0, T1>::type;
   return Gcd(static_cast<ResultType>(m), static_cast<ResultType>(n));
@@ -156,11 +157,11 @@ SL REQUIRES((sizeof...(TT) >= 2)) RETURN(IntPromotion(TH, TT...))
 }
 
 template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
+SL REQUIRES((is_native_or_extended_integer<T>::value)) RETURN(T)
     Gcd(std::initializer_list<T> init) {
   T ret = 0;
   for (auto& v : init) {
-    if (ret == 0) {
+    if (IsZero(ret)) {
       ret = v;
     } else {
       ret = Gcd(ret, v);
@@ -170,12 +171,13 @@ SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
 }
 
 template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T) Lcm(T m, T n) {
+SL REQUIRES((is_native_or_extended_integer<T>::value)) RETURN(T) Lcm(T m, T n) {
   return m / Gcd(m, n) * n;
 }
 
 template <typename T0, typename T1>
-SL REQUIRES((is_native_integer<T0>::value && is_native_integer<T1>::value))
+SL REQUIRES((is_native_or_extended_integer<T0>::value &&
+             is_native_or_extended_integer<T1>::value))
     RETURN_T(IntPromotionT(T0, T1)) Lcm(T0 m, T1 n) {
   using ResultType = typename BiggerIntegralN<T0, T1>::type;
   return Lcm(static_cast<ResultType>(m), static_cast<ResultType>(n));
@@ -193,11 +195,11 @@ SL REQUIRES((sizeof...(TT) >= 2)) RETURN(IntPromotion(TH, TT...))
 }
 
 template <typename T>
-SL REQUIRES((is_native_integer<T>::value)) RETURN(T)
+SL REQUIRES((is_native_or_extended_integer<T>::value)) RETURN(T)
     Lcm(std::initializer_list<T> init) {
   T ret = 0;
   for (auto& v : init) {
-    if (ret == 0) {
+    if (IsZero(ret)) {
       ret = v;
     } else {
       ret = ret / Gcd(ret, v) * v;

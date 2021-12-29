@@ -164,7 +164,8 @@ class BigInteger {
 
     std::copy(v.begin(), v.end(), data_);
 
-    FixPos();
+    FixLeadingZeros();
+    FixSign();
   }
 
   template <typename T>
@@ -199,7 +200,8 @@ class BigInteger {
     }
     --pos_;
     sign_ = 1;
-    FixPos();
+    FixLeadingZeros();
+    FixSign();
   }
 
   template <typename T>
@@ -257,7 +259,7 @@ class BigInteger {
     sign_ = 1;
     pos_ = std::max<int>(0, static_cast<int>(result.size()) - 1);
     std::copy(result.begin(), result.end(), data_);
-    FixPos();
+    FixLeadingZeros();
   }
 
   void Reserve(int new_size) {
@@ -280,8 +282,11 @@ class BigInteger {
     buffer_length_ = new_size;
   }
 
-  void FixPos() const {
+  void FixLeadingZeros() const {
     while (pos_ > 0 && data_[pos_] == 0) --pos_;
+  }
+
+  void FixSign() const {
     if (pos_ == 0 && data_[0] == 0) sign_ = 0;
   }
 
@@ -499,7 +504,7 @@ class BigInteger {
     }
 
     self.pos_ = std::max(idx - 1, 0);
-    self.FixPos();
+    self.FixLeadingZeros();
   }
 
   static void AbsSubtractInplace(BigInteger& self, const BigInteger& other) {
@@ -535,7 +540,7 @@ class BigInteger {
       self[curr] = static_cast<unsigned>(t - borrow);
       borrow = next_borrow;
     }
-    self.FixPos();
+    self.FixLeadingZeros();
   }
 
 #if HAS_POLY_MUL_NTT32
@@ -578,7 +583,7 @@ class BigInteger {
     }
     ret.pos_ = (now >> 1) - 1;
     ret.sign_ = 1;
-    ret.FixPos();
+    ret.FixLeadingZeros();
     return ret;
   }
 #endif
@@ -632,7 +637,7 @@ class BigInteger {
       }
     }
     ret.pos_ = left_pos + right_pos + 2;
-    ret.FixPos();
+    ret.FixLeadingZeros();
     return ret;
   }
 
@@ -676,7 +681,7 @@ class BigInteger {
     }
 
     self.pos_ = top - 1;
-    self.FixPos();
+    self.FixLeadingZeros();
   }
 
   template <typename T>
@@ -842,7 +847,7 @@ class BigInteger {
     static_assert(pe_is_unsigned<T>::value, "T must be unsigned");
     static_assert(sizeof(T) <= 8, "T must be at most 64-bit");
 
-    self.FixPos();
+    self.FixLeadingZeros();
     if (self.size() <= 2) {
       const uint64 a = self.ToInt<uint64>();
       const uint64 b = other;
@@ -869,7 +874,7 @@ class BigInteger {
       const uint64 x = add + self.data_[0];
       self.data_[0] = x / other;
       remain = x % other;
-      self.FixPos();
+      self.FixLeadingZeros();
     } else {
       uint64 add = 0;
       for (int i = self.pos_; i > 0; --i) {
@@ -881,7 +886,7 @@ class BigInteger {
       const uint128 x = (static_cast<uint128>(add) << 32) + self.data_[0];
       self.data_[0] = x / other;
       remain = x % other;
-      self.FixPos();
+      self.FixLeadingZeros();
     }
 #endif
   }
@@ -1001,7 +1006,8 @@ class BigInteger {
   std::string ToString() const {
     BigInteger t(*this);
     std::vector<unsigned int> mods;
-    t.FixPos();
+    t.FixLeadingZeros();
+    t.FixSign();
     std::stringstream ss;
     if (t.sign_ == -1) {
       ss << "-";
@@ -1018,7 +1024,8 @@ class BigInteger {
       uint64 x = add + t.data_[0];
       t.data_[0] = static_cast<unsigned>(x / output_mod);
       mods.push_back(x % output_mod);
-      t.FixPos();
+      t.FixLeadingZeros();
+      t.FixSign();
     } while (!t.IsZero());
 
     int idx = static_cast<int>(mods.size()) - 1;
@@ -1070,7 +1077,8 @@ class BigInteger {
       ret[ret.pos_] ^= x;
     }
 
-    ret.FixPos();
+    ret.FixLeadingZeros();
+    ret.FixSign();
 
     return ret;
   }
@@ -1082,6 +1090,7 @@ class BigInteger {
       *this = other;
     } else if (sign() == other.sign()) {
       AbsAddInplace(*this, other);
+      FixSign();
     } else {
       int c = AbsCompare(*this, other);
       if (c == 0) {
@@ -1090,9 +1099,11 @@ class BigInteger {
         sign_ = 0;
       } else if (c > 0) {
         AbsSubtractInplace(*this, other);
+        FixSign();
       } else {
         BigInteger t(other);
         AbsSubtractInplace(t, *this);
+        t.FixSign();
         *this = std::move(t);
       }
     }
@@ -1107,6 +1118,7 @@ class BigInteger {
       sign_ = -other.sign_;
     } else if (sign() != other.sign()) {
       AbsAddInplace(*this, other);
+      FixSign();
     } else {
       int c = AbsCompare(*this, other);
       if (c == 0) {
@@ -1115,9 +1127,11 @@ class BigInteger {
         sign_ = 0;
       } else if (c > 0) {
         AbsSubtractInplace(*this, other);
+        FixSign();
       } else {
         BigInteger t(other);
         AbsSubtractInplace(t, *this);
+        t.FixSign();
         *this = std::move(t);
         sign_ = -other.sign_;
       }
@@ -1147,6 +1161,7 @@ class BigInteger {
     const int s = sign_ * (other > 0 ? 1 : -1);
     AbsMultiplyInplace(*this, abs_value);
     sign_ = s;
+    FixSign();
     return *this;
   }
 
@@ -1315,6 +1330,7 @@ class BigInteger {
     } else if (l.sign() == r.sign()) {
       BigInteger t(l);
       AbsAddInplace(t, r);
+      t.FixSign();
       return t;
     } else {
       int c = AbsCompare(l, r);
@@ -1323,10 +1339,12 @@ class BigInteger {
       } else if (c > 0) {
         BigInteger t(l);
         AbsSubtractInplace(t, r);
+        t.FixSign();
         return t;
       } else {
         BigInteger t(r);
         AbsSubtractInplace(t, l);
+        t.FixSign();
         return t;
       }
     }
@@ -1340,6 +1358,7 @@ class BigInteger {
     } else if (l.sign() != r.sign()) {
       BigInteger t(l);
       BigInteger::AbsAddInplace(t, r);
+      t.FixSign();
       return t;
     } else {
       int c = BigInteger::AbsCompare(l, r);
@@ -1348,11 +1367,13 @@ class BigInteger {
       } else if (c > 0) {
         BigInteger t(l);
         BigInteger::AbsSubtractInplace(t, r);
+        t.FixSign();
         return t;
       } else {
         BigInteger t(r);
         BigInteger::AbsSubtractInplace(t, l);
         t.sign_ = -r.sign_;
+        t.FixSign();
         return t;
       }
     }
@@ -1364,6 +1385,7 @@ class BigInteger {
     const int s = l.sign() * (r > 0 ? 1 : -1);
     BigInteger ret(BigInteger::AbsMultiply(l, r));
     ret.sign_ = s;
+    ret.FixSign();
 
     return ret;
   }
@@ -1381,6 +1403,7 @@ class BigInteger {
     const int s = l.sign() * (r > 0 ? 1 : -1);
     BigInteger ret(BigInteger::AbsMultiply(l, abs_value));
     ret.sign_ = s;
+    ret.FixSign();
 
     return ret;
   }
@@ -1423,11 +1446,13 @@ class BigInteger {
       BigInteger x;
       BigInteger ret(BigInteger::AbsDivide(l, r, x));
       ret.sign_ = l.sign_ * r.sign_;
-      ret.FixPos();
+      ret.FixLeadingZeros();
+      ret.FixSign();
       if (l.sign_ < 0) {
         x.sign_ = -x.sign_;
       }
-      x.FixPos();
+      x.FixLeadingZeros();
+      x.FixSign();
 
       remain = std::move(x);
 
@@ -1438,7 +1463,8 @@ class BigInteger {
       BigInteger ret(l);
       BigInteger::AbsDivideInplace(ret, abs_value, x);
       ret.sign_ = l.sign() * (r.sign() > 0 ? 1 : -1);
-      ret.FixPos();
+      ret.FixLeadingZeros();
+      ret.FixSign();
 
       remain = x;
       if (l.sign_ < 0) {
@@ -1461,11 +1487,8 @@ class BigInteger {
       BigInteger x;
       BigInteger ret(BigInteger::AbsDivide(l, r, x));
       ret.sign_ = l.sign_ * r.sign_;
-      ret.FixPos();
-      if (l.sign_ < 0) {
-        x.sign_ = -x.sign_;
-      }
-      x.FixPos();
+      ret.FixLeadingZeros();
+      ret.FixSign();
 
       return ret;
     } else {
@@ -1474,7 +1497,8 @@ class BigInteger {
       BigInteger ret(l);
       BigInteger::AbsDivideInplace(ret, abs_value, x);
       ret.sign_ = l.sign() * (r.sign() > 0 ? 1 : -1);
-      ret.FixPos();
+      ret.FixLeadingZeros();
+      ret.FixSign();
 
       return ret;
     }
@@ -1505,7 +1529,8 @@ class BigInteger {
     BigInteger ret(l);
     BigInteger::AbsDivideInplace(ret, abs_value, x);
     ret.sign_ = signl * (r > 0 ? 1 : -1);
-    ret.FixPos();
+    ret.FixLeadingZeros();
+    ret.FixSign();
     if (l.sign_ < 0) {
       PE_ASSERT(x == 0 || !pe_is_unsigned<T>::value);
       x = BigInteger::GetAbsValue(x);
@@ -1542,7 +1567,8 @@ class BigInteger {
     const int signl = self.sign_;
     BigInteger::AbsDivideInplace(self, abs_value, tmp_remain);
     self.sign_ = signl * (other > 0 ? 1 : -1);
-    self.FixPos();
+    self.FixLeadingZeros();
+    self.FixSign();
     remain = static_cast<T>(tmp_remain);
     if (signl < 0) {
       PE_ASSERT(remain == 0 || !pe_is_unsigned<T>::value);
@@ -1583,7 +1609,8 @@ class BigInteger {
     }
     ret.pos_ = min_pos;
     ret.sign_ = 1;
-    ret.FixPos();
+    ret.FixLeadingZeros();
+    ret.FixSign();
     return ret;
   }
 
@@ -1602,7 +1629,8 @@ class BigInteger {
     }
     ret.pos_ = max_pos;
     ret.sign_ = 1;
-    ret.FixPos();
+    ret.FixLeadingZeros();
+    ret.FixSign();
     return ret;
   }
 
@@ -1621,7 +1649,8 @@ class BigInteger {
     }
     ret.pos_ = max_pos;
     ret.sign_ = 1;
-    ret.FixPos();
+    ret.FixLeadingZeros();
+    ret.FixSign();
     return ret;
   }
 
@@ -1644,9 +1673,11 @@ class BigInteger {
       const int y = i & BigInteger::mod32_mask;
       v[j] = (l[x] >> y) & 1;
     }
-    BigInteger ret(v);
+    BigInteger ret(pe_internal::zero_initialize_tag);
+    ret.FromBinaryVector(v);
+    ret.FixLeadingZeros();
     ret.sign_ = l.sign_;
-    ret.FixPos();
+    ret.FixSign();
     return ret;
   }
 
@@ -1674,9 +1705,11 @@ class BigInteger {
       v[j] = (l[x] >> y) & 1;
     }
 
-    BigInteger ret(v);
+    BigInteger ret(pe_internal::zero_initialize_tag);
+    ret.FromBinaryVector(v);
+    ret.FixLeadingZeros();
     ret.sign_ = l.sign_;
-    ret.FixPos();
+    ret.FixSign();
 
     return ret;
   }

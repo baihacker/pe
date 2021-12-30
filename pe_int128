@@ -122,7 +122,10 @@ inline uint128 operator"" _u128(const char* sv, size_t /*sc*/) {
 }
 
 namespace std {
-#if !defined(__GLIBCXX_TYPE_INT_N_0) && !defined(__STRICT_ANSI__)
+#if defined(__GLIBCXX__)
+// glibc++ associated with gcc 10.3 doesn't specialized numeric_limits for
+// int128 and uint128 in ansi mode.
+#if __GLIBCXX__ < 20210408 && defined(__STRICT_ANSI__)
 template <>
 struct numeric_limits<uint128> {
   static constexpr uint128 max() { return static_cast<uint128>(-1); }
@@ -146,6 +149,8 @@ struct numeric_limits<int128> {
 };
 #endif
 
+// glibc++ doesn't specialize hash for int128 and uint128 in ansi mode.
+#if defined(__STRICT_ANSI__)
 template <>
 struct hash<int128> {
   size_t operator()(int128 val) const noexcept {
@@ -159,6 +164,8 @@ struct hash<uint128> {
     return static_cast<size_t>(val);
   }
 };
+#endif
+#endif
 
 SL int128 gcd(int128 a, int128 b) {
   while (b != 0) {

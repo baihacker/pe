@@ -94,7 +94,7 @@ class BigInteger {
 
  private:
   template <typename T>
-  REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value))
+  REQUIRES((is_builtin_integer<T>::value && pe_is_unsigned<T>::value))
   RETURN(void) FromNativeInt(T value) {
     if (value == 0) {
       Reserve(1);
@@ -132,7 +132,7 @@ class BigInteger {
   }
 
   template <typename T>
-  REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
+  REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value))
   RETURN(void) FromNativeInt(T value) {
     if (value == 0) {
       Reserve(1);
@@ -169,7 +169,7 @@ class BigInteger {
   }
 
   template <typename T>
-  REQUIRES((is_native_integer<T>::value))
+  REQUIRES((is_builtin_integer<T>::value))
   RETURN(void) FromBinaryVector(const std::vector<T>& v) {
     if (v.empty()) {
       Reserve(1);
@@ -307,13 +307,13 @@ class BigInteger {
   }
 
   template <typename T,
-            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(void)>
+            typename TT = REQUIRES((is_builtin_integer<T>::value)) RETURN(void)>
   BigInteger(T value) : BigInteger(pe_internal::zero_initialize_tag) {
     FromNativeInt(value);
   }
 
   template <typename T,
-            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
+            typename TT = REQUIRES((is_builtin_integer<T>::value)) RETURN(T)>
   BigInteger(const std::vector<T>& v)
       : BigInteger(pe_internal::zero_initialize_tag) {
     FromUInt32Vector(v);
@@ -353,7 +353,7 @@ class BigInteger {
   }
 
   template <typename T,
-            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
+            typename TT = REQUIRES((is_builtin_integer<T>::value)) RETURN(T)>
   BigInteger& operator=(T value) {
     return *this = BigInteger(value);
   }
@@ -395,31 +395,31 @@ class BigInteger {
 
   // Operations on native integer.
   template <typename T>
-  SL REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value)) RETURN(T)
-      GetAbsValue(T x) {
+  SL REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value))
+      RETURN(T) GetAbsValue(T x) {
     return x >= 0 ? x : -x;
   }
 
   template <typename T>
-  SL REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value))
+  SL REQUIRES((is_builtin_integer<T>::value && pe_is_unsigned<T>::value))
       RETURN(T) GetAbsValue(T x) {
     return x;
   }
 
   template <typename T>
-  SL REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value)) RETURN(T)
-      GetNegValue(T x) {
+  SL REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value))
+      RETURN(T) GetNegValue(T x) {
     return -x;
   }
 
   template <typename T>
-  SL REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value))
+  SL REQUIRES((is_builtin_integer<T>::value && pe_is_unsigned<T>::value))
       RETURN(T) GetNegValue(T x) {
     return x;
   }
 
   template <typename T>
-  REQUIRES((is_native_integer<T>::value))
+  REQUIRES((is_builtin_integer<T>::value))
   RETURN(std::vector<T>) ToBinaryVector(int fix_size = 1) const {
     std::vector<T> ret;
     for (int i = 0; i <= pos_; ++i) {
@@ -926,7 +926,7 @@ class BigInteger {
   unsigned int LowerBits() const { return static_cast<unsigned int>(data_[0]); }
 
   template <typename T>
-  REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
+  REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value))
   RETURN(T) ToInt() const {
     using unsignedT = typename pe_make_unsigned<T>::type;
     unsignedT v = ToInt<unsignedT>();
@@ -937,7 +937,7 @@ class BigInteger {
   }
 
   template <typename T>
-  REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value))
+  REQUIRES((is_builtin_integer<T>::value && pe_is_unsigned<T>::value))
   RETURN(T) ToInt() const {
     T result = 0;
     for (int i = pos_; i >= 0; --i) {
@@ -1145,7 +1145,7 @@ class BigInteger {
   }
 
   template <typename T>
-  REQUIRES((is_native_integer<T>::value))
+  REQUIRES((is_builtin_integer<T>::value))
   RETURN(BigInteger&) operator*=(T other) {
     if (IsZero()) {
       return *this;
@@ -1171,7 +1171,7 @@ class BigInteger {
   }
 
   template <typename T>
-  REQUIRES((is_native_integer<T>::value && sizeof(T) <= 8))
+  REQUIRES((is_builtin_integer<T>::value && sizeof(T) <= 8))
   RETURN(BigInteger&) operator/=(T other) {
     T remain;
     DivideInplace(*this, other, remain);
@@ -1184,7 +1184,7 @@ class BigInteger {
   }
 
   template <typename T>
-  REQUIRES((is_native_integer<T>::value && sizeof(T) <= 8))
+  REQUIRES((is_builtin_integer<T>::value && sizeof(T) <= 8))
   RETURN(BigInteger&) operator%=(T other) {
     T remain;
     DivideInplace(*this, other, remain);
@@ -1208,7 +1208,7 @@ class BigInteger {
 
   template <typename T>
   REQUIRES(
-      (is_native_integer<T>::value &&
+      (is_builtin_integer<T>::value &&
        !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
   RETURN(BigInteger&)
   operator>>=(T other) {
@@ -1218,7 +1218,7 @@ class BigInteger {
 
   template <typename T>
   REQUIRES(
-      (is_native_integer<T>::value &&
+      (is_builtin_integer<T>::value &&
        !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
   RETURN(BigInteger&)
   operator<<=(T other) {
@@ -1392,7 +1392,7 @@ class BigInteger {
 
   template <typename T>
   friend inline REQUIRES(
-      (is_native_integer<T>::value &&
+      (is_builtin_integer<T>::value &&
        !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
       RETURN(BigInteger)
       operator*(const BigInteger& l, T r) {
@@ -1410,7 +1410,7 @@ class BigInteger {
 
   template <typename T>
   friend inline REQUIRES(
-      (is_native_integer<T>::value &&
+      (is_builtin_integer<T>::value &&
        !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
       RETURN(BigInteger)
       operator*(T l, const BigInteger& r) {
@@ -1423,7 +1423,7 @@ class BigInteger {
 
   template <typename T>
   friend inline REQUIRES(
-      (is_native_integer<T>::value &&
+      (is_builtin_integer<T>::value &&
        !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
        sizeof(T) <= 8)) RETURN(BigInteger)
   operator/(const BigInteger& l, T r) {
@@ -1509,7 +1509,7 @@ class BigInteger {
 
   template <typename T>
   friend inline REQUIRES(
-      (is_native_integer<T>::value &&
+      (is_builtin_integer<T>::value &&
        !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
        sizeof(T) <= 8)) RETURN(BigInteger)
       Divide(const BigInteger& l, T r, T& remain) {
@@ -1543,7 +1543,7 @@ class BigInteger {
 
   template <typename T>
   friend inline REQUIRES(
-      (is_native_integer<T>::value &&
+      (is_builtin_integer<T>::value &&
        !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
       RETURN(void) DivideInplace(BigInteger& self, T other, T& remain) {
     if (self.IsZero() && other == 0) {
@@ -1584,7 +1584,7 @@ class BigInteger {
 
   template <typename T>
   friend inline REQUIRES(
-      (is_native_integer<T>::value &&
+      (is_builtin_integer<T>::value &&
        !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
        sizeof(T) <= 8)) RETURN(BigInteger)
   operator%(const BigInteger& l, T r) {
@@ -1656,7 +1656,7 @@ class BigInteger {
 
   template <typename T>
   friend inline REQUIRES(
-      (is_native_integer<T>::value &&
+      (is_builtin_integer<T>::value &&
        !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
       RETURN(BigInteger)
       operator<<(const BigInteger& l, T n) {
@@ -1683,7 +1683,7 @@ class BigInteger {
 
   template <typename T>
   friend inline REQUIRES(
-      (is_native_integer<T>::value &&
+      (is_builtin_integer<T>::value &&
        !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
       RETURN(BigInteger)
       operator>>(const BigInteger& l, T n) {
@@ -1730,7 +1730,7 @@ using bi = BigInteger;
 template <>
 struct Gbi<BigInteger> {
   template <typename T,
-            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
+            typename TT = REQUIRES((is_builtin_integer<T>::value)) RETURN(T)>
   static BigInteger Of(T value) {
     return BigInteger(value);
   }

@@ -24,7 +24,7 @@
 using Mpz = ::mpz_class;
 
 template <typename T>
-SL REQUIRES((pe::is_native_integer<T>::value)) RETURN(Mpz) MPZ(const T& v) {
+SL REQUIRES((pe::is_builtin_integer<T>::value)) RETURN(Mpz) MPZ(const T& v) {
   return Mpz(v);
 }
 
@@ -44,7 +44,7 @@ namespace pe {
 template <>
 struct Gbi<Mpz> {
   template <typename T,
-            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
+            typename TT = REQUIRES((is_builtin_integer<T>::value)) RETURN(T)>
   static Mpz Of(T value) {
     return MPZ(value);
   }
@@ -120,7 +120,7 @@ SL std::tuple<Mpz, Mpz> Div(const Mpz& l, const Mpz& r) {
 // Extra operations
 
 template <typename T>
-SL REQUIRES((pe::is_native_integer<T>::value && sizeof(T) > 4)) RETURN(T)
+SL REQUIRES((pe::is_builtin_integer<T>::value && sizeof(T) > 4)) RETURN(T)
 operator%(const Mpz& v, const T& mod) {
   return ToInt<T>(v % MPZ(mod));
 }
@@ -155,7 +155,7 @@ class MpInteger {
   static constexpr mp_limb_t LIMB_MASK = -1;
 
   template <typename T>
-  REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value &&
+  REQUIRES((is_builtin_integer<T>::value && pe_is_unsigned<T>::value &&
             !std::is_same<T, bool>::value))
   RETURN(void) FromNativeInt(T value) {
     if (value == 0) {
@@ -193,7 +193,7 @@ class MpInteger {
   }
 
   template <typename T>
-  REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
+  REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value))
   RETURN(void) FromNativeInt(T value) {
     if (value == 0) {
       mpz_init(z);
@@ -264,13 +264,13 @@ class MpInteger {
   MpInteger(const mpz_t o) { mpz_init_set(z, o); }
 
   template <typename T,
-            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(void)>
+            typename TT = REQUIRES((is_builtin_integer<T>::value)) RETURN(void)>
   MpInteger(T value) {
     FromNativeInt(value);
   }
 
   template <typename T,
-            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
+            typename TT = REQUIRES((is_builtin_integer<T>::value)) RETURN(T)>
   MpInteger(const std::vector<T>& v) {
     FromUInt32Vector(v);
   }
@@ -315,7 +315,7 @@ class MpInteger {
   }
 
   template <typename T,
-            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
+            typename TT = REQUIRES((is_builtin_integer<T>::value)) RETURN(T)>
   MpInteger& operator=(T value) {
     *this = MpInteger(value);
     return *this;
@@ -412,7 +412,7 @@ class MpInteger {
   std::string to_string(int base = 10) const { return ToString(base); }
 
   template <typename T>
-  REQUIRES((is_native_integer<T>::value && pe_is_signed<T>::value))
+  REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value))
   RETURN(T) ToInt() const {
     using unsignedT = typename pe_make_unsigned<T>::type;
     unsignedT v = ToInt<unsignedT>();
@@ -423,7 +423,7 @@ class MpInteger {
   }
 
   template <typename T>
-  REQUIRES((is_native_integer<T>::value && pe_is_unsigned<T>::value))
+  REQUIRES((is_builtin_integer<T>::value && pe_is_unsigned<T>::value))
   RETURN(T) ToInt() const {
     T result = 0;
     const auto* buff = data();
@@ -486,7 +486,7 @@ class MpInteger {
   }
 
   template <typename T>
-  REQUIRES((is_native_integer<T>::value &&
+  REQUIRES((is_builtin_integer<T>::value &&
             (std::is_same<T, unsigned int>::value ||
              std::is_same<T, unsigned long>::value)))
   RETURN(MpInteger&)
@@ -501,7 +501,7 @@ class MpInteger {
   }
 
   template <typename T>
-  REQUIRES((is_native_integer<T>::value &&
+  REQUIRES((is_builtin_integer<T>::value &&
             (std::is_same<T, unsigned int>::value ||
              std::is_same<T, unsigned long>::value)))
   RETURN(MpInteger&)
@@ -516,7 +516,7 @@ class MpInteger {
   }
 
   template <typename T>
-  REQUIRES((is_native_integer<T>::value &&
+  REQUIRES((is_builtin_integer<T>::value &&
             (std::is_same<T, int>::value || std::is_same<T, long>::value)))
   RETURN(MpInteger&)
   operator*=(T val) {
@@ -525,7 +525,7 @@ class MpInteger {
   }
 
   template <typename T>
-  REQUIRES((is_native_integer<T>::value &&
+  REQUIRES((is_builtin_integer<T>::value &&
             (std::is_same<T, unsigned int>::value ||
              std::is_same<T, unsigned long>::value)))
   RETURN(MpInteger&)
@@ -540,7 +540,7 @@ class MpInteger {
   }
 
   template <typename T>
-  REQUIRES((is_native_integer<T>::value &&
+  REQUIRES((is_builtin_integer<T>::value &&
             (std::is_same<T, unsigned int>::value ||
              std::is_same<T, unsigned long>::value)))
   MpInteger&
@@ -649,7 +649,7 @@ class MpInteger {
   }
 
   template <typename T>
-  friend inline REQUIRES((is_native_integer<T>::value &&
+  friend inline REQUIRES((is_builtin_integer<T>::value &&
                           (std::is_same<T, unsigned int>::value ||
                            std::is_same<T, unsigned long>::value)))
       RETURN(MpInteger)
@@ -660,7 +660,7 @@ class MpInteger {
   }
 
   template <typename T>
-  friend inline REQUIRES((is_native_integer<T>::value &&
+  friend inline REQUIRES((is_builtin_integer<T>::value &&
                           (std::is_same<T, unsigned int>::value ||
                            std::is_same<T, unsigned long>::value)))
       RETURN(MpInteger)
@@ -677,7 +677,7 @@ class MpInteger {
   }
 
   template <typename T>
-  friend inline REQUIRES((is_native_integer<T>::value &&
+  friend inline REQUIRES((is_builtin_integer<T>::value &&
                           (std::is_same<T, unsigned int>::value ||
                            std::is_same<T, unsigned long>::value)))
       RETURN(MpInteger)
@@ -688,7 +688,7 @@ class MpInteger {
   }
 
   template <typename T>
-  friend inline REQUIRES((is_native_integer<T>::value &&
+  friend inline REQUIRES((is_builtin_integer<T>::value &&
                           (std::is_same<T, unsigned int>::value ||
                            std::is_same<T, unsigned long>::value)))
       RETURN(MpInteger)
@@ -705,7 +705,7 @@ class MpInteger {
   }
 
   template <typename T>
-  friend inline REQUIRES((is_native_integer<T>::value &&
+  friend inline REQUIRES((is_builtin_integer<T>::value &&
                           (std::is_same<T, int>::value ||
                            std::is_same<T, long>::value))) RETURN(MpInteger)
   operator*(const MpInteger& l, T r) {
@@ -715,7 +715,7 @@ class MpInteger {
   }
 
   template <typename T>
-  friend inline REQUIRES((is_native_integer<T>::value &&
+  friend inline REQUIRES((is_builtin_integer<T>::value &&
                           (std::is_same<T, int>::value ||
                            std::is_same<T, long>::value))) RETURN(MpInteger)
   operator*(T l, const MpInteger& r) {
@@ -725,7 +725,7 @@ class MpInteger {
   }
 
   template <typename T>
-  friend inline REQUIRES((is_native_integer<T>::value &&
+  friend inline REQUIRES((is_builtin_integer<T>::value &&
                           (std::is_same<T, unsigned int>::value ||
                            std::is_same<T, unsigned long>::value)))
       RETURN(MpInteger)
@@ -736,7 +736,7 @@ class MpInteger {
   }
 
   template <typename T>
-  friend inline REQUIRES((is_native_integer<T>::value &&
+  friend inline REQUIRES((is_builtin_integer<T>::value &&
                           (std::is_same<T, unsigned int>::value ||
                            std::is_same<T, unsigned long>::value)))
       RETURN(MpInteger)
@@ -754,7 +754,7 @@ class MpInteger {
 
   template <typename T>
   friend inline REQUIRES(
-      (is_native_integer<T>::value &&
+      (is_builtin_integer<T>::value &&
        !std::is_same<typename std::remove_cvref<T>::type, MpInteger>::value &&
        (std::is_same<T, unsigned int>::value ||
         std::is_same<T, unsigned long>::value))) RETURN(MpInteger)
@@ -772,7 +772,7 @@ class MpInteger {
 
   template <typename T>
   friend inline REQUIRES(
-      (is_native_integer<T>::value &&
+      (is_builtin_integer<T>::value &&
        !std::is_same<typename std::remove_cvref<T>::type, MpInteger>::value &&
        (std::is_same<T, unsigned int>::value ||
         std::is_same<T, unsigned long>::value))) RETURN(MpInteger)
@@ -843,7 +843,7 @@ using bn = MpInteger;
 template <>
 struct Gbi<MpInteger> {
   template <typename T,
-            typename TT = REQUIRES((is_native_integer<T>::value)) RETURN(T)>
+            typename TT = REQUIRES((is_builtin_integer<T>::value)) RETURN(T)>
   static MpInteger Of(T value) {
     return MpInteger(value);
   }
@@ -884,7 +884,7 @@ SL std::tuple<MpInteger, MpInteger> Div(const MpInteger& l,
 }
 
 template <typename T>
-SL REQUIRES((is_native_integer<T>::value &&
+SL REQUIRES((is_builtin_integer<T>::value &&
              (std::is_same<T, unsigned int>::value ||
               std::is_same<T, unsigned long>::value))) RETURN(MpInteger)
     Power(const MpInteger& base, T n) {
@@ -894,7 +894,7 @@ SL REQUIRES((is_native_integer<T>::value &&
 }
 
 template <typename T>
-SL REQUIRES((is_native_integer<T>::value &&
+SL REQUIRES((is_builtin_integer<T>::value &&
              (std::is_same<T, int>::value || std::is_same<T, long>::value)))
     RETURN(MpInteger) Power(const MpInteger& base, T n) {
   using unsignedT = typename pe_make_unsigned<T>::type;
@@ -911,7 +911,7 @@ SL MpInteger PowerMod(const MpInteger& base, const MpInteger& n,
 }
 
 template <typename T>
-SL REQUIRES((is_native_integer<T>::value &&
+SL REQUIRES((is_builtin_integer<T>::value &&
              (std::is_same<T, unsigned int>::value ||
               std::is_same<T, unsigned long>::value))) RETURN(MpInteger)
     PowerMod(const MpInteger& base, T n, const MpInteger& mod) {

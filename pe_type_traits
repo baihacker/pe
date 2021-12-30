@@ -23,7 +23,7 @@ struct IntToType {
 
 // A simple concept implementation, e.g.
 // template<typename T, typename U>
-// REQUIRES((is_native_integer<T>::value && pe_is_unsigned<U>::value))
+// REQUIRES((is_builtin_integer<T>::value && pe_is_unsigned<U>::value))
 // RETURN(void)  foo(T x, U y)  {}
 template <int ok>
 struct CheckConditionThen {};
@@ -60,73 +60,73 @@ class BigInteger;
 class MpInteger;
 #endif
 
-// is_native_integer
+// is_builtin_integer
 template <typename T>
-struct is_native_integer {
+struct is_builtin_integer {
   enum { value = std::is_integral<T>::value };
 };
 
 template <typename T>
-struct is_native_integer<T&> {
-  enum { value = is_native_integer<T>::value };
+struct is_builtin_integer<T&> {
+  enum { value = is_builtin_integer<T>::value };
 };
 
 #if PE_HAS_INT128
 template <>
-struct is_native_integer<int128> {
+struct is_builtin_integer<int128> {
   enum { value = true };
 };
 template <>
-struct is_native_integer<uint128> {
+struct is_builtin_integer<uint128> {
   enum { value = true };
 };
 #endif
 
 template <typename ET, bool is_native>
-struct is_native_integer<ExtendedUnsignedIntImpl<ET, is_native>> {
+struct is_builtin_integer<ExtendedUnsignedIntImpl<ET, is_native>> {
   enum { value = false };
 };
 
 template <typename ET, bool is_native>
-struct is_native_integer<ExtendedSignedIntImpl<ET, is_native>> {
+struct is_builtin_integer<ExtendedSignedIntImpl<ET, is_native>> {
   enum { value = false };
 };
 
 template <>
-struct is_native_integer<BigInteger> {
+struct is_builtin_integer<BigInteger> {
   enum { value = false };
 };
 
 template <>
-struct is_native_integer<BigInteger&> {
+struct is_builtin_integer<BigInteger&> {
   enum { value = false };
 };
 
 template <>
-struct is_native_integer<const BigInteger&> {
+struct is_builtin_integer<const BigInteger&> {
   enum { value = false };
 };
 
 #if ENABLE_GMP
 template <>
-struct is_native_integer<MpInteger> {
+struct is_builtin_integer<MpInteger> {
   enum { value = false };
 };
 #endif
 
 #if defined(__GMP_PLUSPLUS__)
 template <>
-struct is_native_integer<mpz_class> {
+struct is_builtin_integer<mpz_class> {
   enum { value = false };
 };
 
 template <>
-struct is_native_integer<mpz_class&> {
+struct is_builtin_integer<mpz_class&> {
   enum { value = false };
 };
 
 template <>
-struct is_native_integer<const mpz_class&> {
+struct is_builtin_integer<const mpz_class&> {
   enum { value = false };
 };
 #endif
@@ -173,7 +173,9 @@ struct is_extended_integer<const ExtendedSignedIntImpl<ET, is_native>&> {
 // is_native_or_extended_integer
 template <typename T>
 struct is_native_or_extended_integer {
-  enum { value = is_native_integer<T>::value || is_extended_integer<T>::value };
+  enum {
+    value = is_builtin_integer<T>::value || is_extended_integer<T>::value
+  };
 };
 
 // is_gbi
@@ -235,7 +237,7 @@ struct is_gbi<const mpz_class&> {
 template <typename T>
 struct is_general_integer {
   enum {
-    value = is_native_integer<T>::value || is_extended_integer<T>::value ||
+    value = is_builtin_integer<T>::value || is_extended_integer<T>::value ||
             is_gbi<T>::value
   };
 };

@@ -84,6 +84,14 @@ void DisplayCompilerInfo() {
   AddDefined(__clang_version__);
 #endif
 
+#if defined(__MINGW32__)
+  AddDefined(__MINGW32__);
+#endif
+
+#if defined(__MINGW64__)
+  AddDefined(__MINGW64__);
+#endif
+
 #if defined(_MSC_VER)
   AddDefined(_MSC_VER);
 #endif

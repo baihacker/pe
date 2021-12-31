@@ -1,7 +1,8 @@
 # pe
 
 [![Build Status](https://travis-ci.com/baihacker/pe.svg?branch=master)](https://travis-ci.com/baihacker/pe)
-[![Build status](https://ci.appveyor.com/api/projects/status/scaji00tde2gb7uy?svg=true)](https://ci.appveyor.com/project/baihacker/pe)
+[![Build status](https://ci.appveyor.com/api/projects/status/scaji00tde2gb7uy?svg=true)](https://ci.appveyor.com/project/baihacker/pe-win-msvc)
+[![Build status](https://ci.appveyor.com/api/projects/status/9bt606nax24anyen?svg=true)](https://ci.appveyor.com/project/baihacker/pe-ubuntu-gcc)
 [![Github Releases](https://img.shields.io/github/release/baihacker/pe.svg)](https://github.com/baihacker/pe/releases)
 <a href="https://projecteuler.net/recent" target="_blank">![project euler](https://projecteuler.net/profile/baihacker.png)</a>
 

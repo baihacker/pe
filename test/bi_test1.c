@@ -27,7 +27,7 @@ SL void BiTestSmall() {
 
 PE_REGISTER_TEST(&BiTestSmall, "BiTestSmall", SMALL);
 
-#if ENABLE_GMP
+#if ENABLE_GMP && defined(CPP_GLIBCXX)
 SL void BiMulTestImpl(int x, int y) {
   for (int s1 = -1; s1 <= 1; ++s1)
     for (int s2 = -1; s2 <= 1; ++s2)

@@ -1,8 +1,7 @@
 #include "pe_test.h"
 
 #if 0
-#include "bi_test.c"
-#include "bi_test1.c"
+#include "extended_signed_int_test.c"
 #else
 #include "algo_test.c"
 #include "array_test.c"
@@ -63,8 +62,15 @@ static inline void AddResult(const std::string& key, const std::string& value) {
   result.push_back({key, value});
 }
 
-std::string to_string(const std::string& str) { return str; }
-#define AddDefined(x) AddResult((#x), to_string(x))
+template <typename T>
+SL std::string AsString(const T& v) {
+  return std::to_string(v);
+}
+
+SL std::string AsString(const std::string& str) { return str; }
+SL std::string AsString(const char* str) { return str; }
+
+#define AddDefined(x) AddResult((#x), AsString(x))
 #define AddNotDefined(x) AddResult((#x), "n/a")
 
 void DisplayCompilerInfo() {

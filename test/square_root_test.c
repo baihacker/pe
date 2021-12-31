@@ -17,10 +17,24 @@ SL void SquareRootCorrectnessTest() {
       }
     }
   }
+
   assert(SqrtI(9999999999999999) == 99999999);
   assert(SqrtI(9999999999999999 + 1) == 99999999 + 1);
   assert(SqrtI(999999999999999999) == 999999999);
   assert(SqrtI(999999999999999999 + 1) == 999999999 + 1);
+
+  {
+    const int64 x = 3037000499;
+    assert(SqrtI(x * x + 1) == x);
+    assert(SqrtI(x * x) == x);
+    assert(SqrtI(x * x - 1) == x - 1);
+  }
+  {
+    const uint64 x = 4294967295;
+    assert(SqrtI(x * x + 1) == x);
+    assert(SqrtI(x * x) == x);
+    assert(SqrtI(x * x - 1) == x - 1);
+  }
   if (f == 0) {
     std::cerr << "Correctness test pass!" << std::endl;
   } else {

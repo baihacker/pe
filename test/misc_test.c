@@ -72,7 +72,7 @@ SL void CountPtInCircleTest() {
   }
 }
 
-PE_REGISTER_TEST(&CountPtInCircleTest, "CountPtInCircleTest", SUPER);
+PE_REGISTER_TEST(&CountPtInCircleTest, "CountPtInCircleTest", MEDIUM);
 
 #if PE_HAS_INT128
 SL void SumSigma0Test() {

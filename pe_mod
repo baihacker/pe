@@ -264,7 +264,19 @@ const static int __init_code_data_once = __MakeMulModShellCodeExecutable();
 
 template <typename T1, typename T2, typename TM>
 SL REQUIRES((is_builtin_integer<T1>::value && is_builtin_integer<T2>::value &&
-             is_builtin_integer<TM>::value))
+             is_builtin_integer<TM>::value &&
+             (sizeof(T1) > sizeof(int64) || sizeof(T2) > sizeof(int64) ||
+              sizeof(TM) > sizeof(int64)))) RETURN_T(IntPromotionT(T1, T2, TM))
+    MulModEx(T1 a, T2 b, TM mod) {
+  using ResultType = typename BiggerIntegralN<T1, T2, TM>::type;
+  return static_cast<ResultType>(a) * static_cast<ResultType>(b) %
+         static_cast<ResultType>(mod);
+}
+
+template <typename T1, typename T2, typename TM>
+SL REQUIRES((is_builtin_integer<T1>::value && is_builtin_integer<T2>::value &&
+             is_builtin_integer<TM>::value && sizeof(T1) <= sizeof(int64) &&
+             sizeof(T2) <= sizeof(int64) && sizeof(TM) <= sizeof(int64)))
     RETURN_T(IntPromotionT(T1, T2, int64, TM)) MulModEx(T1 a, T2 b, TM mod) {
   using T = typename BiggerIntegralN<T1, T2>::type;
   using atLeastInt64T = typename AtLeastInt64<T>::type;
@@ -278,7 +290,8 @@ SL REQUIRES((is_builtin_integer<T1>::value && is_builtin_integer<T2>::value &&
     return pe_internal::MulModImpl<atLeastInt64T, TM>(a, b, mod);
   }
 #if PE_HAS_INT128
-  return static_cast<ResultType>(pe_internal::MulModImpl<int128, TM>(a, b, mod));
+  return static_cast<ResultType>(
+      pe_internal::MulModImpl<int128, TM>(a, b, mod));
 #else
 
   // The openmp has issue about long double on windows.

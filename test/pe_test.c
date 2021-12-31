@@ -212,13 +212,13 @@ void DisplayCompilerInfo() {
   int max_size[2] = {0};
   for (auto& iter : result) {
     for (int i = 0; i < 2; ++i) {
-      int t = iter[i].size();
+      int t = static_cast<int>(iter[i].size());
       if (t > max_size[i]) max_size[i] = t;
     }
   }
 
   for (auto& iter : result) {
-    printf("%-*s\t\t%-*s\n", max_size[0], iter[0].c_str(), max_size[1],
+    printf("%-*s        %-*s\n", max_size[0], iter[0].c_str(), max_size[1],
            iter[1].c_str());
   }
 }

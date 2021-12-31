@@ -1,8 +1,6 @@
 #ifndef PE_EXTENDED_UNSIGNED_INT_
 #define PE_EXTENDED_UNSIGNED_INT_
 
-#if !defined(COMPILER_CLANG)
-
 #include "pe_base"
 #include "pe_int128"
 #include "pe_type_traits"
@@ -52,6 +50,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
 
   // The corresponding native integer type.
   using NT = ET;
+  using ElementT = ET;
 
  private:
   template <typename T>
@@ -1092,6 +1091,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   using NT = typename ET::NT;
   using UnsignedT = ExtendedUnsignedIntImpl<ET, false>;
   using SignedT = ExtendedSignedIntImpl<ET, false>;
+  using ElementT = ET;
 
  private:
   template <typename T>
@@ -1799,8 +1799,23 @@ struct ExtendedUnsignedIntImpl<ET, false> {
         }
       }
     }
+
+#if 1
+#if PE_IS_LITTLE_ENDIAN
+    typename ET::ElementT tmp[4]{t[0].low(), t[1].low(), t[2].low(),
+                                 t[3].low()};
+#else
+    typename ET::ElementT tmp[4]{t[3].low(), t[2].low(), t[1].low(),
+                                 t[0].low()};
+#endif
+    memcpy(reinterpret_cast<void*>(this), reinterpret_cast<void*>(&tmp[0]),
+           sizeof(tmp));
+#else
     low_ = t[0] | (t[1] << quarter_bitsize);
     hi_ = t[2] | (t[3] << quarter_bitsize);
+    low_ = t[0] | (t[1] << quarter_bitsize);
+    hi_ = t[2] | (t[3] << quarter_bitsize);
+#endif
 
     return *this;
   }
@@ -2178,8 +2193,5 @@ static_assert(PeNumberUtil<ExtendedUnsignedInt<uint128>>);
 #endif
 #endif
 }  // namespace pe
-#define PE_HAS_EXTENDED_INT 1
-#else
-#define PE_HAS_EXTENDED_INT 0
-#endif
+
 #endif

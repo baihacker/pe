@@ -1,7 +1,6 @@
 #include "pe_test.h"
 
 namespace extended_unsigned_int_test {
-#if PE_HAS_EXTENDED_INT
 #if PE_HAS_INT128 && 0
 using UInt256 = pe::ExtendedUnsignedInt<uint128>;
 using UInt512 = pe::ExtendedUnsignedInt<UInt256>;
@@ -414,5 +413,4 @@ SL void ExtendedUnsignedIntTest() {
   TestUtilities();
 }
 PE_REGISTER_TEST(&ExtendedUnsignedIntTest, "ExtendedUnsignedIntTest", MEDIUM);
-#endif
 }  // namespace extended_unsigned_int_test

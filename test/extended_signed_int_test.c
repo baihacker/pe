@@ -1,7 +1,6 @@
 #include "pe_test.h"
 
 namespace extended_signed_int_test {
-#if PE_HAS_EXTENDED_INT
 #if PE_HAS_INT128 && 0
 using Int256 = pe::ExtendedSignedInt<uint128>;
 using Int512 = pe::ExtendedSignedInt<Int256>;
@@ -415,5 +414,4 @@ SL void ExtendedSignedIntTest() {
   TestUtilities();
 }
 PE_REGISTER_TEST(&ExtendedSignedIntTest, "ExtendedSignedIntTest", MEDIUM);
-#endif
 }  // namespace extended_signed_int_test

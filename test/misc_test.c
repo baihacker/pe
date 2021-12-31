@@ -58,6 +58,8 @@ SL void CountPtInCircleTest() {
     assert(u == v);
   }
 #endif
+
+#if !defined(CONTINUOUS_INTEGRATION_TEST)
   // 9999999999999907 7853981733966909 7853981733966913
   for (int64 i = 10000; i <= 100000000000000000; i = i * 10) {
     for (int64 j = -3; j <= 3; ++j) {
@@ -70,6 +72,7 @@ SL void CountPtInCircleTest() {
       assert(u == v);
     }
   }
+#endif
 }
 
 PE_REGISTER_TEST(&CountPtInCircleTest, "CountPtInCircleTest", MEDIUM);

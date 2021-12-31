@@ -38,14 +38,14 @@ struct ExtractET : public ExtractETImpl<ET, is_builtin_integer<ET>::value> {};
 
 template <typename ET>
 struct ExtendedUnsignedIntImpl<ET, true> {
-  constexpr static int quarter_bitcount = sizeof(ET) * 4;
-  constexpr static int half_bitcount = quarter_bitcount * 2;
-  constexpr static int bitcount = half_bitcount * 2;
+  constexpr static int quarter_bitsize = sizeof(ET) * 4;
+  constexpr static int half_bitsize = quarter_bitsize * 2;
+  constexpr static int bitsize = half_bitsize * 2;
 
   constexpr static ET quarter_mask =
-      (static_cast<ET>(1) << quarter_bitcount) - 1;
+      (static_cast<ET>(1) << quarter_bitsize) - 1;
 
-  constexpr static ET hibit_mask = (static_cast<ET>(1) << (half_bitcount - 1));
+  constexpr static ET hibit_mask = (static_cast<ET>(1) << (half_bitsize - 1));
 
   using UnsignedT = ExtendedUnsignedIntImpl<ET, true>;
   using SignedT = ExtendedSignedIntImpl<ET, true>;
@@ -66,7 +66,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
             sizeof(T) > sizeof(ET)))
   RETURN(void) FromNativeInt(T v) {
     low_ = v;
-    hi_ = v >> half_bitcount;
+    hi_ = v >> half_bitsize;
   }
 
   template <typename T>
@@ -188,34 +188,34 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   void SetHighestBit() { hi_ |= hibit_mask; }
 
   void SetBit(int idx) {
-    if (idx < half_bitcount) {
+    if (idx < half_bitsize) {
       low_ |= static_cast<ET>(1) << idx;
     } else {
-      hi_ |= static_cast<ET>(1) << (idx - half_bitcount);
+      hi_ |= static_cast<ET>(1) << (idx - half_bitsize);
     }
   }
 
   void ResetBit(int idx) {
-    if (idx < half_bitcount) {
+    if (idx < half_bitsize) {
       low_ &= ~(static_cast<ET>(1) << idx);
     } else {
-      hi_ &= ~(static_cast<ET>(1) << (idx - half_bitcount));
+      hi_ &= ~(static_cast<ET>(1) << (idx - half_bitsize));
     }
   }
 
   int GetBit(int idx) const {
-    if (idx < half_bitcount) {
+    if (idx < half_bitsize) {
       return low_ & (static_cast<ET>(1) << idx) ? 1 : 0;
     } else {
-      return hi_ & (static_cast<ET>(1) << (idx - half_bitcount)) ? 1 : 0;
+      return hi_ & (static_cast<ET>(1) << (idx - half_bitsize)) ? 1 : 0;
     }
   }
 
   void RevBit(int idx) {
-    if (idx < half_bitcount) {
+    if (idx < half_bitsize) {
       low_ ^= static_cast<ET>(1) << idx;
     } else {
-      hi_ ^= static_cast<ET>(1) << (idx - half_bitcount);
+      hi_ ^= static_cast<ET>(1) << (idx - half_bitsize);
     }
   }
 
@@ -260,28 +260,28 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   }
 
   void ShiftRight(int cnt) {
-    if (cnt >= bitcount) {
+    if (cnt >= bitsize) {
       low_ = hi_ = 0;
-    } else if (cnt >= half_bitcount) {
-      low_ = hi_ >> (cnt - half_bitcount);
+    } else if (cnt >= half_bitsize) {
+      low_ = hi_ >> (cnt - half_bitsize);
       hi_ = 0;
     } else {
       ET mask = (static_cast<ET>(1) << cnt) - 1;
       ET t = hi_ & mask;
       hi_ >>= cnt;
       low_ >>= cnt;
-      low_ |= t << (half_bitcount - cnt);
+      low_ |= t << (half_bitsize - cnt);
     }
   }
 
   void ShiftLeft(int cnt) {
-    if (cnt >= bitcount) {
+    if (cnt >= bitsize) {
       low_ = hi_ = 0;
-    } else if (cnt >= half_bitcount) {
-      hi_ = low_ << (cnt - half_bitcount);
+    } else if (cnt >= half_bitsize) {
+      hi_ = low_ << (cnt - half_bitsize);
       low_ = 0;
     } else {
-      ET t = low_ >> (half_bitcount - cnt);
+      ET t = low_ >> (half_bitsize - cnt);
       hi_ = hi_ << cnt | t;
       low_ <<= cnt;
     }
@@ -292,11 +292,11 @@ struct ExtendedUnsignedIntImpl<ET, true> {
       case 0:
         return low_ & quarter_mask;
       case 1:
-        return low_ >> quarter_bitcount;
+        return low_ >> quarter_bitsize;
       case 2:
         return hi_ & quarter_mask;
       case 3:
-        return hi_ >> quarter_bitcount;
+        return hi_ >> quarter_bitsize;
     }
     return 0;
   }
@@ -370,15 +370,15 @@ struct ExtendedUnsignedIntImpl<ET, true> {
 
   std::vector<uint32_t> ToBinaryVector(int fix_size = 1) const {
     std::vector<uint32_t> r;
-    r.reserve(bitcount);
+    r.reserve(bitsize);
     ET t = low_;
-    for (int i = 0; i < half_bitcount; ++i) {
+    for (int i = 0; i < half_bitsize; ++i) {
       r.push_back(t & 1);
       t >>= 1;
     }
     if (!fix_size || hi_) {
       t = hi_;
-      for (int i = 0; i < half_bitcount; ++i) {
+      for (int i = 0; i < half_bitsize; ++i) {
         r.push_back(t & 1);
         t >>= 1;
       }
@@ -391,13 +391,13 @@ struct ExtendedUnsignedIntImpl<ET, true> {
 
   void FromBinaryVector(const std::vector<uint32_t>& bits) {
     hi_ = 0;
-    for (int i = std::min(bitcount - 1, static_cast<int>(bits.size()) - 1);
-         i >= half_bitcount; --i) {
+    for (int i = std::min(bitsize - 1, static_cast<int>(bits.size()) - 1);
+         i >= half_bitsize; --i) {
       hi_ = (hi_ << 1) | bits[i];
     }
 
     low_ = 0;
-    for (int i = std::min(half_bitcount - 1, static_cast<int>(bits.size()) - 1);
+    for (int i = std::min(half_bitsize - 1, static_cast<int>(bits.size()) - 1);
          i >= 0; --i) {
       low_ = (low_ << 1) | bits[i];
     }
@@ -627,7 +627,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   REQUIRES((is_builtin_integer<T>::value && sizeof(T) > sizeof(ET)))
   RETURN(T) ToInt() const {
     using unsignedT = typename pe_make_unsigned<T>::type;
-    return static_cast<T>((static_cast<unsignedT>(hi_) << half_bitcount) |
+    return static_cast<T>((static_cast<unsignedT>(hi_) << half_bitsize) |
                           static_cast<unsignedT>(low_));
   }
 
@@ -839,15 +839,15 @@ struct ExtendedUnsignedIntImpl<ET, true> {
         for (int now = i + j; now < 4; ++now) {
           ET x = t[now] + (carry & quarter_mask);
           t[now] = x & quarter_mask;
-          carry = (x >> quarter_bitcount) + (carry >> quarter_bitcount);
+          carry = (x >> quarter_bitsize) + (carry >> quarter_bitsize);
           if (carry == 0) {
             break;
           }
         }
       }
     }
-    low_ = t[0] | (t[1] << quarter_bitcount);
-    hi_ = t[2] | (t[3] << quarter_bitcount);
+    low_ = t[0] | (t[1] << quarter_bitsize);
+    hi_ = t[2] | (t[3] << quarter_bitsize);
 
     return *this;
   }
@@ -861,19 +861,19 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     for (int i = 0; i < 4; ++i) {
       for (int j = 0; j < 2 && j + i < 4; ++j) {
         ET carry = GetQuarter(i) *
-                   (j == 0 ? other & quarter_mask : other >> quarter_bitcount);
+                   (j == 0 ? other & quarter_mask : other >> quarter_bitsize);
         for (int now = i + j; now < 4; ++now) {
           ET x = t[now] + (carry & quarter_mask);
           t[now] = x & quarter_mask;
-          carry = (x >> quarter_bitcount) + (carry >> quarter_bitcount);
+          carry = (x >> quarter_bitsize) + (carry >> quarter_bitsize);
           if (carry == 0) {
             break;
           }
         }
       }
     }
-    low_ = t[0] | (t[1] << quarter_bitcount);
-    hi_ = t[2] | (t[3] << quarter_bitcount);
+    low_ = t[0] | (t[1] << quarter_bitsize);
+    hi_ = t[2] | (t[3] << quarter_bitsize);
     return *this;
   }
 
@@ -1085,9 +1085,9 @@ struct ExtendedUnsignedIntImpl<ET, true> {
 
 template <typename ET>
 struct ExtendedUnsignedIntImpl<ET, false> {
-  constexpr static int quarter_bitcount = sizeof(ET) * 4;
-  constexpr static int half_bitcount = quarter_bitcount * 2;
-  constexpr static int bitcount = half_bitcount * 2;
+  constexpr static int quarter_bitsize = sizeof(ET) * 4;
+  constexpr static int half_bitsize = quarter_bitsize * 2;
+  constexpr static int bitsize = half_bitsize * 2;
 
   using NT = typename ET::NT;
   using UnsignedT = ExtendedUnsignedIntImpl<ET, false>;
@@ -1106,7 +1106,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
             sizeof(T) > sizeof(ET)))
   RETURN(void) FromNativeInt(T v) {
     low_ = v;
-    hi_ = v >> half_bitcount;
+    hi_ = v >> half_bitsize;
   }
 
   template <typename T>
@@ -1228,34 +1228,34 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   void SetHighestBit() { hi_.SetHighestBit(); }
 
   void SetBit(int idx) {
-    if (idx < half_bitcount) {
+    if (idx < half_bitsize) {
       low_.SetBit(idx);
     } else {
-      hi_.SetBit(idx - half_bitcount);
+      hi_.SetBit(idx - half_bitsize);
     }
   }
 
   void ResetBit(int idx) {
-    if (idx < half_bitcount) {
+    if (idx < half_bitsize) {
       low_.ResetBit(idx);
     } else {
-      hi_.ResetBit(idx - half_bitcount);
+      hi_.ResetBit(idx - half_bitsize);
     }
   }
 
   int GetBit(int idx) const {
-    if (idx < half_bitcount) {
+    if (idx < half_bitsize) {
       return low_.GetBit(idx);
     } else {
-      return hi_.GetBit(idx - half_bitcount);
+      return hi_.GetBit(idx - half_bitsize);
     }
   }
 
   void RevBit(int idx) {
-    if (idx < half_bitcount) {
+    if (idx < half_bitsize) {
       low_.RevBit(idx);
     } else {
-      hi_.RevBit(idx - half_bitcount);
+      hi_.RevBit(idx - half_bitsize);
     }
   }
 
@@ -1273,28 +1273,28 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   void ShiftRight(int cnt) {
-    if (cnt >= bitcount) {
+    if (cnt >= bitsize) {
       MakeZeroBits();
-    } else if (cnt >= half_bitcount) {
-      low_ = hi_ >> (cnt - half_bitcount);
+    } else if (cnt >= half_bitsize) {
+      low_ = hi_ >> (cnt - half_bitsize);
       hi_.MakeZeroBits();
     } else {
       ET mask = (static_cast<ET>(1) << cnt) - 1;
       ET t = hi_ & mask;
       hi_ >>= cnt;
       low_ >>= cnt;
-      low_ |= t << (half_bitcount - cnt);
+      low_ |= t << (half_bitsize - cnt);
     }
   }
 
   void ShiftLeft(int cnt) {
-    if (cnt >= bitcount) {
+    if (cnt >= bitsize) {
       MakeZeroBits();
-    } else if (cnt >= half_bitcount) {
-      hi_ = low_ << (cnt - half_bitcount);
+    } else if (cnt >= half_bitsize) {
+      hi_ = low_ << (cnt - half_bitsize);
       low_.MakeZeroBits();
     } else {
-      ET t = low_ >> (half_bitcount - cnt);
+      ET t = low_ >> (half_bitsize - cnt);
       hi_ = hi_ << cnt | t;
       low_ <<= cnt;
     }
@@ -1354,7 +1354,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
 
   std::vector<uint32_t> ToBinaryVector(int fix_size = 1) const {
     std::vector<uint32_t> r;
-    r.reserve(bitcount);
+    r.reserve(bitsize);
     for (auto& iter : low_.ToBinaryVector(0)) r.push_back(iter);
     if (!fix_size || !hi_.IsZero()) {
       for (auto& iter : hi_.ToBinaryVector(0)) r.push_back(iter);
@@ -1370,10 +1370,10 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     hi_.MakeZeroBits();
     for (int i = 0; i < bits.size(); ++i) {
       if (bits[i]) {
-        if (i < half_bitcount) {
+        if (i < half_bitsize) {
           low_.SetBit(i);
-        } else if (i < bitcount) {
-          hi_.SetBit(i - half_bitcount);
+        } else if (i < bitsize) {
+          hi_.SetBit(i - half_bitsize);
         }
       }
     }
@@ -1607,7 +1607,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   REQUIRES((is_builtin_integer<T>::value && sizeof(T) > sizeof(ET)))
   RETURN(T) ToInt() const {
     using unsignedT = typename pe_make_unsigned<T>::type;
-    return static_cast<T>(hi_.template ToInt<unsignedT>() << half_bitcount |
+    return static_cast<T>(hi_.template ToInt<unsignedT>() << half_bitsize |
                           low_.template ToInt<unsignedT>());
   }
 
@@ -1799,8 +1799,8 @@ struct ExtendedUnsignedIntImpl<ET, false> {
         }
       }
     }
-    low_ = t[0] | (t[1] << quarter_bitcount);
-    hi_ = t[2] | (t[3] << quarter_bitcount);
+    low_ = t[0] | (t[1] << quarter_bitsize);
+    hi_ = t[2] | (t[3] << quarter_bitsize);
 
     return *this;
   }

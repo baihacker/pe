@@ -17,6 +17,10 @@ SL void SquareRootCorrectnessTest() {
       }
     }
   }
+  assert(SqrtI(9999999999999999) == 99999999);
+  assert(SqrtI(9999999999999999 + 1) == 99999999 + 1);
+  assert(SqrtI(999999999999999999) == 999999999);
+  assert(SqrtI(999999999999999999 + 1) == 999999999 + 1);
   if (f == 0) {
     std::cerr << "Correctness test pass!" << std::endl;
   } else {

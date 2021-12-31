@@ -27,7 +27,20 @@ SL void BiTestSmall() {
 
 PE_REGISTER_TEST(&BiTestSmall, "BiTestSmall", SMALL);
 
-#if ENABLE_GMP && defined(CPP_GLIBCXX)
+#if ENABLE_GMP
+SL std::string MpzClassToString(mpz_class t) {
+  auto z = t.__get_mp();
+  size_t sz = mpz_sizeinbase(z, 10) + 1;
+
+  char* buff = new char[sz + 1];
+  if (buff != nullptr) {
+    gmp_sprintf(buff, "%Zd", z);
+  }
+  std::string ret(buff);
+  delete[] buff;
+  return ret;
+}
+
 SL void BiMulTestImpl(int x, int y) {
   for (int s1 = -1; s1 <= 1; ++s1)
     for (int s2 = -1; s2 <= 1; ++s2)
@@ -43,10 +56,9 @@ SL void BiMulTestImpl(int x, int y) {
           mpz_class b = s2;
           for (auto& iter : A) a *= iter;
           for (auto& iter : B) b *= iter;
+
           mpz_class c = a * b;
-          std::stringstream ss;
-          ss << c;
-          ss >> expectedResult;
+          expectedResult = MpzClassToString(c);
         }
         std::string myResult;
         {
@@ -105,8 +117,8 @@ SL void BiDivTestMediumImpl(int x, int y) {
               for (auto& iter : B) b *= iter;
               mpz_class c = a / b;
               mpz_class d = a % b;
-              expectedResult1 = ToString(c);
-              expectedResult2 = ToString(d);
+              expectedResult1 = MpzClassToString(c);
+              expectedResult2 = MpzClassToString(d);
             }
             std::string myResult1;
             std::string myResult2;

@@ -180,7 +180,7 @@ void DisplayCompilerInfo() {
 #endif
 
 #if defined(__FLOAT128__)
-  show(__FLOAT128__);
+  AddDefined(__FLOAT128__);
 #else
   AddNotDefined(__FLOAT128__);
 #endif

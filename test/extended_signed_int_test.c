@@ -1,7 +1,7 @@
 #include "pe_test.h"
 
 namespace extended_signed_int_test {
-#if !(defined(COMPILER_CLANG) && defined(CPP_LIBCPP))
+#if PE_HAS_EXTENDED_INT
 #if PE_HAS_INT128 && 0
 using Int256 = pe::ExtendedSignedInt<uint128>;
 using Int512 = pe::ExtendedSignedInt<Int256>;

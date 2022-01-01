@@ -215,6 +215,7 @@ typedef uint64 (*MulModUint64FunctionPointerType)(uint64, uint64, uint64);
 typedef int64 (*MulModInt64FunctionPointerType)(int64, int64, int64);
 }
 
+// Compilfed by ml64.exe
 #if 0
 .CODE
 
@@ -231,6 +232,7 @@ END
 const char __MulModUint64ShellCode[] =
     "\x48\x8b\xc1\x48\xf7\xe2\x49\xf7\xf0\x48\x8b\xc2\xc3";
 
+// Compilfed by ml64.exe
 #if 0
 .CODE
 
@@ -263,7 +265,7 @@ const static int __init_code_data_once = __MakeMulModShellCodeExecutable();
 
 SL uint64 MulModUint64(uint64 a, uint64 b, uint64 mod) {
   if (mod >> 32) {
-    pe_internal::MulModUint64FunctionPointerType code =
+    auto code =
         reinterpret_cast<pe_internal::MulModUint64FunctionPointerType>(
             reinterpret_cast<unsigned char*>(
                 const_cast<char*>(&pe_internal::__MulModUint64ShellCode[0])));
@@ -275,10 +277,9 @@ SL uint64 MulModUint64(uint64 a, uint64 b, uint64 mod) {
 
 SL int64 MulModInt64(int64 a, int64 b, int64 mod) {
   if (static_cast<uint64>(mod) >> 31) {
-    pe_internal::MulModInt64FunctionPointerType code =
-        reinterpret_cast<pe_internal::MulModInt64FunctionPointerType>(
-            reinterpret_cast<unsigned char*>(
-                const_cast<char*>(&pe_internal::__MulModInt64ShellCode[0])));
+    auto code = reinterpret_cast<pe_internal::MulModInt64FunctionPointerType>(
+        reinterpret_cast<unsigned char*>(
+            const_cast<char*>(&pe_internal::__MulModInt64ShellCode[0])));
     return code(a, b, mod);
   } else {
     return a * b % mod;
@@ -294,8 +295,8 @@ SL void MulModExSlowWarningOnce() {
   }
 }
 
-// If the biggest of the operand size is greater than sizeof(int64), just
-// convert every operand to that and multiply them directly.
+// If the biggest operand size is greater than sizeof(int64), just convert every
+// operand to that and multiply them directly.
 template <typename T1, typename T2, typename TM>
 SL REQUIRES((is_builtin_integer<T1>::value && is_builtin_integer<T2>::value &&
              is_builtin_integer<TM>::value &&
@@ -334,7 +335,6 @@ SL REQUIRES((is_builtin_integer<T1>::value && is_builtin_integer<T2>::value &&
 
 #if (defined(COMPILER_GNU) && PE_X86_64) || \
     (defined(COMPILER_MSVC) && OS_TYPE_WIN && PE_X86_64)
-  // We have an assembly version
   return static_cast<ResultType>(MulModUint64(a, b, mod));
 #else
   if (mod <= PE_SOI63) {
@@ -363,15 +363,6 @@ SL REQUIRES((is_builtin_integer<T1>::value && is_builtin_integer<T2>::value &&
     if (r < 0) r += m;
     return r;
   }
-
-#if defined(COMPILER_MSVC) && OS_TYPE_WIN && PE_X86_64
-  MulModFunctionPointerType code = reinterpret_cast<MulModFunctionPointerType>(
-      reinterpret_cast<unsigned char*>(
-          const_cast<char*>(&__MulModShellCode[0])));
-  return static_cast<ResultType>(code(static_cast<uint64>(a),
-                                      static_cast<uint64>(b),
-                                      static_cast<uint64>(mod)));
-#endif
 
   MulModExSlowWarningOnce();
 // 3 other implementations
@@ -422,7 +413,7 @@ SL REQUIRES((is_builtin_integer<T1>::value && is_builtin_integer<T2>::value &&
       if (ret >= umod) ret -= umod;
       used += now;
     }
-    return ret;
+    return static_cast<ResultType>(ret);
   } else {
     uint64 ret = 0;
     int used = pe_clzll(ub);
@@ -437,7 +428,7 @@ SL REQUIRES((is_builtin_integer<T1>::value && is_builtin_integer<T2>::value &&
       if (ret >= umod) ret -= umod;
       used += now;
     }
-    return ret;
+    return static_cast<ResultType>(ret);
   }
 #elif 0
   atLeastInt64T ret = 0;
@@ -448,7 +439,7 @@ SL REQUIRES((is_builtin_integer<T1>::value && is_builtin_integer<T2>::value &&
     }
     flag = (flag << 1) % mod;
   }
-  return (ResultType)ret;
+  return static_cast<ResultType>(ret);
 #endif
 
 #endif

@@ -10,8 +10,8 @@ int main() {
     std::cout << Power(a, 10) << std::endl;
     std::cout << PowerMod(a, 10) << std::endl;
     std::cout << PowerMod(a, 10, mod) << std::endl;
-    std::cout << PowerModEx(a, 10) << std::endl;
-    std::cout << PowerModEx(a, 10, mod) << std::endl;
+    std::cout << PowerMod(a, 10) << std::endl;
+    std::cout << PowerMod(a, 10, mod) << std::endl;
   }
   {
     TLMod<int64>::Set(mod);
@@ -20,8 +20,8 @@ int main() {
     std::cout << Power(a, 10) << std::endl;
     std::cout << PowerMod(a, 10) << std::endl;
     std::cout << PowerMod(a, 10, mod) << std::endl;
-    std::cout << PowerModEx(a, 10) << std::endl;
-    std::cout << PowerModEx(a, 10, mod) << std::endl;
+    std::cout << PowerMod(a, 10) << std::endl;
+    std::cout << PowerMod(a, 10, mod) << std::endl;
   }
   {
     DefaultMod::Set(mod);
@@ -30,8 +30,8 @@ int main() {
     std::cout << Power(a, 10) << std::endl;
     std::cout << PowerMod(a, 10) << std::endl;
     std::cout << PowerMod(a, 10, mod) << std::endl;
-    std::cout << PowerModEx(a, 10) << std::endl;
-    std::cout << PowerModEx(a, 10, mod) << std::endl;
+    std::cout << PowerMod(a, 10) << std::endl;
+    std::cout << PowerMod(a, 10, mod) << std::endl;
   }
   {
       // NModNumber<MemMod<int64>> a(5);
@@ -43,8 +43,8 @@ int main() {
     std::cout << Power(a, 10) << std::endl;
     std::cout << PowerMod(a, 10) << std::endl;
     std::cout << PowerMod(a, 10, mod) << std::endl;
-    std::cout << PowerModEx(a, 10) << std::endl;
-    std::cout << PowerModEx(a, 10, mod) << std::endl;
+    std::cout << PowerMod(a, 10) << std::endl;
+    std::cout << PowerMod(a, 10, mod) << std::endl;
   }
   {
     TLMod<int64>::Set(mod);
@@ -53,8 +53,8 @@ int main() {
     std::cout << Power(a, 10) << std::endl;
     std::cout << PowerMod(a, 10) << std::endl;
     std::cout << PowerMod(a, 10, mod) << std::endl;
-    std::cout << PowerModEx(a, 10) << std::endl;
-    std::cout << PowerModEx(a, 10, mod) << std::endl;
+    std::cout << PowerMod(a, 10) << std::endl;
+    std::cout << PowerMod(a, 10, mod) << std::endl;
   }
   {
     DefaultMod::Set(mod);
@@ -63,8 +63,8 @@ int main() {
     std::cout << Power(a, 10) << std::endl;
     std::cout << PowerMod(a, 10) << std::endl;
     std::cout << PowerMod(a, 10, mod) << std::endl;
-    std::cout << PowerModEx(a, 10) << std::endl;
-    std::cout << PowerModEx(a, 10, mod) << std::endl;
+    std::cout << PowerMod(a, 10) << std::endl;
+    std::cout << PowerMod(a, 10, mod) << std::endl;
   }
   {
     // Not recommended.
@@ -73,8 +73,8 @@ int main() {
     std::cout << Power(a, 10) << std::endl;
     std::cout << PowerMod(a, 10) << std::endl;
     std::cout << PowerMod(a, 10, mod) << std::endl;
-    std::cout << PowerModEx(a, 10) << std::endl;
-    std::cout << PowerModEx(a, 10, mod) << std::endl;
+    std::cout << PowerMod(a, 10) << std::endl;
+    std::cout << PowerMod(a, 10, mod) << std::endl;
   }
   return 0;
 }

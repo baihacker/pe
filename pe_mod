@@ -287,10 +287,10 @@ SL int64 MulModInt64(int64 a, int64 b, int64 mod) {
 
 #endif
 
-SL void MulModExSlowWarningOnce() {
+SL void MulModSlowWarningOnce() {
   static std::atomic_int WARNING_ONCE_FLAG{0};
   if (WARNING_ONCE_FLAG.exchange(1) == 0) {
-    fprintf(stderr, "MulModEx may be very slow.\n");
+    fprintf(stderr, "MulMod may be very slow.\n");
   }
 }
 
@@ -363,7 +363,7 @@ SL REQUIRES((is_builtin_integer<T1>::value && is_builtin_integer<T2>::value &&
     return r;
   }
 
-  MulModExSlowWarningOnce();
+  MulModSlowWarningOnce();
 // 3 other implementations
 #if 0
   // Mpz based implementation
@@ -446,13 +446,6 @@ SL REQUIRES((is_builtin_integer<T1>::value && is_builtin_integer<T2>::value &&
 #endif
 }
 
-template <typename T1, typename T2, typename TM>
-SL REQUIRES((is_builtin_integer<T1>::value && is_builtin_integer<T2>::value &&
-             is_builtin_integer<TM>::value)) RETURN_T(IntPromotionT(T1, T2, TM))
-    MulModEx(T1 a, T2 b, TM mod) {
-  return MulMod(a, b, mod);
-}
-
 template <typename TM, typename T>
 SL T ProdMod(TM /*mod*/, T a) {
   return a;
@@ -472,29 +465,6 @@ SL REQUIRES((is_builtin_integer<T>::value)) RETURN(T)
   }
   for (auto& v : init) {
     ret = MulMod(ret, v, mod);
-  }
-  return ret;
-}
-
-template <typename TM, typename T>
-SL T ProdModEx(TM /*mod*/, T a) {
-  return a;
-}
-
-template <typename TM, typename TH, typename... TT>
-SL IntPromotion(TH, TT...) ProdModEx(TM mod, TH a, TT... b) {
-  return MulModEx(a, ProdModEx(mod, b...), mod);
-}
-
-template <typename TM, typename T>
-SL REQUIRES((is_builtin_integer<T>::value)) RETURN(T)
-    ProdModEx(TM mod, std::initializer_list<T> init) {
-  T ret = 1;
-  if (mod == 1) {
-    return 0;
-  }
-  for (auto& v : init) {
-    ret = MulModEx(ret, v, mod);
   }
   return ret;
 }
@@ -524,33 +494,6 @@ SL REQUIRES((is_builtin_integer<T>::value && is_builtin_integer<TN>::value &&
     RETURN_T(IntPromotionT(T, int64, TM)) PowerMod(T x, TN n, TM mod) {
   using atLeastInt64T = typename AtLeastInt64<T>::type;
   return pe_internal::PowerModImpl<atLeastInt64T, TN, TM>(x, n, mod);
-}
-
-namespace pe_internal {
-template <typename T, typename TN, typename TM>
-SL REQUIRES((is_builtin_integer<T>::value && is_builtin_integer<TN>::value &&
-             is_builtin_integer<TM>::value)) RETURN_T(IntPromotionT(T, TM))
-    PowerModExImpl(T x, TN n, TM mod) {
-  PE_ASSERT(n >= 0);
-  if (mod == 1) return 0;
-  using ResultType = typename BiggerIntegralN<T, TM>::type;
-
-  ResultType ret = 1;
-  auto y = RegulateMod(x, mod);
-  for (; n; n >>= 1) {
-    if (n & 1) ret = MulModEx(ret, y, mod);
-    y = MulModEx(y, y, mod);
-  }
-  return ret;
-}
-}  // namespace pe_internal
-
-template <typename T, typename TN, typename TM>
-SL REQUIRES((is_builtin_integer<T>::value && is_builtin_integer<TN>::value &&
-             is_builtin_integer<TM>::value))
-    RETURN_T(IntPromotionT(T, int64, TM)) PowerModEx(T x, TN n, TM mod) {
-  using atLeastInt64T = typename AtLeastInt64<T>::type;
-  return pe_internal::PowerModExImpl<atLeastInt64T, TN, TM>(x, n, mod);
 }
 
 template <typename T>
@@ -755,7 +698,7 @@ struct APSB<S, fake_int128> {
     if (a < 0) a += mod;
     return a;
   }
-  static ints Mul(ints a, ints b, ints mod) { return MulModEx(a, b, mod); }
+  static ints Mul(ints a, ints b, ints mod) { return MulMod(a, b, mod); }
   static void FixValue(ints& v, ints mod) {
     // Do nothing
   }
@@ -1273,22 +1216,6 @@ SL REQUIRES((IsNModNumber<T>::value && is_builtin_integer<TN>::value &&
     PowerMod(T x, TN n, TM mod) {
   PE_ASSERT(mod == x.Mod());
   return x.Power(n);
-}
-
-template <typename T, typename TN>
-SL REQUIRES((IsNModNumber<T>::value && is_builtin_integer<TN>::value)) RETURN(T)
-    PowerModEx(T x, TN n) {
-  auto v = PowerModEx(ExtractValue(x), n, x.Mod());
-  return x.OfValue(v);
-}
-
-template <typename T, typename TN, typename TM>
-SL REQUIRES((IsNModNumber<T>::value && is_builtin_integer<TN>::value &&
-             is_builtin_integer<TM>::value)) RETURN(T)
-    PowerModEx(T x, TN n, TM mod) {
-  PE_ASSERT(mod == x.Mod());
-  auto v = PowerModEx(ExtractValue(x), n, x.Mod());
-  return x.OfValue(v);
 }
 
 #if PE_HAS_CPP20

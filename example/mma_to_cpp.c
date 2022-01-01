@@ -27,7 +27,7 @@ int main() {
   // int64 foo(int64 a, int64 b, int64 mod) {
   //   const int64 t0 = a % mod;
   //   const int64 t1 = 4;
-  //   const int64 t2 = PowerModEx(t0, t1, mod) % mod;
+  //   const int64 t2 = PowerMod(t0, t1, mod) % mod;
   //   const int64 t3 = b % mod;
   //   const int64 t4 = (t0 * t3) % mod;
   //   const int64 t5 = (t2 + t4) % mod;

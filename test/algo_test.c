@@ -57,7 +57,7 @@ SL void FactSumModTest() {
   int64 now = 1;
   int64 s = 1;
   for (int64 i = 1; i <= n; ++i) {
-    now = MulModEx(now, i, mod);
+    now = MulMod(now, i, mod);
     s = AddMod(s, now, mod);
   }
   assert(ans == s);

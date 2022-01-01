@@ -298,7 +298,7 @@ SL REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value)) RETURN(T)
 }
 
 // p is prime
-SL int64 InvOf(int64 x, int64 p) { return PowerModEx(x, p - 2, p); }
+SL int64 InvOf(int64 x, int64 p) { return PowerMod(x, p - 2, p); }
 
 namespace pe_internal {
 template <typename T>
@@ -476,9 +476,9 @@ SL REQUIRES((!IsNModNumber<T>::value)) RETURN(void)
   for (int i = 2; i <= maxi; ++i) {
     const auto t = mod / i;
     const auto k = mod % i;
-    const auto v = MulModEx(t, t, mod);
-    const auto u = MulModEx(dest[k], dest[k], mod);
-    dest[i] = static_cast<T>(MulModEx(i, MulModEx(v, u, mod), mod));
+    const auto v = MulMod(t, t, mod);
+    const auto u = MulMod(dest[k], dest[k], mod);
+    dest[i] = static_cast<T>(MulMod(i, MulMod(v, u, mod), mod));
   }
   for (auto i = mod; i <= n; ++i) {
     dest[i] = dest[i - mod];
@@ -504,7 +504,7 @@ SL REQUIRES((IsNModNumber<T>::value)) RETURN(void) InitInv(T* dest, int64 n) {
   for (int i = 2; i <= maxi; ++i) {
     const auto t = mod / i;
     const auto k = mod % i;
-    const auto v = MulModEx(t, t, mod);
+    const auto v = MulMod(t, t, mod);
     const auto u = dest[k] * dest[k];
     dest[i] = u * v * i;
   }
@@ -530,7 +530,7 @@ SL void InitSeqProd(T* dest, T s, T e, int64 mod) {
   const int cnt = static_cast<int>(e - s + 1);
   T i = s;
   for (int j = 1; j <= cnt; ++i, ++j) {
-    dest[j] = MulModEx(dest[j - 1], i, mod);
+    dest[j] = MulMod(dest[j - 1], i, mod);
   }
 }
 
@@ -549,9 +549,9 @@ SL void InitSeqProdInvLastv(T* dest, T s, T e, T mod, T lastv = 0) {
   if (lastv == 0) {
     lastv = 1;
     for (T i = s; i <= e; ++i) {
-      lastv = MulModEx(lastv, i, mod);
+      lastv = MulMod(lastv, i, mod);
     }
-    lastv = PowerModEx(lastv, mod - 2, mod);
+    lastv = PowerMod(lastv, mod - 2, mod);
   }
   const int cnt = static_cast<int>(e - s + 1);
   dest[0] = 1;
@@ -559,7 +559,7 @@ SL void InitSeqProdInvLastv(T* dest, T s, T e, T mod, T lastv = 0) {
 
   T i = e;
   for (int j = cnt - 1; j > 0; --j) {
-    dest[j] = MulModEx(dest[j + 1], i--, mod);
+    dest[j] = MulMod(dest[j + 1], i--, mod);
   }
 }
 
@@ -606,14 +606,14 @@ SL REQUIRES((!IsNModNumber<T>::value)) RETURN(void)
   if (dest == nullptr) {
     T v = s % mod;
     for (T i = s; i <= e; ++i) {
-      lastv = MulModEx(lastv, v, mod);
+      lastv = MulMod(lastv, v, mod);
       v = v == mod - 1 ? 0 : v + 1;
     }
   } else {
     dest[0] = lastv;
     T v = s % mod;
     for (T i = s, j = 1; i <= e; ++i, ++j) {
-      dest[j] = lastv = MulModEx(lastv, v, mod);
+      dest[j] = lastv = MulMod(lastv, v, mod);
       v = v == mod - 1 ? 0 : v + 1;
     }
   }
@@ -623,13 +623,13 @@ SL REQUIRES((!IsNModNumber<T>::value)) RETURN(void)
 
   // Assumption 1: mod is a prime number
   // Assumption 2: lastv != 0
-  lastv = PowerModEx(lastv, mod - 2, mod);
+  lastv = PowerMod(lastv, mod - 2, mod);
   idest[0] = 1;
   idest[cnt] = lastv;
 
   T v = e % mod;
   for (int64 j = cnt - 1; j > 0; --j) {
-    idest[j] = MulModEx(idest[j + 1], v, mod);
+    idest[j] = MulMod(idest[j + 1], v, mod);
     v = v == 0 ? mod - 1 : v - 1;
   }
 }
@@ -658,14 +658,14 @@ SL REQUIRES((IsNModNumber<T>::value)) RETURN(void)
   if (dest == nullptr) {
     ModType v = s % mod;
     for (int64 i = s; i <= e; ++i) {
-      lastv = MulModEx(lastv, v, mod);
+      lastv = MulMod(lastv, v, mod);
       v = v == mod - 1 ? 0 : v + 1;
     }
   } else {
     dest[0].SetValue(lastv);
     ModType v = s % mod;
     for (int64 i = s, j = 1; i <= e; ++i, ++j) {
-      lastv = MulModEx(lastv, v, mod);
+      lastv = MulMod(lastv, v, mod);
       dest[j].SetValue(lastv);
       v = v == mod - 1 ? 0 : v + 1;
     }
@@ -676,13 +676,13 @@ SL REQUIRES((IsNModNumber<T>::value)) RETURN(void)
 
   // Assumption 1: mod is a prime number
   // Assumption 2: lastv != 0
-  lastv = PowerModEx(lastv, mod - 2, mod);
+  lastv = PowerMod(lastv, mod - 2, mod);
   idest[0] = 1;
   idest[cnt].SetValue(lastv);
 
   ModType v = e % mod;
   for (int64 j = cnt - 1; j > 0; --j) {
-    idest[j].SetValue(MulModEx(idest[j + 1].value(), v, mod));
+    idest[j].SetValue(MulMod(idest[j + 1].value(), v, mod));
     v = v == 0 ? mod - 1 : v - 1;
   }
 }
@@ -734,7 +734,7 @@ SL bool IsPrimitiveRoot(int64 x, int64 p,
                         const std::vector<std::pair<int64, int>>& f) {
   return std::none_of(std::begin(f), std::end(f),
                       [=](const std::pair<int64, int>& it) {
-                        return PowerModEx(x, (p - 1) / it.first, p) == 1;
+                        return PowerMod(x, (p - 1) / it.first, p) == 1;
                       });
 }
 
@@ -775,7 +775,7 @@ SL int64 Ind(int64 a, int64 pr, int64 p) {
     mem[t2] = i;
     t2 = t2 * inv_pr % p;
   }
-  int64 temp = PowerModEx(pr, mx, p);
+  int64 temp = PowerMod(pr, mx, p);
   for (unsigned int i = 0; i <= mx - 1; ++i) {
     auto where = mem.find(t1);
     if (where != mem.end()) {
@@ -813,7 +813,7 @@ class IndSolver {
     PE_ASSERT(a > 0);
     a %= p_;
 
-    const int64 temp = PowerModEx(pr_, mx_, p_);
+    const int64 temp = PowerMod(pr_, mx_, p_);
     const int64 inv_a = InvOf(a, p_);
     int64 t = 1;
 
@@ -851,28 +851,28 @@ SL int64 SquareRootModImpl(int64 n, int64 p) {
   if (n == 1) {
     return 1;
   }
-  if (PowerModEx(n, (p - 1) / 2, p) == p - 1) {
+  if (PowerMod(n, (p - 1) / 2, p) == p - 1) {
     return -1;
   }
   if (p % 4 == 3) {
-    return PowerModEx(n, (p + 1) >> 2, p);
+    return PowerMod(n, (p + 1) >> 2, p);
   }
   int64 Q = p - 1, S = 0;
   while (Q % 2 == 0) Q >>= 1, ++S;
   int64 z = 1;
-  while (PowerModEx(z, (p - 1) >> 1, p) == 1) ++z;
-  int64 M = S, c = PowerModEx(z, Q, p);
-  int64 t = PowerModEx(n, Q, p), R = PowerModEx(n, (Q + 1) >> 1, p);
+  while (PowerMod(z, (p - 1) >> 1, p) == 1) ++z;
+  int64 M = S, c = PowerMod(z, Q, p);
+  int64 t = PowerMod(n, Q, p), R = PowerMod(n, (Q + 1) >> 1, p);
   for (;;) {
     if (t == 0) return -1;
     if (t == 1) return R;
     int64 i = 0, tt = t;
-    while (tt != 1) tt = MulModEx(tt, tt, p), ++i;
-    const int64 b = PowerModEx(c, 1 << (M - i - 1), p);
+    while (tt != 1) tt = MulMod(tt, tt, p), ++i;
+    const int64 b = PowerMod(c, 1 << (M - i - 1), p);
     M = i;
-    c = MulModEx(b, b, p);
-    t = MulModEx(t, c, p);
-    R = MulModEx(R, b, p);
+    c = MulMod(b, b, p);
+    t = MulMod(t, c, p);
+    R = MulMod(R, b, p);
   }
 }
 }  // namespace pe_internal
@@ -905,8 +905,8 @@ SL std::vector<int64> RootMod(int64 a, int64 n, int64 p, int64 retCnt = -1) {
     return std::vector<int64>{};
   }
   std::vector<int64> result;
-  int64 coe = PowerModEx(sv.pr(), v, p);
-  int64 x = PowerModEx(sv.pr(), u, p);
+  int64 coe = PowerMod(sv.pr(), v, p);
+  int64 x = PowerMod(sv.pr(), u, p);
   int64 oldx = x;
   do {
     if (retCnt < 0 || static_cast<int64>(result.size()) < retCnt) {
@@ -914,7 +914,7 @@ SL std::vector<int64> RootMod(int64 a, int64 n, int64 p, int64 retCnt = -1) {
     } else {
       break;
     }
-    x = MulModEx(x, coe, p);
+    x = MulMod(x, coe, p);
   } while (oldx != x);
   return result;
 }
@@ -1000,10 +1000,10 @@ SL std::vector<std::pair<int64, int64>> PrimeTwoSquares(const int64 p) {
     return std::vector<std::pair<int64, int64>>{};
   }
   int128 y = 1, x = 2;
-  for (x = 2; PowerModEx(x, (p - 1) >> 1, p) != p - 1; ++x) {
+  for (x = 2; PowerMod(x, (p - 1) >> 1, p) != p - 1; ++x) {
     ;
   }
-  x = PowerModEx(x, (p - 1) >> 2, p);
+  x = PowerMod(x, (p - 1) >> 2, p);
 
   for (int128 s = x * x + y * y; s != p;) {
     const int128 k = s / p, k2 = k >> 1;

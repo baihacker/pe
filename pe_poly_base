@@ -412,9 +412,8 @@ SL REQUIRES((is_builtin_integer<T>::value)) RETURN(void)
     result[i] = mod > 0 ? t % mod : t;
 #else
     PE_ASSERT(mod > 0);
-    const uint64 y2 =
-        MulModEx(x2, NttConstant::INV_M3__M1M2, NttConstant::M1M2);
-    const uint64 t = MulModEx(y2 % mod, NttConstant::M3 % mod, mod);
+    const uint64 y2 = MulMod(x2, NttConstant::INV_M3__M1M2, NttConstant::M1M2);
+    const uint64 t = MulMod(y2 % mod, NttConstant::M3 % mod, mod);
     result[i] = AddMod(t, c % mod, mod);
 #endif
 #endif
@@ -444,7 +443,7 @@ struct NttMod64 {
   NttMod64(uint64 mod, unsigned r, int k, unsigned g)
       : mod(mod), r(r), k(k), g(g) {
     for (int i = 0; i <= k; ++i) {
-      omg[i] = PowerModEx<uint64, uint64, uint64>(g, (mod - 1) >> i, mod);
+      omg[i] = PowerMod<uint64, uint64, uint64>(g, (mod - 1) >> i, mod);
     }
     std::fill(pre_omg, pre_omg + 64, nullptr);
   }
@@ -474,7 +473,7 @@ struct NttMod64 {
 #if PE_HAS_INT128
         last = Mod128And64(static_cast<uint128>(last) * m, mod);
 #else
-        last = MulModEx(last, m, mod);
+        last = MulMod(last, m, mod);
 #endif
         target[i] = last;
       }
@@ -508,7 +507,7 @@ SL REQUIRES((is_builtin_integer<T>::value)) RETURN(void)
           const auto t =
               Mod128And64(static_cast<uint128>(*omg++) * data[k + half_h], mod);
 #else
-          const auto t = MulModEx(*omg++, data[k + half_h], mod);
+          const auto t = MulMod(*omg++, data[k + half_h], mod);
 #endif
           data[k] = (u + t) % mod;
           data[k + half_h] = (u + mod - t) % mod;
@@ -528,14 +527,14 @@ SL REQUIRES((is_builtin_integer<T>::value)) RETURN(void)
           const auto t =
               Mod128And64(static_cast<uint128>(omgn) * data[k + half_h], mod);
 #else
-          const auto t = MulModEx(omgn, data[k + half_h], mod);
+          const auto t = MulMod(omgn, data[k + half_h], mod);
 #endif
           data[k] = (u + t) % mod;
           data[k + half_h] = (u + mod - t) % mod;
 #if PE_HAS_INT128
           omgn = Mod128And64(static_cast<uint128>(omgn) * moder.omg[id], mod);
 #else
-          omgn = MulModEx(omgn, moder.omg[id], mod);
+          omgn = MulMod(omgn, moder.omg[id], mod);
 #endif
         }
       }
@@ -544,12 +543,12 @@ SL REQUIRES((is_builtin_integer<T>::value)) RETURN(void)
   if (inv) {
     const int64 half_n = n >> 1;
     for (int64 i = 1; i < half_n; ++i) std::swap(data[i], data[n - i]);
-    const uint64 c = PowerModEx<uint64>(n, mod - 2, mod);
+    const uint64 c = PowerMod<uint64>(n, mod - 2, mod);
     for (int64 i = 0; i < n; ++i) {
 #if PE_HAS_INT128
       data[i] = Mod128And64(static_cast<uint128>(c) * data[i], mod);
 #else
-      data[i] = MulModEx(c, data[i], mod);
+      data[i] = MulMod(c, data[i], mod);
 #endif
     }
   }
@@ -600,7 +599,7 @@ SL REQUIRES((is_builtin_integer<T>::value)) RETURN(void)
 #if PE_HAS_INT128
       XX[i] = Mod128And64(static_cast<uint128>(XX[i]) * YY[i], mod);
 #else
-      XX[i] = MulModEx(XX[i], YY[i], mod);
+      XX[i] = MulMod(XX[i], YY[i], mod);
 #endif
     }
     Ntt(&XX[0], aligned_size, moder, true);
@@ -669,7 +668,7 @@ SL REQUIRES((is_builtin_integer<T>::value)) RETURN(void)
 #if PE_HAS_INT128
       XX[i] = Mod128And64(static_cast<uint128>(XX[i]) * YY[i], mod);
 #else
-      XX[i] = MulModEx(XX[i], YY[i], mod);
+      XX[i] = MulMod(XX[i], YY[i], mod);
 #endif
     }
     Ntt(&XX[0], aligned_size, moder, true);
@@ -691,8 +690,8 @@ SL REQUIRES((is_builtin_integer<T>::value)) RETURN(void)
     result[i] = mod > 0 ? t % mod : t;
 #else
     PE_ASSERT(mod > 0);
-    const uint64 y = MulModEx(x, NttConstant::INV_M1__M2, NttConstant::M2);
-    const uint64 t = MulModEx(y % mod, NttConstant::M1 % mod, mod);
+    const uint64 y = MulMod(x, NttConstant::INV_M1__M2, NttConstant::M2);
+    const uint64 t = MulMod(y % mod, NttConstant::M1 % mod, mod);
     result[i] = AddMod(t, a % mod, mod);
 #endif
   }
@@ -777,7 +776,7 @@ SL REQUIRES((is_builtin_integer<T>::value)) RETURN(void)
     std::fill(result, result + n2, 0);
     for (int64 i = 0; i < n; ++i) {
       for (int64 j = 0; j < n; ++j) {
-        result[i + j] = AddMod(result[i + j], MulModEx(X[i], Y[j], mod), mod);
+        result[i + j] = AddMod(result[i + j], MulMod(X[i], Y[j], mod), mod);
       }
     }
     return;
@@ -976,7 +975,7 @@ SL REQUIRES((is_builtin_integer<T>::value)) RETURN(void)
     PolyInvDoublingImpl(int64 n, const T* a, T* b, T* tmp[2], int64 mod) {
   static_assert(pe_is_unsigned<T>::value, "T must be unsigned");
   if (n == 1) {
-    b[0] = PowerModEx(a[0], mod - 2, mod);
+    b[0] = PowerMod(a[0], mod - 2, mod);
   } else {
     const int64 m = (n + 1) >> 1;
     PolyInvDoublingImpl(m, a, b, tmp, mod);
@@ -1149,9 +1148,9 @@ SL REQUIRES((is_builtin_integer<T>::value)) RETURN(void)
   std::vector<T> tmp(X, X + n);
   int64 t = InvOf(Y[m - 1], mod);
   for (int64 i = n - 1; i >= m - 1; --i) {
-    int64 u = MulModEx(tmp[i], t, mod);
+    int64 u = MulMod(tmp[i], t, mod);
     for (int64 j = i, k = m - 1; k >= 0; --j, --k) {
-      tmp[j] = SubMod(tmp[j], MulModEx(u, Y[k], mod), mod);
+      tmp[j] = SubMod(tmp[j], MulMod(u, Y[k], mod), mod);
     }
     if (q) {
       q[top++] = u;
@@ -1222,7 +1221,7 @@ template <typename T>
 SL REQUIRES((is_builtin_integer<T>::value)) RETURN(void)
     PolyDerivativeImpl(const T* x, int64 m, T* result, int64 mod) {
   for (int64 i = 1; i < m; ++i) {
-    result[i - 1] = MulModEx(x[i], i, mod);
+    result[i - 1] = MulMod(x[i], i, mod);
   }
   result[m - 1] = 0;
 }
@@ -1261,7 +1260,7 @@ SL REQUIRES((is_builtin_integer<T>::value)) RETURN(void)
   std::vector<T> y(m + 1);
   InitInv(&y[0], m, mod);
   for (int64 i = 0; i < m; ++i) {
-    result[i + 1] = MulModEx(x[i], y[i + 1], mod);
+    result[i + 1] = MulMod(x[i], y[i + 1], mod);
   }
   result[0] = static_cast<T>(1 % mod);
 }
@@ -1309,7 +1308,7 @@ SL REQUIRES((is_builtin_integer<T>::value)) RETURN(void)
   InitInv(&y[0], n - 1, mod);
 
   for (int64 i = 0; i < n - 1; ++i) {
-    result[i + 1] = MulModEx(z[i], y[i + 1], mod);
+    result[i + 1] = MulMod(z[i], y[i + 1], mod);
   }
   result[0] = 0;
 }
@@ -1737,8 +1736,8 @@ SL REQUIRES((is_builtin_integer<T>::value)) RETURN(void)
   std::vector<T> T0(2 * d + 2);
   std::vector<T> T1(2 * d + 2);
   for (int64 i = 0; i <= d; ++i) {
-    auto t = MulModEx(h[i], preFactInv[i], mod);
-    t = MulModEx(t, preFactInv[d - i], mod);
+    auto t = MulMod(h[i], preFactInv[i], mod);
+    t = MulMod(t, preFactInv[d - i], mod);
     if ((d - i) & 1) {
       A[i] = t == 0 ? 0 : mod - t;
     } else {
@@ -1748,24 +1747,24 @@ SL REQUIRES((is_builtin_integer<T>::value)) RETURN(void)
 
   T0[0] = T1[0] = 1;
   for (int64 i = -d, j = 1; i <= d; ++i, ++j) {
-    T0[j] = MulModEx(T0[j - 1], offset + i, mod);
+    T0[j] = MulMod(T0[j - 1], offset + i, mod);
   }
 
-  T1[2 * d + 1] = PowerModEx(T0[2 * d + 1], mod - 2, mod);
+  T1[2 * d + 1] = PowerMod(T0[2 * d + 1], mod - 2, mod);
   for (int64 i = d - 1, j = 2 * d; i >= -d; --i, --j) {
-    T1[j] = MulModEx(T1[j + 1], offset + i + 1, mod);
+    T1[j] = MulMod(T1[j + 1], offset + i + 1, mod);
   }
 
   for (int64 i = -d, j = 1; i <= d; ++i, ++j) {
-    B[j - 1] = MulModEx(T1[j], T0[j - 1], mod);
+    B[j - 1] = MulMod(T1[j], T0[j - 1], mod);
   }
 
   PolyMul(&A[0], d + 1, &B[0], 2 * d + 1, &C[0], mod);
   std::copy(&C[0] + d, &C[0] + 2 * d + 1, result);
 
   for (int64 i = 0, j = d + 1; i <= d; ++i, ++j) {
-    result[i] = MulModEx(result[i], T0[j], mod);
-    result[i] = MulModEx(result[i], T1[j - d - 1], mod);
+    result[i] = MulMod(result[i], T0[j], mod);
+    result[i] = MulMod(result[i], T1[j - d - 1], mod);
   }
 }
 }  // namespace pe_internal

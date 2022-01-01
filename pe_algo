@@ -49,22 +49,22 @@ struct FactModer {
     }
 
     for (int i = 0; i <= half_d; ++i) {
-      result[i] = MulModEx(g0_[i], g2_[i], p_);
+      result[i] = MulMod(g0_[i], g2_[i], p_);
     }
     for (int i = half_d + 1, j = 0; i <= half_d * 2; ++i, ++j) {
-      result[i] = MulModEx(g1_[j], g3_[j + 1], p_);
+      result[i] = MulMod(g1_[j], g3_[j + 1], p_);
     }
 
     if (d & 1) {
       uint64 tmp = (v * (d - 1) + 1) % p_;
       for (int i = 0; i <= 2 * half_d; ++i) {
-        result[i] = MulModEx(result[i], tmp++, p_);
+        result[i] = MulMod(result[i], tmp++, p_);
         if (tmp >= p_) tmp -= p_;
       }
       uint64 t = 1;
       uint64 c = d + 1;
       for (int i = 0; i < d; ++i) {
-        t = MulModEx(t, c, p_);
+        t = MulMod(t, c, p_);
         c += v;
         if (c >= p_) c -= p_;
       }
@@ -82,13 +82,13 @@ struct FactModer {
     uint64 ret = 1;
 
     for (uint64 i = m * m + 1; i <= n; ++i) {
-      ret = MulModEx(ret, i, p_);
+      ret = MulMod(ret, i, p_);
     }
 
     Evaluate(static_cast<int>(m), static_cast<uint64*>(&v_[0]), m);
 
     for (int i = 0; i < m; ++i) {
-      ret = MulModEx(ret, v_[i], p_);
+      ret = MulMod(ret, v_[i], p_);
     }
     return static_cast<int64>(ret);
   }
@@ -156,7 +156,7 @@ struct FactSumModer {
     for (int i = static_cast<int>(m - 1); i >= 1; --i) {
       YQ[i] = AddMod(YQ[i], YQ[i - 1], p_);
     }
-    for (auto& i : YQ) i = MulModEx(i, m, p_);
+    for (auto& i : YQ) i = MulMod(i, m, p_);
 
     // V.extend(m)
     V.push_back(m);
@@ -164,7 +164,7 @@ struct FactSumModer {
     // Compute Q
     auto Q = PolyMultipointEvaluate(YQ, V, p_);
     for (int i = 1; i <= m; ++i) {
-      Q[i] = MulModEx(Q[i], Q[i - 1], p_);
+      Q[i] = MulMod(Q[i], Q[i - 1], p_);
     }
 
     // Compute P
@@ -175,14 +175,14 @@ struct FactSumModer {
     // Compute result
     int64 result = P[0];
     for (int i = 1; i < m; ++i) {
-      uint64 t = MulModEx(P[i], Q[i - 1], p_);
+      uint64 t = MulMod(P[i], Q[i - 1], p_);
       result = AddMod(result, t, p_);
     }
 
     uint64 last = Q[m - 1];
     for (int64 i = m * m; i <= static_cast<int64>(n); ++i) {
       result = AddMod(result, last, p_);
-      last = MulModEx(last, i + 1, p_);
+      last = MulMod(last, i + 1, p_);
     }
     return result;
   }
@@ -223,12 +223,12 @@ struct PowerModer {
     powers_.resize(f_ + 1);
     powers_[0] = 1 % mod_;
     for (int64 i = 1; i <= f_; ++i) {
-      powers_[i] = MulModEx<int64, int64, int64>(powers_[i - 1], x_, mod_);
+      powers_[i] = MulMod<int64, int64, int64>(powers_[i - 1], x_, mod_);
     }
     ppowers_.resize(128);
     ppowers_[0] = x_ % mod_;
     for (int i = 1; i < 128; ++i) {
-      ppowers_[i] = MulModEx(ppowers_[i - 1], ppowers_[i - 1], mod_);
+      ppowers_[i] = MulMod(ppowers_[i - 1], ppowers_[i - 1], mod_);
     }
   }
 
@@ -241,7 +241,7 @@ struct PowerModer {
     int64 r = 1 % mod_;
     for (int i = 0; n; n >>= 1, ++i) {
       if (n & 1) {
-        r = MulModEx(r, ppowers_[i], mod_);
+        r = MulMod(r, ppowers_[i], mod_);
       }
     }
     return r;
@@ -276,19 +276,19 @@ struct PowerModerEx {
     powers_.resize(f_);
     powers_[0] = 1 % mod_;
     for (int64 i = 1; i < f_; ++i) {
-      powers_[i] = MulModEx<int64, int64, int64>(powers_[i - 1], x_, mod_);
+      powers_[i] = MulMod<int64, int64, int64>(powers_[i - 1], x_, mod_);
     }
-    c_ = MulModEx(powers_.back(), x_, mod_);
+    c_ = MulMod(powers_.back(), x_, mod_);
 
     const int64 size = (128 + lgf_ - 1) / lgf_;
     ppowers_.resize(size);
     ppowers_[0] = powers_;
 
     for (int64 i = 1; i < size; ++i) {
-      const int64 base = PowerModEx(ppowers_[i - 1][1], f_, mod_);
+      const int64 base = PowerMod(ppowers_[i - 1][1], f_, mod_);
       ppowers_[i].push_back(1 % mod_);
       for (int64 j = 1; j < f_; ++j) {
-        ppowers_[i].push_back(PowerModEx<int64, int64, int64>(base, j, mod_));
+        ppowers_[i].push_back(PowerMod<int64, int64, int64>(base, j, mod_));
       }
     }
   }
@@ -303,7 +303,7 @@ struct PowerModerEx {
     for (int i = 0; n; n >>= lgf_, ++i) {
       const int64 now = n & mask_;
       if (now) {
-        r = MulModEx(r, ppowers_[i][now], mod_);
+        r = MulMod(r, ppowers_[i][now], mod_);
       }
     }
     return r;
@@ -414,7 +414,7 @@ struct CombModer {
     if (m == 1 || m == n - 1) return n % p_;
 
     if (n <= f_) {
-      return MulModEx(MulModEx(fac_[n], ifac_[m], p_), ifac_[n - m], p_);
+      return MulMod(MulMod(fac_[n], ifac_[m], p_), ifac_[n - m], p_);
     }
 
     // It's required that x % p_ <= f_ in the following code.
@@ -429,18 +429,18 @@ struct CombModer {
     if (pp) return 0;
     int64 l = 1, r = 1;
     for (int64 x = n; x; x /= p_) {
-      l = MulModEx(l, Sign(x / p_), p_);
-      l = MulModEx(l, fac_[x % p_], p_);
+      l = MulMod(l, Sign(x / p_), p_);
+      l = MulMod(l, fac_[x % p_], p_);
     }
     for (int64 x = m; x; x /= p_) {
-      r = MulModEx(r, Sign(x / p_), p_);
-      r = MulModEx(r, fac_[x % p_], p_);
+      r = MulMod(r, Sign(x / p_), p_);
+      r = MulMod(r, fac_[x % p_], p_);
     }
     for (int64 x = dist; x; x /= p_) {
-      r = MulModEx(r, Sign(x / p_), p_);
-      r = MulModEx(r, fac_[x % p_], p_);
+      r = MulMod(r, Sign(x / p_), p_);
+      r = MulMod(r, fac_[x % p_], p_);
     }
-    return MulModEx(InvOf(r, p_), l, p_);
+    return MulMod(InvOf(r, p_), l, p_);
   }
 
  private:
@@ -468,7 +468,7 @@ SL int64 ShortCombMod(int64 n, int64 m, int64 mod) {
   }
   int64 ret = 1;
   for (int i = 0; i < size; ++i) {
-    ret = MulModEx(ret, data[i], mod);
+    ret = MulMod(ret, data[i], mod);
   }
   return ret;
 }
@@ -497,19 +497,19 @@ struct CombModerEx {
     if (pp) return 0;
     int64 l = 1, r = 1;
     for (int64 x = n; x; x /= p_) {
-      l = MulModEx(l, Sign(x / p_), p_);
-      l = MulModEx(l, fmoder_.Cal(x % p_), p_);
+      l = MulMod(l, Sign(x / p_), p_);
+      l = MulMod(l, fmoder_.Cal(x % p_), p_);
     }
     for (int64 x = m; x; x /= p_) {
-      r = MulModEx(r, Sign(x / p_), p_);
-      r = MulModEx(r, fmoder_.Cal(x % p_), p_);
+      r = MulMod(r, Sign(x / p_), p_);
+      r = MulMod(r, fmoder_.Cal(x % p_), p_);
     }
     for (int64 x = dist; x; x /= p_) {
-      r = MulModEx(r, Sign(x / p_), p_);
-      r = MulModEx(r, fmoder_.Cal(x % p_), p_);
+      r = MulMod(r, Sign(x / p_), p_);
+      r = MulMod(r, fmoder_.Cal(x % p_), p_);
     }
 
-    return MulModEx(InvOf(r, p_), l, p_);
+    return MulMod(InvOf(r, p_), l, p_);
   }
 
  private:
@@ -549,11 +549,11 @@ struct PowerSumModer {
       for (int j = 1; j < i; ++j) {
         int64 t = p_[i - 1][j - 1] + p_[i - 1][j];
         if (t >= mod_) t -= mod_;
-        p_[i][j] = MulModEx(j, t, mod_);
+        p_[i][j] = MulMod(j, t, mod_);
       }
       p_[i][i] = 1;
       for (int j = 1; j <= i; ++j) {
-        p_[i][i] = MulModEx(p_[i][i], j, mod_);
+        p_[i][i] = MulMod(p_[i][i], j, mod_);
       }
     }
   }
@@ -572,12 +572,12 @@ struct PowerSumModer {
     int64 c = (n + 1) % mod_;
     for (int i = 1; i <= k; ++i) {
       // ret += P[k][i] * ShortCombMod(n + 1, i + 1, mod) % mod;
-      c = MulModEx(c, RegulateMod(n + 1 - i, mod_), mod_);
-      c = MulModEx(c, invs_[i + 1], mod_);
+      c = MulMod(c, RegulateMod(n + 1 - i, mod_), mod_);
+      c = MulMod(c, invs_[i + 1], mod_);
       if (c == 0) {
         break;
       }
-      ret += MulModEx(p_[k][i], c, mod_);
+      ret += MulMod(p_[k][i], c, mod_);
       if (ret >= mod_) ret -= mod_;
     }
     return ret % mod_;
@@ -599,18 +599,18 @@ struct PowerSumModer {
       // ret += P[k][i] * ShortCombMod(n + 1, i + 1, mod) % mod;
       std::tie(A, B) = ExtractFactor(n + 1 - i, mod_);
       d += B;
-      c = MulModEx(c, RegulateMod(A, mod_), mod_);
+      c = MulMod(c, RegulateMod(A, mod_), mod_);
 
       std::tie(A, B) = ExtractFactor(i + 1, mod_);
       d -= B;
-      c = MulModEx(c, invs_[A], mod_);
+      c = MulMod(c, invs_[A], mod_);
 
       if (c == 0) {
         break;
       }
 
       if (d == 0) {
-        ret += MulModEx(p_[k][i], c, mod_);
+        ret += MulMod(p_[k][i], c, mod_);
         if (ret >= mod_) ret -= mod_;
       }
     }
@@ -659,24 +659,24 @@ struct PowerSumModerB {
 
     int64 ret = 0;
 
-    const int64 invn = PowerModEx(n % mod_, mod_ - 2, mod_);
-    int64 c = PowerModEx(n % mod_, k + 1, mod_);
+    const int64 invn = PowerMod(n % mod_, mod_ - 2, mod_);
+    int64 c = PowerMod(n % mod_, k + 1, mod_);
 
     for (int64 i = 0; i <= k; ++i) {
       if (i > 0) {
-        c = MulModEx(c, RegulateMod(k + 2 - i, mod_), mod_);
-        c = MulModEx(c, invs_[i], mod_);
-        c = MulModEx(c, invn, mod_);
+        c = MulMod(c, RegulateMod(k + 2 - i, mod_), mod_);
+        c = MulMod(c, invs_[i], mod_);
+        c = MulMod(c, invn, mod_);
       }
 
       if (c == 0) {
         break;
       }
 
-      ret += MulModEx(c, bnl_[i], mod_);
+      ret += MulMod(c, bnl_[i], mod_);
       if (ret >= mod_) ret -= mod_;
     }
-    ret = MulModEx(ret, invs_[k + 1], mod_);
+    ret = MulMod(ret, invs_[k + 1], mod_);
     return ret;
   }
 
@@ -688,8 +688,8 @@ struct PowerSumModerB {
 
     int64 ret = 0;
 
-    const int64 invn = PowerModEx(n % mod_, mod_ - 2, mod_);
-    int64 c = PowerModEx(n % mod_, k + 1, mod_);
+    const int64 invn = PowerMod(n % mod_, mod_ - 2, mod_);
+    int64 c = PowerMod(n % mod_, k + 1, mod_);
 
     int64 d = 0;
     for (int64 i = 0; i <= k; ++i) {
@@ -698,23 +698,23 @@ struct PowerSumModerB {
 
         std::tie(A, B) = ExtractFactor(k + 2 - i, mod_);
         d += B;
-        c = MulModEx(c, RegulateMod(A, mod_), mod_);
+        c = MulMod(c, RegulateMod(A, mod_), mod_);
 
         std::tie(A, B) = ExtractFactor(i, mod_);
         d -= B;
-        c = MulModEx(c, invs_[A], mod_);
+        c = MulMod(c, invs_[A], mod_);
 
-        c = MulModEx(c, invn, mod_);
+        c = MulMod(c, invn, mod_);
       }
       if (c == 0) {
         break;
       }
       if (d == 0) {
-        ret += MulModEx(c, bnl_[i], mod_);
+        ret += MulMod(c, bnl_[i], mod_);
         if (ret >= mod_) ret -= mod_;
       }
     }
-    ret = MulModEx(ret, invs_[k + 1], mod_);
+    ret = MulMod(ret, invs_[k + 1], mod_);
     return ret;
   }
 
@@ -763,18 +763,18 @@ struct PowerSumModerB1 {
 
     int64 c = 1 % mod_;
     for (int64 i = 1; i <= k1; ++i) {
-      c = MulModEx(c, RegulateMod(k1 - i + 1, mod_), mod_);
-      c = MulModEx(c, invs_[i], mod_);
-      c = MulModEx(c, n1, mod_);
+      c = MulMod(c, RegulateMod(k1 - i + 1, mod_), mod_);
+      c = MulMod(c, invs_[i], mod_);
+      c = MulMod(c, n1, mod_);
 
       if (c == 0) {
         break;
       }
 
-      ret += MulModEx(c, bnl_[k1 - i], mod_);
+      ret += MulMod(c, bnl_[k1 - i], mod_);
       if (ret >= mod_) ret -= mod_;
     }
-    ret = MulModEx(ret, invs_[k1], mod_);
+    ret = MulMod(ret, invs_[k1], mod_);
     return ret;
   }
 
@@ -796,23 +796,23 @@ struct PowerSumModerB1 {
 
       std::tie(A, B) = ExtractFactor(k1 - i + 1, mod_);
       d += B;
-      c = MulModEx(c, RegulateMod(A, mod_), mod_);
+      c = MulMod(c, RegulateMod(A, mod_), mod_);
 
       std::tie(A, B) = ExtractFactor(i, mod_);
       d -= B;
-      c = MulModEx(c, invs_[A], mod_);
+      c = MulMod(c, invs_[A], mod_);
 
-      c = MulModEx(c, n1, mod_);
+      c = MulMod(c, n1, mod_);
 
       if (c == 0) {
         break;
       }
       if (d == 0) {
-        ret += MulModEx(c, bnl_[k1 - i], mod_);
+        ret += MulMod(c, bnl_[k1 - i], mod_);
         if (ret >= mod_) ret -= mod_;
       }
     }
-    ret = MulModEx(ret, invs_[k1], mod_);
+    ret = MulMod(ret, invs_[k1], mod_);
     return ret;
   }
 
@@ -842,17 +842,15 @@ SL void InitPowerSumMod(int64 n, const int maxk, int64* result, T (*comb)[D],
   PE_ASSERT(maxk + 1 < D);
   result[0] = n % mod;
   for (int i = 1; i <= maxk; ++i) {
-    int64 tmp = PowerModEx(n, i + 1, mod);
+    int64 tmp = PowerMod(n, i + 1, mod);
     for (int j = 2; j <= i + 1; ++j) {
       if (j & 1) {
-        tmp =
-            SubMod(tmp, MulModEx(comb[i + 1][j], result[i + 1 - j], mod), mod);
+        tmp = SubMod(tmp, MulMod(comb[i + 1][j], result[i + 1 - j], mod), mod);
       } else {
-        tmp =
-            AddMod(tmp, MulModEx(comb[i + 1][j], result[i + 1 - j], mod), mod);
+        tmp = AddMod(tmp, MulMod(comb[i + 1][j], result[i + 1 - j], mod), mod);
       }
     }
-    result[i] = MulModEx(tmp, InvOf(comb[i + 1][1], mod), mod);
+    result[i] = MulMod(tmp, InvOf(comb[i + 1][1], mod), mod);
   }
 }
 
@@ -860,8 +858,8 @@ SL void InitPowerSumMod(int64 n, const int maxk, int64* result, T (*comb)[D],
 SL int64 P1SumMod(int64 n, int64 mod) {
   if (n == 0) return 0;
   if (n < 0) return RegulateMod(-P1SumMod(-n, mod), mod);
-  return n & 1 ? MulModEx(((n + 1) >> 1) % mod, n % mod, mod)
-               : MulModEx((n >> 1) % mod, (n + 1) % mod, mod);
+  return n & 1 ? MulMod(((n + 1) >> 1) % mod, n % mod, mod)
+               : MulMod((n >> 1) % mod, (n + 1) % mod, mod);
 }
 
 // Calculates sum of arithmetic progression modulo mod.
@@ -876,9 +874,9 @@ SL int64 P1SumMod(int64 a, int64 b, int64 mod, int64 delta = 1) {
   if (delta < 0 && a < b) return 0;
   const int64 maxk = (b - a) / delta;
   PE_ASSERT(maxk >= 0);
-  const int64 t0 = MulModEx((maxk + 1) % mod, RegulateMod(a, mod), mod);
+  const int64 t0 = MulMod((maxk + 1) % mod, RegulateMod(a, mod), mod);
   // delta, 2 delta, maxk delta
-  const int64 t1 = MulModEx(RegulateMod(delta, mod), P1SumMod(maxk, mod), mod);
+  const int64 t1 = MulMod(RegulateMod(delta, mod), P1SumMod(maxk, mod), mod);
   return AddMod(t0, t1, mod);
 }
 
@@ -908,7 +906,7 @@ SL int64 P2SumMod(int64 n, int64 mod) {
       b /= 6;
       break;
   }
-  return MulModEx(a % mod, MulModEx(b % mod, c % mod, mod), mod);
+  return MulMod(a % mod, MulMod(b % mod, c % mod, mod), mod);
 }
 
 // Calculates (1^3 + 2^3 + 3^3 + ... + n^3) % mod.
@@ -916,7 +914,7 @@ SL int64 P3SumMod(int64 n, int64 mod) {
   if (n <= 0) return 0;
   // (n*(n + 1)/2)^2
   const int64 a = P1SumMod(n, mod);
-  return MulModEx(a, a, mod);
+  return MulMod(a, a, mod);
 }
 
 // Calculates (1^4 + 2^4 + 3^4 + ... + n^4) % mod.
@@ -950,11 +948,11 @@ SL int64 P4SumMod(int64 n, int64 mod) {
   if (!done && a % 5 == 0) a /= 5, done = 1;
   if (!done && b % 5 == 0) b /= 5, done = 1;
   if (!done && c % 5 == 0) c /= 5, done = 1;
-  const int64 d = MulModEx(a % mod, MulModEx(b % mod, c % mod, mod), mod);
+  const int64 d = MulMod(a % mod, MulMod(b % mod, c % mod, mod), mod);
   if (done) {
-    const int64 t0 = MulModEx(n % mod, (n + 1) % mod, mod);
-    const int64 t1 = SubMod(MulModEx(3LL, t0, mod), 1, mod);
-    return MulModEx(d, t1, mod);
+    const int64 t0 = MulMod(n % mod, (n + 1) % mod, mod);
+    const int64 t1 = SubMod(MulMod(3LL, t0, mod), 1, mod);
+    return MulMod(d, t1, mod);
   }
   // Handle (3*n*n + 3*n - 1)/5
   switch (n % 5) {
@@ -963,10 +961,9 @@ SL int64 P4SumMod(int64 n, int64 mod) {
     // (n - 1)*(3*(n - 1) + 4) + 5*n
     // (n - 1)*(3 n + 1) + 5*n
     case 1: {
-      const int64 t0 = AddMod(MulModEx(3LL, n, mod), 1, mod);
-      const int64 t1 =
-          AddMod(MulModEx((n - 1) / 5 % mod, t0, mod), n % mod, mod);
-      return MulModEx(d, t1, mod);
+      const int64 t0 = AddMod(MulMod(3LL, n, mod), 1, mod);
+      const int64 t1 = AddMod(MulMod((n - 1) / 5 % mod, t0, mod), n % mod, mod);
+      return MulMod(d, t1, mod);
     }
     // 3*n*n + 3*n - 1 =
     // 3*(n - 3)*(n - 3) + 7*(3*n - 4)
@@ -975,9 +972,9 @@ SL int64 P4SumMod(int64 n, int64 mod) {
     // 3*(n - 3)*(n + 4) + 35
     case 3: {
       const int64 t0 =
-          MulModEx(3LL, MulModEx((n - 3) / 5 % mod, (n + 4) % mod, mod), mod);
+          MulMod(3LL, MulMod((n - 3) / 5 % mod, (n + 4) % mod, mod), mod);
       const int64 t1 = AddMod(t0, 7, mod);
-      return MulModEx(d, t1, mod);
+      return MulMod(d, t1, mod);
     }
     default:
       PE_ASSERT(0);
@@ -1000,20 +997,20 @@ SL int64 P5SumMod(int64 n, int64 mod) {
   int done = 0;
   if (!done && a % 3 == 0) a /= 3, done = 1;
   if (!done && c % 3 == 0) c /= 3, done = 1;
-  const int64 e = MulModEx(MulModEx(a % mod, b % mod, mod),
-                           MulModEx(c % mod, d % mod, mod), mod);
+  const int64 e =
+      MulMod(MulMod(a % mod, b % mod, mod), MulMod(c % mod, d % mod, mod), mod);
   if (done) {
     const int64 t0 = AddMod(n, n, mod);
-    const int64 t1 = MulModEx(t0, n, mod);
+    const int64 t1 = MulMod(t0, n, mod);
     const int64 t2 = SubMod(AddMod(t0, t1, mod), 1, mod);
-    return MulModEx(e, t2, mod);
+    return MulMod(e, t2, mod);
   }
   // Handle (2*n^2 + 2*n - 1)/3
   // We have n%3 = 1
   // 2*n^2 + 2*n - 1 = 2*(n-1)^2 + 6n - 3
-  const int64 t0 = MulModEx((n - 1) / 3 % mod, (n - 1) % mod, mod);
+  const int64 t0 = MulMod((n - 1) / 3 % mod, (n - 1) % mod, mod);
   const int64 t1 = AddMod(AddMod(t0, t0, mod), (2 * n - 1) % mod, mod);
-  return MulModEx(e, t1, mod);
+  return MulMod(e, t1, mod);
 }
 
 // Calculates (1^6 + 2^6 + 3^6 + ... + n^6) % mod.
@@ -1048,54 +1045,54 @@ SL int64 P6SumMod(int64 n, int64 mod) {
   if (!done && a % 7 == 0) a /= 7, done = 1;
   if (!done && b % 7 == 0) b /= 7, done = 1;
   if (!done && c % 7 == 0) c /= 7, done = 1;
-  const int64 d = MulModEx(a % mod, MulModEx(b % mod, c % mod, mod), mod);
+  const int64 d = MulMod(a % mod, MulMod(b % mod, c % mod, mod), mod);
   if (done) {
     const int64 n1 = n % mod;
-    const int64 n2 = MulModEx(n1, n1, mod);
-    const int64 n3 = MulModEx(n1, n2, mod);
-    const int64 n4 = MulModEx(n2, n2, mod);
+    const int64 n2 = MulMod(n1, n1, mod);
+    const int64 n3 = MulMod(n1, n2, mod);
+    const int64 n4 = MulMod(n2, n2, mod);
     const int64 t0 = SubMod(AddMod(n4, 2 * n3 % mod, mod), n1, mod);
-    const int64 t1 = AddMod(MulModEx(3, t0, mod), 1, mod);
-    return MulModEx(d, t1, mod);
+    const int64 t1 = AddMod(MulMod(3, t0, mod), 1, mod);
+    return MulMod(d, t1, mod);
   }
   // Handle (1 - 3*n + 6*n^3 + 3*n^4)/7
   const int64 n1 = n % mod;
-  const int64 n2 = MulModEx(n1, n1, mod);
-  const int64 n3 = MulModEx(n1, n2, mod);
+  const int64 n2 = MulMod(n1, n1, mod);
+  const int64 n3 = MulMod(n1, n2, mod);
   switch (n % 7) {
     // 3*(2 + 3*n + 3*n^2 + n^3)*(n - 1) + 7
     case 1: {
-      const int64 t0 = AddMod(2LL, MulModEx(3LL, n1, mod), mod);
-      const int64 t1 = AddMod(MulModEx(3LL, n2, mod), n3, mod);
-      const int64 t2 = MulModEx(MulModEx(3LL, AddMod(t0, t1, mod), mod),
-                                (n - 1) / 7 % mod, mod);
+      const int64 t0 = AddMod(2LL, MulMod(3LL, n1, mod), mod);
+      const int64 t1 = AddMod(MulMod(3LL, n2, mod), n3, mod);
+      const int64 t2 =
+          MulMod(MulMod(3LL, AddMod(t0, t1, mod), mod), (n - 1) / 7 % mod, mod);
       const int64 t3 = AddMod(t2, 1, mod);
-      return MulModEx(d, t3, mod);
+      return MulMod(d, t3, mod);
     }
     // 3*(15 + 8*n + 4*n^2 + n^3)*(n - 2) + 91
     case 2: {
-      const int64 t0 = AddMod(15LL, MulModEx(8LL, n1, mod), mod);
-      const int64 t1 = AddMod(MulModEx(4LL, n2, mod), n3, mod);
-      const int64 t2 = MulModEx(MulModEx(3LL, AddMod(t0, t1, mod), mod),
-                                (n - 2) / 7 % mod, mod);
+      const int64 t0 = AddMod(15LL, MulMod(8LL, n1, mod), mod);
+      const int64 t1 = AddMod(MulMod(4LL, n2, mod), n3, mod);
+      const int64 t2 =
+          MulMod(MulMod(3LL, AddMod(t0, t1, mod), mod), (n - 2) / 7 % mod, mod);
       const int64 t3 = AddMod(t2, 13LL, mod);
-      return MulModEx(d, t3, mod);
+      return MulMod(d, t3, mod);
     }
     // 3*(-10 + 3 n - n^2 + n^3)*(n + 3) + 91
     case 4: {
-      const int64 t0 = SubMod(MulModEx(3LL, n1, mod), 10LL, mod);
+      const int64 t0 = SubMod(MulMod(3LL, n1, mod), 10LL, mod);
       const int64 t1 = SubMod(n3, n2, mod);
-      const int64 t2 = MulModEx(MulModEx(3LL, AddMod(t0, t1, mod), mod),
-                                (n + 3) / 7 % mod, mod);
+      const int64 t2 =
+          MulMod(MulMod(3LL, AddMod(t0, t1, mod), mod), (n + 3) / 7 % mod, mod);
       const int64 t3 = AddMod(t2, 13LL, mod);
-      return MulModEx(d, t3, mod);
+      return MulMod(d, t3, mod);
     }
     // 3*(-1 + n^3)*(n + 2) + 7
     case 5: {
-      const int64 t0 = MulModEx(3LL, SubMod(n3, 1LL, mod), mod);
-      const int64 t1 = MulModEx(t0, (n + 2) / 7 % mod, mod);
+      const int64 t0 = MulMod(3LL, SubMod(n3, 1LL, mod), mod);
+      const int64 t1 = MulMod(t0, (n + 2) / 7 % mod, mod);
       const int64 t2 = AddMod(t1, 1LL, mod);
-      return MulModEx(d, t2, mod);
+      return MulMod(d, t2, mod);
     }
     default:
       PE_ASSERT(0);
@@ -1125,30 +1122,30 @@ SL int64 P7SumMod(int64 n, int64 mod) {
   // 648 k^4
   const int64 k = n / 6;
   const int64 k1 = k % mod;
-  const int64 k2 = MulModEx(k1, k1, mod);
-  const int64 k3 = MulModEx(k2, k1, mod);
-  const int64 k4 = MulModEx(k2, k2, mod);
+  const int64 k2 = MulMod(k1, k1, mod);
+  const int64 k3 = MulMod(k2, k1, mod);
+  const int64 k4 = MulMod(k2, k2, mod);
   const int64 f1 = n % 6;
   const int64 f2 = f1 * f1;
   const int64 f3 = f2 * f1;
   const int64 f4 = f2 * f2;
-  int64 t0 = SubMod(0LL, MulModEx(4LL, k1, mod), mod);
-  t0 = SubMod(t0, MulModEx(2LL, MulModEx(f1, k1, mod), mod), mod);
-  t0 = AddMod(t0, MulModEx(18LL, MulModEx(f2, k1, mod), mod), mod);
-  t0 = AddMod(t0, MulModEx(12LL, MulModEx(f3, k1, mod), mod), mod);
-  t0 = SubMod(t0, MulModEx(6LL, k2, mod), mod);
-  t0 = AddMod(t0, MulModEx(108LL, MulModEx(f1, k2, mod), mod), mod);
-  t0 = AddMod(t0, MulModEx(108LL, MulModEx(f2, k2, mod), mod), mod);
-  t0 = AddMod(t0, MulModEx(216LL, k3, mod), mod);
-  t0 = AddMod(t0, MulModEx(432LL, MulModEx(f1, k3, mod), mod), mod);
-  t0 = AddMod(t0, MulModEx(648LL, k4, mod), mod);
+  int64 t0 = SubMod(0LL, MulMod(4LL, k1, mod), mod);
+  t0 = SubMod(t0, MulMod(2LL, MulMod(f1, k1, mod), mod), mod);
+  t0 = AddMod(t0, MulMod(18LL, MulMod(f2, k1, mod), mod), mod);
+  t0 = AddMod(t0, MulMod(12LL, MulMod(f3, k1, mod), mod), mod);
+  t0 = SubMod(t0, MulMod(6LL, k2, mod), mod);
+  t0 = AddMod(t0, MulMod(108LL, MulMod(f1, k2, mod), mod), mod);
+  t0 = AddMod(t0, MulMod(108LL, MulMod(f2, k2, mod), mod), mod);
+  t0 = AddMod(t0, MulMod(216LL, k3, mod), mod);
+  t0 = AddMod(t0, MulMod(432LL, MulMod(f1, k3, mod), mod), mod);
+  t0 = AddMod(t0, MulMod(648LL, k4, mod), mod);
   if (done3) {
-    t0 = MulModEx(3LL, t0, mod);
+    t0 = MulMod(3LL, t0, mod);
   }
   const int64 t1 = (3 * f4 + 6 * f3 - f2 - 4 * f1 + 2) / (done3 ? 2 : 6) % mod;
-  const int64 t2 = MulModEx(MulModEx(a % mod, b % mod, mod),
-                            MulModEx(c % mod, d % mod, mod), mod);
-  return MulModEx(AddMod(t0, t1, mod), t2, mod);
+  const int64 t2 =
+      MulMod(MulMod(a % mod, b % mod, mod), MulMod(c % mod, d % mod, mod), mod);
+  return MulMod(AddMod(t0, t1, mod), t2, mod);
 }
 
 SL int64 ApSumMod(int64 n, int64 mod) { return P1SumMod(n, mod); }
@@ -1183,11 +1180,11 @@ SL int64 GpSumMod(int64 x, int64 a, int64 b, int64 mod, int64 zero_p_zero = 1) {
     if (x == 0) return 0;
     if (x == 1) return (b - a + 1) % mod;
     // (x^(b+1)-x^a) / (x - 1)
-    const int64 u = PowerModEx(x, b + 1, mod);
-    const int64 v = PowerModEx(x, a, mod);
+    const int64 u = PowerMod(x, b + 1, mod);
+    const int64 v = PowerMod(x, a, mod);
     const int64 w = SubMod(u, v, mod);
     const int64 t = InvOf(SubMod(x, 1, mod), mod);
-    return MulModEx(w, t, mod);
+    return MulMod(w, t, mod);
   }
   // a == 0 and x == 0
   return zero_p_zero % mod;
@@ -1202,10 +1199,10 @@ SL int64 GpSumModIvx1(int64 x, int64 inv_x_sub_1, int64 a, int64 b, int64 mod,
     if (x == 0) return 0;
     if (x == 1) return (b - a + 1) % mod;
     // (x^(b+1)-x^a) / (x - 1)
-    const int64 u = PowerModEx(x, b + 1, mod);
-    const int64 v = PowerModEx(x, a, mod);
+    const int64 u = PowerMod(x, b + 1, mod);
+    const int64 v = PowerMod(x, a, mod);
     const int64 w = SubMod(u, v, mod);
-    return MulModEx(w, inv_x_sub_1, mod);
+    return MulMod(w, inv_x_sub_1, mod);
   }
   // a == 0 and x == 0
   return zero_p_zero % mod;
@@ -1230,14 +1227,14 @@ SL int64 GpSumMod(int64 x, int64 a, int64 b, int64 mod,
   m[0][0] = x;
   m[1][0] = x;
   m[1][1] = 1;
-  r[0][0] = a == 0 && x == 0 ? zero_p_zero : PowerModEx(x, a, mod);
+  r[0][0] = a == 0 && x == 0 ? zero_p_zero : PowerMod(x, a, mod);
   r[1][0] = r[0][0];
   for (int64 n = b - a; n > 0; n >>= 1) {
     if (n & 1) {
       for (int i = 0; i < 2; ++i) {
         int64 s = 0;
         for (int k = 0; k < 2; ++k) {
-          s = AddMod(s, MulModEx(m[i][k], r[k][0], mod), mod);
+          s = AddMod(s, MulMod(m[i][k], r[k][0], mod), mod);
         }
         t[i][0] = s;
       }
@@ -1248,7 +1245,7 @@ SL int64 GpSumMod(int64 x, int64 a, int64 b, int64 mod,
         for (int j = 0; j < 2; ++j) {
           int64 s = 0;
           for (int k = 0; k < 2; ++k) {
-            s = AddMod(s, MulModEx(m[i][k], m[k][j], mod), mod);
+            s = AddMod(s, MulMod(m[i][k], m[k][j], mod), mod);
           }
           t[i][j] = s;
         }
@@ -1272,16 +1269,16 @@ SL int64 GpSumMod(int64 x, int64 a, int64 b, int64 mod, int64 zero_p_zero = 1) {
   // |x 1|       x^a
   int64 u = x;
   int64 w = x;
-  int64 v1 = a == 0 && x == 0 ? zero_p_zero : PowerModEx(x, a, mod);
+  int64 v1 = a == 0 && x == 0 ? zero_p_zero : PowerMod(x, a, mod);
   int64 v2 = v1;
   for (int64 n = b - a; n > 0; n >>= 1) {
     if (n & 1) {
-      v2 = AddMod(MulModEx(w, v1, mod), v2, mod);
-      v1 = MulModEx(u, v1, mod);
+      v2 = AddMod(MulMod(w, v1, mod), v2, mod);
+      v1 = MulMod(u, v1, mod);
     }
     if (n > 1) {
-      w = AddMod(MulModEx(w, u, mod), w, mod);
-      u = MulModEx(u, u, mod);
+      w = AddMod(MulMod(w, u, mod), w, mod);
+      u = MulMod(u, u, mod);
     }
   }
   return v2;
@@ -1549,8 +1546,7 @@ struct MuPhiSumModer {
     for (int64 i = 2; i <= n;) {
       int64 v = n / i;
       int64 maxi = n / v;
-      ret =
-          SubMod(ret, MulModEx((maxi - i + 1) % mod_, CalSumMu(v), mod_), mod_);
+      ret = SubMod(ret, MulMod((maxi - i + 1) % mod_, CalSumMu(v), mod_), mod_);
       i = maxi + 1;
     }
     return mem_sum_mu_[n] = ret;
@@ -1574,11 +1570,11 @@ struct MuPhiSumModer {
 
       int64 s = 0;
       if (v & 1) {
-        s = MulModEx((v + 1) / 2 % mod_, v % mod_, mod_);
+        s = MulMod((v + 1) / 2 % mod_, v % mod_, mod_);
       } else {
-        s = MulModEx(v / 2 % mod_, (v + 1) % mod_, mod_);
+        s = MulMod(v / 2 % mod_, (v + 1) % mod_, mod_);
       }
-      ret = AddMod(ret, MulModEx(s, x, mod_), mod_);
+      ret = AddMod(ret, MulMod(s, x, mod_), mod_);
       k = maxk + 1;
     }
     return mem_sum_phi_[n] = ret;
@@ -1643,7 +1639,7 @@ struct Sigma0SumModer {
       ret -= mod_;
     }
     const int64 t = SqrtI(n) % mod_;
-    return mem_[n] = SubMod(ret, MulModEx(t, t, mod_), mod_);
+    return mem_[n] = SubMod(ret, MulMod(t, t, mod_), mod_);
   }
 
  private:
@@ -2051,7 +2047,7 @@ SL void PrimeSkExImpl(const int64 /*n*/, int k, int64* PK, TreeType& tree,
   int pid = 0;
   for (int64 p = 2; p <= dva.m; ++p) {
     if (IsPrime(p)) {
-      const int64 pk = PK ? PK[pid] : PowerModEx(p, k, mod);
+      const int64 pk = PK ? PK[pid] : PowerMod(p, k, mod);
       const auto psum = tree.Query(static_cast<int>(p - 1)).value();
       const int64 p2 = p * p;
       const int a = key_size - 1;
@@ -2060,7 +2056,7 @@ SL void PrimeSkExImpl(const int64 /*n*/, int k, int64* PK, TreeType& tree,
         const auto delta = SubMod(
             tree.Query(dva.IdxOfValue(dva.keys[i] / p)).value(), psum, mod);
         const int mini = std::max(dva.IdxOfValue(dva.keys[i] / p * p), b);
-        tree.Update(mini, i, SubMod(0, MulModEx(delta, pk, mod), mod));
+        tree.Update(mini, i, SubMod(0, MulMod(delta, pk, mod), mod));
         i = mini - 1;
       }
       ++pid;
@@ -2302,7 +2298,7 @@ SL std::vector<DVA<NModNumber<CCMod64<mod>>>> PrimeSkPMod(const int64 n, int k,
       }
     }
     for (int i = 1; i < pmod; ++i) {
-      auto t = coe * power_pmod * PowerModEx(i, k - c, mod);
+      auto t = coe * power_pmod * PowerMod(i, k - c, mod);
       // psm.cal() doesn't count x == 0, i.e x^c is 0.
       // If c = 0, we need i^k, so 1 is added.
       // If c > 0, the behavior is expected.
@@ -2314,7 +2310,7 @@ SL std::vector<DVA<NModNumber<CCMod64<mod>>>> PrimeSkPMod(const int64 n, int k,
       }
     }
   }
-  MT y = PowerModEx(pmod, k, mod);
+  MT y = PowerMod(pmod, k, mod);
   for (auto& key : dva.FKeys()) {
     result[0][key] += y * psm.Cal(key / pmod, k);
   }
@@ -2333,7 +2329,7 @@ SL std::vector<DVA<NModNumber<CCMod64<mod>>>> PrimeSkPMod(const int64 n, int k,
     if (p2 > n) break;
     for (auto key : result[0].BKeys()) {
       if (key < p2) break;
-      const int64 coe = PowerModEx(p, k, mod);
+      const int64 coe = PowerMod(p, k, mod);
       const int rp = p % pmod;
       for (int j = 0; j < pmod; ++j) {
         const int next = rp * j % pmod;
@@ -3227,8 +3223,8 @@ struct CarlitzWordsCounter {
 
   int64 Comb(int64 a, int64 b) {
     if (a < 0 || b < 0 || b > a) return 0;
-    int64 t = MulModEx(fac_[a], ifac_[b], mod_);
-    return MulModEx(t, ifac_[a - b], mod_);
+    int64 t = MulMod(fac_[a], ifac_[b], mod_);
+    return MulMod(t, ifac_[a - b], mod_);
   }
 
   int64 Cal(std::vector<int64> vec) {
@@ -3249,7 +3245,7 @@ struct CarlitzWordsCounter {
     int64 ret = 0;
     const int64 size = sz(it);
     for (int64 i = 0; i < size; ++i) {
-      ret = AddMod(ret, MulModEx(fac_[i], it[i], mod_), mod_);
+      ret = AddMod(ret, MulMod(fac_[i], it[i], mod_), mod_);
     }
     return cache_[vec] = ret;
   }
@@ -3258,8 +3254,8 @@ struct CarlitzWordsCounter {
     std::vector<int64> ret(n + 1, 0);
     for (int i = 1; i <= n; ++i) {
       int64 curr = RegulateMod(IsEven(i) ? sgn : -sgn, mod_);
-      curr = MulModEx(curr, Comb(n - 1, n - i), mod_);
-      curr = MulModEx(curr, ifac_[i], mod_);
+      curr = MulMod(curr, Comb(n - 1, n - i), mod_);
+      curr = MulMod(curr, ifac_[i], mod_);
       ret[i] = curr;
     }
     return ret;

@@ -124,38 +124,6 @@ SL REQUIRES((is_builtin_integer<T>::value && is_builtin_integer<TM>::value))
 }
 }  // namespace pe_internal
 
-template <typename T1, typename T2, typename TM>
-SL REQUIRES((is_builtin_integer<T1>::value && is_builtin_integer<T2>::value &&
-             is_builtin_integer<TM>::value))
-    RETURN_T(IntPromotionT(T1, T2, int64, TM)) MulMod(T1 a, T2 b, TM mod) {
-  using T = typename BiggerIntegralN<T1, T2>::type;
-  using atLeastInt64T = typename AtLeastInt64<T>::type;
-  return pe_internal::MulModImpl<atLeastInt64T, TM>(a, b, mod);
-}
-
-template <typename TM, typename T>
-SL T ProdMod(TM /*mod*/, T a) {
-  return a;
-}
-
-template <typename TM, typename TH, typename... TT>
-SL IntPromotion(TH, TT...) ProdMod(TM mod, TH a, TT... b) {
-  return MulMod(a, ProdMod(mod, b...), mod);
-}
-
-template <typename TM, typename T>
-SL REQUIRES((is_builtin_integer<T>::value)) RETURN(T)
-    ProdMod(TM mod, std::initializer_list<T> init) {
-  T ret = 1;
-  if (mod == 1) {
-    return 0;
-  }
-  for (auto& v : init) {
-    ret = MulMod(ret, v, mod);
-  }
-  return ret;
-}
-
 #if PE_HAS_INT128
 // Returns a % b.
 // If possible, it uses an assembly language implementation which requires a / b
@@ -243,9 +211,9 @@ typedef uint64 (*MulModFunctionPointerType)(uint64, uint64, uint64);
 MulModShellCode PROC
 	mov rax, rcx
 	mul rdx
-    Div r8
+  Div r8
 	mov rax, rdx
-    ret
+  ret
 MulModShellCode ENDP
 
 END
@@ -267,7 +235,7 @@ SL REQUIRES((is_builtin_integer<T1>::value && is_builtin_integer<T2>::value &&
              is_builtin_integer<TM>::value &&
              (sizeof(T1) > sizeof(int64) || sizeof(T2) > sizeof(int64) ||
               sizeof(TM) > sizeof(int64)))) RETURN_T(IntPromotionT(T1, T2, TM))
-    MulModEx(T1 a, T2 b, TM mod) {
+    MulMod(T1 a, T2 b, TM mod) {
   using ResultType = typename BiggerIntegralN<T1, T2, TM>::type;
   return static_cast<ResultType>(a) * static_cast<ResultType>(b) %
          static_cast<ResultType>(mod);
@@ -277,7 +245,7 @@ template <typename T1, typename T2, typename TM>
 SL REQUIRES((is_builtin_integer<T1>::value && is_builtin_integer<T2>::value &&
              is_builtin_integer<TM>::value && sizeof(T1) <= sizeof(int64) &&
              sizeof(T2) <= sizeof(int64) && sizeof(TM) <= sizeof(int64)))
-    RETURN_T(IntPromotionT(T1, T2, int64, TM)) MulModEx(T1 a, T2 b, TM mod) {
+    RETURN_T(IntPromotionT(T1, T2, int64, TM)) MulMod(T1 a, T2 b, TM mod) {
   using T = typename BiggerIntegralN<T1, T2>::type;
   using atLeastInt64T = typename AtLeastInt64<T>::type;
   using ResultType = typename BiggerIntegralN<atLeastInt64T, T>::type;
@@ -403,6 +371,36 @@ SL REQUIRES((is_builtin_integer<T1>::value && is_builtin_integer<T2>::value &&
 #endif
 
 #endif
+}
+
+template <typename T1, typename T2, typename TM>
+SL REQUIRES((is_builtin_integer<T1>::value && is_builtin_integer<T2>::value &&
+             is_builtin_integer<TM>::value)) RETURN_T(IntPromotionT(T1, T2, TM))
+    MulModEx(T1 a, T2 b, TM mod) {
+  return MulMod(a, b, mod);
+}
+
+template <typename TM, typename T>
+SL T ProdMod(TM /*mod*/, T a) {
+  return a;
+}
+
+template <typename TM, typename TH, typename... TT>
+SL IntPromotion(TH, TT...) ProdMod(TM mod, TH a, TT... b) {
+  return MulMod(a, ProdMod(mod, b...), mod);
+}
+
+template <typename TM, typename T>
+SL REQUIRES((is_builtin_integer<T>::value)) RETURN(T)
+    ProdMod(TM mod, std::initializer_list<T> init) {
+  T ret = 1;
+  if (mod == 1) {
+    return 0;
+  }
+  for (auto& v : init) {
+    ret = MulMod(ret, v, mod);
+  }
+  return ret;
 }
 
 template <typename TM, typename T>

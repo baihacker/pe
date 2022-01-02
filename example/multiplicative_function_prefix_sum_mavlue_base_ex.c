@@ -44,6 +44,32 @@ struct Solver2 : public MValueBaseEx<Solver2, RT, 8> {
   DVA<int64> dva;
 };
 
+struct Solver3 : public MValueBaseEx<Solver3, RT, 8, true> {
+  RT Batch(int64 n, int64 val, int imp, int64 vmp, int emp, RT now, RT now1) {
+    RT ret = 0;
+    int64 remain = n / val;
+    // we have remain >= vmp
+    // handle val * q where q > vmp
+    if (remain > vmp) {
+      ret += now * BatchF(imp, vmp, remain);
+    }
+    if (val > 1) {
+      // handle val * vmp
+      ret += now1 * F(vmp, emp + 1);
+    } else {
+      // handle f(1)
+      ret += 1;
+    }
+    return ret;
+  }
+  RT F(int64 p, int64 e) { return e + 1; }
+  RT BatchF(int imp, int64 vmp, int64 remain) {
+    return F(2, 1) * RT(dva[remain] - (imp + 1));
+  }
+  void Init(int64 n) { dva = PrimeS0Ex<int64>(n); }
+  DVA<int64> dva;
+};
+
 DVA<int64> dva;
 MVVHistory history_[128];
 int top_;
@@ -94,10 +120,11 @@ int main() {
     int64 a = Solver0().Cal(n);
     int64 b = Solver1().Cal(n);
     int64 c = Solver2().Cal(n);
+    int64 d = Solver3().Cal(n);
     ::dva = PrimeS0Ex<int64>(n);
-    int64 d = Dfs(pcnt, n, 1, -1, 1, 0, 1, 1);
-    std::cout << n << "\t" << a << "\t" << b << "\t" << c << " " << d
-              << std::endl;
+    int64 e = Dfs(pcnt, n, 1, -1, 1, 0, 1, 1);
+    std::cout << n << "\t" << a << "\t" << b << "\t" << c << "\t" << d << "\t"
+              << e << std::endl;
   }
   return 0;
 }

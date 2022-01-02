@@ -2526,9 +2526,13 @@ RT ForMValues(
   return MValueVisitor<RT>(visitor).Cal(n);
 }
 
+template <typename D, typename RT = int64, int TN = 1,
+          bool small_to_large = false>
+struct MValueBaseEx;
+
 // See example/multiplicative_function_prefix_sum.c
-template <typename D, typename RT = int64, int TN = 1>
-struct MValueBaseEx {
+template <typename D, typename RT, int TN>
+struct MValueBaseEx<D, RT, TN, false> {
   RT Batch(int64 n, int64 val, int imp, int64 vmp, int emp, RT now, RT now1) {
     RT ret = 0;
     int64 remain = n / val;
@@ -2602,16 +2606,86 @@ struct MValueBaseEx {
   }
 };
 
+template <typename D, typename RT, int TN>
+struct MValueBaseEx<D, RT, TN, true> {
+  RT Batch(int64 n, int64 val, int imp, int64 vmp, int emp, RT now, RT now1) {
+    RT ret = 0;
+    int64 remain = n / val;
+    // we have remain >= vmp
+    // handle val * q where q > vmp
+    if (remain > vmp) {
+      ret += now * static_cast<D&>(*this).BatchF(imp, vmp, remain);
+    }
+    if (val > 1) {
+      // handle val * vmp
+      ret += now1 * static_cast<D&>(*this).F(vmp, emp + 1);
+    } else {
+      // handle f(1)
+      ret += 1;
+    }
+    return ret;
+  }
+
+  RT Dfs(int start, int limit, int64 n, int64 val, int imp, int64 vmp, int emp,
+         RT now, RT now1) {
+    RT ret = static_cast<D&>(*this).Batch(n, val, imp, vmp, emp, now, now1);
+#if ENABLE_OPENMP
+    if (val == 1 && TN > 1) {
+      PSum<RT> sum_helper;
+#pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
+      for (int i = start; i < limit; ++i) {
+        const int64 p = plist[i];
+        const int64 val_limit = n / p / p;
+        int e = 1;
+        for (int64 nextval = val * p;; ++e) {
+          RT t = static_cast<D&>(*this).F(p, e);
+          sum_helper += Dfs(i + 1, limit, n, nextval, i, p, e, now * t, now);
+          if (nextval > val_limit) break;
+          nextval *= p;
+        }
+      }
+      ret += sum_helper.value();
+    } else {
+#endif
+      for (int i = start; i < limit; ++i) {
+        const int64 p = plist[i];
+        const int64 val_limit = n / p / p;
+        if (val > val_limit) break;
+        int e = 1;
+        for (int64 nextval = val * p;; ++e) {
+          RT t = static_cast<D&>(*this).F(p, e);
+          ret += Dfs(i + 1, limit, n, nextval, i, p, e, now * t, now);
+          if (nextval > val_limit) break;
+          nextval *= p;
+        }
+      }
+#if ENABLE_OPENMP
+    }
+#endif
+    return ret;
+  }
+
+  RT F(int64 /*p*/, int64 /*e*/) { return 1; }
+  RT BatchF(int /*imp*/, int64 /*vmp*/, int64 /*remain*/) { return 1; }
+  void Init(int64 n) {}
+  RT Cal(int64 n) {
+    static_cast<D&>(*this).Init(n);
+    return Dfs(0, FindPrimeIdxSg(n), n, 1, -1, 1, 0, 1, 1);
+  }
+};
+
 // The lite version assumes that F(p, e) is only related to e.
 // In other words, F(p1, e) = F(p2, e) for two different primes p1, p2.
-template <typename D, typename RT = int64, int TN = 1>
-struct MValueBaseExLite : public MValueBaseEx<D, RT, TN> {
+template <typename D, typename RT = int64, int TN = 1,
+          bool small_to_large = false>
+struct MValueBaseExLite : public MValueBaseEx<D, RT, TN, small_to_large> {
   RT BatchF(int imp, int64 /*vmp*/, int64 remain) {
     return static_cast<D&>(*this).F(2, 1) * RT(dva[remain] - (imp + 1));
   }
   void Init(int64 n) { dva = PrimeS0Ex<int64>(n); }
   DVA<int64> dva;
 };
+
 
 // Returns the number of integer solutions of
 // x^2+y^2=z^2 where 0 < x < y, 0 < z <= n.

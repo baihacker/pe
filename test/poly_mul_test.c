@@ -2,6 +2,7 @@
 
 namespace poly_mul_test {
 #if HAS_POLY_MUL_FLINT || HAS_POLY_MUL_NTT64
+#define ONLY_TEST_PE_POLY_MUL 0
 using poly_mul_t = std::vector<uint64> (*)(const std::vector<uint64>&,
                                            const std::vector<uint64>&, int64);
 struct MulImpl {
@@ -10,7 +11,7 @@ struct MulImpl {
   const char* name;
 };
 MulImpl mul_impl[] = {
-#if HAS_POLY_MUL_FLINT
+#if HAS_POLY_MUL_FLINT && !ONLY_TEST_PE_POLY_MUL
     {&poly_flint::PolyMulNMod<uint64>, 4, "flint n"},
     {&poly_flint::PolyMulPrime<uint64>, 4, "flint p"},
 #else
@@ -23,19 +24,19 @@ MulImpl mul_impl[] = {
 #if HAS_POLY_MUL_NTT64
     {&ntt64::PolyMulSmall<uint64>, 1, "ntt64 s"},
 #endif
-#if HAS_POLY_MUL_FLINT && HAS_POLY_MUL_NTT64
+#if HAS_POLY_MUL_FLINT && HAS_POLY_MUL_NTT64 && !ONLY_TEST_PE_POLY_MUL
     {&ntt64::PolyMulLarge<uint64>, 4, "ntt64 l"},
 #endif
-#if HAS_POLY_MUL_MIN25_SMALL
+#if HAS_POLY_MUL_MIN25_SMALL && !ONLY_TEST_PE_POLY_MUL
     {&poly_min25::PolyMulSmall<uint64>, 1, "Min_25 s"},
 #endif
-#if HAS_POLY_MUL_MIN25
+#if HAS_POLY_MUL_MIN25 && !ONLY_TEST_PE_POLY_MUL
     {&poly_min25::PolyMulLarge<uint64>, 4, "Min_25 l"},
 #endif
-#if HAS_POLY_MUL_LIBBF
+#if HAS_POLY_MUL_LIBBF && !ONLY_TEST_PE_POLY_MUL
     {&poly_libbf::PolyMul<uint64>, 4, "libbf"},
 #endif
-#if HAS_POLY_MUL_NTL
+#if HAS_POLY_MUL_NTL && !ONLY_TEST_PE_POLY_MUL
     {&poly_ntl::PolyMulLargeMod<uint64>, 4, "ntl lm"},
     {&poly_ntl::PolyMul<uint64>, 4, "ntl"},
 #endif

@@ -1393,5 +1393,136 @@ struct SAM {
   int top_;
   int last_;
 };
+
+struct TableFormatter {
+  enum ColumnAlign { LEFT = 0, MIDDLE = 1, RIGHT = 2 };
+  struct ColumnFormat {
+    int width_base = 0;
+    int width_inc = 0;
+    ColumnAlign align = LEFT;
+
+    std::string Render(const std::string& str, int column_width = 0) {
+      int width = width_base;
+      if (width_base == 0) {
+        width = column_width ? column_width : str.size();
+      }
+      width += width_inc;
+      if (width < str.size()) {
+        return str.substr(0, width);
+      } else if (width == str.size()) {
+        return str;
+      } else {
+        const int diff = width - str.size();
+        int left_padding = 0, right_padding = 0;
+        if (align == LEFT) {
+          right_padding = diff;
+        } else if (align == RIGHT) {
+          left_padding = diff;
+        } else {
+          left_padding = diff >> 1;
+          right_padding = width - left_padding;
+        }
+        auto result = str;
+        if (left_padding > 0) {
+          std::string t;
+          for (int i = 0; i < left_padding; ++i) {
+            t.append(" ");
+          }
+          result += t;
+        }
+        for (int i = 0; i < right_padding; ++i) {
+          result.append(" ");
+        }
+        return result;
+      }
+    }
+  };
+
+  TableFormatter() { default_format_.width_inc = 4; }
+
+  TableFormatter& SetDefaultFormat(const ColumnFormat& format) {
+    default_format_ = format;
+    return *this;
+  }
+
+  TableFormatter& SetDefaultFormat(int idx, const ColumnFormat& format) {
+    column_format_map_[idx] = format;
+    return *this;
+  }
+
+  TableFormatter& Push(const std::vector<std::string>& line) {
+    raw_lines_.push_back(line);
+    return *this;
+  }
+
+  TableFormatter& Prepare() {
+    column_widths_.clear();
+    int idx = 0;
+    for (auto& iter : raw_lines_) {
+      int t = static_cast<int>(iter.size());
+      while (column_widths_.size() < t) {
+        column_widths_.push_back(0);
+      }
+      for (int i = 0; i < t; ++i) {
+        int t = static_cast<int>(iter[i].size());
+        if (t > column_widths_[i]) {
+          column_widths_[i] = t;
+        }
+      }
+    }
+    return *this;
+  }
+
+  std::vector<std::string> Render() {
+    Prepare();
+    std::vector<std::string> result;
+    for (auto& iter : raw_lines_) {
+      const int column_size = static_cast<int>(iter.size());
+      std::stringstream ss;
+      for (int i = 0; i < column_size; ++i) {
+        ss << RenderColumn(i, iter[i]);
+      }
+      result.push_back(ss.str());
+    }
+    return result;
+  }
+
+  void Render(std::ostream& o) {
+    Prepare();
+    for (auto& iter : raw_lines_) {
+      const int column_size = static_cast<int>(iter.size());
+      for (int i = 0; i < column_size; ++i) {
+        o << RenderColumn(i, iter[i]);
+      }
+      o << std::endl;
+    }
+  }
+
+  std::string RenderColumn(int idx, const std::string& content) {
+    return GetFormat(idx).Render(
+        content, idx < column_widths_.size() ? column_widths_[idx] : 0);
+  }
+
+  ColumnFormat GetFormat(int idx) {
+    auto where = column_format_map_.find(idx);
+    if (where != column_format_map_.end()) {
+      return where->second;
+    }
+    return default_format_;
+  }
+
+  std::vector<std::string>& AppendLine() {
+    raw_lines_.push_back({});
+    return raw_lines_.back();
+  }
+
+  std::vector<std::string>& AtLine(int idx) { return raw_lines_[idx]; }
+
+ public:
+  ColumnFormat default_format_;
+  std::vector<std::vector<std::string>> raw_lines_;
+  std::vector<int> column_widths_;
+  std::map<int, ColumnFormat> column_format_map_;
+};
 }  // namespace pe
 #endif

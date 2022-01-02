@@ -116,6 +116,7 @@ RT Dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, RT now,
 int main() {
   PE_INIT(maxp = 2000000);
 
+  TableFormatter tf;
   for (int64 n = 1; n <= 100000000; n *= 10) {
     int64 a = Solver0().Cal(n);
     int64 b = Solver1().Cal(n);
@@ -123,8 +124,14 @@ int main() {
     int64 d = Solver3().Cal(n);
     ::dva = PrimeS0Ex<int64>(n);
     int64 e = Dfs(pcnt, n, 1, -1, 1, 0, 1, 1);
-    std::cout << n << "\t" << a << "\t" << b << "\t" << c << "\t" << d << "\t"
-              << e << std::endl;
+    auto& line = tf.AppendLine();
+    line.push_back(pe::ToString(n));
+    line.push_back(pe::ToString(a));
+    line.push_back(pe::ToString(b));
+    line.push_back(pe::ToString(c));
+    line.push_back(pe::ToString(d));
+    line.push_back(pe::ToString(e));
   }
+  tf.Render(std::cout);
   return 0;
 }

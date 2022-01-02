@@ -1,7 +1,8 @@
 #include "pe_test.h"
 
-#define ONLY_TEST_PE_POLY_MUL 1
-#include "poly_mul_test.c"
+#define ONLY_RUN_PE_IMPLEMENTATION 1
+//#include "poly_mul_test.c"
+//#include "poly_div_test.c"
 
 PeTest& GetTester() {
   static PeTest tester;

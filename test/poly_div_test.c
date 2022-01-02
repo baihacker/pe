@@ -1,6 +1,9 @@
 #include "pe_test.h"
 
 namespace poly_div_test {
+#if !defined(ONLY_RUN_PE_IMPLEMENTATION)
+#define ONLY_RUN_PE_IMPLEMENTATION 0
+#endif
 using poly_div_t = std::vector<uint64> (*)(const std::vector<uint64>&,
                                            const std::vector<uint64>&, int64);
 struct DivImpl {
@@ -12,10 +15,10 @@ struct DivImpl {
 DivImpl div_impl[] = {
     {&PolyDivDc<uint64>, 1, "dc"},
     {&PolyDivNormal<uint64>, 0, "normal"},
-#if HAS_POLY_FLINT
+#if HAS_POLY_FLINT && !ONLY_RUN_PE_IMPLEMENTATION
     {&poly_flint::PolyDiv<uint64>, 1, "flint"},
 #endif
-#if HAS_POLY_NTL
+#if HAS_POLY_NTL && !ONLY_RUN_PE_IMPLEMENTATION
     {&poly_ntl::PolyDivLargeMod<uint64>, 1, "ntl lm"},
     {&poly_ntl::PolyDiv<uint64>, 1, "ntl"},
 #endif

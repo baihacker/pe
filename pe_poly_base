@@ -205,10 +205,11 @@ SL REQUIRES((is_builtin_integer<T>::value)) RETURN(void)
         const int64 half_h = h >> 1;
         const int64 limit = j + half_h;
         for (int64 k = j; k < limit; ++k) {
-          const auto u = data[k] % mod;
-          const auto t = static_cast<uint64>(*omg++) * data[k + half_h] % mod;
-          data[k] = (u + t) % mod;
-          data[k + half_h] = (u + mod - t) % mod;
+          const auto u = data[k];
+          const auto t =
+              MulMod(static_cast<uint64>(*omg++), data[k + half_h], mod);
+          data[k] = AddMod(u, t, mod);
+          data[k + half_h] = SubMod(u, t, mod);
         }
       }
     } else {
@@ -220,11 +221,11 @@ SL REQUIRES((is_builtin_integer<T>::value)) RETURN(void)
         const int64 half_h = h >> 1;
         const int64 limit = j + half_h;
         for (int64 k = j; k < limit; ++k) {
-          const auto u = data[k] % mod;
-          const auto t = omgn * data[k + half_h] % mod;
-          data[k] = (u + t) % mod;
-          data[k + half_h] = (u + mod - t) % mod;
-          omgn = omgn * moder.omg[id] % mod;
+          const auto u = data[k];
+          const auto t = MulMod(omgn, data[k + half_h], mod);
+          data[k] = AddMod(u, t, mod);
+          data[k + half_h] = SubMod(u, t, mod);
+          omgn = MulMod(omgn, moder.omg[id], mod);
         }
       }
     }
@@ -502,15 +503,15 @@ SL REQUIRES((is_builtin_integer<T>::value)) RETURN(void)
         const int64 half_h = h >> 1;
         const int64 limit = j + half_h;
         for (int64 k = j; k < limit; ++k) {
-          const auto u = data[k] % mod;
+          const auto u = data[k];
 #if PE_HAS_INT128
           const auto t = Uint128ModUint64(
               static_cast<uint128>(*omg++) * data[k + half_h], mod);
 #else
           const auto t = MulMod(*omg++, data[k + half_h], mod);
 #endif
-          data[k] = (u + t) % mod;
-          data[k + half_h] = (u + mod - t) % mod;
+          data[k] = AddMod(u, t, mod);
+          data[k + half_h] = SubMod(u, t, mod);
         }
       }
     } else {
@@ -522,15 +523,15 @@ SL REQUIRES((is_builtin_integer<T>::value)) RETURN(void)
         const int64 half_h = h >> 1;
         const int64 limit = j + half_h;
         for (int64 k = j; k < limit; ++k) {
-          const auto u = data[k] % mod;
+          const auto u = data[k];
 #if PE_HAS_INT128
           const auto t = Uint128ModUint64(
               static_cast<uint128>(omgn) * data[k + half_h], mod);
 #else
           const auto t = MulMod(omgn, data[k + half_h], mod);
 #endif
-          data[k] = (u + t) % mod;
-          data[k + half_h] = (u + mod - t) % mod;
+          data[k] = AddMod(u, t, mod);
+          data[k + half_h] = SubMod(u, t, mod);
 #if PE_HAS_INT128
           omgn =
               Uint128ModUint64(static_cast<uint128>(omgn) * moder.omg[id], mod);

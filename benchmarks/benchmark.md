@@ -1,23 +1,21 @@
-# Benchmark
-
-## Ntt benchmark
-
-### Test Environment:
+# Test Environment
 
 * Date: 2022.01.02
 * OS:  Win11 Pro 21H2 (22000.376)
 * CPU: [i9-9900K](https://en.wikichip.org/wiki/intel/core_i9/i9-9900k)
 * Compiler: gcc version 11.2.0 (Rev2, Built by MSYS2 project)
 * Msys2: msys2-x86_64-20210725
-* Test code: [Poly mul test](https://github.com/baihacker/pe/blob/master/test/poly_mul_test.c)
 * Build:
   * [Build and use pe's dependent libraries](https://github.com/baihacker/pe/blob/master/libraries_on_win64.md#build-and-use-pes-dependent-libraries)
   * Build test target:
   > -o a.exe --std=c++17 -fno-diagnostics-color -O3 -march=native -mtune=native -fopenmp -lquadmath -Wl,--stack,268435456 -static -lbf -lgmpxx -lflint -lmpfr -lntl -lgmp -lprimesieve -lprimecount
 
-### Test result
+# PolyMul benchmark
+* Test code: [Poly mul test](https://github.com/baihacker/pe/blob/master/test/poly_mul_test.c)
 
-#### Openmp enabled
+## Test result
+
+### Openmp enabled
 ```cpp
 Begin PolyMulTest
 config   : data = random, size = 1, n = 1000000, mod = 100019
@@ -142,7 +140,7 @@ Time usage 0:00:01:06.799
 time usage: 0:00:01:48.330
 ```
 
-#### Openmp disabled (option "-fopenmp" removed)
+### Openmp disabled (option "-fopenmp" removed)
 ```cpp
 Begin PolyMulTest
 config   : data = random, size = 1, n = 1000000, mod = 100019

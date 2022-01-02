@@ -2,7 +2,9 @@
 
 namespace poly_mul_test {
 #if HAS_POLY_MUL_FLINT || HAS_POLY_MUL_NTT64
+#if !defined(ONLY_TEST_PE_POLY_MUL)
 #define ONLY_TEST_PE_POLY_MUL 0
+#endif
 using poly_mul_t = std::vector<uint64> (*)(const std::vector<uint64>&,
                                            const std::vector<uint64>&, int64);
 struct MulImpl {

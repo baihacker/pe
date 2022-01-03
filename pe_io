@@ -3,6 +3,7 @@
 
 #include "pe_base"
 #include "pe_int128"
+#include "pe_type_traits"
 
 namespace pe {
 template <typename T>
@@ -80,5 +81,83 @@ inline int128 ReadValue<int128>() {
   T DV_IMPL(PE_NARG(__VA_ARGS__), pe::ReadValue<T>(), __VA_ARGS__)
 #define DVC(T, ...) \
   const T DV_IMPL(PE_NARG(__VA_ARGS__), pe::ReadValue<T>(), __VA_ARGS__)
+}  // namespace pe
+
+namespace pe {
+
+#if OS_TYPE_WIN
+SL bool CopyStringToClipboard(const std::string& s) {
+  OpenClipboard(0);
+  EmptyClipboard();
+  HGLOBAL hg = GlobalAlloc(GMEM_MOVEABLE, s.size() + 1);
+  if (!hg) {
+    CloseClipboard();
+    return false;
+  }
+  memcpy(GlobalLock(hg), s.c_str(), s.size());
+  GlobalUnlock(hg);
+  SetClipboardData(CF_TEXT, hg);
+  CloseClipboard();
+  GlobalFree(hg);
+  return true;
+}
+
+SL int PromptYesAndNo(const std::string& title, const std::string& content) {
+  return MessageBoxA(NULL, content.c_str(), title.c_str(), MB_OKCANCEL) == 1;
+}
+
+SL void PromptAnswer(const std::string& str) {
+  std::cout << "Answer:" << std::endl << str << std::endl;
+  if (PromptYesAndNo("Copy to clipboard?", str)) {
+    CopyStringToClipboard(str);
+  }
+}
+
+#else
+SL void PromptAnswer(const std::string& str) {
+  std::cout << "Answer:" << std::endl << str << std::endl;
+}
+#endif
+
+template <typename T>
+SL REQUIRES((is_general_integer<T>::value)) RETURN(void)
+    PromptAnswer(const T& v) {
+  PromptAnswer(ToString(v));
+}
+
+template <typename... T>
+SL void PromptAnswer(const std::string& format, T... v) {
+  char buff[1024];
+  sprintf(buff, format.c_str(), v...);
+  PromptAnswer(buff);
+}
+
+struct AnswerPrompter {
+  template <typename... T>
+  AnswerPrompter& operator()(const std::string& format, T... v) {
+    char buff[1024];
+    sprintf(buff, format.c_str(), v...);
+    PromptAnswer(buff);
+    return *this;
+  }
+};
+
+template <typename T>
+SL REQUIRES((is_general_integer<T>::value)) RETURN(AnswerPrompter&) operator<<(
+    AnswerPrompter& ap, T v) {
+  PromptAnswer(ToString(v));
+  return ap;
+}
+
+template <typename T>
+SL REQUIRES((!is_general_integer<T>::value)) RETURN(AnswerPrompter&) operator<<(
+    AnswerPrompter& ap, T v) {
+  std::stringstream ss;
+  ss << v;
+  PromptAnswer(v);
+  return ap;
+}
+
+static AnswerPrompter ap;
 }  // namespace pe
 #endif

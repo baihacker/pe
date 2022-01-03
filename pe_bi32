@@ -84,6 +84,7 @@ using BiAllocator = pe_internal::BiAllocatorStd;
 // Member fields
 class BigInteger {
   static_assert(sizeof(unsigned int) == sizeof(uint32));
+
  public:
   static constexpr unsigned int max_32bit_value = 0xFFFFFFFF;
   static constexpr uint64 bit32_value = 1ULL << 32;
@@ -92,6 +93,8 @@ class BigInteger {
 
   static constexpr unsigned int div32_bit = 5;
   static constexpr unsigned int mod32_mask = 31;
+
+  static constexpr int div_bit_size = 4;
 
  private:
   template <typename T>
@@ -421,6 +424,71 @@ class BigInteger {
 
   template <typename T>
   REQUIRES((is_builtin_integer<T>::value))
+  RETURN(std::vector<T>) ToKBits(int k, int fix_size = 1) const {
+    if (k == 1) {
+      return ToBinaryVector<T>(fix_size);
+    }
+    // k = 1, 2, 4
+    const unsigned mask = (1U << k) - 1;
+    const int blocks = 32 / k;
+    std::vector<T> ret;
+    for (int i = 0; i <= pos_; ++i) {
+      auto t = data_[i];
+      for (int j = 0; j < blocks; ++j) {
+        ret.push_back(t & mask);
+        t >>= k;
+      }
+    }
+    if (fix_size) {
+      FixSize(ret);
+    }
+    return ret;
+  }
+
+  template <typename T>
+  REQUIRES((is_builtin_integer<T>::value))
+  RETURN(void) FromKBits(int k, const std::vector<T>& v) {
+    if (k == 1) {
+      FromBinaryVector(v);
+      return;
+    }
+    if (v.empty()) {
+      Reserve(1);
+      data_[0] = 0;
+      sign_ = 0;
+      return;
+    }
+
+    const auto n = static_cast<unsigned int>(v.size());
+    unsigned int need = (n * k + 31) >> 5;
+    Reserve(need);
+
+    unsigned int value = 0;
+    int offset = 0;
+    for (unsigned i = 0; i < n; ++i) {
+      if (v[i]) {
+        value |= v[i] << offset;
+      }
+      offset += k;
+      if (offset == 32) {
+        data_[pos_++] = value;
+        value = 0;
+        offset = 0;
+      }
+    }
+    if (value) {
+      data_[pos_++] = value;
+    }
+    if (pos_ > 0) {
+      --pos_;
+    }
+    sign_ = 1;
+    FixLeadingZeros();
+    FixSign();
+  }
+
+  template <typename T>
+  REQUIRES((is_builtin_integer<T>::value))
   RETURN(std::vector<T>) ToBinaryVector(int fix_size = 1) const {
     std::vector<T> ret;
     for (int i = 0; i <= pos_; ++i) {
@@ -686,6 +754,128 @@ class BigInteger {
   }
 
   template <typename T>
+  static std::vector<T> AbsDivideInternal(const int k, const std::vector<T>& l,
+                                          const std::vector<T>& r,
+                                          std::vector<T>& remain) {
+    const T mask = (1U << k) - 1;
+
+    std::vector<std::vector<T>> tdata;
+    tdata.push_back({0});
+    tdata.push_back(r);
+    for (int i = 2; i < 1 << k; ++i) {
+      const std::vector<T>& a = tdata[i - 1];
+      const std::vector<T>& b = r;
+      const int sizea = static_cast<int>(a.size());
+      const int sizeb = static_cast<int>(b.size());
+      const int size = std::max(sizea, sizeb);
+      std::vector<T> result;
+      T inc = 0;
+      for (int j = 0; j < size; ++j) {
+        T x = inc;
+        if (j < sizea) x += a[j];
+        if (j < sizeb) x += b[j];
+        result.push_back(x & mask);
+        inc = x >> k;
+      }
+      while (inc > 0) {
+        result.push_back(inc & mask);
+        inc >>= k;
+      }
+      tdata.push_back(result);
+    }
+
+    std::vector<T> result;
+    remain = l;
+
+    const int r_size = static_cast<int>(r.size());
+    int pos = static_cast<int>(l.size()) - 1;
+    int end = pos - r_size + 1;
+
+    for (; end >= 0;) {
+      if (pos - end + 1 < r_size) {
+        result.push_back(0);
+        --end;
+        continue;
+      }
+      if (remain[pos] == 0) {
+        --pos;
+        continue;
+      }
+      int idx = remain[pos] / (r[r_size - 1] + 1);
+      int is_equal = 0;
+      while (idx < (1 << k)) {
+        const auto& who = tdata[idx];
+        int cmp = 0;
+        if (who.size() < pos - end + 1) {
+          ++idx;
+          continue;
+        }
+        if (who.size() > pos - end + 1) {
+          break;
+        }
+        for (int i = pos, j = who.size() - 1; i >= end; --i, --j) {
+          if (who[j] > remain[i]) {
+            cmp = 1;
+            break;
+          } else if (who[j] < remain[i]) {
+            cmp = -1;
+            break;
+          }
+        }
+        if (cmp == 1 || cmp == 0) {
+          if (cmp == 0) {
+            is_equal = 1;
+          }
+          break;
+        }
+        ++idx;
+      }
+      if (is_equal) {
+        result.push_back(idx);
+        for (int i = pos; i >= end; --i) {
+          remain[i] = 0;
+        }
+        --end;
+      } else {
+        --idx;
+        result.push_back(idx);
+        auto& who = tdata[idx];
+        const int size = static_cast<int>(who.size());
+        int borrow = 0;
+        int i = end, j = 0;
+        for (; j < size; ++i, ++j) {
+          int next_borrow = 0;
+          auto t = remain[i];
+          while (t < who[j] + borrow) {
+            t += 1 << k;
+            ++next_borrow;
+          }
+          remain[i] = t - who[j] - borrow;
+          borrow = next_borrow;
+        }
+
+        for (; i <= pos; ++i) {
+          int next_borrow = 0;
+          int t = remain[i];
+          while (t < borrow) {
+            t += 1 << k;
+            ++next_borrow;
+          }
+          remain[i] = t - borrow;
+          borrow = next_borrow;
+        }
+        --end;
+      }
+    }
+
+    if (result.size() == 0) result.push_back(0);
+    std::reverse(result.begin(), result.end());
+    FixSize(result);
+    FixSize(remain);
+    return result;
+  }
+
+  template <typename T>
   static std::vector<T> AbsDivideInternal(const std::vector<T>& l,
                                           const std::vector<T>& r,
                                           std::vector<T>& remain) {
@@ -775,13 +965,15 @@ class BigInteger {
       return 1;
     }
 
+    const int k = div_bit_size;
+
     std::vector<unsigned int> rb;
     std::vector<unsigned int> rr = AbsDivideInternal<unsigned int>(
-        l.ToBinaryVector<unsigned int>(), r.ToBinaryVector<unsigned int>(), rb);
-    remain.FromBinaryVector(rb);
+        k, l.ToKBits<unsigned int>(k), r.ToKBits<unsigned int>(k), rb);
+    remain.FromKBits(k, rb);
 
     BigInteger ret(pe_internal::zero_initialize_tag);
-    ret.FromBinaryVector(rr);
+    ret.FromKBits(k, rr);
 
     return ret;
   }
@@ -801,12 +993,14 @@ class BigInteger {
       return 1;
     }
 
+    const int k = div_bit_size;
+
     std::vector<unsigned int> rb;
     std::vector<unsigned int> rr = AbsDivideInternal<unsigned int>(
-        l.ToBinaryVector<unsigned int>(), r.ToBinaryVector<unsigned int>(), rb);
+        k, l.ToKBits<unsigned int>(k), r.ToKBits<unsigned int>(k), rb);
 
     BigInteger ret(pe_internal::zero_initialize_tag);
-    ret.FromBinaryVector(rr);
+    ret.FromKBits(k, rr);
 
     return ret;
   }

@@ -1396,19 +1396,25 @@ struct SAM {
 
 struct TableFormatter {
   enum ColumnAlign { NO_ALIGN = 0, LEFT = 1, MIDDLE = 2, RIGHT = 3 };
+  struct ColumnContext {
+    int max_row_width = 0;
+    int column_idx = 0;
+    int column_count = 0;
+  };
+
   struct ColumnFormat {
     ColumnAlign align = LEFT;
     int width_base = 0;
     int width_inc = 0;
 
-    std::string Render(const std::string& str, int column_width = 0) {
+    std::string Render(const std::string& str, const ColumnContext& cc) {
       if (align == NO_ALIGN) {
         return str;
       }
       int width = width_base;
       const int str_size = static_cast<int>(str.size());
       if (width_base == 0) {
-        width = column_width ? column_width : str_size;
+        width = cc.max_row_width >= 0 ? cc.max_row_width : str_size;
       }
       width += width_inc;
       if (width < str_size) {
@@ -1517,7 +1523,8 @@ struct TableFormatter {
 
   std::string RenderColumn(int idx, const std::string& content) {
     return GetFormat(idx).Render(
-        content, idx < column_widths_.size() ? column_widths_[idx] : 0);
+        content, {idx < column_widths_.size() ? column_widths_[idx] : -1, idx,
+                  static_cast<int>(column_widths_.size())});
   }
 
   ColumnFormat GetFormat(int idx) {

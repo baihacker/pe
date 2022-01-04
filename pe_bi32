@@ -174,42 +174,6 @@ class BigInteger {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value))
-  RETURN(void) FromBinaryVector(const std::vector<T>& v) {
-    if (v.empty()) {
-      Reserve(1);
-      data_[0] = 0;
-      sign_ = 0;
-      return;
-    }
-
-    const auto n = static_cast<unsigned int>(v.size());
-    unsigned int need = (n + 31) >> 5;
-    Reserve(need);
-
-    unsigned int value = 0;
-    unsigned int flag = 1;
-    for (unsigned i = 0; i < n; ++i) {
-      if (v[i]) {
-        value |= flag;
-      }
-      flag <<= 1;
-      if (((i + 1) & mod32_mask) == 0) {
-        data_[pos_++] = value;
-        value = 0;
-        flag = 1;
-      }
-    }
-    if (n & mod32_mask) {
-      data_[pos_++] = value;
-    }
-    --pos_;
-    sign_ = 1;
-    FixLeadingZeros();
-    FixSign();
-  }
-
-  template <typename T>
   REQUIRES((is_extended_integer<T>::value && pe_is_unsigned<T>::value))
   RETURN(void) FromExtendedInt(const T& value) {
     FromUInt32Vector(value.ToUInt32Vector());
@@ -427,7 +391,7 @@ class BigInteger {
   REQUIRES((is_builtin_integer<T>::value))
   RETURN(std::vector<T>) ToKBits(int k, int fix_size = 1) const {
     if (k == 1) {
-      return ToBinaryVector<T>(fix_size);
+      return ToBinary<T>(fix_size);
     }
     const unsigned mask = (1U << k) - 1;
     const int blocks = 32 / k;
@@ -449,7 +413,7 @@ class BigInteger {
   REQUIRES((is_builtin_integer<T>::value))
   RETURN(void) FromKBits(int k, const std::vector<T>& v) {
     if (k == 1) {
-      FromBinaryVector(v);
+      FromBinary(v);
       return;
     }
     if (v.empty()) {
@@ -489,7 +453,7 @@ class BigInteger {
 
   template <typename T>
   REQUIRES((is_builtin_integer<T>::value))
-  RETURN(std::vector<T>) ToBinaryVector(int fix_size = 1) const {
+  RETURN(std::vector<T>) ToBinary(int fix_size = 1) const {
     std::vector<T> ret;
     for (int i = 0; i <= pos_; ++i) {
       auto t = data_[i];
@@ -502,6 +466,42 @@ class BigInteger {
       FixSize(ret);
     }
     return ret;
+  }
+
+  template <typename T>
+  REQUIRES((is_builtin_integer<T>::value))
+  RETURN(void) FromBinary(const std::vector<T>& v) {
+    if (v.empty()) {
+      Reserve(1);
+      data_[0] = 0;
+      sign_ = 0;
+      return;
+    }
+
+    const auto n = static_cast<unsigned int>(v.size());
+    unsigned int need = (n + 31) >> 5;
+    Reserve(need);
+
+    unsigned int value = 0;
+    unsigned int flag = 1;
+    for (unsigned i = 0; i < n; ++i) {
+      if (v[i]) {
+        value |= flag;
+      }
+      flag <<= 1;
+      if (((i + 1) & mod32_mask) == 0) {
+        data_[pos_++] = value;
+        value = 0;
+        flag = 1;
+      }
+    }
+    if (n & mod32_mask) {
+      data_[pos_++] = value;
+    }
+    --pos_;
+    sign_ = 1;
+    FixLeadingZeros();
+    FixSign();
   }
 
   void SetNativeUInt64AndKeepSign(uint64 v) {
@@ -1677,7 +1677,7 @@ class BigInteger {
       v[j] = (l[x] >> y) & 1;
     }
     BigInteger ret(pe_internal::zero_initialize_tag);
-    ret.FromBinaryVector(v);
+    ret.FromBinary(v);
     ret.FixLeadingZeros();
     ret.sign_ = l.sign_;
     ret.FixSign();
@@ -1709,7 +1709,7 @@ class BigInteger {
     }
 
     BigInteger ret(pe_internal::zero_initialize_tag);
-    ret.FromBinaryVector(v);
+    ret.FromBinary(v);
     ret.FixLeadingZeros();
     ret.sign_ = l.sign_;
     ret.FixSign();

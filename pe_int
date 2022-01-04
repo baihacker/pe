@@ -166,5 +166,209 @@ static_assert(PeNumberUtil<uint128>);
 // Modular arithmetic is implemented in pe_mod.
 // Other utilities are implemented in pe_nt_base and pe_nt.
 
+namespace pe_internal {
+template <typename T>
+SL void FixSize(std::vector<T>& v) {
+  if (v.empty()) v.push_back(0);
+  int now = static_cast<int>(v.size()) - 1;
+  while (now > 0 && v[now] == 0) --now;
+  v.resize(now + 1);
+}
+
+template <typename T>
+SL std::vector<T> AbsDivide(const std::vector<T>& l, const std::vector<T>& r,
+                            std::vector<T>& remain) {
+  std::vector<T> result;
+  remain = l;
+
+  const int r_size = static_cast<int>(r.size());
+  int pos = static_cast<int>(l.size()) - 1;
+  int end = pos - r_size + 1;
+  for (; end >= 0;) {
+    if (pos - end + 1 < r_size) {
+      result.push_back(0);
+      --end;
+      continue;
+    }
+    if (remain[pos] == 0) {
+      --pos;
+      continue;
+    }
+    int gt = 1;
+    if (pos - end + 1 == r_size) {
+      for (int i = pos, j = r_size - 1; i >= end; --i, --j) {
+        if (remain[i] < r[j]) {
+          gt = 0;
+          break;
+        } else if (remain[i] > r[j]) {
+          break;
+        }
+      }
+    }
+    result.push_back(gt);
+    if (gt == 0) {
+      --end;
+      continue;
+    }
+
+    int borrow = 0;
+    int i = end, j = 0;
+    for (; j < r_size; ++i, ++j) {
+      int next_borrow = 0;
+      auto t = remain[i];
+      while (t < r[j] + borrow) {
+        t += 2;
+        ++next_borrow;
+      }
+      remain[i] = t - r[j] - borrow;
+      borrow = next_borrow;
+    }
+
+    for (; i <= pos; ++i) {
+      int next_borrow = 0;
+      int t = remain[i];
+      while (t < borrow) {
+        t += 2;
+        ++next_borrow;
+      }
+      remain[i] = t - borrow;
+      borrow = next_borrow;
+    }
+    --end;
+  }
+
+  if (result.size() == 0) result.push_back(0);
+  std::reverse(result.begin(), result.end());
+  FixSize(result);
+  FixSize(remain);
+  return result;
+}
+
+template <typename T>
+SL std::vector<T> AbsDivide(const int k, const std::vector<T>& l,
+                            const std::vector<T>& r, std::vector<T>& remain) {
+  if (k == 1) {
+    return AbsDivide(l, r, remain);
+  }
+
+  const T mask = (1U << k) - 1;
+
+  std::vector<std::vector<T>> tdata;
+  tdata.push_back({0});
+  tdata.push_back(r);
+  for (int i = 2; i < 1 << k; ++i) {
+    const std::vector<T>& a = tdata[i - 1];
+    const std::vector<T>& b = r;
+    const int sizea = static_cast<int>(a.size());
+    const int sizeb = static_cast<int>(b.size());
+    const int size = std::max(sizea, sizeb);
+    std::vector<T> result;
+    T inc = 0;
+    for (int j = 0; j < size; ++j) {
+      T x = inc;
+      if (j < sizea) x += a[j];
+      if (j < sizeb) x += b[j];
+      result.push_back(x & mask);
+      inc = x >> k;
+    }
+    while (inc > 0) {
+      result.push_back(inc & mask);
+      inc >>= k;
+    }
+    tdata.push_back(result);
+  }
+
+  std::vector<T> result;
+  remain = l;
+
+  const int r_size = static_cast<int>(r.size());
+  int pos = static_cast<int>(l.size()) - 1;
+  int end = pos - r_size + 1;
+
+  for (; end >= 0;) {
+    if (pos - end + 1 < r_size) {
+      result.push_back(0);
+      --end;
+      continue;
+    }
+    if (remain[pos] == 0) {
+      --pos;
+      continue;
+    }
+    int idx = remain[pos] / (r[r_size - 1] + 1);
+    int is_equal = 0;
+    while (idx < (1 << k)) {
+      const auto& who = tdata[idx];
+      int cmp = 0;
+      if (who.size() < pos - end + 1) {
+        ++idx;
+        continue;
+      }
+      if (who.size() > pos - end + 1) {
+        break;
+      }
+      for (int i = pos, j = static_cast<int>(who.size()) - 1; i >= end;
+           --i, --j) {
+        if (who[j] > remain[i]) {
+          cmp = 1;
+          break;
+        } else if (who[j] < remain[i]) {
+          cmp = -1;
+          break;
+        }
+      }
+      if (cmp == 1 || cmp == 0) {
+        if (cmp == 0) {
+          is_equal = 1;
+        }
+        break;
+      }
+      ++idx;
+    }
+    if (is_equal) {
+      result.push_back(idx);
+      for (int i = pos; i >= end; --i) {
+        remain[i] = 0;
+      }
+      --end;
+    } else {
+      --idx;
+      result.push_back(idx);
+      auto& who = tdata[idx];
+      const int size = static_cast<int>(who.size());
+      int borrow = 0;
+      int i = end, j = 0;
+      for (; j < size; ++i, ++j) {
+        int next_borrow = 0;
+        auto t = remain[i];
+        while (t < who[j] + borrow) {
+          t += 1 << k;
+          ++next_borrow;
+        }
+        remain[i] = t - who[j] - borrow;
+        borrow = next_borrow;
+      }
+
+      for (; i <= pos; ++i) {
+        int next_borrow = 0;
+        int t = remain[i];
+        while (t < borrow) {
+          t += 1 << k;
+          ++next_borrow;
+        }
+        remain[i] = t - borrow;
+        borrow = next_borrow;
+      }
+      --end;
+    }
+  }
+
+  if (result.size() == 0) result.push_back(0);
+  std::reverse(result.begin(), result.end());
+  FixSize(result);
+  FixSize(remain);
+  return result;
+}
+}  // namespace pe_internal
 }  // namespace pe
 #endif

@@ -374,28 +374,29 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   RETURN(std::vector<T>) ToKBits(int k, int fix_size = 1) const {
     if (k == 1) {
       return ToBinary<T>(fix_size);
-    }
-    const unsigned mask = (1U << k) - 1;
-    const int blocks = half_bitsize / k;
-    std::vector<T> ret;
-    {
-      auto t = low_;
-      for (int j = 0; j < blocks; ++j) {
-        ret.push_back(t & mask);
-        t >>= k;
+    } else {
+      const unsigned mask = (1U << k) - 1;
+      const int blocks = half_bitsize / k;
+      std::vector<T> ret;
+      {
+        auto t = low_;
+        for (int j = 0; j < blocks; ++j) {
+          ret.push_back(t & mask);
+          t >>= k;
+        }
       }
-    }
-    {
-      auto t = hi_;
-      for (int j = 0; j < blocks; ++j) {
-        ret.push_back(t & mask);
-        t >>= k;
+      {
+        auto t = hi_;
+        for (int j = 0; j < blocks; ++j) {
+          ret.push_back(t & mask);
+          t >>= k;
+        }
       }
+      if (fix_size) {
+        FixSize(ret);
+      }
+      return ret;
     }
-    if (fix_size) {
-      FixSize(ret);
-    }
-    return ret;
   }
 
   template <typename T>
@@ -403,17 +404,17 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   RETURN(void) FromKBits(const int k, const T* bits, const int n) {
     if (k == 1) {
       FromBinary(bits, n);
-      return;
-    }
-    const int blocks = half_bitsize / k;
-    hi_ = 0;
-    for (int i = std::min(2 * blocks - 1, n - 1); i >= blocks; --i) {
-      hi_ = (hi_ << k) | bits[i];
-    }
+    } else {
+      const int blocks = half_bitsize / k;
+      hi_ = 0;
+      for (int i = std::min(2 * blocks - 1, n - 1); i >= blocks; --i) {
+        hi_ = (hi_ << k) | bits[i];
+      }
 
-    low_ = 0;
-    for (int i = std::min(blocks - 1, n - 1); i >= 0; --i) {
-      low_ = (low_ << k) | bits[i];
+      low_ = 0;
+      for (int i = std::min(blocks - 1, n - 1); i >= 0; --i) {
+        low_ = (low_ << k) | bits[i];
+      }
     }
   }
 
@@ -1396,14 +1397,15 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   RETURN(std::vector<T>) ToKBits(int k, int fix_size = 1) const {
     if (k == 1) {
       return ToBinary<T>(fix_size);
-    }
-    std::vector<T> r = low_.template ToKBits<T>(k, 0);
-    if (!fix_size || !hi_.IsZero()) {
-      r.reserve(bitsize / k);
-      for (auto& iter : hi_.template ToKBits<T>(k, 0)) r.push_back(iter);
-    }
-    if (fix_size) {
-      FixSize(r);
+    } else {
+      std::vector<T> r = low_.template ToKBits<T>(k, 0);
+      if (!fix_size || !hi_.IsZero()) {
+        r.reserve(bitsize / k);
+        for (auto& iter : hi_.template ToKBits<T>(k, 0)) r.push_back(iter);
+      }
+      if (fix_size) {
+        FixSize(r);
+      }
     }
   }
 
@@ -1423,13 +1425,14 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     if (k == 1) {
       FromBinary(bits, n);
       return;
-    }
-    low_.FromKBits(k, bits, n);
-    int need = half_bitsize / k;
-    if (n >= need) {
-      hi_.FromKBits(k, bits + need, n - need);
     } else {
-      hi_.MakeZeroBits();
+      low_.FromKBits(k, bits, n);
+      int need = half_bitsize / k;
+      if (n > need) {
+        hi_.FromKBits(k, bits + need, n - need);
+      } else {
+        hi_.MakeZeroBits();
+      }
     }
   }
 

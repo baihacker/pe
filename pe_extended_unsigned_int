@@ -369,13 +369,15 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     }
   }
 
-  std::vector<uint32_t> ToKBits(int k, int fix_size = 1) const {
+  template <typename T>
+  REQUIRES((is_builtin_integer<T>::value))
+  RETURN(std::vector<T>) ToKBits(int k, int fix_size = 1) const {
     if (k == 1) {
-      return ToBinaryVector(fix_size);
+      return ToBinaryVector<T>(fix_size);
     }
     const unsigned mask = (1U << k) - 1;
     const int blocks = half_bitsize / k;
-    std::vector<uint32_t> ret;
+    std::vector<T> ret;
     {
       auto t = low_;
       for (int j = 0; j < blocks; ++j) {
@@ -396,7 +398,9 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     return ret;
   }
 
-  void FromKBits(const int k, const uint32_t* bits, const int n) {
+  template <typename T>
+  REQUIRES((is_builtin_integer<T>::value))
+  RETURN(void) FromKBits(const int k, const T* bits, const int n) {
     if (k == 1) {
       FromBinaryVector(bits, n);
       return;
@@ -413,7 +417,9 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     }
   }
 
-  void FromKBits(int k, const std::vector<uint32_t>& bits) {
+  template <typename T>
+  REQUIRES((is_builtin_integer<T>::value))
+  RETURN(void) FromKBits(int k, const std::vector<T>& bits) {
     if (k == 1) {
       FromBinaryVector(&bits[0], static_cast<int>(bits.size()));
     } else {
@@ -421,8 +427,10 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     }
   }
 
-  std::vector<uint32_t> ToBinaryVector(int fix_size = 1) const {
-    std::vector<uint32_t> r;
+  template <typename T>
+  REQUIRES((is_builtin_integer<T>::value))
+  RETURN(std::vector<T>) ToBinaryVector(int fix_size = 1) const {
+    std::vector<T> r;
     r.reserve(bitsize);
     ET t = low_;
     for (int i = 0; i < half_bitsize; ++i) {
@@ -442,7 +450,9 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     return r;
   }
 
-  void FromBinaryVector(const uint32_t* bits, const int n) {
+  template <typename T>
+  REQUIRES((is_builtin_integer<T>::value))
+  RETURN(void) FromBinaryVector(const T* bits, const int n) {
     hi_ = 0;
     for (int i = std::min(bitsize - 1, n - 1); i >= half_bitsize; --i) {
       hi_ = (hi_ << 1) | bits[i];
@@ -454,7 +464,9 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     }
   }
 
-  void FromBinaryVector(const std::vector<uint32_t>& bits) {
+  template <typename T>
+  REQUIRES((is_builtin_integer<T>::value))
+  RETURN(void) FromBinaryVector(const std::vector<T>& bits) {
     FromBinaryVector(&bits[0], static_cast<int>(bits.size()));
   }
 
@@ -492,14 +504,15 @@ struct ExtendedUnsignedIntImpl<ET, true> {
       std::vector<uint32_t> remain;
 
       std::vector<uint32_t> result = pe_internal::AbsDivide<uint32_t>(
-          self.ToBinaryVector(), other.ToBinaryVector(), remain);
+          self.ToBinaryVector<uint32_t>(), other.ToBinaryVector<uint32_t>(),
+          remain);
 
       self.FromBinaryVector(result);
     } else {
       std::vector<uint32_t> remain;
 
       std::vector<uint32_t> result = pe_internal::AbsDivide<uint32_t>(
-          k, self.ToKBits(k), other.ToKBits(k), remain);
+          k, self.ToKBits<uint32_t>(k), other.ToKBits<uint32_t>(k), remain);
 
       self.FromKBits(k, result);
     }
@@ -545,7 +558,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
       std::vector<uint32_t> r;
 
       std::vector<uint32_t> result = pe_internal::AbsDivide<uint32_t>(
-          self.ToBinaryVector(), other.ToBinaryVector(), r);
+          self.ToBinaryVector<uint32_t>(), other.ToBinaryVector<uint32_t>(), r);
 
       self.FromBinaryVector(result);
       remain.FromBinaryVector(r);
@@ -554,7 +567,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
       std::vector<uint32_t> r;
 
       std::vector<uint32_t> result = pe_internal::AbsDivide<uint32_t>(
-          k, self.ToKBits(k), other.ToKBits(k), r);
+          k, self.ToKBits<uint32_t>(k), other.ToKBits<uint32_t>(k), r);
 
       self.FromKBits(k, result);
       remain.FromKBits(k, r);
@@ -593,16 +606,17 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     if (k > 1) {
       std::vector<uint32_t> remain;
 
-      pe_internal::AbsDivide<uint32_t>(self.ToBinaryVector(),
-                                       other.ToBinaryVector(), remain);
+      pe_internal::AbsDivide<uint32_t>(self.ToBinaryVector<uint32_t>(),
+                                       other.ToBinaryVector<uint32_t>(),
+                                       remain);
 
       self.FromBinaryVector(remain);
 
     } else {
       std::vector<uint32_t> remain;
 
-      pe_internal::AbsDivide<uint32_t>(k, self.ToKBits(k), other.ToKBits(k),
-                                       remain);
+      pe_internal::AbsDivide<uint32_t>(k, self.ToKBits<uint32_t>(k),
+                                       other.ToKBits<uint32_t>(k), remain);
 
       self.FromKBits(k, remain);
     }
@@ -1379,21 +1393,25 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     }
   }
 
-  std::vector<uint32_t> ToKBits(int k, int fix_size = 1) const {
+  template <typename T>
+  REQUIRES((is_builtin_integer<T>::value))
+  RETURN(std::vector<T>) ToKBits(int k, int fix_size = 1) const {
     if (k == 1) {
-      return ToBinaryVector(fix_size);
+      return ToBinaryVector<T>(fix_size);
     }
-    std::vector<uint32_t> r;
-    for (auto& iter : low_.ToKBits(k, 0)) r.push_back(iter);
+    std::vector<T> r = low_.template ToKBits<T>(k, 0);
     if (!fix_size || !hi_.IsZero()) {
-      for (auto& iter : hi_.ToKBits(k, 0)) r.push_back(iter);
+      r.reserve(bitsize / k);
+      for (auto& iter : hi_.template ToKBits<T>(k, 0)) r.push_back(iter);
     }
     if (fix_size) {
       FixSize(r);
     }
   }
 
-  void FromKBits(int k, const std::vector<uint32_t>& bits) {
+  template <typename T>
+  REQUIRES((is_builtin_integer<T>::value))
+  RETURN(void) FromKBits(int k, const std::vector<T>& bits) {
     if (k == 1) {
       FromBinaryVector(&bits[0], static_cast<int>(bits.size()));
     } else {
@@ -1401,7 +1419,9 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     }
   }
 
-  void FromKBits(int k, const uint32_t* bits, const int n) {
+  template <typename T>
+  REQUIRES((is_builtin_integer<T>::value))
+  RETURN(void) FromKBits(int k, const T* bits, const int n) {
     if (k == 1) {
       FromBinaryVector(bits, n);
       return;
@@ -1415,12 +1435,13 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     }
   }
 
-  std::vector<uint32_t> ToBinaryVector(int fix_size = 1) const {
-    std::vector<uint32_t> r;
-    r.reserve(bitsize);
-    for (auto& iter : low_.ToBinaryVector(0)) r.push_back(iter);
+  template <typename T>
+  REQUIRES((is_builtin_integer<T>::value))
+  RETURN(std::vector<T>) ToBinaryVector(int fix_size = 1) const {
+    std::vector<T> r = low_.template ToBinaryVector<T>(0);
     if (!fix_size || !hi_.IsZero()) {
-      for (auto& iter : hi_.ToBinaryVector(0)) r.push_back(iter);
+      r.reserve(bitsize);
+      for (auto& iter : hi_.template ToBinaryVector<T>(0)) r.push_back(iter);
     }
     if (fix_size) {
       FixSize(r);
@@ -1428,11 +1449,15 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     return r;
   }
 
-  void FromBinaryVector(const std::vector<uint32_t>& bits) {
+  template <typename T>
+  REQUIRES((is_builtin_integer<T>::value))
+  RETURN(void) FromBinaryVector(const std::vector<T>& bits) {
     FromBinaryVector(&bits[0], static_cast<int>(bits.size()));
   }
 
-  void FromBinaryVector(const uint32_t* bits, const int n) {
+  template <typename T>
+  REQUIRES((is_builtin_integer<T>::value))
+  RETURN(std::vector<T>) FromBinaryVector(const T* bits, const int n) {
     low_.FromBinaryVector(bits, n);
     if (n > half_bitsize) {
       hi_.FromBinaryVector(bits + half_bitsize, n - half_bitsize);
@@ -1476,14 +1501,15 @@ struct ExtendedUnsignedIntImpl<ET, false> {
       std::vector<uint32_t> remain;
 
       std::vector<uint32_t> result = pe_internal::AbsDivide<uint32_t>(
-          self.ToBinaryVector(), other.ToBinaryVector(), remain);
+          self.ToBinaryVector<uint32_t>(), other.ToBinaryVector<uint32_t>(),
+          remain);
 
       self.FromBinaryVector(result);
     } else {
       std::vector<uint32_t> remain;
 
       std::vector<uint32_t> result = pe_internal::AbsDivide<uint32_t>(
-          k, self.ToKBits(k), other.ToKBits(k), remain);
+          k, self.ToKBits<uint32_t>(k), other.ToKBits<uint32_t>(k), remain);
 
       self.FromKBits(k, result);
     }
@@ -1530,7 +1556,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
       std::vector<uint32_t> r;
 
       std::vector<uint32_t> result = pe_internal::AbsDivide<uint32_t>(
-          self.ToBinaryVector(), other.ToBinaryVector(), r);
+          self.ToBinaryVector<uint32_t>(), other.ToBinaryVector<uint32_t>(), r);
 
       self.FromBinaryVector(result);
       remain.FromBinaryVector(r);
@@ -1538,7 +1564,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
       std::vector<uint32_t> r;
 
       std::vector<uint32_t> result = pe_internal::AbsDivide<uint32_t>(
-          k, self.ToKBits(k), other.ToKBits(k), r);
+          k, self.ToKBits<uint32_t>(k), other.ToKBits<uint32_t>(k), r);
 
       self.FromKBits(k, result);
       remain.FromKBits(k, r);
@@ -1578,15 +1604,16 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     if (k == 1) {
       std::vector<uint32_t> remain;
 
-      pe_internal::AbsDivide<uint32_t>(self.ToBinaryVector(),
-                                       other.ToBinaryVector(), remain);
+      pe_internal::AbsDivide<uint32_t>(self.ToBinaryVector<uint32_t>(),
+                                       other.ToBinaryVector<uint32_t>(),
+                                       remain);
 
       self.FromBinaryVector(remain);
     } else {
       std::vector<uint32_t> remain;
 
-      pe_internal::AbsDivide<uint32_t>(k, self.ToKBits(k), other.ToKBits(k),
-                                       remain);
+      pe_internal::AbsDivide<uint32_t>(k, self.ToKBits<uint32_t>(k),
+                                       other.ToKBits<uint32_t>(k), remain);
 
       self.FromKBits(k, remain);
     }

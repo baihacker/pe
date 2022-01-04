@@ -45,6 +45,8 @@ struct ExtendedUnsignedIntImpl<ET, true> {
 
   constexpr static ET hibit_mask = (static_cast<ET>(1) << (half_bitsize - 1));
 
+  static constexpr int div_bit_size = 1;
+
   using UnsignedT = ExtendedUnsignedIntImpl<ET, true>;
   using SignedT = ExtendedSignedIntImpl<ET, true>;
 
@@ -367,6 +369,58 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     }
   }
 
+  std::vector<uint32_t> ToKBits(int k, int fix_size = 1) const {
+    if (k == 1) {
+      return ToBinaryVector(fix_size);
+    }
+    const unsigned mask = (1U << k) - 1;
+    const int blocks = half_bitsize / k;
+    std::vector<uint32_t> ret;
+    {
+      auto t = low_;
+      for (int j = 0; j < blocks; ++j) {
+        ret.push_back(t & mask);
+        t >>= k;
+      }
+    }
+    {
+      auto t = hi_;
+      for (int j = 0; j < blocks; ++j) {
+        ret.push_back(t & mask);
+        t >>= k;
+      }
+    }
+    if (fix_size) {
+      FixSize(ret);
+    }
+    return ret;
+  }
+
+  void FromKBits(const int k, const uint32_t* bits, const int n) {
+    if (k == 1) {
+      FromBinaryVector(bits, n);
+      return;
+    }
+    const int blocks = half_bitsize / k;
+    hi_ = 0;
+    for (int i = std::min(2 * blocks - 1, n - 1); i >= blocks; --i) {
+      hi_ = (hi_ << k) | bits[i];
+    }
+
+    low_ = 0;
+    for (int i = std::min(blocks - 1, n - 1); i >= 0; --i) {
+      low_ = (low_ << k) | bits[i];
+    }
+  }
+
+  void FromKBits(int k, const std::vector<uint32_t>& bits) {
+    if (k == 1) {
+      FromBinaryVector(&bits[0], static_cast<int>(bits.size()));
+    } else {
+      FromKBits(k, &bits[0], static_cast<int>(bits.size()));
+    }
+  }
+
   std::vector<uint32_t> ToBinaryVector(int fix_size = 1) const {
     std::vector<uint32_t> r;
     r.reserve(bitsize);
@@ -388,18 +442,20 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     return r;
   }
 
-  void FromBinaryVector(const std::vector<uint32_t>& bits) {
+  void FromBinaryVector(const uint32_t* bits, const int n) {
     hi_ = 0;
-    for (int i = std::min(bitsize - 1, static_cast<int>(bits.size()) - 1);
-         i >= half_bitsize; --i) {
+    for (int i = std::min(bitsize - 1, n - 1); i >= half_bitsize; --i) {
       hi_ = (hi_ << 1) | bits[i];
     }
 
     low_ = 0;
-    for (int i = std::min(half_bitsize - 1, static_cast<int>(bits.size()) - 1);
-         i >= 0; --i) {
+    for (int i = std::min(half_bitsize - 1, n - 1); i >= 0; --i) {
       low_ = (low_ << 1) | bits[i];
     }
+  }
+
+  void FromBinaryVector(const std::vector<uint32_t>& bits) {
+    FromBinaryVector(&bits[0], static_cast<int>(bits.size()));
   }
 
   static std::vector<uint32_t> DivideInternal(const std::vector<uint32_t>& l,
@@ -470,6 +526,132 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     return result;
   }
 
+  static std::vector<uint32_t> DivideInternal(const int k,
+                                              const std::vector<uint32_t>& l,
+                                              const std::vector<uint32_t>& r,
+                                              std::vector<uint32_t>& remain) {
+    if (k == 1) {
+      return DivideInternal(l, r, remain);
+    }
+
+    const uint32_t mask = (1U << k) - 1;
+
+    std::vector<std::vector<uint32_t>> tdata;
+    tdata.push_back({0});
+    tdata.push_back(r);
+    for (int i = 2; i < 1 << k; ++i) {
+      const std::vector<uint32_t>& a = tdata[i - 1];
+      const std::vector<uint32_t>& b = r;
+      const int sizea = static_cast<int>(a.size());
+      const int sizeb = static_cast<int>(b.size());
+      const int size = std::max(sizea, sizeb);
+      std::vector<uint32_t> result;
+      uint32_t inc = 0;
+      for (int j = 0; j < size; ++j) {
+        uint32_t x = inc;
+        if (j < sizea) x += a[j];
+        if (j < sizeb) x += b[j];
+        result.push_back(x & mask);
+        inc = x >> k;
+      }
+      while (inc > 0) {
+        result.push_back(inc & mask);
+        inc >>= k;
+      }
+      tdata.push_back(result);
+    }
+
+    std::vector<uint32_t> result;
+    remain = l;
+
+    const int r_size = static_cast<int>(r.size());
+    int pos = static_cast<int>(l.size()) - 1;
+    int end = pos - r_size + 1;
+
+    for (; end >= 0;) {
+      if (pos - end + 1 < r_size) {
+        result.push_back(0);
+        --end;
+        continue;
+      }
+      if (remain[pos] == 0) {
+        --pos;
+        continue;
+      }
+      int idx = remain[pos] / (r[r_size - 1] + 1);
+      int is_equal = 0;
+      while (idx < (1 << k)) {
+        const auto& who = tdata[idx];
+        int cmp = 0;
+        if (who.size() < pos - end + 1) {
+          ++idx;
+          continue;
+        }
+        if (who.size() > pos - end + 1) {
+          break;
+        }
+        for (int i = pos, j = static_cast<int>(who.size()) - 1; i >= end;
+             --i, --j) {
+          if (who[j] > remain[i]) {
+            cmp = 1;
+            break;
+          } else if (who[j] < remain[i]) {
+            cmp = -1;
+            break;
+          }
+        }
+        if (cmp == 1 || cmp == 0) {
+          if (cmp == 0) {
+            is_equal = 1;
+          }
+          break;
+        }
+        ++idx;
+      }
+      if (is_equal) {
+        result.push_back(idx);
+        for (int i = pos; i >= end; --i) {
+          remain[i] = 0;
+        }
+        --end;
+      } else {
+        --idx;
+        result.push_back(idx);
+        auto& who = tdata[idx];
+        const int size = static_cast<int>(who.size());
+        int borrow = 0;
+        int i = end, j = 0;
+        for (; j < size; ++i, ++j) {
+          int next_borrow = 0;
+          auto t = remain[i];
+          while (t < who[j] + borrow) {
+            t += 1 << k;
+            ++next_borrow;
+          }
+          remain[i] = t - who[j] - borrow;
+          borrow = next_borrow;
+        }
+
+        for (; i <= pos; ++i) {
+          int next_borrow = 0;
+          int t = remain[i];
+          while (t < borrow) {
+            t += 1 << k;
+            ++next_borrow;
+          }
+          remain[i] = t - borrow;
+          borrow = next_borrow;
+        }
+        --end;
+      }
+    }
+
+    if (result.size() == 0) result.push_back(0);
+    std::reverse(result.begin(), result.end());
+
+    return result;
+  }
+
   static void DivideInplace(ExtendedUnsignedIntImpl& self,
                             const ExtendedUnsignedIntImpl& other) {
     if (self.IsZero()) {
@@ -498,12 +680,23 @@ struct ExtendedUnsignedIntImpl<ET, true> {
       return;
     }
 
-    std::vector<uint32_t> remain;
+    const int k = div_bit_size;
 
-    std::vector<uint32_t> result =
-        DivideInternal(self.ToBinaryVector(), other.ToBinaryVector(), remain);
+    if (k == 1) {
+      std::vector<uint32_t> remain;
 
-    self.FromBinaryVector(result);
+      std::vector<uint32_t> result =
+          DivideInternal(self.ToBinaryVector(), other.ToBinaryVector(), remain);
+
+      self.FromBinaryVector(result);
+    } else {
+      std::vector<uint32_t> remain;
+
+      std::vector<uint32_t> result =
+          DivideInternal(k, self.ToKBits(k), other.ToKBits(k), remain);
+
+      self.FromKBits(k, result);
+    }
   }
 
   static void DivideInplace(ExtendedUnsignedIntImpl& self,
@@ -540,13 +733,26 @@ struct ExtendedUnsignedIntImpl<ET, true> {
       return;
     }
 
-    std::vector<uint32_t> r;
+    const int k = div_bit_size;
 
-    std::vector<uint32_t> result =
-        DivideInternal(self.ToBinaryVector(), other.ToBinaryVector(), r);
+    if (k == 1) {
+      std::vector<uint32_t> r;
 
-    self.FromBinaryVector(result);
-    remain.FromBinaryVector(r);
+      std::vector<uint32_t> result =
+          DivideInternal(self.ToBinaryVector(), other.ToBinaryVector(), r);
+
+      self.FromBinaryVector(result);
+      remain.FromBinaryVector(r);
+
+    } else {
+      std::vector<uint32_t> r;
+
+      std::vector<uint32_t> result =
+          DivideInternal(k, self.ToKBits(k), other.ToKBits(k), r);
+
+      self.FromKBits(k, result);
+      remain.FromKBits(k, r);
+    }
   }
 
   static void RemainInplace(ExtendedUnsignedIntImpl& self,
@@ -576,11 +782,22 @@ struct ExtendedUnsignedIntImpl<ET, true> {
       return;
     }
 
-    std::vector<uint32_t> remain;
+    const int k = div_bit_size;
 
-    DivideInternal(self.ToBinaryVector(), other.ToBinaryVector(), remain);
+    if (k > 1) {
+      std::vector<uint32_t> remain;
 
-    self.FromBinaryVector(remain);
+      DivideInternal(self.ToBinaryVector(), other.ToBinaryVector(), remain);
+
+      self.FromBinaryVector(remain);
+
+    } else {
+      std::vector<uint32_t> remain;
+
+      DivideInternal(k, self.ToKBits(k), other.ToKBits(k), remain);
+
+      self.FromKBits(k, remain);
+    }
   }
 
  public:
@@ -1088,6 +1305,8 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   constexpr static int half_bitsize = quarter_bitsize * 2;
   constexpr static int bitsize = half_bitsize * 2;
 
+  static constexpr int div_bit_size = 1;
+
   using NT = typename ET::NT;
   using UnsignedT = ExtendedUnsignedIntImpl<ET, false>;
   using SignedT = ExtendedSignedIntImpl<ET, false>;
@@ -1352,6 +1571,42 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     }
   }
 
+  std::vector<uint32_t> ToKBits(int k, int fix_size = 1) const {
+    if (k == 1) {
+      return ToBinaryVector(fix_size);
+    }
+    std::vector<uint32_t> r;
+    for (auto& iter : low_.ToKBits(k, 0)) r.push_back(iter);
+    if (!fix_size || !hi_.IsZero()) {
+      for (auto& iter : hi_.ToKBits(k, 0)) r.push_back(iter);
+    }
+    if (fix_size) {
+      FixSize(r);
+    }
+  }
+
+  void FromKBits(int k, const std::vector<uint32_t>& bits) {
+    if (k == 1) {
+      FromBinaryVector(&bits[0], static_cast<int>(bits.size()));
+    } else {
+      FromKBits(k, &bits[0], static_cast<int>(bits.size()));
+    }
+  }
+
+  void FromKBits(int k, const uint32_t* bits, const int n) {
+    if (k == 1) {
+      FromBinaryVector(bits, n);
+      return;
+    }
+    low_.FromKBits(k, bits, n);
+    int need = half_bitsize / k;
+    if (n >= need) {
+      hi_.FromKBits(k, bits + need, n - need);
+    } else {
+      hi_.MakeZeroBits();
+    }
+  }
+
   std::vector<uint32_t> ToBinaryVector(int fix_size = 1) const {
     std::vector<uint32_t> r;
     r.reserve(bitsize);
@@ -1366,16 +1621,15 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   void FromBinaryVector(const std::vector<uint32_t>& bits) {
-    low_.MakeZeroBits();
-    hi_.MakeZeroBits();
-    for (int i = 0; i < bits.size(); ++i) {
-      if (bits[i]) {
-        if (i < half_bitsize) {
-          low_.SetBit(i);
-        } else if (i < bitsize) {
-          hi_.SetBit(i - half_bitsize);
-        }
-      }
+    FromBinaryVector(&bits[0], static_cast<int>(bits.size()));
+  }
+
+  void FromBinaryVector(const uint32_t* bits, const int n) {
+    low_.FromBinaryVector(bits, n);
+    if (n > half_bitsize) {
+      hi_.FromBinaryVector(bits + half_bitsize, n - half_bitsize);
+    } else {
+      hi_.MakeZeroBits();
     }
   }
 
@@ -1447,6 +1701,132 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     return result;
   }
 
+  static std::vector<uint32_t> DivideInternal(const int k,
+                                              const std::vector<uint32_t>& l,
+                                              const std::vector<uint32_t>& r,
+                                              std::vector<uint32_t>& remain) {
+    if (k == 1) {
+      return DivideInternal(l, r, remain);
+    }
+
+    const uint32_t mask = (1U << k) - 1;
+
+    std::vector<std::vector<uint32_t>> tdata;
+    tdata.push_back({0});
+    tdata.push_back(r);
+    for (int i = 2; i < 1 << k; ++i) {
+      const std::vector<uint32_t>& a = tdata[i - 1];
+      const std::vector<uint32_t>& b = r;
+      const int sizea = static_cast<int>(a.size());
+      const int sizeb = static_cast<int>(b.size());
+      const int size = std::max(sizea, sizeb);
+      std::vector<uint32_t> result;
+      uint32_t inc = 0;
+      for (int j = 0; j < size; ++j) {
+        uint32_t x = inc;
+        if (j < sizea) x += a[j];
+        if (j < sizeb) x += b[j];
+        result.push_back(x & mask);
+        inc = x >> k;
+      }
+      while (inc > 0) {
+        result.push_back(inc & mask);
+        inc >>= k;
+      }
+      tdata.push_back(result);
+    }
+
+    std::vector<uint32_t> result;
+    remain = l;
+
+    const int r_size = static_cast<int>(r.size());
+    int pos = static_cast<int>(l.size()) - 1;
+    int end = pos - r_size + 1;
+
+    for (; end >= 0;) {
+      if (pos - end + 1 < r_size) {
+        result.push_back(0);
+        --end;
+        continue;
+      }
+      if (remain[pos] == 0) {
+        --pos;
+        continue;
+      }
+      int idx = remain[pos] / (r[r_size - 1] + 1);
+      int is_equal = 0;
+      while (idx < (1 << k)) {
+        const auto& who = tdata[idx];
+        int cmp = 0;
+        if (who.size() < pos - end + 1) {
+          ++idx;
+          continue;
+        }
+        if (who.size() > pos - end + 1) {
+          break;
+        }
+        for (int i = pos, j = static_cast<int>(who.size()) - 1; i >= end;
+             --i, --j) {
+          if (who[j] > remain[i]) {
+            cmp = 1;
+            break;
+          } else if (who[j] < remain[i]) {
+            cmp = -1;
+            break;
+          }
+        }
+        if (cmp == 1 || cmp == 0) {
+          if (cmp == 0) {
+            is_equal = 1;
+          }
+          break;
+        }
+        ++idx;
+      }
+      if (is_equal) {
+        result.push_back(idx);
+        for (int i = pos; i >= end; --i) {
+          remain[i] = 0;
+        }
+        --end;
+      } else {
+        --idx;
+        result.push_back(idx);
+        auto& who = tdata[idx];
+        const int size = static_cast<int>(who.size());
+        int borrow = 0;
+        int i = end, j = 0;
+        for (; j < size; ++i, ++j) {
+          int next_borrow = 0;
+          auto t = remain[i];
+          while (t < who[j] + borrow) {
+            t += 1 << k;
+            ++next_borrow;
+          }
+          remain[i] = t - who[j] - borrow;
+          borrow = next_borrow;
+        }
+
+        for (; i <= pos; ++i) {
+          int next_borrow = 0;
+          int t = remain[i];
+          while (t < borrow) {
+            t += 1 << k;
+            ++next_borrow;
+          }
+          remain[i] = t - borrow;
+          borrow = next_borrow;
+        }
+        --end;
+      }
+    }
+
+    if (result.size() == 0) result.push_back(0);
+    std::reverse(result.begin(), result.end());
+
+    return result;
+  }
+
   static void DivideInplace(ExtendedUnsignedIntImpl& self,
                             const ExtendedUnsignedIntImpl& other) {
     if (self.IsZero()) {
@@ -1476,12 +1856,23 @@ struct ExtendedUnsignedIntImpl<ET, false> {
       return;
     }
 
-    std::vector<uint32_t> remain;
+    const int k = div_bit_size;
 
-    std::vector<uint32_t> result =
-        DivideInternal(self.ToBinaryVector(), other.ToBinaryVector(), remain);
+    if (k == 1) {
+      std::vector<uint32_t> remain;
 
-    self.FromBinaryVector(result);
+      std::vector<uint32_t> result =
+          DivideInternal(self.ToBinaryVector(), other.ToBinaryVector(), remain);
+
+      self.FromBinaryVector(result);
+    } else {
+      std::vector<uint32_t> remain;
+
+      std::vector<uint32_t> result =
+          DivideInternal(k, self.ToKBits(k), other.ToKBits(k), remain);
+
+      self.FromKBits(k, result);
+    }
   }
 
   static void DivideInplace(ExtendedUnsignedIntImpl& self,
@@ -1519,13 +1910,25 @@ struct ExtendedUnsignedIntImpl<ET, false> {
       return;
     }
 
-    std::vector<uint32_t> r;
+    const int k = div_bit_size;
 
-    std::vector<uint32_t> result =
-        DivideInternal(self.ToBinaryVector(), other.ToBinaryVector(), r);
+    if (k == 1) {
+      std::vector<uint32_t> r;
 
-    self.FromBinaryVector(result);
-    remain.FromBinaryVector(r);
+      std::vector<uint32_t> result =
+          DivideInternal(self.ToBinaryVector(), other.ToBinaryVector(), r);
+
+      self.FromBinaryVector(result);
+      remain.FromBinaryVector(r);
+    } else {
+      std::vector<uint32_t> r;
+
+      std::vector<uint32_t> result =
+          DivideInternal(k, self.ToKBits(k), other.ToKBits(k), r);
+
+      self.FromKBits(k, result);
+      remain.FromKBits(k, r);
+    }
   }
 
   static void RemainInplace(ExtendedUnsignedIntImpl& self,
@@ -1557,11 +1960,20 @@ struct ExtendedUnsignedIntImpl<ET, false> {
       return;
     }
 
-    std::vector<uint32_t> remain;
+    const int k = div_bit_size;
+    if (k == 1) {
+      std::vector<uint32_t> remain;
 
-    DivideInternal(self.ToBinaryVector(), other.ToBinaryVector(), remain);
+      DivideInternal(self.ToBinaryVector(), other.ToBinaryVector(), remain);
 
-    self.FromBinaryVector(remain);
+      self.FromBinaryVector(remain);
+    } else {
+      std::vector<uint32_t> remain;
+
+      DivideInternal(k, self.ToKBits(k), other.ToKBits(k), remain);
+
+      self.FromKBits(k, remain);
+    }
   }
 
  public:

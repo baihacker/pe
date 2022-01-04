@@ -10,7 +10,8 @@
 It is my basic code for solving problem on <a href="https://projecteuler.net/recent" target="_blank">project euler</a>.
 
 ## Prerequirements:
-C++ dev environment that supports C++17 or above.
+* C++ dev environment that supports C++17 or above.
+* The compiler suppports building x86_64 targets.
 
 ## Installation:
 * Make sure "#include <pe.hpp>" work.

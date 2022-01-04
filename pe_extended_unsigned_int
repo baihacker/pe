@@ -221,12 +221,12 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   }
 
   int BitCount() const {
-    const int each = sizeof(ET) / sizeof(uint32_t);
+    const int each = sizeof(ET) / sizeof(uint32);
 
     int ret = 0;
     ET t = low_;
     for (int i = 0; t && i < each; ++i) {
-      ret += pe_popcount(static_cast<uint32_t>(t));
+      ret += pe_popcount(static_cast<uint32>(t));
 #if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
       t >>= 16;
       t >>= 16;
@@ -237,7 +237,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
 
     t = hi_;
     for (int i = 0; t && i < each; ++i) {
-      ret += pe_popcount(static_cast<uint32_t>(t));
+      ret += pe_popcount(static_cast<uint32>(t));
 #if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
       t >>= 16;
       t >>= 16;
@@ -310,14 +310,14 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     v.resize(now + 1);
   }
 
-  std::vector<uint32_t> ToUInt32Vector(int fix_size = 1) const {
-    const int each = sizeof(ET) / sizeof(uint32_t);
+  std::vector<uint32> ToUInt32Vector(int fix_size = 1) const {
+    const int each = sizeof(ET) / sizeof(uint32);
 
-    std::vector<uint32_t> r;
+    std::vector<uint32> r;
     r.reserve(each * 2);
     ET t = low_;
     for (int i = 0; i < each; ++i) {
-      r.push_back(static_cast<uint32_t>(t));
+      r.push_back(static_cast<uint32>(t));
 #if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
       t >>= 16;
       t >>= 16;
@@ -328,7 +328,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     if (!fix_size || hi_) {
       t = hi_;
       for (int i = 0; i < each; ++i) {
-        r.push_back(static_cast<uint32_t>(t));
+        r.push_back(static_cast<uint32>(t));
 #if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
         t >>= 16;
         t >>= 16;
@@ -343,7 +343,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     return r;
   }
 
-  void FromUInt32Vector(const std::vector<uint32_t>& bits32) {
+  void FromUInt32Vector(const std::vector<uint32>& bits32) {
     const int each = sizeof(ET) / sizeof(int32_t);
 
     hi_ = 0;
@@ -502,17 +502,17 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     const int k = div_bit_size;
 
     if (k == 1) {
-      std::vector<uint32_t> remain;
+      std::vector<uint32> remain;
 
-      std::vector<uint32_t> result = pe_internal::AbsDivide<uint32_t>(
-          self.ToBinary<uint32_t>(), other.ToBinary<uint32_t>(), remain);
+      std::vector<uint32> result = pe_internal::AbsDivide<uint32>(
+          self.ToBinary<uint32>(), other.ToBinary<uint32>(), remain);
 
       self.FromBinary(result);
     } else {
-      std::vector<uint32_t> remain;
+      std::vector<uint32> remain;
 
-      std::vector<uint32_t> result = pe_internal::AbsDivide<uint32_t>(
-          k, self.ToKBits<uint32_t>(k), other.ToKBits<uint32_t>(k), remain);
+      std::vector<uint32> result = pe_internal::AbsDivide<uint32>(
+          k, self.ToKBits<uint32>(k), other.ToKBits<uint32>(k), remain);
 
       self.FromKBits(k, result);
     }
@@ -555,19 +555,19 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     const int k = div_bit_size;
 
     if (k == 1) {
-      std::vector<uint32_t> r;
+      std::vector<uint32> r;
 
-      std::vector<uint32_t> result = pe_internal::AbsDivide<uint32_t>(
-          self.ToBinary<uint32_t>(), other.ToBinary<uint32_t>(), r);
+      std::vector<uint32> result = pe_internal::AbsDivide<uint32>(
+          self.ToBinary<uint32>(), other.ToBinary<uint32>(), r);
 
       self.FromBinary(result);
       remain.FromBinary(r);
 
     } else {
-      std::vector<uint32_t> r;
+      std::vector<uint32> r;
 
-      std::vector<uint32_t> result = pe_internal::AbsDivide<uint32_t>(
-          k, self.ToKBits<uint32_t>(k), other.ToKBits<uint32_t>(k), r);
+      std::vector<uint32> result = pe_internal::AbsDivide<uint32>(
+          k, self.ToKBits<uint32>(k), other.ToKBits<uint32>(k), r);
 
       self.FromKBits(k, result);
       remain.FromKBits(k, r);
@@ -604,18 +604,18 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     const int k = div_bit_size;
 
     if (k > 1) {
-      std::vector<uint32_t> remain;
+      std::vector<uint32> remain;
 
-      pe_internal::AbsDivide<uint32_t>(self.ToBinary<uint32_t>(),
-                                       other.ToBinary<uint32_t>(), remain);
+      pe_internal::AbsDivide<uint32>(self.ToBinary<uint32>(),
+                                     other.ToBinary<uint32>(), remain);
 
       self.FromBinary(remain);
 
     } else {
-      std::vector<uint32_t> remain;
+      std::vector<uint32> remain;
 
-      pe_internal::AbsDivide<uint32_t>(k, self.ToKBits<uint32_t>(k),
-                                       other.ToKBits<uint32_t>(k), remain);
+      pe_internal::AbsDivide<uint32>(k, self.ToKBits<uint32>(k),
+                                     other.ToKBits<uint32>(k), remain);
 
       self.FromKBits(k, remain);
     }
@@ -648,7 +648,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
 
   int IsOdd() const { return low_ & 1 ? 1 : 0; }
 
-  unsigned int LowerBits() const { return static_cast<uint32_t>(low_); }
+  unsigned int LowerBits() const { return static_cast<uint32>(low_); }
 
   ExtendedUnsignedIntImpl Abs() const { return *this; }
 
@@ -680,7 +680,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   }
 
   std::string ToString() const {
-    const uint32_t output_mod = 1000000000;
+    const uint32 output_mod = 1000000000;
     if (IsZero()) {
       return "0";
     }
@@ -688,8 +688,8 @@ struct ExtendedUnsignedIntImpl<ET, true> {
       return pe::ToString(low_);
     }
 
-    std::vector<uint32_t> bits32 = ToUInt32Vector();
-    std::vector<uint32_t> mods;
+    std::vector<uint32> bits32 = ToUInt32Vector();
+    std::vector<uint32> mods;
 
     std::stringstream ss;
 
@@ -1362,10 +1362,10 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     v.resize(now + 1);
   }
 
-  std::vector<uint32_t> ToUInt32Vector(int fix_size = 1) const {
-    const int each = sizeof(ET) / sizeof(uint32_t);
+  std::vector<uint32> ToUInt32Vector(int fix_size = 1) const {
+    const int each = sizeof(ET) / sizeof(uint32);
 
-    std::vector<uint32_t> r;
+    std::vector<uint32> r;
     r.reserve(each * 2);
     for (auto& iter : low_.ToUInt32Vector(0)) r.push_back(iter);
     if (!fix_size || !hi_.IsZero()) {
@@ -1377,7 +1377,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     return r;
   }
 
-  void FromUInt32Vector(const std::vector<uint32_t>& bits32) {
+  void FromUInt32Vector(const std::vector<uint32>& bits32) {
     const int each = sizeof(ET) / sizeof(int32_t);
     hi_.MakeZeroBits();
     for (int i = std::min(2 * each - 1, static_cast<int>(bits32.size()));
@@ -1500,17 +1500,17 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     const int k = div_bit_size;
 
     if (k == 1) {
-      std::vector<uint32_t> remain;
+      std::vector<uint32> remain;
 
-      std::vector<uint32_t> result = pe_internal::AbsDivide<uint32_t>(
-          self.ToBinary<uint32_t>(), other.ToBinary<uint32_t>(), remain);
+      std::vector<uint32> result = pe_internal::AbsDivide<uint32>(
+          self.ToBinary<uint32>(), other.ToBinary<uint32>(), remain);
 
       self.FromBinary(result);
     } else {
-      std::vector<uint32_t> remain;
+      std::vector<uint32> remain;
 
-      std::vector<uint32_t> result = pe_internal::AbsDivide<uint32_t>(
-          k, self.ToKBits<uint32_t>(k), other.ToKBits<uint32_t>(k), remain);
+      std::vector<uint32> result = pe_internal::AbsDivide<uint32>(
+          k, self.ToKBits<uint32>(k), other.ToKBits<uint32>(k), remain);
 
       self.FromKBits(k, result);
     }
@@ -1554,18 +1554,18 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     const int k = div_bit_size;
 
     if (k == 1) {
-      std::vector<uint32_t> r;
+      std::vector<uint32> r;
 
-      std::vector<uint32_t> result = pe_internal::AbsDivide<uint32_t>(
-          self.ToBinary<uint32_t>(), other.ToBinary<uint32_t>(), r);
+      std::vector<uint32> result = pe_internal::AbsDivide<uint32>(
+          self.ToBinary<uint32>(), other.ToBinary<uint32>(), r);
 
       self.FromBinary(result);
       remain.FromBinary(r);
     } else {
-      std::vector<uint32_t> r;
+      std::vector<uint32> r;
 
-      std::vector<uint32_t> result = pe_internal::AbsDivide<uint32_t>(
-          k, self.ToKBits<uint32_t>(k), other.ToKBits<uint32_t>(k), r);
+      std::vector<uint32> result = pe_internal::AbsDivide<uint32>(
+          k, self.ToKBits<uint32>(k), other.ToKBits<uint32>(k), r);
 
       self.FromKBits(k, result);
       remain.FromKBits(k, r);
@@ -1603,17 +1603,17 @@ struct ExtendedUnsignedIntImpl<ET, false> {
 
     const int k = div_bit_size;
     if (k == 1) {
-      std::vector<uint32_t> remain;
+      std::vector<uint32> remain;
 
-      pe_internal::AbsDivide<uint32_t>(self.ToBinary<uint32_t>(),
-                                       other.ToBinary<uint32_t>(), remain);
+      pe_internal::AbsDivide<uint32>(self.ToBinary<uint32>(),
+                                     other.ToBinary<uint32>(), remain);
 
       self.FromBinary(remain);
     } else {
-      std::vector<uint32_t> remain;
+      std::vector<uint32> remain;
 
-      pe_internal::AbsDivide<uint32_t>(k, self.ToKBits<uint32_t>(k),
-                                       other.ToKBits<uint32_t>(k), remain);
+      pe_internal::AbsDivide<uint32>(k, self.ToKBits<uint32>(k),
+                                     other.ToKBits<uint32>(k), remain);
 
       self.FromKBits(k, remain);
     }
@@ -1678,7 +1678,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   std::string ToString() const {
-    const uint32_t output_mod = 1000000000;
+    const uint32 output_mod = 1000000000;
     if (IsZero()) {
       return "0";
     }
@@ -1686,8 +1686,8 @@ struct ExtendedUnsignedIntImpl<ET, false> {
       return low_.ToString();
     }
 
-    std::vector<uint32_t> bits32 = ToUInt32Vector();
-    std::vector<uint32_t> mods;
+    std::vector<uint32> bits32 = ToUInt32Vector();
+    std::vector<uint32> mods;
 
     std::stringstream ss;
     int idx = bits32.size() - 1;

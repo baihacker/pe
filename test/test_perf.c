@@ -3,7 +3,7 @@
 #define ONLY_RUN_PE_IMPLEMENTATION 1
 //#include "poly_mul_test.c"
 //#include "poly_div_test.c"
-//#include "bi_test1.c"
+#include "bi_test1.c"
 #include "extended_signed_int_test.c"
 #include "extended_unsigned_int_test.c"
 

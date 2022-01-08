@@ -1251,6 +1251,9 @@ struct IsNModNumber {
   enum { value = result_type::value };
 };
 
+template <typename T>
+inline constexpr bool IsNModNumberV = IsNModNumber<T>::value;
+
 template <typename X>
 struct IsNModNumberCCModOrGlobalMod {
   static constexpr NModNumberIndicator<0> NModNumberCCmodOrGlobalModMatch(...);
@@ -1279,13 +1282,17 @@ struct IsNModNumberCCModOrGlobalMod {
 };
 
 template <typename T>
-SL REQUIRES((IsNModNumber<T>::value)) RETURN(typename T::ints)
+inline constexpr bool IsNModNumberCCModOrGlobalModV =
+    IsNModNumberCCModOrGlobalMod<T>::value;
+
+template <typename T>
+SL REQUIRES((IsNModNumberV<T>)) RETURN(typename T::ints)
     ExtractValue(const T& t) {
   return t.FixValue().value();
 }
 
 template <typename T>
-SL REQUIRES((!IsNModNumber<T>::value)) RETURN(T) ExtractValue(const T& t) {
+SL REQUIRES((!IsNModNumberV<T>)) RETURN(T) ExtractValue(const T& t) {
   return t;
 }
 
@@ -1305,19 +1312,19 @@ struct ModValueFixer<NModNumberM<MC, APSBL<S>>> {
 };
 
 template <typename T, typename TN>
-SL REQUIRES((IsNModNumber<T>::value && is_builtin_integer_v<TN>)) RETURN(T)
+SL REQUIRES((IsNModNumberV<T> && is_builtin_integer_v<TN>)) RETURN(T)
     Power(T x, TN n) {
   return x.Power(n);
 }
 
 template <typename T, typename TN>
-SL REQUIRES((IsNModNumber<T>::value && is_builtin_integer_v<TN>)) RETURN(T)
+SL REQUIRES((IsNModNumberV<T> && is_builtin_integer_v<TN>)) RETURN(T)
     PowerMod(T x, TN n) {
   return x.Power(n);
 }
 
 template <typename T, typename TN, typename TM>
-SL REQUIRES((IsNModNumber<T>::value && is_builtin_integer_v<TN> &&
+SL REQUIRES((IsNModNumberV<T> && is_builtin_integer_v<TN> &&
              is_builtin_integer_v<TM>)) RETURN(T) PowerMod(T x, TN n, TM mod) {
   PE_ASSERT(mod == x.Mod());
   return x.Power(n);
@@ -1339,7 +1346,7 @@ SL REQUIRES((IsNModNumber<T>::value && is_builtin_integer_v<TN> &&
 
 template <class T>
 concept PeModNumber = requires(T v) {
-  requires static_cast<bool>(IsNModNumber<T>::value);
+  requires static_cast<bool>(IsNModNumberV<T>);
   PE_MOD_ARTHMETIC_OPERATION_IMPL(char);
   PE_MOD_ARTHMETIC_OPERATION_IMPL(unsigned char);
   PE_MOD_ARTHMETIC_OPERATION_IMPL(signed char);

@@ -9,8 +9,8 @@
 namespace pe {
 // Modular arithmetic
 template <typename T, typename TM>
-SL REQUIRES((is_builtin_integer<T>::value && is_builtin_integer<TM>::value &&
-             pe_is_signed<T>::value && pe_is_signed<TM>::value))
+SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM> &&
+             pe_is_signed_v<T> && pe_is_signed_v<TM>))
     RETURN_T(IntPromotionT(T, TM)) RegulateMod(T a, TM mod) {
   PE_ASSERT(mod >= 1);
   if (a >= 0) {
@@ -23,8 +23,8 @@ SL REQUIRES((is_builtin_integer<T>::value && is_builtin_integer<TM>::value &&
 }
 
 template <typename T, typename TM>
-SL REQUIRES((is_builtin_integer<T>::value && is_builtin_integer<TM>::value &&
-             pe_is_signed<T>::value && pe_is_unsigned<TM>::value))
+SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM> &&
+             pe_is_signed_v<T> && pe_is_unsigned_v<TM>))
     RETURN_T(IntPromotionT(T, TM)) RegulateMod(T a, TM mod) {
   PE_ASSERT(mod >= 1);
   if (a >= 0) {
@@ -37,8 +37,8 @@ SL REQUIRES((is_builtin_integer<T>::value && is_builtin_integer<TM>::value &&
 }
 
 template <typename T, typename TM>
-SL REQUIRES((is_builtin_integer<T>::value && is_builtin_integer<TM>::value &&
-             pe_is_unsigned<T>::value)) RETURN_T(IntPromotionT(T, TM))
+SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM> &&
+             pe_is_unsigned_v<T>)) RETURN_T(IntPromotionT(T, TM))
     RegulateMod(T a, TM mod) {
   PE_ASSERT(mod >= 1);
   using ResultType = typename BiggerIntegralN<T, TM>::type;
@@ -48,13 +48,13 @@ SL REQUIRES((is_builtin_integer<T>::value && is_builtin_integer<TM>::value &&
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer<T>::value)) RETURN(T) RegulateMod(T a, T mod) {
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T) RegulateMod(T a, T mod) {
   return RegulateMod<T, T>(a, mod);
 }
 
 namespace pe_internal {
 template <typename T, typename TM>
-SL REQUIRES((is_builtin_integer<T>::value && is_builtin_integer<TM>::value))
+SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM>))
     RETURN_T(IntPromotionT(T, TM)) AddModImpl(T a, T b, TM mod) {
   using ResultType = typename BiggerIntegralN<T, TM>::type;
 #if 0
@@ -73,8 +73,8 @@ SL REQUIRES((is_builtin_integer<T>::value && is_builtin_integer<TM>::value))
 }  // namespace pe_internal
 
 template <typename T1, typename T2, typename TM>
-SL REQUIRES((is_builtin_integer<T1>::value && is_builtin_integer<T2>::value &&
-             is_builtin_integer<TM>::value)) RETURN_T(IntPromotionT(T1, T2, TM))
+SL REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
+             is_builtin_integer_v<TM>)) RETURN_T(IntPromotionT(T1, T2, TM))
     AddMod(T1 a, T2 b, TM mod) {
   using T = typename BiggerIntegralN<T1, T2>::type;
   return pe_internal::AddModImpl<T, TM>(a, b, mod);
@@ -91,7 +91,7 @@ SL IntPromotion(TH, TT...) SumMod(TM mod, TH a, TT... b) {
 }
 
 template <typename TM, typename T>
-SL REQUIRES((is_builtin_integer<T>::value)) RETURN(T)
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
     SumMod(TM mod, std::initializer_list<T> init) {
   T ret = 0;
   for (auto& v : init) {
@@ -102,15 +102,15 @@ SL REQUIRES((is_builtin_integer<T>::value)) RETURN(T)
 
 namespace pe_internal {
 template <typename T, typename TM>
-SL REQUIRES((is_builtin_integer<T>::value && is_builtin_integer<TM>::value))
+SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM>))
     RETURN(IntPromotion(T, TM)) SubModImpl(T a, T b, TM mod) {
   return a >= b ? a - b : mod - b + a;
 }
 }  // namespace pe_internal
 
 template <typename T1, typename T2, typename TM>
-SL REQUIRES((is_builtin_integer<T1>::value && is_builtin_integer<T2>::value &&
-             is_builtin_integer<TM>::value)) RETURN_T(IntPromotionT(T1, T2, TM))
+SL REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
+             is_builtin_integer_v<TM>)) RETURN_T(IntPromotionT(T1, T2, TM))
     SubMod(T1 a, T2 b, TM mod) {
   using T = typename BiggerIntegralN<T1, T2>::type;
   return pe_internal::SubModImpl<T, TM>(a, b, mod);
@@ -118,7 +118,7 @@ SL REQUIRES((is_builtin_integer<T1>::value && is_builtin_integer<T2>::value &&
 
 namespace pe_internal {
 template <typename T, typename TM>
-SL REQUIRES((is_builtin_integer<T>::value && is_builtin_integer<TM>::value))
+SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM>))
     RETURN_T(IntPromotionT(T, TM)) MulModImpl(T a, T b, TM mod) {
   return a * b % mod;
 }
@@ -399,8 +399,8 @@ SL void MulModSlowWarningOnce() {
 // If the biggest operand size is greater than sizeof(int64), just convert every
 // operand to that and multiply them directly.
 template <typename T1, typename T2, typename TM>
-SL REQUIRES((is_builtin_integer<T1>::value && is_builtin_integer<T2>::value &&
-             is_builtin_integer<TM>::value &&
+SL REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
+             is_builtin_integer_v<TM> &&
              (sizeof(T1) > sizeof(int64) || sizeof(T2) > sizeof(int64) ||
               sizeof(TM) > sizeof(int64)))) RETURN_T(IntPromotionT(T1, T2, TM))
     MulMod(T1 a, T2 b, TM mod) {
@@ -412,8 +412,8 @@ SL REQUIRES((is_builtin_integer<T1>::value && is_builtin_integer<T2>::value &&
 // If all the operand size is no more than sizeof(int32), use uint32
 // implementation.
 template <typename T1, typename T2, typename TM>
-SL REQUIRES((is_builtin_integer<T1>::value && is_builtin_integer<T2>::value &&
-             is_builtin_integer<TM>::value &&
+SL REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
+             is_builtin_integer_v<TM> &&
              (sizeof(T1) <= sizeof(int32) && sizeof(T2) <= sizeof(int32) &&
               sizeof(TM) <= sizeof(int32)))) RETURN_T(int64)
     MulMod(T1 a, T2 b, TM mod) {
@@ -423,8 +423,8 @@ SL REQUIRES((is_builtin_integer<T1>::value && is_builtin_integer<T2>::value &&
 // At least one of the operand size is sizeof(int64) and all are no more than
 // sizeof(int64).
 template <typename T1, typename T2, typename TM>
-SL REQUIRES((is_builtin_integer<T1>::value && is_builtin_integer<T2>::value &&
-             is_builtin_integer<TM>::value &&
+SL REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
+             is_builtin_integer_v<TM> &&
              (sizeof(T1) > sizeof(int32) || sizeof(T2) > sizeof(int32) ||
               sizeof(TM) > sizeof(int32)) &&
              (sizeof(T1) <= sizeof(int64) && sizeof(T2) <= sizeof(int64) &&
@@ -562,7 +562,7 @@ SL IntPromotion(TH, TT...) ProdMod(TM mod, TH a, TT... b) {
 }
 
 template <typename TM, typename T>
-SL REQUIRES((is_builtin_integer<T>::value)) RETURN(T)
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
     ProdMod(TM mod, std::initializer_list<T> init) {
   T ret = 1;
   if (mod == 1) {
@@ -576,8 +576,8 @@ SL REQUIRES((is_builtin_integer<T>::value)) RETURN(T)
 
 namespace pe_internal {
 template <typename T, typename TN, typename TM>
-SL REQUIRES((is_builtin_integer<T>::value && is_builtin_integer<TN>::value &&
-             is_builtin_integer<TM>::value)) RETURN_T(IntPromotionT(T, TM))
+SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TN> &&
+             is_builtin_integer_v<TM>)) RETURN_T(IntPromotionT(T, TM))
     PowerModImpl(T x, TN n, TM mod) {
   PE_ASSERT(n >= 0);
   if (mod == 1) return 0;
@@ -594,34 +594,35 @@ SL REQUIRES((is_builtin_integer<T>::value && is_builtin_integer<TN>::value &&
 }  // namespace pe_internal
 
 template <typename T, typename TN, typename TM>
-SL REQUIRES((is_builtin_integer<T>::value && is_builtin_integer<TN>::value &&
-             is_builtin_integer<TM>::value))
-    RETURN_T(IntPromotionT(T, int64, TM)) PowerMod(T x, TN n, TM mod) {
+SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TN> &&
+             is_builtin_integer_v<TM>)) RETURN_T(IntPromotionT(T, int64, TM))
+    PowerMod(T x, TN n, TM mod) {
   using atLeastInt64T = typename AtLeastInt64<T>::type;
   return pe_internal::PowerModImpl<atLeastInt64T, TN, TM>(x, n, mod);
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_or_extended_integer<T>::value)) RETURN(T) Gcd(T m, T n);
+SL REQUIRES((is_builtin_or_extended_integer_v<T>)) RETURN(T) Gcd(T m, T n);
 
 template <typename GBI>
-SL REQUIRES((is_gbi<GBI>::value)) RETURN(GBI) Gcd(GBI m, GBI n);
+SL REQUIRES((is_gbi_v<GBI>)) RETURN(GBI) Gcd(GBI m, GBI n);
 
 template <typename T0, typename T1>
-SL REQUIRES((is_general_integer<T0>::value && is_general_integer<T1>::value))
+SL REQUIRES((is_general_integer_v<T0> && is_general_integer_v<T1>))
     RETURN_T(IntPromotionT(T0, T1)) Gcd(const T0& m, const T1& n);
 
 template <typename T>
-SL REQUIRES((is_general_integer<T>::value)) RETURN(T) Gcd(const T& a);
+SL REQUIRES((is_general_integer_v<T>)) RETURN(T) Gcd(const T& a);
 
 template <typename TH, typename... TT>
-SL REQUIRES(((sizeof...(TT) >= 2) && (is_general_integer<TH>::value) &&
-             (predicate_all<is_general_integer, TT...>::value)))
+SL REQUIRES(((sizeof...(TT) >= 2) &&
+             (is_general_integer_v<TH>)&&(
+                 predicate_all<is_general_integer, TT...>::value)))
     RETURN(IntPromotion(TH, TT...)) Gcd(TH a, TT... b);
 
 namespace pe_internal {
 template <typename T, typename TM>
-SL REQUIRES((is_builtin_integer<T>::value && is_builtin_integer<TM>::value))
+SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM>))
     RETURN_T(IntPromotionT(T, TM))
         FracModImpl(const std::vector<T>& a, std::vector<T> b, TM mod) {
   using ResultType = typename BiggerIntegralN<T, TM>::type;
@@ -650,8 +651,8 @@ SL REQUIRES((is_builtin_integer<T>::value && is_builtin_integer<TM>::value))
 }  // namespace pe_internal
 
 template <typename T1, typename T2 = T1, typename TM>
-SL REQUIRES((is_builtin_integer<T1>::value && is_builtin_integer<T2>::value &&
-             is_builtin_integer<TM>::value))
+SL REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
+             is_builtin_integer_v<TM>))
     RETURN_T(IntPromotionT(T1, T2, int64, TM))
         FracMod(const std::vector<T1>& a, const std::vector<T2>& b, TM mod) {
   using T = typename BiggerIntegralN<T1, T2>::type;
@@ -843,7 +844,7 @@ struct NModNumber {
   }
 
   template <typename T,
-            typename TT = REQUIRES((is_builtin_integer<T>::value)) RETURN(T)>
+            typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(T)>
   NModNumber(T value) : NModNumber(static_cast<ints>(value % MC::Mod())) {}
 
   NModNumber(ints value, pe_internal::init_direct_t) : value_(value) {}
@@ -898,7 +899,7 @@ struct NModNumber {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value))
+  REQUIRES((is_builtin_integer_v<T>))
   RETURN(NModNumber) Power(T n) const {
     NModNumber ret(1);
     NModNumber x(*this);
@@ -932,13 +933,13 @@ struct NModNumber {
   }
 
   template <typename T>
-  friend REQUIRES((is_builtin_integer<T>::value)) RETURN(NModNumber) operator+(
+  friend REQUIRES((is_builtin_integer_v<T>)) RETURN(NModNumber) operator+(
       const NModNumber& x, T y) {
     return x + NModNumber(y);
   }
 
   template <typename T>
-  friend REQUIRES((is_builtin_integer<T>::value)) RETURN(NModNumber) operator+(
+  friend REQUIRES((is_builtin_integer_v<T>)) RETURN(NModNumber) operator+(
       T x, const NModNumber& y) {
     return NModNumber(x) + y;
   }
@@ -1034,7 +1035,7 @@ struct NModNumberM {
   }
 
   template <typename T,
-            typename TT = REQUIRES((is_builtin_integer<T>::value)) RETURN(T)>
+            typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(T)>
   NModNumberM(T value, const MC& mc = MC())
       : NModNumberM(static_cast<ints>(value % mc.Mod()), mc) {}
 
@@ -1092,7 +1093,7 @@ struct NModNumberM {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value))
+  REQUIRES((is_builtin_integer_v<T>))
   RETURN(NModNumberM) Power(T n) const {
     NModNumberM ret(1, mc);
     NModNumberM x(*this);
@@ -1126,13 +1127,13 @@ struct NModNumberM {
   }
 
   template <typename T>
-  friend REQUIRES((is_builtin_integer<T>::value)) RETURN(NModNumberM) operator+(
+  friend REQUIRES((is_builtin_integer_v<T>)) RETURN(NModNumberM) operator+(
       const NModNumberM& x, T y) {
     return x + NModNumberM(y, x.mc);
   }
 
   template <typename T>
-  friend REQUIRES((is_builtin_integer<T>::value)) RETURN(NModNumberM) operator+(
+  friend REQUIRES((is_builtin_integer_v<T>)) RETURN(NModNumberM) operator+(
       T x, const NModNumberM& y) {
     return NModNumberM(x, y.mc) + y;
   }
@@ -1143,13 +1144,13 @@ struct NModNumberM {
   }
 
   template <typename T>
-  friend REQUIRES((is_builtin_integer<T>::value)) RETURN(NModNumberM) operator-(
+  friend REQUIRES((is_builtin_integer_v<T>)) RETURN(NModNumberM) operator-(
       const NModNumberM& x, T y) {
     return x - NModNumberM(y, x.mc);
   }
 
   template <typename T>
-  friend REQUIRES((is_builtin_integer<T>::value)) RETURN(NModNumberM) operator-(
+  friend REQUIRES((is_builtin_integer_v<T>)) RETURN(NModNumberM) operator-(
       T x, const NModNumberM& y) {
     return NModNumberM(x, y.mc) - y;
   }
@@ -1160,13 +1161,13 @@ struct NModNumberM {
   }
 
   template <typename T>
-  friend REQUIRES((is_builtin_integer<T>::value)) RETURN(NModNumberM) operator*(
+  friend REQUIRES((is_builtin_integer_v<T>)) RETURN(NModNumberM) operator*(
       const NModNumberM& x, T y) {
     return x * NModNumberM(y, x.mc);
   }
 
   template <typename T>
-  friend REQUIRES((is_builtin_integer<T>::value)) RETURN(NModNumberM) operator*(
+  friend REQUIRES((is_builtin_integer_v<T>)) RETURN(NModNumberM) operator*(
       T x, const NModNumberM& y) {
     return NModNumberM(x, y.mc) * y;
   }
@@ -1304,21 +1305,20 @@ struct ModValueFixer<NModNumberM<MC, APSBL<S>>> {
 };
 
 template <typename T, typename TN>
-SL REQUIRES((IsNModNumber<T>::value && is_builtin_integer<TN>::value)) RETURN(T)
+SL REQUIRES((IsNModNumber<T>::value && is_builtin_integer_v<TN>)) RETURN(T)
     Power(T x, TN n) {
   return x.Power(n);
 }
 
 template <typename T, typename TN>
-SL REQUIRES((IsNModNumber<T>::value && is_builtin_integer<TN>::value)) RETURN(T)
+SL REQUIRES((IsNModNumber<T>::value && is_builtin_integer_v<TN>)) RETURN(T)
     PowerMod(T x, TN n) {
   return x.Power(n);
 }
 
 template <typename T, typename TN, typename TM>
-SL REQUIRES((IsNModNumber<T>::value && is_builtin_integer<TN>::value &&
-             is_builtin_integer<TM>::value)) RETURN(T)
-    PowerMod(T x, TN n, TM mod) {
+SL REQUIRES((IsNModNumber<T>::value && is_builtin_integer_v<TN> &&
+             is_builtin_integer_v<TM>)) RETURN(T) PowerMod(T x, TN n, TM mod) {
   PE_ASSERT(mod == x.Mod());
   return x.Power(n);
 }

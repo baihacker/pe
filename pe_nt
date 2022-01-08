@@ -26,20 +26,20 @@ SL int64 SqrtI(int128 d) {
 
 #if defined(COMPILER_MSVC) || !OS_TYPE_WIN
 template <typename T>
-SL REQUIRES((is_builtin_integer<T>::value)) RETURN(T) SqrtI(T d) {
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T) SqrtI(T d) {
   const auto result = static_cast<T>(sqrt(static_cast<long double>(d)));
   return result * result > d ? result - 1 : result;
 }
 #else
 template <typename T>
-SL REQUIRES((is_builtin_integer<T>::value)) RETURN(T) SqrtI(T v) {
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T) SqrtI(T v) {
   return static_cast<T>(sqrt(static_cast<long double>(v)));
 }
 #endif
 
 namespace pe_internal {
 template <typename T>
-SL REQUIRES((is_builtin_integer<T>::value)) RETURN(T) RootIImpl(T v, int n) {
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T) RootIImpl(T v, int n) {
   // n > 2 && v > 1
   T r = static_cast<T>(
       pow(static_cast<long double>(v), static_cast<long double>(1.) / n));
@@ -67,7 +67,7 @@ SL REQUIRES((is_builtin_integer<T>::value)) RETURN(T) RootIImpl(T v, int n) {
 }  // namespace pe_internal
 
 template <typename T>
-SL REQUIRES((is_builtin_integer<T>::value)) RETURN(T) RootI(T v, int n) {
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T) RootI(T v, int n) {
   PE_ASSERT(n >= 0);
   if (n == 0) {
     return 1;
@@ -128,8 +128,7 @@ SL std::tuple<T1, int64> ExtractFactor(T1 A, T2 B) {
 
 // Greatest common divisor
 template <typename T>
-SL REQUIRES((is_builtin_or_extended_integer<T>::value)) RETURN(T)
-    Gcd(T m, T n) {
+SL REQUIRES((is_builtin_or_extended_integer_v<T>)) RETURN(T) Gcd(T m, T n) {
   while (!IsZero(n)) {
     T t = m % n;
     m = n;
@@ -140,7 +139,7 @@ SL REQUIRES((is_builtin_or_extended_integer<T>::value)) RETURN(T)
 
 // #if !defined(COMPILER_MSVC) && !PE_HAS_CPP17
 template <typename T0, typename T1>
-SL REQUIRES((is_general_integer<T0>::value && is_general_integer<T1>::value))
+SL REQUIRES((is_general_integer_v<T0> && is_general_integer_v<T1>))
     RETURN_T(IntPromotionT(T0, T1)) Gcd(const T0& m, const T1& n) {
   using ResultType = typename BiggerIntegralN<T0, T1>::type;
   return Gcd(static_cast<ResultType>(m), static_cast<ResultType>(n));
@@ -148,19 +147,20 @@ SL REQUIRES((is_general_integer<T0>::value && is_general_integer<T1>::value))
 // #endif
 
 template <typename T>
-SL REQUIRES((is_general_integer<T>::value)) RETURN(T) Gcd(const T& a) {
+SL REQUIRES((is_general_integer_v<T>)) RETURN(T) Gcd(const T& a) {
   return a;
 }
 
 template <typename TH, typename... TT>
-SL REQUIRES(((sizeof...(TT) >= 2) && (is_general_integer<TH>::value) &&
-             (predicate_all<is_general_integer, TT...>::value)))
+SL REQUIRES(((sizeof...(TT) >= 2) &&
+             (is_general_integer_v<TH>)&&(
+                 predicate_all<is_general_integer, TT...>::value)))
     RETURN(IntPromotion(TH, TT...)) Gcd(TH a, TT... b) {
   return Gcd(a, Gcd(b...));
 }
 
 template <typename T>
-SL REQUIRES((is_general_integer<T>::value)) RETURN(T)
+SL REQUIRES((is_general_integer_v<T>)) RETURN(T)
     Gcd(std::initializer_list<T> init) {
   T ret = 0;
   for (auto& v : init) {
@@ -174,7 +174,7 @@ SL REQUIRES((is_general_integer<T>::value)) RETURN(T)
 }
 
 template <typename T>
-SL REQUIRES((is_general_integer<T>::value)) RETURN(T)
+SL REQUIRES((is_general_integer_v<T>)) RETURN(T)
     Gcd(const std::vector<T>& init) {
   T ret = 0;
   for (auto& v : init) {
@@ -188,32 +188,32 @@ SL REQUIRES((is_general_integer<T>::value)) RETURN(T)
 }
 
 template <typename T>
-SL REQUIRES((is_general_integer<T>::value)) RETURN(T)
-    Lcm(const T& m, const T& n) {
+SL REQUIRES((is_general_integer_v<T>)) RETURN(T) Lcm(const T& m, const T& n) {
   return m / Gcd(m, n) * n;
 }
 
 template <typename T0, typename T1>
-SL REQUIRES((is_general_integer<T0>::value && is_general_integer<T1>::value))
+SL REQUIRES((is_general_integer_v<T0> && is_general_integer_v<T1>))
     RETURN_T(IntPromotionT(T0, T1)) Lcm(const T0& m, const T1& n) {
   using ResultType = typename BiggerIntegralN<T0, T1>::type;
   return Lcm(static_cast<ResultType>(m), static_cast<ResultType>(n));
 }
 
 template <typename T>
-SL REQUIRES((is_general_integer<T>::value)) RETURN(T) Lcm(const T& a) {
+SL REQUIRES((is_general_integer_v<T>)) RETURN(T) Lcm(const T& a) {
   return a;
 }
 
 template <typename TH, typename... TT>
-SL REQUIRES(((sizeof...(TT) >= 2) && (is_general_integer<TH>::value) &&
-             (predicate_all<is_general_integer, TT...>::value)))
+SL REQUIRES(((sizeof...(TT) >= 2) &&
+             (is_general_integer_v<TH>)&&(
+                 predicate_all<is_general_integer, TT...>::value)))
     RETURN(IntPromotion(TH, TT...)) Lcm(TH a, TT... b) {
   return Lcm(a, Lcm(b...));
 }
 
 template <typename T>
-SL REQUIRES((is_general_integer<T>::value)) RETURN(T)
+SL REQUIRES((is_general_integer_v<T>)) RETURN(T)
     Lcm(std::initializer_list<T> init) {
   T ret = 0;
   for (auto& v : init) {
@@ -227,7 +227,7 @@ SL REQUIRES((is_general_integer<T>::value)) RETURN(T)
 }
 
 template <typename T>
-SL REQUIRES((is_general_integer<T>::value)) RETURN(T)
+SL REQUIRES((is_general_integer_v<T>)) RETURN(T)
     Lcm(const std::vector<T>& init) {
   T ret = 0;
   for (auto& v : init) {
@@ -243,7 +243,7 @@ SL REQUIRES((is_general_integer<T>::value)) RETURN(T)
 // Extended greatest common divisor
 namespace pe_internal {
 template <typename T>
-SL REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value)) RETURN(T)
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
     ExGcdImpl(T a, T b, T& x, T& y) {
   if (b == 0) {
     x = 1;
@@ -264,7 +264,7 @@ SL REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value)) RETURN(T)
 }  // namespace pe_internal
 
 template <typename T>
-SL REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value)) RETURN(T)
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
     ExGcd(T a, T b, T& x, T& y) {
   PE_ASSERT(a != 0 || b != 0);
   const T r = pe_internal::ExGcdImpl(a, b, x, y);
@@ -273,7 +273,7 @@ SL REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value)) RETURN(T)
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value))
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>))
     RETURN(std::tuple<T, T, T>) ExGcd(T a, T b) {
   PE_ASSERT(a != 0 || b != 0);
   T x = 0, y = 0;
@@ -283,7 +283,7 @@ SL REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value))
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value)) RETURN(T)
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
     ModInv(T a, T mod) {
   T b = mod, s = 1, t = 0, old_a = a;
   while (b > 0) {
@@ -302,8 +302,8 @@ SL int64 InvOf(int64 x, int64 p) { return PowerMod(x, p - 2, p); }
 
 namespace pe_internal {
 template <typename T>
-SL REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value))
-    RETURN(int) SolveLinearEquationImpl(T a, T b, T m, T& v, T& u) {
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(int)
+    SolveLinearEquationImpl(T a, T b, T m, T& v, T& u) {
   v = 0;
   u = 0;
 
@@ -339,14 +339,13 @@ SL REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value))
 // return 0 and set u = -1 and v = 0 if failed
 // return 1, x = v (mod u)
 template <typename T>
-SL REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value))
-    RETURN(int)
-        SolveLinearEquation(const T& a, const T& b, const T& m, T& v, T& u) {
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(int)
+    SolveLinearEquation(const T& a, const T& b, const T& m, T& v, T& u) {
   return pe_internal::SolveLinearEquationImpl<T>(a, b, m, v, u);
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value))
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>))
     RETURN(std::tuple<int, T, T>)
         SolveLinearEquation(const T& a, const T& b, const T& m) {
   T v = 0, u = 0;
@@ -358,8 +357,8 @@ SL REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value))
 // return 0 and set u = 0 and t = 0 if failed
 // return 1, x = v (mod u)
 template <typename T>
-SL REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value))
-    RETURN(int) Crt2(T a, T m1, T b, T m2, T& v, T& u) {
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(int)
+    Crt2(T a, T m1, T b, T m2, T& v, T& u) {
   v = 0;
   u = 0;
 
@@ -388,7 +387,7 @@ SL REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value))
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value))
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>))
     RETURN(std::tuple<int, T, T>) Crt2(T a, T m1, T b, T m2) {
   T v = 0, u = 0;
   int r = Crt2(a, m1, b, m2, v, u);
@@ -396,7 +395,7 @@ SL REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value))
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value))
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>))
     RETURN(std::tuple<int, T, T>) CrtN(const T* val, const T* mod, int n) {
   PE_ASSERT(val != NULL && mod != NULL);
   T v = 0, u = 1;
@@ -411,7 +410,7 @@ SL REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value))
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value))
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>))
     RETURN(std::tuple<int, T, T>)
         CrtN(const std::vector<T>& val, const std::vector<T>& mod) {
   return CrtN<T>(&val[0], &mod[0], val.size());

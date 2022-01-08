@@ -32,7 +32,7 @@ struct ExtractETImpl<ET, false> {
 };
 
 template <typename ET>
-struct ExtractET : public ExtractETImpl<ET, is_builtin_integer<ET>::value> {};
+struct ExtractET : public ExtractETImpl<ET, is_builtin_integer_v<ET>> {};
 
 template <typename ET>
 struct ExtendedUnsignedIntImpl<ET, true> {
@@ -56,14 +56,14 @@ struct ExtendedUnsignedIntImpl<ET, true> {
 
  private:
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value && pe_is_unsigned<T>::value &&
+  REQUIRES((is_builtin_integer_v<T> && pe_is_unsigned_v<T> &&
             sizeof(T) <= sizeof(ET)))
   RETURN(void) FromNativeInt(T v) {
     low_ = v;
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value && pe_is_unsigned<T>::value &&
+  REQUIRES((is_builtin_integer_v<T> && pe_is_unsigned_v<T> &&
             sizeof(T) > sizeof(ET)))
   RETURN(void) FromNativeInt(T v) {
     low_ = v;
@@ -71,7 +71,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value &&
+  REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T> &&
             sizeof(T) <= sizeof(ET)))
   RETURN(void) FromNativeInt(T v) {
     if (v >= 0) {
@@ -83,7 +83,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value &&
+  REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T> &&
             sizeof(T) > sizeof(ET)))
   RETURN(void) FromNativeInt(T v) {
     using unsignedT = typename pe_make_unsigned<T>::type;
@@ -117,7 +117,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   ExtendedUnsignedIntImpl(ET low, ET hi) : low_(low), hi_(hi) {}
 
   template <typename T,
-            typename TT = REQUIRES((is_builtin_integer<T>::value)) RETURN(T)>
+            typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(T)>
   ExtendedUnsignedIntImpl(T v) : low_(0), hi_(0) {
     FromNativeInt<T>(v);
   }
@@ -136,7 +136,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   }
 
   template <typename T,
-            typename TT = REQUIRES((is_builtin_integer<T>::value)) RETURN(T)>
+            typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(T)>
   ExtendedUnsignedIntImpl& operator=(const T& other) {
     low_ = hi_ = 0;
     FromNativeInt<T>(other);
@@ -370,7 +370,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value))
+  REQUIRES((is_builtin_integer_v<T>))
   RETURN(std::vector<T>) ToKBits(int k, int fix_size = 1) const {
     if (k == 1) {
       return ToBinary<T>(fix_size);
@@ -400,7 +400,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value))
+  REQUIRES((is_builtin_integer_v<T>))
   RETURN(void) FromKBits(const int k, const T* bits, const int n) {
     if (k == 1) {
       FromBinary(bits, n);
@@ -419,7 +419,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value))
+  REQUIRES((is_builtin_integer_v<T>))
   RETURN(void) FromKBits(int k, const std::vector<T>& bits) {
     if (k == 1) {
       FromBinary(&bits[0], static_cast<int>(bits.size()));
@@ -429,7 +429,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value))
+  REQUIRES((is_builtin_integer_v<T>))
   RETURN(std::vector<T>) ToBinary(int fix_size = 1) const {
     std::vector<T> r;
     r.reserve(bitsize);
@@ -452,7 +452,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value))
+  REQUIRES((is_builtin_integer_v<T>))
   RETURN(void) FromBinary(const T* bits, const int n) {
     hi_ = 0;
     for (int i = std::min(bitsize - 1, n - 1); i >= half_bitsize; --i) {
@@ -466,7 +466,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value))
+  REQUIRES((is_builtin_integer_v<T>))
   RETURN(void) FromBinary(const std::vector<T>& bits) {
     FromBinary(&bits[0], static_cast<int>(bits.size()));
   }
@@ -655,13 +655,13 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   ExtendedUnsignedIntImpl FAbs() const { return *this; }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value && sizeof(T) <= sizeof(ET)))
+  REQUIRES((is_builtin_integer_v<T> && sizeof(T) <= sizeof(ET)))
   RETURN(T) ToInt() const {
     return static_cast<T>(low_);
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value && sizeof(T) > sizeof(ET)))
+  REQUIRES((is_builtin_integer_v<T> && sizeof(T) > sizeof(ET)))
   RETURN(T) ToInt() const {
     using unsignedT = typename pe_make_unsigned<T>::type;
     return static_cast<T>((static_cast<unsignedT>(hi_) << half_bitsize) |
@@ -1135,14 +1135,14 @@ struct ExtendedUnsignedIntImpl<ET, false> {
 
  private:
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value && pe_is_unsigned<T>::value &&
+  REQUIRES((is_builtin_integer_v<T> && pe_is_unsigned_v<T> &&
             sizeof(T) <= sizeof(ET)))
   RETURN(void) FromNativeInt(T v) {
     low_ = v;
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value && pe_is_unsigned<T>::value &&
+  REQUIRES((is_builtin_integer_v<T> && pe_is_unsigned_v<T> &&
             sizeof(T) > sizeof(ET)))
   RETURN(void) FromNativeInt(T v) {
     low_ = v;
@@ -1150,7 +1150,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value &&
+  REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T> &&
             sizeof(T) <= sizeof(ET)))
   RETURN(void) FromNativeInt(T v) {
     if (v >= 0) {
@@ -1162,7 +1162,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value && pe_is_signed<T>::value &&
+  REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T> &&
             sizeof(T) > sizeof(ET)))
   RETURN(void) FromNativeInt(T v) {
     using unsignedT = typename pe_make_unsigned<T>::type;
@@ -1196,7 +1196,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   ExtendedUnsignedIntImpl(ET low, ET hi) : low_(low), hi_(hi) {}
 
   template <typename T,
-            typename TT = REQUIRES((is_builtin_integer<T>::value)) RETURN(T)>
+            typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(T)>
   ExtendedUnsignedIntImpl(T v) : low_(0), hi_(0) {
     FromNativeInt<T>(v);
   }
@@ -1215,7 +1215,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   template <typename T,
-            typename TT = REQUIRES((is_builtin_integer<T>::value)) RETURN(T)>
+            typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(T)>
   ExtendedUnsignedIntImpl& operator=(const T& other) {
     MakeZeroBits();
     FromNativeInt<T>(other);
@@ -1393,7 +1393,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value))
+  REQUIRES((is_builtin_integer_v<T>))
   RETURN(std::vector<T>) ToKBits(int k, int fix_size = 1) const {
     if (k == 1) {
       return ToBinary<T>(fix_size);
@@ -1411,7 +1411,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value))
+  REQUIRES((is_builtin_integer_v<T>))
   RETURN(void) FromKBits(int k, const std::vector<T>& bits) {
     if (k == 1) {
       FromBinary(&bits[0], static_cast<int>(bits.size()));
@@ -1421,7 +1421,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value))
+  REQUIRES((is_builtin_integer_v<T>))
   RETURN(void) FromKBits(int k, const T* bits, const int n) {
     if (k == 1) {
       FromBinary(bits, n);
@@ -1438,7 +1438,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value))
+  REQUIRES((is_builtin_integer_v<T>))
   RETURN(std::vector<T>) ToBinary(int fix_size = 1) const {
     std::vector<T> r = low_.template ToBinary<T>(0);
     if (!fix_size || !hi_.IsZero()) {
@@ -1452,13 +1452,13 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value))
+  REQUIRES((is_builtin_integer_v<T>))
   RETURN(void) FromBinary(const std::vector<T>& bits) {
     FromBinary(&bits[0], static_cast<int>(bits.size()));
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value))
+  REQUIRES((is_builtin_integer_v<T>))
   RETURN(void) FromBinary(const T* bits, const int n) {
     low_.FromBinary(bits, n);
     if (n > half_bitsize) {
@@ -1653,13 +1653,13 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   ExtendedUnsignedIntImpl FAbs() const { return *this; }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value && sizeof(T) <= sizeof(ET)))
+  REQUIRES((is_builtin_integer_v<T> && sizeof(T) <= sizeof(ET)))
   RETURN(T) ToInt() const {
     return low_.template ToInt<T>();
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value && sizeof(T) > sizeof(ET)))
+  REQUIRES((is_builtin_integer_v<T> && sizeof(T) > sizeof(ET)))
   RETURN(T) ToInt() const {
     using unsignedT = typename pe_make_unsigned<T>::type;
     return static_cast<T>(hi_.template ToInt<unsignedT>() << half_bitsize |
@@ -1788,7 +1788,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value))
+  REQUIRES((is_builtin_integer_v<T>))
   RETURN(ExtendedUnsignedIntImpl&) operator+=(const T& other) {
     return *this += ExtendedUnsignedIntImpl(other);
   }
@@ -1829,7 +1829,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value))
+  REQUIRES((is_builtin_integer_v<T>))
   RETURN(ExtendedUnsignedIntImpl&) operator-=(const T& other) {
     return *this -= ExtendedUnsignedIntImpl(other);
   }
@@ -1880,7 +1880,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value))
+  REQUIRES((is_builtin_integer_v<T>))
   RETURN(ExtendedUnsignedIntImpl&) operator*=(const T& other) {
     return *this *= ExtendedUnsignedIntImpl(other);
   }
@@ -1895,7 +1895,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value))
+  REQUIRES((is_builtin_integer_v<T>))
   RETURN(ExtendedUnsignedIntImpl&) operator/=(const T& other) {
     return *this /= ExtendedUnsignedIntImpl(other);
   }
@@ -1910,7 +1910,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value))
+  REQUIRES((is_builtin_integer_v<T>))
   RETURN(ExtendedUnsignedIntImpl&) operator%=(const T& other) {
     return *this %= ExtendedUnsignedIntImpl(other);
   }
@@ -1922,7 +1922,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value))
+  REQUIRES((is_builtin_integer_v<T>))
   RETURN(ExtendedUnsignedIntImpl&) operator&=(const T& other) {
     return *this &= ExtendedUnsignedIntImpl(other);
   }
@@ -1942,7 +1942,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value))
+  REQUIRES((is_builtin_integer_v<T>))
   RETURN(ExtendedUnsignedIntImpl&) operator^=(const T& other) {
     return *this ^= ExtendedUnsignedIntImpl(other);
   }
@@ -1958,7 +1958,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer<T>::value))
+  REQUIRES((is_builtin_integer_v<T>))
   RETURN(ExtendedUnsignedIntImpl&) operator|=(const T& other) {
     return *this |= ExtendedUnsignedIntImpl(other);
   }
@@ -2195,7 +2195,7 @@ SL std::string to_string(
 }
 
 template <typename ET, bool is_builtin_integer, typename TN>
-SL REQUIRES((pe::is_builtin_integer<TN>::value))
+SL REQUIRES((pe::is_builtin_integer_v<TN>))
     RETURN(ExtendedUnsignedIntImpl<ET, is_builtin_integer>)
         Power(ExtendedUnsignedIntImpl<ET, is_builtin_integer> x, TN n) {
   PE_ASSERT(n >= 0);
@@ -2208,7 +2208,7 @@ SL REQUIRES((pe::is_builtin_integer<TN>::value))
 }
 
 template <typename ET, bool is_builtin_integer, typename TN>
-SL REQUIRES((pe::is_builtin_integer<TN>::value))
+SL REQUIRES((pe::is_builtin_integer_v<TN>))
     RETURN(ExtendedUnsignedIntImpl<ET, is_builtin_integer>)
         PowerMod(ExtendedUnsignedIntImpl<ET, is_builtin_integer> x, TN n,
                  const ExtendedUnsignedIntImpl<ET, is_builtin_integer>& mod) {
@@ -2222,8 +2222,7 @@ SL REQUIRES((pe::is_builtin_integer<TN>::value))
 }
 
 template <typename ET, bool is_builtin_integer, typename TN, typename TM>
-SL REQUIRES((pe::is_builtin_integer<TN>::value &&
-             pe::is_builtin_integer<TM>::value))
+SL REQUIRES((pe::is_builtin_integer_v<TN> && pe::is_builtin_integer_v<TM>))
     RETURN(ExtendedUnsignedIntImpl<ET, is_builtin_integer>)
         PowerMod(ExtendedUnsignedIntImpl<ET, is_builtin_integer> x, TN n,
                  TM mod) {
@@ -2239,7 +2238,7 @@ SL REQUIRES((pe::is_builtin_integer<TN>::value &&
 template <typename ET>
 using ExtendedUnsignedInt =
     ExtendedUnsignedIntImpl<typename ExtractET<ET>::type,
-                            is_builtin_integer<ET>::value>;
+                            is_builtin_integer_v<ET>>;
 
 #if PE_HAS_CPP20
 static_assert(PeNumberUtil<ExtendedUnsignedInt<uint64>>);

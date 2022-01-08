@@ -23,7 +23,7 @@ struct IntToType {
 
 // A simple concept implementation, e.g.
 // template<typename T, typename U>
-// REQUIRES((is_builtin_integer<T>::value && pe_is_unsigned<U>::value))
+// REQUIRES((is_builtin_integer_v<T> && pe_is_unsigned<U>::value))
 // RETURN(void)  foo(T x, U y)  {}
 template <int ok>
 struct CheckConditionThen {};
@@ -65,12 +65,12 @@ class MpInteger;
 // is_builtin_integer
 template <typename T>
 struct is_builtin_integer {
-  enum { value = std::is_integral<T>::value };
+  enum { value = std::is_integral_v<T> };
 };
 
 template <typename T>
 struct is_builtin_integer<T&> {
-  enum { value = is_builtin_integer<T>::value };
+  enum { value = is_builtin_integer_v<T> };
 };
 
 #if PE_HAS_INT128
@@ -83,6 +83,9 @@ struct is_builtin_integer<uint128> {
   enum { value = true };
 };
 #endif
+
+template <typename T>
+inline constexpr bool is_builtin_integer_v = is_builtin_integer<T>::value;
 
 // is_extended_integer
 template <typename T>
@@ -120,13 +123,18 @@ struct is_extended_integer<const ExtendedSignedIntImpl<ET, is_builtin>&> {
   enum { value = true };
 };
 
+template <typename T>
+inline constexpr bool is_extended_integer_v = is_extended_integer<T>::value;
+
 // is_builtin_or_extended_integer
 template <typename T>
 struct is_builtin_or_extended_integer {
-  enum {
-    value = is_builtin_integer<T>::value || is_extended_integer<T>::value
-  };
+  enum { value = is_builtin_integer_v<T> || is_extended_integer_v<T> };
 };
+
+template <typename T>
+inline constexpr bool is_builtin_or_extended_integer_v =
+    is_builtin_or_extended_integer<T>::value;
 
 // is_gbi
 template <typename T>
@@ -183,12 +191,14 @@ struct is_gbi<const mpz_class&> {
 };
 #endif
 
+template <typename T>
+inline constexpr bool is_gbi_v = is_gbi<T>::value;
+
 // is_general_integer
 template <typename T>
 struct is_general_integer {
   enum {
-    value = is_builtin_integer<T>::value || is_extended_integer<T>::value ||
-            is_gbi<T>::value
+    value = is_builtin_integer_v<T> || is_extended_integer_v<T> || is_gbi_v<T>
   };
 };
 
@@ -196,6 +206,9 @@ template <typename T>
 struct is_general_integer<T&> {
   enum { value = is_general_integer<T>::value };
 };
+
+template <typename T>
+inline constexpr bool is_general_integer_v = is_general_integer<T>::value;
 
 // pe_is_signed
 template <typename T>
@@ -225,6 +238,9 @@ struct pe_is_signed<ExtendedSignedIntImpl<ET, is_builtin>> {
   enum { value = true };
 };
 
+template <typename T>
+inline constexpr bool pe_is_signed_v = pe_is_signed<T>::value;
+
 // pe_is_unsigned
 template <typename T>
 struct pe_is_unsigned {
@@ -252,6 +268,9 @@ template <typename ET, bool is_builtin>
 struct pe_is_unsigned<ExtendedSignedIntImpl<ET, is_builtin>> {
   enum { value = false };
 };
+
+template <typename T>
+inline constexpr bool pe_is_unsigned_v = pe_is_unsigned<T>::value;
 
 // pe_make_signed
 template <typename T>
@@ -380,7 +399,7 @@ struct BiggerIntegralHandleGbi<T1, T2, false, false> {
 
 template <typename T1, typename T2>
 struct BiggerIntegral {
-  using type = typename BiggerIntegralHandleGbi<T1, T2, is_gbi<T1>::value,
+  using type = typename BiggerIntegralHandleGbi<T1, T2, is_gbi_v<T1>,
                                                 is_gbi<T2>::value>::type;
 };
 

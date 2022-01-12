@@ -193,7 +193,50 @@ SL void InitPrimes(int cal_phi, int cal_mu, int cal_rad, int cal_sigma0) {
   }
 }
 
-SL void FactorizeByPmask(int64 n, std::vector<std::pair<int64, int>>& ret) {
+struct IntegerFactorization : public std::vector<std::pair<int64, int>> {
+  using base = std::vector<std::pair<int64, int>>;
+  using base::base;
+
+  IntegerFactorization(const IntegerFactorization& o) : base(o) {}
+
+  IntegerFactorization(IntegerFactorization&& o) : base(std::move(o)) {}
+
+  IntegerFactorization(const base& o) : base(o) {}
+
+  IntegerFactorization(base&& o) : base(std::move(o)) {}
+
+  IntegerFactorization& operator=(const IntegerFactorization& o) {
+    this->base::operator=(o);
+    return *this;
+  }
+
+  IntegerFactorization& operator=(IntegerFactorization&& o) {
+    this->base::operator=(std::move(o));
+    return *this;
+  }
+
+  IntegerFactorization& operator=(const base& o) {
+    this->base::operator=(o);
+    return *this;
+  }
+
+  IntegerFactorization& operator=(base&& o) {
+    this->base::operator=(std::move(o));
+    return *this;
+  }
+};
+
+SL std::ostream& operator<<(std::ostream& o, const IntegerFactorization& v) {
+  const auto n = static_cast<int64>(v.size());
+  for (int64 i = 0; i < n; ++i) {
+    o << v[i].first;
+    if (v[i].second > 1) o << "^" << v[i].second;
+    if (i < n - 1) o << " * ";
+  }
+  return o;
+}
+
+SL void FactorizeByPmask(int64 n, IntegerFactorization& ret) {
   while (n != 1) {
     int now = pmask[n];
     int c = 0;
@@ -202,8 +245,8 @@ SL void FactorizeByPmask(int64 n, std::vector<std::pair<int64, int>>& ret) {
   }
 }
 
-SL std::vector<std::pair<int64, int>> Factorize(int64 n) {
-  std::vector<std::pair<int64, int>> ret;
+SL IntegerFactorization Factorize(int64 n) {
+  IntegerFactorization ret;
   if (n <= 1) {
     return ret;
   }
@@ -224,9 +267,8 @@ SL std::vector<std::pair<int64, int>> Factorize(int64 n) {
   return ret;
 }
 
-SL std::vector<std::pair<int64, int>> Factorize(
-    int64 n, const std::vector<int64>& hint) {
-  std::vector<std::pair<int64, int>> ret;
+SL IntegerFactorization Factorize(int64 n, const std::vector<int64>& hint) {
+  IntegerFactorization ret;
   if (n <= 1) {
     return ret;
   }
@@ -269,17 +311,6 @@ SL int IsPrime(int64 n) {
     if (n % p == 0) return 0;
   }
   return 1;
-}
-
-SL std::ostream& operator<<(std::ostream& o,
-                            const std::vector<std::pair<int64, int>>& v) {
-  const auto n = static_cast<int64>(v.size());
-  for (int64 i = 0; i < n; ++i) {
-    o << v[i].first;
-    if (v[i].second > 1) o << "^" << v[i].second;
-    if (i < n - 1) o << " * ";
-  }
-  return o;
 }
 
 // prime test for n <= 2^63 - 1
@@ -361,8 +392,8 @@ SL int IsPrimeEx(int64 n) {
 }
 
 namespace pe_internal {
-SL std::vector<int64> GetFactorsImpl(
-    const std::vector<std::pair<int64, int>>& f, const int64 maxv) {
+SL std::vector<int64> GetFactorsImpl(const IntegerFactorization& f,
+                                     const int64 maxv) {
   if (maxv == 0) {
     return std::vector<int64>();
   }
@@ -395,7 +426,7 @@ SL std::vector<int64> GetFactorsImpl(
 }
 }  // namespace pe_internal
 
-SL std::vector<int64> GetFactors(const std::vector<std::pair<int64, int>>& f,
+SL std::vector<int64> GetFactors(const IntegerFactorization& f,
                                  int64 maxv = -1) {
   return pe_internal::GetFactorsImpl(f, maxv);
 }
@@ -404,8 +435,7 @@ SL std::vector<int64> GetFactors(int64 value, int64 maxv = -1) {
   return pe_internal::GetFactorsImpl(Factorize(value), maxv);
 }
 
-SL std::vector<int64> GetPrimeFactors(
-    const std::vector<std::pair<int64, int>>& f) {
+SL std::vector<int64> GetPrimeFactors(const IntegerFactorization& f) {
   if (f.size() == 0) {
     return {};
   }
@@ -428,8 +458,8 @@ SL std::vector<int64> GetPrimeFactors(int64 value) {
 }
 
 namespace pe_internal {
-SL std::vector<int64> GetRadFactorsImpl(
-    const std::vector<std::pair<int64, int>>& f, const int64 maxv) {
+SL std::vector<int64> GetRadFactorsImpl(const IntegerFactorization& f,
+                                        const int64 maxv) {
   if (maxv == 0) {
     return std::vector<int64>();
   }
@@ -460,7 +490,7 @@ SL std::vector<int64> GetRadFactorsImpl(
 }
 }  // namespace pe_internal
 
-SL std::vector<int64> GetRadFactors(const std::vector<std::pair<int64, int>>& f,
+SL std::vector<int64> GetRadFactors(const IntegerFactorization& f,
                                     int64 maxv = -1) {
   return pe_internal::GetRadFactorsImpl(f, maxv);
 }
@@ -470,14 +500,14 @@ SL std::vector<int64> GetRadFactors(int64 value, int64 maxv = -1) {
 }
 
 namespace pe_internal {
-SL std::vector<std::pair<int64, int>> GetRadFactorsWithMuImpl(
-    const std::vector<std::pair<int64, int>>& f, const int64 maxv) {
+SL IntegerFactorization GetRadFactorsWithMuImpl(const IntegerFactorization& f,
+                                                const int64 maxv) {
   if (maxv == 0) {
-    return std::vector<std::pair<int64, int>>();
+    return IntegerFactorization();
   }
 
   const int max_size = 1 << f.size();
-  std::vector<std::pair<int64, int>> result(max_size);
+  IntegerFactorization result(max_size);
   result[0] = {1LL, 1};
 
   int top = 1;
@@ -503,17 +533,16 @@ SL std::vector<std::pair<int64, int>> GetRadFactorsWithMuImpl(
 }
 }  // namespace pe_internal
 
-SL std::vector<std::pair<int64, int>> GetRadFactorsWithMu(
-    const std::vector<std::pair<int64, int>>& f, int64 maxv = -1) {
+SL IntegerFactorization GetRadFactorsWithMu(const IntegerFactorization& f,
+                                            int64 maxv = -1) {
   return pe_internal::GetRadFactorsWithMuImpl(f, maxv);
 }
 
-SL std::vector<std::pair<int64, int>> GetRadFactorsWithMu(int64 value,
-                                                          int64 maxv = -1) {
+SL IntegerFactorization GetRadFactorsWithMu(int64 value, int64 maxv = -1) {
   return pe_internal::GetRadFactorsWithMuImpl(Factorize(value), maxv);
 }
 
-SL int64 CalPhi(int64 n, const std::vector<std::pair<int64, int>>& fn) {
+SL int64 CalPhi(int64 n, const IntegerFactorization& fn) {
   if (n <= 0) return 0;
   if (phi && n <= maxp) return phi[n];
   int64 phi_n = n;
@@ -575,7 +604,7 @@ SL int64 CalMu(int64 n) {
   return pe_internal::CalMuImpl(n);
 }
 
-SL int64 CalMu(int64 n, const std::vector<std::pair<int64, int>>& fn) {
+SL int64 CalMu(int64 n, const IntegerFactorization& fn) {
   if (n <= 0) return 0;
   if (n == 1) return 1;
   if (mu && n <= maxp) return mu[n];
@@ -624,7 +653,7 @@ SL int64 CalRad(int64 n) {
   return pe_internal::CalRadImpl(n);
 }
 
-SL int64 CalRad(int64 n, const std::vector<std::pair<int64, int>>& fn) {
+SL int64 CalRad(int64 n, const IntegerFactorization& fn) {
   if (n <= 0) return 0;
   if (n == 1) return 1;
   if (rad && n <= maxp) return rad[n];
@@ -674,7 +703,7 @@ SL int64 CalSigma0(int64 n) {
   return pe_internal::CalSigma0Impl(n);
 }
 
-SL int64 CalSigma0(int64 n, const std::vector<std::pair<int64, int>>& fn) {
+SL int64 CalSigma0(int64 n, const IntegerFactorization& fn) {
   if (n <= 0) return 0;
   if (n == 1) return 1;
   if (sigma0 && n <= maxp) return sigma0[n];

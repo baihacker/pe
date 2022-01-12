@@ -727,8 +727,7 @@ SL REQUIRES((IsNModNumberV<T>)) RETURN(void) InitComb(T (*comb)[D]) {
 
 // Checks whether x is the primitive root of p while  the factorization of p -1
 // is f.
-SL bool IsPrimitiveRoot(int64 x, int64 p,
-                        const std::vector<std::pair<int64, int>>& f) {
+SL bool IsPrimitiveRoot(int64 x, int64 p, const IntegerFactorization& f) {
   return std::none_of(std::begin(f), std::end(f),
                       [=](const std::pair<int64, int>& it) {
                         return PowerMod(x, (p - 1) / it.first, p) == 1;
@@ -750,8 +749,7 @@ SL int64 FindPrimitiveRoot(int64 p) {
   return -1;
 }
 
-SL int64 FindPrimitiveRoot(int64 p,
-                           const std::vector<std::pair<int64, int>>& fp1) {
+SL int64 FindPrimitiveRoot(int64 p, const IntegerFactorization& fp1) {
   if (p <= 1) return -1;
   if (p == 2) return 1;
   for (int64 i = 2;; ++i) {
@@ -925,8 +923,7 @@ SL void GaussMul(int64& x, int64& y, int64 a, int64 b) {
 
 #if PE_HAS_INT128
 namespace pe_internal {
-SL void FactorizeForTwoSquaresByPmask(int64 n,
-                                      std::vector<std::pair<int64, int>>& ret) {
+SL void FactorizeForTwoSquaresByPmask(int64 n, IntegerFactorization& ret) {
   while (n != 1) {
     int now = pmask[n];
     int c = 0;
@@ -934,7 +931,7 @@ SL void FactorizeForTwoSquaresByPmask(int64 n,
     if (c) {
       if ((now & 3) == 3) {
         if (IsOdd(c)) {
-          std::vector<std::pair<int64, int>>{}.swap(ret);
+          IntegerFactorization{}.swap(ret);
           return;
         }
       }
@@ -944,8 +941,8 @@ SL void FactorizeForTwoSquaresByPmask(int64 n,
 }
 
 // n > 2
-SL std::vector<std::pair<int64, int>> FactorizeForTwoSquares(int64 n) {
-  std::vector<std::pair<int64, int>> ret;
+SL IntegerFactorization FactorizeForTwoSquares(int64 n) {
+  IntegerFactorization ret;
 
   int p2 = 0;
   while (IsEven(n)) n >>= 1, ++p2;
@@ -966,7 +963,7 @@ SL std::vector<std::pair<int64, int>> FactorizeForTwoSquares(int64 n) {
     if (c) {
       if ((p & 3) == 3) {
         if (IsOdd(c)) {
-          return std::vector<std::pair<int64, int>>();
+          return IntegerFactorization();
         }
       }
       ret.emplace_back(p, c);
@@ -974,7 +971,7 @@ SL std::vector<std::pair<int64, int>> FactorizeForTwoSquares(int64 n) {
   }
   if (n != 1) {
     if ((n & 3) == 3) {
-      return std::vector<std::pair<int64, int>>();
+      return IntegerFactorization();
     }
     ret.emplace_back(n, 1);
   }
@@ -1019,8 +1016,7 @@ SL std::vector<std::pair<int64, int64>> PrimeTwoSquares(const int64 p) {
 }
 
 namespace pe_internal {
-SL void TwoSquaresImpl(int now, const std::vector<std::pair<int64, int>>& f,
-                       int64 u, int64 v,
+SL void TwoSquaresImpl(int now, const IntegerFactorization& f, int64 u, int64 v,
                        std::vector<std::pair<int64, int64>>& result) {
   if (now == sz(f)) {
     u = Abs(u), v = Abs(v);
@@ -1065,7 +1061,7 @@ SL void TwoSquaresImpl(int now, const std::vector<std::pair<int64, int>>& f,
 }
 
 SL std::vector<std::pair<int64, int64>> TwoSquaresImpl(
-    const std::vector<std::pair<int64, int>>& f) {
+    const IntegerFactorization& f) {
   std::vector<std::pair<int64, int64>> ret;
   TwoSquaresImpl(0, f, 1, 0, ret);
   std::sort(all(ret));
@@ -1075,7 +1071,7 @@ SL std::vector<std::pair<int64, int64>> TwoSquaresImpl(
 }  // namespace pe_internal
 
 SL std::vector<std::pair<int64, int64>> TwoSquares(
-    const std::vector<std::pair<int64, int>>& f) {
+    const IntegerFactorization& f) {
   for (auto& iter : f) {
     if ((iter.first & 3) == 3) {
       if (IsOdd(iter.second)) {

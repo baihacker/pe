@@ -18,6 +18,7 @@ static int* plist = nullptr;
 static int* phi = nullptr;
 static int* mu = nullptr;
 static int* rad = nullptr;
+static int* sigma0 = nullptr;
 
 SL void INIT_MAXP(int64 v) {
   maxp = v;
@@ -130,7 +131,7 @@ SL void InitPrimes() {
   }
 }
 
-SL void InitPrimes(int cal_phi, int cal_mu, int cal_rad) {
+SL void InitPrimes(int cal_phi, int cal_mu, int cal_rad, int cal_sigma0) {
   if (maxp == 0) {
     INIT_MAXP(1000000);
   }
@@ -167,6 +168,26 @@ SL void InitPrimes(int cal_phi, int cal_mu, int cal_rad) {
         if (mu) mu[t] = -mu[i];
         if (phi) phi[t] = phi[i] * (plist[j] - 1);
         if (rad) rad[t] = rad[i] * plist[j];
+      }
+    }
+  }
+
+  if (cal_sigma0) {
+    sigma0 = new int[maxp + 1];
+    sigma0[0] = 0;
+    sigma0[1] = 1;
+    for (int i = 2; i <= maxp; ++i) {
+      if (pmask[i] == i) {
+        sigma0[i] = 2;
+      } else {
+        int d = pmask[i];
+        int e = 2;
+        int j = i / d;
+        while (j % d == 0) {
+          ++e;
+          j /= d;
+        }
+        sigma0[i] = e * sigma0[j];
       }
     }
   }
@@ -611,6 +632,56 @@ SL int64 CalRad(int64 n, const std::vector<std::pair<int64, int>>& fn) {
   int64 ret = 1;
   for (auto& iter : fn) {
     ret *= iter.first;
+  }
+  return ret;
+}
+
+namespace pe_internal {
+SL int64 CalRadSigma0ByPmask(int64 n, int64 v = 1) {
+  while (n != 1) {
+    const int now = pmask[n];
+    int c = 0;
+    while (n % now == 0) n /= now, ++c;
+    if (c >= 1) v *= c + 1;
+  }
+  return v;
+}
+
+SL int64 CalSigma0Impl(int64 n) {
+  int64 v = 1;
+
+  for (int i = 0; i < pcnt; ++i) {
+    if (n <= maxp) {
+      return CalRadSigma0ByPmask(n, v);
+    }
+    const int64 p = plist[i];
+    const int64 test = p * p;
+    if (test > n) break;
+    int c = 0;
+    while (n % p == 0) n /= p, ++c;
+    if (c >= 1) v *= c + 1;
+  }
+  if (n != 1) v *= 2;
+  return v;
+}
+}  // namespace pe_internal
+
+SL int64 CalSigma0(int64 n) {
+  if (n <= 0) return 0;
+  if (n == 1) return 1;
+  if (sigma0 && n <= maxp) return sigma0[n];
+
+  return pe_internal::CalSigma0Impl(n);
+}
+
+SL int64 CalSigma0(int64 n, const std::vector<std::pair<int64, int>>& fn) {
+  if (n <= 0) return 0;
+  if (n == 1) return 1;
+  if (sigma0 && n <= maxp) return sigma0[n];
+
+  int64 ret = 1;
+  for (auto& iter : fn) {
+    ret *= iter.second + 1;
   }
   return ret;
 }

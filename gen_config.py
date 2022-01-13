@@ -44,6 +44,7 @@ def check_target(path):
 def main():
   content.append('#ifndef PE_CONFIG_')
   content.append('#define PE_CONFIG_')
+  content.append('')
   content.append('// This file provides a centralized place to configure pe')
   content.append('')
   content.append(

@@ -46,7 +46,7 @@ int main() {
   int64 ans0 = CalPi0(n);
   int64 ans1 = CalPi1(n);
   std::cout << "n = " << n << std::endl;
-  std::cout << "Expected: " << pmpi[m] << std::endl;
+  std::cout << "Expected: " << kPrimePi[m] << std::endl;
   std::cout << "CalPi0: " << ans0 << std::endl;
   std::cout << "CalPi1: " << ans1 << std::endl;
 

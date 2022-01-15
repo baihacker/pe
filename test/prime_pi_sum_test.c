@@ -36,12 +36,12 @@ SL void PrimePiSumTest() {
 
   SmallTest();
 
-  assert((PrimePi<int64>(10000000))[10000000] == pmpi[7]);
-  assert((PrimePi<int64>(100000000))[100000000] == pmpi[8]);
-  assert((PrimePi<int64>(1000000000))[1000000000] == pmpi[9]);
-  assert((PrimePi<int64>(10000000000))[10000000000] == pmpi[10]);
-  // assert((PrimePi<int64>(100000000000))[100000000000] == pmpi[11]);
-  // assert((PrimePi<int64>(1000000000000))[1000000000000] == pmpi[12]);
+  assert((PrimePi<int64>(10000000))[10000000] == kPrimePi[7]);
+  assert((PrimePi<int64>(100000000))[100000000] == kPrimePi[8]);
+  assert((PrimePi<int64>(1000000000))[1000000000] == kPrimePi[9]);
+  assert((PrimePi<int64>(10000000000))[10000000000] == kPrimePi[10]);
+  // assert((PrimePi<int64>(100000000000))[100000000000] == kPrimePi[11]);
+  // assert((PrimePi<int64>(1000000000000))[1000000000000] == kPrimePi[12]);
 }
 
 PE_REGISTER_TEST(&PrimePiSumTest, "PrimePiSumTest", BIG);

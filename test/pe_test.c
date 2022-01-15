@@ -254,22 +254,22 @@ int main() {
     if (!IsEnabledTestSize(item.testSize)) {
       continue;
     }
-#ifdef NO_SMALL_TEST
+#if defined(NO_SMALL_TEST)
     if (item.testSize == SMALL) {
       continue;
     }
 #endif
-#ifdef NO_MEDIUM_TEST
+#if defined(NO_MEDIUM_TEST)
     if (item.testSize == MEDIUM) {
       continue;
     }
 #endif
-#ifdef NO_BIG_TEST
+#if defined(NO_BIG_TEST)
     if (item.testSize == BIG) {
       continue;
     }
 #endif
-#ifdef NO_SUPER_TEST
+#if defined(NO_SUPER_TEST)
     if (item.testSize == SUPER) {
       continue;
     }

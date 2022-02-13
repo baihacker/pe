@@ -410,23 +410,23 @@ SL int IsPrimeEx(int64 n) {
 }
 
 namespace pe_internal {
-SL std::vector<int64> GetFactorsImpl(const IntegerFactorization& f,
-                                     const int64 maxv) {
+template <typename T>
+SL std::vector<T> GetFactorsImpl(const IntegerFactorization& f, const T maxv) {
   if (maxv == 0) {
-    return std::vector<int64>();
+    return std::vector<T>();
   }
 
   int max_size = 1;
   for (auto& iter : f) max_size *= iter.second + 1;
 
-  std::vector<int64> result(max_size);
+  std::vector<T> result(max_size);
   result[0] = 1;
 
   int top = 1;
   for (auto& iter : f) {
     const int last = top;
-    const int64 p = iter.first;
-    int64 v = 1;
+    const T p = iter.first;
+    T v = 1;
     for (int i = 0; i < iter.second; ++i) {
       v *= p;
       if (maxv > 0 && v > maxv) break;
@@ -446,11 +446,16 @@ SL std::vector<int64> GetFactorsImpl(const IntegerFactorization& f,
 
 SL std::vector<int64> GetFactors(const IntegerFactorization& f,
                                  int64 maxv = -1) {
-  return pe_internal::GetFactorsImpl(f, maxv);
+  return pe_internal::GetFactorsImpl<int64>(f, maxv);
 }
 
 SL std::vector<int64> GetFactors(int64 value, int64 maxv = -1) {
-  return pe_internal::GetFactorsImpl(Factorize(value), maxv);
+  return pe_internal::GetFactorsImpl<int64>(Factorize(value), maxv);
+}
+
+template <typename T>
+SL std::vector<T> GetFactorsT(const IntegerFactorization& f, T maxv = -1) {
+  return pe_internal::GetFactorsImpl<T>(f, maxv);
 }
 
 SL std::vector<int64> GetPrimeFactors(const IntegerFactorization& f) {

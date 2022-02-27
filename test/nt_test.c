@@ -181,4 +181,178 @@ SL void BaseKConversionTest() {
   }
 }
 PE_REGISTER_TEST(&BaseKConversionTest, "BaseKConversionTest", SMALL);
+
+SL void CountCoprimeTest() {
+  const int64 mod = 17;
+  using MT = NMod64<mod>;
+  for (int64 a = 1; a <= 100; ++a) {
+    auto f = Factorize(a);
+    auto rm = GetRadFactorsWithMu(a);
+    for (int64 n = 1; n <= 1000; n *= 10) {
+      int64 ans0 = 0;
+      int64 ans1 = CountCoprime(n, a);
+      int64 ans2 = CountCoprime(n, f);
+      int64 ans3 = CountCoprime(n, rm);
+      for (int64 i = 1; i <= n; ++i) {
+        if (Gcd(i, a) == 1) {
+          ++ans0;
+        }
+      }
+      assert(ans1 == ans0);
+      assert(ans2 == ans0);
+      assert(ans3 == ans0);
+    }
+  }
+
+  for (int64 a = 1; a <= 100; ++a) {
+    auto f = Factorize(a);
+    auto rm = GetRadFactorsWithMu(a);
+    for (int64 n = 1; n <= 1000; n *= 10) {
+      int64 ans0 = 0;
+      int64 ans1 = CountCoprime<MT>(n, a).value();
+      int64 ans2 = CountCoprime<MT>(n, f).value();
+      int64 ans3 = CountCoprime<MT>(n, rm).value();
+      for (int64 i = 1; i <= n; ++i) {
+        if (Gcd(i, a) == 1) {
+          ++ans0;
+        }
+      }
+      ans0 %= mod;
+      assert(ans1 == ans0);
+      assert(ans2 == ans0);
+      assert(ans3 == ans0);
+    }
+  }
+
+  for (int64 a = 1; a <= 100; ++a) {
+    auto f = Factorize(a);
+    auto rm = GetRadFactorsWithMu(a);
+    for (int64 n = 1; n <= 1000; n *= 10) {
+      for (int64 remain = 0; remain < 5; ++remain) {
+        int64 ans0 = 0;
+        int64 ans1 = CountCoprime(n, a, remain, 5);
+        int64 ans2 = CountCoprime(n, f, remain, 5);
+        int64 ans3 = CountCoprime(n, rm, remain, 5);
+        for (int64 i = 1; i <= n; ++i) {
+          if (Gcd(i, a) == 1 && i % 5 == remain) {
+            ++ans0;
+          }
+        }
+        assert(ans1 == ans0);
+        assert(ans2 == ans0);
+        assert(ans3 == ans0);
+      }
+    }
+  }
+
+  for (int64 a = 1; a <= 100; ++a) {
+    auto f = Factorize(a);
+    auto rm = GetRadFactorsWithMu(a);
+    for (int64 n = 1; n <= 1000; n *= 10) {
+      for (int64 remain = 0; remain < 5; ++remain) {
+        int64 ans0 = 0;
+        int64 ans1 = CountCoprime<MT>(n, a, remain, 5).value();
+        int64 ans2 = CountCoprime<MT>(n, f, remain, 5).value();
+        int64 ans3 = CountCoprime<MT>(n, rm, remain, 5).value();
+        for (int64 i = 1; i <= n; ++i) {
+          if (Gcd(i, a) == 1 && i % 5 == remain) {
+            ++ans0;
+          }
+        }
+        ans0 %= mod;
+        assert(ans1 == ans0);
+        assert(ans2 == ans0);
+        assert(ans3 == ans0);
+      }
+    }
+  }
+}
+PE_REGISTER_TEST(&CountCoprimeTest, "CountCoprimeTest", SMALL);
+
+SL void SumCoprimeTest() {
+  const int64 mod = 17;
+  using MT = NMod64<mod>;
+  for (int64 a = 1; a <= 100; ++a) {
+    auto f = Factorize(a);
+    auto rm = GetRadFactorsWithMu(a);
+    for (int64 n = 1; n <= 1000; n *= 10) {
+      int64 ans0 = 0;
+      int64 ans1 = SumCoprime(n, a);
+      int64 ans2 = SumCoprime(n, f);
+      int64 ans3 = SumCoprime(n, rm);
+      for (int64 i = 1; i <= n; ++i) {
+        if (Gcd(i, a) == 1) {
+          ans0 += i;
+        }
+      }
+      assert(ans1 == ans0);
+      assert(ans2 == ans0);
+      assert(ans3 == ans0);
+    }
+  }
+
+  for (int64 a = 1; a <= 100; ++a) {
+    auto f = Factorize(a);
+    auto rm = GetRadFactorsWithMu(a);
+    for (int64 n = 1; n <= 1000; n *= 10) {
+      int64 ans0 = 0;
+      int64 ans1 = SumCoprime<MT>(n, a).value();
+      int64 ans2 = SumCoprime<MT>(n, f).value();
+      int64 ans3 = SumCoprime<MT>(n, rm).value();
+      for (int64 i = 1; i <= n; ++i) {
+        if (Gcd(i, a) == 1) {
+          ans0 += i;
+        }
+      }
+      ans0 %= mod;
+      assert(ans1 == ans0);
+      assert(ans2 == ans0);
+      assert(ans3 == ans0);
+    }
+  }
+
+  for (int64 a = 1; a <= 100; ++a) {
+    auto f = Factorize(a);
+    auto rm = GetRadFactorsWithMu(a);
+    for (int64 n = 1; n <= 1000; n *= 10) {
+      for (int64 remain = 0; remain < 5; ++remain) {
+        int64 ans0 = 0;
+        int64 ans1 = SumCoprime(n, a, remain, 5);
+        int64 ans2 = SumCoprime(n, f, remain, 5);
+        int64 ans3 = SumCoprime(n, rm, remain, 5);
+        for (int64 i = 1; i <= n; ++i) {
+          if (Gcd(i, a) == 1 && i % 5 == remain) {
+            ans0 += i;
+          }
+        }
+        assert(ans1 == ans0);
+        assert(ans2 == ans0);
+        assert(ans3 == ans0);
+      }
+    }
+  }
+
+  for (int64 a = 1; a <= 100; ++a) {
+    auto f = Factorize(a);
+    auto rm = GetRadFactorsWithMu(a);
+    for (int64 n = 1; n <= 1000; n *= 10) {
+      for (int64 remain = 0; remain < 5; ++remain) {
+        int64 ans0 = 0;
+        int64 ans1 = SumCoprime<MT>(n, a, remain, 5).value();
+        int64 ans2 = SumCoprime<MT>(n, f, remain, 5).value();
+        int64 ans3 = SumCoprime<MT>(n, rm, remain, 5).value();
+        for (int64 i = 1; i <= n; ++i) {
+          if (Gcd(i, a) == 1 && i % 5 == remain) {
+            ans0 += i;
+          }
+        }
+        ans0 %= mod;
+        assert(ans1 == ans0);
+        assert(ans2 == ans0);
+        assert(ans3 == ans0);
+      }
+    }
+  }
+}
+PE_REGISTER_TEST(&SumCoprimeTest, "SumCoprimeTest", SMALL);
 }  // namespace nt_test

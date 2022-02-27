@@ -416,6 +416,249 @@ SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>))
   return CrtN<T>(&val[0], &mod[0], val.size());
 }
 
+// Returns the number of x in the range [1, n] such that x is a multiple of d.
+template <typename T = int64>
+SL T CountMultiple(const int64 n, const int64 d) {
+  return n / d;
+}
+
+// Returns the sum of x in the range [1, n] such that x is a multiple of d.
+template <typename T = int64>
+SL REQUIRES((!IsNModNumberV<T>)) RETURN(T)
+    SumMultiple(const int64 n, const int64 d) {
+  const T t0 = n / d;
+  const T t1 = t0 & 1 ? ((t0 + 1) >> 1) * t0 : (t0 >> 1) * (t0 + 1);
+  return t1 * d;
+}
+
+template <typename T = int64>
+SL REQUIRES((IsNModNumberV<T>)) RETURN(T)
+    SumMultiple(const int64 n, const int64 d) {
+  const auto t0 = ExtractValue(T(n / d));
+  const T t1 = t0 & 1 ? T((t0 + 1) >> 1) * t0 : T(t0 >> 1) * (t0 + 1);
+  return t1 * d;
+}
+
+// Returns the number of x in the range [1, n] such that x = remain mod(mod).
+template <typename T = int64>
+SL T CountModValue(const int64 n, int64 remain, int64 mod) {
+  if (remain == 0) {
+    return CountMultiple<T>(n, mod);
+  } else {
+    return CountMultiple<T>(n + mod - remain, mod);
+  }
+}
+
+namespace pe_internal {
+// The sum of i, i + d, i + 2d, ..., i + (n-1) * d
+template <typename T = int64>
+SL REQUIRES((!IsNModNumberV<T>)) RETURN(T)
+    ApSum(const int64 i, const int64 d, const int64 n) {
+  const T t0 = n & 1 ? ((n - 1) >> 1) * n : (n >> 1) * (n - 1);
+  return n * i + t0 * d;
+}
+
+template <typename T = int64>
+SL REQUIRES((IsNModNumberV<T>)) RETURN(T)
+    ApSum(const int64 i, const int64 d, const int64 n) {
+  const T t0 = n & 1 ? T((n - 1) >> 1) * n : T(n >> 1) * (n - 1);
+  return T(n) * i + t0 * d;
+}
+}  // namespace pe_internal
+
+// Returns the sum of x in the range [1, n] such that x = remain mod(mod).
+template <typename T = int64>
+SL T SumModValue(const int64 n, int64 remain, int64 mod) {
+  if (remain == 0) {
+    return SumMultiple<T>(n, mod);
+  } else {
+    return pe_internal::ApSum(remain, mod, (n + mod - remain) / mod);
+  }
+}
+
+// Returns the number of x in the range [1, n] such that x = remain0 mod(mod0),
+// and x = remain1 mod(mod1).
+template <typename T = int64>
+SL T CountModValue(const int64 n, int64 remain0, int64 mod0, int64 remain1,
+                   int64 mod1) {
+  int64 remain, mod;
+  int has = Crt2<int64>(remain0, mod0, remain1, mod1, remain, mod);
+  if (!has) return 0;
+  return CountModValue<T>(n, remain, mod);
+}
+
+// Returns the sum of x in the range [1, n] such that x = remain0 mod(mod0),
+// and x = remain1 mod(mod1).
+template <typename T = int64>
+SL T SumModValue(const int64 n, int64 remain0, int64 mod0, int64 remain1,
+                 int64 mod1) {
+  int64 remain, mod;
+  int has = Crt2<int64>(remain0, mod0, remain1, mod1, remain, mod);
+  if (!has) return 0;
+  return SumModValue<T>(n, remain, mod);
+}
+
+// Returns the number of x in the range [1, n] such that gcd(x, a) = 1.
+// The rad factors with mu are given by rad_factors_with_mu.
+template <typename T = int64>
+SL T CountCoprime(
+    int64 n, const std::vector<std::pair<int64, int>>& rad_factors_with_mu) {
+  if (n == 0) {
+    return 0;
+  }
+  T ret = 0;
+  for (auto& iter : rad_factors_with_mu) {
+    ret += CountMultiple<T>(n, iter.first) * iter.second;
+  }
+  return ret;
+}
+
+template <typename T = int64>
+SL T CountCoprime(int64 n, const IntegerFactorization& f) {
+  if (n == 0) {
+    return 0;
+  }
+  T ret = 0;
+  for (auto& iter : GetRadFactorsWithMu(f, n)) {
+    ret += CountMultiple<T>(n, iter.first) * iter.second;
+  }
+  return ret;
+}
+
+template <typename T = int64>
+SL T CountCoprime(int64 n, int64 a) {
+  if (n == 0) {
+    return 0;
+  }
+  T ret = 0;
+  for (auto& iter : GetRadFactorsWithMu(a, n)) {
+    ret += CountMultiple<T>(n, iter.first) * iter.second;
+  }
+  return ret;
+}
+
+// Returns the number x in the range [1, n] such that gcd(x, a) = 1 and x =
+// remain mod(mod). The rad factors with mu are given by rad_factors_with_mu.
+template <typename T = int64>
+SL T CountCoprime(int64 n,
+                  const std::vector<std::pair<int64, int>>& rad_factors_with_mu,
+                  int64 remain, int64 mod) {
+  if (n == 0) {
+    return 0;
+  }
+  T ret = 0;
+  for (auto& iter : rad_factors_with_mu) {
+    ret += CountModValue<T>(n, remain, mod, 0, iter.first) * iter.second;
+  }
+  return ret;
+}
+
+template <typename T = int64>
+SL T CountCoprime(int64 n, const IntegerFactorization& f, int64 remain,
+                  int64 mod) {
+  if (n == 0) {
+    return 0;
+  }
+  T ret = 0;
+  for (auto& iter : GetRadFactorsWithMu(f, n)) {
+    ret += CountModValue<T>(n, remain, mod, 0, iter.first) * iter.second;
+  }
+  return ret;
+}
+
+template <typename T = int64>
+SL T CountCoprime(int64 n, int64 a, int64 remain, int64 mod) {
+  if (n == 0) {
+    return 0;
+  }
+  T ret = 0;
+  for (auto& iter : GetRadFactorsWithMu(a, n)) {
+    ret += CountModValue<T>(n, remain, mod, 0, iter.first) * iter.second;
+  }
+  return ret;
+}
+
+// Returns the sum x in the range [1, n] such that gcd(x, a) = 1.
+// The rad factors with mu are given by rad_factors_with_mu.
+template <typename T = int64>
+SL T SumCoprime(int64 n,
+                const std::vector<std::pair<int64, int>>& rad_factors_with_mu) {
+  if (n == 0) {
+    return 0;
+  }
+  T ret = 0;
+  for (auto& iter : rad_factors_with_mu) {
+    ret += SumMultiple<T>(n, iter.first) * iter.second;
+  }
+  return ret;
+}
+
+template <typename T = int64>
+SL T SumCoprime(int64 n, const IntegerFactorization& f) {
+  if (n == 0) {
+    return 0;
+  }
+  T ret = 0;
+  for (auto& iter : GetRadFactorsWithMu(f, n)) {
+    ret += SumMultiple<T>(n, iter.first) * iter.second;
+  }
+  return ret;
+}
+
+template <typename T = int64>
+SL T SumCoprime(int64 n, int64 a) {
+  if (n == 0) {
+    return 0;
+  }
+  T ret = 0;
+  for (auto& iter : GetRadFactorsWithMu(a, n)) {
+    ret += SumMultiple<T>(n, iter.first) * iter.second;
+  }
+  return ret;
+}
+
+// Returns the sum x in the range [1, n] such that gcd(x, a) = 1 and x =
+// remain mod(mod) The rad factors with mu are given by rad_factors_with_mu.
+// The rad factors with mu are given by rad_factors_with_mu.
+template <typename T = int64>
+SL T SumCoprime(int64 n,
+                const std::vector<std::pair<int64, int>>& rad_factors_with_mu,
+                int64 remain, int64 mod) {
+  if (n == 0) {
+    return 0;
+  }
+  T ret = 0;
+  for (auto& iter : rad_factors_with_mu) {
+    ret += SumModValue<T>(n, remain, mod, 0, iter.first) * iter.second;
+  }
+  return ret;
+}
+
+template <typename T = int64>
+SL T SumCoprime(int64 n, const IntegerFactorization& f, int64 remain,
+                int64 mod) {
+  if (n == 0) {
+    return 0;
+  }
+  T ret = 0;
+  for (auto& iter : GetRadFactorsWithMu(f, n)) {
+    ret += SumModValue<T>(n, remain, mod, 0, iter.first) * iter.second;
+  }
+  return ret;
+}
+
+template <typename T = int64>
+SL T SumCoprime(int64 n, int64 a, int64 remain, int64 mod) {
+  if (n == 0) {
+    return 0;
+  }
+  T ret = 0;
+  for (auto& iter : GetRadFactorsWithMu(a, n)) {
+    ret += SumModValue<T>(n, remain, mod, 0, iter.first) * iter.second;
+  }
+  return ret;
+}
+
 // dest[0] = 0
 // dest[1] = 1
 // dest[2] = 1 / 2

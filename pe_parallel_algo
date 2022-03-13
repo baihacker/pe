@@ -419,6 +419,75 @@ struct PSumMod {
   T data[128];
   const T mod;
 };
+
+template <typename T, typename C = std::less<T>>
+struct PMin {
+  PMin() {
+    omp_init_lock(&locker);
+    enable_log = true;
+    invert_cmp = false;
+    Reset();
+  }
+
+  ~PMin() { omp_destroy_lock(&locker); }
+
+  PMin& Reset() {
+    for (int i = 0; i < 128; ++i) {
+      data[i].reset();
+    }
+    result.reset();
+    return *this;
+  }
+
+  PMin& SetEnableLog(bool enable_log = true) {
+    this->enable_log = enable_log;
+    return *this;
+  }
+
+  PMin& SetInvertCmp(bool invert_cmp = true) {
+    this->invert_cmp = invert_cmp;
+    return *this;
+  }
+
+  PMin& CheckMin(const T& v) {
+    const auto id = omp_get_thread_num();
+    if (!data[id].has_value() || Compare(v, data[id].value())) {
+      data[id].emplace(v);
+      CheckGlobalMin(data[id]);
+    }
+    return *this;
+  }
+
+  PMin& CheckGlobalMin(std::optional<T> o) {
+    omp_set_lock(&locker);
+    if (!result.has_value() || Compare(o.value(), result.value())) {
+      result = o;
+      if (enable_log) {
+        std::cerr << "PMin: " << result.value() << std::endl;
+      }
+    }
+    omp_unset_lock(&locker);
+    return *this;
+  }
+
+  int Compare(const T& a, const T& b) {
+    int t = cmp(a, b);
+    return invert_cmp ? !t : t;
+  }
+
+  T value() const { return result.value(); }
+
+  operator T() const { return result.value(); }
+  T operator()() const { return result.value(); }
+
+  // Note: false sharing issue
+  std::optional<T> data[128];
+  std::optional<T> result;
+  omp_lock_t locker;
+  bool enable_log;
+  bool invert_cmp;
+  C cmp;
+};
 #endif
 }  // namespace pe
 #endif

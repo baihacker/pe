@@ -42,34 +42,36 @@ SL int __pe_clz128(uint128 x) {
 
 #endif
 
-SL int __pe_ctz2(uint32 x) { return x & 1 ? 0 : 1; }
+SL int __pe_ctz2(uint32 x) { return x ? (x & 1 ? 0 : 1) : 2; }
 
 SL int __pe_ctz4(uint32 x) {
-  return x & 3 ? __pe_ctz2(x) : 2 + __pe_ctz2(x >> 2);
+  return x ? (x & 3 ? __pe_ctz2(x) : 2 + __pe_ctz2(x >> 2)) : 4;
 }
 
 SL int __pe_ctz8(uint32 x) {
-  return x & 15 ? __pe_ctz4(x) : 4 + __pe_ctz4(x >> 4);
+  return x ? (x & 15 ? __pe_ctz4(x) : 4 + __pe_ctz4(x >> 4)) : 8;
 }
 
 SL int __pe_ctz16(uint32 x) {
-  return x & 255 ? __pe_ctz8(x) : 8 + __pe_ctz8(x >> 8);
+  return x ? (x & 255 ? __pe_ctz8(x) : 8 + __pe_ctz8(x >> 8)) : 16;
 }
 
 SL int __pe_ctz32(uint32 x) {
-  return x & 65535 ? __pe_ctz16(x) : 16 + __pe_ctz16(x >> 16);
+  return x ? (x & 65535 ? __pe_ctz16(x) : 16 + __pe_ctz16(x >> 16)) : 32;
 }
 
 SL int __pe_ctz64(uint64 x) {
-  return static_cast<uint32>(x) ? __pe_ctz32(static_cast<uint32>(x))
-                                : 32 + __pe_ctz32(x >> 32);
+  return x ? (static_cast<uint32>(x) ? __pe_ctz32(static_cast<uint32>(x))
+                                     : 32 + __pe_ctz32(x >> 32))
+           : 64;
 }
 
 #if PE_HAS_INT128
 
 SL int __pe_ctz128(uint128 x) {
-  return static_cast<uint64>(x) ? __pe_ctz64(static_cast<uint64>(x))
-                                : 64 + __pe_ctz64(x >> 64);
+  return x ? (static_cast<uint64>(x) ? __pe_ctz64(static_cast<uint64>(x))
+                                     : 64 + __pe_ctz64(x >> 64))
+           : 128;
 }
 
 #endif

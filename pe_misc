@@ -1549,5 +1549,316 @@ struct TableFormatter {
   std::map<int, ColumnFormat> column_format_map_;
   std::string separator_;
 };
+
+template <typename T>
+struct IntegerRange {
+  static_assert(pe_is_signed_v<T>);
+  static const T inf = std::numeric_limits<T>::max() / 4;
+
+  T x1, x2;
+
+  IntegerRange(T x1 = 0, T x2 = 0) : x1(x1), x2(x2) {}
+
+  int operator==(const IntegerRange& o) const {
+    return x1 == o.x1 && x2 == o.x2;
+  }
+
+  int operator!=(const IntegerRange& o) const { return !(*this == o); }
+
+  int operator<(const IntegerRange& o) const {
+    return x1 < o.x1 || x1 == o.x1 && x2 < o.x2;
+  }
+
+  int operator<=(const IntegerRange& o) const { return !(*this > o); }
+
+  int operator>(const IntegerRange& o) const {
+    return x1 > o.x1 || x1 == o.x1 && x2 > o.x2;
+  }
+
+  int operator>=(const IntegerRange& o) const { return !(*this < o); }
+
+  const IntegerRange& Print() const {
+    std::cout << x1 << ", " << x2;
+    return *this;
+  }
+
+  const IntegerRange& PrintLn() const {
+    std::cout << x1 << ", " << x2 << std::endl;
+    return *this;
+  }
+
+  friend std::ostream& operator<<(std::ostream& o, const IntegerRange& p) {
+    return o << p.x1 << ", " << p.x2;
+  }
+};
+
+using IntegerRange64 = IntegerRange<int64>;
+
+#if PE_HAS_INT128
+using IntegerRange128 = IntegerRange<int128>;
+#endif
+
+template <typename T>
+void AppendRange(std::vector<IntegerRange<T>>& ranges, IntegerRange<T> r) {
+  if (ranges.empty() || ranges.back().x2 + 1 < r.x1) {
+    ranges.push_back(r);
+  } else {
+    ranges.back().x2 = std::max(ranges.back().x2, r.x2);
+  }
+}
+
+template <typename T>
+SL void AppendRange(std::vector<IntegerRange<T>>& ranges, T A, T B) {
+  if (ranges.empty() || ranges.back().x2 + 1 < A) {
+    ranges.emplace_back(A, B);
+  } else {
+    ranges.back().x2 = std::max(ranges.back().x2, B);
+  }
+}
+
+template <typename T>
+SL std::vector<IntegerRange<T>> IntersectRanges(
+    const std::vector<IntegerRange<T>>& a,
+    const std::vector<IntegerRange<T>>& b) {
+  const int n = static_cast<int>(a.size());
+  const int m = static_cast<int>(b.size());
+  if (n == 0 || m == 0) return {};
+
+  std::vector<IntegerRange<T>> result;
+  for (int i = 0, j = 0; i < n; ++i) {
+    while (j < m && b[j].x2 < a[i].x1) ++j;
+    while (j < m && b[j].x1 <= a[i].x2) {
+      AppendRange(result, std::max(a[i].x1, b[j].x1),
+                  std::min(a[i].x2, b[j].x2));
+      ++j;
+    }
+  }
+  return result;
+}
+
+template <typename T>
+SL std::vector<IntegerRange<T>> IntersectRanges(
+    const std::vector<IntegerRange<T>>& a, IntegerRange<T>& b) {
+  return IntersectRanges({b}, a);
+}
+
+template <typename T>
+SL std::vector<IntegerRange<T>> UniteRanges(
+    const std::vector<IntegerRange<T>>& a,
+    const std::vector<IntegerRange<T>>& b) {
+  const int n = static_cast<int>(a.size());
+  const int m = static_cast<int>(b.size());
+  if (n == 0) return b;
+  if (m == 0) return a;
+
+  std::vector<IntegerRange<T>> result;
+  int i = 0, j = 0;
+  while (i < n || j < m) {
+    if (i == n) {
+      AppendRange(result, b[j++]);
+    } else if (j == m) {
+      AppendRange(result, a[i++]);
+    } else if (a[i].x1 <= b[j].x1) {
+      AppendRange(result, a[i++]);
+    } else {
+      AppendRange(result, b[j++]);
+    }
+  }
+  return result;
+}
+
+template <typename T>
+SL std::vector<IntegerRange<T>> UniteRanges(
+    const std::vector<IntegerRange<T>>& a, IntegerRange<T>& b) {
+  return UniteRanges(a, {b});
+}
+
+// Solve A >= 0
+template <typename T>
+SL std::vector<IntegerRange<T>> SolveInequatilityGE0(T A) {
+  using RangeT = IntegerRange<T>;
+  return A >= 0 ? std::vector<RangeT>{{-RangeT::inf, RangeT::inf}}
+                : std::vector<RangeT>{};
+}
+
+// Solve A > 0
+template <typename T>
+SL std::vector<IntegerRange<T>> SolveInequatilityG0(T A) {
+  using RangeT = IntegerRange<T>;
+  return A > 0 ? std::vector<RangeT>{{-RangeT::inf, RangeT::inf}}
+               : std::vector<RangeT>{};
+}
+
+// Solve A <= 0
+template <typename T>
+SL std::vector<IntegerRange<T>> SolveInequatilityLE0(T A) {
+  using RangeT = IntegerRange<T>;
+  return A <= 0 ? std::vector<RangeT>{{-RangeT::inf, RangeT::inf}}
+                : std::vector<RangeT>{};
+}
+
+// Solve A < 0
+template <typename T>
+SL std::vector<IntegerRange<T>> SolveInequatilityL0(T A) {
+  using RangeT = IntegerRange<T>;
+  return A < 0 ? std::vector<RangeT>{{-RangeT::inf, RangeT::inf}}
+               : std::vector<RangeT>{};
+}
+
+template <typename T>
+SL std::vector<IntegerRange<T>> SolveInequatilityGE1(T A, T B);
+
+template <typename T>
+SL std::vector<IntegerRange<T>> SolveInequatilityG1(T A, T B);
+
+template <typename T>
+SL std::vector<IntegerRange<T>> SolveInequatilityLE1(T A, T B);
+
+template <typename T>
+SL std::vector<IntegerRange<T>> SolveInequatilityL1(T A, T B);
+
+// Solve A x + B >= 0
+template <typename T>
+SL std::vector<IntegerRange<T>> SolveInequatilityGE1(T A, T B) {
+  using RangeT = IntegerRange<T>;
+  if (A == 0) return SolveInequatilityGE0(B);
+  if (A < 0) return SolveInequatilityLE1(-A, -B);
+  T t = -B / A;
+  while (A * t + B < 0) ++t;
+  while (A * (t - 1) + B >= 0) --t;
+  return {{t, RangeT::inf}};
+}
+
+// Solve A x + B > 0
+template <typename T>
+SL std::vector<IntegerRange<T>> SolveInequatilityG1(T A, T B) {
+  using RangeT = IntegerRange<T>;
+  if (A == 0) return SolveInequatilityG0(B);
+  if (A < 0) return SolveInequatilityL1(-A, -B);
+  T t = -B / A;
+  while (A * t + B <= 0) ++t;
+  while (A * (t - 1) + B > 0) --t;
+  return {{t, RangeT::inf}};
+}
+
+// Solve A x + B <= 0
+template <typename T>
+SL std::vector<IntegerRange<T>> SolveInequatilityLE1(T A, T B) {
+  using RangeT = IntegerRange<T>;
+  if (A == 0) return SolveInequatilityLE0(B);
+  if (A < 0) return SolveInequatilityGE1(-A, -B);
+  T t = -B / A;
+  while (A * t + B > 0) --t;
+  while (A * (t + 1) + B <= 0) ++t;
+  return {{-RangeT::inf, t}};
+}
+
+// Solve A x + B < 0
+template <typename T>
+SL std::vector<IntegerRange<T>> SolveInequatilityL1(T A, T B) {
+  using RangeT = IntegerRange<T>;
+  if (A == 0) return SolveInequatilityL0(B);
+  if (A < 0) return SolveInequatilityG1(-A, -B);
+  T t = -B / A;
+  while (A * t + B >= 0) --t;
+  while (A * (t + 1) + B < 0) ++t;
+  return {{-RangeT::inf, t}};
+}
+
+template <typename T>
+SL std::vector<IntegerRange<T>> SolveInequatilityGE2(T A, T B, T C);
+
+template <typename T>
+SL std::vector<IntegerRange<T>> SolveInequatilityG2(T A, T B, T C);
+
+template <typename T>
+SL std::vector<IntegerRange<T>> SolveInequatilityLE2(T A, T B, T C);
+
+template <typename T>
+SL std::vector<IntegerRange<T>> SolveInequatilityL2(T A, T B, T C);
+
+// Solve A x^2 + B x + C >= 0
+template <typename T>
+SL std::vector<IntegerRange<T>> SolveInequatilityGE2(T A, T B, T C) {
+  using RangeT = IntegerRange<T>;
+  if (A == 0) return SolveInequatilityGE1(B, C);
+  if (A < 0) return SolveInequatilityLE2(-A, -B, -C);
+  T delta = B * B - 4 * A * C;
+  if (delta <= 0) return {{-RangeT::inf, RangeT::inf}};
+
+  T t1 = (-B - sqrt(delta)) / (2 * A);
+  T t2 = (-B + sqrt(delta)) / (2 * A);
+
+  while ((A * t1 + B) * t1 + C < 0) --t1;
+  while ((A * t2 + B) * t2 + C < 0) ++t2;
+  while (t1 <= t2 && (A * (t1 + 1) + B) * (t1 + 1) + C >= 0) ++t1;
+  while (t1 <= t2 && (A * (t2 - 1) + B) * (t2 - 1) + C >= 0) --t2;
+
+  if (t1 >= t2) return {{-RangeT::inf, RangeT::inf}};
+  return {{-RangeT::inf, t1}, {t2, RangeT::inf}};
+}
+
+// Solve A x^2 + B x + C > 0
+template <typename T>
+SL std::vector<IntegerRange<T>> SolveInequatilityG2(T A, T B, T C) {
+  using RangeT = IntegerRange<T>;
+  if (A == 0) return SolveInequatilityG1(B, C);
+  if (A < 0) return SolveInequatilityL2(-A, -B, -C);
+  T delta = B * B - 4 * A * C;
+  if (delta < 0) return {{-RangeT::inf, RangeT::inf}};
+
+  T t1 = (-B - sqrt(delta)) / (2 * A);
+  T t2 = (-B + sqrt(delta)) / (2 * A);
+
+  while ((A * t1 + B) * t1 + C <= 0) --t1;
+  while ((A * t2 + B) * t2 + C <= 0) ++t2;
+  while (t1 <= t2 && (A * (t1 + 1) + B) * (t1 + 1) + C > 0) ++t1;
+  while (t1 <= t2 && (A * (t2 - 1) + B) * (t2 - 1) + C > 0) --t2;
+
+  if (t1 >= t2) return {{-RangeT::inf, RangeT::inf}};
+  return {{-RangeT::inf, t1}, {t2, RangeT::inf}};
+}
+
+// Solve A x^2 + B x + C <= 0
+template <typename T>
+SL std::vector<IntegerRange<T>> SolveInequatilityLE2(T A, T B, T C) {
+  using RangeT = IntegerRange<T>;
+  if (A == 0) return SolveInequatilityLE1(B, C);
+  if (A < 0) return SolveInequatilityGE2(-A, -B, -C);
+  T delta = B * B - 4 * A * C;
+  if (delta < 0) return {};
+
+  T t1 = (-B - sqrt(delta)) / (2 * A);
+  T t2 = (-B + sqrt(delta)) / (2 * A);
+
+  while ((A * (t1 - 1) + B) * (t1 - 1) + C <= 0) --t1;
+  while ((A * (t2 + 1) + B) * (t2 + 1) + C <= 0) ++t2;
+  while (t1 <= t2 && (A * t1 + B) * t1 + C > 0) ++t1;
+  while (t1 <= t2 && (A * t2 + B) * t2 + C > 0) --t2;
+
+  if (t1 > t2) return {};
+  return {{t1, t2}};
+}
+
+// Solve A x^2 + B x + C < 0
+template <typename T>
+SL std::vector<IntegerRange<T>> SolveInequatilityL2(T A, T B, T C) {
+  using RangeT = IntegerRange<T>;
+  if (A == 0) return SolveInequatilityL1(B, C);
+  if (A < 0) return SolveInequatilityG2(-A, -B, -C);
+  T delta = B * B - 4 * A * C;
+  if (delta <= 0) return {};
+
+  T t1 = (-B - sqrt(delta)) / (2 * A);
+  T t2 = (-B + sqrt(delta)) / (2 * A);
+
+  while ((A * (t1 - 1) + B) * (t1 - 1) + C < 0) --t1;
+  while ((A * (t2 + 1) + B) * (t2 + 1) + C < 0) ++t2;
+  while (t1 <= t2 && (A * t1 + B) * t1 + C >= 0) ++t1;
+  while (t1 <= t2 && (A * t2 + B) * t2 + C >= 0) --t2;
+
+  if (t1 > t2) return {};
+  return {{t1, t2}};
+}
 }  // namespace pe
 #endif

@@ -110,4 +110,111 @@ SL void SumSigma0Test() {
 
 PE_REGISTER_TEST(&SumSigma0Test, "SumSigma0Test", SUPER);
 #endif
+
+SL int64 IntDivFloor(int64 a, int64 b) {
+  if (b < 0) a = -a;
+  if (a % b == 0) return a / b;
+  if (a >= 0) return a / b;
+  return a / b - 1;
+}
+
+SL void SolveInequatilityGE2Test() {
+  for (int64 x1 = -1000; x1 <= 1000; ++x1) {
+    for (int64 x2 = x1; x2 <= 1000; ++x2) {
+      // (100 x-x1)(100 x-x2) >= 0
+      // 10000 x^2-(100 x1 + 100 x2) x + x1 x2 >= 0
+      const int64 A = 10000;
+      const int64 B = -(100 * x1 + 100 * x2);
+      const int64 C = x1 * x2;
+      int64 u = IntDivFloor(x1, 100);
+      int64 v = x2 % 100 == 0 ? IntDivFloor(x2, 100) : IntDivFloor(x2, 100) + 1;
+      auto ans = SolveInequatilityGE2<int64>(A, B, C);
+      if (u == v || u + 1 == v) {
+        assert(ans.size() == 1);
+        assert(ans[0].x1 == -IntegerRange64::inf);
+        assert(ans[0].x2 == IntegerRange64::inf);
+      } else {
+        assert(ans.size() == 2);
+        assert(ans[0].x1 == -IntegerRange64::inf);
+        assert(ans[0].x2 == u);
+        assert(ans[1].x1 == v);
+        assert(ans[1].x2 == IntegerRange64::inf);
+      }
+    }
+  }
+}
+PE_REGISTER_TEST(&SolveInequatilityGE2Test, "SolveInequatilityGE2Test", SMALL);
+
+SL void SolveInequatilityG2Test() {
+  for (int64 x1 = -1000; x1 <= 1000; ++x1) {
+    for (int64 x2 = x1; x2 <= 1000; ++x2) {
+      // (100 x-x1)(100 x-x2) > 0
+      // 10000 x^2-(100 x1 + 100 x2) x + x1 x2 > 0
+      const int64 A = 10000;
+      const int64 B = -(100 * x1 + 100 * x2);
+      const int64 C = x1 * x2;
+      int64 u = x1 % 100 == 0 ? IntDivFloor(x1, 100) - 1 : IntDivFloor(x1, 100);
+      int64 v = IntDivFloor(x2, 100) + 1;
+      auto ans = SolveInequatilityG2<int64>(A, B, C);
+      if (u == v || u + 1 == v) {
+        assert(ans.size() == 1);
+        assert(ans[0].x1 == -IntegerRange64::inf);
+        assert(ans[0].x2 == IntegerRange64::inf);
+      } else {
+        assert(ans.size() == 2);
+        assert(ans[0].x1 == -IntegerRange64::inf);
+        assert(ans[0].x2 == u);
+        assert(ans[1].x1 == v);
+        assert(ans[1].x2 == IntegerRange64::inf);
+      }
+    }
+  }
+}
+PE_REGISTER_TEST(&SolveInequatilityG2Test, "SolveInequatilityG2Test", SMALL);
+
+SL void SolveInequatilityLE2Test() {
+  for (int64 x1 = -1000; x1 <= 1000; ++x1) {
+    for (int64 x2 = x1; x2 <= 1000; ++x2) {
+      // (100 x-x1)(100 x-x2) <= 0
+      // 10000 x^2-(100 x1 + 100 x2) x + x1 x2 <= 0
+      const int64 A = 10000;
+      const int64 B = -(100 * x1 + 100 * x2);
+      const int64 C = x1 * x2;
+      int64 u = x1 % 100 == 0 ? IntDivFloor(x1, 100) : IntDivFloor(x1, 100) + 1;
+      int64 v = IntDivFloor(x2, 100);
+      auto ans = SolveInequatilityLE2<int64>(A, B, C);
+      if (u > v) {
+        assert(ans.size() == 0);
+      } else {
+        assert(ans.size() == 1);
+        assert(ans[0].x1 == u);
+        assert(ans[0].x2 == v);
+      }
+    }
+  }
+}
+PE_REGISTER_TEST(&SolveInequatilityLE2Test, "SolveInequatilityLE2Test", SMALL);
+
+SL void SolveInequatilityL2Test() {
+  for (int64 x1 = -1000; x1 <= 1000; ++x1) {
+    for (int64 x2 = x1; x2 <= 1000; ++x2) {
+      // (100 x-x1)(100 x-x2) < 0
+      // 10000 x^2-(100 x1 + 100 x2) x + x1 x2 < 0
+      const int64 A = 10000;
+      const int64 B = -(100 * x1 + 100 * x2);
+      const int64 C = x1 * x2;
+      int64 u = IntDivFloor(x1, 100) + 1;
+      int64 v = x2 % 100 == 0 ? IntDivFloor(x2, 100) - 1 : IntDivFloor(x2, 100);
+      auto ans = SolveInequatilityL2<int64>(A, B, C);
+      if (u > v) {
+        assert(ans.size() == 0);
+      } else {
+        assert(ans.size() == 1);
+        assert(ans[0].x1 == u);
+        assert(ans[0].x2 == v);
+      }
+    }
+  }
+}
+PE_REGISTER_TEST(&SolveInequatilityL2Test, "SolveInequatilityL2Test", SMALL);
 }  // namespace misc_test

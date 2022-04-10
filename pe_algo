@@ -10,6 +10,78 @@
 #include "pe_parallel_algo"
 
 namespace pe {
+// Finds the first x value in [l, r] such that f(x) is true.
+// Returns r + 1 if failed.
+// It is assumed that if f(x) is true then f(x+1) is true.
+// It's required that l - 1 <= r, i.e. l <= r or l - 1 = r.
+template <typename T, typename F>
+SL T BinarySearchFirst(T l, T r, const F& f) {
+  PE_ASSERT(l <= r + 1);
+  while (l <= r) {
+    T mid = (l + r) / 2;
+    if (f(mid))
+      r = mid - 1;
+    else
+      l = mid + 1;
+  }
+  return l;
+}
+
+template <typename T, typename F>
+SL T BinarySearchFirstEx(T l, T r, const F& f) {
+  ++r;
+  PE_ASSERT(l <= r);
+  auto len = r - l;
+  while (len > 0) {
+    const auto half = len >> 1;
+    const T mid = l + half;
+    if (f(mid)) {
+      r = mid;
+      len = half;
+    } else {
+      l = mid + 1;
+      len = len - half - 1;
+    }
+  }
+  return l;
+}
+
+// Finds the last x value in [l, r] such that f(x) is true.
+// Returns l - 1 if failed.
+// It is assumed that if f(x) is true then f(x-1) is true.
+// It's required that l - 1 <= r, i.e. l <= r or l - 1 = r.
+template <typename T, typename F>
+SL T BinarySearchLast(T l, T r, const F& f) {
+  PE_ASSERT(l <= r + 1);
+  while (l <= r) {
+    T mid = (l + r) / 2;
+    if (f(mid))
+      l = mid + 1;
+    else
+      r = mid - 1;
+  }
+  return r;
+}
+
+template <typename T, typename F>
+SL T BinarySearchLastEx(T l, T r, const F& f) {
+  --l;
+  PE_ASSERT(l <= r);
+  auto len = r - l;
+  while (len > 0) {
+    const auto half = len >> 1;
+    const T mid = r - half;
+    if (f(mid)) {
+      l = mid;
+      len = half;
+    } else {
+      r = mid - 1;
+      len = len - half - 1;
+    }
+  }
+  return r;
+}
+
 // Calculates n! % p.
 // Algorithm source: https://min-25.hatenablog.com/entry/2017/04/10/215046
 // Complexity: M(p^(1/2))

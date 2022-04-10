@@ -17,12 +17,11 @@ SL void BinarySearchTest() {
         [&](int idx) { return vec[idx] >= target; },
     };
     for (auto& f : check_methods) {
-      int a = BinarySearchFirst(start, end, f);
-      int b = BinarySearchFirstEx(start, end, f);
-      int c = 0;
-      while (c <= end && !f(c)) ++c;
-      assert(a == c);
-      assert(b == c);
+      int a = 0;
+      while (a <= end && !f(a)) ++a;
+
+      int b = BinarySearchFirst(start, end, f);
+      assert(a == b);
     }
   }
 
@@ -32,12 +31,11 @@ SL void BinarySearchTest() {
         [&](int idx) { return vec[idx] <= target; },
     };
     for (auto& f : check_methods) {
-      int a = BinarySearchLast(start, end, f);
-      int b = BinarySearchLastEx(start, end, f);
-      int c = -1;
-      while (c + 1 <= end && f(c + 1)) ++c;
-      assert(a == c);
-      assert(b == c);
+      int a = -1;
+      while (a + 1 <= end && f(a + 1)) ++a;
+
+      int b = BinarySearchLast(start, end, f);
+      assert(a == b);
     }
   }
 }

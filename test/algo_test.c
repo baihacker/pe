@@ -1,6 +1,48 @@
 #include "pe_test.h"
 
 namespace algo_test {
+SL void BinarySearchTest() {
+  const int n = 30;
+  std::vector<int> vec(n);
+  srand(123456789);
+  for (int i = 0; i < n; ++i) vec[i] = (rand() % 20) * 2 + 1 - 20;
+  for (int i = 0; i < 4; ++i) vec.push_back(vec[i]);
+  sort(vec.begin(), vec.end());
+
+  const int start = 0, end = static_cast<int>(vec.size()) - 1;
+
+  for (int target = -50; target <= 50; ++target) {
+    std::function<int(int)> check_methods[] = {
+        [&](int idx) { return vec[idx] > target; },
+        [&](int idx) { return vec[idx] >= target; },
+    };
+    for (auto& f : check_methods) {
+      int a = BinarySearchFirst(start, end, f);
+      int b = BinarySearchFirstEx(start, end, f);
+      int c = 0;
+      while (c <= end && !f(c)) ++c;
+      assert(a == c);
+      assert(b == c);
+    }
+  }
+
+  for (int target = -50; target <= 50; ++target) {
+    std::function<int(int)> check_methods[] = {
+        [&](int idx) { return vec[idx] < target; },
+        [&](int idx) { return vec[idx] <= target; },
+    };
+    for (auto& f : check_methods) {
+      int a = BinarySearchLast(start, end, f);
+      int b = BinarySearchLastEx(start, end, f);
+      int c = -1;
+      while (c + 1 <= end && f(c + 1)) ++c;
+      assert(a == c);
+      assert(b == c);
+    }
+  }
+}
+PE_REGISTER_TEST(&BinarySearchTest, "BinarySearchTest", SMALL);
+
 SL void FactModTest() {
   {
     const int64 mod = 10007;

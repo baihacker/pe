@@ -360,6 +360,44 @@ SL REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 16)) RETURN(int)
 #define CountTrailingZero CountRightZero
 
 template <typename T>
+SL REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 4)) RETURN(T)
+    Byteswap(T x) {
+  return static_cast<T>(pe_bswap(x));
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 8)) RETURN(T)
+    Byteswap(T x) {
+  return static_cast<T>(pe_bswapll(x));
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 16)) RETURN(T)
+    Byteswap(T x) {
+  return static_cast<T>(__pe_bswap128(x));
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T) RotateLeft(T x, int s) {
+  using unsignedT = typename pe_make_unsigned<T>::type;
+  const unsignedT& unsignedV = x;
+  constexpr int bitcount = sizeof(T) * 8;
+  s %= bitcount;
+  if (s < 0) s += bitcount;
+  return static_cast<T>(unsignedV << s) | (unsignedV >> (bitcount - s));
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T) RotateRight(T x, int s) {
+  using unsignedT = typename pe_make_unsigned<T>::type;
+  const unsignedT& unsignedV = x;
+  constexpr int bitcount = sizeof(T) * 8;
+  s %= bitcount;
+  if (s < 0) s += bitcount;
+  return static_cast<T>(unsignedV << bitcount - s) | (unsignedV >> (s));
+}
+
+template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(int) BitWidth(T x) {
   return sizeof(T) * 8 - CountLeftZero(x);
 }

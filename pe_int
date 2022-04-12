@@ -91,6 +91,42 @@ SL std::string ToString(long double v) { return pe::to_string(v); }
 SL std::string ToString(float v) { return pe::to_string(v); }
 
 template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::string)
+    ToBinString(T v, int width = 0) {
+  static const char* bin_char = "01";
+  if (width == 0) {
+    width = sizeof(T) * 8;
+  }
+  using unsignedT = typename pe_make_unsigned<T>::type;
+  unsignedT unsignedV = v;
+  // TODO(baihacker): initialize it with characters in c++20
+  std::string result;
+  for (int i = 0; i < width; ++i, unsignedV >>= 1) {
+    result += bin_char[static_cast<int>(unsignedV & 1)];
+  }
+  std::reverse(result.begin(), result.end());
+  return result;
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::string)
+    ToHexString(T v, int width = 0) {
+  static const char* hex_char = "0123456789ABCDEF";
+  if (width == 0) {
+    width = sizeof(T) * 2;
+  }
+  using unsignedT = typename pe_make_unsigned<T>::type;
+  unsignedT unsignedV = v;
+  // TODO(baihacker): initialize it with characters in c++20
+  std::string result;
+  for (int i = 0; i < width; ++i, unsignedV >>= 4) {
+    result += hex_char[static_cast<int>(unsignedV & 15)];
+  }
+  std::reverse(result.begin(), result.end());
+  return result;
+}
+
+template <typename T>
 SL std::tuple<T, T> Div(const T& l, const T& r) {
   return {l / r, l % r};
 }

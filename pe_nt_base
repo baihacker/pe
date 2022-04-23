@@ -194,9 +194,16 @@ SL void InitPrimes(int cal_phi, int cal_mu, int cal_rad, int cal_sigma0) {
   }
 }
 
+struct IntegerFactorization;
+SL IntegerFactorization Factorize(int64 n);
+
 struct IntegerFactorization : public std::vector<std::pair<int64, int>> {
   using base = std::vector<std::pair<int64, int>>;
-  using base::base;
+  // using base::base;
+
+  IntegerFactorization() = default;
+
+  IntegerFactorization(int64 t) : IntegerFactorization(Factorize(t)) {}
 
   IntegerFactorization(const IntegerFactorization& o) = default;
 
@@ -235,8 +242,16 @@ struct IntegerFactorization : public std::vector<std::pair<int64, int>> {
   }
 };
 
+static const IntegerFactorization IF_ONE;
+
 SL IntegerFactorization operator*(const IntegerFactorization& a,
                                   const IntegerFactorization& b) {
+  if (a.empty()) {
+    return b;
+  }
+  if (b.empty()) {
+    return a;
+  }
   auto ret = a.ToMap();
   for (auto& iter : b) {
     ret[iter.first] += iter.second;

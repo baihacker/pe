@@ -4,6 +4,7 @@
 #include "pe_base"
 #include "pe_int128"
 #include "pe_type_traits"
+#include "pe_bit"
 #include "pe_mod"
 #include "pe_nt"
 
@@ -1007,6 +1008,184 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 
   std::vector<T> result(n + m - 1);
   PolyMul(&X[0], n, &Y[0], m, &result[0], mod);
+
+  return result;
+}
+
+// https://zhuanlan.zhihu.com/p/65998145
+namespace fwt {
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    FWTOr(T* X, const int64 n, const T mod, bool rev) {
+  if (!rev) {
+    for (int l = 2, m = 1; l <= n; l <<= 1, m <<= 1) {
+      for (int j = 0; j < n; j += l)
+        for (int i = 0; i < m; i++) {
+          X[i + j + m] = AddMod(X[i + j + m], X[i + j], mod);
+        }
+    }
+  } else {
+    for (int l = 2, m = 1; l <= n; l <<= 1, m <<= 1) {
+      for (int j = 0; j < n; j += l)
+        for (int i = 0; i < m; i++) {
+          X[i + j + m] = SubMod(X[i + j + m], X[i + j], mod);
+        }
+    }
+  }
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    FWTAnd(T* X, const int64 n, const T mod, bool rev) {
+  if (!rev) {
+    for (int l = 2, m = 1; l <= n; l <<= 1, m <<= 1) {
+      for (int j = 0; j < n; j += l)
+        for (int i = 0; i < m; i++) {
+          X[i + j] = AddMod(X[i + j], X[i + j + m], mod);
+        }
+    }
+  } else {
+    for (int l = 2, m = 1; l <= n; l <<= 1, m <<= 1) {
+      for (int j = 0; j < n; j += l)
+        for (int i = 0; i < m; i++) {
+          X[i + j] = AddMod(X[i + j], X[i + j + m], mod);
+        }
+    }
+  }
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    FWTXor(T* X, const int64 n, const T mod, bool rev) {
+  // Assume mod is a prime number.
+  const T inv2 = (mod + 1) >> 1;
+  if (!rev) {
+    for (int l = 2, m = 1; l <= n; l <<= 1, m <<= 1) {
+      for (int j = 0; j < n; j += l)
+        for (int i = 0; i < m; i++) {
+          const T x = X[i + j], y = X[i + j + m];
+          X[i + j] = AddMod(x, y, mod);
+          X[i + j + m] = SubMod(x, y, mod);
+        }
+    }
+  } else {
+    for (int l = 2, m = 1; l <= n; l <<= 1, m <<= 1) {
+      for (int j = 0; j < n; j += l)
+        for (int i = 0; i < m; i++) {
+          const T x = X[i + j], y = X[i + j + m];
+          X[i + j] = MulMod(AddMod(x, y, mod), inv2, mod);
+          X[i + j + m] = MulMod(SubMod(x, y, mod), inv2, mod);
+        }
+    }
+  }
+}
+}  // namespace fwt
+
+namespace pe_internal {
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    PolyConvolutionImpl(const T* X, const int64 n, const T* Y, const int64 m,
+                        T* result, T mod,
+                        void (*ope)(T*, const int64, const T, bool)) {
+  const T nn = BitCeil(n);
+  const T mm = BitCeil(m);
+  const T size = std::max(nn, mm);
+  std::vector<T> XX(size, 0), YY(size, 0);
+
+  for (int64 i = 0; i < n; ++i) XX[i] = X[i];
+  for (int64 i = n; i < size; ++i) XX[i] = 0;
+
+  for (int64 i = 0; i < m; ++i) YY[i] = Y[i];
+  for (int64 i = m; i < size; ++i) YY[i] = 0;
+
+#if ENABLE_OPENMP
+#pragma omp parallel sections if (size >= 100000)
+#endif
+  {
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    ope(&XX[0], size, mod, false);
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    ope(&YY[0], size, mod, false);
+  }
+  for (int i = 0; i < size; ++i) {
+    result[i] = MulMod(XX[i], YY[i], mod);
+  }
+  ope(result, size, mod, true);
+}
+}  // namespace pe_internal
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    PolyConvolutionOr(const T* X, const int64 n, const T* Y, const int64 m,
+                      T* result, T mod) {
+  pe_internal::PolyConvolutionImpl(X, n, Y, m, result, mod, &fwt::FWTOr<T>);
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
+    PolyConvolutionOr(const std::vector<T>& X, const std::vector<T>& Y,
+                      int64 mod) {
+  const int64 n = static_cast<int64>(X.size());
+  const int64 m = static_cast<int64>(Y.size());
+  const int64 nn = BitCeil(n);
+  const int64 mm = BitCeil(m);
+  const int64 size = std::max(nn, mm);
+  std::vector<T> result(size);
+
+  pe_internal::PolyConvolutionImpl(&X[0], n, &Y[0], m, &result[0], mod,
+                                   &fwt::FWTOr<T>);
+
+  return result;
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    PolyConvolutionAnd(const T* X, const int64 n, const T* Y, const int64 m,
+                       T* result, T mod) {
+  pe_internal::PolyConvolutionImpl(X, n, Y, m, result, mod, &fwt::FWTAnd<T>);
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
+    PolyConvolutionAnd(const std::vector<T>& X, const std::vector<T>& Y,
+                       int64 mod) {
+  const int64 n = static_cast<int64>(X.size());
+  const int64 m = static_cast<int64>(Y.size());
+  const int64 nn = BitCeil(n);
+  const int64 mm = BitCeil(m);
+  const int64 size = std::max(nn, mm);
+  std::vector<T> result(size);
+
+  pe_internal::PolyConvolutionImpl(&X[0], n, &Y[0], m, &result[0], mod,
+                                   &fwt::FWTAnd<T>);
+
+  return result;
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    PolyConvolutionXor(const T* X, const int64 n, const T* Y, const int64 m,
+                       T* result, T mod) {
+  pe_internal::PolyConvolutionImpl(X, n, Y, m, result, mod, &fwt::FWTXor<T>);
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
+    PolyConvolutionXor(const std::vector<T>& X, const std::vector<T>& Y,
+                       int64 mod) {
+  const int64 n = static_cast<int64>(X.size());
+  const int64 m = static_cast<int64>(Y.size());
+  const int64 nn = BitCeil(n);
+  const int64 mm = BitCeil(m);
+  const int64 size = std::max(nn, mm);
+  std::vector<T> result(size);
+
+  pe_internal::PolyConvolutionImpl<T>(&X[0], n, &Y[0], m, &result[0],
+                                      static_cast<T>(mod), &fwt::FWTXor<T>);
 
   return result;
 }

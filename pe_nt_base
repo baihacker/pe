@@ -616,20 +616,38 @@ SL std::vector<std::pair<int64, int>> GetRadFactorsWithMu(int64 value,
   return pe_internal::GetRadFactorsWithMuImpl(Factorize(value), maxv);
 }
 
-SL int64 CalPhi(int64 n, const IntegerFactorization& fn) {
-  if (n <= 0) return 0;
-  if (phi && n <= maxp) return phi[n];
-  int64 phi_n = n;
-  for (auto& it : fn) phi_n -= phi_n / it.first;
-  return phi_n;
-}
-
 SL int64 CalPhi(int64 n) {
   if (n <= 0) return 0;
   if (phi && n <= maxp) return phi[n];
   auto fn = Factorize(n);
   int64 phi_n = n;
-  for (auto& it : fn) phi_n -= phi_n / it.first;
+  for (auto& it : fn) {
+    phi_n -= phi_n / it.first;
+  }
+  return phi_n;
+}
+
+SL int64 CalPhi(const IntegerFactorization& fn) {
+  int64 n = 1;
+  for (auto iter : fn) {
+    for (int i = 0; i < iter.second; ++i) {
+      n *= iter.first;
+    }
+  }
+  int64 phi_n = n;
+  for (auto& it : fn) {
+    phi_n -= phi_n / it.first;
+  }
+  return phi_n;
+}
+
+SL int64 CalPhi(int64 n, const IntegerFactorization& fn) {
+  if (n <= 0) return 0;
+  if (phi && n <= maxp) return phi[n];
+  int64 phi_n = n;
+  for (auto& it : fn) {
+    phi_n -= phi_n / it.first;
+  }
   return phi_n;
 }
 
@@ -676,6 +694,15 @@ SL int64 CalMu(int64 n) {
   if (n == 1) return 1;
   if (mu && n <= maxp) return mu[n];
   return pe_internal::CalMuImpl(n);
+}
+
+SL int64 CalMu(const IntegerFactorization& fn) {
+  for (auto& iter : fn) {
+    if (iter.second > 0) {
+      return 0;
+    }
+  }
+  return fn.size() & 1 ? -1 : 1;
 }
 
 SL int64 CalMu(int64 n, const IntegerFactorization& fn) {
@@ -727,6 +754,14 @@ SL int64 CalRad(int64 n) {
   return pe_internal::CalRadImpl(n);
 }
 
+SL int64 CalRad(const IntegerFactorization& fn) {
+  int64 ret = 1;
+  for (auto& iter : fn) {
+    ret *= iter.first;
+  }
+  return ret;
+}
+
 SL int64 CalRad(int64 n, const IntegerFactorization& fn) {
   if (n <= 0) return 0;
   if (n == 1) return 1;
@@ -775,6 +810,14 @@ SL int64 CalSigma0(int64 n) {
   if (sigma0 && n <= maxp) return sigma0[n];
 
   return pe_internal::CalSigma0Impl(n);
+}
+
+SL int64 CalSigma0(const IntegerFactorization& fn) {
+  int64 ret = 1;
+  for (auto& iter : fn) {
+    ret *= iter.second + 1;
+  }
+  return ret;
 }
 
 SL int64 CalSigma0(int64 n, const IntegerFactorization& fn) {

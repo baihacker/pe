@@ -304,37 +304,6 @@ SL IntegerFactorization Factorize(int64 n) {
   return ret;
 }
 
-SL void FactorizePowerByPmask(int64 n, int r, IntegerFactorization& ret) {
-  while (n != 1) {
-    int now = pmask[n];
-    int c = 0;
-    while (n % now == 0) n /= now, ++c;
-    if (c) ret.emplace_back(static_cast<int64>(now), c * r);
-  }
-}
-
-SL IntegerFactorization FactorizePower(int64 n, int r) {
-  IntegerFactorization ret;
-  if (n <= 1) {
-    return ret;
-  }
-
-  for (int i = 0; i < pcnt; ++i) {
-    if (n <= maxp) {
-      FactorizePowerByPmask(n, r, ret);
-      return ret;
-    }
-    const int64 p = plist[i];
-    const int64 test = p * p;
-    if (test > n) break;
-    int c = 0;
-    while (n % p == 0) n /= p, ++c;
-    if (c) ret.emplace_back(p, c * r);
-  }
-  if (n != 1) ret.emplace_back(n, r);
-  return ret;
-}
-
 SL IntegerFactorization Factorize(int64 n, const std::vector<int64>& hint) {
   IntegerFactorization ret;
   if (n <= 1) {
@@ -363,6 +332,37 @@ SL IntegerFactorization Factorize(int64 n, const std::vector<int64>& hint) {
     if (c) ret.emplace_back(p, c);
   }
   if (n != 1) ret.emplace_back(n, 1);
+  return ret;
+}
+
+SL void FactorizePowerByPmask(int64 n, int r, IntegerFactorization& ret) {
+  while (n != 1) {
+    int now = pmask[n];
+    int c = 0;
+    while (n % now == 0) n /= now, ++c;
+    if (c) ret.emplace_back(static_cast<int64>(now), c * r);
+  }
+}
+
+SL IntegerFactorization FactorizePower(int64 n, int r) {
+  IntegerFactorization ret;
+  if (n <= 1) {
+    return ret;
+  }
+
+  for (int i = 0; i < pcnt; ++i) {
+    if (n <= maxp) {
+      FactorizePowerByPmask(n, r, ret);
+      return ret;
+    }
+    const int64 p = plist[i];
+    const int64 test = p * p;
+    if (test > n) break;
+    int c = 0;
+    while (n % p == 0) n /= p, ++c;
+    if (c) ret.emplace_back(p, c * r);
+  }
+  if (n != 1) ret.emplace_back(n, r);
   return ret;
 }
 

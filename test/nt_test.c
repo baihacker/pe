@@ -75,6 +75,15 @@ SL void GetFactorsTest() {
 
 PE_REGISTER_TEST(&GetFactorsTest, "GetFactorsTest", SMALL);
 
+SL int IsSquareFreeNormal(int64 n) {
+  for (auto& iter : Factorize(n)) {
+    if (iter.second > 1) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
 SL void IsSquareFreeTest() {
   const int64 n = maxp * 2;
   int64 ans1 = 0;

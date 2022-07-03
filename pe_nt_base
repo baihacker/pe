@@ -450,161 +450,259 @@ SL int IsPrimeEx(int64 n) {
   return 1;
 }
 
-namespace pe_internal {
 template <typename T>
-SL std::vector<T> GetFactorsImpl(const IntegerFactorization& f, const T maxv) {
-  if (maxv == 0) {
-    return std::vector<T>();
+struct FactorizedInteger {
+  FactorizedInteger(T n) : n_(n), factorization_(n) {}
+
+  FactorizedInteger(T n, const IntegerFactorization& f)
+      : n_(n), factorization_(f) {}
+  FactorizedInteger(T n, IntegerFactorization&& f)
+      : n_(n), factorization_(std::move(f)) {}
+
+  FactorizedInteger(const IntegerFactorization& f)
+      : n_(-1), factorization_(f) {}
+  FactorizedInteger(IntegerFactorization& f)
+      : n_(-1), factorization_(std::move(f)) {}
+
+  T GetValue() const {
+    if (n_ < 0) {
+      T tmp = 1;
+      for (auto iter : factorization_) {
+        for (int i = 0; i < iter.second; ++i) {
+          tmp *= iter.first;
+        }
+      }
+      n_ = tmp;
+    }
+    return n_;
   }
 
-  int max_size = 1;
-  for (auto& iter : f) max_size *= iter.second + 1;
+  const IntegerFactorization& GetFactorization() const {
+    return factorization_;
+  }
 
-  std::vector<T> result(max_size);
-  result[0] = 1;
+  std::vector<T> GetFactors(const T maxv = -1) const {
+    if (maxv == 0) {
+      return std::vector<T>();
+    }
 
-  int top = 1;
-  for (auto& iter : f) {
-    const int last = top;
-    const T p = iter.first;
-    T v = 1;
-    for (int i = 0; i < iter.second; ++i) {
-      v *= p;
-      if (maxv > 0 && v > maxv) break;
-      for (int j = 0; j < last; ++j) {
-        const auto tmp = result[j] * v;
-        if (maxv < 0 || tmp <= maxv) {
-          result[top++] = tmp;
+    int max_size = 1;
+    for (auto& iter : factorization_) {
+      max_size *= iter.second + 1;
+    }
+
+    std::vector<T> result(max_size);
+    result[0] = 1;
+
+    int top = 1;
+    for (auto& iter : factorization_) {
+      const int last = top;
+      const T p = iter.first;
+      T v = 1;
+      for (int i = 0; i < iter.second; ++i) {
+        v *= p;
+        if (maxv > 0 && v > maxv) break;
+        for (int j = 0; j < last; ++j) {
+          const auto tmp = result[j] * v;
+          if (maxv < 0 || tmp <= maxv) {
+            result[top++] = tmp;
+          }
         }
       }
     }
+
+    result.resize(top);
+    return std::move(result);
   }
 
-  result.resize(top);
-  return std::move(result);
-}
-}  // namespace pe_internal
+  std::vector<T> GetPrimeFactors() const {
+    if (factorization_.size() == 0) {
+      return {};
+    }
 
-SL std::vector<int64> GetFactors(const IntegerFactorization& f,
+    std::vector<T> ans;
+    ans.reserve(factorization_.size());
+
+    for (auto& iter : factorization_) {
+      ans.push_back(iter.first);
+    }
+    return ans;
+  }
+
+  std::vector<T> GetRadFactors(const T maxv = -1) const {
+    if (maxv == 0) {
+      return std::vector<T>();
+    }
+
+    const int max_size = 1 << factorization_.size();
+    std::vector<T> result(max_size);
+    result[0] = 1;
+
+    int top = 1;
+    for (auto& iter : factorization_) {
+      const int last = top;
+      const int64 p = iter.first;
+      int64 v = 1;
+      for (int i = 0; i < 1; ++i) {
+        v *= p;
+        if (maxv > 0 && v > maxv) break;
+        for (int j = 0; j < last; ++j) {
+          const auto tmp = result[j] * v;
+          if (maxv < 0 || tmp <= maxv) {
+            result[top++] = tmp;
+          }
+        }
+      }
+    }
+
+    result.resize(top);
+    return std::move(result);
+  }
+
+  std::vector<std::pair<T, int>> GetRadFactorsWithMu(const T maxv = -1) const {
+    if (maxv == 0) {
+      return std::vector<std::pair<T, int>>();
+    }
+
+    const int max_size = 1 << factorization_.size();
+    std::vector<std::pair<T, int>> result(max_size);
+    result[0] = {1LL, 1};
+
+    int top = 1;
+    for (auto& iter : factorization_) {
+      const int last = top;
+      const int64 p = iter.first;
+      T v = 1;
+      for (int i = 0; i < 1; ++i) {
+        v *= p;
+        if (maxv > 0 && v > maxv) break;
+        for (int j = 0; j < last; ++j) {
+          const auto tmp = result[j].first * v;
+          const auto mu = -result[j].second;
+          if (maxv < 0 || tmp <= maxv) {
+            result[top++] = {tmp, mu};
+          }
+        }
+      }
+    }
+
+    result.resize(top);
+    return std::move(result);
+  }
+
+  T CalPhi() const {
+    if (factorization_.size() == 0) {
+      return 1;
+    }
+    if (phi && n_ >= 0 && n_ <= maxp) {
+      return phi[n_];
+    }
+    int64 phi_n = GetValue();
+    for (auto& it : factorization_) {
+      phi_n -= phi_n / it.first;
+    }
+    return phi_n;
+  }
+
+  int64 CalMu() const {
+    if (factorization_.size() == 0) {
+      return 1;
+    }
+    if (mu && n_ >= 0 && n_ <= maxp) {
+      return mu[n_];
+    }
+    for (auto& iter : factorization_) {
+      if (iter.second > 0) {
+        return 0;
+      }
+    }
+    return factorization_.size() & 1 ? -1 : 1;
+  }
+
+  T CalRad() const {
+    if (factorization_.size() == 0) {
+      return 1;
+    }
+    if (rad && n_ >= 0 && n_ <= maxp) {
+      return rad[n_];
+    }
+
+    T ret = 1;
+    for (auto& iter : factorization_) {
+      ret *= iter.first;
+    }
+    return ret;
+  }
+
+  T CalSigma0() const {
+    if (factorization_.size() == 0) {
+      return 1;
+    }
+    if (sigma0 && n_ >= 0 && n_ <= maxp) {
+      return sigma0[n_];
+    }
+
+    T ret = 1;
+    for (auto& iter : factorization_) {
+      ret *= iter.second + 1;
+    }
+    return ret;
+  }
+
+  int IsSquareFree() const {
+    for (auto& iter : factorization_) {
+      if (iter.second > 1) {
+        return 0;
+      }
+    }
+    return 1;
+  }
+
+ private:
+  mutable T n_;  // It can be -1
+  IntegerFactorization factorization_;
+};
+
+using FI64 = FactorizedInteger<int64>;
+
+SL std::vector<int64> GetFactors(const FactorizedInteger<int64>& fi,
                                  int64 maxv = -1) {
-  return pe_internal::GetFactorsImpl<int64>(f, maxv);
-}
-
-SL std::vector<int64> GetFactors(int64 value, int64 maxv = -1) {
-  return pe_internal::GetFactorsImpl<int64>(Factorize(value), maxv);
+  return fi.GetFactors(maxv);
 }
 
 template <typename T>
-SL std::vector<T> GetFactorsT(const IntegerFactorization& f, T maxv = -1) {
-  return pe_internal::GetFactorsImpl<T>(f, maxv);
+SL std::vector<T> GetFactors(const FactorizedInteger<T>& fi, T maxv = -1) {
+  return fi.GetFactors(maxv);
 }
 
-SL std::vector<int64> GetPrimeFactors(const IntegerFactorization& f) {
-  if (f.size() == 0) {
-    return {};
-  }
-
-  std::vector<int64> ans;
-  ans.reserve(f.size());
-
-  for (auto& iter : f) {
-    ans.push_back(iter.first);
-  }
-  return ans;
+SL std::vector<int64> GetPrimeFactors(const FactorizedInteger<int64>& fi) {
+  return fi.GetPrimeFactors();
 }
 
-SL std::vector<int64> GetPrimeFactors(int64 value) {
-  if (value <= 1) {
-    return {};
-  }
-
-  return GetPrimeFactors(Factorize(value));
+template <typename T>
+SL std::vector<T> GetPrimeFactors(const FactorizedInteger<T>& fi) {
+  return fi.GetPrimeFactors();
 }
 
-namespace pe_internal {
-SL std::vector<int64> GetRadFactorsImpl(const IntegerFactorization& f,
-                                        const int64 maxv) {
-  if (maxv == 0) {
-    return std::vector<int64>();
-  }
-
-  const int max_size = 1 << f.size();
-  std::vector<int64> result(max_size);
-  result[0] = 1;
-
-  int top = 1;
-  for (auto& iter : f) {
-    const int last = top;
-    const int64 p = iter.first;
-    int64 v = 1;
-    for (int i = 0; i < 1; ++i) {
-      v *= p;
-      if (maxv > 0 && v > maxv) break;
-      for (int j = 0; j < last; ++j) {
-        const auto tmp = result[j] * v;
-        if (maxv < 0 || tmp <= maxv) {
-          result[top++] = tmp;
-        }
-      }
-    }
-  }
-
-  result.resize(top);
-  return std::move(result);
-}
-}  // namespace pe_internal
-
-SL std::vector<int64> GetRadFactors(const IntegerFactorization& f,
+SL std::vector<int64> GetRadFactors(const FactorizedInteger<int64>& fi,
                                     int64 maxv = -1) {
-  return pe_internal::GetRadFactorsImpl(f, maxv);
+  return fi.GetRadFactors(maxv);
 }
 
-SL std::vector<int64> GetRadFactors(int64 value, int64 maxv = -1) {
-  return pe_internal::GetRadFactorsImpl(Factorize(value), maxv);
+template <typename T>
+SL std::vector<T> GetRadFactors(const FactorizedInteger<T>& fi, T maxv = -1) {
+  return fi.GetRadFactors(maxv);
 }
-
-namespace pe_internal {
-SL std::vector<std::pair<int64, int>> GetRadFactorsWithMuImpl(
-    const IntegerFactorization& f, const int64 maxv) {
-  if (maxv == 0) {
-    return std::vector<std::pair<int64, int>>();
-  }
-
-  const int max_size = 1 << f.size();
-  std::vector<std::pair<int64, int>> result(max_size);
-  result[0] = {1LL, 1};
-
-  int top = 1;
-  for (auto& iter : f) {
-    const int last = top;
-    const int64 p = iter.first;
-    int64 v = 1;
-    for (int i = 0; i < 1; ++i) {
-      v *= p;
-      if (maxv > 0 && v > maxv) break;
-      for (int j = 0; j < last; ++j) {
-        const auto tmp = result[j].first * v;
-        const auto mu = -result[j].second;
-        if (maxv < 0 || tmp <= maxv) {
-          result[top++] = {tmp, mu};
-        }
-      }
-    }
-  }
-
-  result.resize(top);
-  return std::move(result);
-}
-}  // namespace pe_internal
 
 SL std::vector<std::pair<int64, int>> GetRadFactorsWithMu(
-    const IntegerFactorization& f, int64 maxv = -1) {
-  return pe_internal::GetRadFactorsWithMuImpl(f, maxv);
+    const FactorizedInteger<int64>& fi, int64 maxv = -1) {
+  return fi.GetRadFactorsWithMu(maxv);
 }
 
-SL std::vector<std::pair<int64, int>> GetRadFactorsWithMu(int64 value,
-                                                          int64 maxv = -1) {
-  return pe_internal::GetRadFactorsWithMuImpl(Factorize(value), maxv);
+template <typename T>
+SL std::vector<std::pair<T, int>> GetRadFactorsWithMu(
+    const FactorizedInteger<T>& fi, T maxv = -1) {
+  return fi.GetRadFactorsWithMu(maxv);
 }
 
 SL int64 CalPhi(int64 n) {
@@ -618,28 +716,11 @@ SL int64 CalPhi(int64 n) {
   return phi_n;
 }
 
-SL int64 CalPhi(const IntegerFactorization& fn) {
-  int64 n = 1;
-  for (auto iter : fn) {
-    for (int i = 0; i < iter.second; ++i) {
-      n *= iter.first;
-    }
-  }
-  int64 phi_n = n;
-  for (auto& it : fn) {
-    phi_n -= phi_n / it.first;
-  }
-  return phi_n;
-}
+SL int64 CalPhi(const FactorizedInteger<int64>& fn) { return fn.CalPhi(); }
 
-SL int64 CalPhi(int64 n, const IntegerFactorization& fn) {
-  if (n <= 0) return 0;
-  if (phi && n <= maxp) return phi[n];
-  int64 phi_n = n;
-  for (auto& it : fn) {
-    phi_n -= phi_n / it.first;
-  }
-  return phi_n;
+template <typename T>
+SL T CalPhi(const FactorizedInteger<T>& fn) {
+  return fn.CalPhi();
 }
 
 namespace pe_internal {
@@ -687,25 +768,11 @@ SL int64 CalMu(int64 n) {
   return pe_internal::CalMuImpl(n);
 }
 
-SL int64 CalMu(const IntegerFactorization& fn) {
-  for (auto& iter : fn) {
-    if (iter.second > 0) {
-      return 0;
-    }
-  }
-  return fn.size() & 1 ? -1 : 1;
-}
+SL int64 CalMu(const FactorizedInteger<int64>& fn) { return fn.CalMu(); }
 
-SL int64 CalMu(int64 n, const IntegerFactorization& fn) {
-  if (n <= 0) return 0;
-  if (n == 1) return 1;
-  if (mu && n <= maxp) return mu[n];
-  for (auto& iter : fn) {
-    if (iter.second > 0) {
-      return 0;
-    }
-  }
-  return fn.size() & 1 ? -1 : 1;
+template <typename T>
+SL T CalMu(const FactorizedInteger<T>& fn) {
+  return fn.CalMu();
 }
 
 namespace pe_internal {
@@ -745,28 +812,15 @@ SL int64 CalRad(int64 n) {
   return pe_internal::CalRadImpl(n);
 }
 
-SL int64 CalRad(const IntegerFactorization& fn) {
-  int64 ret = 1;
-  for (auto& iter : fn) {
-    ret *= iter.first;
-  }
-  return ret;
-}
+SL int64 CalRad(const FactorizedInteger<int64>& fn) { return fn.CalRad(); }
 
-SL int64 CalRad(int64 n, const IntegerFactorization& fn) {
-  if (n <= 0) return 0;
-  if (n == 1) return 1;
-  if (rad && n <= maxp) return rad[n];
-
-  int64 ret = 1;
-  for (auto& iter : fn) {
-    ret *= iter.first;
-  }
-  return ret;
+template <typename T>
+SL T CalRad(const FactorizedInteger<T>& fn) {
+  return fn.CalRad();
 }
 
 namespace pe_internal {
-SL int64 CalRadSigma0ByPmask(int64 n, int64 v = 1) {
+SL int64 CalSigma0ByPmask(int64 n, int64 v = 1) {
   while (n != 1) {
     const int now = pmask[n];
     int c = 0;
@@ -781,7 +835,7 @@ SL int64 CalSigma0Impl(int64 n) {
 
   for (int i = 0; i < pcnt; ++i) {
     if (n <= maxp) {
-      return CalRadSigma0ByPmask(n, v);
+      return CalSigma0ByPmask(n, v);
     }
     const int64 p = plist[i];
     const int64 test = p * p;
@@ -803,33 +857,13 @@ SL int64 CalSigma0(int64 n) {
   return pe_internal::CalSigma0Impl(n);
 }
 
-SL int64 CalSigma0(const IntegerFactorization& fn) {
-  int64 ret = 1;
-  for (auto& iter : fn) {
-    ret *= iter.second + 1;
-  }
-  return ret;
+SL int64 CalSigma0(const FactorizedInteger<int64>& fn) {
+  return fn.CalSigma0();
 }
 
-SL int64 CalSigma0(int64 n, const IntegerFactorization& fn) {
-  if (n <= 0) return 0;
-  if (n == 1) return 1;
-  if (sigma0 && n <= maxp) return sigma0[n];
-
-  int64 ret = 1;
-  for (auto& iter : fn) {
-    ret *= iter.second + 1;
-  }
-  return ret;
-}
-
-SL int IsSquareFreeNormal(int64 n) {
-  for (auto& iter : Factorize(n)) {
-    if (iter.second > 1) {
-      return 0;
-    }
-  }
-  return 1;
+template <typename T>
+SL T CalSigma0(const FactorizedInteger<T>& fn) {
+  return fn.CalSigma0();
 }
 
 namespace pe_internal {
@@ -861,6 +895,15 @@ SL int IsSquareFree(int64 n) {
     if (c > 1) return 0;
   }
   return 1;
+}
+
+SL int IsSquareFree(const FactorizedInteger<int64>& fi) {
+  return fi.IsSquareFree();
+}
+
+template <typename T>
+SL int IsSquareFree(const FactorizedInteger<T>& fi) {
+  return fi.IsSquareFree();
 }
 
 SL int FindPrimeIdx(const std::function<int(int64)>& f) {

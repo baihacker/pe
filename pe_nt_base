@@ -716,11 +716,11 @@ SL int64 CalPhi(int64 n) {
   return phi_n;
 }
 
-SL int64 CalPhi(const FactorizedInteger<int64>& fn) { return fn.CalPhi(); }
+SL int64 CalPhi(const FactorizedInteger<int64>& fi) { return fi.CalPhi(); }
 
 template <typename T>
-SL T CalPhi(const FactorizedInteger<T>& fn) {
-  return fn.CalPhi();
+SL T CalPhi(const FactorizedInteger<T>& fi) {
+  return fi.CalPhi();
 }
 
 namespace pe_internal {
@@ -768,11 +768,11 @@ SL int64 CalMu(int64 n) {
   return pe_internal::CalMuImpl(n);
 }
 
-SL int64 CalMu(const FactorizedInteger<int64>& fn) { return fn.CalMu(); }
+SL int64 CalMu(const FactorizedInteger<int64>& fi) { return fi.CalMu(); }
 
 template <typename T>
-SL T CalMu(const FactorizedInteger<T>& fn) {
-  return fn.CalMu();
+SL T CalMu(const FactorizedInteger<T>& fi) {
+  return fi.CalMu();
 }
 
 namespace pe_internal {
@@ -812,11 +812,11 @@ SL int64 CalRad(int64 n) {
   return pe_internal::CalRadImpl(n);
 }
 
-SL int64 CalRad(const FactorizedInteger<int64>& fn) { return fn.CalRad(); }
+SL int64 CalRad(const FactorizedInteger<int64>& fi) { return fi.CalRad(); }
 
 template <typename T>
-SL T CalRad(const FactorizedInteger<T>& fn) {
-  return fn.CalRad();
+SL T CalRad(const FactorizedInteger<T>& fi) {
+  return fi.CalRad();
 }
 
 namespace pe_internal {
@@ -857,13 +857,13 @@ SL int64 CalSigma0(int64 n) {
   return pe_internal::CalSigma0Impl(n);
 }
 
-SL int64 CalSigma0(const FactorizedInteger<int64>& fn) {
-  return fn.CalSigma0();
+SL int64 CalSigma0(const FactorizedInteger<int64>& fi) {
+  return fi.CalSigma0();
 }
 
 template <typename T>
-SL T CalSigma0(const FactorizedInteger<T>& fn) {
-  return fn.CalSigma0();
+SL T CalSigma0(const FactorizedInteger<T>& fi) {
+  return fi.CalSigma0();
 }
 
 namespace pe_internal {
@@ -904,6 +904,34 @@ SL int IsSquareFree(const FactorizedInteger<int64>& fi) {
 template <typename T>
 SL int IsSquareFree(const FactorizedInteger<T>& fi) {
   return fi.IsSquareFree();
+}
+
+template <typename T>
+SL T CalMultiplicativeOrder(T n, T mod, T phi_mod = -1) {
+  if (phi_mod == -1) {
+    phi_mod = CalPhi(mod);
+  }
+  FactorizedInteger<T> fi(phi_mod);
+  T ret = phi_mod;
+  for (auto p : fi.GetPrimeFactors()) {
+    if (PowerMod(n, phi_mod / p, mod) == 1) {
+      ret /= p;
+    }
+  }
+  return ret;
+}
+
+template <typename T>
+SL T CalMultiplicativeOrder(T n, T mod,
+                            const FactorizedInteger<T>& phi_mod_pi) {
+  T phi_mod = phi_mod_pi.GetValue();
+  T ret = phi_mod;
+  for (auto p : phi_mod_pi.GetPrimeFactors()) {
+    if (PowerMod(n, phi_mod / p, mod) == 1) {
+      ret /= p;
+    }
+  }
+  return ret;
 }
 
 SL int FindPrimeIdx(const std::function<int(int64)>& f) {

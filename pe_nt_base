@@ -19,6 +19,7 @@ static int* phi = nullptr;
 static int* mu = nullptr;
 static int* rad = nullptr;
 static int* sigma0 = nullptr;
+static int64* sigma1 = nullptr;
 
 SL void InitMaxp(int64 v) {
   maxp = v;
@@ -110,6 +111,10 @@ SL void DeinitPrimes() {
     delete[] sigma0;
     sigma0 = nullptr;
   }
+  if (sigma1) {
+    delete[] sigma1;
+    sigma1 = nullptr;
+  }
 }
 
 SL void InitPrimes() {
@@ -136,7 +141,46 @@ SL void InitPrimes() {
   }
 }
 
-SL void InitPrimes(int cal_phi, int cal_mu, int cal_rad, int cal_sigma0) {
+SL void InitSigma0(int* sigma0) {
+  sigma0[0] = 0;
+  sigma0[1] = 1;
+  for (int i = 2; i <= maxp; ++i) {
+    if (pmask[i] == i) {
+      sigma0[i] = 2;
+    } else {
+      const int p = pmask[i];
+      int e = 2;
+      int j = i / p;
+      for (; j % p == 0; j /= p) {
+        ++e;
+      }
+      sigma0[i] = e * sigma0[j];
+    }
+  }
+}
+
+SL void InitSigma1(int64* sigma1) {
+  sigma1[0] = 0;
+  sigma1[1] = 1;
+  for (int i = 2; i <= maxp; ++i) {
+    if (pmask[i] == i) {
+      sigma1[i] = i + 1;
+    } else {
+      const int p = pmask[i];
+      int d = p;
+      int64 s = 1 + p;
+      int j = i / p;
+      for (; j % p == 0; j /= p) {
+        d *= p;
+        s += d;
+      }
+      sigma1[i] = s * sigma1[j];
+    }
+  }
+}
+
+SL void InitPrimes(int cal_phi, int cal_mu, int cal_rad, int cal_sigma0,
+                   int cal_sigma1) {
   if (maxp == 0) {
     InitMaxp(1000000);
   }
@@ -179,22 +223,11 @@ SL void InitPrimes(int cal_phi, int cal_mu, int cal_rad, int cal_sigma0) {
 
   if (cal_sigma0) {
     sigma0 = new int[maxp + 1];
-    sigma0[0] = 0;
-    sigma0[1] = 1;
-    for (int i = 2; i <= maxp; ++i) {
-      if (pmask[i] == i) {
-        sigma0[i] = 2;
-      } else {
-        int d = pmask[i];
-        int e = 2;
-        int j = i / d;
-        while (j % d == 0) {
-          ++e;
-          j /= d;
-        }
-        sigma0[i] = e * sigma0[j];
-      }
-    }
+    InitSigma0(sigma0);
+  }
+  if (cal_sigma1) {
+    sigma1 = new int64[maxp + 1];
+    InitSigma1(sigma1);
   }
 }
 
@@ -663,6 +696,27 @@ struct FactorizedInteger {
     return ret;
   }
 
+  T CalSigma1() const {
+    if (factorization_.size() == 0) {
+      return 1;
+    }
+    if (sigma1 && n_ >= 0 && n_ <= maxp) {
+      return sigma1[n_];
+    }
+
+    T ret = 1;
+    for (auto& iter : factorization_) {
+      T s = 1 + iter.first;
+      T d = iter.first;
+      for (int i = 1; i < iter.second; ++i) {
+        d *= iter.first;
+        s += d;
+      }
+      ret *= s;
+    }
+    return ret;
+  }
+
   int IsSquareFree() const {
     for (auto& iter : factorization_) {
       if (iter.second > 1) {
@@ -836,9 +890,9 @@ SL T CalRad(const FactorizedInteger<T>& fi) {
 namespace pe_internal {
 SL int64 CalSigma0ByPmask(int64 n, int64 v = 1) {
   while (n != 1) {
-    const int now = pmask[n];
+    const int p = pmask[n];
     int c = 0;
-    while (n % now == 0) n /= now, ++c;
+    while (n % p == 0) n /= p, ++c;
     if (c >= 1) v *= c + 1;
   }
   return v;
@@ -878,6 +932,55 @@ SL int64 CalSigma0(const FactorizedInteger<int64>& fi) {
 template <typename T>
 SL T CalSigma0(const FactorizedInteger<T>& fi) {
   return fi.CalSigma0();
+}
+
+namespace pe_internal {
+SL int64 CalSigma1ByPmask(int64 n, int64 v = 1) {
+  while (n != 1) {
+    const int p = pmask[n];
+    int64 d = 1;
+    int64 s = 1;
+    while (n % p == 0) n /= p, d *= p, s += d;
+    if (d > 1) v *= s;
+  }
+  return v;
+}
+
+SL int64 CalSigma1Impl(int64 n) {
+  int64 v = 1;
+
+  for (int i = 0; i < pcnt; ++i) {
+    if (n <= maxp) {
+      return CalSigma1ByPmask(n, v);
+    }
+    const int64 p = plist[i];
+    const int64 test = p * p;
+    if (test > n) break;
+    int64 d = 1;
+    int64 s = 1;
+    while (n % p == 0) n /= p, d *= p, s += d;
+    if (d > 1) v *= s;
+  }
+  if (n != 1) v *= n + 1;
+  return v;
+}
+}  // namespace pe_internal
+
+SL int64 CalSigma1(int64 n) {
+  if (n <= 0) return 0;
+  if (n == 1) return 1;
+  if (sigma1 && n <= maxp) return sigma1[n];
+
+  return pe_internal::CalSigma1Impl(n);
+}
+
+SL int64 CalSigma1(const FactorizedInteger<int64>& fi) {
+  return fi.CalSigma1();
+}
+
+template <typename T>
+SL T CalSigma1(const FactorizedInteger<T>& fi) {
+  return fi.CalSigma1();
 }
 
 namespace pe_internal {

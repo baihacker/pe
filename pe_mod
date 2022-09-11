@@ -1330,6 +1330,39 @@ SL REQUIRES((IsNModNumberV<T> && is_builtin_integer_v<TN> &&
   return x.Power(n);
 }
 
+// Returns maximum x such that x <= maxv and x = v mod (mod)
+template <typename T>
+SL REQUIRES((is_general_integer_v<T>)) RETURN(T) ModNoMore(T maxv, T v, T mod) {
+  if (maxv >= v) {
+    return v + (maxv - v) / mod * mod;
+  } else {
+    return v - (v - maxv + mod - 1) / mod * mod;
+  }
+}
+
+template <typename T, typename TM>
+SL REQUIRES((is_general_integer_v<T> && IsNModNumberV<TM>)) RETURN(T)
+    ModNoMore(T maxv, TM v) {
+  return ModNoMore<T>(maxv, ExtractValue(v), v.Mod());
+}
+
+// Returns minimum x such that x >= minv and x = v mod (mod)
+template <typename T>
+SL REQUIRES((is_general_integer_v<T>)) RETURN(T)
+    ModAtLeast(T minv, T v, T mod) {
+  if (minv >= v) {
+    return v + (minv - v + mod - 1) / mod * mod;
+  } else {
+    return v - (v - minv) / mod * mod;
+  }
+}
+
+template <typename T, typename TM>
+SL REQUIRES((is_general_integer_v<T> && IsNModNumberV<TM>)) RETURN(T)
+    ModAtLeast(T minv, TM v) {
+  return ModAtLeast<T>(minv, ExtractValue(v), v.Mod());
+}
+
 #if PE_HAS_CPP20
 #define PE_MOD_ARTHMETIC_OPERATION_IMPL(type) \
   v + static_cast<type>(1);                   \

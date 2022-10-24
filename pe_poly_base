@@ -1670,6 +1670,71 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   return b;
 }
 
+// https://oeis.org/wiki/Euler_transform
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    PolyEulerTransform(const T* x, int64 m, int64 n, T* result, int64 mod,
+                       int64* invs) {
+  if (m > n) {
+    m = n;
+  }
+
+  std::vector<T> t(n, 0);
+  for (int i = 1; i < m; ++i) {
+    t[i] = x[i];
+  }
+  for (int i = 2; i < m; ++i) {
+    const T c = invs[i];
+    for (int j = i, k = 1; j < n && k < m; j += i, ++k) {
+      t[j] = AddMod(t[j], MulMod(c, x[k], mod), mod);
+    }
+  }
+
+  PolyExp(&t[0], n, n, result, mod);
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    PolyEulerTransform(const T* x, int64 m, int64 n, T* result, int64 mod) {
+  if (m > n) {
+    m = n;
+  }
+
+  std::vector<int64> invs(m);
+  InitInv(&invs[0], m - 1, mod);
+
+  PolyEulerTransform(x, m, n, result, mod, &invs[0]);
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
+    PolyEulerTransform(const std::vector<T>& x, int64 n, int64 mod,
+                       int64* invs) {
+  // It is assumed that mod is a prime
+  const auto m = static_cast<int64>(x.size());
+
+  // b
+  std::vector<T> b(n);
+
+  PolyEulerTransform(&x[0], m, n, &b[0], mod, invs);
+
+  return b;
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
+    PolyEulerTransform(const std::vector<T>& x, int64 n, int64 mod) {
+  // It is assumed that mod is a prime
+  const auto m = static_cast<int64>(x.size());
+
+  // b
+  std::vector<T> b(n);
+
+  PolyEulerTransform(&x[0], m, n, &b[0], mod);
+
+  return b;
+}
+
 namespace pe_internal {
 // FactSumModer uses PolyMultipointEvaluate.
 struct PSPTree {

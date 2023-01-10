@@ -587,6 +587,117 @@ struct CombModerEx {
   FactModer fmoder_;
 };
 
+// Computes Binomial(a, b) mod p^e
+template <typename T>
+struct PPowerCombModer {
+  PPowerCombModer(const T p, const T e) : p_(p), e_(e) {
+    T pe = p_ * e_;
+    mod_ = Power(T(p_), e_);
+    phi_ = Power(T(p_), (e_ - 1)) * (p_ - 1);
+    f_.resize(pe + 1, 1);
+    for (int i = 1; i <= pe; ++i) {
+      if (i % p_ == 0) {
+        f_[i] = f_[i - 1];
+      } else {
+        f_[i] = MulMod(f_[i - 1], i, mod_);
+      }
+    }
+
+    ppower_.resize(e_);
+    ppower_[0] = 1;
+    for (int i = 1; i < e_; ++i) {
+      ppower_[i] = MulMod(ppower_[i - 1], p, mod_);
+    }
+  }
+
+  // Note: if i % p == 0, then the contribution of i is 1.
+  T FactorialWithoutP(const T& n) {
+    T u = n / p_;
+    T v = n % p_;
+    T r = (e_ + 1) >> 1;
+
+    T ret = 1;
+    const T u2 = u * u;
+
+    for (int j = 1; j <= r; ++j) {
+      T beta_numer = u;
+      T beta_denom = j;
+      const int j2 = j * j;
+      for (int i = 1; i <= r; ++i) {
+        if (i != j) {
+          beta_numer *= u2 - i * i;
+          beta_denom *= j2 - i * i;
+        }
+      }
+      T beta = beta_numer / beta_denom % phi_;
+      if (IntSign(beta) < 0) {
+        beta += phi_;
+      }
+      ret = MulMod(ret, PowerMod(f_[j * p_], beta, mod_), mod_);
+    }
+
+    if (p_ == 2) {
+      T left_mod4 = ((LowerBits(u * p_ + 1) & 4) >> 1) + 1;
+      T right_mod4 = LowerBits(ret) & 3;
+      if (left_mod4 != right_mod4) {
+        ret = (mod_ - ret) % mod_;
+      }
+    }
+
+    ret = MulMod(ret, f_[v], mod_);
+
+    for (int j = 1; j < e_; ++j) {
+      T base = MulMod(f_[j * p_ + v],
+                      ModInv(MulMod(f_[v], f_[j * p_], mod_), mod_), mod_);
+      T alpha_numer = u;
+      T alpha_denom = j;
+      for (int i = 1; i < e_; ++i) {
+        if (i != j) {
+          alpha_numer *= u - i;
+          alpha_denom *= j - i;
+        }
+      }
+      T alpha = alpha_numer / alpha_denom % phi_;
+      if (IntSign(alpha) < 0) alpha += phi_;
+      ret = MulMod(ret, PowerMod(base, alpha, mod_), mod_);
+    }
+
+    return ret;
+  }
+
+  // Note: if i = p^a q where (p, q) = 1, then the contribution of i is q.
+  T FactorialWithoutPPower(T n) {
+    T result = FactorialWithoutP(n);
+    for (n /= p_; n; n /= p_) {
+      result = MulMod(result, FactorialWithoutP(n), mod_);
+    }
+    return result;
+  }
+
+  T Comb(T a, T b) {
+    if (b < 0 || b > a) return 0;
+    if (b == 0 || a == b) return 1;
+    T p_idx = 0;
+    for (T i = a / p_; i; i /= p_) p_idx += i;
+    for (T i = b / p_; i; i /= p_) p_idx -= i;
+    for (T i = (a - b) / p_; i; i /= p_) p_idx -= i;
+    if (p_idx >= e_) return 0;
+    T u = FactorialWithoutPPower(a);
+    T v =
+        MulMod(FactorialWithoutPPower(b), FactorialWithoutPPower(a - b), mod_);
+    if (p_idx) u = MulMod(u, ppower_[p_idx], mod_);
+    return MulMod(u, ModInv(v, mod_), mod_);
+  }
+
+ private:
+  std::vector<T> f_;
+  std::vector<T> ppower_;
+  T p_;
+  T e_;
+  T mod_;
+  T phi_;
+};
+
 // Computes (1^k + 2^k + ... + n^k) % mod based on Bernoulli number.
 // It uses O(k^2) to initialize Bernoulli number.
 // It is recommended to use PowerSumModerB or PowerSumModerB1 to support larger

@@ -589,8 +589,8 @@ struct CombModerEx {
 
 // Computes Binomial(a, b) mod p^e
 template <typename T>
-struct PPowerCombModer {
-  PPowerCombModer(const T p, const T e) : p_(p), e_(e) {
+struct CombModerPrimePower {
+  CombModerPrimePower(const T p, const T e) : p_(p), e_(e) {
     T pe = p_ * e_;
     mod_ = Power(T(p_), e_);
     phi_ = Power(T(p_), (e_ - 1)) * (p_ - 1);
@@ -611,7 +611,7 @@ struct PPowerCombModer {
   }
 
   // Note: if i % p == 0, then the contribution of i is 1.
-  T FactorialWithoutP(const T& n) {
+  T FactorialModInternal(const T& n) const {
     T u = n / p_;
     T v = n % p_;
     T r = (e_ + 1) >> 1;
@@ -666,26 +666,30 @@ struct PPowerCombModer {
   }
 
   // Note: if i = p^a q where (p, q) = 1, then the contribution of i is q.
-  T FactorialWithoutPPower(T n) {
-    T result = FactorialWithoutP(n);
+  T FactorialMod(T n) const {
+    T result = FactorialModInternal(n);
     for (n /= p_; n; n /= p_) {
-      result = MulMod(result, FactorialWithoutP(n), mod_);
+      result = MulMod(result, FactorialModInternal(n), mod_);
     }
     return result;
   }
 
-  T Comb(T a, T b) {
-    if (b < 0 || b > a) return 0;
-    if (b == 0 || a == b) return 1;
-    T p_idx = 0;
-    for (T i = a / p_; i; i /= p_) p_idx += i;
-    for (T i = b / p_; i; i /= p_) p_idx -= i;
-    for (T i = (a - b) / p_; i; i /= p_) p_idx -= i;
-    if (p_idx >= e_) return 0;
-    T u = FactorialWithoutPPower(a);
-    T v =
-        MulMod(FactorialWithoutPPower(b), FactorialWithoutPPower(a - b), mod_);
-    if (p_idx) u = MulMod(u, ppower_[p_idx], mod_);
+  T operator()(T n, T m) const { return Cal(n, m); }
+
+  T Comb(T n, T m) const { return Cal(n, m); }
+
+  T Cal(T n, T m) const {
+    if (m < 0 || m > n) return 0;
+    if (m == 0 || n == m) return 1;
+    T pp = 0;
+    for (T nn = n / p_, mm = m / p_, dd = (n - m) / p_; nn;
+         nn /= p_, mm /= p_, dd /= p_) {
+      pp += nn - mm - dd;
+    }
+    if (pp >= e_) return 0;
+    T u = FactorialMod(n);
+    T v = MulMod(FactorialMod(m), FactorialMod(n - m), mod_);
+    if (pp) u = MulMod(u, ppower_[pp], mod_);
     return MulMod(u, ModInv(v, mod_), mod_);
   }
 
@@ -696,6 +700,65 @@ struct PPowerCombModer {
   T e_;
   T mod_;
   T phi_;
+};
+
+// Computes Binomial(a, b) mod p^2
+template <typename T>
+struct CombModerPrimeSquare {
+  CombModerPrimeSquare(const T p) : p_(p) {
+    mod_ = p_ * p_;
+    f_.resize(p_);
+    f_[0] = 1 % mod_;
+
+    for (T i = 1; i < p_; ++i) {
+      f_[i] = MulMod(f_[i - 1], i, mod_);
+    }
+
+    h_.resize(p_);
+    InitInv(h_.begin(), p_ - 1, p_);
+    for (T i = 1; i < p_; ++i) {
+      h_[i] = AddMod(h_[i - 1], h_[i], p_);
+    }
+  }
+
+  // Note: if i = p^a q where (p, q) = 1, then the contribution of i is q.
+  T FactorialMod(T n) const {
+    T result = 1;
+    for (; n; n /= p_) {
+      const T t0 = RegulateMod(n / p_, mod_);
+      const T t1 = MulMod(MulMod(f_[n % p_], p_, mod_),
+                          MulMod(h_[n % p_], t0, mod_), mod_);
+      const T t2 = PowerMod(f_[p_ - 1], n / p_, mod_);
+      const T t = MulMod(AddMod(f_[n % p_], t1, mod_), t2, mod_);
+      result = MulMod(result, t, mod_);
+    }
+    return result;
+  }
+
+  T operator()(T n, T m) const { return Cal(n, m); }
+
+  T Comb(T n, T m) const { return Cal(n, m); }
+
+  T Cal(T n, T m) const {
+    if (m < 0 || m > n) return 0;
+    if (m == 0 || n == m) return 1;
+    T pp = 0;
+    for (T nn = n / p_, mm = m / p_, dd = (n - m) / p_; nn;
+         nn /= p_, mm /= p_, dd /= p_) {
+      pp += nn - mm - dd;
+    }
+    if (pp >= 2) return 0;
+    T u = FactorialMod(n);
+    T v = MulMod(FactorialMod(m), FactorialMod(n - m), mod_);
+    if (pp) u = MulMod(u, p_, mod_);
+    return MulMod(u, ModInv(v, mod_), mod_);
+  }
+
+ private:
+  std::vector<T> f_;
+  std::vector<T> h_;
+  T p_;
+  T mod_;
 };
 
 // Computes (1^k + 2^k + ... + n^k) % mod based on Bernoulli number.

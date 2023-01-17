@@ -72,7 +72,7 @@ See [example.c](https://github.com/baihacker/pe/blob/master/example/example.c) f
 * pe_nt_base: Generate prime list, factorize integer, prime test, compute phi and mu.
 * pe_parallel: A simple framework to solve problem with multi-threads. (windows only)
 * pe_parallel_algo: Parallel algorithms.
-* pe_persistance: KVPersistance. (it may support linux but we need change the generated cmdline and check the other codes)
+* pe_persistance: KVPersistance. (it may support linux if we change the generated cmdline and check the other codes)
 * pe_poly: Polynomial c++ wrapper.
 * pe_poly_algo: Polynomial algorithms.
 * pe_poly_base: Polynomial basic algorithms.

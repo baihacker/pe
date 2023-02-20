@@ -254,6 +254,54 @@ POLY_DIV_AND_MOD_IMPL(PolyDivAndMod, poly_flint_internal::PolyDivAndModImpl)
 POLY_DIV_IMPL(PolyDiv, PolyDivAndMod)
 POLY_MOD_IMPL(PolyMod, PolyDivAndMod)
 
+namespace poly_flint_internal {
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    PolyPowerImpl(const T* x, int64 m, int64 n, int64 t, T* result, int64 mod) {
+  static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
+
+  nmod_poly_t u, v;
+  nmod_poly_init2(u, mod, m);
+  for (int64 i = 0; i < m; ++i) {
+    nmod_poly_set_coeff_ui(u, i, x[i]);
+  }
+
+  nmod_poly_init2(v, mod, t);
+
+  nmod_poly_pow_trunc(v, u, n, t);
+
+  for (int64 i = 0; i < t; ++i) {
+    result[i] = nmod_poly_get_coeff_ui(v, i);
+  }
+
+  nmod_poly_clear(u);
+  nmod_poly_clear(v);
+}
+}  // namespace poly_flint_internal
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    PolyPower(const T* x, int64 m, int64 n, int64 t, T* result, int64 mod) {
+  using unsignedT = typename pe_make_unsigned<T>::type;
+  poly_flint_internal::PolyPowerImpl<unsignedT>(
+      reinterpret_cast<const unsignedT*>(x), m, n, t,
+      reinterpret_cast<unsignedT*>(result), mod);
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
+    PolyPower(const std::vector<T>& x, int64 n, int64 t, int64 mod) {
+  // It is assumed that mod is a prime
+  const auto m = static_cast<int64>(x.size());
+
+  // b
+  std::vector<T> b(t);
+
+  PolyPower(&x[0], m, n, t, &b[0], mod);
+
+  return b;
+}
+
 // More function can be found here:
 // http://flintlib.org/sphinx/nmod_poly.html#transcendental-functions
 extern "C" {

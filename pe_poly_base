@@ -1194,12 +1194,14 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 }
 
 namespace pe_internal {
+// size b >= n
+// The inverse of a[0] exists
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyInvDoublingImpl(int64 n, const T* a, T* b, T* tmp[2], int64 mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
   if (n == 1) {
-    b[0] = PowerMod(a[0], mod - 2, mod);
+    b[0] = ModInv(static_cast<int64>(a[0]), mod);
   } else {
     const int64 m = (n + 1) >> 1;
     PolyInvDoublingImpl(m, a, b, tmp, mod);
@@ -1220,10 +1222,10 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 }
 
 // size result >= n
+// The inverse of x[0] exists
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyInvDoublingImpl(const T* x, int64 m, int64 n, T* result, int64 mod) {
-  // It is assumed that mod is a prime
   const int64 t = std::max(n, m);
   const int64 p = 1LL << pe_lgll(4 * t - 1);
 
@@ -1262,13 +1264,12 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
       reinterpret_cast<unsignedT*>(result), mod);
 }
 
+// The inverse of x[0] exists
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
     PolyInvDoubling(const std::vector<T>& x, int64 n, int64 mod) {
-  // It is assumed that mod is a prime
   const auto m = static_cast<int64>(x.size());
 
-  // b
   std::vector<T> b(n);
 
   PolyInvDoubling(&x[0], m, n, &b[0], mod);
@@ -1277,9 +1278,39 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 }
 
 // size result >= n
+// The inverse of x[0] exists
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyInv(const T* x, int64 m, int64 n, T* result, int64 mod) {
+  using unsignedT = typename pe_make_unsigned<T>::type;
+#if HAS_POLY_FLINT
+  poly_flint::PolyInvNMod<unsignedT>(reinterpret_cast<const unsignedT*>(x), m,
+                                     n, reinterpret_cast<unsignedT*>(result),
+                                     mod);
+#else
+  PolyInvDoubling<unsignedT>(reinterpret_cast<const unsignedT*>(x), m, n,
+                             reinterpret_cast<unsignedT*>(result), mod);
+#endif
+}
+
+// The inverse of x[0] exists.
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
+    PolyInv(const std::vector<T>& x, int64 n, int64 mod) {
+  const auto m = static_cast<int64>(x.size());
+
+  std::vector<T> b(n);
+
+  PolyInv(&x[0], m, n, &b[0], mod);
+
+  return b;
+}
+
+// size result >= n
+// The inverse of x[0] exists.
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    PolyInvPMod(const T* x, int64 m, int64 n, T* result, int64 mod) {
   using unsignedT = typename pe_make_unsigned<T>::type;
 #if HAS_POLY_FLINT
   poly_flint::PolyInvPMod<unsignedT>(reinterpret_cast<const unsignedT*>(x), m,
@@ -1291,16 +1322,15 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 #endif
 }
 
+// The inverse of x[0] exists.
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyInv(const std::vector<T>& x, int64 n, int64 mod) {
-  // It is assumed that mod is a prime
+    PolyInvPMod(const std::vector<T>& x, int64 n, int64 mod) {
   const auto m = static_cast<int64>(x.size());
 
-  // b
   std::vector<T> b(n);
 
-  PolyInv(&x[0], m, n, &b[0], mod);
+  PolyInvPMod(&x[0], m, n, &b[0], mod);
 
   return b;
 }
@@ -1308,6 +1338,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 namespace pe_internal {
 // size r >= m
 // size q >= n - m + 1
+// Inverse of Y[m-1] exists.
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyDivAndModDcImpl(const T* X, int64 n, const T* Y, int64 m, T* q, T* r,
@@ -1352,6 +1383,7 @@ POLY_MOD_IMPL(PolyModDc, PolyDivAndModDc)
 namespace pe_internal {
 // size q >= n - m + 1
 // size r >= m
+// Inverse of Y[m-1] exists.
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyDivAndModNormalImpl(const T* X, int64 n, const T* Y, int64 m, T* q,
@@ -1371,7 +1403,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 
   int64 top = 0;
   std::vector<T> tmp(X, X + n);
-  int64 t = InvOf(Y[m - 1], mod);
+  int64 t = ModInv(static_cast<int64>(Y[m - 1]), mod);
   for (int64 i = n - 1; i >= m - 1; --i) {
     int64 u = MulMod(tmp[i], t, mod);
     for (int64 j = i, k = m - 1; k >= 0; --j, --k) {
@@ -1394,6 +1426,7 @@ POLY_DIV_AND_MOD_IMPL(PolyDivAndModNormal, pe_internal::PolyDivAndModNormalImpl)
 POLY_DIV_IMPL(PolyDivNormal, PolyDivAndModNormal)
 POLY_MOD_IMPL(PolyModNormal, PolyDivAndModNormal)
 
+// Inverse of Y[m-1] exists.
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyDivAndMod(const T* X, const int64 n, const T* Y, const int64 m, T* q,
@@ -1420,6 +1453,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 #endif
 }
 
+// Inverse of Y[m-1] exists.
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>))
     RETURN(std::tuple<std::vector<T>, std::vector<T>>)
@@ -2019,8 +2053,9 @@ namespace pe_internal {
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyOffsetEvaluateImpl(int64 d, const T* h, T* result, int64 offset,
-                           const T* preFactInv, T mod) {
+                           const T* pre_fact_inv, T mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
+  using signedT = typename pe_make_signed<T>::type;
 
   std::vector<T> A(d + 1);
   std::vector<T> B(2 * d + 1);
@@ -2028,8 +2063,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   std::vector<T> T0(2 * d + 2);
   std::vector<T> T1(2 * d + 2);
   for (int64 i = 0; i <= d; ++i) {
-    auto t = MulMod(h[i], preFactInv[i], mod);
-    t = MulMod(t, preFactInv[d - i], mod);
+    auto t = MulMod(h[i], pre_fact_inv[i], mod);
+    t = MulMod(t, pre_fact_inv[d - i], mod);
     if ((d - i) & 1) {
       A[i] = t == 0 ? 0 : mod - t;
     } else {
@@ -2042,7 +2077,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     T0[j] = MulMod(T0[j - 1], offset + i, mod);
   }
 
-  T1[2 * d + 1] = PowerMod(T0[2 * d + 1], mod - 2, mod);
+  T1[2 * d + 1] =
+      ModInv(static_cast<signedT>(T0[2 * d + 1]), static_cast<signedT>(mod));
   for (int64 i = d - 1, j = 2 * d; i >= -d; --i, --j) {
     T1[j] = MulMod(T1[j + 1], offset + i + 1, mod);
   }
@@ -2064,20 +2100,20 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyOffsetEvaluate(int64 d, const T* h, T* result, int64 offset,
-                       const T* preFactInv, T mod) {
+                       const T* pre_fact_inv, T mod) {
   using unsignedT = typename pe_make_unsigned<T>::type;
   pe_internal::PolyOffsetEvaluateImpl<unsignedT>(
       d, reinterpret_cast<const unsignedT*>(h),
-      reinterpret_cast<unsignedT*>(result), offset, preFactInv, mod);
+      reinterpret_cast<unsignedT*>(result), offset, pre_fact_inv, mod);
 }
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
     PolyOffsetEvaluate(const std::vector<T>& values, int64 offset,
-                       const T* preFactInv, T mod) {
+                       const T* pre_fact_inv, T mod) {
   const int64 d = static_cast<int64>(values.size()) - 1;
   std::vector<T> result(d + 1);
-  PolyOffsetEvaluate(d, &values[0], &result[0], offset, preFactInv, mod);
+  PolyOffsetEvaluate(d, &values[0], &result[0], offset, pre_fact_inv, mod);
   return result;
 }
 

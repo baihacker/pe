@@ -104,17 +104,17 @@ struct FactModer {
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-      PolyOffsetEvaluate<uint64>(half_d, result, &g1_[0], half_d + 1,
+      PolyOffsetEvaluateNMod<uint64>(half_d, result, &g1_[0], half_d + 1,
                                  &pre_fact_inv_[0], p_);
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-      PolyOffsetEvaluate<uint64>(half_d, result, &g2_[0], v * half_d,
+      PolyOffsetEvaluateNMod<uint64>(half_d, result, &g2_[0], v * half_d,
                                  &pre_fact_inv_[0], p_);
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-      PolyOffsetEvaluate<uint64>(half_d, result, &g3_[0], v * half_d + half_d,
+      PolyOffsetEvaluateNMod<uint64>(half_d, result, &g3_[0], v * half_d + half_d,
                                  &pre_fact_inv_[0], p_);
     }
 
@@ -215,9 +215,9 @@ struct FactSumModer {
 
     // Compute P
     std::vector<uint64> YQ;
-    auto YP = PolyBatchMulAcc(X, 0, static_cast<int>(m - 1), YQ, p_);
+    auto YP = PolyBatchMulAccNMod(X, 0, static_cast<int>(m - 1), YQ, p_);
     YP[0] = AddMod(YP[0], 1, p_);
-    auto P = PolyMultipointEvaluate(YP, V, p_);
+    auto P = PolyMultipointEvaluateNMod(YP, V, p_);
 
     // Prepare data for computing Q
     // YQ *= (m + xm)
@@ -232,7 +232,7 @@ struct FactSumModer {
     V.push_back(m);
 
     // Compute Q
-    auto Q = PolyMultipointEvaluate(YQ, V, p_);
+    auto Q = PolyMultipointEvaluateNMod(YQ, V, p_);
     for (int i = 1; i <= m; ++i) {
       Q[i] = MulMod(Q[i], Q[i - 1], p_);
     }
@@ -3567,7 +3567,7 @@ struct CarlitzWordsCounter {
     const int64 vsize = sz(vec);
     for (int64 i = 0; i < vsize; i += 2) {
       auto L = MakeLaguerrePoly(vec[i], IsEven(vec[i]) ? 1 : -1);
-      for (int j = 0; j < vec[i + 1]; ++j) it = PolyMulNMod(it, L, mod_);
+      for (int j = 0; j < vec[i + 1]; ++j) it = PolyMul(it, L, mod_);
     }
     int64 ret = 0;
     const int64 size = sz(it);

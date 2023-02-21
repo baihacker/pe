@@ -94,7 +94,7 @@ SL void PolyMultiPointEvaluationTest() {
   for (int i = 1; i <= n; ++i) v.push_back(i % 10007);
   {
     TimeRecorder tr;
-    auto result = PolyMultipointEvaluateNormal(p.data, v, p.mod);
+    auto result = PolyMultipointEvaluateNModNormal(p.data, v, p.mod);
     std::cout << tr.Elapsed().Format() << std::endl;
     for (int i = 1; i <= n; ++i) {
       assert(p.ValueAt(i % 10007) == result[i - 1]);
@@ -102,7 +102,7 @@ SL void PolyMultiPointEvaluationTest() {
   }
   {
     TimeRecorder tr;
-    auto result = PolyMultipointEvaluateBls(p.data, v, p.mod);
+    auto result = PolyMultipointEvaluateNModBls(p.data, v, p.mod);
     std::cout << tr.Elapsed().Format() << std::endl;
     for (int i = 1; i <= n; ++i) {
       assert(p.ValueAt(i % 10007) == result[i - 1]);
@@ -111,7 +111,7 @@ SL void PolyMultiPointEvaluationTest() {
 #if HAS_POLY_FLINT
   {
     TimeRecorder tr;
-    auto result = poly_flint::PolyMultipointEvaluateNMod(p.data, v, p.mod);
+    auto result = poly_flint::PolyMultipointEvaluate(p.data, v, p.mod);
     std::cout << tr.Elapsed().Format() << std::endl;
     for (int i = 1; i <= n; ++i) {
       assert(p.ValueAt(i % 10007) == result[i - 1]);
@@ -125,7 +125,7 @@ PE_REGISTER_TEST(&PolyMultiPointEvaluationTest, "PolyMultiPointEvaluationTest",
 SL void PolyBatchMulTest() {
   const int mod = 10007;
   std::vector<int64> data{1, 1, 2, 1, 3, 1};
-  auto result = PolyBatchMul(data, mod);
+  auto result = PolyBatchMulNMod(data, mod);
 
   std::vector<int64> expected{6, 11, 6, 1};
   assert(expected == result);

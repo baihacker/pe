@@ -120,12 +120,12 @@ struct NModPolyT : public NModPoly {
 };
 
 SL NModPoly PolyMul(const NModPoly& X, const NModPoly& Y) {
-  return NModPoly{PolyMulNMod(X.data, Y.data, X.mod), X.mod};
+  return NModPoly{PolyMul(X.data, Y.data, X.mod), X.mod};
 }
 
-SL NModPoly PolyInv(const NModPoly& x, int64 n) {
+SL NModPoly PolyInvNMod(const NModPoly& x, int64 n) {
   // It is assumed that mod is a prime
-  return NModPoly(PolyInv(x.data, n, x.mod), x.mod);
+  return NModPoly(PolyInvNMod(x.data, n, x.mod), x.mod);
 }
 
 #define PPOLY_DIV_AND_MOD_IMPL(PolyDivAndMod, PolyDivAndModImpl)       \
@@ -161,7 +161,7 @@ PPOLY_MOD_IMPL(PolyMod, pe::PolyMod)
 
 inline NModPoly NModPoly::Inv(int64 n) const {
   // It is assumed that mod is a prime
-  auto t = PolyInv(data, n, mod);
+  auto t = PolyInvNMod(data, n, mod);
   return NModPoly(std::vector<int64>(static_cast<int64*>(&t[0]),
                                      static_cast<int64*>(&t[0]) + t.size()),
                   mod);
@@ -201,7 +201,7 @@ SL NModPoly operator-(const NModPoly& x, const NModPoly& y) {
 }
 
 SL NModPoly operator+(const NModPoly& x, const NModPoly& y) {
-  return NModPoly(PolyAdd(x.data, y.data, x.mod), x.mod).AdjustLeadingZeros();
+  return NModPoly(PolyAddNMod(x.data, y.data, x.mod), x.mod).AdjustLeadingZeros();
 }
 
 SL NModPoly operator*(const NModPoly& x, int64 v) {

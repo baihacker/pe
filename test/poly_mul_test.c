@@ -15,19 +15,19 @@ struct MulImpl {
 MulImpl mul_impl[] = {
 #if HAS_POLY_MUL_FLINT && !ONLY_RUN_PE_IMPLEMENTATION
     {&poly_flint::PolyMulNMod<uint64>, 4, "flint n"},
-    {&poly_flint::PolyMulPMod<uint64>, 4, "flint p"},
+    {&poly_flint::PolyMulPrime<uint64>, 4, "flint p"},
 #else
-    {&ntt64::PolyMulNModLarge<uint64>, 4, "ntt64 l"},
+    {&ntt64::PolyMulLarge<uint64>, 4, "ntt64 l"},
 #endif
 #if HAS_POLY_MUL_NTT32
-    {&ntt32::PolyMulNModSmall<uint64>, 1, "ntt32 s"},
-    {&ntt32::PolyMulNModLarge<uint64>, 3, "ntt32 l"},
+    {&ntt32::PolyMulSmall<uint64>, 1, "ntt32 s"},
+    {&ntt32::PolyMulLarge<uint64>, 3, "ntt32 l"},
 #endif
 #if HAS_POLY_MUL_NTT64
-    {&ntt64::PolyMulNModSmall<uint64>, 1, "ntt64 s"},
+    {&ntt64::PolyMulSmall<uint64>, 1, "ntt64 s"},
 #endif
 #if HAS_POLY_MUL_FLINT && HAS_POLY_MUL_NTT64 && !ONLY_RUN_PE_IMPLEMENTATION
-    {&ntt64::PolyMulNModLarge<uint64>, 4, "ntt64 l"},
+    {&ntt64::PolyMulLarge<uint64>, 4, "ntt64 l"},
 #endif
 #if HAS_POLY_MUL_MIN25_SMALL && !ONLY_RUN_PE_IMPLEMENTATION
     {&poly_min25::PolyMulSmall<uint64>, 1, "Min_25 s"},

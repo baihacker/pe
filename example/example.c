@@ -433,7 +433,7 @@ void PolynomialMultiplicationExample() {
     a.push_back(i);
     b.push_back(i);
   }
-  auto c = PolyMulNMod(a, b, mod);
+  auto c = PolyMul(a, b, mod);
   std::cout << c[12345] << std::endl;
 }
 

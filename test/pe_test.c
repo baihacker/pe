@@ -1,6 +1,6 @@
 #include "pe_test.h"
 
-#if 0
+#if 1
 #include "poly_mul_test.c"
 #else
 #include "algo_test.c"

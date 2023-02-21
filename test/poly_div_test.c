@@ -16,7 +16,7 @@ DivImpl div_impl[] = {
     {&PolyDivDc<uint64>, 1, "dc"},
     {&PolyDivNormal<uint64>, 0, "normal"},
 #if HAS_POLY_FLINT && !ONLY_RUN_PE_IMPLEMENTATION
-    {&poly_flint::PolyDiv<uint64>, 1, "flint"},
+    {&poly_flint::PolyDivNMod<uint64>, 1, "flint"},
 #endif
 #if HAS_POLY_NTL && !ONLY_RUN_PE_IMPLEMENTATION
     {&poly_ntl::PolyDivLargeMod<uint64>, 1, "ntl lm"},

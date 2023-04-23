@@ -17,7 +17,7 @@ It is my basic code for solving problem on <a href="https://projecteuler.net/rec
 * Make sure "#include <pe.hpp>" work.
   * Put all the files in an installation folder (directory).
   * Add the installation folder to the environment variable CPLUS_INCLUDE_PATH. Other approaches are also OK.
- 
+
 * Configure this library.
   * Execute **[gen_config.py](https://github.com/baihacker/pe/blob/master/gen_config.py)** in the installation folder to generate **[pe_config](https://github.com/baihacker/pe/blob/master/pe_config)**.
     * Static configuration. The values are always 1 in the generated config file. You can edit the values after generating the config file.

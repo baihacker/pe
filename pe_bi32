@@ -12,7 +12,7 @@
 #include "pe_gbi"
 
 namespace pe {
-namespace pe_internal {
+namespace internal {
 static const struct alloc_mem {
 } alloc_mem_tag;
 
@@ -63,10 +63,10 @@ struct BiAllocatorFixedSize {
     allocator_impl.Deallocate(data);
   }
 };
-}  // namespace pe_internal
+}  // namespace internal
 
 // Configuration of BigInteger.
-using BiAllocator = pe_internal::BiAllocatorStd;
+using BiAllocator = internal::BiAllocatorStd;
 
 // Class layout principle:
 // Idealy, if a method A uses method B, B should be declared before A.
@@ -269,7 +269,7 @@ class BigInteger {
 
  public:
   // constructors, destructors, value semantics.
-  BigInteger() : BigInteger(pe_internal::zero_initialize_tag) {
+  BigInteger() : BigInteger(internal::zero_initialize_tag) {
     Reserve(1);
     data_[0] = 0;
     sign_ = 0;
@@ -277,30 +277,30 @@ class BigInteger {
 
   template <typename T,
             typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(void)>
-  BigInteger(T value) : BigInteger(pe_internal::zero_initialize_tag) {
+  BigInteger(T value) : BigInteger(internal::zero_initialize_tag) {
     FromNativeInt(value);
   }
 
   template <typename T,
             typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(T)>
   BigInteger(const std::vector<T>& v)
-      : BigInteger(pe_internal::zero_initialize_tag) {
+      : BigInteger(internal::zero_initialize_tag) {
     FromUInt32Vector(v);
   }
 
   template <typename T,
             typename TT = REQUIRES((is_extended_integer_v<T>)) RETURN(void)>
-  BigInteger(const T& value) : BigInteger(pe_internal::zero_initialize_tag) {
+  BigInteger(const T& value) : BigInteger(internal::zero_initialize_tag) {
     FromExtendedInt(value);
   }
 
   BigInteger(const std::string& str)
-      : BigInteger(pe_internal::zero_initialize_tag) {
+      : BigInteger(internal::zero_initialize_tag) {
     FromString(str);
   }
 
   BigInteger(const BigInteger& other)
-      : BigInteger(pe_internal::zero_initialize_tag) {
+      : BigInteger(internal::zero_initialize_tag) {
     Reserve(other.buffer_length_);
     sign_ = other.sign_;
     pos_ = other.pos_;
@@ -308,7 +308,7 @@ class BigInteger {
   }
 
   BigInteger(BigInteger&& other) noexcept
-      : BigInteger(pe_internal::zero_initialize_tag) {
+      : BigInteger(internal::zero_initialize_tag) {
     std::swap(data_, other.data_);
     std::swap(buffer_length_, other.buffer_length_);
     std::swap(sign_, other.sign_);
@@ -341,22 +341,22 @@ class BigInteger {
 
  private:
   // Internal constructor
-  BigInteger(int size, pe_internal::alloc_mem)
-      : BigInteger(pe_internal::zero_initialize_tag) {
+  BigInteger(int size, internal::alloc_mem)
+      : BigInteger(internal::zero_initialize_tag) {
     Reserve(size);
     data_[0] = 0;
     sign_ = 0;
   }
 
   BigInteger(const BigInteger& other, int min_buffer)
-      : BigInteger(pe_internal::zero_initialize_tag) {
+      : BigInteger(internal::zero_initialize_tag) {
     Reserve(std::max(other.buffer_length_, min_buffer));
     sign_ = other.sign_;
     pos_ = other.pos_;
     std::copy(other.data_, other.data_ + other.pos_ + 1, data_);
   }
 
-  BigInteger(pe_internal::zero_initialize)
+  BigInteger(internal::zero_initialize)
       : data_(nullptr), buffer_length_(0), sign_(0), pos_(0) {}
 
  private:
@@ -646,7 +646,7 @@ class BigInteger {
       result[now++] = 0;
     }
 
-    BigInteger ret(now >> 1, pe_internal::alloc_mem_tag);
+    BigInteger ret(now >> 1, internal::alloc_mem_tag);
     for (int i = 0; i < now; i += 2) {
       ret[i >> 1] = static_cast<unsigned>((result[i + 1] << 16) | result[i]);
     }
@@ -689,7 +689,7 @@ class BigInteger {
 
     const int new_size = l.size() + r.size() + 1;
 
-    BigInteger ret(new_size, pe_internal::alloc_mem_tag);
+    BigInteger ret(new_size, internal::alloc_mem_tag);
     std::fill(ret.data_, ret.data_ + new_size, 0);
 
     for (int i = 0; i <= right_pos; ++i) {
@@ -776,11 +776,11 @@ class BigInteger {
     const int k = div_bit_size;
 
     std::vector<unsigned int> rb;
-    std::vector<unsigned int> rr = pe_internal::AbsDivide<unsigned int>(
+    std::vector<unsigned int> rr = internal::AbsDivide<unsigned int>(
         k, l.ToKBits<unsigned int>(k), r.ToKBits<unsigned int>(k), rb);
     remain.FromKBits(k, rb);
 
-    BigInteger ret(pe_internal::zero_initialize_tag);
+    BigInteger ret(internal::zero_initialize_tag);
     ret.FromKBits(k, rr);
 
     return ret;
@@ -804,10 +804,10 @@ class BigInteger {
     const int k = div_bit_size;
 
     std::vector<unsigned int> rb;
-    std::vector<unsigned int> rr = pe_internal::AbsDivide<unsigned int>(
+    std::vector<unsigned int> rr = internal::AbsDivide<unsigned int>(
         k, l.ToKBits<unsigned int>(k), r.ToKBits<unsigned int>(k), rb);
 
-    BigInteger ret(pe_internal::zero_initialize_tag);
+    BigInteger ret(internal::zero_initialize_tag);
     ret.FromKBits(k, rr);
 
     return ret;
@@ -1606,7 +1606,7 @@ class BigInteger {
     }
 
     const int min_pos = std::min(l.pos_, r.pos_);
-    BigInteger ret(min_pos + 1, pe_internal::alloc_mem_tag);
+    BigInteger ret(min_pos + 1, internal::alloc_mem_tag);
     for (int i = 0; i <= min_pos; ++i) {
       ret[i] = l[i] & r[i];
     }
@@ -1623,7 +1623,7 @@ class BigInteger {
     }
 
     const int max_pos = std::max(l.pos_, r.pos_);
-    BigInteger ret(max_pos + 1, pe_internal::alloc_mem_tag);
+    BigInteger ret(max_pos + 1, internal::alloc_mem_tag);
     for (int i = 0; i <= max_pos; ++i) {
       unsigned int t = 0;
       if (i <= l.pos_) t ^= l[i];
@@ -1643,7 +1643,7 @@ class BigInteger {
     }
 
     const int max_pos = std::max(l.pos_, r.pos_);
-    BigInteger ret(max_pos + 1, pe_internal::alloc_mem_tag);
+    BigInteger ret(max_pos + 1, internal::alloc_mem_tag);
     for (int i = 0; i <= max_pos; ++i) {
       unsigned int t = 0;
       if (i <= l.pos_) t |= l[i];
@@ -1676,7 +1676,7 @@ class BigInteger {
       const int y = i & BigInteger::mod32_mask;
       v[j] = (l[x] >> y) & 1;
     }
-    BigInteger ret(pe_internal::zero_initialize_tag);
+    BigInteger ret(internal::zero_initialize_tag);
     ret.FromBinary(v);
     ret.FixLeadingZeros();
     ret.sign_ = l.sign_;
@@ -1708,7 +1708,7 @@ class BigInteger {
       v[j] = (l[x] >> y) & 1;
     }
 
-    BigInteger ret(pe_internal::zero_initialize_tag);
+    BigInteger ret(internal::zero_initialize_tag);
     ret.FromBinary(v);
     ret.FixLeadingZeros();
     ret.sign_ = l.sign_;

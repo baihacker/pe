@@ -315,7 +315,7 @@ SL void FactorizeByPmask(uint64 n, IntegerFactorization& ret) {
   }
 }
 
-namespace pe_internal {
+namespace internal {
 SL void FactorizeWarningOnce(int64 n) {
   static std::atomic_int WARNING_ONCE_FLAG{0};
   if (WARNING_ONCE_FLAG.exchange(1) == 0) {
@@ -331,7 +331,7 @@ SL void FactorizeWarningOnce(int64 n) {
     std::cerr << std::setw(40) << "n = " << n << std::endl;
   }
 }
-}  // namespace pe_internal
+}  // namespace internal
 
 SL IntegerFactorization Factorize(int64 n) {
   IntegerFactorization ret;
@@ -354,7 +354,7 @@ SL IntegerFactorization Factorize(int64 n) {
   }
 
   if (i == pcnt) {
-    pe_internal::FactorizeWarningOnce(n);
+    internal::FactorizeWarningOnce(n);
     {
       int p2 = 0;
       while ((n & 1) == 0) n >>= 1, ++p2;
@@ -405,7 +405,7 @@ SL IntegerFactorization Factorize(int64 n, const std::vector<int64>& hint) {
   }
 
   if (i == pcnt) {
-    pe_internal::FactorizeWarningOnce(n);
+    internal::FactorizeWarningOnce(n);
     {
       int p2 = 0;
       while ((n & 1) == 0) n >>= 1, ++p2;
@@ -491,7 +491,7 @@ constexpr int64 sopp[] = {
 };
 constexpr int64 sopp_size = sizeof(sopp) / sizeof(sopp[0]);
 
-namespace pe_internal {
+namespace internal {
 SL int MrTestImpl(int s, int64 t, int64 n, int x) {
   // PE_ASSERT((n&1) == 0)
 
@@ -505,7 +505,7 @@ SL int MrTestImpl(int s, int64 t, int64 n, int x) {
 
   return 0;
 }
-}  // namespace pe_internal
+}  // namespace internal
 
 SL int MrTest(int64 n, int x) {
   if (n <= 1) return 0;
@@ -515,7 +515,7 @@ SL int MrTest(int64 n, int x) {
   int64 t = n - 1;
   while ((t & 1) == 0) ++s, t >>= 1;
 
-  return pe_internal::MrTestImpl(s, t, n, x);
+  return internal::MrTestImpl(s, t, n, x);
 }
 
 SL int IsPrimeEx(int64 n) {
@@ -535,7 +535,7 @@ SL int IsPrimeEx(int64 n) {
   for (int i = 0; i < sopp_size; ++i) {
     const int64 val = sopp[i];
     if (n == val) return 0;
-    if (!pe_internal::MrTestImpl(s, t, n, plist[i])) return 0;
+    if (!internal::MrTestImpl(s, t, n, plist[i])) return 0;
     if (n < val) break;
   }
   return 1;
@@ -858,7 +858,7 @@ SL T CalPhi(const FactorizedInteger<T>& fi) {
   return fi.CalPhi();
 }
 
-namespace pe_internal {
+namespace internal {
 SL int64 CalMuImplByPmask(int64 n, int64 v = 1) {
   while (n != 1) {
     const int now = pmask[n];
@@ -894,13 +894,13 @@ SL int64 CalMuImpl(int64 n) {
   if (n != 1) v = -v;
   return v;
 }
-}  // namespace pe_internal
+}  // namespace internal
 
 SL int64 CalMu(int64 n) {
   if (n <= 0) return 0;
   if (n == 1) return 1;
   if (mu && n <= maxp) return mu[n];
-  return pe_internal::CalMuImpl(n);
+  return internal::CalMuImpl(n);
 }
 
 SL int64 CalMu(const FactorizedInteger<int64>& fi) { return fi.CalMu(); }
@@ -910,7 +910,7 @@ SL T CalMu(const FactorizedInteger<T>& fi) {
   return fi.CalMu();
 }
 
-namespace pe_internal {
+namespace internal {
 SL int64 CalRadImplByPmask(int64 n, int64 v = 1) {
   while (n != 1) {
     const int now = pmask[n];
@@ -938,13 +938,13 @@ SL int64 CalRadImpl(int64 n) {
   if (n != 1) v *= n;
   return v;
 }
-}  // namespace pe_internal
+}  // namespace internal
 
 SL int64 CalRad(int64 n) {
   if (n <= 0) return 0;
   if (n == 1) return 1;
   if (rad && n <= maxp) return rad[n];
-  return pe_internal::CalRadImpl(n);
+  return internal::CalRadImpl(n);
 }
 
 SL int64 CalRad(const FactorizedInteger<int64>& fi) { return fi.CalRad(); }
@@ -972,7 +972,7 @@ SL int CalBigOmega(const FactorizedInteger<T>& fi) {
   return fi.CalBigOmega();
 }
 
-namespace pe_internal {
+namespace internal {
 SL int64 CalSigma0ByPmask(int64 n, int64 v = 1) {
   while (n != 1) {
     const int p = pmask[n];
@@ -1000,14 +1000,14 @@ SL int64 CalSigma0Impl(int64 n) {
   if (n != 1) v *= 2;
   return v;
 }
-}  // namespace pe_internal
+}  // namespace internal
 
 SL int64 CalSigma0(int64 n) {
   if (n <= 0) return 0;
   if (n == 1) return 1;
   if (sigma0 && n <= maxp) return sigma0[n];
 
-  return pe_internal::CalSigma0Impl(n);
+  return internal::CalSigma0Impl(n);
 }
 
 SL int64 CalSigma0(const FactorizedInteger<int64>& fi) {
@@ -1019,7 +1019,7 @@ SL T CalSigma0(const FactorizedInteger<T>& fi) {
   return fi.CalSigma0();
 }
 
-namespace pe_internal {
+namespace internal {
 SL int64 CalSigma1ByPmask(int64 n, int64 v = 1) {
   while (n != 1) {
     const int p = pmask[n];
@@ -1049,14 +1049,14 @@ SL int64 CalSigma1Impl(int64 n) {
   if (n != 1) v *= n + 1;
   return v;
 }
-}  // namespace pe_internal
+}  // namespace internal
 
 SL int64 CalSigma1(int64 n) {
   if (n <= 0) return 0;
   if (n == 1) return 1;
   if (sigma1 && n <= maxp) return sigma1[n];
 
-  return pe_internal::CalSigma1Impl(n);
+  return internal::CalSigma1Impl(n);
 }
 
 SL int64 CalSigma1(const FactorizedInteger<int64>& fi) {
@@ -1068,7 +1068,7 @@ SL T CalSigma1(const FactorizedInteger<T>& fi) {
   return fi.CalSigma1();
 }
 
-namespace pe_internal {
+namespace internal {
 SL int IsSquareFreeByPmask(int64 n) {
   while (n != 1) {
     const int now = pmask[n];
@@ -1078,7 +1078,7 @@ SL int IsSquareFreeByPmask(int64 n) {
   }
   return 1;
 }
-}  // namespace pe_internal
+}  // namespace internal
 
 SL int IsSquareFree(int64 n) {
   if (n <= 0) {
@@ -1087,7 +1087,7 @@ SL int IsSquareFree(int64 n) {
 
   for (int i = 0; i < pcnt; ++i) {
     if (n <= maxp) {
-      return pe_internal::IsSquareFreeByPmask(n);
+      return internal::IsSquareFreeByPmask(n);
     }
     const int64 p = plist[i];
     const int64 test = p * p;

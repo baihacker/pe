@@ -805,7 +805,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   return result;
 }
 
-namespace pe_internal {
+namespace internal {
 // Multiplies two polynomials of the same length using Divide and Conquer
 // algorithm. size result >= 2 * n size return = 2 * n (deg return = 2 * n - 1)
 template <typename T>
@@ -886,7 +886,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   delete[] x1y1;
   delete[] w;
 }
-}  // namespace pe_internal
+}  // namespace internal
 
 // Multiplies two polynomials using Divide and Conquer algorithm.
 // size result >= n + m - 1
@@ -907,7 +907,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     for (int64 i = n; i < m; ++i) {
       XX[i] = 0;
     }
-    pe_internal::PolyMulDcImpl<unsignedT>(
+    internal::PolyMulDcImpl<unsignedT>(
         reinterpret_cast<const unsignedT*>(&XX[0]),
         reinterpret_cast<const unsignedT*>(Y), m,
         reinterpret_cast<unsignedT*>(&tresult[0]), mod);
@@ -919,7 +919,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     for (int64 i = m; i < n; ++i) {
       YY[i] = 0;
     }
-    pe_internal::PolyMulDcImpl<unsignedT>(
+    internal::PolyMulDcImpl<unsignedT>(
         reinterpret_cast<const unsignedT*>(X),
         reinterpret_cast<const unsignedT*>(&YY[0]), n,
         reinterpret_cast<unsignedT*>(&tresult[0]), mod);
@@ -938,7 +938,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   const int64 result_size = n + m - 1;
   if (n == m) {
     std::vector<T> result(2 * n);
-    pe_internal::PolyMulDcImpl<unsignedT>(
+    internal::PolyMulDcImpl<unsignedT>(
         reinterpret_cast<const unsignedT*>(&X[0]),
         reinterpret_cast<const unsignedT*>(&Y[0]), n,
         reinterpret_cast<unsignedT*>(&result[0]), mod);
@@ -949,7 +949,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
     std::vector<T> result(2 * n);
     YY.resize(n);
     for (int64 i = 0; i < m; ++i) YY[i] = Y[i];
-    pe_internal::PolyMulDcImpl<unsignedT>(
+    internal::PolyMulDcImpl<unsignedT>(
         reinterpret_cast<const unsignedT*>(&X[0]),
         reinterpret_cast<const unsignedT*>(&YY[0]), n,
         reinterpret_cast<unsignedT*>(&result[0]), mod);
@@ -960,7 +960,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
     std::vector<T> result(2 * m);
     XX.resize(m);
     for (int64 i = 0; i < n; ++i) XX[i] = X[i];
-    pe_internal::PolyMulDcImpl<unsignedT>(
+    internal::PolyMulDcImpl<unsignedT>(
         reinterpret_cast<const unsignedT*>(&XX[0]),
         reinterpret_cast<const unsignedT*>(&Y[0]), m,
         reinterpret_cast<unsignedT*>(&result[0]), mod);
@@ -1086,7 +1086,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 }
 }  // namespace fwt
 
-namespace pe_internal {
+namespace internal {
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyConvolutionImpl(const T* X, const int64 n, const T* Y, const int64 m,
@@ -1122,13 +1122,13 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   }
   ope(result, size, mod, true);
 }
-}  // namespace pe_internal
+}  // namespace internal
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyConvolutionOr(const T* X, const int64 n, const T* Y, const int64 m,
                       T* result, T mod) {
-  pe_internal::PolyConvolutionImpl<T>(X, n, Y, m, result, mod, &fwt::FWTOr<T>);
+  internal::PolyConvolutionImpl<T>(X, n, Y, m, result, mod, &fwt::FWTOr<T>);
 }
 
 template <typename T>
@@ -1141,8 +1141,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   const int64 size = std::max(nn, mm);
   std::vector<T> result(size);
 
-  pe_internal::PolyConvolutionImpl<T>(&X[0], n, &Y[0], m, &result[0], mod,
-                                      &fwt::FWTOr<T>);
+  internal::PolyConvolutionImpl<T>(&X[0], n, &Y[0], m, &result[0], mod,
+                                   &fwt::FWTOr<T>);
 
   return result;
 }
@@ -1151,7 +1151,7 @@ template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyConvolutionAnd(const T* X, const int64 n, const T* Y, const int64 m,
                        T* result, T mod) {
-  pe_internal::PolyConvolutionImpl<T>(X, n, Y, m, result, mod, &fwt::FWTAnd<T>);
+  internal::PolyConvolutionImpl<T>(X, n, Y, m, result, mod, &fwt::FWTAnd<T>);
 }
 
 template <typename T>
@@ -1165,8 +1165,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   const int64 size = std::max(nn, mm);
   std::vector<T> result(size);
 
-  pe_internal::PolyConvolutionImpl<T>(&X[0], n, &Y[0], m, &result[0], mod,
-                                      &fwt::FWTAnd<T>);
+  internal::PolyConvolutionImpl<T>(&X[0], n, &Y[0], m, &result[0], mod,
+                                   &fwt::FWTAnd<T>);
 
   return result;
 }
@@ -1175,7 +1175,7 @@ template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyConvolutionXor(const T* X, const int64 n, const T* Y, const int64 m,
                        T* result, T mod) {
-  pe_internal::PolyConvolutionImpl<T>(X, n, Y, m, result, mod, &fwt::FWTXor<T>);
+  internal::PolyConvolutionImpl<T>(X, n, Y, m, result, mod, &fwt::FWTXor<T>);
 }
 
 template <typename T>
@@ -1189,13 +1189,13 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   const int64 size = std::max(nn, mm);
   std::vector<T> result(size);
 
-  pe_internal::PolyConvolutionImpl<T>(&X[0], n, &Y[0], m, &result[0],
-                                      static_cast<T>(mod), &fwt::FWTXor<T>);
+  internal::PolyConvolutionImpl<T>(&X[0], n, &Y[0], m, &result[0],
+                                   static_cast<T>(mod), &fwt::FWTXor<T>);
 
   return result;
 }
 
-namespace pe_internal {
+namespace internal {
 // Calculates the inverse of a polynomial using doubling algorithm.
 // The inverse of a[0] exists.
 // size b >= n
@@ -1253,7 +1253,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   PolyInvDoublingImpl(n, &a[0], &b[0], tmp, mod);
   std::copy(b.begin(), b.begin() + n, result);
 }
-}  // namespace pe_internal
+}  // namespace internal
 
 // Calculates the inverse of a polynomial using doubling algorithm.
 // The inverse of x[0] exists.
@@ -1262,7 +1262,7 @@ template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyInvDoubling(const T* x, int64 m, int64 n, T* result, int64 mod) {
   using unsignedT = typename pe_make_unsigned<T>::type;
-  pe_internal::PolyInvDoublingImpl<unsignedT>(
+  internal::PolyInvDoublingImpl<unsignedT>(
       reinterpret_cast<const unsignedT*>(x), m, n,
       reinterpret_cast<unsignedT*>(result), mod);
 }
@@ -1343,7 +1343,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   return b;
 }
 
-namespace pe_internal {
+namespace internal {
 // Divides two polynomials using Divide and Conquer algorithm.
 // The inverse of Y[m-1] exists.
 // size r >= m
@@ -1383,13 +1383,13 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     }
   }
 }
-}  // namespace pe_internal
+}  // namespace internal
 
-POLY_DIV_AND_MOD_IMPL(PolyDivAndModDc, pe_internal::PolyDivAndModDcImpl)
+POLY_DIV_AND_MOD_IMPL(PolyDivAndModDc, internal::PolyDivAndModDcImpl)
 POLY_DIV_IMPL(PolyDivDc, PolyDivAndModDc)
 POLY_MOD_IMPL(PolyModDc, PolyDivAndModDc)
 
-namespace pe_internal {
+namespace internal {
 // Divides two polynomials.
 // The inverse of Y[m-1] exists.
 // size q >= n - m + 1
@@ -1430,9 +1430,9 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     std::copy(tmp.begin(), tmp.begin() + m, r);
   }
 }
-}  // namespace pe_internal
+}  // namespace internal
 
-POLY_DIV_AND_MOD_IMPL(PolyDivAndModNormal, pe_internal::PolyDivAndModNormalImpl)
+POLY_DIV_AND_MOD_IMPL(PolyDivAndModNormal, internal::PolyDivAndModNormalImpl)
 POLY_DIV_IMPL(PolyDivNormal, PolyDivAndModNormal)
 POLY_MOD_IMPL(PolyModNormal, PolyDivAndModNormal)
 
@@ -1453,12 +1453,12 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 #else
   // This condition also includes the case n < m;
   if ((n - m) * m <= 1000) {
-    pe_internal::PolyDivAndModNormalImpl<unsignedT>(
+    internal::PolyDivAndModNormalImpl<unsignedT>(
         reinterpret_cast<const unsignedT*>(X), n,
         reinterpret_cast<const unsignedT*>(Y), m,
         reinterpret_cast<unsignedT*>(q), reinterpret_cast<unsignedT*>(r), mod);
   } else {
-    pe_internal::PolyDivAndModDcImpl<unsignedT>(
+    internal::PolyDivAndModDcImpl<unsignedT>(
         reinterpret_cast<const unsignedT*>(X), n,
         reinterpret_cast<const unsignedT*>(Y), m,
         reinterpret_cast<unsignedT*>(q), reinterpret_cast<unsignedT*>(r), mod);
@@ -1488,7 +1488,7 @@ SL REQUIRES((is_builtin_integer_v<T>))
 POLY_DIV_IMPL(PolyDiv, PolyDivAndMod)
 POLY_MOD_IMPL(PolyMod, PolyDivAndMod)
 
-namespace pe_internal {
+namespace internal {
 // Calculates the derivative of a polynomial.
 // size result >= m
 template <typename T>
@@ -1499,7 +1499,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   }
   result[m - 1] = 0;
 }
-}  // namespace pe_internal
+}  // namespace internal
 
 // Calculates the derivative of a polynomial.
 // size result >= m
@@ -1507,7 +1507,7 @@ template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyDerivative(const T* x, int64 m, T* result, int64 mod) {
   using unsignedT = typename pe_make_unsigned<T>::type;
-  pe_internal::PolyDerivativeImpl<unsignedT>(
+  internal::PolyDerivativeImpl<unsignedT>(
       reinterpret_cast<const unsignedT*>(x), m,
       reinterpret_cast<unsignedT*>(result), mod);
 }
@@ -1526,7 +1526,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   return b;
 }
 
-namespace pe_internal {
+namespace internal {
 // Calculates the integral of a polynomial.
 // size result >= m + 1
 template <typename T>
@@ -1539,7 +1539,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   }
   result[0] = static_cast<T>(1 % mod);
 }
-}  // namespace pe_internal
+}  // namespace internal
 
 // Calculates the integral of a polynomial.
 // size result >= m + 1
@@ -1547,7 +1547,7 @@ template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyIntegralPMod(const T* x, int64 m, T* result, int64 mod) {
   using unsignedT = typename pe_make_unsigned<T>::type;
-  pe_internal::PolyIntegralPModImpl<unsignedT>(
+  internal::PolyIntegralPModImpl<unsignedT>(
       reinterpret_cast<const unsignedT*>(x), m,
       reinterpret_cast<unsignedT*>(result), mod);
 }
@@ -1566,7 +1566,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   return b;
 }
 
-namespace pe_internal {
+namespace internal {
 // Calculates the logarithm of a polynomial.
 // x[0] = 1
 // size result >= n
@@ -1589,7 +1589,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   }
   result[0] = 0;
 }
-}  // namespace pe_internal
+}  // namespace internal
 
 // Calculates the logarithm of a polynomial.
 // x[0] = 1
@@ -1598,9 +1598,9 @@ template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyLogPMod(const T* x, int64 m, int64 n, T* result, int64 mod) {
   using unsignedT = typename pe_make_unsigned<T>::type;
-  pe_internal::PolyLogPModImpl<unsignedT>(
-      reinterpret_cast<const unsignedT*>(x), m, n,
-      reinterpret_cast<unsignedT*>(result), mod);
+  internal::PolyLogPModImpl<unsignedT>(reinterpret_cast<const unsignedT*>(x), m,
+                                       n, reinterpret_cast<unsignedT*>(result),
+                                       mod);
 }
 
 // Calculates the logarithm of a polynomial.
@@ -1618,7 +1618,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   return b;
 }
 
-namespace pe_internal {
+namespace internal {
 // Calculates exp(x) where x is a polynomial.
 // x[0] = 0
 // size result >= n
@@ -1649,7 +1649,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   ret.resize(n);
   std::copy(ret.begin(), ret.end(), result);
 }
-}  // namespace pe_internal
+}  // namespace internal
 
 // Calculates exp(x) where x is a polynomial.
 // x[0] = 0
@@ -1658,9 +1658,9 @@ template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyExpPMod(const T* x, int64 m, int64 n, T* result, int64 mod) {
   using unsignedT = typename pe_make_unsigned<T>::type;
-  pe_internal::PolyExpPModImpl<unsignedT>(
-      reinterpret_cast<const unsignedT*>(x), m, n,
-      reinterpret_cast<unsignedT*>(result), mod);
+  internal::PolyExpPModImpl<unsignedT>(reinterpret_cast<const unsignedT*>(x), m,
+                                       n, reinterpret_cast<unsignedT*>(result),
+                                       mod);
 }
 
 // Calculates exp(x) where x is a polynomial.
@@ -1768,7 +1768,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(int64)
   return PolyEvaluate<T>(&x[0], static_cast<int64>(x.size()), v, mod);
 }
 
-namespace pe_internal {
+namespace internal {
 // FactSumModer uses PolyMultipointEvaluate.
 struct PSPTree {
   int64 mod;
@@ -1962,7 +1962,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     for (int64 i = 0; i < n; ++i) result[i] = c[i][0];
   }
 }
-}  // namespace pe_internal
+}  // namespace internal
 
 // size(V) = n
 template <typename T>
@@ -1970,7 +1970,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyMultipointEvaluateNormal(const T* X, const int64 n, const T* V,
                                  T* result, int64 mod) {
   using unsignedT = typename pe_make_unsigned<T>::type;
-  pe_internal::PolyMultipointEvaluateNormalImpl<unsignedT>(
+  internal::PolyMultipointEvaluateNormalImpl<unsignedT>(
       reinterpret_cast<const unsignedT*>(X), n,
       reinterpret_cast<const unsignedT*>(V),
       reinterpret_cast<unsignedT*>(result), mod);
@@ -1993,7 +1993,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyMultipointEvaluateBls(const T* X, const int64 n, const T* V, T* result,
                               int64 mod) {
   using unsignedT = typename pe_make_unsigned<T>::type;
-  pe_internal::PolyMultipointEvaluateBlsImpl<unsignedT>(
+  internal::PolyMultipointEvaluateBlsImpl<unsignedT>(
       reinterpret_cast<const unsignedT*>(X), n,
       reinterpret_cast<const unsignedT*>(V),
       reinterpret_cast<unsignedT*>(result), mod);
@@ -2040,7 +2040,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   return result;
 }
 
-namespace pe_internal {
+namespace internal {
 // PolyOffsetEvaluate is used by FactModer
 
 // Known f[0],f[1],f[2],...,f[d]
@@ -2091,14 +2091,14 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     result[i] = MulMod(result[i], T1[j - d - 1], mod);
   }
 }
-}  // namespace pe_internal
+}  // namespace internal
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyOffsetEvaluate(int64 d, const T* h, T* result, int64 offset,
                        const T* pre_fact_inv, T mod) {
   using unsignedT = typename pe_make_unsigned<T>::type;
-  pe_internal::PolyOffsetEvaluateImpl<unsignedT>(
+  internal::PolyOffsetEvaluateImpl<unsignedT>(
       d, reinterpret_cast<const unsignedT*>(h),
       reinterpret_cast<unsignedT*>(result), offset, pre_fact_inv, mod);
 }
@@ -2113,7 +2113,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   return result;
 }
 
-namespace pe_internal {
+namespace internal {
 #if 0
 // returns: (X[0]+X[1]*x)(X[2]+X[3]x)...(X[2k-2]+X[2k-1]x)
 // where n = 2 * k
@@ -2186,7 +2186,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   PolyMul(&A[0], half + 1, &B[0], n - half + 1, result, mod);
 }
 #endif
-}  // namespace pe_internal
+}  // namespace internal
 
 // returns: (X[0]+X[1]*x)(X[2]+X[3]x)...(X[2k-2]+X[2k-1]x)
 // where n = 2 * k
@@ -2195,7 +2195,7 @@ template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyBatchMul(const T* X, const int64 n, T* result, int64 mod) {
   using unsignedT = typename pe_make_unsigned<T>::type;
-  pe_internal::PolyBatchMulImpl<unsignedT>(
+  internal::PolyBatchMulImpl<unsignedT>(
       reinterpret_cast<const unsignedT*>(X), 0, n,
       reinterpret_cast<unsignedT*>(result), mod);
 }

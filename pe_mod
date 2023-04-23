@@ -52,7 +52,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T) RegulateMod(T a, T mod) {
   return RegulateMod<T, T>(a, mod);
 }
 
-namespace pe_internal {
+namespace internal {
 template <typename T, typename TM>
 SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM>))
     RETURN_T(IntPromotionT(T, TM)) AddModImpl(T a, T b, TM mod) {
@@ -70,14 +70,14 @@ SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM>))
   return a0;
 #endif
 }
-}  // namespace pe_internal
+}  // namespace internal
 
 template <typename T1, typename T2, typename TM>
 SL REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
              is_builtin_integer_v<TM>)) RETURN_T(IntPromotionT(T1, T2, TM))
     AddMod(T1 a, T2 b, TM mod) {
   using T = typename BiggerIntegralN<T1, T2>::type;
-  return pe_internal::AddModImpl<T, TM>(a, b, mod);
+  return internal::AddModImpl<T, TM>(a, b, mod);
 }
 
 template <typename TM, typename T>
@@ -100,29 +100,29 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
   return ret;
 }
 
-namespace pe_internal {
+namespace internal {
 template <typename T, typename TM>
 SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM>))
     RETURN(IntPromotion(T, TM)) SubModImpl(T a, T b, TM mod) {
   return a >= b ? a - b : mod - b + a;
 }
-}  // namespace pe_internal
+}  // namespace internal
 
 template <typename T1, typename T2, typename TM>
 SL REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
              is_builtin_integer_v<TM>)) RETURN_T(IntPromotionT(T1, T2, TM))
     SubMod(T1 a, T2 b, TM mod) {
   using T = typename BiggerIntegralN<T1, T2>::type;
-  return pe_internal::SubModImpl<T, TM>(a, b, mod);
+  return internal::SubModImpl<T, TM>(a, b, mod);
 }
 
-namespace pe_internal {
+namespace internal {
 template <typename T, typename TM>
 SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM>))
     RETURN_T(IntPromotionT(T, TM)) MulModImpl(T a, T b, TM mod) {
   return a * b % mod;
 }
-}  // namespace pe_internal
+}  // namespace internal
 
 #if PE_HAS_INT128
 // Returns a % b.
@@ -217,7 +217,7 @@ int64 MulModInt64GnuAsm(int64 a, int64 b, int64 mod) {
 // Shell code implementation
 #if OS_TYPE_WIN && PE_X86_64
 
-namespace pe_internal {
+namespace internal {
 extern "C" {
 using MulModUint64FunctionPointerType = uint64 (*)(uint64, uint64, uint64);
 using MulModInt64FunctionPointerType = int64 (*)(int64, int64, int64);
@@ -347,19 +347,19 @@ int __MakeMulModShellCodeExecutable() {
   return 0;
 }
 const static int __init_code_data_once = __MakeMulModShellCodeExecutable();
-}  // namespace pe_internal
+}  // namespace internal
 
 SL uint64 MulModUint64ShellCode(uint64 a, uint64 b, uint64 mod) {
-  auto code = reinterpret_cast<pe_internal::MulModUint64FunctionPointerType>(
+  auto code = reinterpret_cast<internal::MulModUint64FunctionPointerType>(
       reinterpret_cast<unsigned char*>(
-          const_cast<char*>(&pe_internal::__MulModUint64ShellCode[0])));
+          const_cast<char*>(&internal::__MulModUint64ShellCode[0])));
   return code(a, b, mod);
 }
 
 SL int64 MulModInt64ShellCode(int64 a, int64 b, int64 mod) {
-  auto code = reinterpret_cast<pe_internal::MulModInt64FunctionPointerType>(
+  auto code = reinterpret_cast<internal::MulModInt64FunctionPointerType>(
       reinterpret_cast<unsigned char*>(
-          const_cast<char*>(&pe_internal::__MulModInt64ShellCode[0])));
+          const_cast<char*>(&internal::__MulModInt64ShellCode[0])));
   return code(a, b, mod);
 }
 #define PE_MUL_MOD_SHELL_CODE_AVAILABLE 1
@@ -442,11 +442,10 @@ SL REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
   return static_cast<ResultType>(MulModUint64GnuAsm(a, b, mod));
 #else
   if (mod <= PE_SOI63) {
-    return pe_internal::MulModImpl<atLeastInt64T, TM>(a, b, mod);
+    return internal::MulModImpl<atLeastInt64T, TM>(a, b, mod);
   }
 #if PE_HAS_INT128
-  return static_cast<ResultType>(
-      pe_internal::MulModImpl<int128, TM>(a, b, mod));
+  return static_cast<ResultType>(internal::MulModImpl<int128, TM>(a, b, mod));
 #else
 
   // The openmp has issue about long double on windows.
@@ -574,7 +573,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
   return ret;
 }
 
-namespace pe_internal {
+namespace internal {
 template <typename T, typename TN, typename TM>
 SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TN> &&
              is_builtin_integer_v<TM>)) RETURN_T(IntPromotionT(T, TM))
@@ -591,14 +590,14 @@ SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TN> &&
   }
   return ret;
 }
-}  // namespace pe_internal
+}  // namespace internal
 
 template <typename T, typename TN, typename TM>
 SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TN> &&
              is_builtin_integer_v<TM>)) RETURN_T(IntPromotionT(T, int64, TM))
     PowerMod(T x, TN n, TM mod) {
   using atLeastInt64T = typename AtLeastInt64<T>::type;
-  return pe_internal::PowerModImpl<atLeastInt64T, TN, TM>(x, n, mod);
+  return internal::PowerModImpl<atLeastInt64T, TN, TM>(x, n, mod);
 }
 
 template <typename T>
@@ -620,7 +619,7 @@ SL REQUIRES(((sizeof...(TT) >= 2) &&
                  predicate_all<is_general_integer, TT...>::value)))
     RETURN(IntPromotion(TH, TT...)) Gcd(TH a, TT... b);
 
-namespace pe_internal {
+namespace internal {
 template <typename T, typename TM>
 SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM>))
     RETURN_T(IntPromotionT(T, TM))
@@ -648,7 +647,7 @@ SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM>))
   }
   return ret;
 }
-}  // namespace pe_internal
+}  // namespace internal
 
 template <typename T1, typename T2 = T1, typename TM>
 SL REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
@@ -657,15 +656,15 @@ SL REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
         FracMod(const std::vector<T1>& a, const std::vector<T2>& b, TM mod) {
   using T = typename BiggerIntegralN<T1, T2>::type;
   using atLeastInt64T = typename AtLeastInt64<T>::type;
-  return pe_internal::FracModImpl<atLeastInt64T, TM>(
+  return internal::FracModImpl<atLeastInt64T, TM>(
       std::vector<atLeastInt64T>(a.begin(), a.end()),
       std::vector<atLeastInt64T>(b.begin(), b.end()), mod);
 }
 
-namespace pe_internal {
+namespace internal {
 struct init_direct_t {};
 static const init_direct_t __init_direct{};
-}  // namespace pe_internal
+}  // namespace internal
 
 struct fake_int128 {};
 enum class ModContextType { STATIC, DYNAMIC };
@@ -847,7 +846,7 @@ struct NModNumber {
             typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(T)>
   NModNumber(T value) : NModNumber(static_cast<ints>(value % MC::Mod())) {}
 
-  NModNumber(ints value, pe_internal::init_direct_t) : value_(value) {}
+  NModNumber(ints value, internal::init_direct_t) : value_(value) {}
 
   static NModNumber OfValue(const ints value) { return NModNumber(value); }
 
@@ -864,7 +863,7 @@ struct NModNumber {
   }
 
   NModNumber operator++(int) {
-    NModNumber t(value_, pe_internal::__init_direct);
+    NModNumber t(value_, internal::__init_direct);
     ++*this;
     return t;
   }
@@ -880,17 +879,17 @@ struct NModNumber {
   }
 
   NModNumber operator--(int) {
-    NModNumber t(value_, pe_internal::__init_direct);
+    NModNumber t(value_, internal::__init_direct);
     --*this;
     return t;
   }
 
   NModNumber operator+() const {
-    return NModNumber(value_, pe_internal::__init_direct);
+    return NModNumber(value_, internal::__init_direct);
   }
 
   NModNumber operator-() const {
-    return NModNumber(AP::Sub(0, value_, Mod()), pe_internal::__init_direct);
+    return NModNumber(AP::Sub(0, value_, Mod()), internal::__init_direct);
   }
 
   NModNumber& operator*=(const NModNumber& y) {
@@ -929,7 +928,7 @@ struct NModNumber {
  public:
   friend NModNumber operator+(const NModNumber& x, const NModNumber& y) {
     return NModNumber(AP::Add(x.value_, y.value_, MC::Mod()),
-                      pe_internal::__init_direct);
+                      internal::__init_direct);
   }
 
   template <typename T>
@@ -946,12 +945,12 @@ struct NModNumber {
 
   friend NModNumber operator-(const NModNumber& x, const NModNumber& y) {
     return NModNumber(AP::Sub(x.value_, y.value_, Mod()),
-                      pe_internal::__init_direct);
+                      internal::__init_direct);
   }
 
   friend NModNumber operator*(const NModNumber& x, const NModNumber& y) {
     return NModNumber(AP::Mul(x.value_, y.value_, Mod()),
-                      pe_internal::__init_direct);
+                      internal::__init_direct);
   }
 
   friend std::ostream& operator<<(std::ostream& o, const NModNumber& m) {
@@ -1039,7 +1038,7 @@ struct NModNumberM {
   NModNumberM(T value, const MC& mc = MC())
       : NModNumberM(static_cast<ints>(value % mc.Mod()), mc) {}
 
-  NModNumberM(ints value, const MC& mc, pe_internal::init_direct_t)
+  NModNumberM(ints value, const MC& mc, internal::init_direct_t)
       : value_(value), mc(mc) {}
 
   NModNumberM OfValue(const ints value) const { return NModNumberM(value, mc); }
@@ -1057,7 +1056,7 @@ struct NModNumberM {
   }
 
   NModNumberM operator++(int) {
-    NModNumberM t(value_, mc, pe_internal::__init_direct);
+    NModNumberM t(value_, mc, internal::__init_direct);
     ++*this;
     return t;
   }
@@ -1073,18 +1072,17 @@ struct NModNumberM {
   }
 
   NModNumberM operator--(int) {
-    NModNumberM t(value_, pe_internal::__init_direct);
+    NModNumberM t(value_, internal::__init_direct);
     --*this;
     return t;
   }
 
   NModNumberM operator+() const {
-    return NModNumberM(value_, mc, pe_internal::__init_direct);
+    return NModNumberM(value_, mc, internal::__init_direct);
   }
 
   NModNumberM operator-() const {
-    return NModNumberM(AP::Sub(0, value_, Mod()), mc,
-                       pe_internal::__init_direct);
+    return NModNumberM(AP::Sub(0, value_, Mod()), mc, internal::__init_direct);
   }
 
   NModNumberM& operator*=(const NModNumberM& y) {
@@ -1123,7 +1121,7 @@ struct NModNumberM {
  public:
   friend NModNumberM operator+(const NModNumberM& x, const NModNumberM& y) {
     return NModNumberM(AP::Add(x.value_, y.value_, x.Mod()), x.mc,
-                       pe_internal::__init_direct);
+                       internal::__init_direct);
   }
 
   template <typename T>
@@ -1140,7 +1138,7 @@ struct NModNumberM {
 
   friend NModNumberM operator-(const NModNumberM& x, const NModNumberM& y) {
     return NModNumberM(AP::Sub(x.value_, y.value_, x.Mod()), x.mc,
-                       pe_internal::__init_direct);
+                       internal::__init_direct);
   }
 
   template <typename T>
@@ -1157,7 +1155,7 @@ struct NModNumberM {
 
   friend NModNumberM operator*(const NModNumberM& x, const NModNumberM& y) {
     return NModNumberM(AP::Mul(x.value_, y.value_, x.Mod()), x.mc,
-                       pe_internal::__init_direct);
+                       internal::__init_direct);
   }
 
   template <typename T>

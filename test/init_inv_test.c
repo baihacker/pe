@@ -8,8 +8,8 @@ int sresult[n + 1];
 int64 lresult[n + 1];
 
 SL void InitInvTest() {
-  InitInv(sresult, n, mod);
-  InitInv(lresult, n, mod);
+  InitializeInverse(sresult, n, mod);
+  InitializeInverse(lresult, n, mod);
   for (int i = 1; i <= n; ++i) {
     assert((int64)i * sresult[i] % mod == 1);
     assert(sresult[i] == lresult[i]);

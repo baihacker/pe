@@ -149,7 +149,7 @@ void NtExample() {
 
   {
     int64 comb[10][10];
-    InitComb(comb, 9);
+    InitializeBinomialCoefficient(comb, 9);
     std::cout << comb[5][2] << std::endl;  // Binomial(5, 2) = 10.
   }
 

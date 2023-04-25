@@ -14,7 +14,7 @@ int main() {
   PowerSumModerB moder1(mod);   // maxk = 128
   PowerSumModerB1 moder2(mod);  // maxk = 128
   int64 comb[32][32];
-  InitComb(comb, 31, mod);
+  InitializeBinomialCoefficient(comb, 31, mod);
   for (int k = 0; k <= 10; ++k) {
     std::cout << "k = " << k << std::endl;
     for (int64 n = 1; n <= 1000000000; n *= 10) {

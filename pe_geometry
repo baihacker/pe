@@ -270,5 +270,114 @@ SL T Cross(std::pair<T, T> v0, std::pair<T, T> v1, std::pair<T, T> v2) {
       std::pair<T, T>{v1.first - v0.first, v1.second - v0.second},
       std::pair<T, T>{v2.first - v0.first, v2.second - v0.second});
 }
+
+template <typename T = double>
+struct GeoConstant {
+  using DT = decltype(acos(static_cast<T>(-1)));
+  static constexpr DT PI = acos(static_cast<T>(-1));
+  static constexpr DT RAD_TO_DEGREE_COE = 180 / PI;
+  static constexpr DT DEGREE_TO_RAD_COE = PI / 180;
+};
+
+template <typename T>
+SL typename GeoConstant<T>::DT RadToDegree(T rad) {
+  return rad * GeoConstant<T>::RAD_TO_DEGREE_COE;
+}
+
+template <typename T>
+SL typename GeoConstant<T>::DT DegreeToRad(T degree) {
+  return degree * GeoConstant<T>::DEGREE_TO_RAD_COE;
+}
+
+template <typename T = double>
+struct Rotation {
+  Rotation(T rad_) : cos_(cos(rad_)), sin_(sin(rad_)) {}
+  std::pair<T, T> operator()(T x, T y) const {
+    return {cos_ * x - sin_ * y, sin_ * x + cos_ * y};
+  }
+  void operator()(T x, T y, T& xo, T& yo) const {
+    tie(xo, yo) = operator()(x, y);
+  }
+
+  std::pair<T, T> Rotate(T x, T y) const {
+    return {cos_ * x - sin_ * y, sin_ * x + cos_ * y};
+  }
+  void Rotate(T x, T y, T& xo, T& yo) const { tie(xo, yo) = Rotate(x, y); }
+
+  std::pair<T, T> RotateAntiClock(T x, T y) const {
+    return {cos_ * x - sin_ * y, sin_ * x + cos_ * y};
+  }
+  void RotateAntiClock(T x, T y, T& xo, T& yo) const {
+    tie(xo, yo) = RotateAntiClock(x, y);
+  }
+
+  std::pair<T, T> RotateClock(T x, T y) const {
+    return {cos_ * x + sin_ * y, -sin_ * x + cos_ * y};
+  }
+  void RotateClock(T x, T y, T& xo, T& yo) const {
+    tie(xo, yo) = RotateClock(x, y);
+  }
+  T rad_;
+  T cos_;
+  T sin_;
+};
+
+template <typename T = double>
+struct RotationHalfPi {
+  RotationHalfPi() : rad_(0.5 * GeoConstant<T>::PI), cos_(0), sin_(1) {}
+
+  std::pair<T, T> operator()(T x, T y) const { return {-y, x}; }
+  void operator()(T x, T y, T& xo, T& yo) const {
+    tie(xo, yo) = operator()(x, y);
+  }
+
+  std::pair<T, T> Rotate(T x, T y) const {
+    return {-y, x};
+    ;
+  }
+  void Rotate(T x, T y, T& xo, T& yo) const { tie(xo, yo) = Rotate(x, y); }
+
+  std::pair<T, T> RotateAntiClock(T x, T y) const { return {-y, x}; }
+  void RotateAntiClock(T x, T y, T& xo, T& yo) const {
+    tie(xo, yo) = RotateAntiClock(x, y);
+  }
+
+  std::pair<T, T> RotateClock(T x, T y) const { return {y, -x}; }
+  void RotateClock(T x, T y, T& xo, T& yo) const {
+    tie(xo, yo) = RotateClock(x, y);
+  }
+  T rad_;
+  T cos_;
+  T sin_;
+};
+
+template <typename T = double>
+struct RotationPi {
+  RotationPi() : rad_(GeoConstant<T>::PI), cos_(-1), sin_(0) {}
+
+  std::pair<T, T> operator()(T x, T y) const { return {-x, -y}; }
+  void operator()(T x, T y, T& xo, T& yo) const {
+    tie(xo, yo) = operator()(x, y);
+  }
+
+  std::pair<T, T> Rotate(T x, T y) const {
+    return {-x, -y};
+    ;
+  }
+  void Rotate(T x, T y, T& xo, T& yo) const { tie(xo, yo) = Rotate(x, y); }
+
+  std::pair<T, T> RotateAntiClock(T x, T y) const { return {-x, -y}; }
+  void RotateAntiClock(T x, T y, T& xo, T& yo) const {
+    tie(xo, yo) = RotateAntiClock(x, y);
+  }
+
+  std::pair<T, T> RotateClock(T x, T y) const { return {-x, -y}; }
+  void RotateClock(T x, T y, T& xo, T& yo) const {
+    tie(xo, yo) = RotateClock(x, y);
+  }
+  T rad_;
+  T cos_;
+  T sin_;
+};
 }  // namespace pe
 #endif

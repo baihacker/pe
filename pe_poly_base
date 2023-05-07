@@ -1693,7 +1693,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   for (int i = 1; i < m; ++i) {
     t[i] = x[i];
   }
-  for (int i = 2; i < m; ++i) {
+  for (int i = 2; i < n; ++i) {
     const T c = invs[i];
     for (int j = i, k = 1; j < n && k < m; j += i, ++k) {
       t[j] = AddMod(t[j], MulMod(c, x[k], mod), mod);
@@ -1715,8 +1715,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     m = n;
   }
 
-  std::vector<int64> invs(m);
-  InitializeInverse(&invs[0], m - 1, mod);
+  std::vector<int64> invs(n);
+  InitializeInverse(&invs[0], n - 1, mod);
 
   PolyEulerTransformPMod(x, m, n, result, mod, &invs[0]);
 }
@@ -1746,6 +1746,82 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   std::vector<T> b(n);
 
   PolyEulerTransformPMod(&x[0], m, n, &b[0], mod);
+
+  return b;
+}
+
+// Extended euler transforms a polynomial
+// x[0] is ignored.
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    PolyEulerTransformPMod(const T* x, int64 m, const T* y, int64 n, T* result,
+                           int64 mod, int64* invs) {
+  if (m > n) {
+    m = n;
+  }
+
+  std::vector<T> z(y, y + m);
+
+  std::vector<T> t(n, 0);
+  for (int i = 1; i < m; ++i) {
+    t[i] = MulMod(x[i], z[i], mod);
+  }
+  for (int i = 2; i < n; ++i) {
+    const T c = invs[i];
+    for (int j = i, k = 1; j < n && k < m; j += i, ++k) {
+      z[k] = MulMod(z[k], y[k], mod);
+      t[j] = AddMod(t[j], MulMod(c, MulMod(x[k], z[k], mod), mod), mod);
+    }
+  }
+#if HAS_POLY_FLINT
+  poly_flint::PolyExpNMod(&t[0], n, n, result, mod);
+#else
+  PolyExpPMod(&t[0], n, n, result, mod);
+#endif
+}
+
+// Extended euler transforms a polynomial
+// x[0] is ignored.
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    PolyEulerTransformPMod(const T* x, int64 m, const T* y, int64 n, T* result,
+                           int64 mod) {
+  if (m > n) {
+    m = n;
+  }
+
+  std::vector<int64> invs(n);
+  InitializeInverse(&invs[0], n - 1, mod);
+
+  PolyEulerTransformPMod(x, m, y, n, result, mod, &invs[0]);
+}
+
+// Extended euler transforms a polynomial
+// x[0] is ignored.
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
+    PolyEulerTransformPMod(const std::vector<T>& x, const std::vector<T>& y,
+                           int64 n, int64 mod, int64* invs) {
+  const int64 m = static_cast<int64>(x.size());
+
+  std::vector<T> b(n);
+
+  PolyEulerTransformPMod(&x[0], m, &y[0], n, &b[0], mod, invs);
+
+  return b;
+}
+
+// Extended euler transforms a polynomial
+// x[0] is ignored.
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
+    PolyEulerTransformPMod(const std::vector<T>& x, const std::vector<T>& y,
+                           int64 n, int64 mod) {
+  const int64 m = static_cast<int64>(x.size());
+
+  std::vector<T> b(n);
+
+  PolyEulerTransformPMod(&x[0], m, &y[0], n, &b[0], mod);
 
   return b;
 }

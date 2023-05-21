@@ -359,7 +359,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 namespace internal {
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyPowerImpl(const T* x, int64 m, int64 n, T* result, int64 mod) {
+    PolyPowerImpl(const T* x, int64 m, int64 n, std::vector<T>& result,
+                  int64 mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
 
   nmod_poly_t u, v;
@@ -373,8 +374,14 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   nmod_poly_pow(v, u, n);
 
   const int64 size = nmod_poly_length(v);
-  for (int64 i = 0; i < size; ++i) {
-    result[i] = nmod_poly_get_coeff_ui(v, i);
+  if (size > 0) {
+    result.resize(size);
+    for (int64 i = 0; i < size; ++i) {
+      result[i] = nmod_poly_get_coeff_ui(v, i);
+    }
+  } else {
+    result.resize(1);
+    result[0] = 1;
   }
 
   nmod_poly_clear(u);
@@ -518,10 +525,15 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   fq_nmod_poly_pow(v, u, n, ctx);
 
   int64 size = fq_nmod_poly_length(v, ctx);
-  result.resize(size);
-  for (int64 i = 0; i < size; ++i) {
-    auto t = nmod_poly_get_coeff_ui(v[0].coeffs + i, 0);
-    result[i] = t;
+  if (size > 0) {
+    result.resize(size);
+    for (int64 i = 0; i < size; ++i) {
+      auto t = nmod_poly_get_coeff_ui(v[0].coeffs + i, 0);
+      result[i] = t;
+    }
+  } else {
+    result.resize(1);
+    result[0] = 0;
   }
 
   fq_nmod_poly_clear(u, ctx);

@@ -14,7 +14,7 @@ namespace pe {
 namespace ntl {
 namespace internal {
 template <typename T>
-SL void InitNModPoly(NTL::ZZ_pX& p, const T* x, int64 n, int64 mod) {
+SL void InitPoly(NTL::ZZ_pX& p, const T* x, int64 n, int64 mod) {
   NTL::ZZ tmp(0);
   p.SetLength(n);
   if (mod >> 32) {
@@ -31,7 +31,7 @@ SL void InitNModPoly(NTL::ZZ_pX& p, const T* x, int64 n, int64 mod) {
 }
 
 template <typename T>
-SL void CopyNModPoly(NTL::ZZ_pX& p, T* x, int64 n, int64 mod) {
+SL void CopyPoly(NTL::ZZ_pX& p, T* x, int64 n, int64 mod) {
   const int64 d = deg(p);
   const int64 m = std::min(d, n - 1);
   if (mod >> 32) {
@@ -52,7 +52,7 @@ SL void CopyNModPoly(NTL::ZZ_pX& p, T* x, int64 n, int64 mod) {
 }
 
 template <typename T>
-SL void InitNModPoly(NTL::zz_pX& p, const T* x, int64 n, long /*mod*/) {
+SL void InitPoly(NTL::zz_pX& p, const T* x, int64 n, long /*mod*/) {
   p.SetLength(n);
   for (int64 i = 0; i < n; ++i) {
     p[i]._zz_p__rep = static_cast<long>(x[i]);
@@ -60,7 +60,7 @@ SL void InitNModPoly(NTL::zz_pX& p, const T* x, int64 n, long /*mod*/) {
 }
 
 template <typename T>
-SL void CopyNModPoly(NTL::zz_pX& p, T* x, int64 n, long /*mod*/) {
+SL void CopyPoly(NTL::zz_pX& p, T* x, int64 n, long /*mod*/) {
   const int64 d = deg(p);
   const int64 m = std::min(d, n - 1);
   for (int64 i = 0; i <= m; ++i) {
@@ -77,12 +77,12 @@ SL void PolyMulSmallModImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
   NTL::zz_p::init(static_cast<long>(mod));
 
   NTL::zz_pX x, y, z;
-  InitNModPoly(x, X, n, static_cast<long>(mod));
-  InitNModPoly(y, Y, m, static_cast<long>(mod));
+  InitPoly(x, X, n, static_cast<long>(mod));
+  InitPoly(y, Y, m, static_cast<long>(mod));
 
   NTL::mul(z, x, y);
 
-  CopyNModPoly(z, result, n + m - 1, static_cast<long>(mod));
+  CopyPoly(z, result, n + m - 1, static_cast<long>(mod));
 }
 
 template <typename T>
@@ -93,12 +93,12 @@ SL void PolyMulLargeModImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
   NTL::ZZ_p::init(tmp);
 
   NTL::ZZ_pX x, y, z;
-  InitNModPoly(x, X, n, mod);
-  InitNModPoly(y, Y, m, mod);
+  InitPoly(x, X, n, mod);
+  InitPoly(y, Y, m, mod);
 
   NTL::mul(z, x, y);
 
-  CopyNModPoly(z, result, n + m - 1, mod);
+  CopyPoly(z, result, n + m - 1, mod);
 }
 
 template <typename T>
@@ -135,27 +135,27 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   NTL::zz_p::init(static_cast<long>(mod));
 
   NTL::zz_pX x, y;
-  InitNModPoly(x, X, n, mod);
-  InitNModPoly(y, Y, m, mod);
+  InitPoly(x, X, n, mod);
+  InitPoly(y, Y, m, mod);
 
   if (q && r) {
     NTL::zz_pX u, v;
 
     NTL::DivRem(u, v, x, y);
 
-    CopyNModPoly(u, q, n - m + 1, mod);
-    CopyNModPoly(v, r, m, mod);
+    CopyPoly(u, q, n - m + 1, mod);
+    CopyPoly(v, r, m, mod);
   } else if (q) {
     NTL::zz_pX u;
 
     NTL::div(u, x, y);
 
-    CopyNModPoly(u, q, n - m + 1, mod);
+    CopyPoly(u, q, n - m + 1, mod);
   } else if (r) {
     NTL::zz_pX v;
 
     NTL::rem(v, x, y);
-    CopyNModPoly(v, r, m, mod);
+    CopyPoly(v, r, m, mod);
   }
 }
 
@@ -179,27 +179,27 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   NTL::ZZ_p::init(tmp);
 
   NTL::ZZ_pX x, y;
-  InitNModPoly(x, X, n, mod);
-  InitNModPoly(y, Y, m, mod);
+  InitPoly(x, X, n, mod);
+  InitPoly(y, Y, m, mod);
 
   if (q && r) {
     NTL::ZZ_pX u, v;
 
     NTL::DivRem(u, v, x, y);
 
-    CopyNModPoly(u, q, n - m + 1, mod);
-    CopyNModPoly(v, r, m, mod);
+    CopyPoly(u, q, n - m + 1, mod);
+    CopyPoly(v, r, m, mod);
   } else if (q) {
     NTL::ZZ_pX u;
 
     NTL::div(u, x, y);
 
-    CopyNModPoly(u, q, n - m + 1, mod);
+    CopyPoly(u, q, n - m + 1, mod);
   } else if (r) {
     NTL::ZZ_pX v;
 
     NTL::rem(v, x, y);
-    CopyNModPoly(v, r, m, mod);
+    CopyPoly(v, r, m, mod);
   }
 }
 

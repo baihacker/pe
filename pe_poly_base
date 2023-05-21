@@ -1318,7 +1318,7 @@ namespace pmod {
 // size result >= n
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyInvPMod(const T* x, int64 m, int64 n, T* result, int64 mod) {
+    PolyInv(const T* x, int64 m, int64 n, T* result, int64 mod) {
   using unsignedT = typename pe_make_unsigned<T>::type;
 #if HAS_POLY_FLINT
   poly_flint::PolyInvPMod<unsignedT>(reinterpret_cast<const unsignedT*>(x), m,
@@ -1334,12 +1334,12 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 // The inverse of x[0] exists.
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyInvPMod(const std::vector<T>& x, int64 n, int64 mod) {
+    PolyInv(const std::vector<T>& x, int64 n, int64 mod) {
   const int64 m = static_cast<int64>(x.size());
 
   std::vector<T> b(n);
 
-  PolyInvPMod(&x[0], m, n, &b[0], mod);
+  PolyInv(&x[0], m, n, &b[0], mod);
 
   return b;
 }
@@ -1534,7 +1534,7 @@ namespace internal {
 // size result >= m + 1
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyIntegralPModImpl(const T* x, int64 m, T* result, int64 mod) {
+    PolyIntegralImpl(const T* x, int64 m, T* result, int64 mod) {
   std::vector<T> y(m + 1);
   InitializeInverse(&y[0], m, mod);
   for (int64 i = 0; i < m; ++i) {
@@ -1548,23 +1548,23 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 // size result >= m + 1
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyIntegralPMod(const T* x, int64 m, T* result, int64 mod) {
+    PolyIntegral(const T* x, int64 m, T* result, int64 mod) {
   using unsignedT = typename pe_make_unsigned<T>::type;
-  internal::PolyIntegralPModImpl<unsignedT>(
-      reinterpret_cast<const unsignedT*>(x), m,
-      reinterpret_cast<unsignedT*>(result), mod);
+  internal::PolyIntegralImpl<unsignedT>(reinterpret_cast<const unsignedT*>(x),
+                                        m, reinterpret_cast<unsignedT*>(result),
+                                        mod);
 }
 
 // Calculates the integral of a polynomial.
 // size result >= m + 1
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyIntegralPMod(const std::vector<T>& x, int64 mod) {
+    PolyIntegral(const std::vector<T>& x, int64 mod) {
   const int64 m = static_cast<int64>(x.size());
 
   std::vector<T> b(m);
 
-  PolyIntegralPMod(&x[0], m, &b[0], mod);
+  PolyIntegral(&x[0], m, &b[0], mod);
 
   return b;
 }
@@ -1575,7 +1575,7 @@ namespace internal {
 // size result >= n
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyLogPModImpl(const T* x, int64 m, int64 n, T* result, int64 mod) {
+    PolyLogImpl(const T* x, int64 m, int64 n, T* result, int64 mod) {
   std::vector<T> dx(m);
   PolyDerivative(x, m, &dx[0], mod);
 
@@ -1599,11 +1599,10 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 // size result >= n
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyLogPMod(const T* x, int64 m, int64 n, T* result, int64 mod) {
+    PolyLog(const T* x, int64 m, int64 n, T* result, int64 mod) {
   using unsignedT = typename pe_make_unsigned<T>::type;
-  internal::PolyLogPModImpl<unsignedT>(reinterpret_cast<const unsignedT*>(x), m,
-                                       n, reinterpret_cast<unsignedT*>(result),
-                                       mod);
+  internal::PolyLogImpl<unsignedT>(reinterpret_cast<const unsignedT*>(x), m, n,
+                                   reinterpret_cast<unsignedT*>(result), mod);
 }
 
 // Calculates the logarithm of a polynomial.
@@ -1611,12 +1610,12 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 // size result >= n
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyLogPMod(const std::vector<T>& x, int64 n, int64 mod) {
+    PolyLog(const std::vector<T>& x, int64 n, int64 mod) {
   const int64 m = static_cast<int64>(x.size());
 
   std::vector<T> b(n);
 
-  PolyLogPMod(&x[0], m, n, &b[0], mod);
+  PolyLog(&x[0], m, n, &b[0], mod);
 
   return b;
 }
@@ -1627,7 +1626,7 @@ namespace internal {
 // size result >= n
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyExpPModImpl(const T* x, int64 m, int64 n, T* result, int64 mod) {
+    PolyExpImpl(const T* x, int64 m, int64 n, T* result, int64 mod) {
   PE_ASSERT(x[0] == 0);
   std::vector<T> ret{static_cast<T>(1 % mod)};
 
@@ -1636,7 +1635,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 #if HAS_POLY_FLINT
     poly_flint::PolyLogNMod(&ret[0], u, u, &t0[0], mod);
 #else
-    PolyLogPMod(&ret[0], u, u, &t0[0], mod);
+    PolyLog(&ret[0], u, u, &t0[0], mod);
 #endif
     std::vector<T> t1(u);
     PolySub(x, std::min(u, m), &t0[0], u, &t1[0], mod);
@@ -1659,11 +1658,10 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 // size result >= n
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyExpPMod(const T* x, int64 m, int64 n, T* result, int64 mod) {
+    PolyExp(const T* x, int64 m, int64 n, T* result, int64 mod) {
   using unsignedT = typename pe_make_unsigned<T>::type;
-  internal::PolyExpPModImpl<unsignedT>(reinterpret_cast<const unsignedT*>(x), m,
-                                       n, reinterpret_cast<unsignedT*>(result),
-                                       mod);
+  internal::PolyExpImpl<unsignedT>(reinterpret_cast<const unsignedT*>(x), m, n,
+                                   reinterpret_cast<unsignedT*>(result), mod);
 }
 
 // Calculates exp(x) where x is a polynomial.
@@ -1671,12 +1669,12 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 // size result >= n
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyExpPMod(const std::vector<T>& x, int64 n, int64 mod) {
+    PolyExp(const std::vector<T>& x, int64 n, int64 mod) {
   const int64 m = static_cast<int64>(x.size());
 
   std::vector<T> b(n);
 
-  PolyExpPMod(&x[0], m, n, &b[0], mod);
+  PolyExp(&x[0], m, n, &b[0], mod);
 
   return b;
 }
@@ -1686,8 +1684,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 // x[0] is ignored.
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyEulerTransformPMod(const T* x, int64 m, int64 n, T* result, int64 mod,
-                           int64* invs) {
+    PolyEulerTransform(const T* x, int64 m, int64 n, T* result, int64 mod,
+                       int64* invs) {
   if (m > n) {
     m = n;
   }
@@ -1705,7 +1703,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 #if HAS_POLY_FLINT
   poly_flint::PolyExpNMod(&t[0], n, n, result, mod);
 #else
-  PolyExpPMod(&t[0], n, n, result, mod);
+  PolyExp(&t[0], n, n, result, mod);
 #endif
 }
 
@@ -1713,7 +1711,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 // x[0] is ignored.
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyEulerTransformPMod(const T* x, int64 m, int64 n, T* result, int64 mod) {
+    PolyEulerTransform(const T* x, int64 m, int64 n, T* result, int64 mod) {
   if (m > n) {
     m = n;
   }
@@ -1721,20 +1719,20 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   std::vector<int64> invs(n);
   InitializeInverse(&invs[0], n - 1, mod);
 
-  PolyEulerTransformPMod(x, m, n, result, mod, &invs[0]);
+  PolyEulerTransform(x, m, n, result, mod, &invs[0]);
 }
 
 // Euler transforms a polynomial.
 // x[0] is ignored.
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyEulerTransformPMod(const std::vector<T>& x, int64 n, int64 mod,
-                           int64* invs) {
+    PolyEulerTransform(const std::vector<T>& x, int64 n, int64 mod,
+                       int64* invs) {
   const int64 m = static_cast<int64>(x.size());
 
   std::vector<T> b(n);
 
-  PolyEulerTransformPMod(&x[0], m, n, &b[0], mod, invs);
+  PolyEulerTransform(&x[0], m, n, &b[0], mod, invs);
 
   return b;
 }
@@ -1743,12 +1741,12 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 // x[0] is ignored.
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyEulerTransformPMod(const std::vector<T>& x, int64 n, int64 mod) {
+    PolyEulerTransform(const std::vector<T>& x, int64 n, int64 mod) {
   const int64 m = static_cast<int64>(x.size());
 
   std::vector<T> b(n);
 
-  PolyEulerTransformPMod(&x[0], m, n, &b[0], mod);
+  PolyEulerTransform(&x[0], m, n, &b[0], mod);
 
   return b;
 }
@@ -1757,8 +1755,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 // x[0] is ignored.
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyEulerTransformPMod(const T* x, int64 m, const T* y, int64 n, T* result,
-                           int64 mod, int64* invs) {
+    PolyEulerTransform(const T* x, int64 m, const T* y, int64 n, T* result,
+                       int64 mod, int64* invs) {
   if (m > n) {
     m = n;
   }
@@ -1779,7 +1777,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 #if HAS_POLY_FLINT
   poly_flint::PolyExpNMod(&t[0], n, n, result, mod);
 #else
-  PolyExpPMod(&t[0], n, n, result, mod);
+  PolyExp(&t[0], n, n, result, mod);
 #endif
 }
 
@@ -1787,8 +1785,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 // x[0] is ignored.
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyEulerTransformPMod(const T* x, int64 m, const T* y, int64 n, T* result,
-                           int64 mod) {
+    PolyEulerTransform(const T* x, int64 m, const T* y, int64 n, T* result,
+                       int64 mod) {
   if (m > n) {
     m = n;
   }
@@ -1803,13 +1801,13 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 // x[0] is ignored.
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyEulerTransformPMod(const std::vector<T>& x, const std::vector<T>& y,
-                           int64 n, int64 mod, int64* invs) {
+    PolyEulerTransform(const std::vector<T>& x, const std::vector<T>& y,
+                       int64 n, int64 mod, int64* invs) {
   const int64 m = static_cast<int64>(x.size());
 
   std::vector<T> b(n);
 
-  PolyEulerTransformPMod(&x[0], m, &y[0], n, &b[0], mod, invs);
+  PolyEulerTransform(&x[0], m, &y[0], n, &b[0], mod, invs);
 
   return b;
 }
@@ -1818,8 +1816,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 // x[0] is ignored.
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyEulerTransformPMod(const std::vector<T>& x, const std::vector<T>& y,
-                           int64 n, int64 mod) {
+    PolyEulerTransform(const std::vector<T>& x, const std::vector<T>& y,
+                       int64 n, int64 mod) {
   const int64 m = static_cast<int64>(x.size());
 
   std::vector<T> b(n);

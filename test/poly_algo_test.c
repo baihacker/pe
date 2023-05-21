@@ -111,7 +111,7 @@ SL void PolyMultiPointEvaluationTest() {
 #if HAS_POLY_FLINT
   {
     TimeRecorder tr;
-    auto result = poly_flint::PolyMultipointEvaluate(p.data, v, p.mod);
+    auto result = flint::PolyMultipointEvaluate(p.data, v, p.mod);
     std::cout << tr.Elapsed().Format() << std::endl;
     for (int i = 1; i <= n; ++i) {
       assert(p.ValueAt(i % 10007) == result[i - 1]);

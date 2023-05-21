@@ -35,7 +35,7 @@
 //     ntt64 (64 bit internal mod)
 //     poly_min25
 //     poly_libbf
-//     poly_flint
+//     flint
 //     poly_ntl
 //
 //   implementation suffix:
@@ -61,8 +61,8 @@
 // poly_min25::PolyMulSmall  : requires int128
 // poly_min25::PolyMulLarge  : requires int128
 // poly_libbf::PolyMul       : enable libbf && LIMB_BITS >= 64
-// poly_flint::PolyMulPMod   : enable flint && GMP_LIMB_BITS >= 64
-// poly_flint::PolyMulNMod   : enable flint && GMP_LIMB_BITS >= 64
+// flint::PolyMulPMod        : enable flint && GMP_LIMB_BITS >= 64
+// flint::PolyMulNMod        : enable flint && GMP_LIMB_BITS >= 64
 // poly_ntl::PolyMulSmallMod : enable ntl
 // poly_ntl::PolyMulLargeMod : enable ntl
 // poly_ntl::PolyMul         : enable ntl
@@ -70,7 +70,7 @@
 // ntt32::PolyMul      = ntt32::PolyMulLarge
 // ntt64::PolyMul      = ntt64::PolyMulLarge
 // poly_min25::PolyMul = poly_min25::PolyMulLarge
-// poly_flint::PolyMul = poly_flint::PolyMulNMod
+// flint::PolyMul      = flint::PolyMulNMod
 // poly_ntl::PolyMul   = if mod is small then poly_ntl::PolyMulSmallMod
 //                       else poly_ntl::PolyMulLargeMod
 //
@@ -100,10 +100,10 @@
 // poly_libbf::PolyMul
 // (mod-1)^2*n < 340282366920938463463374607431768211456 (2^128)  3.4e38
 //
-// poly_flint::PolyMulPMod
+// flint::PolyMulPMod
 // mod is a word size prime
 //
-// poly_flint::PolyMulNMod
+// flint::PolyMulNMod
 // mod is a word size number
 //
 // poly_ntl::PolyMulSmallMod
@@ -979,7 +979,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   const int is_big = std::max(n, m) >= 50;
   if (is_big) {
 #if HAS_POLY_MUL_FLINT
-    poly_flint::PolyMul(&X[0], n, &Y[0], m, result, mod);
+    flint::PolyMul(&X[0], n, &Y[0], m, result, mod);
 #elif HAS_POLY_MUL_MIN25
     poly_min25::PolyMulLarge(&X[0], n, &Y[0], m, result, mod);
 #elif HAS_POLY_MUL_NTT32
@@ -1289,8 +1289,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyInv(const T* x, int64 m, int64 n, T* result, int64 mod) {
   using unsignedT = typename pe_make_unsigned<T>::type;
 #if HAS_POLY_FLINT
-  poly_flint::PolyInv<unsignedT>(reinterpret_cast<const unsignedT*>(x), m, n,
-                                 reinterpret_cast<unsignedT*>(result), mod);
+  flint::PolyInv<unsignedT>(reinterpret_cast<const unsignedT*>(x), m, n,
+                            reinterpret_cast<unsignedT*>(result), mod);
 #else
   PolyInvDoubling<unsignedT>(reinterpret_cast<const unsignedT*>(x), m, n,
                              reinterpret_cast<unsignedT*>(result), mod);
@@ -1320,8 +1320,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyInv(const T* x, int64 m, int64 n, T* result, int64 mod) {
   using unsignedT = typename pe_make_unsigned<T>::type;
 #if HAS_POLY_FLINT
-  poly_flint::PolyInv<unsignedT>(reinterpret_cast<const unsignedT*>(x), m, n,
-                                 reinterpret_cast<unsignedT*>(result), mod);
+  flint::PolyInv<unsignedT>(reinterpret_cast<const unsignedT*>(x), m, n,
+                            reinterpret_cast<unsignedT*>(result), mod);
 #else
   PolyInvDoubling<unsignedT>(reinterpret_cast<const unsignedT*>(x), m, n,
                              reinterpret_cast<unsignedT*>(result), mod);
@@ -1446,7 +1446,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
                   T* r, int64 mod) {
   using unsignedT = typename pe_make_unsigned<T>::type;
 #if HAS_POLY_FLINT
-  poly_flint::internal::PolyDivAndModImpl<unsignedT>(
+  flint::internal::PolyDivAndModImpl<unsignedT>(
       reinterpret_cast<const unsignedT*>(X), n,
       reinterpret_cast<const unsignedT*>(Y), m, reinterpret_cast<unsignedT*>(q),
       reinterpret_cast<unsignedT*>(r), mod);
@@ -1631,7 +1631,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   for (int64 u = 1; u < 2 * n; u = u << 1) {
     std::vector<T> t0(u);
 #if HAS_POLY_FLINT
-    poly_flint::PolyLog(&ret[0], u, u, &t0[0], mod);
+    flint::PolyLog(&ret[0], u, u, &t0[0], mod);
 #else
     PolyLog(&ret[0], u, u, &t0[0], mod);
 #endif
@@ -1699,7 +1699,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     }
   }
 #if HAS_POLY_FLINT
-  poly_flint::PolyExp(&t[0], n, n, result, mod);
+  flint::PolyExp(&t[0], n, n, result, mod);
 #else
   PolyExp(&t[0], n, n, result, mod);
 #endif
@@ -1773,7 +1773,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     }
   }
 #if HAS_POLY_FLINT
-  poly_flint::PolyExp(&t[0], n, n, result, mod);
+  flint::PolyExp(&t[0], n, n, result, mod);
 #else
   PolyExp(&t[0], n, n, result, mod);
 #endif
@@ -2093,7 +2093,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
                            int64 mod) {
   using unsignedT = typename pe_make_unsigned<T>::type;
 #if HAS_POLY_FLINT
-  poly_flint::PolyMultipointEvaluate<unsignedT>(
+  flint::PolyMultipointEvaluate<unsignedT>(
       reinterpret_cast<const unsignedT*>(X), n,
       reinterpret_cast<const unsignedT*>(V),
       reinterpret_cast<unsignedT*>(result), mod);

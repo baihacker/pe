@@ -773,6 +773,33 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 }
 
 template <typename T>
+SL void PolyAdd(const T* X, const int64 n, const T* Y, const int64 m,
+                T* result) {
+  if (n <= m) {
+    for (int64 i = 0; i < n; ++i) {
+      result[i] = X[i] + Y[i];
+    }
+    std::copy(Y + n, Y + m, result + n);
+  } else {
+    for (int64 i = 0; i < m; ++i) {
+      result[i] = X[i] + Y[i];
+    }
+    std::copy(X + m, X + n, result + m);
+  }
+}
+
+template <typename T>
+SL std::vector<T> PolyAdd(const std::vector<T>& X, const std::vector<T>& Y) {
+  const int64 n = static_cast<int64>(X.size());
+  const int64 m = static_cast<int64>(Y.size());
+
+  std::vector<T> result(std::max(n, m));
+  PolyAdd(&X[0], n, &Y[0], m, &result[0]);
+
+  return result;
+}
+
+template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolySub(const T* X, const int64 n, const T* Y, const int64 m, T* result,
             int64 mod) {
@@ -799,6 +826,35 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 
   std::vector<T> result(std::max(n, m));
   PolySub(&X[0], n, &Y[0], m, &result[0], mod);
+
+  return result;
+}
+
+template <typename T>
+SL void PolySub(const T* X, const int64 n, const T* Y, const int64 m,
+                T* result) {
+  if (n <= m) {
+    for (int64 i = 0; i < n; ++i) {
+      result[i] = X[i] - Y[i];
+    }
+    for (int64 i = n; i < m; ++i) {
+      result[i] = -Y[i];
+    }
+  } else {
+    for (int64 i = 0; i < m; ++i) {
+      result[i] = X[i] - Y[i];
+    }
+    std::copy(X + m, X + n, result + m);
+  }
+}
+
+template <typename T>
+SL std::vector<T> PolySub(const std::vector<T>& X, const std::vector<T>& Y) {
+  const int64 n = static_cast<int64>(X.size());
+  const int64 m = static_cast<int64>(Y.size());
+
+  std::vector<T> result(std::max(n, m));
+  PolySub(&X[0], n, &Y[0], m, &result[0]);
 
   return result;
 }
@@ -1008,6 +1064,165 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 
   std::vector<T> result(n + m - 1);
   PolyMul(&X[0], n, &Y[0], m, &result[0], mod);
+
+  return result;
+}
+
+namespace internal {
+// Multiplies two polynomials of the same length using Divide and Conquer
+// algorithm. size result >= 2 * n size return = 2 * n (deg return = 2 * n - 1)
+template <typename T>
+SL void PolyMulDcImpl(const T* X, const T* Y, const int64 n, T* result) {
+  const int64 n2 = n << 1;
+  if (n <= 49) {
+    std::fill(result, result + n2, 0);
+    for (int64 i = 0; i < n; ++i) {
+      for (int64 j = 0; j < n; ++j) {
+        result[i + j] += X[i] * Y[j];
+      }
+    }
+    return;
+  }
+
+  const int64 m1 = (n + 1) >> 1;
+  const int64 m0 = n - m1;
+  const int64 dbm1 = m1 << 1;
+  const int64 dbm0 = m0 << 1;
+  // m1 >= m0
+  const T* x0 = X + m1;
+  const T* y0 = Y + m1;
+  const T* x1 = X;
+  const T* y1 = Y;
+
+  T* x0y0 = new T[dbm1];
+  T* x1y1 = new T[dbm1];
+#if ENABLE_OPENMP
+#pragma omp parallel sections if (n > 5000)
+#endif
+  {
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    PolyMulDcImpl(x0, y0, m0, x0y0);
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    PolyMulDcImpl(x1, y1, m1, x1y1);
+  }
+  if (m0 != m1) {
+    x0y0[dbm0] = 0;
+    x0y0[dbm0 + 1] = 0;
+  }
+  T* w = new T[dbm1];
+  {
+    T* u = new T[m1];
+    T* v = new T[m1];
+
+    for (int64 i = 0; i < m0; ++i) {
+      u[i] = x0[i] + x1[i], v[i] = y0[i] + y1[i];
+    }
+    if (m0 != m1) {
+      u[m1 - 1] = x1[m1 - 1];
+      v[m1 - 1] = y1[m1 - 1];
+    }
+    PolyMulDcImpl(u, v, m1, w);
+    delete[] u;
+    delete[] v;
+    for (int64 i = 0; i < m1 * 2; ++i) {
+      w[i] -= x0y0[i] + x1y1[i];
+    }
+  }
+  std::fill(result, result + n2, 0);
+  for (int64 i = 0; i < dbm0; ++i) {
+    result[dbm1 + i] += x0y0[i];
+  }
+  for (int64 i = 0; i < dbm1; ++i) {
+    result[m1 + i] += w[i];
+  }
+  for (int64 i = 0; i < dbm1; ++i) {
+    result[i] += x1y1[i];
+  }
+  delete[] x0y0;
+  delete[] x1y1;
+  delete[] w;
+}
+}  // namespace internal
+// Multiplies two polynomials using Divide and Conquer algorithm.
+// size result >= n + m - 1
+template <typename T>
+SL void PolyMulDc(const T* X, const int64 n, const T* Y, const int64 m,
+                  T* result) {
+  // In case n == m, we still allocate tempory result space to meet the
+  // requirement of PolyMulDcImpl.
+  const int64 v = std::max(n, m);
+  std::vector<T> tresult(v * 2);
+  if (n < m) {
+    std::vector<T> XX(2 * v);
+    for (int64 i = 0; i < n; ++i) {
+      XX[i] = X[i];
+    }
+    for (int64 i = n; i < m; ++i) {
+      XX[i] = 0;
+    }
+    internal::PolyMulDcImpl(&XX[0], Y, m, &tresult[0]);
+  } else {
+    std::vector<T> YY(2 * v);
+    for (int64 i = 0; i < m; ++i) {
+      YY[i] = Y[i];
+    }
+    for (int64 i = m; i < n; ++i) {
+      YY[i] = 0;
+    }
+    internal::PolyMulDcImpl(X, &YY[0], n, &tresult[0]);
+  }
+  std::copy(tresult.begin(), tresult.begin() + n + m - 1, result);
+}
+
+// Multiplies two polynomials using Divide and Conquer algorithm.
+template <typename T>
+SL std::vector<T> PolyMulDc(const std::vector<T>& X, const std::vector<T>& Y) {
+  const int64 n = static_cast<int64>(X.size());
+  const int64 m = static_cast<int64>(Y.size());
+  const int64 result_size = n + m - 1;
+  if (n == m) {
+    std::vector<T> result(2 * n);
+    internal::PolyMulDcImpl(&X[0], &Y[0], n, &result[0]);
+    result.resize(result_size);
+    return result;
+  } else if (n > m) {
+    std::vector<T> YY;
+    std::vector<T> result(2 * n);
+    YY.resize(n);
+    for (int64 i = 0; i < m; ++i) YY[i] = Y[i];
+    internal::PolyMulDcImpl(&X[0], &YY[0], n, &result[0]);
+    result.resize(result_size);
+    return result;
+  } else {
+    std::vector<T> XX;
+    std::vector<T> result(2 * m);
+    XX.resize(m);
+    for (int64 i = 0; i < n; ++i) XX[i] = X[i];
+    internal::PolyMulDcImpl(&XX[0], &Y[0], m, &result[0]);
+    result.resize(result_size);
+    return result;
+  }
+}
+
+// Multiplies two polynomials.
+template <typename T>
+SL void PolyMul(const T* X, const int64 n, const T* Y, const int64 m,
+                T* result) {
+  PolyMulDc(&X[0], n, &Y[0], m, result);
+}
+
+// Multiplies two polynomials.
+template <typename T>
+SL std::vector<T> PolyMul(const std::vector<T>& X, const std::vector<T>& Y) {
+  const int64 n = static_cast<int64>(X.size());
+  const int64 m = static_cast<int64>(Y.size());
+
+  std::vector<T> result(n + m - 1);
+  PolyMul(&X[0], n, &Y[0], m, &result[0]);
 
   return result;
 }
@@ -1790,7 +2005,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   std::vector<int64> invs(n);
   InitializeInverse(&invs[0], n - 1, mod);
 
-  PolyEulerTransformPMod(x, m, y, n, result, mod, &invs[0]);
+  PolyEulerTransform(x, m, y, n, result, mod, &invs[0]);
 }
 
 // Extended euler transforms a polynomial
@@ -1818,7 +2033,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 
   std::vector<T> b(n);
 
-  PolyEulerTransformPMod(&x[0], m, &y[0], n, &b[0], mod);
+  PolyEulerTransform(&x[0], m, &y[0], n, &b[0], mod);
 
   return b;
 }

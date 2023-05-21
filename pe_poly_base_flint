@@ -15,10 +15,10 @@
 
 namespace pe {
 namespace poly_flint {
-namespace poly_flint_internal {
+namespace internal {
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    CopyNModPoly(nmod_poly_t src, T* dest, int64 destSize) {
+    CopyPoly(nmod_poly_t src, T* dest, int64 destSize) {
   const int64 size = static_cast<int64>(src[0].length);
   for (int64 i = 0; i < size; ++i) {
     auto v = src[0].coeffs[i];
@@ -29,6 +29,43 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   }
 }
 
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    PolyMulImpl(const T* X, const int64 n, const T* Y, const int64 m, T* result,
+                int64 mod) {
+  nmod_poly_t a, b;
+  nmod_poly_init2(a, mod, n);
+  nmod_poly_init2(b, mod, m);
+
+  for (int64 i = 0; i < n; ++i) {
+    nmod_poly_set_coeff_ui(a, i, X[i]);
+  }
+  for (int64 i = 0; i < m; ++i) {
+    nmod_poly_set_coeff_ui(b, i, Y[i]);
+  }
+  nmod_poly_mul(a, a, b);
+
+  const int64 size = static_cast<int64>(a[0].length);
+
+  for (int64 i = 0; i < size; ++i) {
+    auto v = a[0].coeffs[i];
+    result[i] = v;
+  }
+
+  const int64 all_size = n + m - 1;
+  for (int64 i = size; i < all_size; ++i) {
+    result[i] = 0;
+  }
+
+  nmod_poly_clear(a);
+  nmod_poly_clear(b);
+}
+}  // namespace internal
+
+POLY_MUL_IMPL(PolyMul, internal::PolyMulImpl)
+
+namespace pmod {
+namespace internal {
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyMulPModImpl(const T* X, const int64 n, const T* Y, const int64 m,
@@ -68,48 +105,63 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   fmpz_clear(xmod);
   fmpz_clear(c);
 }
+}  // namespace internal
+POLY_MUL_IMPL(PolyMul, internal::PolyMulPModImpl)
+}  // namespace pmod
+
+namespace internal {
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    PolyInvImpl(const T* x, int64 m, int64 n, T* result, int64 mod) {
+  if (n == 1) {
+    result[0] = ModInv(static_cast<int64>(x[0]), mod);
+    return;
+  }
+
+  nmod_poly_t u, v;
+  nmod_poly_init2(u, mod, m);
+  for (int64 i = 0; i < m; ++i) {
+    nmod_poly_set_coeff_ui(u, i, x[i]);
+  }
+
+  nmod_poly_init2(v, mod, n + 1);
+
+  nmod_poly_inv_series(v, u, n);
+  for (int64 i = 0; i < n; ++i) {
+    result[i] = nmod_poly_get_coeff_ui(v, i);
+  }
+
+  nmod_poly_clear(u);
+  nmod_poly_clear(v);
+}
+}  // namespace internal
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyMulNModImpl(const T* X, const int64 n, const T* Y, const int64 m,
-                    T* result, int64 mod) {
-  nmod_poly_t a, b;
-  nmod_poly_init2(a, mod, n);
-  nmod_poly_init2(b, mod, m);
-
-  for (int64 i = 0; i < n; ++i) {
-    nmod_poly_set_coeff_ui(a, i, X[i]);
-  }
-  for (int64 i = 0; i < m; ++i) {
-    nmod_poly_set_coeff_ui(b, i, Y[i]);
-  }
-  nmod_poly_mul(a, a, b);
-
-  const int64 size = static_cast<int64>(a[0].length);
-
-  for (int64 i = 0; i < size; ++i) {
-    auto v = a[0].coeffs[i];
-    result[i] = v;
-  }
-
-  const int64 all_size = n + m - 1;
-  for (int64 i = size; i < all_size; ++i) {
-    result[i] = 0;
-  }
-
-  nmod_poly_clear(a);
-  nmod_poly_clear(b);
+    PolyInv(const T* x, int64 m, int64 n, T* result, int64 mod) {
+  using unsignedT = typename pe_make_unsigned<T>::type;
+  internal::PolyInvImpl<unsignedT>(reinterpret_cast<const unsignedT*>(x), m, n,
+                                   reinterpret_cast<unsignedT*>(result), mod);
 }
-}  // namespace poly_flint_internal
 
-POLY_MUL_IMPL(PolyMulPMod, poly_flint_internal::PolyMulPModImpl)
-POLY_MUL_IMPL(PolyMulNMod, poly_flint_internal::PolyMulNModImpl)
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
+    PolyInv(const std::vector<T>& x, int64 n, int64 mod) {
+  const int64 m = static_cast<int64>(x.size());
 
-namespace poly_flint_internal {
+  std::vector<T> b(n);
+
+  PolyInvNMod(&x[0], m, n, &b[0], mod);
+
+  return b;
+}
+
+namespace pmod {
+namespace internal {
 // size result >= n
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyInvPModImpl(const T* x, int64 m, int64 n, T* result, int64 mod) {
+    PolyInvImpl(const T* x, int64 m, int64 n, T* result, int64 mod) {
   if (n == 1) {
     result[0] = ModInv(static_cast<int64>(x[0]), mod);
     return;
@@ -145,80 +197,33 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   fmpz_clear(xmod);
   fmpz_clear(c);
 }
-
+}  // namespace internal
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyInvNModImpl(const T* x, int64 m, int64 n, T* result, int64 mod) {
-  if (n == 1) {
-    result[0] = ModInv(static_cast<int64>(x[0]), mod);
-    return;
-  }
-
-  nmod_poly_t u, v;
-  nmod_poly_init2(u, mod, m);
-  for (int64 i = 0; i < m; ++i) {
-    nmod_poly_set_coeff_ui(u, i, x[i]);
-  }
-
-  nmod_poly_init2(v, mod, n + 1);
-
-  nmod_poly_inv_series(v, u, n);
-  for (int64 i = 0; i < n; ++i) {
-    result[i] = nmod_poly_get_coeff_ui(v, i);
-  }
-
-  nmod_poly_clear(u);
-  nmod_poly_clear(v);
-}
-}  // namespace poly_flint_internal
-
-template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyInvPMod(const T* x, int64 m, int64 n, T* result, int64 mod) {
+    PolyInv(const T* x, int64 m, int64 n, T* result, int64 mod) {
   using unsignedT = typename pe_make_unsigned<T>::type;
-  poly_flint_internal::PolyInvPModImpl<unsignedT>(
-      reinterpret_cast<const unsignedT*>(x), m, n,
-      reinterpret_cast<unsignedT*>(result), mod);
+  internal::PolyInvImpl<unsignedT>(reinterpret_cast<const unsignedT*>(x), m, n,
+                                   reinterpret_cast<unsignedT*>(result), mod);
 }
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyInvPMod(const std::vector<T>& x, int64 n, int64 mod) {
+    PolyInv(const std::vector<T>& x, int64 n, int64 mod) {
   const int64 m = static_cast<int64>(x.size());
 
   std::vector<T> b(n);
 
-  PolyInvPMod(&x[0], m, n, &b[0], mod);
+  PolyInv(&x[0], m, n, &b[0], mod);
 
   return b;
 }
+}  // namespace pmod
 
+namespace internal {
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyInvNMod(const T* x, int64 m, int64 n, T* result, int64 mod) {
-  using unsignedT = typename pe_make_unsigned<T>::type;
-  poly_flint_internal::PolyInvNModImpl<unsignedT>(
-      reinterpret_cast<const unsignedT*>(x), m, n,
-      reinterpret_cast<unsignedT*>(result), mod);
-}
-
-template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyInvNMod(const std::vector<T>& x, int64 n, int64 mod) {
-  const int64 m = static_cast<int64>(x.size());
-
-  std::vector<T> b(n);
-
-  PolyInvNMod(&x[0], m, n, &b[0], mod);
-
-  return b;
-}
-
-namespace poly_flint_internal {
-template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyDivAndModNModImpl(const T* X, int64 n, const T* Y, int64 m, T* q, T* r,
-                          int64 mod) {
+    PolyDivAndModImpl(const T* X, int64 n, const T* Y, int64 m, T* q, T* r,
+                      int64 mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
 
   if (m > n) {
@@ -250,8 +255,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 
     nmod_poly_divrem(u, v, a, b);
 
-    CopyNModPoly(u, q, n - m + 1);
-    CopyNModPoly(v, r, m);
+    CopyPoly(u, q, n - m + 1);
+    CopyPoly(v, r, m);
 
     nmod_poly_clear(u);
     nmod_poly_clear(v);
@@ -261,7 +266,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 
     nmod_poly_div(u, a, b);
 
-    CopyNModPoly(u, q, n - m + 1);
+    CopyPoly(u, q, n - m + 1);
     nmod_poly_clear(u);
   } else if (r) {
     nmod_poly_t v;
@@ -269,26 +274,71 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 
     nmod_poly_rem(v, a, b);
 
-    CopyNModPoly(v, r, m);
+    CopyPoly(v, r, m);
     nmod_poly_clear(v);
   }
 
   nmod_poly_clear(a);
   nmod_poly_clear(b);
 }
-}  // namespace poly_flint_internal
+}  // namespace internal
 
-POLY_DIV_AND_MOD_IMPL(PolyDivAndModNMod,
-                      poly_flint_internal::PolyDivAndModNModImpl)
-POLY_DIV_IMPL(PolyDivNMod, PolyDivAndModNMod)
-POLY_MOD_IMPL(PolyModNMod, PolyDivAndModNMod)
+POLY_DIV_AND_MOD_IMPL(PolyDivAndMod, internal::PolyDivAndModImpl)
+POLY_DIV_IMPL(PolyDiv, PolyDivAndMod)
+POLY_MOD_IMPL(PolyMod, PolyDivAndMod)
 
-namespace poly_flint_internal {
+namespace internal {
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    PolyPowerImpl(const T* x, int64 m, int64 n, int64 t, T* result, int64 mod) {
+  static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
+
+  nmod_poly_t u, v;
+  nmod_poly_init2(u, mod, m);
+  for (int64 i = 0; i < m; ++i) {
+    nmod_poly_set_coeff_ui(u, i, x[i]);
+  }
+
+  nmod_poly_init2(v, mod, t);
+
+  nmod_poly_pow_trunc(v, u, n, t);
+
+  for (int64 i = 0; i < t; ++i) {
+    result[i] = nmod_poly_get_coeff_ui(v, i);
+  }
+
+  nmod_poly_clear(u);
+  nmod_poly_clear(v);
+}
+}  // namespace internal
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    PolyPower(const T* x, int64 m, int64 n, int64 t, T* result, int64 mod) {
+  using unsignedT = typename pe_make_unsigned<T>::type;
+  internal::PolyPowerImpl<unsignedT>(reinterpret_cast<const unsignedT*>(x), m,
+                                     n, t, reinterpret_cast<unsignedT*>(result),
+                                     mod);
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
+    PolyPower(const std::vector<T>& x, int64 n, int64 t, int64 mod) {
+  const int64 m = static_cast<int64>(x.size());
+
+  std::vector<T> b(t);
+
+  PolyPower(&x[0], m, n, t, &b[0], mod);
+
+  return b;
+}
+
+namespace pmod {
+namespace internal {
 #if __FLINT_RELEASE >= 20900
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyPowerPModImpl(const T* x, int64 m, int64 n, int64 t, T* result,
-                      int64 mod) {
+    PolyPowerImpl(const T* x, int64 m, int64 n, int64 t, T* result, int64 mod) {
   fmpz_t xmod;
   fmpz_init_set_ui(xmod, mod);
 
@@ -321,75 +371,30 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   fmpz_clear(c);
 }
 #endif
-
-template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyPowerNModImpl(const T* x, int64 m, int64 n, int64 t, T* result,
-                      int64 mod) {
-  static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
-
-  nmod_poly_t u, v;
-  nmod_poly_init2(u, mod, m);
-  for (int64 i = 0; i < m; ++i) {
-    nmod_poly_set_coeff_ui(u, i, x[i]);
-  }
-
-  nmod_poly_init2(v, mod, t);
-
-  nmod_poly_pow_trunc(v, u, n, t);
-
-  for (int64 i = 0; i < t; ++i) {
-    result[i] = nmod_poly_get_coeff_ui(v, i);
-  }
-
-  nmod_poly_clear(u);
-  nmod_poly_clear(v);
-}
-}  // namespace poly_flint_internal
-
+}  // namespace internal
 #if __FLINT_RELEASE >= 20900
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyPowerPMod(const T* x, int64 m, int64 n, int64 t, T* result, int64 mod) {
+    PolyPower(const T* x, int64 m, int64 n, int64 t, T* result, int64 mod) {
   using unsignedT = typename pe_make_unsigned<T>::type;
-  poly_flint_internal::PolyPowerPModImpl<unsignedT>(
-      reinterpret_cast<const unsignedT*>(x), m, n, t,
-      reinterpret_cast<unsignedT*>(result), mod);
+  internal::PolyPowerImpl<unsignedT>(reinterpret_cast<const unsignedT*>(x), m,
+                                     n, t, reinterpret_cast<unsignedT*>(result),
+                                     mod);
 }
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyPowerPMod(const std::vector<T>& x, int64 n, int64 t, int64 mod) {
+    PolyPower(const std::vector<T>& x, int64 n, int64 t, int64 mod) {
   const int64 m = static_cast<int64>(x.size());
 
   std::vector<T> b(t);
 
-  PolyPowerPMod(&x[0], m, n, t, &b[0], mod);
+  PolyPower(&x[0], m, n, t, &b[0], mod);
 
   return b;
 }
 #endif
-
-template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyPowerNMod(const T* x, int64 m, int64 n, int64 t, T* result, int64 mod) {
-  using unsignedT = typename pe_make_unsigned<T>::type;
-  poly_flint_internal::PolyPowerNModImpl<unsignedT>(
-      reinterpret_cast<const unsignedT*>(x), m, n, t,
-      reinterpret_cast<unsignedT*>(result), mod);
-}
-
-template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyPowerNMod(const std::vector<T>& x, int64 n, int64 t, int64 mod) {
-  const int64 m = static_cast<int64>(x.size());
-
-  std::vector<T> b(t);
-
-  PolyPowerNMod(&x[0], m, n, t, &b[0], mod);
-
-  return b;
-}
+}  // namespace pmod
 
 // More function can be found here:
 // https://flintlib.org/doc/nmod_poly.html#transcendental-functions
@@ -400,11 +405,11 @@ using nmod_poly_series_t = void (*)(nmod_poly_struct*, const nmod_poly_struct*,
                                     mp_limb_signed_t);
 }
 
-namespace poly_flint_internal {
+namespace internal {
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolySeriesNModImpl(const T* x, int64 m, int64 n, T* result, int64 mod,
-                       nmod_poly_series_t trans) {
+    PolySeriesImpl(const T* x, int64 m, int64 n, T* result, int64 mod,
+                   nmod_poly_series_t trans) {
   nmod_poly_t u, v;
   nmod_poly_init2(u, mod, m);
   for (int64 i = 0; i < m; ++i) {
@@ -420,100 +425,98 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   nmod_poly_clear(u);
   nmod_poly_clear(v);
 }
-}  // namespace poly_flint_internal
+}  // namespace internal
 
 // size result == n
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolySeriesNMod(const T* x, int64 m, int64 n, T* result, int64 mod,
-                   nmod_poly_series_t trans) {
+    PolySeries(const T* x, int64 m, int64 n, T* result, int64 mod,
+               nmod_poly_series_t trans) {
   using unsignedT = typename pe_make_unsigned<T>::type;
-  poly_flint_internal::PolySeriesNModImpl<unsignedT>(
-      reinterpret_cast<const unsignedT*>(x), m, n,
-      reinterpret_cast<unsignedT*>(result), mod, trans);
+  internal::PolySeriesImpl<unsignedT>(reinterpret_cast<const unsignedT*>(x), m,
+                                      n, reinterpret_cast<unsignedT*>(result),
+                                      mod, trans);
 }
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolySeriesNMod(const std::vector<T>& x, int64 n, int64 mod,
-                   nmod_poly_series_t trans) {
+    PolySeries(const std::vector<T>& x, int64 n, int64 mod,
+               nmod_poly_series_t trans) {
   const int64 m = static_cast<int64>(x.size());
 
   std::vector<T> b(n);
 
-  PolySeriesNMod(&x[0], m, n, &b[0], mod, trans);
+  PolySeries(&x[0], m, n, &b[0], mod, trans);
 
   return b;
 }
 
-namespace poly_flint_internal {
+namespace internal {
 // size result >= n
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyLogNModImpl(const T* x, int64 m, int64 n, T* result, int64 mod) {
-  PolySeriesNMod(x, m, n, result, mod, &nmod_poly_log_series);
+    PolyLogImpl(const T* x, int64 m, int64 n, T* result, int64 mod) {
+  PolySeries(x, m, n, result, mod, &nmod_poly_log_series);
 }
-}  // namespace poly_flint_internal
+}  // namespace internal
 
 // size result >= n
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyLogNMod(const T* x, int64 m, int64 n, T* result, int64 mod) {
+    PolyLog(const T* x, int64 m, int64 n, T* result, int64 mod) {
   using unsignedT = typename pe_make_unsigned<T>::type;
-  poly_flint_internal::PolyLogNModImpl<unsignedT>(
-      reinterpret_cast<const unsignedT*>(x), m, n,
-      reinterpret_cast<unsignedT*>(result), mod);
+  internal::PolyLogImpl<unsignedT>(reinterpret_cast<const unsignedT*>(x), m, n,
+                                   reinterpret_cast<unsignedT*>(result), mod);
 }
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyLogNMod(const std::vector<T>& x, int64 n, int64 mod) {
+    PolyLog(const std::vector<T>& x, int64 n, int64 mod) {
   const int64 m = static_cast<int64>(x.size());
 
   std::vector<T> b(n);
 
-  PolyLogNMod(&x[0], m, n, &b[0], mod);
+  PolyLog(&x[0], m, n, &b[0], mod);
 
   return b;
 }
 
-namespace poly_flint_internal {
+namespace internal {
 // size result >= n
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyExpNModImpl(const T* x, int64 m, int64 n, T* result, int64 mod) {
+    PolyExpImpl(const T* x, int64 m, int64 n, T* result, int64 mod) {
   PE_ASSERT(x[0] == 0);
-  PolySeriesNMod(x, m, n, result, mod, &nmod_poly_exp_series);
+  PolySeries(x, m, n, result, mod, &nmod_poly_exp_series);
 }
-}  // namespace poly_flint_internal
+}  // namespace internal
 
 // size result >= n
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyExpNMod(const T* x, int64 m, int64 n, T* result, int64 mod) {
+    PolyExp(const T* x, int64 m, int64 n, T* result, int64 mod) {
   using unsignedT = typename pe_make_unsigned<T>::type;
-  poly_flint_internal::PolyExpNModImpl<unsignedT>(
-      reinterpret_cast<const unsignedT*>(x), m, n,
-      reinterpret_cast<unsignedT*>(result), mod);
+  internal::PolyExpImpl<unsignedT>(reinterpret_cast<const unsignedT*>(x), m, n,
+                                   reinterpret_cast<unsignedT*>(result), mod);
 }
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyExpNMod(const std::vector<T>& x, int64 n, int64 mod) {
+    PolyExp(const std::vector<T>& x, int64 n, int64 mod) {
   const int64 m = static_cast<int64>(x.size());
 
   std::vector<T> b(n);
 
-  PolyExpNMod(&x[0], m, n, &b[0], mod);
+  PolyExp(&x[0], m, n, &b[0], mod);
 
   return b;
 }
 
-namespace poly_flint_internal {
+namespace internal {
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyMultipointEvaluateNModImpl(const T* X, int64 n, const T* V,
-                                   const int64 m, T* result, int64 mod) {
+    PolyMultipointEvaluateImpl(const T* X, int64 n, const T* V, const int64 m,
+                               T* result, int64 mod) {
   nmod_poly_t u;
   nmod_poly_init2(u, mod, n);
   for (int64 i = 0; i < n; ++i) {
@@ -530,14 +533,14 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   }
   nmod_poly_clear(u);
 }
-}  // namespace poly_flint_internal
+}  // namespace internal
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyMultipointEvaluateNMod(const T* X, const int64 n, const T* V,
-                               const int64 m, T* result, int64 mod) {
+    PolyMultipointEvaluate(const T* X, const int64 n, const T* V, const int64 m,
+                           T* result, int64 mod) {
   using unsignedT = typename pe_make_unsigned<T>::type;
-  poly_flint_internal::PolyMultipointEvaluateNModImpl<unsignedT>(
+  internal::PolyMultipointEvaluateImpl<unsignedT>(
       reinterpret_cast<const unsignedT*>(X), n,
       reinterpret_cast<const unsignedT*>(V), m,
       reinterpret_cast<unsignedT*>(result), mod);
@@ -546,10 +549,10 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 // size(V) = n
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyMultipointEvaluateNMod(const T* X, const int64 n, const T* V, T* result,
-                               int64 mod) {
+    PolyMultipointEvaluate(const T* X, const int64 n, const T* V, T* result,
+                           int64 mod) {
   using unsignedT = typename pe_make_unsigned<T>::type;
-  poly_flint_internal::PolyMultipointEvaluateNModImpl<unsignedT>(
+  internal::PolyMultipointEvaluateImpl<unsignedT>(
       reinterpret_cast<const unsignedT*>(X), n,
       reinterpret_cast<const unsignedT*>(V), n, static_cast<unsignedT*>(result),
       mod);
@@ -557,12 +560,12 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyMultipointEvaluateNMod(const std::vector<T>& X, const std::vector<T>& V,
-                               int64 mod) {
+    PolyMultipointEvaluate(const std::vector<T>& X, const std::vector<T>& V,
+                           int64 mod) {
   const int64 n = static_cast<int64>(X.size());
   const int64 m = static_cast<int64>(V.size());
   std::vector<T> result(m);
-  PolyMultipointEvaluateNMod(&X[0], n, &V[0], m, &result[0], mod);
+  PolyMultipointEvaluate(&X[0], n, &V[0], m, &result[0], mod);
   return result;
 }
 }  // namespace poly_flint

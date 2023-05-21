@@ -14,8 +14,8 @@ struct MulImpl {
 };
 MulImpl mul_impl[] = {
 #if HAS_POLY_MUL_FLINT && !ONLY_RUN_PE_IMPLEMENTATION
-    {&poly_flint::PolyMulNMod<uint64>, 4, "flint n"},
-    {&poly_flint::PolyMulPMod<uint64>, 4, "flint p"},
+    {&poly_flint::PolyMul<uint64>, 4, "flint n"},
+    {&poly_flint::PolyMul<uint64>, 4, "flint p"},
 #else
     {&ntt64::PolyMulLarge<uint64>, 4, "ntt64 l"},
 #endif

@@ -30,17 +30,17 @@ MulImpl mul_impl[] = {
     {&ntt64::PolyMulLarge<uint64>, 4, "ntt64 l"},
 #endif
 #if HAS_POLY_MUL_MIN25_SMALL && !ONLY_RUN_PE_IMPLEMENTATION
-    {&poly_min25::PolyMulSmall<uint64>, 1, "Min_25 s"},
+    {&min25::PolyMulSmall<uint64>, 1, "Min_25 s"},
 #endif
 #if HAS_POLY_MUL_MIN25 && !ONLY_RUN_PE_IMPLEMENTATION
-    {&poly_min25::PolyMulLarge<uint64>, 4, "Min_25 l"},
+    {&min25::PolyMulLarge<uint64>, 4, "Min_25 l"},
 #endif
 #if HAS_POLY_MUL_LIBBF && !ONLY_RUN_PE_IMPLEMENTATION
-    {&poly_libbf::PolyMul<uint64>, 4, "libbf"},
+    {&libbf::PolyMul<uint64>, 4, "libbf"},
 #endif
 #if HAS_POLY_MUL_NTL && !ONLY_RUN_PE_IMPLEMENTATION
-    {&poly_ntl::PolyMulLargeMod<uint64>, 4, "ntl lm"},
-    {&poly_ntl::PolyMul<uint64>, 4, "ntl"},
+    {&ntl::PolyMulLargeMod<uint64>, 4, "ntl lm"},
+    {&ntl::PolyMul<uint64>, 4, "ntl"},
 #endif
     //    {&PolyMul<uint64>, 4, "default"},
 };

@@ -68,8 +68,8 @@ namespace pmod {
 namespace internal {
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyMulImpl(const T* X, const int64 n, const T* Y, const int64 m,
-                    T* result, int64 mod) {
+    PolyMulImpl(const T* X, const int64 n, const T* Y, const int64 m, T* result,
+                int64 mod) {
   fmpz_t xmod;
   fmpz_init_set_ui(xmod, mod);
 
@@ -290,7 +290,8 @@ POLY_MOD_IMPL(PolyMod, PolyDivAndMod)
 namespace internal {
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyPowerImpl(const T* x, int64 m, int64 n, int64 t, T* result, int64 mod) {
+    PolyPowerTruncImpl(const T* x, int64 m, int64 n, int64 t, T* result,
+                       int64 mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
 
   nmod_poly_t u, v;
@@ -303,8 +304,12 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 
   nmod_poly_pow_trunc(v, u, n, t);
 
-  for (int64 i = 0; i < t; ++i) {
+  const int64 size = nmod_poly_length(v);
+  for (int64 i = 0; i < size; ++i) {
     result[i] = nmod_poly_get_coeff_ui(v, i);
+  }
+  for (int64 i = size; i < t; ++i) {
+    result[i] = 0;
   }
 
   nmod_poly_clear(u);
@@ -314,31 +319,103 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyPower(const T* x, int64 m, int64 n, int64 t, T* result, int64 mod) {
+    PolyPowerTrunc(const T* x, int64 m, int64 n, int64 t, T* result,
+                   int64 mod) {
   using unsignedT = typename pe_make_unsigned<T>::type;
-  internal::PolyPowerImpl<unsignedT>(reinterpret_cast<const unsignedT*>(x), m,
-                                     n, t, reinterpret_cast<unsignedT*>(result),
-                                     mod);
+  if (m == 0) {
+    fill(result, result + t, 0);
+    return;
+  }
+  if (n == 0) {
+    fill(result, result + t, 0);
+    result[0] = 1 % mod;
+    return;
+  }
+  internal::PolyPowerTruncImpl<unsignedT>(
+      reinterpret_cast<const unsignedT*>(x), m, n, t,
+      reinterpret_cast<unsignedT*>(result), mod);
 }
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyPower(const std::vector<T>& x, int64 n, int64 t, int64 mod) {
+    PolyPowerTrunc(const std::vector<T>& x, int64 n, int64 t, int64 mod) {
   const int64 m = static_cast<int64>(x.size());
+  if (m == 0) {
+    return {0};
+  }
+  if (n == 0) {
+    return {1 % mod};
+  }
 
   std::vector<T> b(t);
 
-  PolyPower(&x[0], m, n, t, &b[0], mod);
+  PolyPowerTrunc(&x[0], m, n, t, &b[0], mod);
+
+  AdjustPolyLeadingZero(b);
 
   return b;
 }
 
-namespace pmod {
 namespace internal {
-#if __FLINT_RELEASE >= 20900
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyPowerImpl(const T* x, int64 m, int64 n, int64 t, T* result, int64 mod) {
+    PolyPowerImpl(const T* x, int64 m, int64 n, T* result, int64 mod) {
+  static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
+
+  nmod_poly_t u, v;
+  nmod_poly_init2(u, mod, m);
+  for (int64 i = 0; i < m; ++i) {
+    nmod_poly_set_coeff_ui(u, i, x[i]);
+  }
+
+  nmod_poly_init(v, mod);
+
+  nmod_poly_pow(v, u, n);
+
+  const int64 size = nmod_poly_length(v);
+  for (int64 i = 0; i < size; ++i) {
+    result[i] = nmod_poly_get_coeff_ui(v, i);
+  }
+
+  nmod_poly_clear(u);
+  nmod_poly_clear(v);
+}
+}  // namespace internal
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
+    PolyPower(const std::vector<T>& x, int64 n, int64 mod) {
+  const int64 m = static_cast<int64>(x.size());
+  if (m == 0) {
+    return {0};
+  }
+  if (n == 0) {
+    return {1 % mod};
+  }
+
+  using unsignedT = typename pe_make_unsigned<T>::type;
+  std::vector<T> b;
+  internal::PolyPowerImpl<unsignedT>(reinterpret_cast<const unsignedT*>(x), m,
+                                     n, b, mod);
+
+  const int64 size = b.size();
+  std::vector<T> result(size);
+  for (int64 i = 0; i < size; ++i) {
+    result[i] = static_cast<T>(b[i]);
+  }
+
+  AdjustPolyLeadingZero(result);
+
+  return result;
+}
+
+#if __FLINT_RELEASE >= 20900
+namespace pmod {
+namespace internal {
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    PolyPowerTruncImpl(const T* x, int64 m, int64 n, int64 t, T* result,
+                       int64 mod) {
   fmpz_t xmod;
   fmpz_init_set_ui(xmod, mod);
 
@@ -355,11 +432,94 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     fq_nmod_poly_set_coeff_fmpz(u, i, c, ctx);
   }
 
-  fq_nmod_poly_init2(v, n, ctx);
+  fq_nmod_poly_init2(v, t, ctx);
 
   fq_nmod_poly_pow_trunc(v, u, n, t, ctx);
 
-  for (int64 i = 0; i < n; ++i) {
+  const int64 size = fq_nmod_poly_length(v, ctx);
+  for (int64 i = 0; i < size; ++i) {
+    auto t = nmod_poly_get_coeff_ui(v[0].coeffs + i, 0);
+    result[i] = t;
+  }
+  for (int64 i = size; i < t; ++i) {
+    result[i] = 0;
+  }
+
+  fq_nmod_poly_clear(u, ctx);
+  fq_nmod_poly_clear(v, ctx);
+  fq_nmod_ctx_clear(ctx);
+  fmpz_clear(xmod);
+  fmpz_clear(c);
+}
+}  // namespace internal
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    PolyPowerTrunc(const T* x, int64 m, int64 n, int64 t, T* result,
+                   int64 mod) {
+  using unsignedT = typename pe_make_unsigned<T>::type;
+  if (m == 0) {
+    fill(result, result + t, 0);
+    return;
+  }
+  if (n == 0) {
+    fill(result, result + t, 0);
+    result[0] = 1 % mod;
+    return;
+  }
+  internal::PolyPowerTruncImpl<unsignedT>(
+      reinterpret_cast<const unsignedT*>(x), m, n, t,
+      reinterpret_cast<unsignedT*>(result), mod);
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
+    PolyPowerTrunc(const std::vector<T>& x, int64 n, int64 t, int64 mod) {
+  const int64 m = static_cast<int64>(x.size());
+  if (m == 0) {
+    return {0};
+  }
+  if (n == 0) {
+    return {1 % mod};
+  }
+
+  std::vector<T> b(t);
+
+  PolyPowerTrunc(&x[0], m, n, t, &b[0], mod);
+
+  AdjustPolyLeadingZero(b);
+
+  return b;
+}
+
+namespace internal {
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    PolyPowerImpl(const T* x, int64 m, int64 n, int64 t, std::vector<T>& result,
+                  int64 mod) {
+  fmpz_t xmod;
+  fmpz_init_set_ui(xmod, mod);
+
+  fq_nmod_ctx_t ctx;
+  fq_nmod_ctx_init(ctx, xmod, 1, "Z");
+
+  fq_nmod_poly_t u, v;
+  fq_nmod_poly_init2(u, m, ctx);
+
+  fmpz_t c;
+  fmpz_init(c);
+  for (int64 i = 0; i < m; ++i) {
+    fmpz_set_si(c, x[i]);
+    fq_nmod_poly_set_coeff_fmpz(u, i, c, ctx);
+  }
+
+  fq_nmod_poly_init(v, ctx);
+
+  fq_nmod_poly_pow(v, u, n, ctx);
+
+  int64 size = fq_nmod_poly_length(v, ctx);
+  result.resize(size);
+  for (int64 i = 0; i < size; ++i) {
     auto t = nmod_poly_get_coeff_ui(v[0].coeffs + i, 0);
     result[i] = t;
   }
@@ -370,31 +530,36 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   fmpz_clear(xmod);
   fmpz_clear(c);
 }
-#endif
 }  // namespace internal
-#if __FLINT_RELEASE >= 20900
-template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyPower(const T* x, int64 m, int64 n, int64 t, T* result, int64 mod) {
-  using unsignedT = typename pe_make_unsigned<T>::type;
-  internal::PolyPowerImpl<unsignedT>(reinterpret_cast<const unsignedT*>(x), m,
-                                     n, t, reinterpret_cast<unsignedT*>(result),
-                                     mod);
-}
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyPower(const std::vector<T>& x, int64 n, int64 t, int64 mod) {
+    PolyPower(const std::vector<T>& x, int64 n, int64 mod) {
   const int64 m = static_cast<int64>(x.size());
+  if (m == 0) {
+    return {0};
+  }
+  if (n == 0) {
+    return {1 % mod};
+  }
 
-  std::vector<T> b(t);
+  using unsignedT = typename pe_make_unsigned<T>::type;
+  std::vector<T> b;
+  internal::PolyPowerImpl<unsignedT>(reinterpret_cast<const unsignedT*>(x), m,
+                                     n, b, mod);
 
-  PolyPower(&x[0], m, n, t, &b[0], mod);
+  const int64 size = b.size();
+  std::vector<T> result(size);
+  for (int64 i = 0; i < size; ++i) {
+    result[i] = static_cast<T>(b[i]);
+  }
 
-  return b;
+  AdjustPolyLeadingZero(result);
+
+  return result;
 }
-#endif
 }  // namespace pmod
+#endif
 
 // More function can be found here:
 // https://flintlib.org/doc/nmod_poly.html#transcendental-functions

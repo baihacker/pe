@@ -124,7 +124,6 @@ SL NModPoly PolyMul(const NModPoly& X, const NModPoly& Y) {
 }
 
 SL NModPoly PolyInv(const NModPoly& x, int64 n) {
-  // It is assumed that mod is a prime
   return NModPoly(PolyInv(x.data, n, x.mod), x.mod);
 }
 
@@ -160,7 +159,6 @@ PPOLY_DIV_IMPL(PolyDiv, pe::PolyDiv)
 PPOLY_MOD_IMPL(PolyMod, pe::PolyMod)
 
 inline NModPoly NModPoly::Inv(int64 n) const {
-  // It is assumed that mod is a prime
   auto t = PolyInv(data, n, mod);
   return NModPoly(std::vector<int64>(static_cast<int64*>(&t[0]),
                                      static_cast<int64*>(&t[0]) + t.size()),
@@ -168,32 +166,11 @@ inline NModPoly NModPoly::Inv(int64 n) const {
 }
 
 NModPoly operator<<(const NModPoly& p, int64 m) {
-  if (m == 0) {
-    return p;
-  }
-  std::vector<int64> new_data(p.data.size() + m);
-  for (int64 i = static_cast<int64>(p.data.size()) + m - 1; i >= m; --i) {
-    new_data[i] = p.data[i - m];
-  }
-  for (int64 i = 0; i < m; ++i) {
-    new_data[i] = 0;
-  }
-  return NModPoly(std::move(new_data), p.mod);
+  return NModPoly(PolyShiftLeft<int64>(p.data, m), p.mod);
 }
 
 NModPoly operator>>(const NModPoly& p, int64 m) {
-  if (m == 0) {
-    return p;
-  }
-  if (m >= p.size()) {
-    return NModPoly{std::vector<int64>{0}, p.mod};
-  }
-  const int64 new_size = p.size() - m;
-  std::vector<int64> new_data(new_size);
-  for (int i = 0; i < new_size; ++i) {
-    new_data[i] = p.data[i + m];
-  }
-  return NModPoly(std::move(new_data), p.mod);
+  return NModPoly(PolyShiftRight<int64>(p.data, m), p.mod);
 }
 
 SL NModPoly operator-(const NModPoly& x, const NModPoly& y) {

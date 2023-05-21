@@ -744,6 +744,43 @@ POLY_MUL_IMPL(PolyMulLarge, PolyMulLargeImpl)
 }  // namespace ntt64
 
 template <typename T>
+std::vector<T> PolyShift(const std::vector<T>& p, int64 m) {
+  if (m == 0) {
+    return p;
+  }
+  if (m > 0) {
+    std::vector<T> ret(p.size() + m);
+    for (int64 i = static_cast<int64>(p.size()) + m - 1; i >= m; --i) {
+      ret[i] = p[i - m];
+    }
+    for (int64 i = 0; i < m; ++i) {
+      ret[i] = 0;
+    }
+    return ret;
+  } else {
+    if (m >= p.size()) {
+      return {0};
+    }
+    const int64 new_size = p.size() - m;
+    std::vector<T> ret(new_size);
+    for (int i = 0; i < new_size; ++i) {
+      ret[i] = p[i + m];
+    }
+    return ret;
+  }
+}
+
+template <typename T>
+std::vector<T> PolyShiftLeft(const std::vector<T>& p, int64 m) {
+  return PolyShift(p, m);
+}
+
+template <typename T>
+std::vector<T> PolyShiftRight(const std::vector<T>& p, int64 m) {
+  return PolyShift(p, -m);
+}
+
+template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyAdd(const T* X, const int64 n, const T* Y, const int64 m, T* result,
             int64 mod) {
@@ -1226,6 +1263,9 @@ SL std::vector<T> PolyMul(const std::vector<T>& X, const std::vector<T>& Y) {
 
   return result;
 }
+
+using flint::PolyPowerTrunc;
+using flint::PolyPower;
 
 // https://zhuanlan.zhihu.com/p/65998145
 namespace fwt {
@@ -2041,9 +2081,9 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 
 // Evaluates a polynomial at v.
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(int64)
-    PolyEvaluate(const T* x, int64 n, int64 v, int64 mod) {
-  int64 result = 0;
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
+    PolyEvaluate(const T* x, int64 n, T v, T mod) {
+  T result = 0;
   for (int64 i = n - 1; i >= 0; --i) {
     result = AddMod(MulMod(result, v, mod), x[i], mod);
   }
@@ -2052,9 +2092,25 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(int64)
 
 // Evaluates a polynomial at v.
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(int64)
-    PolyEvaluate(const std::vector<T>& x, int64 v, int64 mod) {
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
+    PolyEvaluate(const std::vector<T>& x, T v, T mod) {
   return PolyEvaluate<T>(&x[0], static_cast<int64>(x.size()), v, mod);
+}
+
+// Evaluates a polynomial at v.
+template <typename T>
+SL T PolyEvaluate(const T* x, int64 n, T v) {
+  T result = 0;
+  for (int64 i = n - 1; i >= 0; --i) {
+    result = result * v + x[i];
+  }
+  return result;
+}
+
+// Evaluates a polynomial at v.
+template <typename T>
+SL T PolyEvaluate(const std::vector<T>& x, T v) {
+  return PolyEvaluate<T>(&x[0], static_cast<int64>(x.size()), v);
 }
 
 namespace internal {

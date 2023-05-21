@@ -78,7 +78,7 @@ See [example.c](https://github.com/baihacker/pe/blob/master/example/example.c) f
 * pe_poly_base: Polynomial basic algorithms.
 * pe_poly_base_flint: Flint based polynomial basic algorithms.
 * pe_poly_base_libbf: Libbf based polynomial basic algorithms.
-* pe_poly_base_min_25: [Min_25](https://github.com/min-25)'s polynomial basic algorithms. The polynomial multiplication implementation is the fastest one among mod polynomials integrated into pe.
+* pe_poly_base_min25: [Min_25](https://github.com/min-25)'s polynomial basic algorithms. The polynomial multiplication implementation is the fastest one among mod polynomials integrated into pe.
 * pe_poly_base_ntl: Ntl based polynomial basic algorithms.
 * pe_rand: Random number.
 * pe_range: generate an range of numbers, iterate a container with index.

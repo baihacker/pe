@@ -3274,6 +3274,7 @@ struct DfaCounter {
     dfa_.Reset({state_count, number_base_});
 
     dp_.Reset({max_len + 1, state_count});
+    acc_.resize(max_len + 1);
 
     target_state_.resize(state_count);
     std::fill(target_state_.begin(), target_state_.end(), 0);
@@ -3297,6 +3298,8 @@ struct DfaCounter {
     for (int i = 0; i < state_count_; ++i) {
       dp_[0][i] = target_state_[i];
     }
+
+    acc_[0] = 0;
     for (int i = 1; i <= max_len_; ++i) {
       for (int j = 0; j < state_count_; ++j) {
         auto to = dfa_[j];
@@ -3306,7 +3309,9 @@ struct DfaCounter {
         }
         dp_[i][j] = tmp;
       }
+      acc_[i] = dp_[i][0] + acc_[i - 1];
     }
+
     prepared_ = 1;
   }
 
@@ -3349,9 +3354,34 @@ struct DfaCounter {
     return result;
   }
 
+  int FindLen(CT k) {
+    int len = 0;
+    if (count_each_len_ == 0) {
+      while (dp_[len][0] < k && len + 1 <= max_len_) {
+        ++len;
+      }
+      PE_ASSERT(dp_[len][0] >= k);
+    } else {
+      while (len == 0 ||
+             dp_[len][0] + acc_[len - 1] < k && len + 1 <= max_len_) {
+        k -= dp_[len++][0];
+      }
+      PE_ASSERT(dp_[len][0] + acc_[len - 1] >= k);
+    }
+    return len;
+  }
+
   template <typename U>
-  U CalKth(CT k, U max_v) {
-    U l = 1, r = max_v;
+  U CalKth(CT k, U unused = 0) {
+    if (prepared_ == 0) {
+      Prepare();
+      prepared_ = 1;
+    }
+
+    U l = 1, r = 0;
+    for (int len = FindLen(k); len--;) {
+      r = r * number_base_ + number_base_ - 1;
+    }
     while (l <= r) {
       U mid = (l + r) / 2;
       if (Cal(mid) >= k) {
@@ -3370,12 +3400,9 @@ struct DfaCounter {
       prepared_ = 1;
     }
 
-    PE_ASSERT(count_each_len_ == 0);
-
-    int len = 0;
-    while (dp_[len][0] < k) {
-      ++len;
-      PE_ASSERT(len <= max_len_);
+    int len = FindLen(k);
+    if (count_each_len_) {
+      k -= acc_[len - 1];
     }
 
     U result = 0;
@@ -3403,6 +3430,7 @@ struct DfaCounter {
   int max_len_ = 0;
   DArray<int, 2> dfa_;
   DArray<CT, 2> dp_;
+  std::vector<CT> acc_;
   std::vector<int> target_state_;
 };
 

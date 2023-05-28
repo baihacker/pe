@@ -3350,7 +3350,7 @@ struct DfaCounter {
   }
 
   template <typename U>
-  CT CalKth(CT k, U max_v) {
+  U CalKth(CT k, U max_v) {
     U l = 1, r = max_v;
     while (l <= r) {
       U mid = (l + r) / 2;
@@ -3361,6 +3361,38 @@ struct DfaCounter {
       }
     }
     return l;
+  }
+
+  template <typename U>
+  U CalKthEx(CT k, U unused = 0) {
+    if (prepared_ == 0) {
+      Prepare();
+      prepared_ = 1;
+    }
+
+    PE_ASSERT(count_each_len_ == 0);
+
+    int len = 0;
+    while (dp_[len][0] < k) {
+      ++len;
+      PE_ASSERT(len <= max_len_);
+    }
+
+    U result = 0;
+    for (int state = 0; len > 0; --len) {
+      for (int i = 0; i < number_base_; ++i) {
+        int now = dfa_[state][i];
+        CT cnt = dp_[len - 1][now];
+        if (cnt >= k) {
+          result = result * number_base_ + i;
+          state = now;
+          break;
+        } else {
+          k -= cnt;
+        }
+      }
+    }
+    return result;
   }
 
  private:

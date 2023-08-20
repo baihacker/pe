@@ -172,26 +172,25 @@
 #define PE_ASSERT(x)
 #endif
 
-// For a known function <name>(IT) -> OT, this macro
-// 1. Defines a map with key type = IT and value type = TO to memorize the
-// values.
-// 2. Defines a function named <name>_c which can utilize the map defined in 1
-// as cache to retrieve values.
-// 3. Defines a function named <name>_map to get the map defined in 1.
-#define PE_MEM(IT, OT, name)                        \
-  std::map<IT, OT> PE_CONCAT(name, __LINE__);       \
-                                                    \
-  SL OT PE_CONCAT(name, _c)(IT x) {                 \
-    auto where = PE_CONCAT(name, __LINE__).find(x); \
-    if (where != PE_CONCAT(name, __LINE__).end()) { \
-      return where->second;                         \
-    }                                               \
-    return PE_CONCAT(name, __LINE__)[x] = name(x);  \
-  }                                                 \
-                                                    \
-  SL std::map<IT, OT>& PE_CONCAT(name, _map)() {    \
-    return PE_CONCAT(name, __LINE__);               \
+template <typename IT, typename OT>
+class Cached {
+ public:
+  Cached(const std::function<OT(IT)>& impl) : impl_(impl) {}
+
+  void Clear() { mem_.clear(); }
+
+  OT operator()(IT key) {
+    auto where = mem_.find(key);
+    if (where != mem_.end()) {
+      return where->second;
+    }
+    return mem_[key] = impl_(key);
   }
+
+ private:
+  std::function<OT(IT)> impl_;
+  std::unordered_map<IT, OT> mem_;
+};
 
 #if ENABLE_OPENMP
 SL int tid(void) { return omp_get_thread_num(); }

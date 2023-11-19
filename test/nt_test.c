@@ -108,7 +108,7 @@ SL void SquareRootModTest() {
     const int64 p = plist[i];
     int cnt = 0;
     for (int n = 0; n < p; ++n) {
-      std::vector<int64> ans = SquareRootMod(n, p);
+      std::vector<int64> ans = pmod::SquareRootMod(n, p);
       for (auto x : ans) {
         assert(x * x % p == n);
       }

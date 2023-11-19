@@ -1057,13 +1057,58 @@ class IndSolver {
   std::unordered_map<int64, int> mem_;
 };
 
+namespace flint {
+#if ENABLE_FLINT && GMP_LIMB_BITS == 64
+std::vector<int64> SquareRootMod(int64 n, const IntegerFactorization& mod_f) {
+  const int size = static_cast<int>(mod_f.size());
+  n_factor_t ff;
+  for (int i = 0; i < size; ++i) {
+    ff.p[i] = mod_f[i].first;
+    ff.exp[i] = mod_f[i].second;
+  }
+  ff.num = size;
+
+  ulong* ans;
+  int cnt = n_sqrtmodn(&ans, n, &ff);
+  if (cnt == 0) return {};
+
+  std::vector<int64> ret(ans, ans + cnt);
+  flint_free(ans);
+
+  return ret;
+}
+
+std::vector<int64> SquareRootMod(int64 n, int64 mod) {
+  return SquareRootMod(n, Factorize(mod));
+}
+
+namespace pmod {
+std::vector<int64> SquareRootMod(int64 n, int64 p, int e = 1) {
+
+  ulong* ans;
+  int cnt = n_sqrtmod_primepow(&ans, n, p, e);
+  if (cnt == 0) return {};
+
+  std::vector<int64> ret(ans, ans + cnt);
+  flint_free(ans);
+
+  return ret;
+}
+}
+#define HAS_SQUARE_ROOT_MOD_FLINT 1
+#else
+#define HAS_SQUARE_ROOT_MOD_FLINT 0
+#endif
+}  // namespace flint
+
+namespace pmod {
 namespace internal {
 // returns x where x^2 = n mod p
 // if no solution, return -1.
 // https://en.wikipedia.org/wiki/Tonelli%E2%80%93Shanks_algorithm
 SL int64 SquareRootModImpl(int64 n, int64 p) {
   if (p == 2) {
-    return n;
+    return n & 1;
   }
   if (n == 0) {
     return 0;
@@ -1140,6 +1185,7 @@ SL std::vector<int64> RootMod(int64 a, int64 n, int64 p,
   } while (oldx != x);
   return result;
 }
+}  // namespace pmod
 
 // (x+yi)(a+bi)
 SL void GaussMul(int64& x, int64& y, int64 a, int64 b) {

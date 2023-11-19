@@ -159,12 +159,12 @@ void NtExample() {
 
   {
     // Output 4 and 9 since 4^2 = 9^2 = 3 (mod 13)
-    std::cout << SquareRootMod(3, 13) << std::endl;
+    std::cout << pmod::SquareRootMod(3, 13) << std::endl;
   }
 
   {
     // Output 7, 8, 11 since 7^3 = 8^3 = 11^3 = 5 (mod 13)
-    std::cout << RootMod(5, 3, 13) << std::endl;
+    std::cout << pmod::RootMod(5, 3, 13) << std::endl;
   }
 }
 

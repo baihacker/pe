@@ -112,14 +112,9 @@ void NtExample() {
 
   {
     // Solve 3 * x = 4 (mod 7)
-    auto t = SolveLinearEquation(3, 4, 7);
-    // Whether the solution exists.
-    auto have = std::get<0>(t);
-    // The solutions are x + k m where k is an integer.
-    auto x = std::get<1>(t);
-    auto m = std::get<2>(t);
+    auto ans = SolveLinearEquation(3, 4, 7);
     // Output 1 4 7 since the solutions are 6 + k * 7.
-    std::cout << have << " " << x << " " << m << std::endl;
+    std::cout << ans.ok << " " << ans.value << " " << ans.mod << std::endl;
   }
 
   {
@@ -127,10 +122,9 @@ void NtExample() {
     // Whether the solution exists.
     int have;
     // The solution are x + k m where k is an integer.
-    int64 x, m;
-    std::tie(have, x, m) = Crt2<int64>(1, 3, 2, 5);
+    auto ans = Crt2<int64>(1, 3, 2, 5);
     // Output 1 7 15 since the solutions are 7 + k * 15.
-    std::cout << have << " " << x << " " << m << std::endl;
+    std::cout << ans.ok << " " << ans.value << " " << ans.value << std::endl;
 
     // CrtN(const T* val, const T* mod, int n) is also available.
   }

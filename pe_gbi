@@ -11,8 +11,8 @@
 #include "pe_fraction"
 
 namespace pe {
-// Each gbi specializes this template. It should provide a method "Of" to convert
-// which is similar to constructor.
+// Each gbi specializes this template. It should provide a method "Of" to
+// convert which is similar to constructor.
 template <typename GBI>
 struct Gbi;
 
@@ -293,14 +293,9 @@ SL REQUIRES((is_gbi_v<GBI>)) RETURN(GBI) ModInv(const GBI& a, const GBI& mod) {
 }
 
 // Solves equation a x = b (mod m)
-// Returns 0 and set u = -1 and v = 0 if failed
-// Returns 1, x = v (mod u)
 template <typename GBI>
-SL REQUIRES((is_gbi_v<GBI>)) RETURN(int)
-    SolveLinearEquation(GBI a, GBI b, const GBI& m, GBI& v, GBI& u) {
-  v = 0;
-  u = 0;
-
+SL REQUIRES((is_gbi_v<GBI>)) RETURN(ModValue<GBI>)
+    SolveLinearEquation(GBI a, GBI b, const GBI& m) {
   PE_ASSERT(!IsZero(m));
 
   a %= m;
@@ -311,34 +306,21 @@ SL REQUIRES((is_gbi_v<GBI>)) RETURN(int)
 
   GBI xx = 0, yy = 0, d = ExGcd(a, m, xx, yy);
 
-  if (!(b % d).isZero()) return 0;
+  if (!(b % d).isZero()) return ModValue<GBI>{0};
 
   xx = (xx % m + m) % m;
   xx = xx * (b / d) % m;
 
-  u = m / d;
-  v = xx % u;
+  GBI mod = m / d;
+  GBI value = xx % mod;
 
-  return 1;
-}
-
-template <typename GBI>
-SL REQUIRES((is_gbi_v<GBI>)) RETURN(std::tuple<int, GBI, GBI>)
-    SolveLinearEquation(const GBI& a, const GBI& b, const GBI& m) {
-  GBI v = 0, u = 0;
-  int r = SolveLinearEquation<GBI>(a, b, m, v, u);
-  return std::tuple<int, GBI, GBI>{r, v, u};
+  return ModValue<GBI>{1, value, mod};
 }
 
 // Solves equation x = a (mod m1) x = b (mod m2)
-// Returns 0 and set u = 0 and t = 0 if failed
-// Returns 1, x = v (mod u)
 template <typename GBI>
-SL REQUIRES((is_gbi_v<GBI>)) RETURN(int)
-    Crt2(GBI a, const GBI& m1, GBI b, const GBI& m2, GBI& v, GBI& u) {
-  v = 0;
-  u = 0;
-
+SL REQUIRES((is_gbi_v<GBI>)) RETURN(ModValue<GBI>)
+    Crt2(GBI a, const GBI& m1, GBI b, const GBI& m2) {
   PE_ASSERT(!IsZero(m1) && !IsZero(m2));
   // x = a (mod m1)
   // x = b (mod m2)
@@ -350,41 +332,33 @@ SL REQUIRES((is_gbi_v<GBI>)) RETURN(int)
   if (a < 0) a = -a;
   if (b < 0) b = -b;
 
-  GBI s = 0, t = 0;
-  if (!SolveLinearEquation(m1, b - a, m2, t, s)) return 0;
+  ModValue<GBI> mod_value = SolveLinearEquation(m1, b - a, m2);
+  if (!mod_value.ok) return 0;
   // k0 = k1 * s + t
   // x = (k1 * s + t) * m1 + a
   // x = k1 * s * m1 + (a + t * m1)
 
-  u = s * m1;
-  v = ((a + t * m1) % u + u) % u;
-  return 1;
+  GBI mod = mod_value.mod * m1;
+  GBI value = ((a + mod_value.value * m1) % mod + mod) % mod;
+
+  return ModValue<GBI>{1, value, mod};
 }
 
 template <typename GBI>
-SL REQUIRES((is_gbi_v<GBI>)) RETURN(std::tuple<int, GBI, GBI>)
-    Crt2(const GBI& a, const GBI& m1, const GBI& b, const GBI& m2) {
-  GBI v = 0, u = 0;
-  int r = Crt2(a, m1, b, m2, v, u);
-  return std::tuple<int, GBI, GBI>{r, v, u};
-}
-
-template <typename GBI>
-SL REQUIRES((is_gbi_v<GBI>)) RETURN(std::tuple<int, GBI, GBI>)
+SL REQUIRES((is_gbi_v<GBI>)) RETURN(ModValue<GBI>)
     CrtN(const GBI* val, const GBI* mod, int n) {
-  GBI v = 0, u = 1;
-  int have = 1;
+  ModValue<GBI> ret{1, 0, 1};
   for (int i = 0; i < n; ++i) {
-    std::tie(have, v, u) = Crt2(v, u, val[i], mod[i]);
-    if (!have) {
-      return std::tuple<int, GBI, GBI>{0, 0, 0};
+    ret = Crt2(ret.value, ret.mod, val[i], mod[i]);
+    if (!ret.ok) {
+      return ModValue<GBI>{0};
     }
   }
-  return std::tuple<int, GBI, GBI>{have, v, u};
+  return ret;
 }
 
 template <typename GBI>
-SL REQUIRES((is_gbi_v<GBI>)) RETURN(std::tuple<int, GBI, GBI>)
+SL REQUIRES((is_gbi_v<GBI>)) RETURN(ModValue<GBI>)
     CrtN(const std::vector<GBI>& val, const std::vector<GBI>& mod) {
   return CrtN<GBI>(&val[0], &mod[0], val.size());
 }

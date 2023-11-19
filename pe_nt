@@ -323,13 +323,17 @@ SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
 // p is prime
 SL int64 InvOf(int64 x, int64 p) { return PowerMod(x, p - 2, p); }
 
-namespace internal {
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(int)
-    SolveLinearEquationImpl(T a, T b, T m, T& v, T& u) {
-  v = 0;
-  u = 0;
+struct ModValue {
+  int ok = 0;
+  T value;
+  T mod;
+};
 
+// Solves equation a x = b (mod m)
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(ModValue<T>)
+    SolveLinearEquation(T a, T b, T m) {
   PE_ASSERT(m);
 
   if (m < 0) m = -m;
@@ -346,45 +350,21 @@ SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(int)
 
   T xx = 0, yy = 0, d = ExGcd(a, m, xx, yy);
 
-  if (b % d) return 0;
+  if (b % d) return ModValue<T>{0};
 
   xx = (xx % m + m) % m;
   xx = xx * (b / d) % m;
 
-  u = m / d;
-  v = xx % u;
+  T mod = m / d;
+  T value = xx % mod;
 
-  return 1;
-}
-}  // namespace internal
-
-// solve equation a x = b (mod m)
-// return 0 and set u = -1 and v = 0 if failed
-// return 1, x = v (mod u)
-template <typename T>
-SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(int)
-    SolveLinearEquation(const T& a, const T& b, const T& m, T& v, T& u) {
-  return internal::SolveLinearEquationImpl<T>(a, b, m, v, u);
+  return ModValue<T>{1, value, mod};
 }
 
+// Solves equation x = a (mod m1) x = b (mod m2)
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>))
-    RETURN(std::tuple<int, T, T>)
-        SolveLinearEquation(const T& a, const T& b, const T& m) {
-  T v = 0, u = 0;
-  int r = internal::SolveLinearEquationImpl<T>(a, b, m, v, u);
-  return std::tuple<int, T, T>{r, v, u};
-}
-
-// solve equation x = a (mod m1) x = b (mod m2)
-// return 0 and set u = 0 and t = 0 if failed
-// return 1, x = v (mod u)
-template <typename T>
-SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(int)
-    Crt2(T a, T m1, T b, T m2, T& v, T& u) {
-  v = 0;
-  u = 0;
-
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(ModValue<T>)
+    Crt2(T a, T m1, T b, T m2) {
   PE_ASSERT(m1 != 0 && m2 != 0);
   if (m1 < 0) m1 = -m1;
   if (m2 < 0) m2 = -m2;
@@ -398,44 +378,37 @@ SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(int)
   if (a < 0) a = -a;
   if (b < 0) b = -b;
 
-  T s = 0, t = 0;
-  if (!SolveLinearEquation(m1, b - a, m2, t, s)) return 0;
+  ModValue<T> mod_value = SolveLinearEquation(m1, b - a, m2);
+  if (!mod_value.ok) {
+    return ModValue<T>{0};
+  }
   // k0 = k1 * s + t
   // x = (k1 * s + t) * m1 + a
   // x = k1 * s * m1 + (a + t * m1)
 
-  u = s * m1;
-  v = ((a + t * m1) % u + u) % u;
-  return 1;
+  T mod = mod_value.mod * m1;
+  T value = ((a + mod_value.value * m1) % mod + mod) % mod;
+
+  return ModValue<T>{1, value, mod};
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>))
-    RETURN(std::tuple<int, T, T>) Crt2(T a, T m1, T b, T m2) {
-  T v = 0, u = 0;
-  int r = Crt2(a, m1, b, m2, v, u);
-  return std::tuple<int, T, T>{r, v, u};
-}
-
-template <typename T>
-SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>))
-    RETURN(std::tuple<int, T, T>) CrtN(const T* val, const T* mod, int n) {
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(ModValue<T>)
+    CrtN(const T* val, const T* mod, int n) {
   PE_ASSERT(val != NULL && mod != NULL);
-  T v = 0, u = 1;
-  int have = 1;
+  ModValue<T> ret{1, 0, 1};
   for (int i = 0; i < n; ++i) {
-    std::tie(have, v, u) = Crt2(v, u, val[i], mod[i]);
-    if (!have) {
-      return std::tuple<int, T, T>{0, 0, 0};
+    ret = Crt2(ret.value, ret.mod, val[i], mod[i]);
+    if (!ret.ok) {
+      return ModValue<T>{0};
     }
   }
-  return std::tuple<int, T, T>{have, v, u};
+  return ret;
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>))
-    RETURN(std::tuple<int, T, T>)
-        CrtN(const std::vector<T>& val, const std::vector<T>& mod) {
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(ModValue<T>)
+    CrtN(const std::vector<T>& val, const std::vector<T>& mod) {
   return CrtN<T>(&val[0], &mod[0], val.size());
 }
 
@@ -504,10 +477,9 @@ SL T SumModValue(const int64 n, int64 remain, int64 mod) {
 template <typename T = int64>
 SL T CountModValue(const int64 n, int64 remain0, int64 mod0, int64 remain1,
                    int64 mod1) {
-  int64 remain, mod;
-  int has = Crt2<int64>(remain0, mod0, remain1, mod1, remain, mod);
-  if (!has) return 0;
-  return CountModValue<T>(n, remain, mod);
+  ModValue<int64> t = Crt2<int64>(remain0, mod0, remain1, mod1);
+  if (!t.ok) return 0;
+  return CountModValue<T>(n, t.value, t.mod);
 }
 
 // Returns the sum of x in the range [1, n] such that x = remain0 mod(mod0),
@@ -515,10 +487,9 @@ SL T CountModValue(const int64 n, int64 remain0, int64 mod0, int64 remain1,
 template <typename T = int64>
 SL T SumModValue(const int64 n, int64 remain0, int64 mod0, int64 remain1,
                  int64 mod1) {
-  int64 remain, mod;
-  int has = Crt2<int64>(remain0, mod0, remain1, mod1, remain, mod);
-  if (!has) return 0;
-  return SumModValue<T>(n, remain, mod);
+  ModValue<int64> t = Crt2<int64>(remain0, mod0, remain1, mod1);
+  if (!t.ok) return 0;
+  return SumModValue<T>(n, t.value, t.mod);
 }
 
 // Returns the number of x in the range [1, n] such that gcd(x, a) = 1.
@@ -1150,13 +1121,13 @@ SL std::vector<int64> RootMod(int64 a, int64 n, int64 p,
   // x^n = a mod p
   // n log_x = r mod q
   const int64 q = p - 1;
-  int64 u, v;
-  if (SolveLinearEquation(n % q, r % q, q, u, v) == 0) {
+  ModValue<int64> t = SolveLinearEquation(n % q, r % q, q);
+  if (!t.ok) {
     return std::vector<int64>{};
   }
   std::vector<int64> result;
-  int64 coe = PowerMod(sv.pr(), v, p);
-  int64 x = PowerMod(sv.pr(), u, p);
+  int64 coe = PowerMod(sv.pr(), t.mod, p);
+  int64 x = PowerMod(sv.pr(), t.value, p);
   int64 oldx = x;
   do {
     if (returned_count < 0 ||

@@ -1,13 +1,10 @@
-INCLUDE_PATH = ["D:/Hilbert/usr/include", "D:/Hilbert/usr/include/pe", "D:/Hilbert/usr/include/flint"]
-LIB_PATH = ["D:/Hilbert/usr/lib"]
-
 def _impl(ctx):
   return ctx.actions.run(
       use_default_shell_env = True,
       inputs = ctx.files.srcs,
       executable = 'g++',
       outputs = [ctx.outputs.target],
-      arguments = [x.path for x in ctx.files.srcs] + ["-o", ctx.outputs.target.path, "--std=c++17", "-O3", "-march=native", "-mtune=native", "-fopenmp", "-lquadmath", "-Wl,--stack,268435456", "-static", "-lbf", "-lgmpxx", "-lflint", "-lmpfr", "-lntl", "-lgmp", "-lprimesieve", "-lprimecount", "-Wno-delete-incomplete", "-Wno-shift-count-overflow"] + ["-I" + path for path in INCLUDE_PATH] + ["-L" + path for path in LIB_PATH],
+      arguments = [x.path for x in ctx.files.srcs] + ["-o", ctx.outputs.target.path, "--std=c++17", "-O3", "-march=native", "-mtune=native", "-fopenmp", "-lquadmath", "-Wl,--stack,268435456", "-static", "-lbf", "-lgmpxx", "-lflint", "-lmpfr", "-lntl", "-lgmp", "-lprimesieve", "-lprimecount", "-Wno-delete-incomplete", "-Wno-shift-count-overflow"] + ["-I" + path for path in ctx.configuration.default_shell_env.get("C_INCLUDE_PATH", "").split(";")] + ["-L" + path for path in ctx.configuration.default_shell_env.get("LIBRARY_PATH", "").split(";")],
       progress_message = "Building " + ctx.outputs.target.path
   )
 

@@ -7,7 +7,7 @@
 [![Github Releases](https://img.shields.io/github/release/baihacker/pe.svg)](https://github.com/baihacker/pe/releases)
 <a href="https://projecteuler.net/recent" target="_blank">![project euler](https://projecteuler.net/profile/baihacker.png?)</a>
 
-It is my basic code for solving problem on <a href="https://projecteuler.net/recent" target="_blank">project euler</a>.
+baihacker's C++ library for solving problem on <a href="https://projecteuler.net/recent" target="_blank">project euler</a>.
 
 ## Prerequirements:
 * C++ dev environment that supports C++17 or above.
@@ -18,7 +18,7 @@ It is my basic code for solving problem on <a href="https://projecteuler.net/rec
   * Put all the files in an installation folder (directory).
   * Add the installation folder to the environment variable CPLUS_INCLUDE_PATH. Other approaches are also OK.
 
-* Configure this library.
+* Configure this library
   * Execute **[gen_config.py](https://github.com/baihacker/pe/blob/master/gen_config.py)** in the installation folder to generate **[pe_config](https://github.com/baihacker/pe/blob/master/pe_config)**.
     * Static configuration. The values are always 1 in the generated config file. You can edit the values after generating the config file.
       * ENABLE_ASSERT whether to assert some inputs or conditions.

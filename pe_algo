@@ -2033,7 +2033,8 @@ SL REQUIRES((IsNModNumberV<T>)) RETURN(std::vector<T>)
       const int64 mint = i * k;
       const int64 maxt = i * (k + 1);
       // [mint, maxt)
-      const int64 u = std::max<int64>(shape.IdxOfValue(shape.n / maxt), shape.m);
+      const int64 u =
+          std::max<int64>(shape.IdxOfValue(shape.n / maxt), shape.m);
       const int64 v = shape.IdxOfValue(shape.n / mint);
       if (v > u) {
         int64 idx = shape.IdxOfValue(shape.n / k);
@@ -2059,7 +2060,8 @@ SL REQUIRES((!IsNModNumberV<T>)) RETURN(std::vector<T>)
       const int64 mint = i * k;
       const int64 maxt = i * (k + 1);
       // [mint, maxt)
-      const int64 u = std::max<int64>(shape.IdxOfValue(shape.n / maxt), shape.m);
+      const int64 u =
+          std::max<int64>(shape.IdxOfValue(shape.n / maxt), shape.m);
       const int64 v = shape.IdxOfValue(shape.n / mint);
       if (v > u) {
         int64 idx = shape.IdxOfValue(shape.n / k);
@@ -2099,23 +2101,22 @@ SL REQUIRES((IsNModNumberV<T>)) RETURN(std::vector<T>)
   std::vector<T> result(shape.key_size, T(0));
   auto [sieve, factorization] = Sieve(W, shape.n);
   for (int64 i = W; i <= shape.n; ++i) {
-    auto them = GetFactors(FactorizedInteger(i, factorization[i - W]));
-    for (int64 x : them) {
-      if (x > shape.m) continue;
+    auto them = GetFactors(FactorizedInteger(i, factorization[i - W]), shape.m);
+    for (const int64 x : them) {
       if (shape.n / (shape.n / x) != x) continue;
       const int64 have = i / x;
-      for (int64 y : them) {
-        if (y > shape.m) continue;
+      for (const int64 y : them) {
         if (have % y) continue;
         if (shape.n / (shape.n / y) != y) continue;
-        int64 t = have / y;
+        const int64 t = have / y;
         if (shape.n / (shape.n / t) != t) continue;
-        int64 k0 = ceil(S * log(x));
-        int64 k1 = ceil(S * log(y));
+        const int64 k0 = ceil(S * log(x));
+        const int64 k1 = ceil(S * log(y));
         if (k0 + k1 > S * log(shape.n / t)) {
           T tmp = a[shape.IdxOfValue(x)] * b[shape.IdxOfValue(y)];
           tans[k0 + k1] -= tmp;
-          result[shape.IdxOfValue(shape.n / t)] += tmp;
+          const int64 idx = shape.IdxOfValue(shape.n / t);
+          result[idx] += tmp;
         }
       }
     }
@@ -2161,23 +2162,21 @@ SL REQUIRES((!IsNModNumberV<T>)) RETURN(std::vector<T>)
   std::vector<T> result(shape.key_size, T(0));
   auto [sieve, factorization] = Sieve(W, shape.n);
   for (int64 i = W; i <= shape.n; ++i) {
-    auto them = GetFactors(FactorizedInteger(i, factorization[i - W]));
-    for (int64 x : them) {
-      if (x > shape.m) continue;
+    auto them = GetFactors(FactorizedInteger(i, factorization[i - W]), shape.m);
+    for (const int64 x : them) {
       if (shape.n / (shape.n / x) != x) continue;
       const int64 have = i / x;
-      for (int64 y : them) {
-        if (y > shape.m) continue;
+      for (const int64 y : them) {
         if (have % y) continue;
         if (shape.n / (shape.n / y) != y) continue;
-        int64 t = have / y;
+        const int64 t = have / y;
         if (shape.n / (shape.n / t) != t) continue;
-        int64 k0 = ceil(S * log(x));
-        int64 k1 = ceil(S * log(y));
+        const int64 k0 = ceil(S * log(x));
+        const int64 k1 = ceil(S * log(y));
         if (k0 + k1 > S * log(shape.n / t)) {
           T tmp = MulMod(a[shape.IdxOfValue(x)], b[shape.IdxOfValue(y)], mod);
           tans[k0 + k1] = SubMod(tans[k0 + k1], tmp, mod);
-          int64 idx = shape.IdxOfValue(shape.n / t);
+          const int64 idx = shape.IdxOfValue(shape.n / t);
           result[idx] = AddMod(result[idx], tmp, mod);
         }
       }

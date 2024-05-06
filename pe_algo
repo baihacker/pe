@@ -83,7 +83,7 @@ SL T BinarySearchLast(T l, T r, const F& f) {
 // Calculates n! % p.
 // Algorithm source: https://min-25.hatenablog.com/entry/2017/04/10/215046
 // Complexity: M(p^(1/2))
-template<typename T = int64>
+template <typename T = int64>
 struct FactModer {
   FactModer(uint64 p) : p_(p) { Init(); }
 
@@ -190,7 +190,7 @@ struct FactModer {
 // Calculates: (0! + 1! + 2! + ... + n!) % p
 // Complexity: M(p^(1/2))
 // Example result: f(4e8)%99999999907 = 16815920030
-template<typename T = int64>
+template <typename T = int64>
 struct FactSumModer {
   FactSumModer(uint64 p) : p_(p) { Init(); }
 
@@ -281,7 +281,7 @@ struct FactSumModer {
 };
 
 // Calculates x^n % mod using pre-computed x^(2^(i))
-template<typename T = int64>
+template <typename T = int64>
 struct PowerModer {
   PowerModer(int64 x, int64 mod, int64 f = 0) { Init(x, mod, f); }
 
@@ -329,7 +329,7 @@ struct PowerModer {
 // Unlike using pre-computed x^(2^(i)), this implementation extends 2 to 2^k.
 // (k = lgf_, f is aligned to the power of 2).
 // In most cases, it is not necessary to specify f.
-template<typename T = int64>
+template <typename T = int64>
 struct PowerModerEx {
   PowerModerEx(int64 x, int64 mod, int64 f = 0) { Init(x, mod, f); }
 
@@ -390,7 +390,7 @@ struct PowerModerEx {
 };
 
 // Calculates Binomial(n, m) % p where p is prime
-template<typename T = int64>
+template <typename T = int64>
 struct CombModer {
   CombModer(int64 p, int64 f = 0) { Init(p, f == 0 ? p : f); }
 
@@ -479,7 +479,7 @@ SL int64 ShortCombMod(int64 n, int64 m, int64 mod) {
 
 // Calculates C(n, m) % p where p is a large prime.
 // Complexity: log(m) M(p^(1/2))
-template<typename T = int64>
+template <typename T = int64>
 struct CombModerEx {
   CombModerEx(int64 p) : p_(p), fmoder_(p) {}
 
@@ -700,7 +700,7 @@ struct CombModerPrimeSquare {
 // It uses O(k^2) to initialize Bernoulli number.
 // It is recommended to use PowerSumModerB or PowerSumModerB1 to support larger
 // k.
-template<typename T = int64>
+template <typename T = int64>
 struct PowerSumModer {
   PowerSumModer(int64 mod, int maxk = 128) : mod_(mod), maxk_(maxk) {
     Init(maxk);
@@ -808,7 +808,7 @@ struct PowerSumModer {
 // See
 // https://en.wikipedia.org/wiki/Bernoulli_number#Sum_of_powers
 // https://blog.csdn.net/acdreamers/article/details/38929067
-template<typename T = int64>
+template <typename T = int64>
 struct PowerSumModerB {
   PowerSumModerB(int64 mod, int64 maxk = 128) : mod_(mod), maxk_(maxk) {
     Init(maxk);
@@ -910,7 +910,7 @@ struct PowerSumModerB {
 // See
 // https://en.wikipedia.org/wiki/Bernoulli_number#Sum_of_powers
 // https://blog.csdn.net/acdreamers/article/details/38929067
-template<typename T = int64>
+template <typename T = int64>
 struct PowerSumModerB1 {
   PowerSumModerB1(int64 mod, int64 maxk = 128) : mod_(mod), maxk_(maxk) {
     Init(maxk);
@@ -1999,7 +1999,270 @@ class DVA {
 
   DVARIterator rend() const { return DVARIterator(keys, values, 0, key_size); }
 };
+struct DVAShape {
+ public:
+  DVAShape(int64 n)
+      : n(n),
+        m(SqrtI(n)),
+        is_perfect_square(m * m == n),
+        key_size(m + 1 + (n / m > m ? m : m - 1)) {}
+  int IdxOfValue(int64 v) const {
+    return static_cast<int>(v <= m ? v : key_size - n / v);
+  }
 
+ public:
+  int64 n;
+  int64 m;
+  int64 is_perfect_square;
+  int64 key_size;
+};
+
+namespace internal {
+template <typename T>
+SL REQUIRES((IsNModNumberV<T>)) RETURN(std::vector<T>)
+    DVAConvGreaterThanSqrtN(DVAShape shape, const std::vector<T>& psa,
+                            const std::vector<T>& psb,
+                            const std::vector<T>& a) {
+  // a < sqrt(n), b > sqrt(n)
+  std::vector<T> result(shape.key_size, T(0));
+  // minimal value greater than or equal to sqrt(n).
+  const int64 max_no_more_than_sqrt_n = shape.m - shape.is_perfect_square;
+  for (int64 i = 1; i <= max_no_more_than_sqrt_n; ++i) {
+    const int64 maxk = max_no_more_than_sqrt_n / i;
+    for (int64 k = 1; k <= maxk; ++k) {
+      const int64 mint = i * k;
+      const int64 maxt = i * (k + 1);
+      // [mint, maxt)
+      const int64 u = std::max<int64>(shape.IdxOfValue(shape.n / maxt), shape.m);
+      const int64 v = shape.IdxOfValue(shape.n / mint);
+      if (v > u) {
+        int64 idx = shape.IdxOfValue(shape.n / k);
+        result[idx] += (psb[v] - psb[u]) * a[i];
+      }
+    }
+  }
+  return result;
+}
+
+template <typename T>
+SL REQUIRES((!IsNModNumberV<T>)) RETURN(std::vector<T>)
+    DVAConvGreaterThanSqrtN(DVAShape shape, const std::vector<T>& psa,
+                            const std::vector<T>& psb, const std::vector<T>& a,
+                            int64 mod) {
+  // a < sqrt(n), b > sqrt(n)
+  std::vector<T> result(shape.key_size, T(0));
+  // minimal value greater than or equal to sqrt(n).
+  const int64 max_no_more_than_sqrt_n = shape.m - shape.is_perfect_square;
+  for (int64 i = 1; i <= max_no_more_than_sqrt_n; ++i) {
+    const int64 maxk = max_no_more_than_sqrt_n / i;
+    for (int64 k = 1; k <= maxk; ++k) {
+      const int64 mint = i * k;
+      const int64 maxt = i * (k + 1);
+      // [mint, maxt)
+      const int64 u = std::max<int64>(shape.IdxOfValue(shape.n / maxt), shape.m);
+      const int64 v = shape.IdxOfValue(shape.n / mint);
+      if (v > u) {
+        int64 idx = shape.IdxOfValue(shape.n / k);
+        result[idx] = AddMod(
+            result[idx], MulMod(SubMod(psb[v], psb[u], mod), a[i], mod), mod);
+      }
+    }
+  }
+  return result;
+}
+
+template <typename T>
+SL REQUIRES((IsNModNumberV<T>)) RETURN(std::vector<T>)
+    DVAConvNoMoreThanSqrtN(DVAShape shape, const std::vector<T>& a,
+                           const std::vector<T>& b) {
+  // a <= sqrt(n), b <= sqrt(n)
+
+  const int64 S = shape.m;
+  const int64 W = std::max(int64(shape.n * exp(-2. / S) - 10), 1LL);
+
+  std::vector<T> tans;
+  {
+    int64 size = ceil(S * log(shape.m));
+    std::vector<int64> u(size + 1, 0), v(size + 1, 0);
+    for (int i = 1; i <= shape.m; ++i) {
+      int64 idx = ceil(S * log(i));
+      u[idx] = a[i].value();
+      v[idx] = b[i].value();
+    }
+    std::vector<int64> t = PolyMul(u, v, T().Mod());
+    tans.reserve(t.size());
+    for (int i = 0; i < t.size(); ++i) {
+      tans.push_back(t[i]);
+    }
+  }
+
+  std::vector<T> result(shape.key_size, T(0));
+  auto [sieve, factorization] = Sieve(W, shape.n);
+  for (int64 i = W; i <= shape.n; ++i) {
+    auto them = GetFactors(FactorizedInteger(i, factorization[i - W]));
+    for (int64 x : them) {
+      if (x > shape.m) continue;
+      if (shape.n / (shape.n / x) != x) continue;
+      const int64 have = i / x;
+      for (int64 y : them) {
+        if (y > shape.m) continue;
+        if (have % y) continue;
+        if (shape.n / (shape.n / y) != y) continue;
+        int64 t = have / y;
+        if (shape.n / (shape.n / t) != t) continue;
+        int64 k0 = ceil(S * log(x));
+        int64 k1 = ceil(S * log(y));
+        if (k0 + k1 > S * log(shape.n / t)) {
+          T tmp = a[shape.IdxOfValue(x)] * b[shape.IdxOfValue(y)];
+          tans[k0 + k1] -= tmp;
+          result[shape.IdxOfValue(shape.n / t)] += tmp;
+        }
+      }
+    }
+  }
+  {
+    for (int i = 0; i < tans.size(); ++i) {
+      int64 now = exp(1. * i / S);
+      if (now <= shape.n) {
+        result[shape.IdxOfValue(now)] += tans[i];
+      } else {
+        break;
+      }
+    }
+  }
+  return result;
+}
+
+template <typename T>
+SL REQUIRES((!IsNModNumberV<T>)) RETURN(std::vector<T>)
+    DVAConvNoMoreThanSqrtN(DVAShape shape, const std::vector<T>& a,
+                           const std::vector<T>& b, int64 mod) {
+  // a <= sqrt(n), b <= sqrt(n)
+
+  const int64 S = shape.m;
+  const int64 W = std::max(int64(shape.n * exp(-2. / S) - 10), 1LL);
+
+  std::vector<T> tans;
+  {
+    int64 size = ceil(S * log(shape.m));
+    std::vector<int64> u(size + 1, 0), v(size + 1, 0);
+    for (int i = 1; i <= shape.m; ++i) {
+      const int64 idx = ceil(S * log(i));
+      u[idx] = a[i];
+      v[idx] = b[i];
+    }
+    std::vector<int64> t = PolyMul(u, v, mod);
+    tans.reserve(t.size());
+    for (int i = 0; i < t.size(); ++i) {
+      tans.push_back(t[i]);
+    }
+  }
+
+  std::vector<T> result(shape.key_size, T(0));
+  auto [sieve, factorization] = Sieve(W, shape.n);
+  for (int64 i = W; i <= shape.n; ++i) {
+    auto them = GetFactors(FactorizedInteger(i, factorization[i - W]));
+    for (int64 x : them) {
+      if (x > shape.m) continue;
+      if (shape.n / (shape.n / x) != x) continue;
+      const int64 have = i / x;
+      for (int64 y : them) {
+        if (y > shape.m) continue;
+        if (have % y) continue;
+        if (shape.n / (shape.n / y) != y) continue;
+        int64 t = have / y;
+        if (shape.n / (shape.n / t) != t) continue;
+        int64 k0 = ceil(S * log(x));
+        int64 k1 = ceil(S * log(y));
+        if (k0 + k1 > S * log(shape.n / t)) {
+          T tmp = MulMod(a[shape.IdxOfValue(x)], b[shape.IdxOfValue(y)], mod);
+          tans[k0 + k1] = SubMod(tans[k0 + k1], tmp, mod);
+          int64 idx = shape.IdxOfValue(shape.n / t);
+          result[idx] = AddMod(result[idx], tmp, mod);
+        }
+      }
+    }
+  }
+  {
+    for (int i = 0; i < tans.size(); ++i) {
+      int64 now = exp(1. * i / S);
+      if (now <= shape.n) {
+        int64 idx = shape.IdxOfValue(now);
+        result[idx] = AddMod(result[idx], tans[i], mod);
+      } else {
+        break;
+      }
+    }
+  }
+  return result;
+}
+}  // namespace internal
+
+template <typename T>
+SL REQUIRES((IsNModNumberV<T>)) RETURN(DVA<T>)
+    DVAConv(const DVA<T>& psa, const DVA<T>& psb) {
+  const DVAShape shape(psa.n);
+
+  std::vector<T> a(shape.key_size);
+  std::vector<T> b(shape.key_size);
+  a[0] = b[0] = T(0);
+  for (int i = 1; i < shape.key_size; ++i) {
+    a[i] = psa.values[i] - psa.values[i - 1];
+    b[i] = psb.values[i] - psb.values[i - 1];
+  }
+
+  DVA<T> result(shape.n);
+  auto add_to = [=](const std::vector<T>& src, std::vector<T>& target) {
+    for (int i = 0; i < shape.key_size; ++i) {
+      target[i] += src[i];
+    }
+  };
+
+  add_to(internal::DVAConvGreaterThanSqrtN(shape, psa.values, psb.values, a),
+         result.values);
+  add_to(internal::DVAConvGreaterThanSqrtN(shape, psb.values, psa.values, b),
+         result.values);
+  add_to(internal::DVAConvNoMoreThanSqrtN(shape, a, b), result.values);
+
+  for (int i = 1; i < shape.key_size; ++i) {
+    result.values[i] += result.values[i - 1];
+  }
+  return result;
+}
+
+template <typename T>
+SL REQUIRES((!IsNModNumberV<T>)) RETURN(DVA<T>)
+    DVAConv(const DVA<T>& psa, const DVA<T>& psb, int64 mod) {
+  const DVAShape shape(psa.n);
+
+  std::vector<T> a(shape.key_size);
+  std::vector<T> b(shape.key_size);
+  a[0] = b[0] = T(0);
+  for (int i = 1; i < shape.key_size; ++i) {
+    a[i] = SubMod(psa.values[i], psa.values[i - 1], mod);
+    b[i] = SubMod(psb.values[i], psb.values[i - 1], mod);
+  }
+
+  DVA<T> result(shape.n);
+  auto add_to = [=](const std::vector<T>& src, std::vector<T>& target) {
+    for (int i = 0; i < shape.key_size; ++i) {
+      target[i] = AddMod(target[i], src[i], mod);
+    }
+  };
+
+  add_to(
+      internal::DVAConvGreaterThanSqrtN(shape, psa.values, psb.values, a, mod),
+      result.values);
+  add_to(
+      internal::DVAConvGreaterThanSqrtN(shape, psb.values, psa.values, b, mod),
+      result.values);
+  add_to(internal::DVAConvNoMoreThanSqrtN(shape, a, b, mod), result.values);
+
+  for (int i = 1; i < shape.key_size; ++i) {
+    result.values[i] = AddMod(result.values[i], result.values[i - 1], mod);
+  }
+  return result;
+}
 // Calculates sum(1, 1 <= prime i <= j) for j in [1, 2, 3, ..., n/3, n/2, n].
 template <typename T>
 SL DVA<T> PrimeS0(const int64 n) {

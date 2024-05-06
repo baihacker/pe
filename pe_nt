@@ -1452,6 +1452,48 @@ SL T FromBaseK(const std::vector<int>& vec, int k) {
   for (int i = size - 1; i >= 0; --i) ret = ret * k + vec[i];
   return ret;
 }
+
+
+SL std::pair<std::vector<int64>,
+             std::vector<std::vector<std::pair<int64, int>>>>
+Sieve(int64 start, int64 end) {
+  std::vector<int64> sieve(end - start + 1);
+  std::vector<std::vector<std::pair<int64, int>>> factorization(
+      end - start + 1, std::vector<std::pair<int64, int>>());
+  for (int64 i = start; i <= end; ++i) {
+    sieve[i - start] = i;
+  }
+
+  int64 sqrt_n = SqrtI(end);
+
+  for (int i = 0; i < pcnt; ++i) {
+    const int64 p = plist[i];
+    if (p > sqrt_n) {
+      break;
+    }
+    int64 pos = start / p * p;
+    while (pos < start) pos += p;
+    for (;; pos += p) {
+      if (pos > end) {
+        break;
+      }
+      int c = 0;
+      while (sieve[pos - start] % p == 0) {
+        sieve[pos - start] /= p, ++c;
+      }
+      if (c > 0) {
+        factorization[pos - start].push_back({p, c});
+      }
+    }
+  }
+
+  for (int64 i = start; i <= end; ++i) {
+    if (i > 1 && sieve[i - start] != 1) {
+      factorization[i - start].push_back({sieve[i - start], 1});
+    }
+  }
+  return {sieve, factorization};
+}
 }  // namespace pe
 // 65701
 #endif

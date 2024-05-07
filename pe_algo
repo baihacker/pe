@@ -1999,6 +1999,7 @@ class DVA {
 
   DVARIterator rend() const { return DVARIterator(keys, values, 0, key_size); }
 };
+
 struct DVAShape {
  public:
   DVAShape(int64 n)
@@ -2073,6 +2074,161 @@ SL REQUIRES((!IsNModNumberV<T>)) RETURN(std::vector<T>)
   return result;
 }
 
+SL void DVAConvDfsTwoFactorsTwo(int max_idx, int64 maxv, int64 n,
+                                std::vector<std::pair<int64, int>>& f,
+                                int64 value1, int64 value2,
+                                std::vector<std::pair<int64, int64>>& result) {
+  if (n / (n / value2) != value2) return;
+  result.push_back({value1, value2});
+  for (int i = 0; i < max_idx; ++i) {
+    const int64 t = maxv / f[i].first;
+    int64 tvalue2 = value2;
+    for (int j = 1; j <= f[i].second; ++j) {
+      if (tvalue2 > t) {
+        break;
+      }
+      tvalue2 *= f[i].first;
+      DVAConvDfsTwoFactorsTwo(i, maxv, n, f, value1, tvalue2, result);
+    }
+  }
+}
+
+SL void DVAConvDfsTwoFactorsOne(int max_idx, int64 maxv, int64 n,
+                                std::vector<std::pair<int64, int>>& f,
+                                int64 value1,
+                                std::vector<std::pair<int64, int64>>& result) {
+  if (n / (n / value1) != value1) return;
+  DVAConvDfsTwoFactorsTwo(f.size(), maxv, n, f, value1, 1, result);
+  for (int i = 0; i < max_idx; ++i) {
+    const int64 t = maxv / f[i].first;
+    int64 tvalue1 = value1;
+    const int total = f[i].second;
+    for (int j = 1; j <= total; ++j) {
+      if (tvalue1 > t) {
+        break;
+      }
+      tvalue1 *= f[i].first;
+      --f[i].second;
+      DVAConvDfsTwoFactorsOne(i, maxv, n, f, tvalue1, result);
+    }
+    f[i].second = total;
+  }
+}
+
+#define DVA_CONV_DFS_FACTORS 1
+
+template <typename T, int TN = 8>
+SL REQUIRES((IsNModNumberV<T>)) RETURN(void)
+    DVAConvAdjust(DVAShape shape, int64 W, const std::vector<T>& a,
+                  const std::vector<T>& b, std::vector<T>& tans,
+                  std::vector<T>& result) {
+  const int64 S = shape.m;
+  auto [sieve, factorization] = Sieve(W, shape.n);
+#if ENABLE_OPENMP
+  const int64 FINAL_TN = TN;
+#else
+  const int64 FINAL_TN = 1;
+#endif
+  if (FINAL_TN == 1) {
+    for (int64 i = W; i <= shape.n; ++i) {
+#if DVA_CONV_DFS_FACTORS
+      std::vector<std::pair<int64, int64>> factors;
+      DVAConvDfsTwoFactorsOne(factorization[i - W].size(), shape.m, shape.n,
+                              factorization[i - W], 1, factors);
+      for (const auto [x, y] : factors) {
+        const int64 t = i / (x * y);
+        if (shape.n / (shape.n / t) != t) continue;
+        const int64 k0 = ceil(S * log(x));
+        const int64 k1 = ceil(S * log(y));
+        if (k0 + k1 > S * log(shape.n / t)) {
+          const T tmp = a[shape.IdxOfValue(x)] * b[shape.IdxOfValue(y)];
+          tans[k0 + k1] -= tmp;
+          const int64 idx = shape.IdxOfValue(shape.n / t);
+          result[idx] += tmp;
+        }
+      }
+#else
+      auto factors =
+          GetFactors(FactorizedInteger(i, factorization[i - W]), shape.m);
+      for (const int64 x : factors) {
+        if (shape.n / (shape.n / x) != x) continue;
+        const int64 have = i / x;
+        for (const int64 y : factors) {
+          if (have % y) continue;
+          if (shape.n / (shape.n / y) != y) continue;
+          const int64 t = have / y;
+          if (shape.n / (shape.n / t) != t) continue;
+          const int64 k0 = ceil(S * log(x));
+          const int64 k1 = ceil(S * log(y));
+          if (k0 + k1 > S * log(shape.n / t)) {
+            T tmp = a[shape.IdxOfValue(x)] * b[shape.IdxOfValue(y)];
+            tans[k0 + k1] -= tmp;
+            const int64 idx = shape.IdxOfValue(shape.n / t);
+            result[idx] += tmp;
+          }
+        }
+      }
+#endif
+    }
+  } else {
+    std::vector<std::vector<T>> tans_data(FINAL_TN,
+                                          std::vector<T>(tans.size(), T(0)));
+    std::vector<std::vector<T>> result_data(
+        FINAL_TN, std::vector<T>(result.size(), T(0)));
+#if ENABLE_OPENMP
+#pragma omp parallel for schedule(dynamic, 1000) num_threads(FINAL_TN)
+    for (int64 i = W; i <= shape.n; ++i) {
+#if DVA_CONV_DFS_FACTORS
+      std::vector<std::pair<int64, int64>> factors;
+      DVAConvDfsTwoFactorsOne(factorization[i - W].size(), shape.m, shape.n,
+                              factorization[i - W], 1, factors);
+      for (const auto [x, y] : factors) {
+        const int64 t = i / (x * y);
+        if (shape.n / (shape.n / t) != t) continue;
+        const int64 k0 = ceil(S * log(x));
+        const int64 k1 = ceil(S * log(y));
+        if (k0 + k1 > S * log(shape.n / t)) {
+          const T tmp = a[shape.IdxOfValue(x)] * b[shape.IdxOfValue(y)];
+          tans_data[tid()][k0 + k1] += tmp;
+          const int64 idx = shape.IdxOfValue(shape.n / t);
+          result_data[tid()][idx] += tmp;
+        }
+      }
+#else
+      auto factors =
+          GetFactors(FactorizedInteger(i, factorization[i - W]), shape.m);
+      for (const int64 x : factors) {
+        if (shape.n / (shape.n / x) != x) continue;
+        const int64 have = i / x;
+        for (const int64 y : factors) {
+          if (have % y) continue;
+          if (shape.n / (shape.n / y) != y) continue;
+          const int64 t = have / y;
+          if (shape.n / (shape.n / t) != t) continue;
+          const int64 k0 = ceil(S * log(x));
+          const int64 k1 = ceil(S * log(y));
+          if (k0 + k1 > S * log(shape.n / t)) {
+            T tmp = a[shape.IdxOfValue(x)] * b[shape.IdxOfValue(y)];
+            tans_data[tid()][k0 + k1] += tmp;
+            const int64 idx = shape.IdxOfValue(shape.n / t);
+            result_data[tid()][idx] += tmp;
+          }
+        }
+      }
+#endif
+    }
+    for (int i = 0; i < FINAL_TN; ++i) {
+      for (int j = 0; j < tans.size(); ++j) {
+        tans[j] -= tans_data[i][j];
+      }
+      for (int j = 0; j < result.size(); ++j) {
+        result[j] += result_data[i][j];
+      }
+    }
+#endif
+  }
+}
+
 template <typename T>
 SL REQUIRES((IsNModNumberV<T>)) RETURN(std::vector<T>)
     DVAConvNoMoreThanSqrtN(DVAShape shape, const std::vector<T>& a,
@@ -2084,10 +2240,10 @@ SL REQUIRES((IsNModNumberV<T>)) RETURN(std::vector<T>)
 
   std::vector<T> tans;
   {
-    int64 size = ceil(S * log(shape.m));
+    const int64 size = ceil(S * log(shape.m));
     std::vector<int64> u(size + 1, 0), v(size + 1, 0);
     for (int i = 1; i <= shape.m; ++i) {
-      int64 idx = ceil(S * log(i));
+      const int64 idx = ceil(S * log(i));
       u[idx] = a[i].value();
       v[idx] = b[i].value();
     }
@@ -2099,39 +2255,134 @@ SL REQUIRES((IsNModNumberV<T>)) RETURN(std::vector<T>)
   }
 
   std::vector<T> result(shape.key_size, T(0));
+  DVAConvAdjust(shape, W, a, b, tans, result);
+
+  for (int i = 0; i < tans.size(); ++i) {
+    int64 now = exp(1. * i / S);
+    if (now <= shape.n) {
+      result[shape.IdxOfValue(now)] += tans[i];
+    } else {
+      break;
+    }
+  }
+
+  return result;
+}
+
+template <typename T, int TN = 8>
+SL REQUIRES((!IsNModNumberV<T>)) RETURN(void)
+    DVAConvAdjust(DVAShape shape, int64 W, const std::vector<T>& a,
+                  const std::vector<T>& b, std::vector<T>& tans,
+                  std::vector<T>& result, int64 mod) {
+  const int64 S = shape.m;
   auto [sieve, factorization] = Sieve(W, shape.n);
-  for (int64 i = W; i <= shape.n; ++i) {
-    auto them = GetFactors(FactorizedInteger(i, factorization[i - W]), shape.m);
-    for (const int64 x : them) {
-      if (shape.n / (shape.n / x) != x) continue;
-      const int64 have = i / x;
-      for (const int64 y : them) {
-        if (have % y) continue;
-        if (shape.n / (shape.n / y) != y) continue;
-        const int64 t = have / y;
+#if ENABLE_OPENMP
+  const int64 FINAL_TN = TN;
+#else
+  const int64 FINAL_TN = 1;
+#endif
+  if (FINAL_TN == 1) {
+    for (int64 i = W; i <= shape.n; ++i) {
+#if DVA_CONV_DFS_FACTORS
+      std::vector<std::pair<int64, int64>> factors;
+      DVAConvDfsTwoFactorsOne(factorization[i - W].size(), shape.m, shape.n,
+                              factorization[i - W], 1, factors);
+      for (const auto [x, y] : factors) {
+        const int64 t = i / (x * y);
         if (shape.n / (shape.n / t) != t) continue;
         const int64 k0 = ceil(S * log(x));
         const int64 k1 = ceil(S * log(y));
         if (k0 + k1 > S * log(shape.n / t)) {
-          T tmp = a[shape.IdxOfValue(x)] * b[shape.IdxOfValue(y)];
-          tans[k0 + k1] -= tmp;
+          const T tmp =
+              MulMod(a[shape.IdxOfValue(x)], b[shape.IdxOfValue(y)], mod);
+          tans[k0 + k1] = SubMod(tans[k0 + k1], tmp, mod);
           const int64 idx = shape.IdxOfValue(shape.n / t);
-          result[idx] += tmp;
+          result[idx] = AddMod(result[idx], tmp, mod);
         }
       }
+#else
+      auto factors =
+          GetFactors(FactorizedInteger(i, factorization[i - W]), shape.m);
+      for (const int64 x : factors) {
+        if (shape.n / (shape.n / x) != x) continue;
+        const int64 have = i / x;
+        for (const int64 y : factors) {
+          if (have % y) continue;
+          if (shape.n / (shape.n / y) != y) continue;
+          const int64 t = have / y;
+          if (shape.n / (shape.n / t) != t) continue;
+          const int64 k0 = ceil(S * log(x));
+          const int64 k1 = ceil(S * log(y));
+          if (k0 + k1 > S * log(shape.n / t)) {
+            T tmp = MulMod(a[shape.IdxOfValue(x)], b[shape.IdxOfValue(y)], mod);
+            tans[k0 + k1] = SubMod(tans[k0 + k1], tmp, mod);
+            const int64 idx = shape.IdxOfValue(shape.n / t);
+            result[idx] = AddMod(result[idx], tmp, mod);
+          }
+        }
+      }
+#endif
     }
-  }
-  {
-    for (int i = 0; i < tans.size(); ++i) {
-      int64 now = exp(1. * i / S);
-      if (now <= shape.n) {
-        result[shape.IdxOfValue(now)] += tans[i];
-      } else {
-        break;
+  } else {
+    std::vector<std::vector<T>> tans_data(FINAL_TN,
+                                          std::vector<T>(tans.size(), T(0)));
+    std::vector<std::vector<T>> result_data(
+        FINAL_TN, std::vector<T>(result.size(), T(0)));
+#if ENABLE_OPENMP
+#pragma omp parallel for schedule(dynamic, 1000) num_threads(FINAL_TN)
+    for (int64 i = W; i <= shape.n; ++i) {
+#if DVA_CONV_DFS_FACTORS
+      std::vector<std::pair<int64, int64>> factors;
+      DVAConvDfsTwoFactorsOne(factorization[i - W].size(), shape.m, shape.n,
+                              factorization[i - W], 1, factors);
+      for (const auto [x, y] : factors) {
+        const int64 t = i / (x * y);
+        if (shape.n / (shape.n / t) != t) continue;
+        const int64 k0 = ceil(S * log(x));
+        const int64 k1 = ceil(S * log(y));
+        if (k0 + k1 > S * log(shape.n / t)) {
+          const T tmp =
+              MulMod(a[shape.IdxOfValue(x)], b[shape.IdxOfValue(y)], mod);
+          tans_data[tid()][k0 + k1] =
+              AddMod(tans_data[tid()][k0 + k1], tmp, mod);
+          const int64 idx = shape.IdxOfValue(shape.n / t);
+          result_data[tid()][idx] = AddMod(result_data[tid()][idx], tmp, mod);
+        }
+      }
+#else
+      auto factors =
+          GetFactors(FactorizedInteger(i, factorization[i - W]), shape.m);
+      for (const int64 x : factors) {
+        if (shape.n / (shape.n / x) != x) continue;
+        const int64 have = i / x;
+        for (const int64 y : factors) {
+          if (have % y) continue;
+          if (shape.n / (shape.n / y) != y) continue;
+          const int64 t = have / y;
+          if (shape.n / (shape.n / t) != t) continue;
+          const int64 k0 = ceil(S * log(x));
+          const int64 k1 = ceil(S * log(y));
+          if (k0 + k1 > S * log(shape.n / t)) {
+            T tmp = MulMod(a[shape.IdxOfValue(x)], b[shape.IdxOfValue(y)], mod);
+            tans_data[tid()][k0 + k1] =
+                AddMod(tans_data[tid()][k0 + k1], tmp, mod);
+            const int64 idx = shape.IdxOfValue(shape.n / t);
+            result_data[tid()][idx] = AddMod(result_data[tid()][idx], tmp, mod);
+          }
+        }
+      }
+#endif
+    }
+    for (int i = 0; i < FINAL_TN; ++i) {
+      for (int j = 0; j < tans.size(); ++j) {
+        tans[j] = SubMod(tans[j], tans_data[i][j], mod);
+      }
+      for (int j = 0; j < result.size(); ++j) {
+        result[j] = AddMod(result[j], result_data[i][j], mod);
       }
     }
+#endif
   }
-  return result;
 }
 
 template <typename T>
@@ -2145,7 +2396,7 @@ SL REQUIRES((!IsNModNumberV<T>)) RETURN(std::vector<T>)
 
   std::vector<T> tans;
   {
-    int64 size = ceil(S * log(shape.m));
+    const int64 size = ceil(S * log(shape.m));
     std::vector<int64> u(size + 1, 0), v(size + 1, 0);
     for (int i = 1; i <= shape.m; ++i) {
       const int64 idx = ceil(S * log(i));
@@ -2160,43 +2411,23 @@ SL REQUIRES((!IsNModNumberV<T>)) RETURN(std::vector<T>)
   }
 
   std::vector<T> result(shape.key_size, T(0));
-  auto [sieve, factorization] = Sieve(W, shape.n);
-  for (int64 i = W; i <= shape.n; ++i) {
-    auto them = GetFactors(FactorizedInteger(i, factorization[i - W]), shape.m);
-    for (const int64 x : them) {
-      if (shape.n / (shape.n / x) != x) continue;
-      const int64 have = i / x;
-      for (const int64 y : them) {
-        if (have % y) continue;
-        if (shape.n / (shape.n / y) != y) continue;
-        const int64 t = have / y;
-        if (shape.n / (shape.n / t) != t) continue;
-        const int64 k0 = ceil(S * log(x));
-        const int64 k1 = ceil(S * log(y));
-        if (k0 + k1 > S * log(shape.n / t)) {
-          T tmp = MulMod(a[shape.IdxOfValue(x)], b[shape.IdxOfValue(y)], mod);
-          tans[k0 + k1] = SubMod(tans[k0 + k1], tmp, mod);
-          const int64 idx = shape.IdxOfValue(shape.n / t);
-          result[idx] = AddMod(result[idx], tmp, mod);
-        }
-      }
+  DVAConvAdjust(shape, W, a, b, tans, result, mod);
+
+  for (int i = 0; i < tans.size(); ++i) {
+    int64 now = exp(1. * i / S);
+    if (now <= shape.n) {
+      int64 idx = shape.IdxOfValue(now);
+      result[idx] = AddMod(result[idx], tans[i], mod);
+    } else {
+      break;
     }
   }
-  {
-    for (int i = 0; i < tans.size(); ++i) {
-      int64 now = exp(1. * i / S);
-      if (now <= shape.n) {
-        int64 idx = shape.IdxOfValue(now);
-        result[idx] = AddMod(result[idx], tans[i], mod);
-      } else {
-        break;
-      }
-    }
-  }
+
   return result;
 }
 }  // namespace internal
 
+// Note that it is required that n <= 3e13.
 template <typename T>
 SL REQUIRES((IsNModNumberV<T>)) RETURN(DVA<T>)
     DVAConv(const DVA<T>& psa, const DVA<T>& psb) {
@@ -2229,6 +2460,15 @@ SL REQUIRES((IsNModNumberV<T>)) RETURN(DVA<T>)
   return result;
 }
 
+// Note that it is required that n <= 3e13.
+template <typename T>
+SL REQUIRES((IsNModNumberV<T>)) RETURN(DVA<T>)
+    DVAConv(const DVA<T>& psa, const DVA<T>& psb, int64 mod) {
+  PE_ASSERT(T().Mod() == mod);
+  return DVAConv(psa, psb);
+}
+
+// Note that it is required that n <= 3e13.
 template <typename T>
 SL REQUIRES((!IsNModNumberV<T>)) RETURN(DVA<T>)
     DVAConv(const DVA<T>& psa, const DVA<T>& psb, int64 mod) {
@@ -2262,6 +2502,7 @@ SL REQUIRES((!IsNModNumberV<T>)) RETURN(DVA<T>)
   }
   return result;
 }
+
 // Calculates sum(1, 1 <= prime i <= j) for j in [1, 2, 3, ..., n/3, n/2, n].
 template <typename T>
 SL DVA<T> PrimeS0(const int64 n) {

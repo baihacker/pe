@@ -696,10 +696,9 @@ struct CombModerPrimeSquare {
   T mod_;
 };
 
-// Computes (1^k + 2^k + ... + n^k) % mod based on Bernoulli number.
-// It uses O(k^2) to initialize Bernoulli number.
-// It is recommended to use PowerSumModerB or PowerSumModerB1 to support larger
-// k.
+// Calculates (1^k + 2^k + ... + n^k) % mod based on k! * Stirling2.
+// https://oeis.org/A019538
+// https://blog.csdn.net/xianhaoming/article/details/80390426
 template <typename T = int64>
 struct PowerSumModer {
   PowerSumModer(int64 mod, int maxk = 128) : mod_(mod), maxk_(maxk) {
@@ -830,6 +829,10 @@ struct PowerSumModerB {
 
   T operator()(int64 n, int64 k) const { return Cal(n, k); }
 
+  std::vector<T> operator()(const std::vector<int64>& vec) const {
+    return Cal(vec);
+  }
+
   // n + 1, n, ..., n-k+1 is not divisible by mod
   // 2, 3, ..., k+1 is not divisible by mod
   T Cal(int64 n, int64 k) const {
@@ -859,6 +862,30 @@ struct PowerSumModerB {
     }
     ret = MulMod(ret, invs_[k + 1], mod_);
     return ret;
+  }
+
+  std::vector<T> Cal(const std::vector<int64>& vec) const {
+    PE_ASSERT(vec.size() <= maxk_ + 1);
+    const int64 size = vec.size();
+    std::vector<int64> result(size + 1, 0);
+    for (int k = 0; k < size; ++k) {
+      // comb(k+1, i) b[i] n^(k+1-i) / (k + 1)
+      int64 c = invs_[k + 1];
+      for (int i = 0; i <= k; ++i) {
+        if (i > 0) {
+          c = MulMod(c, RegulateMod(k + 2 - i, mod_), mod_);
+          c = MulMod(c, invs_[i], mod_);
+        }
+        int64 x = MulMod(c, bnl_[i], mod_);
+        const int idx = k + 1 - i;
+        result[idx] = AddMod(result[idx], MulMod(vec[k], x, mod_), mod_);
+      }
+    }
+    std::vector<T> ret(size + 1);
+    for (int i = 0; i <= size; ++i) {
+      ret[i] = result[i];
+    }
+    return result;
   }
 
   T CalSafe(int64 n, int64 k) const {
@@ -1018,6 +1045,7 @@ SL int64 PowerSumSafe(int64 n, int64 k, int64 mod) {
 // Calculates (1^k + 2^k + ... + n^k) % mod and stores it in result[k].
 // comb[i][j] is Binomial coefficient.
 // Complex: O(k^2)
+// baihacker pe487
 template <typename T, int D>
 SL void InitPowerSumMod(int64 n, const int maxk, int64* result, T (*comb)[D],
                         const int64 mod) {

@@ -1,6 +1,5 @@
 # pe
 
-[![Build Status](https://travis-ci.com/baihacker/pe.svg?branch=master)](https://travis-ci.com/baihacker/pe)
 [![Build status](https://ci.appveyor.com/api/projects/status/scaji00tde2gb7uy?svg=true)](https://ci.appveyor.com/project/baihacker/pe-win-msvc)
 [![Build status](https://ci.appveyor.com/api/projects/status/9bt606nax24anyen?svg=true)](https://ci.appveyor.com/project/baihacker/pe-ubuntu-gcc)
 [![Build status](https://ci.appveyor.com/api/projects/status/nw243uvs95i0bj85?svg=true)](https://ci.appveyor.com/project/baihacker/pe-ubuntu-clang)

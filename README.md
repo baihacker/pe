@@ -9,8 +9,9 @@
 baihacker's C++ library for solving problem on <a href="https://projecteuler.net/recent" target="_blank">project euler</a>.
 
 ## Prerequirements:
-* C++ dev environment that supports C++17 or above.
-* The compiler suppports building x86_64 targets.
+C++ dev environment that supports
+* C++17 or above.
+* Building x86_64 targets.
 
 ## Installation:
 * Make sure "#include <pe.hpp>" work.

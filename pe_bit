@@ -10,25 +10,25 @@
 // https://www.jjj.de/fxt/fxtbook.pdf has more tricks
 
 namespace pe {
-SL int __pe_clz2(uint32 x) { return x > 0 ? (x & 2 ? 0 : 1) : 2; }
+SL constexpr int __pe_clz2(uint32 x) { return x > 0 ? (x & 2 ? 0 : 1) : 2; }
 
-SL int __pe_clz4(uint32 x) {
+SL constexpr int __pe_clz4(uint32 x) {
   return x ? (x >> 2 ? __pe_clz2(x >> 2) : 2 + __pe_clz2(x)) : 4;
 }
 
-SL int __pe_clz8(uint32 x) {
+SL constexpr int __pe_clz8(uint32 x) {
   return x ? (x >> 4 ? __pe_clz4(x >> 4) : 4 + __pe_clz4(x)) : 8;
 }
 
-SL int __pe_clz16(uint32 x) {
+SL constexpr int __pe_clz16(uint32 x) {
   return x ? (x >> 8 ? __pe_clz8(x >> 8) : 8 + __pe_clz8(x)) : 16;
 }
 
-SL int __pe_clz32(uint32 x) {
+SL constexpr int __pe_clz32(uint32 x) {
   return x ? (x >> 16 ? __pe_clz16(x >> 16) : 16 + __pe_clz16(x)) : 32;
 }
 
-SL int __pe_clz64(uint64 x) {
+SL constexpr int __pe_clz64(uint64 x) {
   return x ? (x >> 32 ? __pe_clz32(static_cast<uint32>(x >> 32))
                       : 32 + __pe_clz32(static_cast<uint32>(x)))
            : 64;
@@ -36,7 +36,7 @@ SL int __pe_clz64(uint64 x) {
 
 #if PE_HAS_INT128
 
-SL int __pe_clz128(uint128 x) {
+SL constexpr int __pe_clz128(uint128 x) {
   return x ? (x >> 64 ? __pe_clz64(static_cast<uint64>(x >> 64))
                       : 64 + __pe_clz64(static_cast<uint64>(x)))
            : 128;
@@ -44,25 +44,25 @@ SL int __pe_clz128(uint128 x) {
 
 #endif
 
-SL int __pe_ctz2(uint32 x) { return x ? (x & 1 ? 0 : 1) : 2; }
+SL constexpr int __pe_ctz2(uint32 x) { return x ? (x & 1 ? 0 : 1) : 2; }
 
-SL int __pe_ctz4(uint32 x) {
+SL constexpr int __pe_ctz4(uint32 x) {
   return x ? (x & 3 ? __pe_ctz2(x) : 2 + __pe_ctz2(x >> 2)) : 4;
 }
 
-SL int __pe_ctz8(uint32 x) {
+SL constexpr int __pe_ctz8(uint32 x) {
   return x ? (x & 15 ? __pe_ctz4(x) : 4 + __pe_ctz4(x >> 4)) : 8;
 }
 
-SL int __pe_ctz16(uint32 x) {
+SL constexpr int __pe_ctz16(uint32 x) {
   return x ? (x & 255 ? __pe_ctz8(x) : 8 + __pe_ctz8(x >> 8)) : 16;
 }
 
-SL int __pe_ctz32(uint32 x) {
+SL constexpr int __pe_ctz32(uint32 x) {
   return x ? (x & 65535 ? __pe_ctz16(x) : 16 + __pe_ctz16(x >> 16)) : 32;
 }
 
-SL int __pe_ctz64(uint64 x) {
+SL constexpr int __pe_ctz64(uint64 x) {
   return x ? (static_cast<uint32>(x)
                   ? __pe_ctz32(static_cast<uint32>(x))
                   : 32 + __pe_ctz32(static_cast<uint32>(x >> 32)))
@@ -71,7 +71,7 @@ SL int __pe_ctz64(uint64 x) {
 
 #if PE_HAS_INT128
 
-SL int __pe_ctz128(uint128 x) {
+SL constexpr int __pe_ctz128(uint128 x) {
   return x ? (static_cast<uint64>(x)
                   ? __pe_ctz64(static_cast<uint64>(x))
                   : 64 + __pe_ctz64(static_cast<uint64>(x >> 64)))
@@ -80,40 +80,41 @@ SL int __pe_ctz128(uint128 x) {
 
 #endif
 
-SL int __pe_popcount2(uint32 x) {
-  static const int tb[]{0, 1, 1, 2};
-  return tb[x & 3];
+static constexpr int __pe_popcount2_table[]{0, 1, 1, 2};
+
+SL constexpr int __pe_popcount2(uint32 x) {
+  return __pe_popcount2_table[x & 3];
 }
 
-SL int __pe_popcount4(uint32 x) {
+SL constexpr int __pe_popcount4(uint32 x) {
   int ret = 0;
   if (x & 3) ret += __pe_popcount2(x);
   if (x >> 2) ret += __pe_popcount2(x >> 2);
   return ret;
 }
 
-SL int __pe_popcount8(uint32 x) {
+SL constexpr int __pe_popcount8(uint32 x) {
   int ret = 0;
   if (x & 15) ret += __pe_popcount4(x);
   if (x >> 4) ret += __pe_popcount4(x >> 4);
   return ret;
 }
 
-SL int __pe_popcount16(uint32 x) {
+SL constexpr int __pe_popcount16(uint32 x) {
   int ret = 0;
   if (x & 255) ret += __pe_popcount8(x);
   if (x >> 8) ret += __pe_popcount8(x >> 8);
   return ret;
 }
 
-SL int __pe_popcount32(uint32 x) {
+SL constexpr int __pe_popcount32(uint32 x) {
   int ret = 0;
   if (x & 65535) ret += __pe_popcount16(x);
   if (x >> 16) ret += __pe_popcount16(x >> 16);
   return ret;
 }
 
-SL int __pe_popcount64(uint64 x) {
+SL constexpr int __pe_popcount64(uint64 x) {
   int ret = 0;
   if (static_cast<uint32>(x)) ret += __pe_popcount32(static_cast<uint32>(x));
   if (x >> 32) ret += __pe_popcount32(static_cast<uint32>(x >> 32));
@@ -122,7 +123,7 @@ SL int __pe_popcount64(uint64 x) {
 
 #if PE_HAS_INT128
 
-SL int __pe_popcount128(uint128 x) {
+SL constexpr int __pe_popcount128(uint128 x) {
   int ret = 0;
   if (static_cast<uint64>(x)) ret += __pe_popcount64(static_cast<uint64>(x));
   if (x >> 64) ret += __pe_popcount64(static_cast<uint64>(x >> 64));
@@ -131,7 +132,7 @@ SL int __pe_popcount128(uint128 x) {
 
 #endif
 
-SL uint32 __pe_bitreverse32(uint32 x) {
+SL constexpr uint32 __pe_bitreverse32(uint32 x) {
   x = (((x & 0xAAAAAAAA) >> 1) | ((x & 0x55555555) << 1));
   x = (((x & 0xCCCCCCCC) >> 2) | ((x & 0x33333333) << 2));
   x = (((x & 0xF0F0F0F0) >> 4) | ((x & 0x0F0F0F0F) << 4));
@@ -139,7 +140,7 @@ SL uint32 __pe_bitreverse32(uint32 x) {
   return ((x >> 16) | (x << 16));
 }
 
-SL uint64 __pe_bitreverse64(uint64 x) {
+SL constexpr uint64 __pe_bitreverse64(uint64 x) {
   x = (((x & 0xAAAAAAAAAAAAAAAAULL) >> 1) | ((x & 0x5555555555555555ULL) << 1));
   x = (((x & 0xCCCCCCCCCCCCCCCCULL) >> 2) | ((x & 0x3333333333333333ULL) << 2));
   x = (((x & 0xF0F0F0F0F0F0F0F0ULL) >> 4) | ((x & 0x0F0F0F0F0F0F0F0FULL) << 4));
@@ -151,7 +152,7 @@ SL uint64 __pe_bitreverse64(uint64 x) {
 
 #if PE_HAS_INT128
 
-SL uint128 __pe_bitreverse128(uint128 x) {
+SL constexpr uint128 __pe_bitreverse128(uint128 x) {
   const uint128 x0 = __pe_bitreverse64(static_cast<uint64>(x >> 64));
   const uint128 x1 = __pe_bitreverse64(static_cast<uint64>(x));
   return (x1 << 64) | x0;
@@ -159,12 +160,12 @@ SL uint128 __pe_bitreverse128(uint128 x) {
 
 #endif
 
-SL uint32 __pe_bswap32(uint32 x) {
+SL constexpr uint32 __pe_bswap32(uint32 x) {
   x = (((x & 0xFF00FF00) >> 8) | ((x & 0x00FF00FF) << 8));
   return ((x >> 16) | (x << 16));
 }
 
-SL uint64 __pe_bswap64(uint64 x) {
+SL constexpr uint64 __pe_bswap64(uint64 x) {
   x = (((x & 0xFF00FF00FF00FF00ULL) >> 8) | ((x & 0x00FF00FF00FF00FFULL) << 8));
   x = (((x & 0xFFFF0000FFFF0000ULL) >> 16) |
        ((x & 0x0000FFFF0000FFFFULL) << 16));
@@ -173,7 +174,7 @@ SL uint64 __pe_bswap64(uint64 x) {
 
 #if PE_HAS_INT128
 
-SL uint128 __pe_bswap128(uint128 x) {
+SL constexpr uint128 __pe_bswap128(uint128 x) {
   const uint128 x0 = __pe_bswap64(static_cast<uint64>(x >> 64));
   const uint128 x1 = __pe_bswap64(static_cast<uint64>(x));
   return (x1 << 64) | x0;
@@ -181,25 +182,27 @@ SL uint128 __pe_bswap128(uint128 x) {
 
 #endif
 
-SL int __pe_ffs32(uint32 x) { return x == 0 ? 0 : 1 + __pe_ctz32(x); }
+SL constexpr int __pe_ffs32(uint32 x) { return x == 0 ? 0 : 1 + __pe_ctz32(x); }
 
-SL int __pe_ffs64(uint64 x) { return x == 0 ? 0 : 1 + __pe_ctz64(x); }
+SL constexpr int __pe_ffs64(uint64 x) { return x == 0 ? 0 : 1 + __pe_ctz64(x); }
 
-SL int __pe_parity32(uint32 x) { return __pe_popcount32(x) & 1; }
+SL constexpr int __pe_parity32(uint32 x) { return __pe_popcount32(x) & 1; }
 
-SL int __pe_parity64(uint64 x) { return __pe_popcount64(x) & 1; }
+SL constexpr int __pe_parity64(uint64 x) { return __pe_popcount64(x) & 1; }
 
-SL int __pe_lg32(uint32 x) { return 31 - __pe_clz32(x); }
+SL constexpr int __pe_lg32(uint32 x) { return 31 - __pe_clz32(x); }
 
-SL int __pe_lg64(uint64 x) { return 63 - __pe_clz64(x); }
+SL constexpr int __pe_lg64(uint64 x) { return 63 - __pe_clz64(x); }
 
 #if PE_HAS_INT128
 
-SL int __pe_ffs128(uint128 x) { return x == 0 ? 0 : 1 + __pe_ctz128(x); }
+SL constexpr int __pe_ffs128(uint128 x) {
+  return x == 0 ? 0 : 1 + __pe_ctz128(x);
+}
 
-SL int __pe_parity128(uint128 x) { return __pe_popcount128(x) & 1; }
+SL constexpr int __pe_parity128(uint128 x) { return __pe_popcount128(x) & 1; }
 
-SL int __pe_lg128(uint128 x) { return 127 - __pe_clz128(x); }
+SL constexpr int __pe_lg128(uint128 x) { return 127 - __pe_clz128(x); }
 
 #endif
 
@@ -263,19 +266,19 @@ SL int __pe_lg128(uint128 x) { return 127 - __pe_clz128(x); }
 #endif
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T> && sizeof(T) <= 4)) RETURN(int)
+SL constexpr REQUIRES((is_builtin_integer_v<T> && sizeof(T) <= 4)) RETURN(int)
     Popcount(T x) {
   return pe_popcount(static_cast<uint32>(x));
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 8)) RETURN(int)
+SL constexpr REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 8)) RETURN(int)
     Popcount(T x) {
   return pe_popcountll(static_cast<uint64>(x));
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 16)) RETURN(int)
+SL constexpr REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 16)) RETURN(int)
     Popcount(T x) {
   int ret = 0;
   if (static_cast<uint64>(x)) ret += pe_popcountll(static_cast<uint64>(x));
@@ -284,38 +287,38 @@ SL REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 16)) RETURN(int)
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(int) HasSingleBit(T x) {
+SL constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(int) HasSingleBit(T x) {
   using unsignedT = typename pe_make_unsigned<T>::type;
   const unsignedT& v = x;
   return v != 0 && (v & (v - 1)) == 0;
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 1)) RETURN(int)
+SL constexpr REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 1)) RETURN(int)
     CountLeftZero(T x) {
   return x ? __pe_clz8(static_cast<uint32>(x)) : 8;
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 2)) RETURN(int)
+SL constexpr REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 2)) RETURN(int)
     CountLeftZero(T x) {
   return x ? __pe_clz16(static_cast<uint32>(x)) : 16;
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 4)) RETURN(int)
+SL constexpr REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 4)) RETURN(int)
     CountLeftZero(T x) {
   return x ? pe_clz(static_cast<uint32>(x)) : 32;
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 8)) RETURN(int)
+SL constexpr REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 8)) RETURN(int)
     CountLeftZero(T x) {
   return x ? pe_clzll(static_cast<uint64>(x)) : 64;
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 16)) RETURN(int)
+SL constexpr REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 16)) RETURN(int)
     CountLeftZero(T x) {
   return x ? (x >> 64 ? pe_clzll(static_cast<uint64>(x >> 64))
                       : 64 + pe_clzll(static_cast<uint64>(x)))
@@ -325,31 +328,31 @@ SL REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 16)) RETURN(int)
 #define CountLeadingZero CountLeftZero
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 1)) RETURN(int)
+SL constexpr REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 1)) RETURN(int)
     CountRightZero(T x) {
   return x ? __pe_ctz8(static_cast<uint32>(x)) : 8;
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 2)) RETURN(int)
+SL constexpr REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 2)) RETURN(int)
     CountRightZero(T x) {
   return x ? __pe_ctz16(static_cast<uint32>(x)) : 16;
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 4)) RETURN(int)
+SL constexpr REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 4)) RETURN(int)
     CountRightZero(T x) {
   return x ? pe_ctz(static_cast<uint32>(x)) : 32;
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 8)) RETURN(int)
+SL constexpr REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 8)) RETURN(int)
     CountRightZero(T x) {
   return x ? pe_ctzll(static_cast<uint64>(x)) : 64;
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 16)) RETURN(int)
+SL constexpr REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 16)) RETURN(int)
     CountRightZero(T x) {
   return x ? (static_cast<uint64>(x)
                   ? pe_ctzll(static_cast<uint64>(x))
@@ -360,25 +363,26 @@ SL REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 16)) RETURN(int)
 #define CountTrailingZero CountRightZero
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 4)) RETURN(T)
+SL constexpr REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 4)) RETURN(T)
     Byteswap(T x) {
   return static_cast<T>(pe_bswap(x));
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 8)) RETURN(T)
+SL constexpr REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 8)) RETURN(T)
     Byteswap(T x) {
   return static_cast<T>(pe_bswapll(x));
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 16)) RETURN(T)
+SL constexpr REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 16)) RETURN(T)
     Byteswap(T x) {
   return static_cast<T>(__pe_bswap128(x));
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T) RotateLeft(T x, int s) {
+SL constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
+    RotateLeft(T x, int s) {
   using unsignedT = typename pe_make_unsigned<T>::type;
   const unsignedT& unsignedV = x;
   constexpr int bitcount = sizeof(T) * 8;
@@ -388,7 +392,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T) RotateLeft(T x, int s) {
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T) RotateRight(T x, int s) {
+SL constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
+    RotateRight(T x, int s) {
   using unsignedT = typename pe_make_unsigned<T>::type;
   const unsignedT& unsignedV = x;
   constexpr int bitcount = sizeof(T) * 8;
@@ -398,47 +403,50 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T) RotateRight(T x, int s) {
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(int) BitWidth(T x) {
+SL constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(int) BitWidth(T x) {
   return sizeof(T) * 8 - CountLeftZero(x);
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(int) HighestBitIndex(T v) {
+SL constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(int)
+    HighestBitIndex(T v) {
   return v ? BitWidth(v) - 1 : -1;
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(int) LowestBitIndex(T v) {
+SL constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(int)
+    LowestBitIndex(T v) {
   return v ? CountRightZero(v) : -1;
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T) HighestBit(T v) {
+SL constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(T) HighestBit(T v) {
   using unsignedT = typename pe_make_unsigned<T>::type;
   const unsignedT one = 1;
   return v ? one << HighestBitIndex(v) : 0;
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T) LowestBit(T v) {
+SL constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(T) LowestBit(T v) {
   using unsignedT = typename pe_make_unsigned<T>::type;
   const unsignedT one = 1;
-  return v ? one << LowestBitIndex(v): 0;
+  return v ? one << LowestBitIndex(v) : 0;
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T) BitCeil(T v) {
+SL constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(T) BitCeil(T v) {
   auto t = HighestBit(v);
   return t == v ? t : t << 1;
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T) BitFloor(T v) {
+SL constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(T) BitFloor(T v) {
   return HighestBit(v);
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<int>) BitIndex(T v) {
+SL constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<int>)
+    BitIndex(T v) {
   std::vector<int> ret;
   for (int i = 0; v; v >>= 1, ++i)
     if (v & 1) {
@@ -448,39 +456,39 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<int>) BitIndex(T v) {
 }
 
 template <typename T, typename U>
-SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<U>)) RETURN(T)
-    SetBit(T v, U bidx) {
+SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<U>))
+    RETURN(T) SetBit(T v, U bidx) {
   using unsignedT = typename pe_make_unsigned<T>::type;
   const unsignedT& unsignedV = v;
   return static_cast<T>(unsignedV | (static_cast<unsignedT>(1) << bidx));
 }
 
 template <typename T, typename U>
-SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<U>)) RETURN(T)
-    ResetBit(T v, U bidx) {
+SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<U>))
+    RETURN(T) ResetBit(T v, U bidx) {
   using unsignedT = typename pe_make_unsigned<T>::type;
   const unsignedT& unsignedV = v;
   return static_cast<T>(unsignedV & ~(static_cast<unsignedT>(1) << bidx));
 }
 
 template <typename T, typename U>
-SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<U>)) RETURN(T)
-    GetBit(T v, U bidx) {
+SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<U>))
+    RETURN(T) GetBit(T v, U bidx) {
   using unsignedT = typename pe_make_unsigned<T>::type;
   const unsignedT& unsignedV = v;
   return (unsignedV & (static_cast<unsignedT>(1) << bidx)) ? 1 : 0;
 }
 
 template <typename T, typename U>
-SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<U>)) RETURN(T)
-    RevBit(T v, U bidx) {
+SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<U>))
+    RETURN(T) RevBit(T v, U bidx) {
   using unsignedT = typename pe_make_unsigned<T>::type;
   const unsignedT& unsignedV = v;
   return static_cast<T>(unsignedV ^ (static_cast<unsignedT>(1) << bidx));
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T) NextComb(T comb) {
+SL constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(T) NextComb(T comb) {
   const T x = comb & -comb, y = comb + x;
   return ((comb & ~y) / x >> 1) | y;
 }

@@ -275,21 +275,18 @@ class BigInteger {
     sign_ = 0;
   }
 
-  template <typename T,
-            typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(void)>
+  template <typename T, typename = std::enable_if_t<is_builtin_integer_v<T>>>
   BigInteger(T value) : BigInteger(internal::zero_initialize_tag) {
     FromNativeInt(value);
   }
 
-  template <typename T,
-            typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(T)>
+  template <typename T, typename = std::enable_if_t<is_builtin_integer_v<T>>>
   BigInteger(const std::vector<T>& v)
       : BigInteger(internal::zero_initialize_tag) {
     FromUInt32Vector(v);
   }
 
-  template <typename T,
-            typename TT = REQUIRES((is_extended_integer_v<T>)) RETURN(void)>
+  template <typename T, typename = std::enable_if_t<is_extended_integer_v<T>>>
   BigInteger(const T& value) : BigInteger(internal::zero_initialize_tag) {
     FromExtendedInt(value);
   }
@@ -1213,8 +1210,7 @@ class BigInteger {
   REQUIRES(
       (is_builtin_integer_v<T> &&
        !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
-  RETURN(BigInteger&)
-  operator>>=(T other) {
+  RETURN(BigInteger&) operator>>=(T other) {
     *this = *this >> other;
     return *this;
   }
@@ -1223,8 +1219,7 @@ class BigInteger {
   REQUIRES(
       (is_builtin_integer_v<T> &&
        !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
-  RETURN(BigInteger&)
-  operator<<=(T other) {
+  RETURN(BigInteger&) operator<<=(T other) {
     *this = *this << other;
     return *this;
   }
@@ -1397,8 +1392,7 @@ class BigInteger {
   friend inline REQUIRES(
       (is_builtin_integer_v<T> &&
        !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
-      RETURN(BigInteger)
-      operator*(const BigInteger& l, T r) {
+      RETURN(BigInteger) operator*(const BigInteger & l, T r) {
     if (r == 0 || l.IsZero()) return 0;
 
     using unsignedT = typename pe_make_unsigned<T>::type;
@@ -1415,8 +1409,7 @@ class BigInteger {
   friend inline REQUIRES(
       (is_builtin_integer_v<T> &&
        !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
-      RETURN(BigInteger)
-      operator*(T l, const BigInteger& r) {
+      RETURN(BigInteger) operator*(T l, const BigInteger & r) {
     return r * l;
   }
 
@@ -1425,11 +1418,10 @@ class BigInteger {
   }
 
   template <typename T>
-  friend inline REQUIRES(
-      (is_builtin_integer_v<T> &&
-       !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
-       sizeof(T) <= 8)) RETURN(BigInteger)
-  operator/(const BigInteger& l, T r) {
+  friend inline REQUIRES((
+      is_builtin_integer_v<T> &&
+      !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
+      sizeof(T) <= 8)) RETURN(BigInteger) operator/(const BigInteger & l, T r) {
     T remain;
     return Divide(l, r, remain);
   }
@@ -1586,11 +1578,10 @@ class BigInteger {
   }
 
   template <typename T>
-  friend inline REQUIRES(
-      (is_builtin_integer_v<T> &&
-       !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
-       sizeof(T) <= 8)) RETURN(BigInteger)
-  operator%(const BigInteger& l, T r) {
+  friend inline REQUIRES((
+      is_builtin_integer_v<T> &&
+      !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
+      sizeof(T) <= 8)) RETURN(BigInteger) operator%(const BigInteger & l, T r) {
     BigInteger u;
     T remain;
     Divide(l, r, remain);
@@ -1661,8 +1652,7 @@ class BigInteger {
   friend inline REQUIRES(
       (is_builtin_integer_v<T> &&
        !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
-      RETURN(BigInteger)
-      operator<<(const BigInteger& l, T n) {
+      RETURN(BigInteger) operator<<(const BigInteger & l, T n) {
     if (l.sign() == 0) {
       return 0;
     }
@@ -1688,8 +1678,7 @@ class BigInteger {
   friend inline REQUIRES(
       (is_builtin_integer_v<T> &&
        !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value))
-      RETURN(BigInteger)
-      operator>>(const BigInteger& l, T n) {
+      RETURN(BigInteger) operator>>(const BigInteger & l, T n) {
     if (l.sign() == 0) {
       return 0;
     }
@@ -1732,8 +1721,7 @@ using bi = BigInteger;
 
 template <>
 struct Gbi<BigInteger> {
-  template <typename T,
-            typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(T)>
+  template <typename T, typename = std::enable_if_t<is_builtin_integer_v<T>>>
   static BigInteger Of(T value) {
     return BigInteger(value);
   }

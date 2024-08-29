@@ -1,6 +1,7 @@
 #include <pe.hpp>
 using namespace pe;
 
+#if 0
 const int TN = 8;
 int64 CalPi0(int64 n) {
   int64 result = PARALLEL_RESULT(
@@ -52,3 +53,8 @@ int main() {
 
   return 0;
 }
+#else
+int main() {
+  return 0;
+}
+#endif

@@ -2461,47 +2461,6 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 }
 
 namespace internal {
-#if 0
-// Returns: (X[0]+X[1]*x)(X[2]+X[3]x)...(X[2k-2]+X[2k-1]x)
-// where n = 2 * k
-// size(result) >= k + 1
-template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyBatchMulImpl(const T* X, int64 n, T* result,
-                                   int64 mod) {
-  static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
-  std::vector<std::vector<T>> from;
-  for (int64 i = 0; i < n; ++i) {
-    std::vector<T> tmp{X[2*i] % mod, X[2*i+1]%mod};
-    from.push_back(tmp);
-  }
-  int64 last_size = n;
-  while (last_size != 1) {
-    std::vector<std::vector<T>> to;
-    for (int64 i = 0; i < last_size / 2; ++i) {
-      to.push_back(PolyMul(from[i * 2], from[i * 2 + 1], mod));
-    }
-    if (last_size & 1) {
-      to.push_back(from[last_size - 1]);
-    }
-    last_size = last_size + 1 >> 1;
-    from.swap(to);
-  }
-  auto& t = from[0];
-  PE_ASSERT(sz(t) == n + 1);
-  std::copy(t.begin(), t.end(), result);
-}
-
-// Returns: (X[0]+X[1]*x)(X[2]+X[3]x)...(X[2k-2]+X[2k-1]x)
-// where e - s = 2 * k
-// size(result) >= k + 1
-template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyBatchMulImpl(const T* X, int64 s, int64 e, T* result,
-                                   int64 mod) {
-  PolyBatchMulImpl(X + 2 * s, e - s, result, mod);
-}
-#else
 // Returns: (X[0]+X[1]*x)(X[2]+X[3]x)...(X[2k-2]+X[2k-1]x)
 // where e - s = 2 * k
 // size(result) >= k + 1
@@ -2532,7 +2491,6 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   }
   PolyMul(&A[0], half + 1, &B[0], n - half + 1, result, mod);
 }
-#endif
 }  // namespace internal
 
 // Returns: (X[0]+X[1]*x)(X[2]+X[3]x)...(X[2k-2]+X[2k-1]x)
@@ -2561,66 +2519,6 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 
 // PolyBatchMulAcc is used by FactSumModer
 
-#if 0
-// n = e - s
-// Y = X[2s:2e]
-// s(i) = (Y[1]*x+Y[0])(Y[3]x+Y[2])...(Y[2i+1]x+Y[2i])
-// return s(0) + s(2) + s(3) + ... + s(n-1)
-template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-PolyBatchMulAcc(const std::vector<T>& X, int64 s, int64 e, uint64 mod) {
-  const int64 n = e - s;
-  if (n == 1) {
-    return std::vector<T>(X.begin() + s * 2, X.begin() + e * 2);
-  }
-
-  const int64 half = n / 2;
-  std::vector<T> A, B, C;
-#if ENABLE_OPENMP
-#pragma omp parallel sections if (n > 5000)
-#endif
-  {
-#if ENABLE_OPENMP
-#pragma omp section
-#endif
-    A = PolyBatchMulAcc(X, s, s + half, mod);
-#if ENABLE_OPENMP
-#pragma omp section
-#endif
-    B = PolyBatchMulAcc(X, s + half, e, mod);
-#if ENABLE_OPENMP
-#pragma omp section
-#endif
-    C = PolyBatchMul(std::vector<T>(X.begin() + s * 2, X.begin() + (s + half)*2), mod);
-  }
-
-  B = PolyMul(B, C, mod);
-  return PolyAdd(A, B, mod);
-}
-
-// n = X.size() / 2
-// Y = X
-// s(i) = (Y[1]*x+Y[0])(Y[3]x+Y[2])...(Y[2i+1]x+Y[2i])
-// return s(0) + s(2) + s(3) + ... + s(n-1)
-template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-PolyBatchMulAcc(const std::vector<T>& X, uint64 mod) {
-  return PolyBatchMulAcc(X, 0, X.size() / 2, mod);
-}
-
-// n = e - s
-// Y = X[2s:2e]
-// s(i) = (Y[1]*x+Y[0])(Y[3]x+Y[2])...(Y[2i+1]x+Y[2i])
-// M = s(n-1)
-// return s(0) + s(2) + s(3) + ... + s(n-1)
-template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-PolyBatchMulAcc(const std::vector<T>& X, int64 s, int64 e, std::vector<T>& M, uint64 mod) {
-  std::vector<T> Y(X.begin() + s * 2, X.begin() + e * 2);
-  M = PolyBatchMul(Y, mod);
-  return PolyBatchMulAcc(Y, mod);
-}
-#else
 // n = e - s
 // Y = X[2s:2e]
 // s(i) = (Y[1]*x+Y[0])(Y[3]x+Y[2])...(Y[2i+1]x+Y[2i])
@@ -2678,6 +2576,5 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   std::vector<T> C;
   return PolyBatchMulAcc(X, 0, X.size() / 2, C, mod);
 }
-#endif
 }  // namespace pe
 #endif

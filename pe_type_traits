@@ -25,27 +25,16 @@ struct IntToType {
 // template<typename T, typename U>
 // REQUIRES((is_builtin_integer_v<T> && pe_is_unsigned<U>::value))
 // RETURN(void)  foo(T x, U y)  {}
-template <int ok>
-struct CheckConditionThen {};
-
-template <>
-struct CheckConditionThen<true> {
+template <typename T>
+struct CheckConditionThen1 {
   template <typename U>
   struct IdenticalType {
     using type = U;
   };
-  template <typename U>
-  struct IdenticalTypeT {
-    using type = typename U::type;
-  };
 };
 
-#define REQUIRES(...) typename pe::CheckConditionThen<__VA_ARGS__>::
+#define REQUIRES(...) typename pe::CheckConditionThen1<int[(__VA_ARGS__)]>::
 #define RETURN(...) template IdenticalType<__VA_ARGS__>::type
-
-// If the return type depends on the condition and the return type
-// is invalid if the condition is false, please use this one.
-#define RETURN_T(...) template IdenticalTypeT<__VA_ARGS__>::type
 
 // pe type traits
 
@@ -430,6 +419,5 @@ struct AtLeastInt64 {
 };
 
 #define IntPromotion(...) typename pe::BiggerIntegralN<__VA_ARGS__>::type
-#define IntPromotionT(...) pe::BiggerIntegralN<__VA_ARGS__>
 }  // namespace pe
 #endif

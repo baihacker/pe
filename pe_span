@@ -1,0 +1,371 @@
+#ifndef PE_SPAN_
+#define PE_SPAN_
+
+#include "pe_base"
+#include "pe_type_traits"
+
+namespace pe {
+// Simplified MinGW-x86_64_14.1.0-msys2/include/c++/14.1.0/span.
+template <typename T>
+class Span {
+  using ConstElementAccessType = make_const_arg_type_t<T>;
+  using ElementAccessType =
+      std::conditional_t<std::is_const_v<T>, ConstElementAccessType,
+                         std::add_lvalue_reference_t<T>>;
+  using PointerToElementType =
+      std::conditional_t<std::is_const_v<T>,
+                         std::add_pointer_t<std::add_const_t<T>>,
+                         std::add_pointer_t<T>>;
+  using NonCVType = std::remove_cv_t<T>;
+  using NonConstType = std::remove_const_t<T>;
+
+ public:
+  constexpr Span() noexcept : p(nullptr), n(0) {}
+
+  constexpr Span(const Span&) noexcept = default;
+
+  constexpr Span(PointerToElementType ptr, int64 n) noexcept : p(ptr), n(n) {}
+
+  template <int64 N>
+  constexpr Span(const NonConstType (&a)[N]) noexcept : Span(&a[0], N) {}
+
+  template <int64 N>
+  constexpr Span(NonConstType (&a)[N]) noexcept : Span(&a[0], N) {}
+
+  constexpr Span(const std::vector<NonCVType>& v) noexcept
+      : Span(&v[0], static_cast<int64>(v.size())) {}
+
+  constexpr Span(std::vector<NonCVType>& v) noexcept
+      : Span(&v[0], static_cast<int64>(v.size())) {}
+
+  constexpr Span(std::vector<NonCVType>&& v) noexcept
+      : Span(&v[0], static_cast<int64>(v.size())) {}
+
+  constexpr Span(std::vector<NonCVType>&& v, int) noexcept = delete;
+
+  template <uint64 N>
+  constexpr Span(const std::array<NonCVType, N>& v) noexcept
+      : Span(&v[0], static_cast<int64>(v.size())) {}
+
+  template <uint64 N>
+  constexpr Span(std::array<NonCVType, N>& v) noexcept
+      : Span(&v[0], static_cast<int64>(v.size())) {}
+
+  template <uint64 N>
+  constexpr Span(std::array<NonCVType, N>&& v) noexcept
+      : Span(&v[0], static_cast<int64>(v.size())) {}
+
+  template <uint64 N>
+  constexpr Span(std::array<NonCVType, N>&& v, int) noexcept = delete;
+
+  ~Span() noexcept = default;
+
+  constexpr Span& operator=(const Span&) noexcept = default;
+
+  constexpr int64 size() const noexcept { return this->n; }
+
+  constexpr int64 size_bytes() const noexcept { return this->n * sizeof(T); }
+
+  constexpr bool empty() const noexcept { return size() == 0; }
+
+  constexpr ElementAccessType front() const noexcept {
+    PE_ASSERT(!empty());
+    return *this->p;
+  }
+
+  constexpr ElementAccessType back() const noexcept {
+    PE_ASSERT(!empty());
+    return *(this->p + (size() - 1));
+  }
+
+  constexpr ElementAccessType operator[](int64 idx) const noexcept {
+    // PE_ASSERT(idx < size());
+    return *(this->p + idx);
+  }
+
+  constexpr ElementAccessType at(int64 idx) const {
+    PE_ASSERT(idx < size());
+    return *(this->p + idx);
+  }
+
+  constexpr PointerToElementType data() const noexcept { return this->p; }
+
+  // iterator support
+  struct IteratorBase {
+    bool operator==(const IteratorBase& o) const {
+      return this->iter_ == o.iter_;
+    }
+    bool operator!=(const IteratorBase& o) const {
+      return !(this->operator==(o));
+    }
+    PointerToElementType iter_;
+  };
+
+  struct Iterator : public IteratorBase {
+    ElementAccessType operator*() const { return *this->iter_; }
+    Iterator& operator++() {
+      ++this->iter_;
+      return *this;
+    }
+
+    Iterator operator++(int) { return Iterator{this->iter_++}; }
+
+    Iterator& operator--() {
+      --this->iter_;
+      return *this;
+    }
+
+    Iterator operator--(int) { return Iterator{this->iter_--}; }
+  };
+
+  struct ConstIterator : public Iterator {
+    ConstElementAccessType operator*() const { return *this->iter_; }
+  };
+
+  struct ReversedIterator : public IteratorBase {
+    ElementAccessType operator*() { return *this->iter_; }
+    ReversedIterator& operator++() {
+      --this->iter_;
+      return *this;
+    }
+
+    ReversedIterator operator++(int) { return ReversedIterator{this->iter_--}; }
+
+    ReversedIterator& operator--() {
+      ++this->iter_;
+      return *this;
+    }
+
+    ReversedIterator operator--(int) { return ReversedIterator{this->iter_++}; }
+  };
+  struct ConstReversedIterator : public ReversedIterator {
+    ConstElementAccessType operator*() const { return *this->iter_; }
+  };
+
+  constexpr Iterator begin() const noexcept { return Iterator{this->p}; }
+
+  constexpr Iterator end() const noexcept {
+    return Iterator{this->p + this->size()};
+  }
+
+  constexpr Iterator cbegin() const noexcept { return ConstIterator{this->p}; }
+
+  constexpr Iterator cend() const noexcept {
+    return ConstIterator{this->p + this->size()};
+  }
+
+  constexpr ReversedIterator rbegin() const noexcept {
+    return ReversedIterator{this->p + this->size() - 1};
+  }
+
+  constexpr ReversedIterator rend() const noexcept {
+    return ReversedIterator{this->p - 1};
+  }
+
+  constexpr ConstReversedIterator crbegin() const noexcept {
+    return ConstReversedIterator{this->p + this->size() - 1};
+  }
+
+  constexpr ConstReversedIterator crend() const noexcept {
+    return ConstReversedIterator{this->p - 1};
+  }
+
+  struct IndexedValue {
+    int64 i;
+    ElementAccessType v;
+  };
+  struct ConstIndexedValue {
+    int64 i;
+    ConstElementAccessType v;
+  };
+  struct IndexedIteratorBase {
+    bool operator==(const IndexedIteratorBase& o) const {
+      return this->base_ == o.base_ && this->iter_ == o.iter_;
+    }
+    bool operator!=(const IndexedIteratorBase& o) const {
+      return !(this->operator==(o));
+    }
+    PointerToElementType base_;
+    int64 iter_;
+  };
+  struct IndexedIterator : public IndexedIteratorBase {
+    IndexedValue operator*() const {
+      return {this->iter_, *(this->base_ + this->iter_)};
+    }
+    IndexedIterator& operator++() {
+      ++this->iter_;
+      return *this;
+    }
+
+    IndexedIterator operator++(int) {
+      return IndexedIterator{this->base_, this->iter_++};
+    }
+
+    IndexedIterator& operator--() {
+      --this->iter_;
+      return *this;
+    }
+
+    IndexedIterator operator--(int) {
+      return IndexedIterator{this->base_, this->iter_--};
+    }
+  };
+
+  struct ConstIndexedIterator : public IndexedIterator {
+    ConstIndexedValue operator*() const {
+      return {this->iter_, *(this->base_ + this->iter_)};
+    }
+  };
+
+  struct ItemBase {
+    PointerToElementType p;
+    int64 n;
+  };
+  struct ItemImpl : public ItemBase {
+    IndexedIterator begin() { return {this->p, 0}; }
+    IndexedIterator end() { return {this->p, this->n}; }
+  };
+  struct ConstItemImpl : public ItemBase {
+    ConstIndexedIterator begin() { return {this->p, 0}; }
+    ConstIndexedIterator end() { return {this->p, this->n}; }
+  };
+
+  ItemImpl Item() const { return {p, n}; }
+  ConstItemImpl CItem() const { return {p, n}; }
+
+  struct ReversedIndexedIterator {
+    IndexedValue operator*() const {
+      return {this->iter_, *(this->base_ - this->iter_)};
+    }
+    bool operator==(const ReversedIndexedIterator& o) const {
+      return this->base_ == o.base_ && this->iter_ == o.iter_;
+    }
+    bool operator!=(const ReversedIndexedIterator& o) const {
+      return !(this->operator==(o));
+    }
+    ReversedIndexedIterator& operator++() {
+      ++this->iter_;
+      return *this;
+    }
+
+    ReversedIndexedIterator operator++(int) {
+      return ReversedIndexedIterator{this->base_, this->iter_++};
+    }
+
+    ReversedIndexedIterator& operator--() {
+      --this->iter_;
+      return *this;
+    }
+
+    ReversedIndexedIterator operator--(int) {
+      return ReversedIndexedIterator{this->base_, this->iter_--};
+    }
+
+    PointerToElementType base_;
+    int64 iter_;
+  };
+  struct ConstReversedIndexedIterator : public ReversedIndexedIterator {
+    ConstIndexedValue operator*() const {
+      return {this->iter_, *(this->base_ - this->iter_)};
+    }
+  };
+
+  struct ReversedItemImpl : public ItemBase {
+    ReversedIndexedIterator begin() { return {this->p + this->n - 1, 0}; }
+    ReversedIndexedIterator end() { return {this->p + this->n - 1, n}; }
+  };
+  struct ConstReversedItemImpl : public ItemBase {
+    ConstReversedIndexedIterator begin() { return {this->p + this->n - 1, 0}; }
+    ConstReversedIndexedIterator end() {
+      return {this->p + this->n - 1, this->n};
+    }
+  };
+
+  ReversedItemImpl RItem() const { return {p, n}; }
+  ConstReversedItemImpl CRItem() const { return {p, n}; }
+
+  // subviews
+  constexpr Span<T> first(int64 count) const noexcept {
+    PE_ASSERT(count <= this->size());
+    return {this->data(), count};
+  }
+
+  constexpr Span<T> last(int64 count) const noexcept {
+    PE_ASSERT(count <= this->size());
+    return {this->data() + (this->size() - count), count};
+  }
+
+  constexpr Span<T> subspan(int64 offset) const noexcept {
+    PE_ASSERT(offset <= this->size());
+    return {this->data() + offset, this->size() - offset};
+  }
+
+  constexpr Span<T> subspan(int64 offset, int64 count) const noexcept {
+    PE_ASSERT(offset <= this->size());
+    PE_ASSERT(count <= this->size());
+    PE_ASSERT(offset + count <= this->size());
+    return {this->data() + offset, count};
+  }
+
+  PointerToElementType p;
+  int64 n;
+};
+
+template <typename T>
+SL std::ostream& operator<<(std::ostream& o, Span<T> v) {
+  const int64 size = v.size();
+  int64 id = 0;
+  o << "{";
+  for (const auto& iter : v) {
+    o << iter;
+    if (++id < size) {
+      o << ", ";
+    }
+  }
+  return o << "}";
+}
+
+template <typename T>
+Span<const T> MakeSpan(const std::vector<T>& v) {
+  return Span<const T>(v);
+}
+
+template <typename T>
+Span<T> MakeSpan(std::vector<T>& v) {
+  return Span<T>(v);
+}
+template <typename T>
+Span<T> MakeSpan(std::vector<T>&& v) {
+  // Intentionally call the deleted constructor.
+  return Span<T>(std::move(v), 0);
+}
+
+template <typename T, uint64 N>
+Span<const T> MakeSpan(const std::array<T, N>& v) {
+  return Span<const T>(v);
+}
+template <typename T, uint64 N>
+Span<T> MakeSpan(std::array<T, N>& v) {
+  return Span<T>(v);
+}
+template <typename T, uint64 N>
+Span<T> MakeSpan(std::array<T, N>&& v) {
+  // Intentionally call the deleted constructor.
+  return Span<T>(std::move(v), 0);
+}
+
+template <typename T, int64 N>
+Span<const T> MakeSpan(const T (&a)[N]) {
+  return Span<const T>(a);
+}
+template <typename T, int64 N>
+Span<T> MakeSpan(T (&a)[N]) {
+  return Span<T>(a);
+}
+
+template <typename T>
+Span<T> MakeSpan(T* a, int64 N) {
+  return Span<T>(a, N);
+}
+}  // namespace pe
+#endif

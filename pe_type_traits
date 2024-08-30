@@ -318,23 +318,24 @@ struct pe_make_unsigned<ExtendedSignedIntImpl<ET, is_builtin>> {
 };
 
 // make_const_arg_type
-template <typename T, int is_arithmetic_type>
+template <typename T, bool value = false>
 struct make_const_arg_type_impl {
-  using type = const T;
+  using type = std::add_lvalue_reference_t<std::add_const_t<T>>;
 };
 
 template <typename T>
-struct make_const_arg_type_impl<T, 0> {
-  using type = const T&;
+struct make_const_arg_type_impl<T, /*value=**/ true> {
+  using type = std::add_const_t<T>;
 };
 
 template <typename T>
-struct make_const_arg_type {
-  using no_cvref_type = typename std::remove_cvref<T>::type;
-  using type = typename make_const_arg_type_impl<
-      no_cvref_type,
-      static_cast<int>(std::is_arithmetic<no_cvref_type>::value)>::type;
-};
+struct make_const_arg_type
+    : public make_const_arg_type_impl<T, (sizeof(T) <=
+                                              2 * sizeof(std::nullptr_t) &&
+                                          std::is_trivially_copyable_v<T>)> {};
+
+template <typename T>
+using make_const_arg_type_t = typename make_const_arg_type<T>::type;
 
 // predicate_all
 template <template <typename T> class predicate, typename TH, typename... TT>

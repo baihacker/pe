@@ -214,7 +214,7 @@ void range_map_reduce() {
                      }))
               << std::endl;
 
-    std::cout << Range(a).Map<int64>([](auto& a) { return a.second; }).Sum()
+    std::cout << Range(a).Map<int64>([](const auto& a) { return a.second; }).Sum()
               << std::endl;
   }
 
@@ -228,7 +228,7 @@ void range_map_reduce() {
                        return x.second;
                      }))
               << std::endl;
-    std::cout << Range(a).PMap<int64>([](auto& a) { return a.second; }).Sum()
+    std::cout << Range(a).PMap<int64>([](const auto& a) { return a.second; }).Sum()
               << std::endl;
   }
 }

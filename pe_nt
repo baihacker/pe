@@ -5,6 +5,7 @@
 #include "pe_int128"
 #include "pe_type_traits"
 #include "pe_int"
+#include "pe_span"
 #include "pe_mod"
 #include "pe_nt_base"
 
@@ -160,9 +161,8 @@ SL REQUIRES((is_general_integer_v<T>)) RETURN(T) Gcd(const T& a) {
 }
 
 template <typename TH, typename... TT>
-SL REQUIRES(((sizeof...(TT) >= 2) &&
-             (is_general_integer_v<TH>)&&(
-                 predicate_all<is_general_integer, TT...>::value)))
+SL REQUIRES(((sizeof...(TT) >= 2) && (is_general_integer_v<TH>) &&
+             (predicate_all<is_general_integer, TT...>::value)))
     RETURN(IntPromotion(TH, TT...)) Gcd(TH a, TT... b) {
   return Gcd(a, Gcd(b...));
 }
@@ -213,9 +213,8 @@ SL REQUIRES((is_general_integer_v<T>)) RETURN(T) Lcm(const T& a) {
 }
 
 template <typename TH, typename... TT>
-SL REQUIRES(((sizeof...(TT) >= 2) &&
-             (is_general_integer_v<TH>)&&(
-                 predicate_all<is_general_integer, TT...>::value)))
+SL REQUIRES(((sizeof...(TT) >= 2) && (is_general_integer_v<TH>) &&
+             (predicate_all<is_general_integer, TT...>::value)))
     RETURN(IntPromotion(TH, TT...)) Lcm(TH a, TT... b) {
   return Lcm(a, Lcm(b...));
 }
@@ -668,10 +667,10 @@ SL REQUIRES((!IsNModNumberV<typename std::iterator_traits<IT>::value_type>))
   }
 }
 
-template <typename T, typename TM, int D>
+template <typename T, typename TM>
 SL REQUIRES((!IsNModNumberV<T>)) RETURN(void)
-    InitializeInverse(T (&dest)[D], TM mod) {
-  InitializeInverse<T*, TM>(&dest[0], D - 1, mod);
+    InitializeInverse(Span<T> dest, TM mod) {
+  InitializeInverse<T*, TM>(dest.data(), dest.size() - 1, mod);
 }
 
 template <typename IT>
@@ -699,9 +698,9 @@ SL REQUIRES((IsNModNumberV<typename std::iterator_traits<IT>::value_type>))
   }
 }
 
-template <typename T, int D>
-SL REQUIRES((IsNModNumberV<T>)) RETURN(void) InitializeInverse(T (&dest)[D]) {
-  InitializeInverse<T*>(&dest[0], D - 1);
+template <typename T>
+SL REQUIRES((IsNModNumberV<T>)) RETURN(void) InitializeInverse(Span<T> dest) {
+  InitializeInverse<T*>(dest.data(), dest.size() - 1);
 }
 
 // 1 <= s <= e
@@ -777,6 +776,15 @@ SL REQUIRES((!IsNModNumberV<T>)) RETURN(void)
 }
 
 template <typename T>
+SL REQUIRES((!IsNModNumberV<T>)) RETURN(void)
+    InitSeqProd2(Span<T> dest, Span<T> idest, T mod) {
+  const int64 size1 = dest.size();
+  const int64 size2 = idest.size();
+  PE_ASSERT(size1 == size2);
+  InitSeqProd2<T>(dest.data(), idest.data(), 1, size1 - 1, mod);
+}
+
+template <typename T>
 SL REQUIRES((IsNModNumberV<T>)) RETURN(void)
     InitSeqProd2(T* dest, T* idest, int64 s, int64 e) {
   if (dest == nullptr && idest == nullptr) {
@@ -833,6 +841,15 @@ template <typename T, int D>
 SL REQUIRES((IsNModNumberV<T>)) RETURN(void)
     InitSeqProd2(T (&dest)[D], T (&idest)[D]) {
   InitSeqProd2<T>(dest, idest, 1, D - 1);
+}
+
+template <typename T>
+SL REQUIRES((IsNModNumberV<T>)) RETURN(void)
+    InitSeqProd2(Span<T> dest, Span<T> idest) {
+  const int64 size1 = dest.size();
+  const int64 size2 = idest.size();
+  PE_ASSERT(size1 == size2);
+  InitSeqProd2<T>(dest.data(), idest.data(), 1, size1 - 1);
 }
 
 template <typename IT, typename T, typename G>
@@ -1381,7 +1398,6 @@ SL T FromBaseK(const std::vector<int>& vec, int k) {
   for (int i = size - 1; i >= 0; --i) ret = ret * k + vec[i];
   return ret;
 }
-
 
 SL std::pair<std::vector<int64>,
              std::vector<std::vector<std::pair<int64, int>>>>

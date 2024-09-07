@@ -46,4 +46,21 @@ static inline void MakeSureProcessSingleton(const char* id) {
 }  // namespace pe
 #endif  // end OS_TYPE_WIN
 
+#if ENABLE_OPENMP
+namespace pe {
+class OmpLock {
+ public:
+  OmpLock() { omp_init_lock(&locker_); }
+  ~OmpLock() { omp_destroy_lock(&locker_); }
+  OmpLock(const OmpLock&) = delete;
+  OmpLock& operator=(const OmpLock&) = delete;
+  void lock() { omp_set_lock(&locker_); }
+  void unlock() { omp_unset_lock(&locker_); }
+
+ private:
+  omp_lock_t locker_;
+};
+using OmpGuard = std::lock_guard<pe::OmpLock>;
+}  // namespace pe
+#endif
 #endif

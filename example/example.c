@@ -135,7 +135,7 @@ void NtExample() {
 
   {
     int64 invs[10];
-    InitializeInverse(invs, 9, mod);
+    InitInverse(invs, 9, mod);
     for (int i = 1; i <= 9; ++i) {
       std::cout << invs[i] * i % mod << std::endl;  // Expected to be 1.
     }

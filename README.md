@@ -57,7 +57,7 @@ See [example.c](https://github.com/baihacker/pe/blob/master/example/example.c) f
 * pe_float128: Unified float number functions of __float128.
 * pe_fraction: Fraction arithmetic.
 * pe_gbi: general big integer. The content corresponds to pe_nt.
-* pe_geometry: Support Point2D and Point3D.
+* pe_geometry: Support `Point2D` and `Point3D`.
 * pe_initializer: The helper class and macros used to initialize the library.
 * pe_int: Basic integer utilities.
 * pe_int128: Support to output int128 and the corresponding type traits.

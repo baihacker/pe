@@ -82,6 +82,7 @@ See [example.c](https://github.com/baihacker/pe/blob/master/example/example.c) f
 * pe_poly_base_ntl: Ntl based polynomial basic algorithms.
 * pe_rand: Random number.
 * pe_range: generate an range of numbers, iterate a container with index.
+* pe_span: A `Span` implementation.
 * pe_sym_poly: Symbolic polynomial.
 * pe_time: Support TimeDelta, TimeRecorder.
 * pe_tree: Some tree based data structures.

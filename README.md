@@ -6,7 +6,7 @@
 [![Github Releases](https://img.shields.io/github/release/baihacker/pe.svg)](https://github.com/baihacker/pe/releases)
 <a href="https://projecteuler.net/recent" target="_blank">![project euler](https://projecteuler.net/profile/baihacker.png?)</a>
 
-baihacker's C++ library for solving problem on <a href="https://projecteuler.net/recent" target="_blank">project euler</a>.
+baihacker's C++ library for solving problems on <a href="https://projecteuler.net/recent" target="_blank">Project Euler</a>.
 
 ## Prerequirements:
 C++ dev environment that supports

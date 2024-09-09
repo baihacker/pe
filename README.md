@@ -49,7 +49,7 @@ For a quick start, refer to [example.c](https://github.com/baihacker/pe/blob/mas
 - **pe**: Contains all implementation files.
 - **pe.hpp**: Header file for generating the precompiled header. Includes the core library.
 - **pe_algo**: Contains various algorithms.
-- **pe_array**: Array implementation with compile-time dimension length. Supports element counts exceeding `int32` limits and custom allocators.
+- **pe_array**: Array implementation with compile-time and runtime dimension length. Supports element counts exceeding `int32` limits and custom allocators.
 - **pe_base**: Pre-included headers, macros, typedefs, and basic inline functions.
 - **pe_bi32**: Big integer implementation with base `1 << 32`.
 - **pe_bit**: Bit manipulation utilities.

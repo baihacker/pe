@@ -14,7 +14,7 @@ C++ dev environment that supports
 * Building `x86_64` targets.
 
 ## Installation:
-* Make sure `#include <pe.hpp>"` work.
+* Make sure that `#include <pe.hpp>` works.
   * Put all the files in an installation folder (directory).
   * Add the installation folder to the environment variable CPLUS_INCLUDE_PATH. Other approaches are also OK.
 

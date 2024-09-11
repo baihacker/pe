@@ -18,8 +18,7 @@ To use this library, you need a C++ development environment that supports:
 
 1. **Include the Library:**
    - Place all the library files into a directory of your choice.
-   - Ensure that `#include <pe.hpp>` is correctly recognized.
-   - Add the directory to the `CPLUS_INCLUDE_PATH` environment variable or use an alternative method to include the files.
+   - Ensure that `#include <pe.hpp>` is by adding the directory to the `CPLUS_INCLUDE_PATH` environment variable.
 
 2. **Configure the Library:**
    - Run **[gen_config.py](https://github.com/baihacker/pe/blob/master/gen_config.py)** from the installation directory to generate **[pe_config](https://github.com/baihacker/pe/blob/master/pe_config)**.
@@ -86,7 +85,7 @@ For a quick start, refer to [example.c](https://github.com/baihacker/pe/blob/mas
 - **pe_poly_base_min25**: Polynomial algorithms from [Min_25](https://github.com/min-25), including the fastest polynomial multiplication.
 - **pe_poly_base_ntl**: Polynomial algorithms based on NTL.
 - **pe_rand**: Random number generation utilities.
-- **pe_range**: Range generation and container iteration with indices.
+- **pe_range**: Range implementation.
 - **pe_span**: Implementation of `Span`.
 - **pe_sym_poly**: Symbolic polynomial operations.
 - **pe_time**: Utilities for `TimeDelta` and `TimeRecorder`.

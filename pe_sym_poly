@@ -9,10 +9,10 @@ namespace pe {
 using TermKey = std::vector<std::pair<std::string, int>>;
 
 template <typename CT>
-SL std::map<TermKey, CT> ParseSymPolyTerms(const std::string& s);
+struct SymPoly;
 
 template <typename CT>
-struct SymPoly;
+SL SymPoly<CT> ParseSymPoly(const std::string& s);
 
 template <typename CT>
 SL std::ostream& ToString(const SymPoly<CT>& sp, std::ostream& o,
@@ -32,7 +32,7 @@ struct SymPoly {
 
   SymPoly(SymPoly&& o) noexcept : terms_(std::move(o.terms_)) {}
 
-  SymPoly(const std::string& str) : terms_(ParseSymPolyTerms<CT>(str)) {
+  SymPoly(const std::string& str) : terms_(ParseSymPoly<CT>(str)) {
     FixCoefficient();
   }
 
@@ -110,6 +110,12 @@ struct SymPoly {
     return Replace(var, SymPoly(target));
   }
 
+  void MakeNeg() {
+    for (auto& [key, value] : terms_) {
+      value = -value;
+    }
+  }
+
   std::string ToString(int cstyle = 1, int show_mul = 0) const {
     std::stringstream ss;
     pe::ToString(*this, ss, cstyle, show_mul);
@@ -122,6 +128,42 @@ struct SymPoly {
 
   const std::map<TermKey, CT>& terms() const { return terms_; }
 
+  friend SymPoly<CT> operator+(const SymPoly<CT>& a, const SymPoly<CT>& b) {
+    auto terms = a.terms_;
+    for (const auto& iter : b.terms_) {
+      terms[iter.first] += iter.second;
+    }
+    return SymPoly<CT>(terms);
+  }
+  friend SymPoly<CT> operator-(const SymPoly<CT>& a, const SymPoly<CT>& b) {
+    auto terms = a.terms_;
+    for (const auto& iter : b.terms_) {
+      terms[iter.first] -= iter.second;
+    }
+    return SymPoly<CT>(terms);
+  }
+  static TermKey MergeTermKey(const TermKey& a, const TermKey& b) {
+    if (a.size() == 0) return b;
+    if (b.size() == 0) return a;
+    std::map<std::string, int> terms;
+    for (const auto& iter : a) terms[iter.first] += iter.second;
+    for (const auto& iter : b) terms[iter.first] += iter.second;
+    TermKey result;
+    result.reserve(terms.size());
+    for (const auto& iter : terms) result.emplace_back(iter.first, iter.second);
+    return result;
+  }
+  friend SymPoly<CT> operator*(const SymPoly<CT>& a, const SymPoly<CT>& b) {
+    std::map<TermKey, CT> terms;
+    for (const auto& iter1 : a.terms()) {
+      for (const auto& iter2 : b.terms()) {
+        terms[MergeTermKey(iter1.first, iter2.first)] +=
+            iter1.second * iter2.second;
+      }
+    }
+    return SymPoly<CT>(terms);
+  }
+
  private:
   // TermKey -> coefficient.
   // terms_.size() == 0: value
@@ -131,188 +173,148 @@ struct SymPoly {
 using SymPoly64 = SymPoly<int64>;
 
 template <typename CT>
-SL SymPoly<CT> operator+(const SymPoly<CT>& a, const SymPoly<CT>& b) {
-  auto terms = a.terms_;
-  for (const auto& iter : b.terms_) {
-    terms[iter.first] += iter.second;
+SL SymPoly<CT> ParseSymPolyPower(const std::string& s, int& i);
+
+template <typename CT>
+SL SymPoly<CT> ParseSymPolyMul(const std::string& s, int& i);
+
+template <typename CT>
+SL SymPoly<CT> ParseSymPolyAddOrSubstract(const std::string& s, int& i);
+
+template <typename CT>
+SL SymPoly<CT> ParseSymPolyAtomic(const std::string& s, int& i) {
+  const int size = sz(s);
+  SymPoly<CT> poly;
+  while (i < size && std::isspace(s[i])) ++i;
+  if (i == size) {
+    std::cerr << "ParseSymPolyAtomic Unknown: " << s.substr(i) << std::endl;
+    return poly;
   }
-  return SymPoly<CT>(terms);
-}
-
-template <typename CT>
-SL SymPoly<CT> operator-(const SymPoly<CT>& a, const SymPoly<CT>& b) {
-  auto terms = a.terms_;
-  for (const auto& iter : b.terms_) {
-    terms[iter.first] -= iter.second;
-  }
-  return SymPoly<CT>(terms);
-}
-
-template <typename CT>
-SL TermKey MergeTermKey(const TermKey& a, const TermKey& b) {
-  if (a.size() == 0) return b;
-  if (b.size() == 0) return a;
-  std::map<std::string, int> terms;
-  for (const auto& iter : a) terms[iter.first] += iter.second;
-  for (const auto& iter : b) terms[iter.first] += iter.second;
-  TermKey result;
-  result.reserve(terms.size());
-  for (const auto& iter : terms) result.emplace_back(iter.first, iter.second);
-  return result;
-}
-
-template <typename CT>
-SL SymPoly<CT> operator*(const SymPoly<CT>& a, const SymPoly<CT>& b) {
-  std::map<TermKey, CT> terms;
-  for (const auto& iter1 : a.terms()) {
-    for (const auto& iter2 : b.terms()) {
-      terms[MergeTermKey<CT>(iter1.first, iter2.first)] +=
-          iter1.second * iter2.second;
+  if (std::isdigit(s[i])) {
+    CT now = 0;
+    while (i < size && std::isdigit(s[i])) now = now * 10 + s[i++] - '0';
+    return SymPoly<CT>(now);
+  } else if (std::isalpha(s[i]) || s[i] == '_') {
+    int j = i + 1;
+    while (j < size && (std::isalpha(s[j]) || s[j] == '_')) ++j;
+    std::map<TermKey, CT> terms;
+    terms[{{s.substr(i, j - i), 1}}] = 1;
+    i = j;
+    return terms;
+  } else if (s[i] == '+') {
+    ++i;
+    return ParseSymPolyMul<CT>(s, i);
+  } else if (s[i] == '+') {
+    ++i;
+    auto t = ParseSymPolyMul<CT>(s, i);
+    t.MakeNeg();
+    return t;
+  } else if (s[i] == '(') {
+    ++i;
+    auto t = ParseSymPolyAddOrSubstract<CT>(s, i);
+    while (i < size && std::isspace(s[i])) ++i;
+    if (i == size || s[i] != ')') {
+      std::cerr << ") is expected";
+      if (i < size) {
+        std::cerr << ": " << s.substr(i);
+      }
+      std::cerr << std::endl;
+      return t;
     }
+    ++i;
+    return t;
+  } else {
+    std::cerr << "ParseSymPolyAtomic Unknown: " << s.substr(i) << std::endl;
+    return poly;
   }
-  return SymPoly<CT>(terms);
+  return poly;
 }
 
-// [+- ]*
-SL std::vector<int> ParseSgnList(const std::string& s, int& i) {
-  const int size = static_cast<int>(s.size());
-  std::vector<int> sgns;
+template <typename CT>
+SL SymPoly<CT> ParseSymPolyPower(const std::string& s, int& i) {
+  const int size = sz(s);
+  SymPoly<CT> poly = ParseSymPolyAtomic<CT>(s, i);
+  while (i < size && std::isspace(s[i])) ++i;
+  if (i == size) {
+    return poly;
+  }
+  if (s[i] == '^') {
+    ++i;
+
+    while (i < size && std::isspace(s[i])) ++i;
+    if (i == s || !std::isdigit(s[i])) {
+      std::cerr << "ParseSymPolyPower Unknown: " << s.substr(i) << std::endl;
+      return poly;
+    }
+    int64 now = 0;
+    while (i < size && std::isdigit(s[i])) now = now * 10 + s[i++] - '0';
+    return poly.Power(now);
+  }
+  return poly;
+}
+
+template <typename CT>
+SL SymPoly<CT> ParseSymPolyMul(const std::string& s, int& i) {
+  const int size = sz(s);
+  SymPoly<CT> poly = ParseSymPolyPower<CT>(s, i);
   for (;;) {
     while (i < size && std::isspace(s[i])) ++i;
-    if (i < size && (s[i] == '+' || s[i] == '-')) {
-      sgns.push_back(s[i] == '+' ? 1 : -1);
-      ++i;
-    } else {
-      return sgns;
-    }
-  }
-}
-
-SL std::string ParseDigList(const std::string& s, int& i) {
-  const int size = static_cast<int>(s.size());
-  while (i < size && std::isspace(s[i])) ++i;
-  if (i < size && std::isdigit(s[i])) {
-    int start = i;
-    while (i < size && std::isdigit(s[i])) {
-      ++i;
-    }
-    return s.substr(start, i - start);
-  }
-  return "";
-}
-
-SL std::string ParseIdentifier(const std::string& s, int& i) {
-  const int size = static_cast<int>(s.size());
-  while (i < size && std::isspace(s[i])) ++i;
-  if (i < size && (s[i] == '_' || std::isalpha(s[i]))) {
-    int start = i;
-    while (i < size &&
-           (s[i] == '_' || std::isdigit(s[i]) || std::isalpha(s[i]))) {
-      ++i;
-    }
-    return s.substr(start, i - start);
-  }
-  return "";
-}
-
-SL std::vector<std::pair<std::string, std::string>> ParseSingleTermList(
-    const std::string& s, int& i) {
-  std::vector<std::pair<std::string, std::string>> result;
-  const int size = static_cast<int>(s.size());
-  for (;;) {
-    while (i < size && std::isspace(s[i])) ++i;
+    if (i == size) break;
     if (s[i] == '*') {
       ++i;
       while (i < size && std::isspace(s[i])) ++i;
+      if (i == size) {
+        std::cerr << "ParseSymPolyMul Unknown 0: " << s.substr(i) << std::endl;
+        break;
+      }
     }
-    std::string variable = ParseIdentifier(s, i);
-    if (variable.empty()) variable = ParseDigList(s, i);
-    if (variable.empty()) return result;
-    while (i < size && std::isspace(s[i])) ++i;
-    if (i < size && (s[i] == '^' && !std::isdigit(variable[0]))) {
-      ++i;
-      std::string e = ParseDigList(s, i);
-      result.emplace_back(variable, e);
+    if (std::isdigit(s[i]) || std::isalpha(s[i]) || s[i] == '_' ||
+        s[i] == '(') {
+      SymPoly<CT> t = ParseSymPolyPower<CT>(s, i);
+      poly = poly * t;
     } else {
-      result.emplace_back(variable, "");
+      break;
     }
   }
+  return poly;
 }
 
 template <typename CT>
-SL CT EvaluateDigs(const std::vector<int>& sgns, const std::string& digs,
-                   CT defaultVal = 0) {
-  int s = 1;
-  for (const auto& iter : sgns) {
-    if (iter == -1) s = -s;
-  }
-  CT v = 0;
-  for (const auto& iter : digs) v = v * 10 + iter - '0';
-  if (digs.empty()) v = defaultVal;
-  return s == 1 ? v : -v;
-}
-
-template <typename CT>
-SL std::pair<TermKey, CT> EvaluateSingleTermList(
-    const std::vector<std::pair<std::string, std::string>>& singleTerms) {
-  std::map<std::string, int> t;
-  CT c = 1;
-  for (const auto& iter : singleTerms) {
-    if (std::isdigit(iter.first[0])) {
-      c *= EvaluateDigs<int>({}, iter.first, 1);
-    } else {
-      t[iter.first] += EvaluateDigs<int>({}, iter.second, 1);
-    }
-  }
-  TermKey key;
-  for (const auto& iter : t) key.emplace_back(iter.first, iter.second);
-  return {key, c};
-}
-
-template <typename CT>
-SL std::pair<TermKey, CT> ParseTerm(const std::string& s, int& i) {
-  auto sgns = ParseSgnList(s, i);
-  auto singleTerms = ParseSingleTermList(s, i);
-  auto t = EvaluateSingleTermList<CT>(singleTerms);
-  auto sgn = EvaluateDigs<CT>(sgns, "", 1);
-  return {t.first,
-          singleTerms.empty() ? CT(0) : (sgn == 1 ? t.second : -t.second)};
-}
-
-template <typename CT>
-SL std::pair<TermKey, CT> ParseTerm(const std::string& s) {
-  int i = 0;
-  return ParseTerm<CT>(s, i);
-}
-
-template <typename CT>
-SL std::map<TermKey, CT> ParseSymPolyTerms(const std::string& s) {
+SL SymPoly<CT> ParseSymPolyAddOrSubstract(const std::string& s, int& i) {
   const int size = sz(s);
-  int i = 0;
-  std::map<TermKey, CT> terms;
+  SymPoly<CT> poly = ParseSymPolyMul<CT>(s, i);
   for (;;) {
     while (i < size && std::isspace(s[i])) ++i;
+    if (i == size) break;
+    char ope = s[i];
+    if (ope != '+' && ope != '-') {
+      break;
+    } else {
+      ++i;
+      while (i < size && std::isspace(s[i])) ++i;
+    }
     int j = i;
-    auto t = ParseTerm<CT>(s, i);
+    SymPoly<CT> t = ParseSymPolyMul<CT>(s, j);
     if (j == i) {
       if (i < size) {
         std::cerr << "Unknown: " << s.substr(i) << std::endl;
       }
       break;
     }
-    terms[t.first] += t.second;
+    i = j;
+    if (ope == '+') {
+      poly = poly + t;
+    } else {
+      poly = poly - t;
+    }
   }
-  return terms;
+  return poly;
 }
 
 template <typename CT>
 SL SymPoly<CT> ParseSymPoly(const std::string& s) {
-  return SymPoly<CT>(ParseSymPolyTerms<CT>(s));
-}
-
-SL TermKey ToTermKey(const std::string& s) {
   int i = 0;
-  return ParseTerm<int64>(s, i).first;
+  return ParseSymPolyAddOrSubstract<CT>(s, i);
 }
 
 SL std::ostream& ToString(const TermKey& vpv, std::ostream& o, int cstyle = 1,
@@ -378,5 +380,6 @@ template <typename CT>
 SL std::ostream& operator<<(std::ostream& o, const SymPoly<CT>& sp) {
   return ToString(sp, o);
 }
+
 }  // namespace pe
 #endif

@@ -116,6 +116,20 @@ struct SymPoly {
     }
   }
 
+  std::optional<CT> AsNumber() const {
+    if (terms_.size() == 0) {
+      return 0;
+    }
+    if (terms_.size() > 1) {
+      return std::nullopt;
+    }
+    auto& it = *terms_.begin();
+    if (it.first.size() != 0) {
+      return std::nullopt;
+    }
+    return it.second;
+  }
+
   std::string ToString(int cstyle = 1, int show_mul = 0) const {
     std::stringstream ss;
     pe::ToString(*this, ss, cstyle, show_mul);
@@ -245,23 +259,16 @@ SL std::optional<SymPoly<CT>> ParseSymPolyPower(const std::string& s, int& i) {
   }
 
   auto t = ParseSymPolyPower<int64>(s, ++i);
-  if (!poly.has_value()) {
+  if (!t.has_value()) {
     return std::nullopt;
   }
 
-  const auto& terms = t->terms();
-  if (terms.size() == 0) {
-    return SymPoly<CT>(1);
-  }
-  if (terms.size() > 1) {
-    return std::nullopt;
-  }
-  auto& it = *terms.begin();
-  if (it.first.size() != 0) {
+  auto e = t->AsNumber();
+  if (!e.has_value()) {
     return std::nullopt;
   }
 
-  return poly->Power(it.second);
+  return poly->Power(*e);
 }
 
 template <typename CT>

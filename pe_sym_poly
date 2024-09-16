@@ -135,6 +135,7 @@ struct SymPoly {
     }
     return SymPoly<CT>(terms);
   }
+
   friend SymPoly<CT> operator-(const SymPoly<CT>& a, const SymPoly<CT>& b) {
     auto terms = a.terms_;
     for (const auto& iter : b.terms_) {
@@ -142,6 +143,7 @@ struct SymPoly {
     }
     return SymPoly<CT>(terms);
   }
+
   static TermKey MergeTermKey(const TermKey& a, const TermKey& b) {
     if (a.size() == 0) return b;
     if (b.size() == 0) return a;
@@ -153,6 +155,7 @@ struct SymPoly {
     for (const auto& iter : terms) result.emplace_back(iter.first, iter.second);
     return result;
   }
+
   friend SymPoly<CT> operator*(const SymPoly<CT>& a, const SymPoly<CT>& b) {
     std::map<TermKey, CT> terms;
     for (const auto& iter1 : a.terms()) {
@@ -196,7 +199,9 @@ SL std::optional<SymPoly<CT>> ParseSymPolyAtomic(const std::string& s, int& i) {
     return SymPoly<CT>(now);
   } else if (std::isalpha(s[i]) || s[i] == '_') {
     int j = i + 1;
-    while (j < size && (std::isalpha(s[j]) || s[j] == '_')) ++j;
+    while (j < size &&
+           (std::isalpha(s[j]) || s[j] == '_' || std::isdigit(s[j])))
+      ++j;
     std::map<TermKey, CT> terms;
     terms[{{s.substr(i, j - i), 1}}] = 1;
     i = j;

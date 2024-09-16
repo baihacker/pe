@@ -207,19 +207,16 @@ SL std::optional<SymPoly<CT>> ParseSymPolyAtomic(const std::string& s, int& i) {
     i = j;
     return terms;
   } else if (s[i] == '+') {
-    ++i;
-    return ParseSymPolyMul<CT>(s, i);
+    return ParseSymPolyMul<CT>(s, ++i);
   } else if (s[i] == '-') {
-    ++i;
-    auto t = ParseSymPolyMul<CT>(s, i);
+    auto t = ParseSymPolyMul<CT>(s, ++i);
     if (!t.has_value()) {
       return std::nullopt;
     }
     t->MakeNeg();
     return t;
   } else if (s[i] == '(') {
-    ++i;
-    auto t = ParseSymPolyAddOrSubstract<CT>(s, i);
+    auto t = ParseSymPolyAddOrSubstract<CT>(s, ++i);
     if (!t.has_value()) {
       return std::nullopt;
     }
@@ -247,14 +244,24 @@ SL std::optional<SymPoly<CT>> ParseSymPolyPower(const std::string& s, int& i) {
     return poly;
   }
 
-  ++i;
-  while (i < size && std::isspace(s[i])) ++i;
-  if (i == size || !std::isdigit(s[i])) {
+  auto t = ParseSymPolyPower<int64>(s, ++i);
+  if (!poly.has_value()) {
     return std::nullopt;
   }
-  int64 now = 0;
-  while (i < size && std::isdigit(s[i])) now = now * 10 + s[i++] - '0';
-  return poly->Power(now);
+
+  const auto& terms = t->terms();
+  if (terms.size() == 0) {
+    return SymPoly<CT>(1);
+  }
+  if (terms.size() > 1) {
+    return std::nullopt;
+  }
+  auto& it = *terms.begin();
+  if (it.first.size() != 0) {
+    return std::nullopt;
+  }
+
+  return poly->Power(it.second);
 }
 
 template <typename CT>

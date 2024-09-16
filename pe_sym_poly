@@ -32,7 +32,8 @@ struct SymPoly {
 
   SymPoly(SymPoly&& o) noexcept : terms_(std::move(o.terms_)) {}
 
-  SymPoly(const std::string& str) : terms_(ParseSymPoly<CT>(str)) {
+  SymPoly(const std::string& str)
+      : terms_(std::move(ParseSymPoly<CT>(str).terms_)) {
     FixCoefficient();
   }
 
@@ -128,6 +129,31 @@ struct SymPoly {
       return std::nullopt;
     }
     return it.second;
+  }
+
+  std::optional<std::vector<CT>> AsSingleVarPoly() const {
+    std::string_view var;
+    int64 max_deg = 0;
+    for (const auto& [term_key, _] : terms_) {
+      if (term_key.size() == 0) continue;
+      if (term_key.size() > 1) return std::nullopt;
+      std::string_view t = term_key[0].first;
+      if (var.data() == nullptr) {
+        var = t;
+      } else if (var != t) {
+        return std::nullopt;
+      }
+      max_deg = std::max(max_deg, term_key[0].second);
+    }
+    std::vector<CT> ret(max_deg + 1, 0);
+    for (const auto& [term_key, coe] : terms_) {
+      if (term_key.size() == 0) {
+        ret[0] += coe;
+      } else {
+        ret[term_key[0].second] += coe;
+      }
+    }
+    return ret;
   }
 
   std::string ToString(int cstyle = 1, int show_mul = 0) const {

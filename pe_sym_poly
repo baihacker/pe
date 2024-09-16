@@ -173,23 +173,23 @@ struct SymPoly {
 using SymPoly64 = SymPoly<int64>;
 
 template <typename CT>
-SL SymPoly<CT> ParseSymPolyPower(const std::string& s, int& i);
+SL std::optional<SymPoly<CT>> ParseSymPolyPower(const std::string& s, int& i);
 
 template <typename CT>
-SL SymPoly<CT> ParseSymPolyMul(const std::string& s, int& i);
+SL std::optional<SymPoly<CT>> ParseSymPolyMul(const std::string& s, int& i);
 
 template <typename CT>
-SL SymPoly<CT> ParseSymPolyAddOrSubstract(const std::string& s, int& i);
+SL std::optional<SymPoly<CT>> ParseSymPolyAddOrSubstract(const std::string& s,
+                                                         int& i);
 
 template <typename CT>
-SL SymPoly<CT> ParseSymPolyAtomic(const std::string& s, int& i) {
+SL std::optional<SymPoly<CT>> ParseSymPolyAtomic(const std::string& s, int& i) {
   const int size = sz(s);
-  SymPoly<CT> poly;
   while (i < size && std::isspace(s[i])) ++i;
   if (i == size) {
-    std::cerr << "ParseSymPolyAtomic Unknown: " << s.substr(i) << std::endl;
-    return poly;
+    return std::nullopt;
   }
+
   if (std::isdigit(s[i])) {
     CT now = 0;
     while (i < size && std::isdigit(s[i])) now = now * 10 + s[i++] - '0';
@@ -204,59 +204,62 @@ SL SymPoly<CT> ParseSymPolyAtomic(const std::string& s, int& i) {
   } else if (s[i] == '+') {
     ++i;
     return ParseSymPolyMul<CT>(s, i);
-  } else if (s[i] == '+') {
+  } else if (s[i] == '-') {
     ++i;
     auto t = ParseSymPolyMul<CT>(s, i);
-    t.MakeNeg();
+    if (!t.has_value()) {
+      return std::nullopt;
+    }
+    t->MakeNeg();
     return t;
   } else if (s[i] == '(') {
     ++i;
     auto t = ParseSymPolyAddOrSubstract<CT>(s, i);
+    if (!t.has_value()) {
+      return std::nullopt;
+    }
     while (i < size && std::isspace(s[i])) ++i;
     if (i == size || s[i] != ')') {
-      std::cerr << ") is expected";
-      if (i < size) {
-        std::cerr << ": " << s.substr(i);
-      }
-      std::cerr << std::endl;
-      return t;
+      return std::nullopt;
     }
     ++i;
     return t;
   } else {
-    std::cerr << "ParseSymPolyAtomic Unknown: " << s.substr(i) << std::endl;
-    return poly;
+    return std::nullopt;
   }
-  return poly;
 }
 
 template <typename CT>
-SL SymPoly<CT> ParseSymPolyPower(const std::string& s, int& i) {
+SL std::optional<SymPoly<CT>> ParseSymPolyPower(const std::string& s, int& i) {
+  auto poly = ParseSymPolyAtomic<CT>(s, i);
+  if (!poly.has_value()) {
+    return std::nullopt;
+  }
+
   const int size = sz(s);
-  SymPoly<CT> poly = ParseSymPolyAtomic<CT>(s, i);
   while (i < size && std::isspace(s[i])) ++i;
-  if (i == size) {
+  if (i == size || s[i] != '^') {
     return poly;
   }
-  if (s[i] == '^') {
-    ++i;
 
-    while (i < size && std::isspace(s[i])) ++i;
-    if (i == s || !std::isdigit(s[i])) {
-      std::cerr << "ParseSymPolyPower Unknown: " << s.substr(i) << std::endl;
-      return poly;
-    }
-    int64 now = 0;
-    while (i < size && std::isdigit(s[i])) now = now * 10 + s[i++] - '0';
-    return poly.Power(now);
+  ++i;
+  while (i < size && std::isspace(s[i])) ++i;
+  if (i == size || !std::isdigit(s[i])) {
+    return std::nullopt;
   }
-  return poly;
+  int64 now = 0;
+  while (i < size && std::isdigit(s[i])) now = now * 10 + s[i++] - '0';
+  return poly->Power(now);
 }
 
 template <typename CT>
-SL SymPoly<CT> ParseSymPolyMul(const std::string& s, int& i) {
+SL std::optional<SymPoly<CT>> ParseSymPolyMul(const std::string& s, int& i) {
+  auto poly = ParseSymPolyPower<CT>(s, i);
+  if (!poly.has_value()) {
+    return std::nullopt;
+  }
+
   const int size = sz(s);
-  SymPoly<CT> poly = ParseSymPolyPower<CT>(s, i);
   for (;;) {
     while (i < size && std::isspace(s[i])) ++i;
     if (i == size) break;
@@ -264,14 +267,16 @@ SL SymPoly<CT> ParseSymPolyMul(const std::string& s, int& i) {
       ++i;
       while (i < size && std::isspace(s[i])) ++i;
       if (i == size) {
-        std::cerr << "ParseSymPolyMul Unknown 0: " << s.substr(i) << std::endl;
-        break;
+        return std::nullopt;
       }
     }
     if (std::isdigit(s[i]) || std::isalpha(s[i]) || s[i] == '_' ||
         s[i] == '(') {
-      SymPoly<CT> t = ParseSymPolyPower<CT>(s, i);
-      poly = poly * t;
+      auto t = ParseSymPolyPower<CT>(s, i);
+      if (!t.has_value()) {
+        return std::nullopt;
+      }
+      poly = *poly * *t;
     } else {
       break;
     }
@@ -280,9 +285,14 @@ SL SymPoly<CT> ParseSymPolyMul(const std::string& s, int& i) {
 }
 
 template <typename CT>
-SL SymPoly<CT> ParseSymPolyAddOrSubstract(const std::string& s, int& i) {
+SL std::optional<SymPoly<CT>> ParseSymPolyAddOrSubstract(const std::string& s,
+                                                         int& i) {
+  auto poly = ParseSymPolyMul<CT>(s, i);
+  if (!poly.has_value()) {
+    return std::nullopt;
+  }
+
   const int size = sz(s);
-  SymPoly<CT> poly = ParseSymPolyMul<CT>(s, i);
   for (;;) {
     while (i < size && std::isspace(s[i])) ++i;
     if (i == size) break;
@@ -293,19 +303,14 @@ SL SymPoly<CT> ParseSymPolyAddOrSubstract(const std::string& s, int& i) {
       ++i;
       while (i < size && std::isspace(s[i])) ++i;
     }
-    int j = i;
-    SymPoly<CT> t = ParseSymPolyMul<CT>(s, j);
-    if (j == i) {
-      if (i < size) {
-        std::cerr << "Unknown: " << s.substr(i) << std::endl;
-      }
-      break;
+    auto t = ParseSymPolyMul<CT>(s, i);
+    if (!t.has_value()) {
+      return std::nullopt;
     }
-    i = j;
     if (ope == '+') {
-      poly = poly + t;
+      poly = *poly + *t;
     } else {
-      poly = poly - t;
+      poly = *poly - *t;
     }
   }
   return poly;
@@ -314,7 +319,20 @@ SL SymPoly<CT> ParseSymPolyAddOrSubstract(const std::string& s, int& i) {
 template <typename CT>
 SL SymPoly<CT> ParseSymPoly(const std::string& s) {
   int i = 0;
-  return ParseSymPolyAddOrSubstract<CT>(s, i);
+  auto ret = ParseSymPolyAddOrSubstract<CT>(s, i);
+
+  const int size = s.size();
+  if (i < size && std::isspace(s[i])) ++i;
+  if (!ret.has_value()) {
+    if (i < size) {
+      std::cerr << "Syntax error: cannot parse " << s.substr(i) << std::endl;
+    } else {
+      std::cerr << "Syntax error" << std::endl;
+    }
+    return SymPoly<CT>();
+  }
+
+  return *ret;
 }
 
 SL std::ostream& ToString(const TermKey& vpv, std::ostream& o, int cstyle = 1,

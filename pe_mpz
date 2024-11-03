@@ -120,8 +120,8 @@ SL std::tuple<Mpz, Mpz> Div(const Mpz& l, const Mpz& r) {
 // Extra operations
 
 template <typename T>
-SL REQUIRES((pe::is_builtin_integer_v<T> && sizeof(T) > 4)) RETURN(T) operator%(
-    const Mpz& v, const T& mod) {
+SL REQUIRES((pe::is_builtin_integer_v<T> && sizeof(T) > 4))
+    RETURN(T) operator%(const Mpz& v, const T& mod) {
   return ToInt<T>(v % MPZ(mod));
 }
 
@@ -217,7 +217,7 @@ class MpInteger {
     }
 
     const int n = static_cast<int>(v.size());
-    mpz_init2(z, v.size() * 32);
+    mpz_init2(z, static_cast<mp_bitcnt_t>(v.size() * 32));
 
     for (int i = n - 1; i >= 0; --i) {
       mpz_mul_2exp(z, z, 32);
@@ -397,7 +397,9 @@ class MpInteger {
 
   int BitCount() const { return mpz_popcount(z); }
 
-  int SizeInBase(int base = 10) const { return mpz_sizeinbase(z, base); }
+  int SizeInBase(int base = 10) const {
+    return static_cast<int>(mpz_sizeinbase(z, base));
+  }
 
   std::string ToString() const {
     size_t sz = mpz_sizeinbase(z, 10) + 1;
@@ -490,8 +492,7 @@ class MpInteger {
   template <typename T>
   REQUIRES((is_builtin_integer_v<T> && (std::is_same<T, unsigned int>::value ||
                                         std::is_same<T, unsigned long>::value)))
-  RETURN(MpInteger&)
-  operator+=(T val) {
+  RETURN(MpInteger&) operator+=(T val) {
     mpz_add_ui(z, z, val);
     return *this;
   }
@@ -504,8 +505,7 @@ class MpInteger {
   template <typename T>
   REQUIRES((is_builtin_integer_v<T> && (std::is_same<T, unsigned int>::value ||
                                         std::is_same<T, unsigned long>::value)))
-  RETURN(MpInteger&)
-  operator-=(T val) {
+  RETURN(MpInteger&) operator-=(T val) {
     mpz_sub_ui(z, z, val);
     return *this;
   }
@@ -518,8 +518,7 @@ class MpInteger {
   template <typename T>
   REQUIRES((is_builtin_integer_v<T> &&
             (std::is_same<T, int>::value || std::is_same<T, long>::value)))
-  RETURN(MpInteger&)
-  operator*=(T val) {
+  RETURN(MpInteger&) operator*=(T val) {
     mpz_mul_si(z, z, val);
     return *this;
   }
@@ -527,8 +526,7 @@ class MpInteger {
   template <typename T>
   REQUIRES((is_builtin_integer_v<T> && (std::is_same<T, unsigned int>::value ||
                                         std::is_same<T, unsigned long>::value)))
-  RETURN(MpInteger&)
-  operator*=(T val) {
+  RETURN(MpInteger&) operator*=(T val) {
     mpz_mul_ui(z, z, val);
     return *this;
   }
@@ -650,8 +648,7 @@ class MpInteger {
   friend inline REQUIRES((is_builtin_integer_v<T> &&
                           (std::is_same<T, unsigned int>::value ||
                            std::is_same<T, unsigned long>::value)))
-      RETURN(MpInteger)
-      operator+(const MpInteger& l, T r) {
+      RETURN(MpInteger) operator+(const MpInteger & l, T r) {
     MpInteger ret;
     mpz_add_ui(ret.z, l.z, r);
     return ret;
@@ -661,8 +658,7 @@ class MpInteger {
   friend inline REQUIRES((is_builtin_integer_v<T> &&
                           (std::is_same<T, unsigned int>::value ||
                            std::is_same<T, unsigned long>::value)))
-      RETURN(MpInteger)
-      operator+(T l, const MpInteger& r) {
+      RETURN(MpInteger) operator+(T l, const MpInteger & r) {
     MpInteger ret;
     mpz_add_ui(ret.z, r.z, l);
     return ret;
@@ -678,8 +674,7 @@ class MpInteger {
   friend inline REQUIRES((is_builtin_integer_v<T> &&
                           (std::is_same<T, unsigned int>::value ||
                            std::is_same<T, unsigned long>::value)))
-      RETURN(MpInteger)
-      operator-(const MpInteger& l, T r) {
+      RETURN(MpInteger) operator-(const MpInteger & l, T r) {
     MpInteger ret;
     mpz_sub_ui(ret.z, l.z, r);
     return ret;
@@ -689,8 +684,7 @@ class MpInteger {
   friend inline REQUIRES((is_builtin_integer_v<T> &&
                           (std::is_same<T, unsigned int>::value ||
                            std::is_same<T, unsigned long>::value)))
-      RETURN(MpInteger)
-      operator-(T l, const MpInteger& r) {
+      RETURN(MpInteger) operator-(T l, const MpInteger & r) {
     MpInteger ret;
     mpz_ui_sub(ret.z, l, r.z);
     return ret;
@@ -705,8 +699,8 @@ class MpInteger {
   template <typename T>
   friend inline REQUIRES((is_builtin_integer_v<T> &&
                           (std::is_same<T, int>::value ||
-                           std::is_same<T, long>::value))) RETURN(MpInteger)
-  operator*(const MpInteger& l, T r) {
+                           std::is_same<T, long>::value)))
+      RETURN(MpInteger) operator*(const MpInteger & l, T r) {
     MpInteger ret;
     mpz_mul_si(ret.z, l.z, r);
     return ret;
@@ -715,8 +709,8 @@ class MpInteger {
   template <typename T>
   friend inline REQUIRES((is_builtin_integer_v<T> &&
                           (std::is_same<T, int>::value ||
-                           std::is_same<T, long>::value))) RETURN(MpInteger)
-  operator*(T l, const MpInteger& r) {
+                           std::is_same<T, long>::value)))
+      RETURN(MpInteger) operator*(T l, const MpInteger & r) {
     MpInteger ret;
     mpz_mul_si(ret.z, r.z, l);
     return ret;
@@ -726,8 +720,7 @@ class MpInteger {
   friend inline REQUIRES((is_builtin_integer_v<T> &&
                           (std::is_same<T, unsigned int>::value ||
                            std::is_same<T, unsigned long>::value)))
-      RETURN(MpInteger)
-      operator*(const MpInteger& l, T r) {
+      RETURN(MpInteger) operator*(const MpInteger & l, T r) {
     MpInteger ret;
     mpz_mul_ui(ret.z, l.z, r);
     return ret;
@@ -737,8 +730,7 @@ class MpInteger {
   friend inline REQUIRES((is_builtin_integer_v<T> &&
                           (std::is_same<T, unsigned int>::value ||
                            std::is_same<T, unsigned long>::value)))
-      RETURN(MpInteger)
-      operator*(T l, const MpInteger& r) {
+      RETURN(MpInteger) operator*(T l, const MpInteger & r) {
     MpInteger ret;
     mpz_mul_ui(ret.z, r.z, l);
     return ret;
@@ -755,8 +747,8 @@ class MpInteger {
       (is_builtin_integer_v<T> &&
        !std::is_same<typename std::remove_cvref<T>::type, MpInteger>::value &&
        (std::is_same<T, unsigned int>::value ||
-        std::is_same<T, unsigned long>::value))) RETURN(MpInteger)
-  operator/(const MpInteger& l, T r) {
+        std::is_same<T, unsigned long>::value)))
+      RETURN(MpInteger) operator/(const MpInteger & l, T r) {
     MpInteger ret;
     mpz_tdiv_q_ui(ret.z, l.z, r);
     return ret;
@@ -773,8 +765,8 @@ class MpInteger {
       (is_builtin_integer_v<T> &&
        !std::is_same<typename std::remove_cvref<T>::type, MpInteger>::value &&
        (std::is_same<T, unsigned int>::value ||
-        std::is_same<T, unsigned long>::value))) RETURN(MpInteger)
-  operator%(const MpInteger& l, T r) {
+        std::is_same<T, unsigned long>::value)))
+      RETURN(MpInteger) operator%(const MpInteger & l, T r) {
     MpInteger ret;
     mpz_tdiv_r_ui(ret.z, l.z, r);
     return ret;

@@ -87,7 +87,9 @@ SL constexpr T SumMod(TM /*mod*/, T a) {
 }
 
 template <typename TM, typename TH, typename... TT>
-SL constexpr IntPromotion(TH, TT...) SumMod(TM mod, TH a, TT... b) {
+// Use BiggerIntegralN to avoid a link warning.
+SL constexpr pe::BiggerIntegralN<TH, TT...>::type SumMod(TM mod, TH a,
+                                                         TT... b) {
   return AddMod(a, SumMod(mod, b...), mod);
 }
 
@@ -559,7 +561,8 @@ SL T ProdMod(TM /*mod*/, T a) {
 }
 
 template <typename TM, typename TH, typename... TT>
-SL IntPromotion(TH, TT...) ProdMod(TM mod, TH a, TT... b) {
+// Use BiggerIntegralN to avoid a link warning.
+SL pe::BiggerIntegralN<TH, TT...>::type ProdMod(TM mod, TH a, TT... b) {
   return MulMod(a, ProdMod(mod, b...), mod);
 }
 
@@ -653,9 +656,8 @@ SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM>))
 
 template <typename T1, typename T2 = T1, typename TM>
 SL REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
-             is_builtin_integer_v<TM>))
-    RETURN(IntPromotion(T1, T2, int64, TM))
-        FracMod(const std::vector<T1>& a, const std::vector<T2>& b, TM mod) {
+             is_builtin_integer_v<TM>)) RETURN(IntPromotion(T1, T2, int64, TM))
+    FracMod(const std::vector<T1>& a, const std::vector<T2>& b, TM mod) {
   using T = typename BiggerIntegralN<T1, T2>::type;
   using atLeastInt64T = typename AtLeastInt64<T>::type;
   return internal::FracModImpl<atLeastInt64T, TM>(

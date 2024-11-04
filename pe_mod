@@ -11,7 +11,7 @@ namespace pe {
 template <typename T, typename TM>
 SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM> &&
                        pe_is_signed_v<T> && pe_is_signed_v<TM>))
-    RETURN(IntPromotion(T, TM)) RegulateMod(T a, TM mod) {
+    RETURN(IntPromotion(T, TM)) Mod(T a, TM mod) {
   PE_ASSERT(mod >= 1);
   if (a >= 0) {
     return a >= mod ? a % mod : a;
@@ -25,7 +25,7 @@ SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM> &&
 template <typename T, typename TM>
 SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM> &&
                        pe_is_signed_v<T> && pe_is_unsigned_v<TM>))
-    RETURN(IntPromotion(T, TM)) RegulateMod(T a, TM mod) {
+    RETURN(IntPromotion(T, TM)) Mod(T a, TM mod) {
   PE_ASSERT(mod >= 1);
   if (a >= 0) {
     return a >= mod ? a % mod : a;
@@ -39,7 +39,7 @@ SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM> &&
 template <typename T, typename TM>
 SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM> &&
                        pe_is_unsigned_v<T>)) RETURN(IntPromotion(T, TM))
-    RegulateMod(T a, TM mod) {
+    Mod(T a, TM mod) {
   PE_ASSERT(mod >= 1);
   using ResultType = typename BiggerIntegralN<T, TM>::type;
   ResultType b = a, m = mod;
@@ -48,9 +48,8 @@ SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM> &&
 }
 
 template <typename T>
-SL constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
-    RegulateMod(T a, T mod) {
-  return RegulateMod<T, T>(a, mod);
+SL constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(T) Mod(T a, T mod) {
+  return Mod<T, T>(a, mod);
 }
 
 namespace internal {
@@ -589,7 +588,7 @@ SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TN> &&
   using ResultType = typename BiggerIntegralN<T, TM>::type;
 
   ResultType ret = 1;
-  auto y = RegulateMod(x, mod);
+  auto y = Mod(x, mod);
   for (; n; n >>= 1) {
     if (n & 1) ret = MulMod(ret, y, mod);
     y = MulMod(y, y, mod);
@@ -820,7 +819,7 @@ struct APSBL {
   static ints Add(ints a, ints b, ints /*mod*/) { return a + b; }
   static ints Sub(ints a, ints b, ints /*mod*/) { return a - b; }
   static ints Mul(ints a, ints b, ints /*mod*/) { return a * b; }
-  static void FixValue(ints& v, ints mod) { v = RegulateMod(v, mod); }
+  static void FixValue(ints& v, ints mod) { v = Mod(v, mod); }
 };
 
 // Forward declarations related to NModNumber;

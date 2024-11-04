@@ -634,7 +634,7 @@ struct CombModerPrimeSquare {
   T FactorialMod(T n) const {
     T result = 1;
     for (; n; n /= p_) {
-      const T t0 = RegulateMod(n / p_, mod_);
+      const T t0 = Mod(n / p_, mod_);
       const T t1 = MulMod(MulMod(f_[n % p_], p_, mod_),
                           MulMod(h_[n % p_], t0, mod_), mod_);
       const T t2 = PowerMod(f_[p_ - 1], n / p_, mod_);
@@ -725,7 +725,7 @@ struct PowerSumModer {
     int64 c = (n + 1) % mod_;
     for (int i = 1; i <= k; ++i) {
       // ret += P[k][i] * ShortCombMod(n + 1, i + 1, mod) % mod;
-      c = MulMod(c, RegulateMod(n + 1 - i, mod_), mod_);
+      c = MulMod(c, Mod(n + 1 - i, mod_), mod_);
       c = MulMod(c, invs_[i + 1], mod_);
       if (c == 0) {
         break;
@@ -752,7 +752,7 @@ struct PowerSumModer {
       // ret += P[k][i] * ShortCombMod(n + 1, i + 1, mod) % mod;
       std::tie(A, B) = ExtractFactor(n + 1 - i, mod_);
       d += B;
-      c = MulMod(c, RegulateMod(A, mod_), mod_);
+      c = MulMod(c, Mod(A, mod_), mod_);
 
       std::tie(A, B) = ExtractFactor(i + 1, mod_);
       d -= B;
@@ -822,7 +822,7 @@ struct PowerSumModerB {
 
     for (int64 i = 0; i <= k; ++i) {
       if (i > 0) {
-        c = MulMod(c, RegulateMod(k + 2 - i, mod_), mod_);
+        c = MulMod(c, Mod(k + 2 - i, mod_), mod_);
         c = MulMod(c, invs_[i], mod_);
         c = MulMod(c, invn, mod_);
       }
@@ -847,7 +847,7 @@ struct PowerSumModerB {
       int64 c = invs_[k + 1];
       for (int i = 0; i <= k; ++i) {
         if (i > 0) {
-          c = MulMod(c, RegulateMod(k + 2 - i, mod_), mod_);
+          c = MulMod(c, Mod(k + 2 - i, mod_), mod_);
           c = MulMod(c, invs_[i], mod_);
         }
         int64 x = MulMod(c, bnl_[i], mod_);
@@ -880,7 +880,7 @@ struct PowerSumModerB {
 
         std::tie(A, B) = ExtractFactor(k + 2 - i, mod_);
         d += B;
-        c = MulMod(c, RegulateMod(A, mod_), mod_);
+        c = MulMod(c, Mod(A, mod_), mod_);
 
         std::tie(A, B) = ExtractFactor(i, mod_);
         d -= B;
@@ -946,7 +946,7 @@ struct PowerSumModerB1 {
 
     int64 c = 1 % mod_;
     for (int64 i = 1; i <= k1; ++i) {
-      c = MulMod(c, RegulateMod(k1 - i + 1, mod_), mod_);
+      c = MulMod(c, Mod(k1 - i + 1, mod_), mod_);
       c = MulMod(c, invs_[i], mod_);
       c = MulMod(c, n1, mod_);
 
@@ -979,7 +979,7 @@ struct PowerSumModerB1 {
 
       std::tie(A, B) = ExtractFactor(k1 - i + 1, mod_);
       d += B;
-      c = MulMod(c, RegulateMod(A, mod_), mod_);
+      c = MulMod(c, Mod(A, mod_), mod_);
 
       std::tie(A, B) = ExtractFactor(i, mod_);
       d -= B;
@@ -1041,7 +1041,7 @@ SL void InitPowerSumMod(int64 n, const int maxk, int64* result, T (*comb)[D],
 // Calculates (1 + 2 + 3 + ... + n) % mod.
 SL int64 P1SumMod(int64 n, int64 mod) {
   if (n == 0) return 0;
-  if (n < 0) return RegulateMod(-P1SumMod(-n, mod), mod);
+  if (n < 0) return Mod(-P1SumMod(-n, mod), mod);
   return n & 1 ? MulMod(((n + 1) >> 1) % mod, n % mod, mod)
                : MulMod((n >> 1) % mod, (n + 1) % mod, mod);
 }
@@ -1058,9 +1058,9 @@ SL int64 P1SumMod(int64 a, int64 b, int64 mod, int64 delta = 1) {
   if (delta < 0 && a < b) return 0;
   const int64 maxk = (b - a) / delta;
   PE_ASSERT(maxk >= 0);
-  const int64 t0 = MulMod((maxk + 1) % mod, RegulateMod(a, mod), mod);
+  const int64 t0 = MulMod((maxk + 1) % mod, Mod(a, mod), mod);
   // delta, 2 delta, maxk delta
-  const int64 t1 = MulMod(RegulateMod(delta, mod), P1SumMod(maxk, mod), mod);
+  const int64 t1 = MulMod(Mod(delta, mod), P1SumMod(maxk, mod), mod);
   return AddMod(t0, t1, mod);
 }
 
@@ -4090,7 +4090,7 @@ struct CarlitzWordsCounter {
   std::vector<int64> MakeLaguerrePoly(int64 n, int sgn = 1) {
     std::vector<int64> ret(n + 1, 0);
     for (int i = 1; i <= n; ++i) {
-      int64 curr = RegulateMod(IsEven(i) ? sgn : -sgn, mod_);
+      int64 curr = Mod(IsEven(i) ? sgn : -sgn, mod_);
       curr = MulMod(curr, Comb(n - 1, n - i), mod_);
       curr = MulMod(curr, ifac_[i], mod_);
       ret[i] = curr;

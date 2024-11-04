@@ -67,7 +67,7 @@ SL void ModTest() {
       int128 y = m;                        \
       x %= y;                              \
       if (x < 0) x += y;                   \
-      auto ans = RegulateMod(v, m);        \
+      auto ans = Mod(v, m);                \
       if (ans != x) {                      \
         dbg(v);                            \
         dbg(m);                            \

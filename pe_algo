@@ -4131,7 +4131,8 @@ SL std::optional<std::vector<std::vector<int64>>> FindRecurrenceWithDegree(
   std::vector<std::vector<int64>> mat(R, std::vector<int64>(C));
   for (int y = 0; y < R; ++y) {
     for (int b = 0; b < B; ++b) {
-      for (int d = 0, v = Mod(terms[y + b], mod); d <= deg; ++d) {
+      int64 v = Mod(terms[y + b], mod);
+      for (int d = 0; d <= deg; ++d) {
         mat[y][b * (deg + 1) + d] = v;
         v = MulMod(v, y + b, mod);
       }
@@ -4186,9 +4187,9 @@ SL std::optional<std::vector<std::vector<int64>>> FindRecurrenceWithDegree(
 
 SL int64 ApplyRecurrence(const std::vector<std::vector<int64>>& coeffs,
                          Span<const int64> terms, int64 m, int64 mod) {
-  const int order = coeffs.size() - 1;
-  const int deg = coeffs[0].size() - 1;
-  assert((int)terms.size() >= order);
+  const int order = static_cast<int>(coeffs.size()) - 1;
+  const int deg = static_cast<int>(coeffs[0].size()) - 1;
+  assert(static_cast<int>(terms.size()) >= order);
   int64 s = 0;
   for (int i = 1; i <= order; ++i) {
     const int64 k = SubMod(Mod(m, mod), Mod(i, mod), mod);
@@ -4211,8 +4212,8 @@ SL int VerifyRecurrence(Span<const int64> terms,
                         const std::vector<std::vector<int64>>& recurrence,
                         int64 mod) {
   const int64 n = terms.size();
-  const int order = recurrence.size() - 1;
-  for (int i = order; i < n; ++i) {
+  const int order = static_cast<int>(recurrence.size()) - 1;
+  for (int64 i = order; i < n; ++i) {
     int64 value =
         ApplyRecurrence(recurrence, terms.subspan(i - order, order), i, mod);
     if (value != Mod(terms[i], mod)) {
@@ -4262,9 +4263,11 @@ SL std::optional<int64> RecurrenceAt(Span<const int64> terms, int64 n,
   }
 
   const int64 m = terms.size();
-  const int order = recurrence->size() - 1;
+  const int order = static_cast<int>(recurrence->size()) - 1;
   std::vector<int64> data(order);
-  for (int i = 0; i < order; ++i) data[i] = terms[m - order + i];
+  for (int i = 0; i < order; ++i) {
+    data[i] = terms[m - order + i];
+  }
   for (int64 i = m; i <= n; ++i) {
     int64 value = ApplyRecurrence(*recurrence, data, i, mod);
     data.push_back(value);

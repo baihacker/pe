@@ -3,6 +3,7 @@
 
 #include "pe_base"
 #include "pe_int128"
+#include "pe_span"
 #include "pe_nt"
 #include "pe_poly_algo"
 #include "pe_tree"
@@ -4113,5 +4114,181 @@ struct CarlitzWordsCounter {
   std::vector<int64> fac_;
   std::vector<int64> ifac_;
 };
+
+namespace internal {
+// https://min-25.hatenablog.com/entry/2018/05/10/212805
+SL std::optional<std::vector<std::vector<int64>>> FindRecurrenceWithDegree(
+    Span<const int64> terms, int deg, int64 mod) {
+  const int64 n = terms.size();
+  const int64 B = (n + 2) / (deg + 2);
+  const int64 C = B * (deg + 1);
+  const int64 R = n - (B - 1);
+
+  if (B < 2 || R < C - 1) {
+    return std::nullopt;
+  }
+
+  std::vector<std::vector<int64>> mat(R, std::vector<int64>(C));
+  for (int y = 0; y < R; ++y) {
+    for (int b = 0; b < B; ++b) {
+      for (int d = 0, v = Mod(terms[y + b], mod); d <= deg; ++d) {
+        mat[y][b * (deg + 1) + d] = v;
+        v = MulMod(v, y + b, mod);
+      }
+    }
+  }
+
+  int rank = 0;
+  for (int x = 0; x < C; ++x) {
+    int pivot = -1;
+    for (int y = rank; y < R; ++y)
+      if (mat[y][x] != 0) {
+        pivot = y;
+        break;
+      }
+    if (pivot < 0) break;
+    if (pivot != rank) swap(mat[rank], mat[pivot]);
+    const int64 inv = ModInv(mat[rank][x], mod);
+    for (int x2 = x; x2 < C; ++x2)
+      mat[rank][x2] = MulMod(mat[rank][x2], inv, mod);
+    for (int y = rank + 1; y < R; ++y)
+      if (mat[y][x]) {
+        const int64 c = mod - mat[y][x];
+        for (int x2 = x; x2 < C; ++x2) {
+          mat[y][x2] = AddMod(mat[y][x2], MulMod(c, mat[rank][x2], mod), mod);
+        }
+      }
+    ++rank;
+  }
+
+  if (rank == C) return std::nullopt;
+
+  for (int y = rank - 1; y >= 0; --y)
+    if (mat[y][rank]) {
+      if (mat[y][y] != 1) return std::nullopt;
+      const int64 c = mod - mat[y][rank];
+      for (int y2 = 0; y2 < y; ++y2) {
+        mat[y2][rank] = AddMod(mat[y2][rank], MulMod(c, mat[y2][y], mod), mod);
+      }
+    }
+
+  int order = rank / (deg + 1);
+  std::vector<std::vector<int64>> ret(order + 1, std::vector<int64>(deg + 1));
+  ret[0][rank % (deg + 1)] = 1;
+  for (int y = rank - 1; y >= 0; --y) {
+    int k = order - y / (deg + 1), d = y % (deg + 1);
+    ret[k][d] = (mod - mat[y][rank]) % mod;
+  }
+
+  return ret;
+}
+}  // namespace internal
+
+SL int64 ApplyRecurrence(const std::vector<std::vector<int64>>& coeffs,
+                         Span<const int64> terms, int64 m, int64 mod) {
+  const int order = coeffs.size() - 1;
+  const int deg = coeffs[0].size() - 1;
+  assert((int)terms.size() >= order);
+  int64 s = 0;
+  for (int i = 1; i <= order; ++i) {
+    const int64 k = SubMod(Mod(m, mod), Mod(i, mod), mod);
+    int64 t = terms[terms.size() - i];
+    for (int d = 0; d <= deg; ++d) {
+      s = AddMod(s, MulMod(t, coeffs[i][d], mod), mod);
+      t = MulMod(t, k, mod);
+    }
+  }
+  int64 denom = 0;
+  int64 mpow = 1;
+  for (int d = 0; d <= deg; ++d) {
+    denom = AddMod(denom, MulMod(mpow, coeffs[0][d], mod), mod);
+    mpow = MulMod(mpow, m, mod);
+  }
+  return MulMod(SubMod(0, s, mod), ModInv(denom, mod), mod);
+}
+
+SL int VerifyRecurrence(Span<const int64> terms,
+                        const std::vector<std::vector<int64>>& recurrence,
+                        int64 mod) {
+  const int64 n = terms.size();
+  const int order = recurrence.size() - 1;
+  for (int i = order; i < n; ++i) {
+    int64 value =
+        ApplyRecurrence(recurrence, terms.subspan(i - order, order), i, mod);
+    if (value != Mod(terms[i], mod)) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
+SL std::optional<std::vector<std::vector<int64>>> FindRecurrence(
+    Span<const int64> terms, int64 mod, int64 min_deg = 0) {
+  const int64 n = terms.size();
+  for (int deg = min_deg;; ++deg) {
+    const int64 B = (n + 2) / (deg + 2);
+    const int64 C = B * (deg + 1);
+    const int64 R = n - (B - 1);
+
+    if (B < 2 || R < C - 1) {
+      break;
+    }
+
+    auto recurrence = internal::FindRecurrenceWithDegree(terms, deg, mod);
+    if (!recurrence.has_value()) {
+      continue;
+    }
+
+    if (!VerifyRecurrence(terms, *recurrence, mod)) {
+      continue;
+    }
+
+    return recurrence;
+  }
+
+  return std::nullopt;
+}
+
+SL std::optional<int64> RecurrenceAt(Span<const int64> terms, int64 n,
+                                     int64 mod, int min_deg = 0) {
+  if (n < terms.size()) {
+    return terms[n];
+  }
+
+  auto recurrence = FindRecurrence(terms, mod, min_deg);
+  if (!recurrence.has_value()) {
+    return std::nullopt;
+  }
+
+  const int64 m = terms.size();
+  const int order = recurrence->size() - 1;
+  std::vector<int64> data(order);
+  for (int i = 0; i < order; ++i) data[i] = terms[m - order + i];
+  for (int64 i = m; i <= n; ++i) {
+    int64 value = ApplyRecurrence(*recurrence, data, i, mod);
+    data.push_back(value);
+  }
+
+  return data.back();
+}
+
+SL std::optional<std::vector<int64>> RecurrenceValues(Span<const int64> terms,
+                                                      int64 n, int64 mod,
+                                                      int min_deg = 0) {
+  auto recurrence = FindRecurrence(terms, mod, min_deg);
+  if (!recurrence.has_value()) {
+    return std::nullopt;
+  }
+
+  const int64 m = terms.size();
+  std::vector<int64> data(m);
+  for (int i = 0; i < m; ++i) data[i] = terms[i];
+  for (int64 i = m; i <= n; ++i) {
+    int64 value = ApplyRecurrence(*recurrence, data, i, mod);
+    data.push_back(value);
+  }
+
+  return data;
+}
 }  // namespace pe
 #endif

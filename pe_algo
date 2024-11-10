@@ -4119,7 +4119,7 @@ namespace internal {
 // https://min-25.hatenablog.com/entry/2018/05/10/212805
 SL std::optional<std::vector<std::vector<int64>>> FindRecurrenceWithDegree(
     Span<const int64> terms, int deg, int64 mod) {
-  const int64 n = terms.size();
+  const int64 n = static_cast<int64>(terms.size());
   const int64 B = (n + 2) / (deg + 2);
   const int64 C = B * (deg + 1);
   const int64 R = n - (B - 1);
@@ -4148,10 +4148,13 @@ SL std::optional<std::vector<std::vector<int64>>> FindRecurrenceWithDegree(
         break;
       }
     if (pivot < 0) break;
-    if (pivot != rank) swap(mat[rank], mat[pivot]);
+    if (pivot != rank) {
+      swap(mat[rank], mat[pivot]);
+    }
     const int64 inv = ModInv(mat[rank][x], mod);
-    for (int x2 = x; x2 < C; ++x2)
+    for (int x2 = x; x2 < C; ++x2) {
       mat[rank][x2] = MulMod(mat[rank][x2], inv, mod);
+    }
     for (int y = rank + 1; y < R; ++y)
       if (mat[y][x]) {
         const int64 c = mod - mat[y][x];
@@ -4162,7 +4165,9 @@ SL std::optional<std::vector<std::vector<int64>>> FindRecurrenceWithDegree(
     ++rank;
   }
 
-  if (rank == C) return std::nullopt;
+  if (rank == C) {
+    return std::nullopt;
+  }
 
   for (int y = rank - 1; y >= 0; --y)
     if (mat[y][rank]) {
@@ -4177,7 +4182,8 @@ SL std::optional<std::vector<std::vector<int64>>> FindRecurrenceWithDegree(
   std::vector<std::vector<int64>> ret(order + 1, std::vector<int64>(deg + 1));
   ret[0][rank % (deg + 1)] = 1;
   for (int y = rank - 1; y >= 0; --y) {
-    int k = order - y / (deg + 1), d = y % (deg + 1);
+    const int k = order - y / (deg + 1);
+    const int d = y % (deg + 1);
     ret[k][d] = (mod - mat[y][rank]) % mod;
   }
 
@@ -4190,6 +4196,7 @@ SL int64 ApplyRecurrence(const std::vector<std::vector<int64>>& coeffs,
   const int order = static_cast<int>(coeffs.size()) - 1;
   const int deg = static_cast<int>(coeffs[0].size()) - 1;
   assert(static_cast<int>(terms.size()) >= order);
+
   int64 s = 0;
   for (int i = 1; i <= order; ++i) {
     const int64 k = SubMod(Mod(m, mod), Mod(i, mod), mod);
@@ -4199,19 +4206,21 @@ SL int64 ApplyRecurrence(const std::vector<std::vector<int64>>& coeffs,
       t = MulMod(t, k, mod);
     }
   }
+
   int64 denom = 0;
   int64 mpow = 1;
   for (int d = 0; d <= deg; ++d) {
     denom = AddMod(denom, MulMod(mpow, coeffs[0][d], mod), mod);
     mpow = MulMod(mpow, m, mod);
   }
+
   return MulMod(SubMod(0, s, mod), ModInv(denom, mod), mod);
 }
 
 SL int VerifyRecurrence(Span<const int64> terms,
                         const std::vector<std::vector<int64>>& recurrence,
                         int64 mod) {
-  const int64 n = terms.size();
+  const int64 n = static_cast<int64>(terms.size());
   const int order = static_cast<int>(recurrence.size()) - 1;
   for (int64 i = order; i < n; ++i) {
     int64 value =
@@ -4250,7 +4259,7 @@ SL std::optional<std::vector<std::vector<int64>>> FindRecurrence(
   return std::nullopt;
 }
 
-SL std::optional<int64> RecurrenceAt(Span<const int64> terms, int64 n,
+SL std::optional<int64> RecurrenceValueAt(Span<const int64> terms, int64 n,
                                      int64 mod, int min_deg = 0,
                                      int max_deg = -1) {
   if (n < terms.size()) {
@@ -4262,7 +4271,7 @@ SL std::optional<int64> RecurrenceAt(Span<const int64> terms, int64 n,
     return std::nullopt;
   }
 
-  const int64 m = terms.size();
+  const int64 m = static_cast<int64>(terms.size());
   const int order = static_cast<int>(recurrence->size()) - 1;
   std::vector<int64> data(order);
   for (int i = 0; i < order; ++i) {
@@ -4285,9 +4294,11 @@ SL std::optional<std::vector<int64>> RecurrenceValues(Span<const int64> terms,
     return std::nullopt;
   }
 
-  const int64 m = terms.size();
+  const int64 m = static_cast<int64>(terms.size());
   std::vector<int64> data(m);
-  for (int i = 0; i < m; ++i) data[i] = terms[i];
+  for (int i = 0; i < m; ++i) {
+    data[i] = terms[i];
+  }
   for (int64 i = m; i <= n; ++i) {
     int64 value = ApplyRecurrence(*recurrence, data, i, mod);
     data.push_back(value);
@@ -4295,5 +4306,6 @@ SL std::optional<std::vector<int64>> RecurrenceValues(Span<const int64> terms,
 
   return data;
 }
+
 }  // namespace pe
 #endif

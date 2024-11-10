@@ -4223,9 +4223,9 @@ SL int VerifyRecurrence(Span<const int64> terms,
 }
 
 SL std::optional<std::vector<std::vector<int64>>> FindRecurrence(
-    Span<const int64> terms, int64 mod, int64 min_deg = 0) {
+    Span<const int64> terms, int64 mod, int64 min_deg = 0, int64 max_deg = -1) {
   const int64 n = terms.size();
-  for (int deg = min_deg;; ++deg) {
+  for (int deg = min_deg; max_deg == -1 || deg <= max_deg; ++deg) {
     const int64 B = (n + 2) / (deg + 2);
     const int64 C = B * (deg + 1);
     const int64 R = n - (B - 1);
@@ -4250,12 +4250,13 @@ SL std::optional<std::vector<std::vector<int64>>> FindRecurrence(
 }
 
 SL std::optional<int64> RecurrenceAt(Span<const int64> terms, int64 n,
-                                     int64 mod, int min_deg = 0) {
+                                     int64 mod, int min_deg = 0,
+                                     int max_deg = -1) {
   if (n < terms.size()) {
     return terms[n];
   }
 
-  auto recurrence = FindRecurrence(terms, mod, min_deg);
+  auto recurrence = FindRecurrence(terms, mod, min_deg, max_deg);
   if (!recurrence.has_value()) {
     return std::nullopt;
   }
@@ -4274,8 +4275,9 @@ SL std::optional<int64> RecurrenceAt(Span<const int64> terms, int64 n,
 
 SL std::optional<std::vector<int64>> RecurrenceValues(Span<const int64> terms,
                                                       int64 n, int64 mod,
-                                                      int min_deg = 0) {
-  auto recurrence = FindRecurrence(terms, mod, min_deg);
+                                                      int min_deg = 0,
+                                                      int max_deg = -1) {
+  auto recurrence = FindRecurrence(terms, mod, min_deg, max_deg);
   if (!recurrence.has_value()) {
     return std::nullopt;
   }

@@ -296,8 +296,9 @@ SL int64 ApplyLinearRecurrenceNext(const std::vector<int64>& min_poly,
   return ret;
 }
 
-SL int64 ApplyLinearRecurrenceN(const std::vector<int64>& min_poly,
-                                Span<const int64> terms, int64 n, int64 mod) {
+SL int64 ApplyLinearRecurrenceValueAtN(const std::vector<int64>& min_poly,
+                                       Span<const int64> terms, int64 n,
+                                       int64 mod) {
   if (n < terms.size()) {
     return terms[static_cast<int>(n)];
   }
@@ -328,9 +329,9 @@ SL int64 ApplyLinearRecurrenceN(const std::vector<int64>& min_poly,
 // rec[order+1] = 1
 // Initial terms:
 // {a0, a1, a2, ...}
-SL int64 ApplyLinearRecurrenceSumN(const std::vector<int64>& min_poly,
-                                   Span<const int64> terms, int64 n,
-                                   int64 mod) {
+SL int64 ApplyLinearRecurrenceSumAtN(const std::vector<int64>& min_poly,
+                                     Span<const int64> terms, int64 n,
+                                     int64 mod) {
   if (n < static_cast<int>(terms.size())) {
     int64 ret = 0;
     for (int i = 0; i <= n; ++i) {
@@ -362,7 +363,20 @@ SL int64 ApplyLinearRecurrenceSumN(const std::vector<int64>& min_poly,
   std::vector<int64> min_poly_s =
       PolySub(PolyShiftLeft(min_poly, 1), min_poly, mod);
 
-  return ApplyLinearRecurrenceN(min_poly_s, sum, n, mod);
+  return ApplyLinearRecurrenceValueAtN(min_poly_s, sum, n, mod);
+}
+
+SL int VerifyLinearRecurrence(Span<const int64> terms,
+                              const std::vector<int64>& min_poly, int64 mod) {
+  int order = static_cast<int64>(min_poly.size()) - 1;
+  for (int i = min_poly.size() - 1; i < terms.size(); ++i) {
+    int64 value = ApplyLinearRecurrenceNext(
+        min_poly, terms.subspan(i - order, order), mod);
+    if (value != Mod(terms[i], mod)) {
+      return 0;
+    }
+  }
+  return 1;
 }
 
 SL std::optional<std::vector<int64>> FindLinearRecurrence(
@@ -371,32 +385,23 @@ SL std::optional<std::vector<int64>> FindLinearRecurrence(
   for (int n = (std::max(min_use, 2) + 1) / 2 * 2; n < len; n += 2) {
     std::vector<int64> min_poly =
         internal::FindLinearRecurrence(terms.subspan(0, n), mod);
-    int ok = 1;
-    for (int i = n; i < len; ++i) {
-      int64 value =
-          ApplyLinearRecurrenceNext(min_poly, terms.subspan(0, i), mod);
-      if (value != terms[i]) {
-        ok = 0;
-        break;
-      }
-    }
-    if (ok) {
+    if (VerifyLinearRecurrence(terms, min_poly, mod)) {
       return min_poly;
     }
   }
   return std::nullopt;
 }
 
-SL std::optional<int64> LinearRecurrenceValueN(Span<const int64> terms,
-                                                int64 n, int64 mod,
-                                                int min_use = 2) {
+SL std::optional<int64> LinearRecurrenceValueAtN(Span<const int64> terms,
+                                                 int64 n, int64 mod,
+                                                 int min_use = 2) {
   if (n < terms.size()) {
     return terms[static_cast<int>(n)];
   }
 
   auto min_poly = FindLinearRecurrence(terms, mod, min_use);
   if (min_poly.has_value()) {
-    return ApplyLinearRecurrenceN(*min_poly, terms, n, mod);
+    return ApplyLinearRecurrenceValueAtN(*min_poly, terms, n, mod);
   }
   return std::nullopt;
 }

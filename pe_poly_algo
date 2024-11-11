@@ -258,7 +258,8 @@ SL std::vector<int64> FindLinearRecurrence(Span<const int64> terms,
   const int n = m >> 1;
   PE_ASSERT(n * 2 == m);
 
-  std::vector<int64> r0 = PolyShiftLeft(std::vector<int64>{1}, m);
+  std::vector<int64> r0(m, 0);
+  r0[m] = 1;
 
   std::vector<int64> r1(terms.size());
   for (int i = 0; i < m; ++i) {
@@ -289,7 +290,7 @@ SL int64 ApplyLinearRecurrenceNext(const std::vector<int64>& min_poly,
                                    Span<const int64> terms, int64 mod) {
   PE_ASSERT(terms.size() + 1 >= min_poly.size());
 
-  const int m = min_poly.size();
+  const int m = static_cast<int>(min_poly.size());
   const int idx = static_cast<int>(terms.size());
 
   int64 ret = 0;
@@ -371,8 +372,8 @@ SL int64 ApplyLinearRecurrenceSumAtN(const std::vector<int64>& min_poly,
 
 SL int VerifyLinearRecurrence(Span<const int64> terms,
                               const std::vector<int64>& min_poly, int64 mod) {
-  int order = static_cast<int64>(min_poly.size()) - 1;
-  for (int i = min_poly.size() - 1; i < terms.size(); ++i) {
+  int order = static_cast<int>(min_poly.size()) - 1;
+  for (int i = static_cast<int>(min_poly.size()) - 1; i < terms.size(); ++i) {
     int64 value = ApplyLinearRecurrenceNext(
         min_poly, terms.subspan(i - order, order), mod);
     if (value != Mod(terms[i], mod)) {

@@ -61,25 +61,24 @@ PE_REGISTER_TEST(&GfTest, "GfTest", SMALL);
 
 SL void MinimalPolynomialTest() {
   const int64 P = 1000000009;
-  NModPoly s{{0, 1, 1, 2, 3, 5}, P};
-  auto v = FindMinimalPoly(s);
+  std::vector<int64> s{0, 1, 1, 2, 3, 5};
+  auto v = *FindLinearRecurrence(s, P);
   assert(v[0] == P - 1);
   assert(v[1] == P - 1);
   assert(v[2] == 1);
-  const int n = (int)v.data.size();
+  const int n = (int)v.size();
   int64 ans = 0;
-  for (int i = 0; i < n; ++i) ans += v.At(i) * s.At(i);
+  for (int i = 0; i < n; ++i) ans += v[i] * s[i];
   assert(ans == P);
 
-  ans = NthElement(s, 38, v);
+  ans = ApplyLinearRecurrenceN(v, s, 38, P);
   assert(ans == 39088169LL);
 
-  auto t = FindLinearRecurrence({{0, 1, 1, 2, 3, 5, 8, 13}, 31});
+  auto t = *FindLinearRecurrence({0, 1, 1, 2, 3, 5, 8, 13}, 31);
   assert(t[0] == 30);
   assert(t[1] == 30);
   assert(t[2] == 1);
-  assert(NthElement({{0, 1, 1, 2, 3, 5, 8, 13}, P}, 38) == 39088169);
-  assert(NthElement({0, 1, 1, 2, 3, 5, 8, 13}, P, 38) == 39088169);
+  assert(*LinearRecurrenceValueN({0, 1, 1, 2, 3, 5, 8, 13}, 38, P) == 39088169);
 }
 PE_REGISTER_TEST(&MinimalPolynomialTest, "MinimalPolynomialTest", SMALL);
 

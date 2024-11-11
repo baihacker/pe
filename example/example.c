@@ -317,24 +317,24 @@ void LinearRecurrenceExample() {
 
   {
     // Find the linear recurrence automatically and output the nth element.
-    std::cout << NthElement({1, 2, 4, 8, 16, 32, 64}, mod, 7) << std::endl;
-    std::cout << NthElement({1, 1, 2, 3, 5, 8, 13}, mod, 10000000000)
+    std::cout << *LinearRecurrenceValueN({1, 2, 4, 8, 16, 32, 64}, 7, mod)
+              << std::endl;
+    std::cout << *LinearRecurrenceValueN({1, 1, 2, 3, 5, 8, 13}, 10000000000,
+                                          mod)
               << std::endl;
   }
   {
-    // a[i+1] = a[i] * rec[0] + a[i-1] * rec[1] ...
-    // a[0] = init[0], a[1] = init[1], ...
-    std::vector<int64> rec{1, 1};
+    std::vector<int64> rec{mod - 1, mod - 1, 1};
     std::vector<int64> init{1, 1};
     for (int i = 2; i <= 5; ++i) {
-      std::cout << LinearRecurrence(rec, init, mod, i) << std::endl;
+      std::cout << ApplyLinearRecurrenceN(rec, init, i, mod) << std::endl;
     }
   }
   {
-    std::vector<int64> rec{1, 1};
+    std::vector<int64> rec{mod - 1, mod - 1, 1};
     std::vector<int64> init{1, 1};
     for (int i = 0; i <= 5; ++i) {
-      std::cout << LinearRecurrenceSum(rec, init, mod, i) << std::endl;
+      std::cout << ApplyLinearRecurrenceSumN(rec, init, i, mod) << std::endl;
     }
   }
 }

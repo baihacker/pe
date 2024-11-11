@@ -246,88 +246,136 @@ SL int64 GfAt(const NModPoly& A, const NModPoly& B, const int64 n) {
   return GfAt(A.data, B.data, n, A.mod);
 }
 
+namespace internal {
 // Berlekamp Massey
 // (https://en.wikipedia.org/wiki/Berlekamp%E2%80%93Massey_algorithm)
-//
-// This implementation requires that s[0] has contribution to the sequence. i.e.
-// result[0] != 0
-SL NModPoly FindMinimalPolyA(const NModPoly& s) {
-  const int m = static_cast<int>(s.data.size());
+
+// This implementation can handle the case that terms[0] has no contribution to
+// the sequence. i.e. result[0] == 0
+SL std::vector<int64> FindLinearRecurrence(Span<const int64> terms,
+                                           const int64 mod) {
+  const int m = static_cast<int>(terms.size());
   const int n = m >> 1;
-  const int64 mod = s.mod;
   PE_ASSERT(n * 2 == m);
 
-  NModPoly r0{{1}, mod};
-  r0 = r0 << m;
-  NModPoly r1(s);
-  NModPoly v0{{0}, mod};
-  NModPoly v1{{1}, mod};
+  std::vector<int64> r0 = PolyShiftLeft(std::vector<int64>{1}, m);
+
+  std::vector<int64> r1(terms.rbegin(), terms.rend());
+  AdjustPolyLeadingZero(r1);
+  std::vector<int64> v0{0};
+  std::vector<int64> v1{1};
 
   while (n + 1 <= r1.size()) {
-    NModPoly q, r;
-    std::tie(q, r) = PolyDivAndMod(r0, r1);
-    NModPoly v(v0 - q * v1);
+    std::vector<int64> q, r;
+    std::tie(q, r) = PolyDivAndMod(r0, r1, mod);
+    std::vector<int64> v = PolySub(v0, PolyMul(q, v1, mod), mod);
     v0 = std::move(v1);
     v1 = std::move(v);
     r0 = std::move(r1);
     r1 = std::move(r);
   }
-  v1 = std::move(InvOf(v1[0], mod) * v1);
-  std::reverse(v1.data.begin(), v1.data.end());
+
+  int64 c = ModInv(v1.back(), mod);
+  for (auto& v : v1) v = MulMod(c, v, mod);
+
   return v1;
 }
+}  // namespace internal
 
-// This implementation can handle the case that s[0] has no contribution to the
-// sequence. i.e. result[0] == 0
-SL NModPoly FindMinimalPoly(const NModPoly& s) {
-  const int m = static_cast<int>(s.data.size());
-  const int n = m >> 1;
-  const int64 mod = s.mod;
-  PE_ASSERT(n * 2 == m);
+SL int64 ApplyLinearRecurrenceNext(const std::vector<int64>& min_poly,
+                                   Span<const int64> terms, int64 mod) {
+  PE_ASSERT(terms.size() + 1 >= min_poly.size());
 
-  NModPoly r0{{1}, mod};
-  r0 = r0 << m;
-  NModPoly r1(s);
-  std::reverse(r1.data.begin(), r1.data.end());
-  AdjustPolyLeadingZero(r1.data);
-  NModPoly v0{{0}, mod};
-  NModPoly v1{{1}, mod};
+  const int m = min_poly.size();
+  const int idx = static_cast<int>(terms.size());
 
-  while (n + 1 <= r1.size()) {
-    NModPoly q, r;
-    std::tie(q, r) = PolyDivAndMod(r0, r1);
-    NModPoly v(v0 - q * v1);
-    v0 = std::move(v1);
-    v1 = std::move(v);
-    r0 = std::move(r1);
-    r1 = std::move(r);
+  int64 ret = 0;
+  for (int j = 0; j < m - 1; ++j) {
+    ret = SubMod(ret, MulMod(min_poly[j], terms[idx - (m - j - 1)], mod), mod);
   }
-  return InvOf(v1.data.back(), mod) * v1;
+  return ret;
 }
 
-SL int64 NthElement(const NModPoly& s, int64 n, const NModPoly& min_poly) {
-  if (n <= s.deg()) {
-    return s[static_cast<int>(n)];
+SL int64 ApplyLinearRecurrenceN(const std::vector<int64>& min_poly,
+                                Span<const int64> terms, int64 n, int64 mod) {
+  if (n < terms.size()) {
+    return terms[static_cast<int>(n)];
   }
 
-  auto r = n % min_poly;
-  const int64 m = r.deg();
+  std::vector<int64> r{1};
+  {
+    std::vector<int64> x{0, 1};
+    for (; n > 0; n >>= 1) {
+      if (n & 1) {
+        r = PolyMod(PolyMul(x, r, mod), min_poly, mod);
+      }
+      if (n > 1) {
+        x = PolyMod(PolyMul(x, x, mod), min_poly, mod);
+      }
+    }
+  }
+  const int64 m = static_cast<int64>(r.size()) - 1;
   int64 ans = 0;
   for (int64 i = 0; i <= m; ++i) {
-    ans = AddMod(ans, s[i] * r[i] % s.mod, s.mod);
+    ans = AddMod(ans, MulMod(terms[i], r[i], mod), mod);
   }
   return ans;
 }
 
-SL NModPoly FindLinearRecurrence(const NModPoly& s, int min_use = 2) {
-  const int len = static_cast<int>(s.data.size());
+// Returns sum(a[i], 0 <= i <= n).
+// Recurrence:
+// a[n] * rec[order+1] + a[n-1] * rec[order] + ... + a[n-order] * rec[0] = 0
+// rec[order+1] = 1
+// Initial terms:
+// {a0, a1, a2, ...}
+SL int64 ApplyLinearRecurrenceSumN(const std::vector<int64>& min_poly,
+                                   Span<const int64> terms, int64 n,
+                                   int64 mod) {
+  if (n < static_cast<int>(terms.size())) {
+    int64 ret = 0;
+    for (int i = 0; i <= n; ++i) {
+      ret = AddMod(ret, terms[i], mod);
+    }
+    return ret;
+  }
+
+  PE_ASSERT(terms.size() + 1 >= min_poly.size());
+
+  const int m = static_cast<int>(min_poly.size());
+  std::vector<int64> sum(m, 0);
+  std::vector<int64> values;
+  for (int i = 0; i < m; ++i) {
+    int64 t = 0;
+    if (i < m - 1) {
+      PE_ASSERT(i < terms.size());
+      t = terms[i];
+    } else {
+      t = ApplyLinearRecurrenceNext(min_poly, values, mod);
+    }
+    if (i < terms.size()) {
+      PE_ASSERT(t == terms[i]);
+    }
+    values.push_back(t);
+    sum[i] = i == 0 ? t : AddMod(sum[i - 1], t, mod);
+  }
+
+  std::vector<int64> min_poly_s =
+      PolySub(PolyShiftLeft(min_poly, 1), min_poly, mod);
+
+  return ApplyLinearRecurrenceN(min_poly_s, sum, n, mod);
+}
+
+SL std::optional<std::vector<int64>> FindLinearRecurrence(
+    Span<const int64> terms, int64 mod, int min_use = 2) {
+  const int len = static_cast<int>(terms.size());
   for (int n = (std::max(min_use, 2) + 1) / 2 * 2; n < len; n += 2) {
-    auto use = s.LowerTerms(n, 0);
-    auto min_poly = FindMinimalPoly(use);
+    std::vector<int64> min_poly =
+        internal::FindLinearRecurrence(terms.subspan(0, n), mod);
     int ok = 1;
     for (int i = n; i < len; ++i) {
-      auto value = NthElement(use, i, min_poly);
-      if (value != s[i]) {
+      int64 value =
+          ApplyLinearRecurrenceNext(min_poly, terms.subspan(0, i), mod);
+      if (value != terms[i]) {
         ok = 0;
         break;
       }
@@ -336,90 +384,40 @@ SL NModPoly FindLinearRecurrence(const NModPoly& s, int min_use = 2) {
       return min_poly;
     }
   }
-  return NModPoly();
+  return std::nullopt;
 }
 
-SL int64 NthElement(const NModPoly& s, int64 n, int min_use = 2) {
-  if (n <= s.deg()) {
-    return s[static_cast<int>(n)];
+SL std::optional<int64> LinearRecurrenceValueN(Span<const int64> terms,
+                                                int64 n, int64 mod,
+                                                int min_use = 2) {
+  if (n < terms.size()) {
+    return terms[static_cast<int>(n)];
   }
 
-  auto min_poly = FindLinearRecurrence(s, min_use);
-  if (min_poly.deg() > 0) {
-    return NthElement(s, n, min_poly);
+  auto min_poly = FindLinearRecurrence(terms, mod, min_use);
+  if (min_poly.has_value()) {
+    return ApplyLinearRecurrenceN(*min_poly, terms, n, mod);
   }
-  return -1;
+  return std::nullopt;
 }
 
-SL int64 NthElement(const std::vector<int64>& s, const int64 mod, int64 n,
-                    int min_use = 2) {
-  if (n < static_cast<int>(s.size())) {
-    return s[static_cast<int>(n)];
+SL std::optional<std::vector<int64>> LinearRecurrenceValues(
+    Span<const int64> terms, int64 n, int64 mod, int min_use = 2) {
+  auto min_poly = FindLinearRecurrence(terms, mod, min_use);
+  if (!min_poly.has_value()) {
+    return std::nullopt;
   }
 
-  NModPoly p(s, mod);
-
-  auto min_poly = FindLinearRecurrence(p, min_use);
-  if (min_poly.deg() > 0) {
-    return NthElement(p, n, min_poly);
+  const int64 m = static_cast<int64>(terms.size());
+  std::vector<int64> data(m);
+  for (int i = 0; i < m; ++i) {
+    data[i] = terms[i];
   }
-  return -1;
-}
-
-// Returns a[n].
-// Recurrence: a[i+1] = a[i] * rec[0] + a[i-1] * rec[1] ...
-// Initial terms: init = {a0, a1, a2, ...}
-SL int64 LinearRecurrence(const std::vector<int64>& rec,
-                          const std::vector<int64>& init, const int64 mod,
-                          int64 n) {
-  if (n < static_cast<int>(init.size())) {
-    return init[static_cast<int>(n)];
+  for (int64 i = m; i <= n; ++i) {
+    int64 value = ApplyLinearRecurrenceNext(*min_poly, data, mod);
+    data.push_back(value);
   }
-
-  PE_ASSERT(init.size() >= rec.size());
-
-  const int m = static_cast<int>(rec.size());
-  std::vector<int64> data(m + 1, 0);
-  for (int i = 0; i < m; ++i) data[m - 1 - i] = Mod(-rec[i], mod);
-  data[m] = 1;
-  return NthElement(NModPoly(init, mod), n, NModPoly(std::move(data), mod));
-}
-
-// Returns sum(a[i], 0 <= i <= n).
-// Recurrence: a[i+1] = a[i] * rec[0] + a[i-1] * rec[1] ...
-// Initial terms: init = {a0, a1, a2, ...}
-SL int64 LinearRecurrenceSum(const std::vector<int64>& rec,
-                             const std::vector<int64>& init, const int64 mod,
-                             int64 n) {
-  if (n < static_cast<int>(init.size())) {
-    int64 ret = 0;
-    for (int i = 0; i <= n; ++i) {
-      ret = AddMod(ret, init[i], mod);
-    }
-    return ret;
-  }
-
-  PE_ASSERT(init.size() >= rec.size());
-
-  const int m = static_cast<int>(rec.size());
-  auto each = init;
-  std::vector<int64> sum(2 * (m + 2), 0);
-  sum[0] = each[0];
-  for (int i = 1; i < 2 * m + 4; ++i) {
-    if (i < m) {
-      sum[i] = AddMod(sum[i - 1], each[i], mod);
-    } else {
-      int64 t = 0;
-      for (int j = 0; j < m; ++j) {
-        if (rec[j]) {
-          t = AddMod(t, MulMod(each[i - j - 1], rec[j], mod), mod);
-        }
-      }
-      each.push_back(t);
-      sum[i] = AddMod(sum[i - 1], t, mod);
-    }
-  }
-  return NthElement(sum, mod, n);
+  return data;
 }
 }  // namespace pe
 #endif

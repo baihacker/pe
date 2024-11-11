@@ -38,9 +38,10 @@ int main() {
   for (int64 n = 1; n <= 1000000000; n *= 10) {
     // Use Berlekamp Massey algorithm to find the recurrence.
     // The minimal initial element count is: 2 * order + 1
-    const int64 ans0 = NthElement(init, mod, n);
+    const int64 ans0 = *LinearRecurrenceValueN(init, n, mod);
     // Compute the nth element assuming the recurrence is known.
-    const int64 ans1 = LinearRecurrence({1LL, 1LL}, init, mod, n);
+    const int64 ans1 =
+        ApplyLinearRecurrenceN({mod - 1, mod - 1, 1}, init, n, mod);
     // Use matric multiplication to compute the nth element.
     const int64 ans2 = solve_nth(n);
     std::cout << "n = " << n << std::endl;
@@ -52,7 +53,8 @@ int main() {
 
   for (int64 n = 1; n <= 1000000000; n *= 10) {
     // The minimal initial element count is: 2 * (order + 1) + 1
-    const int64 ans1 = LinearRecurrenceSum({1LL, 1LL}, init, mod, n);
+    const int64 ans1 =
+        ApplyLinearRecurrenceSumN({mod - 1, mod - 1, 1}, init, n, mod);
     const int64 ans2 = solve_nth_sum(n);
     std::cout << "n = " << n << std::endl;
     std::cout << "Ans1 = " << ans1 << std::endl;

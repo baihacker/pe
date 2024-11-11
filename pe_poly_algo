@@ -247,9 +247,18 @@ SL int64 GfAt(const NModPoly& A, const NModPoly& B, const int64 n) {
 }
 
 namespace internal {
+// If the following equations holds for all n
+//
+// A[n] * M[K] + A[n-1] * M[K-1] + ... + A[n-K] * M[0] = 0
+// M[K] = 1
+//
+// sequence A is linear recurrence with minimal polynomial M of order K.
+
+// Returns the minimal polynomial of a linear recurrence sequence.
+//
 // Berlekamp Massey
 // (https://en.wikipedia.org/wiki/Berlekamp%E2%80%93Massey_algorithm)
-
+//
 // This implementation can handle the case that terms[0] has no contribution to
 // the sequence. i.e. result[0] == 0
 SL std::vector<int64> FindLinearRecurrence(Span<const int64> terms,
@@ -270,8 +279,7 @@ SL std::vector<int64> FindLinearRecurrence(Span<const int64> terms,
   std::vector<int64> v1{1};
 
   while (n + 1 <= r1.size()) {
-    std::vector<int64> q, r;
-    std::tie(q, r) = PolyDivAndMod(r0, r1, mod);
+    auto [q, r] = PolyDivAndMod(r0, r1, mod);
     std::vector<int64> v = PolySub(v0, PolyMul(q, v1, mod), mod);
     v0 = std::move(v1);
     v1 = std::move(v);
@@ -327,12 +335,7 @@ SL int64 ApplyLinearRecurrenceValueAtN(const std::vector<int64>& min_poly,
   return ans;
 }
 
-// Returns sum(a[i], 0 <= i <= n).
-// Recurrence:
-// a[n] * rec[order+1] + a[n-1] * rec[order] + ... + a[n-order] * rec[0] = 0
-// rec[order+1] = 1
-// Initial terms:
-// {a0, a1, a2, ...}
+// Returns sum(terms[i], 0 <= i <= n).
 SL int64 ApplyLinearRecurrenceSumAtN(const std::vector<int64>& min_poly,
                                      Span<const int64> terms, int64 n,
                                      int64 mod) {

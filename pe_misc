@@ -1925,5 +1925,220 @@ PeriodicSequence<T> MakePeriodicSequence1(T init, std::function<T(T)> f) {
 
   return ret;
 }
+
+struct MatrixTask {
+  int64 row_start;
+  int64 row_end;
+  int64 column_start;
+  int64 column_end;
+  std::vector<int64> previous_row;
+  std::vector<int64> previous_column;
+  std::vector<int64> current_row;
+  std::vector<int64> current_column;
+};
+
+class MatrixScanner {
+ public:
+  void Init(int64 row_start, int64 row_end, int64 column_start,
+            int64 column_end, std::vector<int64> first_row,
+            std::vector<int64> first_column, int64 row_block,
+            int64 column_block) {
+    PE_ASSERT(row_end - row_start + 1 == first_column.size());
+    PE_ASSERT(column_end - column_start + 1 == first_row.size());
+
+    row_start_ = row_start;
+    row_end_ = row_end;
+    column_start_ = column_start;
+    column_end_ = column_end;
+    first_row_ = std::move(first_row);
+    first_column_ = std::move(first_column);
+    last_row_.resize(first_row_.size());
+    last_column_.resize(first_column_.size());
+
+    row_block_ = row_block;
+    column_block_ = column_block;
+    row_block_count_ = (row_end_ - row_start_ + row_block_ - 1) / row_block_;
+    column_block_count_ =
+        (column_end_ - column_start_ + column_block_ - 1) / column_block_;
+
+    curr_ = -1;
+  }
+
+  std::pair<int64, int64> GetRow(int64 row) {
+    return {row * row_block_ + row_start_ + 1,
+            std::min((row + 1) * row_block_ - 1 + row_start_ + 1, row_end_)};
+  }
+
+  std::pair<int64, int64> GetColumn(int64 column) {
+    return {column * column_block_ + column_start_ + 1,
+            std::min((column + 1) * column_block_ - 1 + column_start_ + 1,
+                     column_end_)};
+  }
+
+  void FlushResults() {
+    if (curr_ == -1) {
+      last_row_[0] = first_column_.back();
+      last_column_[0] = first_row_.back();
+    } else if (curr_ <= row_block_count_ + column_block_count_ - 2) {
+      int64 now_x =
+          curr_ < column_block_count_ ? 0 : curr_ - column_block_count_ + 1;
+      int64 now_y =
+          curr_ < column_block_count_ ? curr_ : column_block_count_ - 1;
+      int64 idx = 0;
+      while (now_x < row_block_count_ && now_y >= 0) {
+        if (now_y == column_block_count_ - 1) {
+          auto [start, end] = GetRow(now_x);
+          for (int64 i = start; i <= end; ++i) {
+            last_column_[i - row_start_] =
+                tasks_[idx].current_column[i - start];
+          }
+        }
+        if (now_x == row_block_count_ - 1) {
+          auto [start, end] = GetColumn(now_y);
+          for (int64 i = start; i <= end; ++i) {
+            last_row_[i - column_start_] = tasks_[idx].current_row[i - start];
+          }
+        }
+        ++now_x;
+        --now_y;
+        ++idx;
+      }
+    }
+  }
+
+  const std::vector<int64>& LastRow() const { return last_row_; }
+
+  const std::vector<int64>& LastColumn() const { return last_column_; }
+
+  std::optional<std::vector<MatrixTask*>> GetTasks() {
+    FlushResults();
+
+    if (curr_ == row_block_count_ + column_block_count_ - 2) {
+      return std::nullopt;
+    }
+
+    ++curr_;
+    std::vector<MatrixTask> curr_tasks;
+    {
+      int64 now_x =
+          curr_ < column_block_count_ ? 0 : curr_ - column_block_count_ + 1;
+      int64 now_y =
+          curr_ < column_block_count_ ? curr_ : column_block_count_ - 1;
+      int64 idx = 0;
+      while (now_x < row_block_count_ && now_y >= 0) {
+        MatrixTask task;
+        std::tie(task.row_start, task.row_end) = GetRow(now_x);
+        std::tie(task.column_start, task.column_end) = GetColumn(now_y);
+        if (curr_ < column_block_count_) {
+          if (now_x == 0) {
+            for (int64 i = task.column_start; i <= task.column_end; ++i) {
+              task.previous_row.push_back(first_row_[i - column_start_]);
+            }
+          } else {
+            task.previous_row = tasks_[idx - 1].current_row;
+          }
+          if (now_y == 0) {
+            for (int64 i = task.row_start; i <= task.row_end; ++i) {
+              task.previous_column.push_back(first_column_[i - row_start_]);
+            }
+          } else {
+            task.previous_column = tasks_[idx].current_column;
+          }
+        } else {
+          task.previous_row = tasks_[idx].current_row;
+          if (now_y == 0) {
+            for (int64 i = task.row_start; i <= task.row_end; ++i) {
+              task.previous_column.push_back(first_column_[i - row_start_]);
+            }
+          } else {
+            task.previous_column = tasks_[idx + 1].current_column;
+          }
+        }
+        ++now_x;
+        --now_y;
+        ++idx;
+        curr_tasks.push_back(task);
+      }
+    }
+    tasks_ = std::move(curr_tasks);
+    std::vector<MatrixTask*> ret;
+    for (auto& task : tasks_) {
+      task.current_row.resize(task.previous_row.size());
+      task.current_column.resize(task.previous_column.size());
+      ret.push_back(&task);
+    }
+    return ret;
+  }
+
+ private:
+  int64 curr_;
+  int64 row_start_;
+  int64 row_end_;
+  int64 column_start_;
+  int64 column_end_;
+  int64 row_block_;
+  int64 column_block_;
+  int64 row_block_count_;
+  int64 column_block_count_;
+  std::vector<int64> first_row_;
+  std::vector<int64> first_column_;
+  std::vector<int64> last_row_;
+  std::vector<int64> last_column_;
+  std::vector<MatrixTask> tasks_;
+};
+
+#if 0
+int64 solve2() {
+  MatrixScanner scanner;
+  vector<int64> row, column;
+  for (int64 i = 1; i <= n; ++i) {
+    row.push_back(SB[i] + i * A[1]);
+    column.push_back(SA[i] + i * B[1]);
+  }
+  scanner.Init(1, n, 1, n, std::move(row), std::move(column), 1000, 1000);
+  for (;;) {
+    auto tasks = scanner.GetTasks();
+    if (!tasks.has_value()) break;
+
+#pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
+    for (auto* ptask : *tasks) {
+      auto& task = *ptask;
+      const int64 m = task.column_end - task.column_start + 1;
+      auto* from = dpdata[tid()][0];
+      auto* to = dpdata[tid()][1];
+      const int64 row_start = task.row_start;
+      const int64 row_end = task.row_end;
+      const int64 column_start = task.column_start;
+      const int64 column_end = task.column_end;
+
+      from[0] = std::min(task.previous_row[0], task.previous_column[0]) +
+                A[row_start] + B[column_start];
+
+      for (int64 j = column_start + 1; j <= column_end; ++j) {
+        from[j - column_start] = std::min(task.previous_row[j - column_start],
+                                          from[j - column_start - 1]) +
+                                 A[row_start] + B[j];
+      }
+      task.current_column[0] = from[m - 1];
+
+      for (int64 i = row_start + 1; i <= row_end; ++i) {
+        for (int64 j = column_start; j <= column_end; ++j) {
+          int64 val = from[j - column_start];
+          if (j == column_start) {
+            val = std::min(val, task.previous_column[i - row_start]);
+          } else {
+            val = std::min(val, to[j - column_start - 1]);
+          }
+          to[j - column_start] = val + A[i] + B[j];
+        }
+        swap(from, to);
+        task.current_column[i - row_start] = from[m - 1];
+      }
+      std::copy(from, from + m, task.current_row.begin());
+    }
+  }
+  return scanner.LastRow().back();
+}
+#endif
 }  // namespace pe
 #endif

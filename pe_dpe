@@ -1,0 +1,264 @@
+#ifndef PE_DPE_
+#define PE_DPE_
+
+#include "pe_base"
+
+namespace pe {
+#if ENABLE_ZMQ
+// Distributred PE
+template <typename Derived>
+class DpeServer {
+ public:
+  DpeServer(std::string_view server_address, std::string_view cache_path)
+      : server_address(server_address), cache_path(cache_path) {}
+
+  ~DpeServer() { LogProgress(); }
+
+  void Run() {
+    Initialize();
+
+    context = zmq_ctx_new();
+    responder = zmq_socket(context, ZMQ_REP);
+    int rc = zmq_bind(responder, server_address.data());
+    assert(rc == 0);
+
+    constexpr int buffer_length = 1 << 20;
+    char *buffer = new char[buffer_length + 1];
+    for (;;) {
+      int received = zmq_recv(responder, buffer, buffer_length, 0);
+      buffer[received] = 0;
+      std::string response = HandleRequest(buffer, received);
+      zmq_send(responder, response.data(), response.size(), 0);
+    }
+    delete[] buffer;
+  }
+
+ private:
+  void Initialize() {
+    std::vector<int64> tasks = AsDerived().GetTasks();
+
+    cache.clear();
+    const int64 size = tasks.size();
+    for (int i = 0; i < size; ++i) {
+      cache[tasks[i]] = std::nullopt;
+    }
+
+    answer = AsDerived().GetInit();
+    total = cache.size();
+    solved = 0;
+
+    LoadCache();
+
+    std::queue<int64>().swap(unsolved);
+    for (const auto [key, value] : cache) {
+      if (value.has_value()) {
+        ++solved;
+        answer = AsDerived().Reduce(answer, key, *value);
+      } else {
+        unsolved.push(key);
+      }
+    }
+
+    LogProgress();
+  }
+
+  void SaveCache() {
+    if (cache_path.empty()) return;
+    FILE *fp = fopen(cache_path.data(), "w");
+    if (!fp) return;
+
+    for (const auto [key, value] : cache) {
+      if (value.has_value()) {
+        fprintf(fp, "%I64d %I64d\n", key, *value);
+      }
+    }
+    fclose(fp);
+  }
+
+  void LoadCache() {
+    if (cache_path.empty()) return;
+    FILE *fp = fopen(cache_path.data(), "r");
+    if (!fp) return;
+
+    int64 k, v;
+    while (fscanf(fp, "%I64d %I64d", &k, &v) == 2) {
+      auto where = cache.find(k);
+      if (where != cache.end()) {
+        where->second = v;
+      }
+    }
+    fclose(fp);
+  }
+
+  std::string HandleRequest(const char *buffer, int received) {
+    if (strncmp(buffer, "get", 3) == 0) {
+      int64 max_task_count;
+      if (sscanf(buffer, "get %I64d", &max_task_count) != 1) {
+        return "error";
+      }
+      return AsDerived().HandleGet(max_task_count);
+    } else if (strncmp(buffer, "put", 3) == 0) {
+      int64 put_cnt;
+      if (sscanf(buffer, "put %I64d", &put_cnt) != 1) {
+        return "error";
+      }
+
+      std::string used = "put " + std::to_string(put_cnt);
+      std::stringstream ss(buffer + used.size());
+
+      std::vector<std::pair<int64, int64>> answers;
+      int64 key, value;
+      while (ss >> key >> value) answers.push_back({key, value});
+      assert(put_cnt == answers.size());
+      return AsDerived().HandlePut(answers);
+    } else {
+      return "error";
+    }
+  }
+
+  std::string HandleGet(int64 max_task_count) {
+    std::vector<int64> tasks;
+    for (int64 i = 0; i < max_task_count; ++i) {
+      if (unsolved.empty()) {
+        break;
+      }
+      tasks.push_back(unsolved.front());
+      unsolved.pop();
+    }
+
+    std::string ret = "ok " + std::to_string(tasks.size());
+    for (auto iter : tasks) {
+      ret += "\n" + std::to_string(iter);
+    }
+    return ret + "\n";
+  }
+
+  std::string HandlePut(const std::vector<std::pair<int64, int64>> &answers) {
+    for (const auto [key, value] : answers) {
+      auto where = cache.find(key);
+      if (where != cache.end()) {
+        where->second = value;
+      }
+      ++solved;
+      answer = AsDerived().Reduce(answer, key, value);
+      if (solved % 1000 == 0) {
+        SaveCache();
+      }
+      if (solved % 100 == 0) {
+        LogProgress();
+      }
+    }
+    return "ok";
+  }
+
+  void LogProgress() {
+    TimeDelta te = tr.Elapsed();
+
+    char buff[32];
+    sprintf(buff, "%2.2f%%", 100. * solved / total);
+
+    std::string eta;
+    while (history_progress.size() > 100) history_progress.pop();
+    if (history_progress.empty() || history_progress.front().second == solved) {
+      eta = "n/a";
+    } else {
+      auto his = history_progress.front();
+      // (total - solved) / eta = (solved - his.second) / (te - his.first)
+      // eta = (total - solved) / (solved - his.second) * (te - his.first)
+
+      eta = TimeDelta(duration_t(static_cast<int64>(
+                          1. * (total - solved) / (solved - his.second) *
+                          (te.NativeTime() - his.first.NativeTime()))))
+                .Format();
+    }
+    history_progress.push({te, solved});
+    std::cerr << std::setw(6) << buff << " " << solved << " " << total << " "
+              << answer << " " << te.Format() << " " << eta << std::endl;
+  }
+
+  int64 GetInit() { return 0; }
+
+  Derived &AsDerived() { return static_cast<Derived &>(*this); }
+
+ private:
+  std::string server_address;
+  std::string cache_path;
+
+  void *context = nullptr;
+  void *responder = nullptr;
+  int64 solved = 0;
+
+  std::map<int64, std::optional<int64>> cache;
+  std::queue<int64> unsolved;
+  int64 answer = 0;
+  int64 total = 0;
+  TimeRecorder tr;
+
+  std::queue<std::pair<TimeDelta, int64>> history_progress;
+};
+
+class DpeClient {
+  DpeClient(std::string_view target)
+      : target(target), buffer(new char[1 << 20]) {}
+  ~DpeClient() { delete[] buffer; }
+  std::vector<int64> GetTask(int task_cnt) {
+    void *context = zmq_ctx_new();
+    void *requester = zmq_socket(context, ZMQ_REQ);
+    zmq_connect(requester, target.data());
+
+    std::string cmd = "get " + std::to_string(task_cnt);
+    zmq_send(requester, cmd.data(), cmd.size(), 0);
+    int cnt = zmq_recv(requester, buffer, 1048576, 0);
+    zmq_close(requester);
+    zmq_ctx_destroy(context);
+    buffer[cnt] = 0;
+
+    char t[256];
+    if (strncmp(buffer, "error", 5) == 0) {
+      return {};
+    }
+
+    if (strncmp(buffer, "ok ", 3) != 0) {
+      return {};
+    }
+
+    int64 task_count;
+    if (sscanf(buffer, "ok %I64d", &task_count) != 1) {
+      return {};
+    }
+
+    std::vector<int64> ret;
+    std::string used = "ok " + std::to_string(task_count);
+    std::stringstream ss(buffer + used.size());
+    int64 key;
+    while (ss >> key) ret.push_back(key);
+    assert(ret.size() == task_count);
+    return ret;
+  }
+
+  int64 PutTask(const std::vector<std::pair<int64, int64>> &answers) {
+    void *context = zmq_ctx_new();
+    void *requester = zmq_socket(context, ZMQ_REQ);
+    zmq_connect(requester, target.data());
+
+    std::string cmd = "put " + std::to_string(answers.size());
+    for (auto [key, value] : answers) {
+      cmd += "\n" + std::to_string(key) + " " + std::to_string(value);
+    }
+
+    zmq_send(requester, cmd.data(), cmd.size(), 0);
+    char buffer[1024];
+    zmq_recv(requester, buffer, 1024, 0);
+    zmq_close(requester);
+    zmq_ctx_destroy(context);
+
+    return 0;
+  }
+
+ private:
+  std::string target;
+  char *buffer;
+};
+#endif
+}  // namespace pe
+#endif

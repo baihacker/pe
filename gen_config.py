@@ -17,6 +17,7 @@ RULES = [
     #('ENABLE_MPIR', ['mpir.h']),
     ('ENABLE_LIBBF', ['libbf.h']),
     ('ENABLE_NTL', ['NTL/ZZ.h']),
+    ('ENABLE_ZMQ', ['zmq/zmq.h']),
     ('ENABLE_PRIME_COUNT', ['primecount.hpp']),
     ('ENABLE_PRIME_SIEVE', ['primesieve.hpp']),
 ]

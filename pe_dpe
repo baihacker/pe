@@ -12,25 +12,26 @@ class DpeServer {
   DpeServer(std::string_view server_address, std::string_view cache_path)
       : server_address(server_address), cache_path(cache_path) {}
 
-  ~DpeServer() { LogProgress(); }
-
   void RunReducer() {
     Initialize();
 
-    context = zmq_ctx_new();
-    responder = zmq_socket(context, ZMQ_REP);
+    void* context = zmq_ctx_new();
+    void* responder = zmq_socket(context, ZMQ_REP);
     int rc = zmq_bind(responder, server_address.data());
     assert(rc == 0);
 
     constexpr int buffer_length = 1 << 20;
     char *buffer = new char[buffer_length + 1];
-    for (;;) {
+    for (;solved < total;) {
       int received = zmq_recv(responder, buffer, buffer_length, 0);
       buffer[received] = 0;
       std::string response = HandleRequest(buffer, received);
       zmq_send(responder, response.data(), response.size(), 0);
     }
+    LogProgress();
     delete[] buffer;
+    zmq_close(responder);
+    zmq_ctx_destroy(context);
   }
 
  private:
@@ -138,8 +139,8 @@ class DpeServer {
       auto where = cache.find(key);
       if (where != cache.end()) {
         where->second = value;
+        ++solved;
       }
-      ++solved;
       answer = AsDerived().Reduce(answer, key, value);
       if (solved % 1000 == 0) {
         SaveCache();
@@ -184,8 +185,6 @@ class DpeServer {
   std::string server_address;
   std::string cache_path;
 
-  void *context = nullptr;
-  void *responder = nullptr;
   int64 solved = 0;
 
   std::map<int64, std::optional<int64>> cache;

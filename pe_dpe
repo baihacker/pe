@@ -14,7 +14,7 @@ class DpeServer {
 
   ~DpeServer() { LogProgress(); }
 
-  void Run() {
+  void RunReducer() {
     Initialize();
 
     context = zmq_ctx_new();
@@ -197,18 +197,23 @@ class DpeServer {
   std::queue<std::pair<TimeDelta, int64>> history_progress;
 };
 
+template <typename Derived>
 class DpeClient {
+ public:
   DpeClient(std::string_view target)
-      : target(target), buffer(new char[1 << 20]) {}
-  ~DpeClient() { delete[] buffer; }
-  std::vector<int64> GetTask(int task_cnt) {
+      : target(target), buffer_length(1 << 20), buffer(nullptr) {}
+  ~DpeClient() {
+    if (buffer != nullptr) delete[] buffer;
+  }
+
+  std::vector<int64> GetTask(int64 task_count) {
     void *context = zmq_ctx_new();
     void *requester = zmq_socket(context, ZMQ_REQ);
     zmq_connect(requester, target.data());
 
-    std::string cmd = "get " + std::to_string(task_cnt);
+    std::string cmd = "get " + std::to_string(task_count);
     zmq_send(requester, cmd.data(), cmd.size(), 0);
-    int cnt = zmq_recv(requester, buffer, 1048576, 0);
+    int cnt = zmq_recv(requester, buffer, buffer_length, 0);
     zmq_close(requester);
     zmq_ctx_destroy(context);
     buffer[cnt] = 0;
@@ -222,7 +227,6 @@ class DpeClient {
       return {};
     }
 
-    int64 task_count;
     if (sscanf(buffer, "ok %I64d", &task_count) != 1) {
       return {};
     }
@@ -247,18 +251,62 @@ class DpeClient {
     }
 
     zmq_send(requester, cmd.data(), cmd.size(), 0);
-    char buffer[1024];
-    zmq_recv(requester, buffer, 1024, 0);
+    zmq_recv(requester, buffer, buffer_length, 0);
     zmq_close(requester);
     zmq_ctx_destroy(context);
 
     return 0;
   }
 
+  void RunWorker(int thread_count, int task_count) {
+    if (buffer == nullptr) {
+      buffer = new char[buffer_length];
+    }
+#if ENABLE_OPENMP
+    OmpLock lock;
+#endif
+    for (;;) {
+      std::vector<int64> tasks = GetTask(task_count);
+      std::cerr << std::endl;
+      std::cerr << "Received " << tasks.size() << " tasks" << std::endl;
+      if (tasks.empty()) {
+        break;
+      }
+
+      std::cerr << "First task: " << tasks[0] << std::endl;
+      std::cerr << "Last task: " << tasks.back() << std::endl;
+
+      TimeRecorder tr;
+      std::vector<std::pair<int64, int64>> answers;
+#if ENABLE_OPENMP
+#pragma omp parallel for schedule(dynamic, 1) num_threads(thread_count)
+#endif
+      for (auto key : tasks) {
+        int64 value = static_cast<Derived &>(*this).Cal(key);
+#if ENABLE_OPENMP
+        OmpGuard guard(lock);
+#endif
+        answers.push_back({key, value});
+      }
+      std::cerr << tr.Elapsed().Format() << std::endl;
+      PutTask(answers);
+    }
+  }
+
  private:
   std::string target;
+  const int buffer_length;
   char *buffer;
 };
+
+template <typename Derived>
+class DpeSolver : public DpeServer<Derived>, public DpeClient<Derived> {
+ public:
+  DpeSolver(std::string_view server_address, std::string_view cache_path = "")
+      : DpeServer<Derived>(server_address, cache_path),
+        DpeClient<Derived>(server_address) {}
+};
+
 #endif
 }  // namespace pe
 #endif

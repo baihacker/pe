@@ -5,6 +5,197 @@
 
 namespace pe {
 #if ENABLE_ZMQ
+struct DpeCommand {
+  std::string name;
+  std::vector<std::vector<int64>> args;
+  std::string ToString() const {
+    std::stringstream ss;
+    ss << name;
+    ss << "(";
+    int arg_idx = 0;
+    for (const auto &arg : args) {
+      if (arg_idx > 0) ss << ",";
+      if (arg.size() == 1)
+        ss << arg[0];
+      else {
+        ss << "{";
+        int val_idx = 0;
+        for (const int64 val : arg) {
+          if (val_idx > 0) ss << ",";
+          ss << val;
+          ++val_idx;
+        }
+        ss << "}";
+      }
+      ++arg_idx;
+    }
+    ss << ")";
+    return ss.str();
+  }
+};
+
+SL std::ostream &operator<<(std::ostream &o, const DpeCommand &cmd) {
+  return o << cmd.ToString();
+}
+namespace internal {
+
+SL std::optional<std::string> ParseDpeToken(std::string_view cmd, int &i) {
+  while (i < cmd.size() && std::isspace(cmd[i])) ++i;
+  if (i == cmd.size()) return "$";
+
+  if (cmd[i] == '(' || cmd[i] == ')' || cmd[i] == '{' || cmd[i] == '}' ||
+      cmd[i] == ',') {
+    return std::string(cmd.substr(i++, 1));
+  } else if (std::isalpha(cmd[i])) {
+    int j = i;
+    while (i < cmd.size() && std::isalpha(cmd[i])) {
+      ++i;
+    }
+    return std::string(cmd.substr(j, i - j));
+  } else if (std::isdigit(cmd[i]) || cmd[i] == '+' || cmd[i] == '-') {
+    int j = i;
+    while (i < cmd.size() && (cmd[i] == '+' || cmd[i] == '-')) {
+      ++i;
+    }
+    if (i == cmd.size() || !std::isdigit(cmd[i])) {
+      return std::nullopt;
+    }
+    while (i < cmd.size() && std::isdigit(cmd[i])) {
+      ++i;
+    }
+    return std::string(cmd.substr(j, i - j));
+  }
+
+  return std::nullopt;
+}
+
+SL std::optional<int64> ParseNumberToken(std::optional<std::string> s) {
+  if (!s.has_value() || s.value().empty()) {
+    return std::nullopt;
+  }
+  if (std::isdigit(s.value()[0]) || s.value()[0] == '+' ||
+      s.value()[0] == '-') {
+    std::string t = *s;
+    const int size = t.size();
+    int sgn = 1;
+    int j = 0;
+    while (j < size && (t[j] == '+' || t[j] == '-')) {
+      if (t[j] == '-') {
+        sgn = -sgn;
+      }
+      ++j;
+    }
+    int64 value = 0;
+    while (j < size && std::isdigit(t[j])) {
+      value = value * 10 + t[j] - '0';
+      ++j;
+    }
+    return sgn < 0 ? -value : value;
+  }
+  return std::nullopt;
+}
+
+SL std::optional<std::vector<int64>> ParseDpeNumberList(std::string_view cmd,
+                                                        int &i) {
+  std::optional<std::string> token = ParseDpeToken(cmd, i);
+  if (!token.has_value()) {
+    return std::nullopt;
+  }
+
+  if (token == "{") {
+    std::vector<int64> ret;
+    for (;;) {
+      std::optional<std::string> token = ParseDpeToken(cmd, i);
+      if (!token.has_value()) {
+        return std::nullopt;
+      }
+      if (token == "}") {
+        break;
+      }
+      if (token == ",") {
+        continue;
+      }
+      if (std::optional<int64> number = ParseNumberToken(token);
+          number.has_value()) {
+        ret.push_back(*number);
+      } else {
+        return std::nullopt;
+      }
+    }
+    return ret;
+  } else if (std::optional<int64> number = ParseNumberToken(token);
+             number.has_value()) {
+    return std::vector<int64>{*number};
+  }
+
+  return std::nullopt;
+}
+
+SL std::optional<std::vector<std::vector<int64>>> ParseDpeArgs(
+    std::string_view cmd, int &i) {
+  std::optional<std::string> start = ParseDpeToken(cmd, i);
+
+  if (!start.has_value()) {
+    return std::nullopt;
+  }
+
+  if (start == "$") {
+    return std::vector<std::vector<int64>>{};
+  }
+
+  if (start != "(") {
+    return std::nullopt;
+  }
+
+  std::vector<std::vector<int64>> ret;
+  for (;;) {
+    std::optional<std::string> token = ParseDpeToken(cmd, i);
+    if (!token.has_value()) {
+      return std::nullopt;
+    }
+    if (token == ")") {
+      break;
+    }
+    if (token == ",") {
+      continue;
+    }
+    std::string s = *std::move(token);
+    if (s[0] == '{' || s[0] == '+' || s[0] == '-' || std::isdigit(s[0])) {
+      i -= s.size();
+      std::optional<std::vector<int64>> number_list =
+          ParseDpeNumberList(cmd, i);
+      if (!number_list.has_value()) {
+        return std::nullopt;
+      }
+      ret.push_back(*std::move(number_list));
+    } else {
+      return std::nullopt;
+    }
+  }
+  return ret;
+}
+
+SL std::optional<DpeCommand> ParseDpeCommand(std::string_view cmd, int &i) {
+  std::optional<std::string> name = ParseDpeToken(cmd, i);
+  if (!name.has_value() || name.value().empty() ||
+      !std::isalpha(name.value()[0])) {
+    return std::nullopt;
+  }
+
+  std::optional<std::vector<std::vector<int64>>> args = ParseDpeArgs(cmd, i);
+  if (!args.has_value()) {
+    return std::nullopt;
+  }
+
+  return DpeCommand{.name = *std::move(name), .args = *std::move(args)};
+}
+
+SL std::optional<DpeCommand> ParseDpeCommand(std::string_view cmd) {
+  int i = 0;
+  return ParseDpeCommand(cmd, i);
+}
+}  // namespace internal
+
 // Distributred PE
 template <typename Derived>
 class DpeServer {
@@ -15,17 +206,17 @@ class DpeServer {
   void RunReducer() {
     Initialize();
 
-    void* context = zmq_ctx_new();
-    void* responder = zmq_socket(context, ZMQ_REP);
+    void *context = zmq_ctx_new();
+    void *responder = zmq_socket(context, ZMQ_REP);
     int rc = zmq_bind(responder, server_address.data());
     assert(rc == 0);
 
     constexpr int buffer_length = 1 << 20;
     char *buffer = new char[buffer_length + 1];
-    for (;solved < total;) {
+    for (; solved < total;) {
       int received = zmq_recv(responder, buffer, buffer_length, 0);
       buffer[received] = 0;
-      std::string response = HandleRequest(buffer, received);
+      std::string response = HandleRequest(std::string_view(buffer, received));
       zmq_send(responder, response.data(), response.size(), 0);
     }
     LogProgress();
@@ -91,33 +282,36 @@ class DpeServer {
     fclose(fp);
   }
 
-  std::string HandleRequest(const char *buffer, int received) {
-    if (strncmp(buffer, "get", 3) == 0) {
-      int64 max_task_count;
-      if (sscanf(buffer, "get %I64d", &max_task_count) != 1) {
-        return "error";
-      }
-      return AsDerived().HandleGet(max_task_count);
-    } else if (strncmp(buffer, "put", 3) == 0) {
-      int64 put_cnt;
-      if (sscanf(buffer, "put %I64d", &put_cnt) != 1) {
-        return "error";
-      }
-
-      std::string used = "put " + std::to_string(put_cnt);
-      std::stringstream ss(buffer + used.size());
-
-      std::vector<std::pair<int64, int64>> answers;
-      int64 key, value;
-      while (ss >> key >> value) answers.push_back({key, value});
-      assert(put_cnt == answers.size());
-      return AsDerived().HandlePut(answers);
-    } else {
-      return "error";
+  std::string HandleRequest(std::string_view request) {
+    std::optional<DpeCommand> command = internal::ParseDpeCommand(request);
+    if (!command.has_value()) {
+      return "error()";
     }
+
+    if (command->name == "GetTasks") {
+      if (command->args.size() != 1 || command->args[0].size() != 1) {
+        return "error()";
+      }
+
+      return AsDerived().HandleGetTasks(command->args[0][0]);
+    }
+
+    if (command->name == "SetResults") {
+      std::vector<std::pair<int64, int64>> answers;
+
+      for (const auto &iter : command->args) {
+        if (iter.size() != 2) {
+          return "error()";
+        }
+        answers.push_back({iter[0], iter[1]});
+      }
+
+      return AsDerived().HandleSetResults(answers);
+    }
+    return "error()";
   }
 
-  std::string HandleGet(int64 max_task_count) {
+  std::string HandleGetTasks(int64 max_task_count) {
     std::vector<int64> tasks;
     for (int64 i = 0; i < max_task_count; ++i) {
       if (unsolved.empty()) {
@@ -127,14 +321,14 @@ class DpeServer {
       unsolved.pop();
     }
 
-    std::string ret = "ok " + std::to_string(tasks.size());
-    for (auto iter : tasks) {
-      ret += "\n" + std::to_string(iter);
-    }
-    return ret + "\n";
+    DpeCommand raw_command;
+    raw_command.name = "Tasks";
+    raw_command.args.push_back(tasks);
+
+    return raw_command.ToString();
   }
 
-  std::string HandlePut(const std::vector<std::pair<int64, int64>> &answers) {
+  std::string HandleSetResults(const std::vector<std::pair<int64, int64>> &answers) {
     for (const auto [key, value] : answers) {
       auto where = cache.find(key);
       if (where != cache.end()) {
@@ -149,7 +343,7 @@ class DpeServer {
         LogProgress();
       }
     }
-    return "ok";
+    return "ok()";
   }
 
   void LogProgress() {
@@ -205,50 +399,48 @@ class DpeClient {
     if (buffer != nullptr) delete[] buffer;
   }
 
-  std::vector<int64> GetTask(int64 task_count) {
+  std::vector<int64> GetTasks(int64 task_count) {
     void *context = zmq_ctx_new();
     void *requester = zmq_socket(context, ZMQ_REQ);
     zmq_connect(requester, target.data());
 
-    std::string cmd = "get " + std::to_string(task_count);
+    DpeCommand raw_command;
+    raw_command.name = "GetTasks";
+    raw_command.args.push_back({task_count});
+    std::string cmd = raw_command.ToString();
+
     zmq_send(requester, cmd.data(), cmd.size(), 0);
     int cnt = zmq_recv(requester, buffer, buffer_length, 0);
     zmq_close(requester);
     zmq_ctx_destroy(context);
     buffer[cnt] = 0;
 
-    char t[256];
-    if (strncmp(buffer, "error", 5) == 0) {
+    std::optional<DpeCommand> result =
+        internal::ParseDpeCommand(std::string_view(buffer, cnt));
+    if (!result.has_value() || result->name != "Tasks") {
       return {};
     }
 
-    if (strncmp(buffer, "ok ", 3) != 0) {
+    if (result->args.size() != 1) {
       return {};
     }
 
-    if (sscanf(buffer, "ok %I64d", &task_count) != 1) {
-      return {};
-    }
-
-    std::vector<int64> ret;
-    std::string used = "ok " + std::to_string(task_count);
-    std::stringstream ss(buffer + used.size());
-    int64 key;
-    while (ss >> key) ret.push_back(key);
-    assert(ret.size() == task_count);
-    return ret;
+    return result->args[0];
   }
 
-  int64 PutTask(const std::vector<std::pair<int64, int64>> &answers) {
+  int64 SetResults(const std::vector<std::pair<int64, int64>> &answers) {
     void *context = zmq_ctx_new();
     void *requester = zmq_socket(context, ZMQ_REQ);
     zmq_connect(requester, target.data());
 
-    std::string cmd = "put " + std::to_string(answers.size());
+    DpeCommand raw_command;
+    raw_command.name = "SetResults";
+
     for (auto [key, value] : answers) {
-      cmd += "\n" + std::to_string(key) + " " + std::to_string(value);
+      raw_command.args.push_back({key, value});
     }
 
+    std::string cmd = raw_command.ToString();
     zmq_send(requester, cmd.data(), cmd.size(), 0);
     zmq_recv(requester, buffer, buffer_length, 0);
     zmq_close(requester);
@@ -265,7 +457,7 @@ class DpeClient {
     OmpLock lock;
 #endif
     for (;;) {
-      std::vector<int64> tasks = GetTask(task_count);
+      std::vector<int64> tasks = GetTasks(task_count);
       std::cerr << std::endl;
       std::cerr << "Received " << tasks.size() << " tasks" << std::endl;
       if (tasks.empty()) {
@@ -288,7 +480,7 @@ class DpeClient {
         answers.push_back({key, value});
       }
       std::cerr << tr.Elapsed().Format() << std::endl;
-      PutTask(answers);
+      SetResults(answers);
     }
   }
 

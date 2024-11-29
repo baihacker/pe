@@ -13,6 +13,7 @@ SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM> &&
                        pe_is_signed_v<T> && pe_is_signed_v<TM>))
     RETURN(IntPromotion(T, TM)) Mod(T a, TM mod) {
   PE_ASSERT(mod >= 1);
+  ASSUME(mod >= 1);
   if (a >= 0) {
     return a >= mod ? a % mod : a;
   } else {
@@ -27,6 +28,7 @@ SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM> &&
                        pe_is_signed_v<T> && pe_is_unsigned_v<TM>))
     RETURN(IntPromotion(T, TM)) Mod(T a, TM mod) {
   PE_ASSERT(mod >= 1);
+  ASSUME(mod >= 1);
   if (a >= 0) {
     return a >= mod ? a % mod : a;
   } else {
@@ -41,6 +43,7 @@ SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM> &&
                        pe_is_unsigned_v<T>)) RETURN(IntPromotion(T, TM))
     Mod(T a, TM mod) {
   PE_ASSERT(mod >= 1);
+  ASSUME(mod >= 1);
   using ResultType = typename BiggerIntegralN<T, TM>::type;
   ResultType b = a, m = mod;
   if (b >= m) b %= m;
@@ -57,6 +60,7 @@ template <typename T, typename TM>
 SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM>))
     RETURN(IntPromotion(T, TM)) AddModImpl(T a, T b, TM mod) {
   using ResultType = typename BiggerIntegralN<T, TM>::type;
+  ASSUME(mod >= 1);
 #if 0
   auto t0 = a;
   t0 += b;
@@ -122,6 +126,7 @@ namespace internal {
 template <typename T, typename TM>
 SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM>))
     RETURN(IntPromotion(T, TM)) MulModImpl(T a, T b, TM mod) {
+  ASSUME(mod >= 1);
   return a * b % mod;
 }
 }  // namespace internal
@@ -408,6 +413,7 @@ SL constexpr REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
                         sizeof(TM) > sizeof(int64))))
     RETURN(IntPromotion(T1, T2, TM)) MulMod(T1 a, T2 b, TM mod) {
   using ResultType = typename BiggerIntegralN<T1, T2, TM>::type;
+  ASSUME(mod >= 1);
   return static_cast<ResultType>(a) * static_cast<ResultType>(b) %
          static_cast<ResultType>(mod);
 }
@@ -437,6 +443,7 @@ SL REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
   using T = typename BiggerIntegralN<T1, T2>::type;
   using atLeastInt64T = typename AtLeastInt64<T>::type;
   using ResultType = typename BiggerIntegralN<atLeastInt64T, T>::type;
+  ASSUME(mod >= 1);
 
 #if PE_MUL_MOD_SHELL_CODE_AVAILABLE && \
     (!PE_MUL_MOD_GNU_ASM_AVAILABLE ||  \

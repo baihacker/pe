@@ -4277,8 +4277,8 @@ SL std::optional<std::vector<std::vector<int64>>> FindRecurrence(
 }
 
 SL std::optional<int64> RecurrenceValueAtN(Span<const int64> terms, int64 n,
-                                         int64 mod, int min_deg = 0,
-                                         int max_deg = -1) {
+                                           int64 mod, int min_deg = 0,
+                                           int max_deg = -1) {
   if (n < static_cast<int64>(terms.size())) {
     return terms[n];
   }
@@ -4322,6 +4322,54 @@ SL std::optional<std::vector<int64>> RecurrenceValues(Span<const int64> terms,
   }
 
   return data;
+}
+
+// https://en.wikipedia.org/wiki/Surreal_number
+// https://www.infinitelymore.xyz/p/surreal-numbers
+// https://math.uchicago.edu/~may/REU2016/REUPapers/Cronin.pdf
+// https://web.mit.edu/sp.268/www/2010/surreal.pdf
+// https://zhuanlan.zhihu.com/p/205154262
+// https://kewth.github.io/2020/05/09/%E4%B8%80%E7%B1%BB%E4%B8%8D%E5%85%AC%E5%B9%B3%E5%8D%9A%E5%BC%88%E6%80%BB%E7%BB%93/
+template <typename T>
+std::optional<Fraction<T>> FindSurrealNumber(std::optional<Fraction<T>> u,
+                                             std::optional<Fraction<T>> v) {
+  if (!u.has_value() && !v.has_value()) {
+    return Fraction<T>(0);
+  }
+  if (!v.has_value()) {
+    if (u->a < 0) {
+      return Fraction<T>(0);
+    } else {
+      return Fraction<T>(u->a / u->b + 1);
+    }
+  }
+  if (!u.has_value()) {
+    if (v->a > 0) {
+      return Fraction<T>(0);
+    } else {
+      return Fraction<T>(u->a / u->b - 1);
+    }
+  }
+  if (u->a < 0 && v->a > 0) {
+    return Fraction<T>(0);
+  }
+  if (*u >= *v) {
+    return std::nullopt;
+  }
+  if (u->a >= 0) {
+    for (T d = 1;; d *= 2) {
+      T tmp = u->a * d / u->b + 1;
+      if (tmp < *v * d) return Fraction<T>(tmp, d);
+    }
+  }
+  if (v->a <= 0) {
+    for (T d = 1;; d *= 2) {
+      T tmp = v->a * d / v->b - 1;
+      if (tmp > *u * d) return Fraction<T>(tmp);
+    }
+  }
+  PE_ASSERT(0);
+  return 0;
 }
 }  // namespace pe
 #endif

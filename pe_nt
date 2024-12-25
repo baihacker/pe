@@ -5,6 +5,7 @@
 #include "pe_int128"
 #include "pe_type_traits"
 #include "pe_int"
+#include "pe_span"
 #include "pe_mod"
 #include "pe_nt_base"
 
@@ -668,7 +669,7 @@ SL REQUIRES((!IsNModNumberV<typename std::iterator_traits<IT>::value_type>))
 
 template <typename T, typename TM>
 SL REQUIRES((!IsNModNumberV<T>)) RETURN(void)
-    InitInverse(std::span<T> dest, TM mod) {
+    InitInverse(Span<T> dest, TM mod) {
   InitInverse<T*, TM>(dest.data(), dest.size() - 1, mod);
 }
 
@@ -698,7 +699,7 @@ SL REQUIRES((IsNModNumberV<typename std::iterator_traits<IT>::value_type>))
 }
 
 template <typename T>
-SL REQUIRES((IsNModNumberV<T>)) RETURN(void) InitInverse(std::span<T> dest) {
+SL REQUIRES((IsNModNumberV<T>)) RETURN(void) InitInverse(Span<T> dest) {
   InitInverse<T*>(dest.data(), dest.size() - 1);
 }
 
@@ -768,9 +769,15 @@ SL REQUIRES((!IsNModNumberV<T>)) RETURN(void)
   InitSeqProd2<T>(dest, idest, 1, e, mod);
 }
 
+template <typename T, int D>
+SL REQUIRES((!IsNModNumberV<T>)) RETURN(void)
+    InitSeqProd2(T (&dest)[D], T (&idest)[D], T mod) {
+  InitSeqProd2<T>(dest, idest, 1, D - 1, mod);
+}
+
 template <typename T>
 SL REQUIRES((!IsNModNumberV<T>)) RETURN(void)
-    InitSeqProd2(std::span<T> dest, std::span<T> idest, T mod) {
+    InitSeqProd2(Span<T> dest, Span<T> idest, T mod) {
   const int64 size1 = dest.size();
   const int64 size2 = idest.size();
   PE_ASSERT(size1 == size2);
@@ -830,9 +837,15 @@ SL REQUIRES((IsNModNumberV<T>)) RETURN(void)
   InitSeqProd2<T>(dest, idest, 1, e);
 }
 
+template <typename T, int D>
+SL REQUIRES((IsNModNumberV<T>)) RETURN(void)
+    InitSeqProd2(T (&dest)[D], T (&idest)[D]) {
+  InitSeqProd2<T>(dest, idest, 1, D - 1);
+}
+
 template <typename T>
 SL REQUIRES((IsNModNumberV<T>)) RETURN(void)
-    InitSeqProd2(std::span<T> dest, std::span<T> idest) {
+    InitSeqProd2(Span<T> dest, Span<T> idest) {
   const int64 size1 = dest.size();
   const int64 size2 = idest.size();
   PE_ASSERT(size1 == size2);
@@ -855,7 +868,7 @@ SL void GenerateSequence(IT first, int64 maxn, T init, const G& gen) {
 }
 
 template <typename T, typename G>
-SL void GenerateSequence(std::span<T> target, T init, const G& gen) {
+SL void GenerateSequence(Span<T> target, T init, const G& gen) {
   GenerateSequence(target.data(), static_cast<int64>(target.size()) - 1, init,
                    gen);
 }

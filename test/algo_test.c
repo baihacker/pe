@@ -55,7 +55,7 @@ SL void FactModTest() {
   {
     const int64 mod = 1000000007;
     FactModer moder(mod);
-    int64 step = sqrt(mod);
+    int64 step = std::sqrt(mod);
     int64 n = 500000000;
     int64 last = moder.Cal(n);
     for (int i = n, j = 0; j < 10; ++i, ++j) {
@@ -67,7 +67,7 @@ SL void FactModTest() {
   {
     const int64 mod = 4000000007;
     FactModer moder(mod);
-    int64 step = sqrt(mod);
+    int64 step = std::sqrt(mod);
     int64 n = 2000000000;
     int64 last = moder.Cal(n);
     for (int64 i = n, j = 0; j < 10; ++j) {

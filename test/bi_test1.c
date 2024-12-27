@@ -127,8 +127,7 @@ SL void BiDivTestMediumImpl(int x, int y) {
               bi b = s2;
               for (auto& iter : A) a *= iter;
               for (auto& iter : B) b *= iter;
-              bi c, d;
-              std::tie(c, d) = Div(a, b);
+              auto [c, d] = Div(a, b);
               myResult1 = ToString(c);
               myResult2 = ToString(d);
             }

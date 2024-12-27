@@ -287,10 +287,8 @@ SL void TestAsmdOperator() {
           assert((x * y).ToString() == (a * b).ToString());
           assert((x / y).ToString() == (a / b).ToString());
           assert((x % y).ToString() == (a % b).ToString());
-          bi aa, bb;
-          std::tie(aa, bb) = Div(a, b);
-          TestT xx, yy;
-          std::tie(xx, yy) = Div(x, y);
+          auto [aa, bb] = Div(a, b);
+          auto [xx, yy] = Div(x, y);
           assert(xx.ToString() == aa.ToString());
           assert(yy.ToString() == bb.ToString());
         }

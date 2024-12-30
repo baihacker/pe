@@ -59,11 +59,11 @@ struct NModPoly {
     return *this;
   }
 
-  int64 deg() const { return static_cast<int64>(data.size() - 1); }
-  int64 size() const { return static_cast<int64>(data.size()); }
+  int64 deg() const { return static_cast<int64>(std::size(data) - 1); }
+  int64 size() const { return static_cast<int64>(std::size(data)); }
 
   NModPoly& Resize(int64 n) {
-    const int64 m = static_cast<int64>(data.size());
+    const int64 m = static_cast<int64>(std::size(data));
     data.resize(n);
     for (int64 i = m; i < n; ++i) {
       data[i] = 0;
@@ -74,20 +74,21 @@ struct NModPoly {
   NModPoly& Redeg(int64 n) { return Resize(n + 1); }
 
   int64& operator[](int64 idx) {
-    PE_ASSERT(idx >= 0 && idx < static_cast<int64>(data.size()));
+    PE_ASSERT(idx >= 0 && idx < static_cast<int64>(std::size(data)));
     return data[idx];
   }
 
   int64 operator[](int64 idx) const {
-    PE_ASSERT(idx >= 0 && idx < static_cast<int64>(data.size()));
+    PE_ASSERT(idx >= 0 && idx < static_cast<int64>(std::size(data)));
     return data[idx];
   }
 
   int64 At(int64 idx) const {
-    return idx >= 0 && idx < static_cast<int64>(data.size()) ? data[idx] : 0;
+    return idx >= 0 && idx < static_cast<int64>(std::size(data)) ? data[idx]
+                                                                 : 0;
   }
 
-  bool IsZero() const { return data.size() == 1 && data[0] == 0; }
+  bool IsZero() const { return std::size(data) == 1 && data[0] == 0; }
 
   int64 ValueAt(int64 v) const {
     int64 ret = 0;
@@ -99,7 +100,7 @@ struct NModPoly {
   }
 
   NModPoly LowerTerms(int64 n, int adjust_leading_zero = 1) const {
-    const int64 m = std::min(n, static_cast<int64>(data.size()));
+    const int64 m = std::min(n, static_cast<int64>(std::size(data)));
     return NModPoly(std::vector<int64>(data.begin(), data.begin() + m), mod,
                     adjust_leading_zero);
   }
@@ -160,7 +161,7 @@ PPOLY_MOD_IMPL(PolyMod, pe::PolyMod)
 inline NModPoly NModPoly::Inv(int64 n) const {
   auto t = PolyInv(data, n, mod);
   return NModPoly(std::vector<int64>(static_cast<int64*>(&t[0]),
-                                     static_cast<int64*>(&t[0]) + t.size()),
+                                     static_cast<int64*>(&t[0]) + std::size(t)),
                   mod);
 }
 
@@ -222,7 +223,7 @@ SL NModPoly operator%(int64 n, const NModPoly& mod) {
 }
 
 SL std::ostream& operator<<(std::ostream& o, const NModPoly& p) {
-  const int64 n = static_cast<int64>(p.data.size());
+  const int64 n = static_cast<int64>(std::size(p.data));
   for (int64 i = 0; i < n - 1; ++i) {
     o << p.data[i] << ", ";
   }

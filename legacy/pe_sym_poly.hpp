@@ -6,7 +6,7 @@
 namespace pe {
 // [+- ]*
 SL std::vector<int> ParseSgnList(const std::string& s, int& i) {
-  const int size = static_cast<int>(s.size());
+  const int size = static_cast<int>(std::size(s));
   std::vector<int> sgns;
   for (;;) {
     while (i < size && std::isspace(s[i])) ++i;
@@ -20,7 +20,7 @@ SL std::vector<int> ParseSgnList(const std::string& s, int& i) {
 }
 
 SL std::string ParseDigList(const std::string& s, int& i) {
-  const int size = static_cast<int>(s.size());
+  const int size = static_cast<int>(std::size(s));
   while (i < size && std::isspace(s[i])) ++i;
   if (i < size && std::isdigit(s[i])) {
     int start = i;
@@ -33,7 +33,7 @@ SL std::string ParseDigList(const std::string& s, int& i) {
 }
 
 SL std::string ParseIdentifier(const std::string& s, int& i) {
-  const int size = static_cast<int>(s.size());
+  const int size = static_cast<int>(std::size(s));
   while (i < size && std::isspace(s[i])) ++i;
   if (i < size && (s[i] == '_' || std::isalpha(s[i]))) {
     int start = i;
@@ -49,7 +49,7 @@ SL std::string ParseIdentifier(const std::string& s, int& i) {
 SL std::vector<std::pair<std::string, std::string>> ParseSingleTermList(
     const std::string& s, int& i) {
   std::vector<std::pair<std::string, std::string>> result;
-  const int size = static_cast<int>(s.size());
+  const int size = static_cast<int>(std::size(s));
   for (;;) {
     while (i < size && std::isspace(s[i])) ++i;
     if (s[i] == '*') {

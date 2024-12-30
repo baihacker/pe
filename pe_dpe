@@ -15,7 +15,7 @@ struct DpeCommand {
     int arg_idx = 0;
     for (const auto &arg : args) {
       if (arg_idx > 0) ss << ",";
-      if (arg.size() == 1) {
+      if (std::size(arg) == 1) {
         ss << arg[0];
       } else {
         ss << "{";
@@ -40,27 +40,27 @@ SL std::ostream &operator<<(std::ostream &o, const DpeCommand &cmd) {
 namespace internal {
 
 SL std::optional<std::string> ParseDpeToken(std::string_view cmd, int &i) {
-  while (i < cmd.size() && std::isspace(cmd[i])) ++i;
-  if (i == cmd.size()) return "$";
+  while (i < std::size(cmd) && std::isspace(cmd[i])) ++i;
+  if (i == std::size(cmd)) return "$";
 
   if (cmd[i] == '(' || cmd[i] == ')' || cmd[i] == '{' || cmd[i] == '}' ||
       cmd[i] == ',') {
     return std::string(cmd.substr(i++, 1));
   } else if (std::isalpha(cmd[i])) {
     int j = i;
-    while (i < cmd.size() && std::isalpha(cmd[i])) {
+    while (i < std::size(cmd) && std::isalpha(cmd[i])) {
       ++i;
     }
     return std::string(cmd.substr(j, i - j));
   } else if (std::isdigit(cmd[i]) || cmd[i] == '+' || cmd[i] == '-') {
     int j = i;
-    while (i < cmd.size() && (cmd[i] == '+' || cmd[i] == '-')) {
+    while (i < std::size(cmd) && (cmd[i] == '+' || cmd[i] == '-')) {
       ++i;
     }
-    if (i == cmd.size() || !std::isdigit(cmd[i])) {
+    if (i == std::size(cmd) || !std::isdigit(cmd[i])) {
       return std::nullopt;
     }
-    while (i < cmd.size() && std::isdigit(cmd[i])) {
+    while (i < std::size(cmd) && std::isdigit(cmd[i])) {
       ++i;
     }
     return std::string(cmd.substr(j, i - j));
@@ -76,7 +76,7 @@ SL std::optional<int64> ParseNumberToken(std::optional<std::string> s) {
   if (std::isdigit(s.value()[0]) || s.value()[0] == '+' ||
       s.value()[0] == '-') {
     std::string t = *s;
-    const int size = t.size();
+    const int size = std::size(t);
     int sgn = 1;
     int j = 0;
     while (j < size && (t[j] == '+' || t[j] == '-')) {
@@ -161,7 +161,7 @@ SL std::optional<std::vector<std::vector<int64>>> ParseDpeArgs(
     }
     std::string s = *std::move(token);
     if (s[0] == '{' || s[0] == '+' || s[0] == '-' || std::isdigit(s[0])) {
-      i -= s.size();
+      i -= std::size(s);
       std::optional<std::vector<int64>> number_list =
           ParseDpeNumberList(cmd, i);
       if (!number_list.has_value()) {
@@ -217,7 +217,7 @@ class DpeServer {
       int received = zmq_recv(responder, buffer, buffer_length, 0);
       buffer[received] = 0;
       std::string response = HandleRequest(std::string_view(buffer, received));
-      zmq_send(responder, std::data(response), response.size(), 0);
+      zmq_send(responder, std::data(response), std::size(response), 0);
     }
     LogProgress();
     delete[] buffer;
@@ -230,13 +230,13 @@ class DpeServer {
     std::vector<int64> tasks = AsDerived().GetTasks();
 
     cache.clear();
-    const int64 size = tasks.size();
+    const int64 size = std::size(tasks);
     for (int i = 0; i < size; ++i) {
       cache[tasks[i]] = std::nullopt;
     }
 
     answer = AsDerived().GetInit();
-    total = cache.size();
+    total = std::size(cache);
     solved = 0;
 
     LoadCache();
@@ -289,7 +289,7 @@ class DpeServer {
     }
 
     if (command->name == "GetTasks") {
-      if (command->args.size() != 1 || command->args[0].size() != 1) {
+      if (std::size(command->args) != 1 || std::size(command->args[0]) != 1) {
         return "error()";
       }
 
@@ -300,7 +300,7 @@ class DpeServer {
       std::vector<std::pair<int64, int64>> answers;
 
       for (const auto &iter : command->args) {
-        if (iter.size() != 2) {
+        if (std::size(iter) != 2) {
           return "error()";
         }
         answers.push_back({iter[0], iter[1]});
@@ -354,7 +354,7 @@ class DpeServer {
     sprintf(buff, "%2.2f%%", 100. * solved / total);
 
     std::string eta;
-    while (history_progress.size() > 100) history_progress.pop();
+    while (std::size(history_progress) > 100) history_progress.pop();
     if (std::empty(history_progress) ||
         history_progress.front().second == solved) {
       eta = "n/a";
@@ -411,7 +411,7 @@ class DpeClient {
     raw_command.args.push_back({task_count});
     std::string cmd = raw_command.ToString();
 
-    zmq_send(requester, std::data(cmd), cmd.size(), 0);
+    zmq_send(requester, std::data(cmd), std::size(cmd), 0);
     int cnt = zmq_recv(requester, buffer, buffer_length, 0);
     zmq_close(requester);
     zmq_ctx_destroy(context);
@@ -423,7 +423,7 @@ class DpeClient {
       return {};
     }
 
-    if (result->args.size() != 1) {
+    if (std::size(result->args) != 1) {
       return {};
     }
 
@@ -443,7 +443,7 @@ class DpeClient {
     }
 
     std::string cmd = raw_command.ToString();
-    zmq_send(requester, std::data(cmd), cmd.size(), 0);
+    zmq_send(requester, std::data(cmd), std::size(cmd), 0);
     zmq_recv(requester, buffer, buffer_length, 0);
     zmq_close(requester);
     zmq_ctx_destroy(context);
@@ -461,7 +461,7 @@ class DpeClient {
     for (;;) {
       std::vector<int64> tasks = GetTasks(task_count);
       std::cerr << std::endl;
-      std::cerr << "Received " << tasks.size() << " tasks" << std::endl;
+      std::cerr << "Received " << std::size(tasks) << " tasks" << std::endl;
       if (std::empty(tasks)) {
         break;
       }

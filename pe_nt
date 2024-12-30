@@ -393,7 +393,7 @@ SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(ModValue<T>)
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(ModValue<T>)
     CrtN(const std::vector<T>& val, const std::vector<T>& mod) {
-  return CrtN<T>(&val[0], &mod[0], val.size());
+  return CrtN<T>(&val[0], &mod[0], std::size(val));
 }
 
 // Returns the number of x in the range [1, n] such that x is a multiple of d.
@@ -670,7 +670,7 @@ SL REQUIRES((!IsNModNumberV<typename std::iterator_traits<IT>::value_type>))
 template <typename T, typename TM>
 SL REQUIRES((!IsNModNumberV<T>)) RETURN(void)
     InitInverse(Span<T> dest, TM mod) {
-  InitInverse<T*, TM>(std::data(dest), dest.size() - 1, mod);
+  InitInverse<T*, TM>(std::data(dest), std::size(dest) - 1, mod);
 }
 
 template <typename IT>
@@ -700,7 +700,7 @@ SL REQUIRES((IsNModNumberV<typename std::iterator_traits<IT>::value_type>))
 
 template <typename T>
 SL REQUIRES((IsNModNumberV<T>)) RETURN(void) InitInverse(Span<T> dest) {
-  InitInverse<T*>(std::data(dest), dest.size() - 1);
+  InitInverse<T*>(std::data(dest), std::size(dest) - 1);
 }
 
 // 1 <= s <= e
@@ -772,8 +772,8 @@ SL REQUIRES((!IsNModNumberV<T>)) RETURN(void)
 template <typename T>
 SL REQUIRES((!IsNModNumberV<T>)) RETURN(void)
     InitSeqProd2(Span<T> dest, Span<T> idest, T mod) {
-  const int64 size1 = dest.size();
-  const int64 size2 = idest.size();
+  const int64 size1 = std::size(dest);
+  const int64 size2 = std::size(idest);
   PE_ASSERT(size1 == size2);
   InitSeqProd2<T>(std::data(dest), std::data(idest), 1, size1 - 1, mod);
 }
@@ -834,8 +834,8 @@ SL REQUIRES((IsNModNumberV<T>)) RETURN(void)
 template <typename T>
 SL REQUIRES((IsNModNumberV<T>)) RETURN(void)
     InitSeqProd2(Span<T> dest, Span<T> idest) {
-  const int64 size1 = dest.size();
-  const int64 size2 = idest.size();
+  const int64 size1 = std::size(dest);
+  const int64 size2 = std::size(idest);
   PE_ASSERT(size1 == size2);
   InitSeqProd2<T>(std::data(dest), std::data(idest), 1, size1 - 1);
 }
@@ -857,7 +857,7 @@ SL void GenerateSequence(IT first, int64 maxn, T init, const G& gen) {
 
 template <typename T, typename G>
 SL void GenerateSequence(Span<T> target, T init, const G& gen) {
-  GenerateSequence(std::data(target), static_cast<int64>(target.size()) - 1,
+  GenerateSequence(std::data(target), static_cast<int64>(std::size(target)) - 1,
                    init, gen);
 }
 
@@ -1005,7 +1005,7 @@ class IndSolver {
 namespace flint {
 #if ENABLE_FLINT && GMP_LIMB_BITS == 64
 std::vector<int64> SquareRootMod(int64 n, const IntegerFactorization& mod_f) {
-  const int size = static_cast<int>(mod_f.size());
+  const int size = static_cast<int>(std::size(mod_f));
   n_factor_t ff;
   for (int i = 0; i < size; ++i) {
     ff.p[i] = mod_f[i].first;
@@ -1120,7 +1120,7 @@ SL std::vector<int64> RootMod(int64 a, int64 n, int64 p,
   int64 oldx = x;
   do {
     if (returned_count < 0 ||
-        static_cast<int64>(result.size()) < returned_count) {
+        static_cast<int64>(std::size(result)) < returned_count) {
       result.push_back(x);
     } else {
       break;
@@ -1335,7 +1335,7 @@ SL std::vector<std::pair<int64, int64>> TwoSquaresFull(const int64 n) {
   }
   auto tmp = TwoSquares(n);
   std::vector<std::pair<int64, int64>> ret;
-  ret.reserve(tmp.size() * 4);
+  ret.reserve(std::size(tmp) * 4);
   for (auto& iter : tmp) {
     ExpandTwoSquares(ret, iter);
     if (iter.first != iter.second) {
@@ -1383,7 +1383,7 @@ SL std::vector<int> ToBaseK(T n, int k, int width = 0) {
 template <typename T>
 SL T FromBaseK(const std::vector<int>& vec, int k) {
   T ret = 0;
-  const int size = static_cast<int>(vec.size());
+  const int size = static_cast<int>(std::size(vec));
   for (int i = size - 1; i >= 0; --i) ret = ret * k + vec[i];
   return ret;
 }

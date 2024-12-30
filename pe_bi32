@@ -41,7 +41,7 @@ struct BiAllocatorFixedSizeImpl {
     }
     PE_ASSERT(length <= SIZE);
     length = SIZE;
-    if (top == available.size()) {
+    if (top == std::size(available)) {
       available.push_back(new unsigned int[SIZE]);
     }
     return available[top++];
@@ -164,7 +164,7 @@ class BigInteger {
       return;
     }
 
-    const auto n = static_cast<unsigned int>(v.size());
+    const auto n = static_cast<unsigned int>(std::size(v));
     Reserve(n);
 
     std::copy(v.begin(), v.end(), data_);
@@ -193,7 +193,7 @@ class BigInteger {
   }
 
   void FromString(const std::string& str) {
-    const int n = static_cast<int>(str.size());
+    const int n = static_cast<int>(std::size(str));
     if (n == 0) {
       Reserve(1);
       data_[0] = 0;
@@ -223,10 +223,10 @@ class BigInteger {
       while (now > 0 && value[now] == 0) --now;
     } while (now > 0 || value[now] > 0);
 
-    Reserve(static_cast<int>(result.size()));
+    Reserve(static_cast<int>(std::size(result)));
 
     sign_ = 1;
-    pos_ = std::max<int>(0, static_cast<int>(result.size()) - 1);
+    pos_ = std::max<int>(0, static_cast<int>(std::size(result)) - 1);
     std::copy(result.begin(), result.end(), data_);
     FixLeadingZeros();
   }
@@ -262,7 +262,7 @@ class BigInteger {
   template <typename T>
   static void FixSize(std::vector<T>& v) {
     if (std::empty(v)) v.push_back(0);
-    int now = static_cast<int>(v.size()) - 1;
+    int now = static_cast<int>(std::size(v)) - 1;
     while (now > 0 && v[now] == 0) --now;
     v.resize(now + 1);
   }
@@ -420,7 +420,7 @@ class BigInteger {
       return;
     }
 
-    const auto n = static_cast<unsigned int>(v.size());
+    const auto n = static_cast<unsigned int>(std::size(v));
     unsigned int need = (n * k + 31) >> 5;
     Reserve(need);
 
@@ -475,7 +475,7 @@ class BigInteger {
       return;
     }
 
-    const auto n = static_cast<unsigned int>(v.size());
+    const auto n = static_cast<unsigned int>(std::size(v));
     unsigned int need = (n + 31) >> 5;
     Reserve(need);
 
@@ -515,7 +515,7 @@ class BigInteger {
   }
 
   static int AbsCompare(const BigInteger& l, const BigInteger& r) {
-    if (l.size() <= 2 && r.size() <= 2) {
+    if (std::size(l) <= 2 && std::size(r) <= 2) {
       const uint64 a = l.ToInt<uint64>();
       const uint64 b = r.ToInt<uint64>();
       if (a == b) return 0;
@@ -537,14 +537,14 @@ class BigInteger {
   }
 
   static void AbsAddInplace(BigInteger& self, const BigInteger& other) {
-    if (self.size() <= 2 && other.size() <= 1 ||
-        self.size() <= 1 && other.size() <= 2) {
+    if (std::size(self) <= 2 && std::size(other) <= 1 ||
+        std::size(self) <= 1 && std::size(other) <= 2) {
       self.SetNativeUInt64AndKeepSign(self.ToInt<uint64>() +
                                       other.ToInt<uint64>());
       return;
     }
 
-    self.Reserve(self.size() + other.size() + 1);
+    self.Reserve(std::size(self) + std::size(other) + 1);
 
     const int max_pos = std::max(self.pos_, other.pos_);
     const int min_pos = std::min(self.pos_, other.pos_);
@@ -576,7 +576,7 @@ class BigInteger {
   static void AbsSubtractInplace(BigInteger& self, const BigInteger& other) {
     PE_ASSERT(BigInteger::AbsCompare(self, other) >= 0);
 
-    if (self.size() <= 2 && other.size() <= 2) {
+    if (std::size(self) <= 2 && std::size(other) <= 2) {
       self.SetNativeUInt64AndKeepSign(self.ToInt<uint64>() -
                                       other.ToInt<uint64>());
       return;
@@ -611,8 +611,8 @@ class BigInteger {
 
 #if HAS_POLY_MUL_NTT32
   static BigInteger AbsMultiplyNtt(const BigInteger& l, const BigInteger& r) {
-    const int n = l.size() << 1;
-    const int m = r.size() << 1;
+    const int n = std::size(l) << 1;
+    const int m = std::size(r) << 1;
 
     std::vector<uint64> X(n), Y(m);
 
@@ -655,21 +655,21 @@ class BigInteger {
 #endif
 
   static BigInteger AbsMultiply(const BigInteger& l, const BigInteger& r) {
-    if (l.size() <= 1 && r.size() <= 1) {
+    if (std::size(l) <= 1 && std::size(r) <= 1) {
       return static_cast<uint64>(l[0]) * r[0];
     }
-    if (r.size() <= 1) {
+    if (std::size(r) <= 1) {
       return AbsMultiply(l, r.ToInt<uint64>());
     }
-    if (l.size() <= 1) {
+    if (std::size(l) <= 1) {
       return AbsMultiply(r, l.ToInt<uint64>());
     }
 
 #if HAS_POLY_MUL_NTT32
     {
       // If the cost of ntt is less than normal multiplication, then use ntt.
-      const uint64 cost1 = static_cast<uint64>(l.size()) * r.size();
-      const uint64 len = (l.size() + r.size()) << 1;
+      const uint64 cost1 = static_cast<uint64>(std::size(l)) * std::size(r);
+      const uint64 len = (std::size(l) + std::size(r)) << 1;
       int64 aligned_len = 1;
       int bit = 1;
       while (aligned_len < static_cast<int64>(len)) aligned_len <<= 1, ++bit;
@@ -684,7 +684,7 @@ class BigInteger {
     const int left_pos = l.pos_;
     const int right_pos = r.pos_;
 
-    const int new_size = l.size() + r.size() + 1;
+    const int new_size = std::size(l) + std::size(r) + 1;
 
     BigInteger ret(new_size, internal::alloc_mem_tag);
     std::fill(ret.data_, ret.data_ + new_size, 0);
@@ -713,7 +713,7 @@ class BigInteger {
     if (r > max_32bit_value) {
       return AbsMultiply(l, BigInteger(r));
     }
-    BigInteger ret(l, l.size() + BigInteger(r).size() + 1);
+    BigInteger ret(l, std::size(l) + std::size(BigInteger(r)) + 1);
     AbsMultiplyInplace(ret, r);
     return ret;
   }
@@ -726,12 +726,12 @@ class BigInteger {
       return;
     }
 
-    if (self.size() <= 1) {
+    if (std::size(self) <= 1) {
       self.SetNativeUInt64AndKeepSign(static_cast<uint64>(self[0]) * other);
       return;
     }
 
-    self.Reserve(self.size() + BigInteger(other).size() + 1);
+    self.Reserve(std::size(self) + std::size(BigInteger(other)) + 1);
 
     uint64 inc = 0;
     int top = 0;
@@ -752,7 +752,7 @@ class BigInteger {
 
   static BigInteger AbsDivide(const BigInteger& l, const BigInteger& r,
                               BigInteger& remain) {
-    if (l.size() <= 2 && r.size() <= 2) {
+    if (std::size(l) <= 2 && std::size(r) <= 2) {
       const uint64 a = l.ToInt<uint64>();
       const uint64 b = r.ToInt<uint64>();
       remain = a % b;
@@ -784,7 +784,7 @@ class BigInteger {
   }
 
   static BigInteger AbsDivide(const BigInteger& l, const BigInteger& r) {
-    if (l.size() <= 2 && r.size() <= 2) {
+    if (std::size(l) <= 2 && std::size(r) <= 2) {
       const uint64 a = l.ToInt<uint64>();
       const uint64 b = r.ToInt<uint64>();
       return a / b;
@@ -814,7 +814,7 @@ class BigInteger {
   static BigInteger AbsDivide(const BigInteger& l, T r, T& remain) {
     static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
     static_assert(sizeof(T) <= 8, "T must be at most 64-bit");
-    if (l.size() <= 2) {
+    if (std::size(l) <= 2) {
       const uint64 a = l.ToInt<uint64>();
       const uint64 b = r;
       remain = a % b;
@@ -830,7 +830,7 @@ class BigInteger {
   static BigInteger AbsDivide(const BigInteger& l, T r) {
     static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
     static_assert(sizeof(T) <= 8, "T must be at most 64-bit");
-    if (l.size() <= 2) {
+    if (std::size(l) <= 2) {
       const uint64 a = l.ToInt<uint64>();
       const uint64 b = r;
       return a / b;
@@ -848,7 +848,7 @@ class BigInteger {
     static_assert(sizeof(T) <= 8, "T must be at most 64-bit");
 
     self.FixLeadingZeros();
-    if (self.size() <= 2) {
+    if (std::size(self) <= 2) {
       const uint64 a = self.ToInt<uint64>();
       const uint64 b = other;
       remain = static_cast<T>(a % b);
@@ -1028,7 +1028,7 @@ class BigInteger {
       t.FixSign();
     } while (!t.IsZero());
 
-    int idx = static_cast<int>(mods.size()) - 1;
+    int idx = static_cast<int>(std::size(mods)) - 1;
     char buff[32];
     sprintf(buff, "%u", mods[idx--]);
     ss << buff;
@@ -1437,7 +1437,7 @@ class BigInteger {
       return 0;
     }
 
-    if (r.size() > 2) {
+    if (std::size(r) > 2) {
       BigInteger x;
       BigInteger ret(BigInteger::AbsDivide(l, r, x));
       ret.sign_ = l.sign_ * r.sign_;
@@ -1478,7 +1478,7 @@ class BigInteger {
       return 0;
     }
 
-    if (r.size() > 2) {
+    if (std::size(r) > 2) {
       BigInteger x;
       BigInteger ret(BigInteger::AbsDivide(l, r, x));
       ret.sign_ = l.sign_ * r.sign_;
@@ -1592,7 +1592,7 @@ class BigInteger {
   }
 
   friend inline BigInteger operator&(const BigInteger& l, const BigInteger& r) {
-    if (l.size() <= 2 && r.size() <= 2) {
+    if (std::size(l) <= 2 && std::size(r) <= 2) {
       return l.ToInt<uint64>() & r.ToInt<uint64>();
     }
 
@@ -1609,7 +1609,7 @@ class BigInteger {
   }
 
   friend inline BigInteger operator^(const BigInteger& l, const BigInteger& r) {
-    if (l.size() <= 2 && r.size() <= 2) {
+    if (std::size(l) <= 2 && std::size(r) <= 2) {
       return l.ToInt<uint64>() ^ r.ToInt<uint64>();
     }
 
@@ -1629,7 +1629,7 @@ class BigInteger {
   }
 
   friend inline BigInteger operator|(const BigInteger& l, const BigInteger& r) {
-    if (l.size() <= 2 && r.size() <= 2) {
+    if (std::size(l) <= 2 && std::size(r) <= 2) {
       return l.ToInt<uint64>() | r.ToInt<uint64>();
     }
 

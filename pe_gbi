@@ -360,16 +360,16 @@ SL REQUIRES((is_gbi_v<GBI>)) RETURN(ModValue<GBI>)
 template <typename GBI>
 SL REQUIRES((is_gbi_v<GBI>)) RETURN(ModValue<GBI>)
     CrtN(const std::vector<GBI>& val, const std::vector<GBI>& mod) {
-  return CrtN<GBI>(&val[0], &mod[0], val.size());
+  return CrtN<GBI>(&val[0], &mod[0], std::size(val));
 }
 
-// Returns f[0], f[1], f[2], ..., f[min(pos, data.size()-1)] if pos >= 0
-// Returns f[0], f[1], f[2], ..., f[data.size()-1] if pos < 0
+// Returns f[0], f[1], f[2], ..., f[min(pos, std::size(data)-1)] if pos >= 0
+// Returns f[0], f[1], f[2], ..., f[std::size(data)-1] if pos < 0
 // https://en.wikipedia.org/wiki/Continued_fraction#Some_useful_theorems
 template <typename GBI, typename T>
 SL std::vector<Fraction<GBI>> FromContinuedFractionN(const std::vector<T>& data,
                                                      int pos = -1) {
-  const int size = static_cast<int>(data.size());
+  const int size = static_cast<int>(std::size(data));
   const int n = pos < 0 ? size : std::min(size, pos + 1);
   if (n == 0) {
     return std::vector<Fraction<GBI>>();
@@ -392,12 +392,12 @@ SL std::vector<Fraction<GBI>> FromContinuedFractionN(const std::vector<T>& data,
   return result;
 }
 
-// Returns f[min(pos, data.size()-1)] if pos >= 0
-// Returns f[data.size()-1] if pos < 0
+// Returns f[min(pos, std::size(data)-1)] if pos >= 0
+// Returns f[std::size(data)-1] if pos < 0
 template <typename GBI, typename T>
 SL Fraction<GBI> FromContinuedFraction(const std::vector<T>& data,
                                        int pos = -1) {
-  const int size = static_cast<int>(data.size());
+  const int size = static_cast<int>(std::size(data));
   const int n = pos < 0 ? size - 1 : std::min(size - 1, pos);
   PE_ASSERT(n >= 0);
 
@@ -447,7 +447,7 @@ SL std::vector<GBI> ToContinuedFraction(int64 p, int64 q, int n) {
   result.pb(val);
   b = b - val * c;
 
-  while (result.size() < n) {
+  while (std::size(result) < n) {
     // (a f^(1/2) + b) / c
     // c * (aq^(1/2) - b)
     GBI cc = a * a * f - b * b;

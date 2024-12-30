@@ -154,8 +154,8 @@ SL std::map<int, std::vector<int64>> ParseSolution(const std::string& text) {
     int offset, degree;
     int64 value;
     int start = 0;
-    while (start < iter.size() && iter[start] != 'x') ++start;
-    if (start == iter.size()) {
+    while (start < std::size(iter) && iter[start] != 'x') ++start;
+    if (start == std::size(iter)) {
       std::cout << "failed to parse:" << std::endl << iter << std::endl;
       exit(-1);
     }
@@ -169,7 +169,7 @@ SL std::map<int, std::vector<int64>> ParseSolution(const std::string& text) {
     // << std::endl;
     if (value != 0) {
       auto& target = result[offset];
-      while (degree >= target.size()) target.push_back(0);
+      while (degree >= std::size(target)) target.push_back(0);
       target[degree] = value;
     }
   }
@@ -177,7 +177,7 @@ SL std::map<int, std::vector<int64>> ParseSolution(const std::string& text) {
 }
 
 SL std::vector<std::string> ParseSolutionList(const std::string& text) {
-  const int n = static_cast<int>(text.size());
+  const int n = static_cast<int>(std::size(text));
   std::vector<std::string> result;
   for (int curr = 0, depth = 0, last = 1; curr < n; ++curr) {
     const int it = text[curr];
@@ -207,7 +207,7 @@ SL void ValidateOne(const std::vector<T>& values, const std::string& result,
     if (iter.first > offset) {
       offset = iter.first;
     }
-    const int d = iter.second.size() - 1;
+    const int d = std::size(iter.second) - 1;
     if (d > deg) {
       deg = d;
     }
@@ -216,7 +216,7 @@ SL void ValidateOne(const std::vector<T>& values, const std::string& result,
   std::cout << "max offset = " << offset << ", "
             << "max degree = " << deg << std::endl;
 
-  const int n = values.size();
+  const int n = std::size(values);
   int failed = 0;
   int successful = 0;
   for (int i = offset; i < n; ++i) {
@@ -263,11 +263,11 @@ struct IntPoly {
 
   void Reset(const std::vector<std::string>& variables) {
     this->variables = variables;
-    n = static_cast<int>(variables.size());
+    n = static_cast<int>(std::size(variables));
   }
 
   void Add(const std::vector<int64>& p, int64 v) {
-    const int len = static_cast<int>(p.size());
+    const int len = static_cast<int>(std::size(p));
     if (n == 0) {
       n = len;
     } else {
@@ -367,7 +367,7 @@ struct IntPoly2D {
   }
 
   void Add(const std::vector<int64>& p, int64 v) {
-    const int len = static_cast<int>(p.size());
+    const int len = static_cast<int>(std::size(p));
     PE_ASSERT(len == 2);
     auto where = vals.find(p);
     if (where != vals.end()) {
@@ -378,7 +378,7 @@ struct IntPoly2D {
   }
 
   std::ostream& Show(std::ostream& o, const std::vector<int64>& v) {
-    const int len = static_cast<int>(v.size());
+    const int len = static_cast<int>(std::size(v));
     PE_ASSERT(vcnt == len);
     int id = 0;
     for (int i = 0; i < vcnt; ++i) {
@@ -846,38 +846,38 @@ struct MmaExpParser {
   //     std::vector<MmaExpTree*> para;
   //     ExpressionList(tree->right, para);
   //     if (tree->token == "min") {
-  //       if (para.size() == 0) return tree->value = 0;
+  //       if (std::size(para) == 0) return tree->value = 0;
   //       int ans = Evaluate(para[0]);
-  //       for (int i = 1; i < para.size(); ++i) {
+  //       for (int i = 1; i < std::size(para); ++i) {
   //         int t = Evaluate(para[i]);
   //         if (t < ans) ans = t;
   //       }
   //       return tree->value = ans;
   //     } else if (tree->token == "max") {
-  //       if (para.size() == 0) return tree->value = 0;
+  //       if (std::size(para) == 0) return tree->value = 0;
   //       int ans = Evaluate(para[0]);
-  //       for (int i = 1; i < para.size(); ++i) {
+  //       for (int i = 1; i < std::size(para); ++i) {
   //         int t = Evaluate(para[i]);
   //         if (t > ans) ans = t;
   //       }
   //       return tree->value = ans;
   //     } else if (tree->token == "sum") {
   //       int ans = 0;
-  //       for (int i = 0; i < para.size(); ++i) {
+  //       for (int i = 0; i < std::size(para); ++i) {
   //         ans += Evaluate(para[i]);
   //       }
   //       return tree->value = ans;
   //     } else if (tree->token == "input") {
-  //       for (int i = 0; i < para.size(); ++i) {
+  //       for (int i = 0; i < std::size(para); ++i) {
   //         vars[para[i]->token] = input_seq[curr_read++];
   //       }
-  //       return tree->value = para.size();
+  //       return tree->value = std::size(para);
   //     } else if (tree->token == "print") {
-  //       for (int i = 0; i < para.size(); ++i) {
+  //       for (int i = 0; i < std::size(para); ++i) {
   //         printf("%d\n", Evaluate(para[i]));
   //       }
-  //       if (para.size() == 0) puts("");
-  //       return tree->value = para.size();
+  //       if (std::size(para) == 0) puts("");
+  //       return tree->value = std::size(para);
   //     } else if (tree->token == "while") {
   //       int ans = 0;
   //       while (Evaluate(para[0])) ans = Evaluate(para[1]);
@@ -889,9 +889,9 @@ struct MmaExpParser {
   //       else
   //         return tree->value = Evaluate(para[2]);
   //     } else if (tree->token == "sequence") {
-  //       if (para.size() == 0) return tree->value = 0;
+  //       if (std::size(para) == 0) return tree->value = 0;
   //       int x;
-  //       for (int i = 0; i < para.size(); ++i) x = Evaluate(para[i]);
+  //       for (int i = 0; i < std::size(para); ++i) x = Evaluate(para[i]);
   //       return tree->value = x;
   //     }
   //     std::cerr << "error 2" << std::endl;
@@ -1084,7 +1084,7 @@ struct MmaModExpCompiler {
     myExpr += ";";
     auto where = expToId.find(myExpr);
     if (where == expToId.end()) {
-      int iid = static_cast<int>(expToId.size());
+      int iid = static_cast<int>(std::size(expToId));
       expToId[myExpr] = iid;
       tree->iid = iid;
       sprintf(buff, "  const int64 t%d = %s", iid, myExpr.c_str());

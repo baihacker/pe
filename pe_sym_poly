@@ -4,7 +4,7 @@
 #include "pe_base"
 
 namespace pe {
-// TermKey.size() == 0, constant term.
+// std::size(TermKey) == 0, constant term.
 // The elements are sorted.
 using TermKey = std::vector<std::pair<std::string, int64>>;
 
@@ -118,14 +118,14 @@ struct SymPoly {
   }
 
   std::optional<CT> AsNumber() const {
-    if (terms_.size() == 0) {
+    if (std::size(terms_) == 0) {
       return 0;
     }
-    if (terms_.size() > 1) {
+    if (std::size(terms_) > 1) {
       return std::nullopt;
     }
     auto& it = *terms_.begin();
-    if (it.first.size() != 0) {
+    if (std::size(it.first) != 0) {
       return std::nullopt;
     }
     return it.second;
@@ -135,8 +135,8 @@ struct SymPoly {
     std::string_view var;
     int64 max_deg = 0;
     for (const auto& [term_key, _] : terms_) {
-      if (term_key.size() == 0) continue;
-      if (term_key.size() > 1) return std::nullopt;
+      if (std::size(term_key) == 0) continue;
+      if (std::size(term_key) > 1) return std::nullopt;
       std::string_view t = term_key[0].first;
       if (std::data(var) == nullptr) {
         var = t;
@@ -147,7 +147,7 @@ struct SymPoly {
     }
     std::vector<CT> ret(max_deg + 1, 0);
     for (const auto& [term_key, coe] : terms_) {
-      if (term_key.size() == 0) {
+      if (std::size(term_key) == 0) {
         ret[0] += coe;
       } else {
         ret[term_key[0].second] += coe;
@@ -185,13 +185,13 @@ struct SymPoly {
   }
 
   static TermKey MergeTermKey(const TermKey& a, const TermKey& b) {
-    if (a.size() == 0) return b;
-    if (b.size() == 0) return a;
+    if (std::size(a) == 0) return b;
+    if (std::size(b) == 0) return a;
     std::map<std::string, CT> terms;
     for (const auto& iter : a) terms[iter.first] += iter.second;
     for (const auto& iter : b) terms[iter.first] += iter.second;
     TermKey result;
-    result.reserve(terms.size());
+    result.reserve(std::size(terms));
     for (const auto& iter : terms) result.emplace_back(iter.first, iter.second);
     return result;
   }
@@ -209,7 +209,7 @@ struct SymPoly {
 
  private:
   // TermKey -> coefficient.
-  // terms_.size() == 0: value
+  // std::size(terms_) == 0: value
   std::map<TermKey, CT> terms_;
 };
 
@@ -366,7 +366,7 @@ SL SymPoly<CT> ParseSymPoly(const std::string& s) {
   int i = 0;
   auto ret = ParseSymPolyAddOrSubstract<CT>(s, i);
 
-  const int size = s.size();
+  const int size = std::size(s);
   if (i < size && std::isspace(s[i])) ++i;
   if (!ret.has_value()) {
     if (i < size) {
@@ -427,7 +427,7 @@ SL std::ostream& ToString(const SymPoly<CT>& sp, std::ostream& o, int cstyle,
       out = 1;
       hasNum = 1;
     }
-    if (iter.first.size() > 0) {
+    if (std::size(iter.first) > 0) {
       if (out) o << (show_mul && hasNum ? " * " : " ");
       ToString(iter.first, o, cstyle, show_mul);
       out = 1;

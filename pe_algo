@@ -433,7 +433,7 @@ SL int64 ShortCombMod(int64 n, int64 m, int64 mod) {
   if (n - m < m) m = n - m;
   std::vector<int64> data;
   for (int64 i = n; i >= n - m + 1; --i) data.push_back(i);
-  const int size = static_cast<int>(data.size());
+  const int size = static_cast<int>(std::size(data));
   for (int i = 2; i <= m; ++i) {
     int64 a = i;
     for (int j = 0; j < size && a > 1; ++j) {
@@ -839,8 +839,8 @@ struct PowerSumModerB {
   }
 
   std::vector<T> Cal(const std::vector<int64>& vec) const {
-    PE_ASSERT(vec.size() <= maxk_ + 1);
-    const int64 size = vec.size();
+    PE_ASSERT(std::size(vec) <= maxk_ + 1);
+    const int64 size = std::size(vec);
     std::vector<int64> result(size + 1, 0);
     for (int k = 0; k < size; ++k) {
       // comb(k+1, i) b[i] n^(k+1-i) / (k + 1)
@@ -1954,8 +1954,8 @@ class DVA {
     for (int64 i = n / m > m ? m : m - 1; i >= 1; --i) {
       keys.push_back(n / i);
     }
-    key_size = static_cast<int64>(keys.size());
-    values.resize(keys.size());
+    key_size = static_cast<int64>(std::size(keys));
+    values.resize(std::size(keys));
     Fill(element);
   }
 
@@ -2099,7 +2099,7 @@ SL void DVAConvDfsTwoFactorsOne(int max_idx, int64 maxv, int64 n,
                                 int64 value1,
                                 std::vector<std::pair<int64, int64>>& result) {
   if (n / (n / value1) != value1) return;
-  DVAConvDfsTwoFactorsTwo(static_cast<int>(f.size()), maxv, n, f, value1, 1,
+  DVAConvDfsTwoFactorsTwo(static_cast<int>(std::size(f)), maxv, n, f, value1, 1,
                           result);
   for (int i = 0; i < max_idx; ++i) {
     const int64 t = maxv / f[i].first;
@@ -2137,7 +2137,7 @@ SL REQUIRES((IsNModNumberV<T>)) RETURN(void)
     for (int64 i = W; i <= shape.n; ++i) {
 #if DVA_CONV_DFS_FACTORS
       std::vector<std::pair<int64, int64>> factors;
-      DVAConvDfsTwoFactorsOne(factorization[i - W].size(), shape.m, shape.n,
+      DVAConvDfsTwoFactorsOne(std::size(factorization[i - W]), shape.m, shape.n,
                               factorization[i - W], 1, factors);
       for (const auto [x, y] : factors) {
         const int64 t = i / (x * y);
@@ -2175,16 +2175,16 @@ SL REQUIRES((IsNModNumberV<T>)) RETURN(void)
 #endif
     }
   } else {
-    std::vector<std::vector<T>> tans_data(FINAL_TN,
-                                          std::vector<T>(tans.size(), T(0)));
+    std::vector<std::vector<T>> tans_data(
+        FINAL_TN, std::vector<T>(std::size(tans), T(0)));
     std::vector<std::vector<T>> result_data(
-        FINAL_TN, std::vector<T>(result.size(), T(0)));
+        FINAL_TN, std::vector<T>(std::size(result), T(0)));
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 1000) num_threads(FINAL_TN)
     for (int64 i = W; i <= shape.n; ++i) {
 #if DVA_CONV_DFS_FACTORS
       std::vector<std::pair<int64, int64>> factors;
-      DVAConvDfsTwoFactorsOne(factorization[i - W].size(), shape.m, shape.n,
+      DVAConvDfsTwoFactorsOne(std::size(factorization[i - W]), shape.m, shape.n,
                               factorization[i - W], 1, factors);
       for (const auto [x, y] : factors) {
         const int64 t = i / (x * y);
@@ -2222,10 +2222,10 @@ SL REQUIRES((IsNModNumberV<T>)) RETURN(void)
 #endif
     }
     for (int i = 0; i < FINAL_TN; ++i) {
-      for (int j = 0; j < tans.size(); ++j) {
+      for (int j = 0; j < std::size(tans); ++j) {
         tans[j] -= tans_data[i][j];
       }
-      for (int j = 0; j < result.size(); ++j) {
+      for (int j = 0; j < std::size(result); ++j) {
         result[j] += result_data[i][j];
       }
     }
@@ -2252,8 +2252,8 @@ SL REQUIRES((IsNModNumberV<T>)) RETURN(std::vector<T>)
       v[idx] = b[i].value();
     }
     std::vector<int64> t = PolyMul(u, v, T().Mod());
-    tans.reserve(t.size());
-    for (int i = 0; i < t.size(); ++i) {
+    tans.reserve(std::size(t));
+    for (int i = 0; i < std::size(t); ++i) {
       tans.push_back(t[i]);
     }
   }
@@ -2261,7 +2261,7 @@ SL REQUIRES((IsNModNumberV<T>)) RETURN(std::vector<T>)
   std::vector<T> result(shape.key_size, T(0));
   DVAConvAdjust(shape, W, a, b, tans, result);
 
-  for (int i = 0; i < tans.size(); ++i) {
+  for (int i = 0; i < std::size(tans); ++i) {
     int64 now = std::exp(1. * i / S);
     if (now <= shape.n) {
       result[shape.IdxOfValue(now)] += tans[i];
@@ -2291,7 +2291,7 @@ SL REQUIRES((!IsNModNumberV<T>)) RETURN(void)
     for (int64 i = W; i <= shape.n; ++i) {
 #if DVA_CONV_DFS_FACTORS
       std::vector<std::pair<int64, int64>> factors;
-      DVAConvDfsTwoFactorsOne(factorization[i - W].size(), shape.m, shape.n,
+      DVAConvDfsTwoFactorsOne(std::size(factorization[i - W]), shape.m, shape.n,
                               factorization[i - W], 1, factors);
       for (const auto [x, y] : factors) {
         const int64 t = i / (x * y);
@@ -2330,16 +2330,16 @@ SL REQUIRES((!IsNModNumberV<T>)) RETURN(void)
 #endif
     }
   } else {
-    std::vector<std::vector<T>> tans_data(FINAL_TN,
-                                          std::vector<T>(tans.size(), T(0)));
+    std::vector<std::vector<T>> tans_data(
+        FINAL_TN, std::vector<T>(std::size(tans), T(0)));
     std::vector<std::vector<T>> result_data(
-        FINAL_TN, std::vector<T>(result.size(), T(0)));
+        FINAL_TN, std::vector<T>(std::size(result), T(0)));
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 1000) num_threads(FINAL_TN)
     for (int64 i = W; i <= shape.n; ++i) {
 #if DVA_CONV_DFS_FACTORS
       std::vector<std::pair<int64, int64>> factors;
-      DVAConvDfsTwoFactorsOne(factorization[i - W].size(), shape.m, shape.n,
+      DVAConvDfsTwoFactorsOne(std::size(factorization[i - W]), shape.m, shape.n,
                               factorization[i - W], 1, factors);
       for (const auto [x, y] : factors) {
         const int64 t = i / (x * y);
@@ -2380,10 +2380,10 @@ SL REQUIRES((!IsNModNumberV<T>)) RETURN(void)
 #endif
     }
     for (int i = 0; i < FINAL_TN; ++i) {
-      for (int j = 0; j < tans.size(); ++j) {
+      for (int j = 0; j < std::size(tans); ++j) {
         tans[j] = SubMod(tans[j], tans_data[i][j], mod);
       }
-      for (int j = 0; j < result.size(); ++j) {
+      for (int j = 0; j < std::size(result); ++j) {
         result[j] = AddMod(result[j], result_data[i][j], mod);
       }
     }
@@ -2410,8 +2410,8 @@ SL REQUIRES((!IsNModNumberV<T>)) RETURN(std::vector<T>)
       v[idx] = b[i];
     }
     std::vector<int64> t = PolyMul(u, v, mod);
-    tans.reserve(t.size());
-    for (int i = 0; i < t.size(); ++i) {
+    tans.reserve(std::size(t));
+    for (int i = 0; i < std::size(t); ++i) {
       tans.push_back(t[i]);
     }
   }
@@ -2419,7 +2419,7 @@ SL REQUIRES((!IsNModNumberV<T>)) RETURN(std::vector<T>)
   std::vector<T> result(shape.key_size, T(0));
   DVAConvAdjust(shape, W, a, b, tans, result, mod);
 
-  for (int i = 0; i < tans.size(); ++i) {
+  for (int i = 0; i < std::size(tans); ++i) {
     int64 now = std::exp(1. * i / S);
     if (now <= shape.n) {
       int64 idx = shape.IdxOfValue(now);
@@ -2979,7 +2979,7 @@ SL std::vector<DVA<NModNumber<CCMod64<mod>>>> PrimeSkPMod(const int64 n, int k,
     if (c > 0) {
       vec.push_back(k - c + 1);
       int64 it = c;
-      const int size = static_cast<int>(vec.size());
+      const int size = static_cast<int>(std::size(vec));
       for (int i = 0; i < size; ++i) {
         if (it > 1 && vec[i] > 1) {
           auto t = Gcd(it, vec[i]);
@@ -3777,7 +3777,7 @@ struct DfaCounter {
       prepared_ = 1;
     }
 
-    const int len = dig.size();
+    const int len = std::size(dig);
     PE_ASSERT(len <= max_len_);
 
     CT result = 0;
@@ -3987,7 +3987,7 @@ struct DfaSummer {
 
     PE_ASSERT(target_power <= max_power_);
 
-    const int len = dig.size();
+    const int len = std::size(dig);
     PE_ASSERT(len <= max_len_);
 
     CT result = 0;
@@ -4061,7 +4061,7 @@ struct CarlitzWordsCounter {
   }
 
   int64 Cal(std::vector<int64> vec) {
-    if (vec.size() == 1) {
+    if (std::size(vec) == 1) {
       return vec[0] == 1 ? 1 : 0;
     }
     vec = ToInternal(vec);
@@ -4122,7 +4122,7 @@ namespace internal {
 // https://min-25.hatenablog.com/entry/2018/05/10/212805
 SL std::optional<std::vector<std::vector<int64>>> FindRecurrenceWithDegree(
     Span<const int64> terms, int deg, int64 mod) {
-  const int64 n = static_cast<int64>(terms.size());
+  const int64 n = static_cast<int64>(std::size(terms));
   const int64 B = (n + 2) / (deg + 2);
   const int64 C = B * (deg + 1);
   const int64 R = n - (B - 1);
@@ -4204,14 +4204,14 @@ SL std::optional<std::vector<std::vector<int64>>> FindRecurrenceWithDegree(
 
 SL int64 ApplyRecurrenceNext(const std::vector<std::vector<int64>>& recurrence,
                              Span<const int64> terms, int64 m, int64 mod) {
-  const int order = static_cast<int>(recurrence.size()) - 1;
-  const int deg = static_cast<int>(recurrence[0].size()) - 1;
-  assert(static_cast<int>(terms.size()) >= order);
+  const int order = static_cast<int>(std::size(recurrence)) - 1;
+  const int deg = static_cast<int>(std::size(recurrence[0])) - 1;
+  assert(static_cast<int>(std::size(terms)) >= order);
 
   int64 s = 0;
   for (int i = 1; i <= order; ++i) {
     const int64 k = SubMod(Mod(m, mod), Mod(i, mod), mod);
-    int64 t = terms[terms.size() - i];
+    int64 t = terms[std::size(terms) - i];
     for (int d = 0; d <= deg; ++d) {
       s = AddMod(s, MulMod(t, recurrence[i][d], mod), mod);
       t = MulMod(t, k, mod);
@@ -4231,8 +4231,8 @@ SL int64 ApplyRecurrenceNext(const std::vector<std::vector<int64>>& recurrence,
 SL int VerifyRecurrence(Span<const int64> terms,
                         const std::vector<std::vector<int64>>& recurrence,
                         int64 mod) {
-  const int64 n = static_cast<int64>(terms.size());
-  const int order = static_cast<int>(recurrence.size()) - 1;
+  const int64 n = static_cast<int64>(std::size(terms));
+  const int order = static_cast<int>(std::size(recurrence)) - 1;
   for (int64 i = order; i < n; ++i) {
     int64 value = ApplyRecurrenceNext(recurrence,
                                       terms.subspan(i - order, order), i, mod);
@@ -4245,7 +4245,7 @@ SL int VerifyRecurrence(Span<const int64> terms,
 
 SL std::optional<std::vector<std::vector<int64>>> FindRecurrence(
     Span<const int64> terms, int64 mod, int64 min_deg = 0, int64 max_deg = -1) {
-  const int64 n = static_cast<int64>(terms.size());
+  const int64 n = static_cast<int64>(std::size(terms));
   for (int64 deg = min_deg; max_deg == -1 || deg <= max_deg; ++deg) {
     const int64 B = (n + 2) / (deg + 2);
     const int64 C = B * (deg + 1);
@@ -4274,7 +4274,7 @@ SL std::optional<std::vector<std::vector<int64>>> FindRecurrence(
 SL std::optional<int64> RecurrenceValueAtN(Span<const int64> terms, int64 n,
                                            int64 mod, int min_deg = 0,
                                            int max_deg = -1) {
-  if (n < static_cast<int64>(terms.size())) {
+  if (n < static_cast<int64>(std::size(terms))) {
     return terms[n];
   }
 
@@ -4283,7 +4283,7 @@ SL std::optional<int64> RecurrenceValueAtN(Span<const int64> terms, int64 n,
     return std::nullopt;
   }
 
-  const int64 m = static_cast<int64>(terms.size());
+  const int64 m = static_cast<int64>(std::size(terms));
   const int order = static_cast<int>(recurrence->size()) - 1;
   std::vector<int64> data(order);
   for (int i = 0; i < order; ++i) {
@@ -4306,7 +4306,7 @@ SL std::optional<std::vector<int64>> RecurrenceValues(Span<const int64> terms,
     return std::nullopt;
   }
 
-  const int64 m = static_cast<int64>(terms.size());
+  const int64 m = static_cast<int64>(std::size(terms));
   std::vector<int64> data(m);
   for (int i = 0; i < m; ++i) {
     data[i] = terms[i];

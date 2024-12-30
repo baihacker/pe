@@ -70,18 +70,18 @@ SL std::vector<int64> GenStirling1Column(int64 n, int64 m, int64 mod) {
   for (int64 t = n; t > 0; t >>= 1) {
     if (t & 1) {
       b = PolyMul(b, a, mod);
-      if (static_cast<int64>(b.size()) > m + 1) b.resize(m + 1);
+      if (static_cast<int64>(std::size(b)) > m + 1) b.resize(m + 1);
     }
     if (t > 1) {
       a = PolyMul(a, a, mod);
-      if (static_cast<int64>(a.size()) > m + 1) a.resize(m + 1);
+      if (static_cast<int64>(std::size(a)) > m + 1) a.resize(m + 1);
     }
   }
   int64 t = 1;
   for (int64 i = 1; i <= n; ++i) t = MulMod(t, i, mod);
   t = ModInv(t, mod);
   int64 now = 1;
-  const int64 limit = std::min<int64>(static_cast<int64>(b.size()), m + 1);
+  const int64 limit = std::min<int64>(static_cast<int64>(std::size(b)), m + 1);
   for (int64 i = 0; i < limit; ++i) {
     b[i] = MulMod(b[i], now, mod);
     b[i] = MulMod(b[i], t, mod);
@@ -121,8 +121,8 @@ SL std::vector<int64> GenStirling2(int64 n, int64 mod) {
 SL std::vector<int64> GfFirst(const std::vector<int64>& A,
                               const std::vector<int64>& B, const int64 n,
                               const int64 mod) {
-  const int sa = static_cast<int>(A.size());
-  const int sb = static_cast<int>(B.size());
+  const int sa = static_cast<int>(std::size(A));
+  const int sb = static_cast<int>(std::size(B));
   PE_ASSERT(sa > 0);
   PE_ASSERT(sb > 0);
 
@@ -162,8 +162,8 @@ SL std::vector<int64> GfFirst(const NModPoly& A, const NModPoly& B,
 // O(MatrixMultiplicationComplexity(size(A)) * log n) for big n
 SL int64 GfAt(const std::vector<int64>& A, const std::vector<int64>& B,
               const int64 n, const int64 mod) {
-  const int sa = static_cast<int>(A.size());
-  const int sb = static_cast<int>(B.size());
+  const int sa = static_cast<int>(std::size(A));
+  const int sb = static_cast<int>(std::size(B));
   PE_ASSERT(sa > 0);
   PE_ASSERT(sb > 0);
 
@@ -263,14 +263,14 @@ namespace internal {
 // the sequence. i.e. result[0] == 0
 SL std::vector<int64> FindLinearRecurrence(Span<const int64> terms,
                                            const int64 mod) {
-  const int m = static_cast<int>(terms.size());
+  const int m = static_cast<int>(std::size(terms));
   const int n = m >> 1;
   PE_ASSERT(n * 2 == m);
 
   std::vector<int64> r0(m + 1, 0);
   r0[m] = 1;
 
-  std::vector<int64> r1(terms.size());
+  std::vector<int64> r1(std::size(terms));
   for (int i = 0; i < m; ++i) {
     r1[i] = terms[m - 1 - i];
   }
@@ -278,7 +278,7 @@ SL std::vector<int64> FindLinearRecurrence(Span<const int64> terms,
   std::vector<int64> v0{0};
   std::vector<int64> v1{1};
 
-  while (n + 1 <= r1.size()) {
+  while (n + 1 <= std::size(r1)) {
     auto [q, r] = PolyDivAndMod(r0, r1, mod);
     std::vector<int64> v = PolySub(v0, PolyMul(q, v1, mod), mod);
     v0 = std::move(v1);
@@ -296,10 +296,10 @@ SL std::vector<int64> FindLinearRecurrence(Span<const int64> terms,
 
 SL int64 ApplyLinearRecurrenceNext(const std::vector<int64>& min_poly,
                                    Span<const int64> terms, int64 mod) {
-  PE_ASSERT(terms.size() + 1 >= min_poly.size());
+  PE_ASSERT(std::size(terms) + 1 >= std::size(min_poly));
 
-  const int m = static_cast<int>(min_poly.size());
-  const int idx = static_cast<int>(terms.size());
+  const int m = static_cast<int>(std::size(min_poly));
+  const int idx = static_cast<int>(std::size(terms));
 
   int64 ret = 0;
   for (int j = 0; j < m - 1; ++j) {
@@ -311,7 +311,7 @@ SL int64 ApplyLinearRecurrenceNext(const std::vector<int64>& min_poly,
 SL int64 ApplyLinearRecurrenceValueAtN(const std::vector<int64>& min_poly,
                                        Span<const int64> terms, int64 n,
                                        int64 mod) {
-  if (n < static_cast<int64>(terms.size())) {
+  if (n < static_cast<int64>(std::size(terms))) {
     return terms[static_cast<int>(n)];
   }
 
@@ -327,7 +327,7 @@ SL int64 ApplyLinearRecurrenceValueAtN(const std::vector<int64>& min_poly,
       }
     }
   }
-  const int64 m = static_cast<int64>(r.size()) - 1;
+  const int64 m = static_cast<int64>(std::size(r)) - 1;
   int64 ans = 0;
   for (int64 i = 0; i <= m; ++i) {
     ans = AddMod(ans, MulMod(terms[i], r[i], mod), mod);
@@ -339,7 +339,7 @@ SL int64 ApplyLinearRecurrenceValueAtN(const std::vector<int64>& min_poly,
 SL int64 ApplyLinearRecurrenceSumAtN(const std::vector<int64>& min_poly,
                                      Span<const int64> terms, int64 n,
                                      int64 mod) {
-  if (n < static_cast<int>(terms.size())) {
+  if (n < static_cast<int>(std::size(terms))) {
     int64 ret = 0;
     for (int i = 0; i <= n; ++i) {
       ret = AddMod(ret, terms[i], mod);
@@ -347,9 +347,9 @@ SL int64 ApplyLinearRecurrenceSumAtN(const std::vector<int64>& min_poly,
     return ret;
   }
 
-  PE_ASSERT(terms.size() + 1 >= min_poly.size());
+  PE_ASSERT(std::size(terms) + 1 >= std::size(min_poly));
 
-  const int m = static_cast<int>(min_poly.size());
+  const int m = static_cast<int>(std::size(min_poly));
   std::vector<int64> sum(m, 0);
   std::vector<int64> values;
   values.reserve(m);
@@ -360,7 +360,7 @@ SL int64 ApplyLinearRecurrenceSumAtN(const std::vector<int64>& min_poly,
     } else {
       t = ApplyLinearRecurrenceNext(min_poly, values, mod);
     }
-    if (i < terms.size()) {
+    if (i < std::size(terms)) {
       PE_ASSERT(t == terms[i]);
     }
     values.push_back(t);
@@ -375,8 +375,9 @@ SL int64 ApplyLinearRecurrenceSumAtN(const std::vector<int64>& min_poly,
 
 SL int VerifyLinearRecurrence(Span<const int64> terms,
                               const std::vector<int64>& min_poly, int64 mod) {
-  int order = static_cast<int>(min_poly.size()) - 1;
-  for (int i = static_cast<int>(min_poly.size()) - 1; i < terms.size(); ++i) {
+  int order = static_cast<int>(std::size(min_poly)) - 1;
+  for (int i = static_cast<int>(std::size(min_poly)) - 1; i < std::size(terms);
+       ++i) {
     int64 value = ApplyLinearRecurrenceNext(
         min_poly, terms.subspan(i - order, order), mod);
     if (value != Mod(terms[i], mod)) {
@@ -388,7 +389,7 @@ SL int VerifyLinearRecurrence(Span<const int64> terms,
 
 SL std::optional<std::vector<int64>> FindLinearRecurrence(
     Span<const int64> terms, int64 mod, int min_use = 2) {
-  const int len = static_cast<int>(terms.size());
+  const int len = static_cast<int>(std::size(terms));
   for (int n = (std::max(min_use, 2) + 1) / 2 * 2; n < len; n += 2) {
     std::vector<int64> min_poly =
         internal::FindLinearRecurrence(terms.subspan(0, n), mod);
@@ -402,7 +403,7 @@ SL std::optional<std::vector<int64>> FindLinearRecurrence(
 SL std::optional<int64> LinearRecurrenceValueAtN(Span<const int64> terms,
                                                  int64 n, int64 mod,
                                                  int min_use = 2) {
-  if (n < static_cast<int64>(terms.size())) {
+  if (n < static_cast<int64>(std::size(terms))) {
     return terms[static_cast<int>(n)];
   }
 
@@ -420,7 +421,7 @@ SL std::optional<std::vector<int64>> LinearRecurrenceValues(
     return std::nullopt;
   }
 
-  const int64 m = static_cast<int64>(terms.size());
+  const int64 m = static_cast<int64>(std::size(terms));
   std::vector<int64> data(m);
   for (int i = 0; i < m; ++i) {
     data[i] = terms[i];

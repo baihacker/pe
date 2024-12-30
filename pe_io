@@ -89,12 +89,12 @@ namespace pe {
 SL bool CopyStringToClipboard(const std::string& s) {
   OpenClipboard(nullptr);
   EmptyClipboard();
-  HGLOBAL hg = GlobalAlloc(GMEM_MOVEABLE, s.size() + 1);
+  HGLOBAL hg = GlobalAlloc(GMEM_MOVEABLE, std::size(s) + 1);
   if (!hg) {
     CloseClipboard();
     return false;
   }
-  memcpy(GlobalLock(hg), s.c_str(), s.size());
+  memcpy(GlobalLock(hg), s.c_str(), std::size(s));
   GlobalUnlock(hg);
   SetClipboardData(CF_TEXT, hg);
   CloseClipboard();
@@ -142,15 +142,15 @@ struct AnswerPrompter {
 };
 
 template <typename T>
-SL REQUIRES((is_general_integer_v<T>)) RETURN(AnswerPrompter&) operator<<(
-    AnswerPrompter& ap, T v) {
+SL REQUIRES((is_general_integer_v<T>))
+    RETURN(AnswerPrompter&) operator<<(AnswerPrompter& ap, T v) {
   PromptAnswer(ToString(v));
   return ap;
 }
 
 template <typename T>
-SL REQUIRES((!is_general_integer_v<T>)) RETURN(AnswerPrompter&) operator<<(
-    AnswerPrompter& ap, T v) {
+SL REQUIRES((!is_general_integer_v<T>))
+    RETURN(AnswerPrompter&) operator<<(AnswerPrompter& ap, T v) {
   std::stringstream ss;
   ss << v;
   PromptAnswer(v);

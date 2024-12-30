@@ -30,9 +30,9 @@ PE_REGISTER_TEST(&BiTestSmall, "BiTestSmall", SMALL);
 #if ENABLE_GMP
 SL std::string MpzClassToString(mpz_class t) {
   auto z = t.__get_mp();
-  size_t sz = mpz_sizeinbase(z, 10) + 1;
+  size_t size = mpz_sizeinbase(z, 10) + 1;
 
-  char* buff = new char[sz + 1];
+  char* buff = new char[size + 1];
   if (buff != nullptr) {
     gmp_sprintf(buff, "%Zd", z);
   }

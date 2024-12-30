@@ -118,14 +118,14 @@ struct SymPoly {
   }
 
   std::optional<CT> AsNumber() const {
-    if (std::size(terms_) == 0) {
+    if (std::empty(terms_)) {
       return 0;
     }
     if (std::size(terms_) > 1) {
       return std::nullopt;
     }
     auto& it = *terms_.begin();
-    if (std::size(it.first) != 0) {
+    if (!std::empty(it.first)) {
       return std::nullopt;
     }
     return it.second;
@@ -135,7 +135,7 @@ struct SymPoly {
     std::string_view var;
     int64 max_deg = 0;
     for (const auto& [term_key, _] : terms_) {
-      if (std::size(term_key) == 0) continue;
+      if (std::empty(term_key)) continue;
       if (std::size(term_key) > 1) return std::nullopt;
       std::string_view t = term_key[0].first;
       if (std::data(var) == nullptr) {
@@ -147,7 +147,7 @@ struct SymPoly {
     }
     std::vector<CT> ret(max_deg + 1, 0);
     for (const auto& [term_key, coe] : terms_) {
-      if (std::size(term_key) == 0) {
+      if (std::empty(term_key)) {
         ret[0] += coe;
       } else {
         ret[term_key[0].second] += coe;
@@ -185,8 +185,8 @@ struct SymPoly {
   }
 
   static TermKey MergeTermKey(const TermKey& a, const TermKey& b) {
-    if (std::size(a) == 0) return b;
-    if (std::size(b) == 0) return a;
+    if (std::empty(a)) return b;
+    if (std::empty(b)) return a;
     std::map<std::string, CT> terms;
     for (const auto& iter : a) terms[iter.first] += iter.second;
     for (const auto& iter : b) terms[iter.first] += iter.second;
@@ -427,7 +427,7 @@ SL std::ostream& ToString(const SymPoly<CT>& sp, std::ostream& o, int cstyle,
       out = 1;
       hasNum = 1;
     }
-    if (std::size(iter.first) > 0) {
+    if (!std::empty(iter.first)) {
       if (out) o << (show_mul && hasNum ? " * " : " ");
       ToString(iter.first, o, cstyle, show_mul);
       out = 1;

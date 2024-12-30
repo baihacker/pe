@@ -112,7 +112,7 @@ SL void SquareRootModTest() {
       for (auto x : ans) {
         assert(x * x % p == n);
       }
-      cnt += sz(ans) > 0;
+      cnt += !std::empty(ans);
     }
     if (p > 2) {
       assert(cnt * 2 == p + 1);

@@ -57,8 +57,8 @@ SL std::vector<std::pair<std::string, std::string>> ParseSingleTermList(
       while (i < size && std::isspace(s[i])) ++i;
     }
     std::string variable = ParseIdentifier(s, i);
-    if (variable.empty()) variable = ParseDigList(s, i);
-    if (variable.empty()) return result;
+    if (std::empty(variable)) variable = ParseDigList(s, i);
+    if (std::empty(variable)) return result;
     while (i < size && std::isspace(s[i])) ++i;
     if (i < size && (s[i] == '^' && !std::isdigit(variable[0]))) {
       ++i;
@@ -79,7 +79,7 @@ SL CT EvaluateDigs(const std::vector<int>& sgns, const std::string& digs,
   }
   CT v = 0;
   for (const auto& iter : digs) v = v * 10 + iter - '0';
-  if (digs.empty()) v = defaultVal;
+  if (std::empty(digs)) v = defaultVal;
   return s == 1 ? v : -v;
 }
 
@@ -107,7 +107,7 @@ SL std::pair<TermKey, CT> ParseTerm(const std::string& s, int& i) {
   auto t = EvaluateSingleTermList<CT>(singleTerms);
   auto sgn = EvaluateDigs<CT>(sgns, "", 1);
   return {t.first,
-          singleTerms.empty() ? CT(0) : (sgn == 1 ? t.second : -t.second)};
+          std::empty(singleTerms) ? CT(0) : (sgn == 1 ? t.second : -t.second)};
 }
 
 template <typename CT>

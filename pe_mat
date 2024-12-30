@@ -196,12 +196,12 @@ struct PeMatrixStorage {
   PeMatrixStorage(const PeMatrixStorage<T, C1>& storage)
       : PeMatrixStorage(storage.row(), storage.column()) {
     PE_ASSERT(storage.column() == C);
-    std::copy(storage.data(), storage.data() + r_ * C, data_);
+    std::copy(std::data(storage), std::data(storage) + r_ * C, data_);
   }
 
   template <int C1>
   PeMatrixStorage(PeMatrixStorage<T, C1>&& storage)
-      : data_(storage.data()), own_(storage.own()), r_(storage.row()) {
+      : data_(std::data(storage)), own_(storage.own()), r_(storage.row()) {
     PE_ASSERT(storage.column() == C);
     storage.set_own(0);
   }
@@ -301,7 +301,7 @@ struct PeMatrixStorage<T, -1> {
 
   template <int C>
   PeMatrixStorage(PeMatrixStorage<T, C>&& storage)
-      : data_(storage.data()),
+      : data_(std::data(storage)),
         own_(storage.own()),
         r_(storage.row()),
         c_(storage.column()) {
@@ -311,7 +311,7 @@ struct PeMatrixStorage<T, -1> {
   template <int C>
   PeMatrixStorage(const PeMatrixStorage<T, C>& storage)
       : PeMatrixStorage(storage.row(), storage.column()) {
-    std::copy(storage.data(), storage.data() + r_ * c_, data_);
+    std::copy(std::data(storage), std::data(storage) + r_ * c_, data_);
   }
 
   template <int C>
@@ -368,7 +368,7 @@ template <typename T, int C = -1>
 struct PeMatrix {
   PeMatrix(const int r, const int c, MatrixNoInit)
       : storage_(r, c), row_(r), col_(c) {
-    data_ = storage_.data();
+    data_ = std::data(storage_);
     if (C != -1) {
       PE_ASSERT(C == c);
     }
@@ -376,7 +376,7 @@ struct PeMatrix {
 
   PeMatrix(const int r, const int c, T v = T())
       : storage_(r, c, v), row_(r), col_(c) {
-    data_ = storage_.data();
+    data_ = std::data(storage_);
     if (C != -1) {
       PE_ASSERT(C == c);
     }
@@ -384,7 +384,7 @@ struct PeMatrix {
 
   PeMatrix(T* data, const int r, const int c)
       : storage_(data, r, c), row_(r), col_(c) {
-    data_ = storage_.data();
+    data_ = std::data(storage_);
     if (C != -1) {
       PE_ASSERT(C == c);
     }
@@ -393,7 +393,7 @@ struct PeMatrix {
   template <int D>
   PeMatrix(T (*a)[D], const int r, const int c)
       : storage_(&a[0][0], r, D), row_(r), col_(c) {
-    data_ = storage_.data();
+    data_ = std::data(storage_);
     if (C != -1) {
       PE_ASSERT(C == c);
     }
@@ -401,12 +401,12 @@ struct PeMatrix {
 
   PeMatrix(const PeMatrix& mat)
       : storage_(mat.storage_), row_(mat.row()), col_(mat.col()) {
-    data_ = storage_.data();
+    data_ = std::data(storage_);
   }
 
   PeMatrix(PeMatrix&& mat) noexcept
       : storage_(std::move(mat.storage_)), row_(mat.row()), col_(mat.col()) {
-    data_ = storage_.data();
+    data_ = std::data(storage_);
   }
 
   PeMatrix& operator=(PeMatrix& mat) {
@@ -428,13 +428,13 @@ struct PeMatrix {
   template <int C1>
   PeMatrix(const PeMatrix<T, C1>& mat)
       : storage_(mat.storage()), row_(mat.row()), col_(mat.col()) {
-    data_ = storage_.data();
+    data_ = std::data(storage_);
   }
 
   template <int C1>
   PeMatrix(PeMatrix<T, C1>&& mat)
       : storage_(std::move(mat.storage())), row_(mat.row()), col_(mat.col()) {
-    data_ = storage_.data();
+    data_ = std::data(storage_);
   }
 
   template <int C1>

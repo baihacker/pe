@@ -15,14 +15,14 @@ SymPoly<int64> target = SymPoly<int64>("a^2-b^2-c^2-b c")
 int his[10];
 void dfs(int now, const SymPoly<int64>& p) {
   if (now == 10) {
-    if (p.terms().empty() && his[7] == 1 && his[8] == 0 && his[9] == -1) {
+    if (std::empty(p.terms()) && his[7] == 1 && his[8] == 0 && his[9] == -1) {
       auto aa =
           t1.Replace("c1", his[1]).Replace("c2", his[2]).Replace("c3", his[3]);
       auto bb =
           t2.Replace("c4", his[4]).Replace("c5", his[5]).Replace("c6", his[6]);
       auto cc =
           t3.Replace("c7", his[7]).Replace("c8", his[8]).Replace("c9", his[9]);
-      if (aa.terms().empty() || bb.terms().empty() || cc.terms().empty())
+      if (std::empty(aa.terms()) || std::empty(bb.terms()) || std::empty(cc.terms()))
         return;
       std::cout << "a = " << aa << std::endl;
       std::cout << "b = " << bb << std::endl;

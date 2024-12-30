@@ -70,7 +70,7 @@ SL std::optional<std::string> ParseDpeToken(std::string_view cmd, int &i) {
 }
 
 SL std::optional<int64> ParseNumberToken(std::optional<std::string> s) {
-  if (!s.has_value() || s.value().empty()) {
+  if (!s.has_value() || std::empty(s.value())) {
     return std::nullopt;
   }
   if (std::isdigit(s.value()[0]) || s.value()[0] == '+' ||
@@ -177,7 +177,7 @@ SL std::optional<std::vector<std::vector<int64>>> ParseDpeArgs(
 
 SL std::optional<DpeCommand> ParseDpeCommand(std::string_view cmd, int &i) {
   std::optional<std::string> name = ParseDpeToken(cmd, i);
-  if (!name.has_value() || name.value().empty() ||
+  if (!name.has_value() || std::empty(name.value()) ||
       !std::isalpha(name.value()[0])) {
     return std::nullopt;
   }
@@ -208,7 +208,7 @@ class DpeServer {
 
     void *context = zmq_ctx_new();
     void *responder = zmq_socket(context, ZMQ_REP);
-    int rc = zmq_bind(responder, server_address.data());
+    int rc = zmq_bind(responder, std::data(server_address));
     assert(rc == 0);
 
     constexpr int buffer_length = 1 << 20;
@@ -217,7 +217,7 @@ class DpeServer {
       int received = zmq_recv(responder, buffer, buffer_length, 0);
       buffer[received] = 0;
       std::string response = HandleRequest(std::string_view(buffer, received));
-      zmq_send(responder, response.data(), response.size(), 0);
+      zmq_send(responder, std::data(response), response.size(), 0);
     }
     LogProgress();
     delete[] buffer;
@@ -255,8 +255,8 @@ class DpeServer {
   }
 
   void SaveCache() {
-    if (cache_path.empty()) return;
-    FILE *fp = fopen(cache_path.data(), "w");
+    if (std::empty(cache_path)) return;
+    FILE *fp = fopen(std::data(cache_path), "w");
     if (!fp) return;
 
     for (const auto [key, value] : cache) {
@@ -268,8 +268,8 @@ class DpeServer {
   }
 
   void LoadCache() {
-    if (cache_path.empty()) return;
-    FILE *fp = fopen(cache_path.data(), "r");
+    if (std::empty(cache_path)) return;
+    FILE *fp = fopen(std::data(cache_path), "r");
     if (!fp) return;
 
     int64 k, v;
@@ -314,7 +314,7 @@ class DpeServer {
   std::string HandleGetTasks(int64 max_task_count) {
     std::vector<int64> tasks;
     for (int64 i = 0; i < max_task_count; ++i) {
-      if (unsolved.empty()) {
+      if (std::empty(unsolved)) {
         break;
       }
       tasks.push_back(unsolved.front());
@@ -355,7 +355,8 @@ class DpeServer {
 
     std::string eta;
     while (history_progress.size() > 100) history_progress.pop();
-    if (history_progress.empty() || history_progress.front().second == solved) {
+    if (std::empty(history_progress) ||
+        history_progress.front().second == solved) {
       eta = "n/a";
     } else {
       auto his = history_progress.front();
@@ -403,14 +404,14 @@ class DpeClient {
   std::vector<int64> GetTasks(int64 task_count) {
     void *context = zmq_ctx_new();
     void *requester = zmq_socket(context, ZMQ_REQ);
-    zmq_connect(requester, target.data());
+    zmq_connect(requester, std::data(target));
 
     DpeCommand raw_command;
     raw_command.name = "GetTasks";
     raw_command.args.push_back({task_count});
     std::string cmd = raw_command.ToString();
 
-    zmq_send(requester, cmd.data(), cmd.size(), 0);
+    zmq_send(requester, std::data(cmd), cmd.size(), 0);
     int cnt = zmq_recv(requester, buffer, buffer_length, 0);
     zmq_close(requester);
     zmq_ctx_destroy(context);
@@ -432,7 +433,7 @@ class DpeClient {
   int64 SetResults(const std::vector<std::pair<int64, int64>> &answers) {
     void *context = zmq_ctx_new();
     void *requester = zmq_socket(context, ZMQ_REQ);
-    zmq_connect(requester, target.data());
+    zmq_connect(requester, std::data(target));
 
     DpeCommand raw_command;
     raw_command.name = "SetResults";
@@ -442,7 +443,7 @@ class DpeClient {
     }
 
     std::string cmd = raw_command.ToString();
-    zmq_send(requester, cmd.data(), cmd.size(), 0);
+    zmq_send(requester, std::data(cmd), cmd.size(), 0);
     zmq_recv(requester, buffer, buffer_length, 0);
     zmq_close(requester);
     zmq_ctx_destroy(context);
@@ -461,7 +462,7 @@ class DpeClient {
       std::vector<int64> tasks = GetTasks(task_count);
       std::cerr << std::endl;
       std::cerr << "Received " << tasks.size() << " tasks" << std::endl;
-      if (tasks.empty()) {
+      if (std::empty(tasks)) {
         break;
       }
 

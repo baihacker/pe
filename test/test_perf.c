@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
 
   for (int i = 1; i < argc;) {
     std::string c = argv[i];
-    const int size = static_cast<int>(c.size());
+    const int size = static_cast<int>(std::size(c));
     int j = 0;
     while (j < size && c[j] == '-') ++j;
     c = c.substr(j);
@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
       .Init();
 
   auto& tester = GetTester();
-  const int size = (int)tester.tests.size();
+  const int size = (int)std::size(tester.tests);
 
   TableFormatter tf;
   auto& header = tf.AppendLine();

@@ -66,7 +66,7 @@ SL void MinimalPolynomialTest() {
   assert(v[0] == P - 1);
   assert(v[1] == P - 1);
   assert(v[2] == 1);
-  const int n = (int)v.size();
+  const int n = (int)std::size(v);
   int64 ans = 0;
   for (int i = 0; i < n; ++i) ans += v[i] * s[i];
   assert(ans == P);

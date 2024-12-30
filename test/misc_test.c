@@ -130,11 +130,11 @@ SL void SolveInequatilityGE2Test() {
       int64 v = x2 % 100 == 0 ? IntDivFloor(x2, 100) : IntDivFloor(x2, 100) + 1;
       auto ans = SolveInequatilityGE2<int64>(A, B, C);
       if (u == v || u + 1 == v) {
-        assert(ans.size() == 1);
+        assert(std::size(ans) == 1);
         assert(ans[0].x1 == -IntegerRange64::inf);
         assert(ans[0].x2 == IntegerRange64::inf);
       } else {
-        assert(ans.size() == 2);
+        assert(std::size(ans) == 2);
         assert(ans[0].x1 == -IntegerRange64::inf);
         assert(ans[0].x2 == u);
         assert(ans[1].x1 == v);
@@ -157,11 +157,11 @@ SL void SolveInequatilityG2Test() {
       int64 v = IntDivFloor(x2, 100) + 1;
       auto ans = SolveInequatilityG2<int64>(A, B, C);
       if (u == v || u + 1 == v) {
-        assert(ans.size() == 1);
+        assert(std::size(ans) == 1);
         assert(ans[0].x1 == -IntegerRange64::inf);
         assert(ans[0].x2 == IntegerRange64::inf);
       } else {
-        assert(ans.size() == 2);
+        assert(std::size(ans) == 2);
         assert(ans[0].x1 == -IntegerRange64::inf);
         assert(ans[0].x2 == u);
         assert(ans[1].x1 == v);
@@ -184,9 +184,9 @@ SL void SolveInequatilityLE2Test() {
       int64 v = IntDivFloor(x2, 100);
       auto ans = SolveInequatilityLE2<int64>(A, B, C);
       if (u > v) {
-        assert(ans.size() == 0);
+        assert(std::size(ans) == 0);
       } else {
-        assert(ans.size() == 1);
+        assert(std::size(ans) == 1);
         assert(ans[0].x1 == u);
         assert(ans[0].x2 == v);
       }
@@ -207,9 +207,9 @@ SL void SolveInequatilityL2Test() {
       int64 v = x2 % 100 == 0 ? IntDivFloor(x2, 100) - 1 : IntDivFloor(x2, 100);
       auto ans = SolveInequatilityL2<int64>(A, B, C);
       if (u > v) {
-        assert(ans.size() == 0);
+        assert(std::size(ans) == 0);
       } else {
-        assert(ans.size() == 1);
+        assert(std::size(ans) == 1);
         assert(ans[0].x1 == u);
         assert(ans[0].x2 == v);
       }

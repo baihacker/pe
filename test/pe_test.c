@@ -39,11 +39,11 @@ PeTest& GetTester() {
   return tester;
 }
 
-TestSize enabled_test_size[] {
+TestSize enabled_test_size[]{
 #if defined(TEST_ALL)
-  SMALL, MEDIUM, BIG, SUPER, SPECIFIED,
+    SMALL, MEDIUM, BIG, SUPER, SPECIFIED,
 #else
-  SPECIFIED,
+    SPECIFIED,
 #endif
 };
 
@@ -220,7 +220,7 @@ void DisplayCompilerInfo() {
   int max_size[2] = {0};
   for (auto& iter : result) {
     for (int i = 0; i < 2; ++i) {
-      int t = static_cast<int>(iter[i].size());
+      int t = static_cast<int>(std::size(iter[i]));
       if (t > max_size[i]) max_size[i] = t;
     }
   }
@@ -245,7 +245,7 @@ int main() {
   dbg(maxp2);
 
   auto& tester = GetTester();
-  const int size = (int)tester.tests.size();
+  const int size = (int)std::size(tester.tests);
 
   bool isFirstTest = true;
 

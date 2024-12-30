@@ -9,7 +9,7 @@ SL void BinarySearchTest() {
   for (int i = 0; i < 4; ++i) vec.push_back(vec[i]);
   sort(vec.begin(), vec.end());
 
-  const int start = 0, end = static_cast<int>(vec.size()) - 1;
+  const int start = 0, end = static_cast<int>(std::size(vec)) - 1;
 
   for (int target = -50; target <= 50; ++target) {
     std::function<int(int)> check_methods[] = {

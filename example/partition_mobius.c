@@ -24,8 +24,8 @@ int64 dfs(int now, int s) {
 
 int64 solve0() { return dfs(1, S); }
 
-std::map<vi, int64> cache;
-int64 compute(vi coe) {
+std::map<std::vector<int>, int64> cache;
+int64 compute(std::vector<int> coe) {
   // sum(coe[i] * x_i) = S
   auto where = cache.find(coe);
   if (where != cache.end()) {
@@ -41,12 +41,12 @@ int64 compute(vi coe) {
 
 int64 solve1() {
   PartitionMobius pm(mod);
-  vi pattern{1, 2, 3, 4, 5};
+  std::vector<int> pattern{1, 2, 3, 4, 5};
   MT ret = 0;
   for (auto p : Partition::GenPartitions(5)) {
     std::map<int, int> mem;
     for (int i = 0; i < 5; ++i) mem[p.colors[i]] += pattern[i];
-    vi key;
+    std::vector<int> key;
     for (auto& i : mem) key.push_back(i.second);
     std::sort(std::begin(key), std::end(key));
     ret += compute(key) * pm.Cal(p) % mod;

@@ -2,7 +2,7 @@
 using namespace pe;
 template <typename GBI>
 void demo() {
-  vi data{1, 2, 2, 2, 2, 2, 2, 2, 2, 2};
+  std::vector<int> data{1, 2, 2, 2, 2, 2, 2, 2, 2, 2};
   for (int i = 0; i < 10; ++i) {
     std::cout << FromCf<GBI>(data, i) << std::endl;
   }

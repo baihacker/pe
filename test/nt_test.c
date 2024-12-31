@@ -57,12 +57,12 @@ SL void GetFactorsTest() {
   assert(result == std::vector<int64>({1, 2, 4}));
 
   result = GetFactors(12);
-  std::sort(all(result));
+  std::sort(std::begin(result), std::end(result));
   assert(result == std::vector<int64>({1, 2, 3, 4, 6, 12}));
 
   for (int64 limit = -1; limit <= 20; ++limit) {
     auto result = GetFactors(12, limit);
-    std::sort(all(result));
+    std::sort(std::begin(result), std::end(result));
     std::vector<int64> expected;
     for (auto iter : {1, 2, 3, 4, 6, 12}) {
       if (limit < 0 || iter <= limit) {

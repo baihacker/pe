@@ -375,8 +375,8 @@ void range_general_example() {
   // std::pair<const int, int> {return {0, a.second + b.second};}, 2) <<
   // std::endl;
   std::vector<Pt> y;
-  y.pb({1, 2});
-  y.pb({3, 4});
+  y.push_back({1, 2});
+  y.push_back({3, 4});
   std::cout << Range(y).PReduce(ru::Reducer<Pt>({0, 0}, [=](Pt& r, Pt v) {
     r.a += v.a;
     r.b += v.b;

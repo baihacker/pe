@@ -47,7 +47,7 @@ int64 solve1() {
     std::map<int, int> mem;
     for (int i = 0; i < 5; ++i) mem[p.colors[i]] += pattern[i];
     vi key;
-    for (auto& i : mem) key.pb(i.second);
+    for (auto& i : mem) key.push_back(i.second);
     std::sort(all(key));
     ret += compute(key) * pm.Cal(p) % mod;
   }

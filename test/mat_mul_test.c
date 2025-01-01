@@ -12,7 +12,8 @@ void TestEigen(const std::vector<int>& data, const std::vector<int>& V) {
   EigenMatrix<E> m = EigenMatrix<E>::Zero(K, K);
 
   for (int i = 0; i < K; ++i) v[i] = V[i];
-  rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j * K + i];
+  for (int i = 0; i < K; ++i)
+    for (int j = 0; j < K; ++j) m(i, j) = data[j * K + i];
 
   TimeRecorder tr;
   v = MatrixPower(m, 4, v);
@@ -32,7 +33,8 @@ void TestEigen(const std::vector<int>& data, const std::vector<int>& V, E mod) {
   EigenMatrix<E> m = EigenMatrix<E>::Zero(K, K);
 
   for (int i = 0; i < K; ++i) v[i] = V[i] % mod;
-  rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j * K + i] % mod;
+  for (int i = 0; i < K; ++i)
+    for (int j = 0; j < K; ++j) m(i, j) = data[j * K + i] % mod;
 
   TimeRecorder tr;
   v = MatrixPower(m, 4, v, mod);
@@ -52,7 +54,8 @@ void TestPe(const std::vector<int>& data, const std::vector<int>& V) {
   PeMatrix<E> m(K, K);
 
   for (int i = 0; i < K; ++i) v[i] = V[i];
-  rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j * K + i];
+  for (int i = 0; i < K; ++i)
+    for (int j = 0; j < K; ++j) m(i, j) = data[j * K + i];
 
   TimeRecorder tr;
   v = MatrixPower(m, 4, v);
@@ -72,7 +75,8 @@ void TestPe(const std::vector<int>& data, const std::vector<int>& V, E mod) {
   PeMatrix<E> m(K, K);
 
   for (int i = 0; i < K; ++i) v[i] = V[i] % mod;
-  rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j * K + i] % mod;
+  for (int i = 0; i < K; ++i)
+    for (int j = 0; j < K; ++j) m(i, j) = data[j * K + i] % mod;
 
   TimeRecorder tr;
   v = MatrixPower(m, 4, v, mod);
@@ -224,7 +228,8 @@ SL void MatMulTest() {
     EigenMatrix<E> m = EigenMatrix<E>::Zero(K, K);
 
     for (int i = 0; i < K; ++i) v[i] = V[i];
-    rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j * K + i];
+    for (int i = 0; i < K; ++i)
+      for (int j = 0; j < K; ++j) m(i, j) = data[j * K + i];
 
     TimeRecorder tr;
     v = MatrixPower(m, 4, v, mod);
@@ -243,7 +248,8 @@ SL void MatMulTest() {
     EigenMatrix<E> m = EigenMatrix<E>::Zero(K, K);
 
     for (int i = 0; i < K; ++i) v[i] = V[i];
-    rep(i, 0, K) rep(j, 0, K) m(i, j) = data[j * K + i];
+    for (int i = 0; i < K; ++i)
+      for (int j = 0; j < K; ++j) m(i, j) = data[j * K + i];
 
     TimeRecorder tr;
     v = MatrixPower(m, 4, v, mod);

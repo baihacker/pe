@@ -188,8 +188,8 @@ SL int64 CountPtInCircleQ1(int64 n) {
     cx = stk.top().x;
     cy = stk.top().y;
     stk.pop();
-    int fnd = 0;
-    while (!fnd) {
+    int found = 0;
+    while (!found) {
       while (x + cx <= m && y - cy >= 0 && sq(x + cx) + sq(y - cy) <= n) {
         stk.push({cx, cy});
         cx += vx, cy += vy;
@@ -197,7 +197,7 @@ SL int64 CountPtInCircleQ1(int64 n) {
       }
       vx = cx, vy = cy;
       if (std::empty(stk)) {
-        fnd = 1;
+        found = 1;
         break;
       }
 
@@ -221,7 +221,7 @@ SL int64 CountPtInCircleQ1(int64 n) {
         if (f1) {
           // if (f2) {
           vx = cx, vy = cy;
-          fnd = 1;
+          found = 1;
           break;
         }
         last_v = curr_v;
@@ -301,11 +301,11 @@ SL int128 SumSigma0(int64 n) {
       ++B;
     }
     if (lx < PIVOT || x <= vx) break;
-    int fnd = 0;
+    int found = 0;
     int64 cx = stk.top().x, cy = stk.top().y;
     stk.pop();
 
-    while (!fnd) {
+    while (!found) {
       while (x > cx && y + cy >= n / (x - cx)) {
         stk.push({cx, cy});
         cx += vx;
@@ -313,7 +313,7 @@ SL int128 SumSigma0(int64 n) {
       }
       vx = cx, vy = cy;
       if (std::empty(stk)) {
-        fnd = 1;
+        found = 1;
         break;
       }
       cx = stk.top().x, cy = stk.top().y;
@@ -331,7 +331,7 @@ SL int128 SumSigma0(int64 n) {
         if (x < 2 * cx + vx || curr_v > n ||
             last_v != -0x123456789 && curr_v < last_v) {
           vx = cx, vy = cy;
-          fnd = 1;
+          found = 1;
           break;
         }
         last_v = curr_v;
@@ -389,7 +389,7 @@ struct Partition {
 
   // compressed parts
   // e.g. {2:2, 3:1}
-  std::vector<std::pair<int, int>> partsC;
+  std::vector<std::pair<int, int>> parts_c;
 
   void GenParts() {
     std::map<int, int> mem, mem1;
@@ -398,8 +398,8 @@ struct Partition {
     for (auto& iter : mem) ++mem1[iter.second], parts.push_back(iter.second);
     std::sort(parts.begin(), parts.end());
 
-    partsC.resize(0);
-    for (auto& iter : mem1) partsC.emplace_back(iter.first, iter.second);
+    parts_c.resize(0);
+    for (auto& iter : mem1) parts_c.emplace_back(iter.first, iter.second);
   }
 
   int operator<(const Partition& o) const { return colors < o.colors; }
@@ -440,7 +440,7 @@ struct PartitionMobius {
   }
 
   int64 Cal(const Partition& partition) {
-    int64 ret = std::size(partition.colors) + std::size(partition.parts) & 1
+    int64 ret = IsOdd(std::size(partition.colors) + std::size(partition.parts))
                     ? mod_ - 1
                     : 1;
     for (auto& iter : partition.parts) {
@@ -915,7 +915,8 @@ struct MultiSet {
   void Update(int64 x) {
     if (x == 0) return;
     Node& nd = data_[x];
-    Node &l = data_[nd.ch[0]], &r = data_[nd.ch[1]];
+    Node& l = data_[nd.ch[0]];
+    Node& r = data_[nd.ch[1]];
     nd.size = 1;
     if (nd.ch[0]) nd.size += l.size;
     if (nd.ch[1]) nd.size += r.size;
@@ -1808,7 +1809,7 @@ SL std::vector<IntegerRange<T>> SolveInequatilityGE2(T A, T B, T C) {
   using RangeT = IntegerRange<T>;
   if (A == 0) return SolveInequatilityGE1(B, C);
   if (A < 0) return SolveInequatilityLE2(-A, -B, -C);
-  T delta = B * B - 4 * A * C;
+  const T delta = B * B - 4 * A * C;
   if (delta <= 0) return {{-RangeT::inf, RangeT::inf}};
 
   T t1 = static_cast<T>((-B - std::sqrt(1. * delta)) / (2 * A));
@@ -1829,7 +1830,7 @@ SL std::vector<IntegerRange<T>> SolveInequatilityG2(T A, T B, T C) {
   using RangeT = IntegerRange<T>;
   if (A == 0) return SolveInequatilityG1(B, C);
   if (A < 0) return SolveInequatilityL2(-A, -B, -C);
-  T delta = B * B - 4 * A * C;
+  const T delta = B * B - 4 * A * C;
   if (delta < 0) return {{-RangeT::inf, RangeT::inf}};
 
   T t1 = static_cast<T>((-B - std::sqrt(1. * delta)) / (2 * A));
@@ -1850,7 +1851,7 @@ SL std::vector<IntegerRange<T>> SolveInequatilityLE2(T A, T B, T C) {
   using RangeT = IntegerRange<T>;
   if (A == 0) return SolveInequatilityLE1(B, C);
   if (A < 0) return SolveInequatilityGE2(-A, -B, -C);
-  T delta = B * B - 4 * A * C;
+  const T delta = B * B - 4 * A * C;
   if (delta < 0) return {};
 
   T t1 = static_cast<T>((-B - std::sqrt(1. * delta)) / (2 * A));
@@ -1871,7 +1872,7 @@ SL std::vector<IntegerRange<T>> SolveInequatilityL2(T A, T B, T C) {
   using RangeT = IntegerRange<T>;
   if (A == 0) return SolveInequatilityL1(B, C);
   if (A < 0) return SolveInequatilityG2(-A, -B, -C);
-  T delta = B * B - 4 * A * C;
+  const T delta = B * B - 4 * A * C;
   if (delta <= 0) return {};
 
   T t1 = static_cast<T>((-B - std::sqrt(1. * delta)) / (2 * A));
@@ -1906,7 +1907,6 @@ struct PeriodicSequence {
       return ret;
     }
 
-    int64 p = end - start;
     RT ret = 0;
     for (int i = 0; i < start; ++i) {
       ret += values[i];

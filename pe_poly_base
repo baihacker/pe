@@ -989,27 +989,13 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   if (n == m) {
     // In case n == m, we still allocate tempory result space to meet the
     // requirement of PolyMulDcImpl.
-    std::vector<T> tresult(m * 2);
+    std::vector<T> tresult(2 * n);
     internal::PolyMulDcImpl<UnsignedT>(
         reinterpret_cast<const UnsignedT*>(X),
-        reinterpret_cast<const UnsignedT*>(Y), m,
+        reinterpret_cast<const UnsignedT*>(Y), n,
         reinterpret_cast<UnsignedT*>(&tresult[0]), mod);
     std::copy(tresult.begin(), tresult.begin() + n + m - 1, result);
-  } else if (n < m) {
-    std::vector<T> XX(m);
-    for (int64 i = 0; i < n; ++i) {
-      XX[i] = X[i];
-    }
-    for (int64 i = n; i < m; ++i) {
-      XX[i] = 0;
-    }
-    std::vector<T> tresult(m * 2);
-    internal::PolyMulDcImpl<UnsignedT>(
-        reinterpret_cast<const UnsignedT*>(&XX[0]),
-        reinterpret_cast<const UnsignedT*>(Y), m,
-        reinterpret_cast<UnsignedT*>(&tresult[0]), mod);
-    std::copy(tresult.begin(), tresult.begin() + n + m - 1, result);
-  } else {
+  } else if (n > m) {
     std::vector<T> YY(n);
     for (int64 i = 0; i < m; ++i) {
       YY[i] = Y[i];
@@ -1017,10 +1003,24 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     for (int64 i = m; i < n; ++i) {
       YY[i] = 0;
     }
-    std::vector<T> tresult(n * 2);
+    std::vector<T> tresult(2 * n);
     internal::PolyMulDcImpl<UnsignedT>(
         reinterpret_cast<const UnsignedT*>(X),
         reinterpret_cast<const UnsignedT*>(&YY[0]), n,
+        reinterpret_cast<UnsignedT*>(&tresult[0]), mod);
+    std::copy(tresult.begin(), tresult.begin() + n + m - 1, result);
+  } else {
+    std::vector<T> XX(m);
+    for (int64 i = 0; i < n; ++i) {
+      XX[i] = X[i];
+    }
+    for (int64 i = n; i < m; ++i) {
+      XX[i] = 0;
+    }
+    std::vector<T> tresult(2 * m);
+    internal::PolyMulDcImpl<UnsignedT>(
+        reinterpret_cast<const UnsignedT*>(&XX[0]),
+        reinterpret_cast<const UnsignedT*>(Y), m,
         reinterpret_cast<UnsignedT*>(&tresult[0]), mod);
     std::copy(tresult.begin(), tresult.begin() + n + m - 1, result);
   }
@@ -1036,6 +1036,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   const int64 m = static_cast<int64>(std::size(Y));
   const int64 result_size = n + m - 1;
   if (n == m) {
+    // In case n == m, we still allocate tempory result space to meet the
+    // requirement of PolyMulDcImpl.
     std::vector<T> result(2 * n);
     internal::PolyMulDcImpl<UnsignedT>(
         reinterpret_cast<const UnsignedT*>(&X[0]),
@@ -1044,9 +1046,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
     result.resize(result_size);
     return result;
   } else if (n > m) {
-    std::vector<T> YY;
     std::vector<T> result(2 * n);
-    YY.resize(n);
+    std::vector<T> YY(n);
     for (int64 i = 0; i < m; ++i) YY[i] = Y[i];
     internal::PolyMulDcImpl<UnsignedT>(
         reinterpret_cast<const UnsignedT*>(&X[0]),
@@ -1055,9 +1056,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
     result.resize(result_size);
     return result;
   } else {
-    std::vector<T> XX;
     std::vector<T> result(2 * m);
-    XX.resize(m);
+    std::vector<T> XX(m);
     for (int64 i = 0; i < n; ++i) XX[i] = X[i];
     internal::PolyMulDcImpl<UnsignedT>(
         reinterpret_cast<const UnsignedT*>(&XX[0]),

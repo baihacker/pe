@@ -985,36 +985,45 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyMulDc(const T* X, const int64 n, const T* Y, const int64 m, T* result,
               int64 mod) {
   using UnsignedT = typename pe_make_unsigned<T>::type;
-  // In case n == m, we still allocate tempory result space to meet the
-  // requirement of PolyMulDcImpl.
-  const int64 v = std::max(n, m);
-  std::vector<T> tresult(v * 2);
-  if (n < m) {
-    std::vector<T> XX(2 * v);
+
+  if (n == m) {
+    // In case n == m, we still allocate tempory result space to meet the
+    // requirement of PolyMulDcImpl.
+    std::vector<T> tresult(m * 2);
+    internal::PolyMulDcImpl<UnsignedT>(
+        reinterpret_cast<const UnsignedT*>(X),
+        reinterpret_cast<const UnsignedT*>(Y), m,
+        reinterpret_cast<UnsignedT*>(&tresult[0]), mod);
+    std::copy(tresult.begin(), tresult.begin() + n + m - 1, result);
+  } else if (n < m) {
+    std::vector<T> XX(m);
     for (int64 i = 0; i < n; ++i) {
       XX[i] = X[i];
     }
     for (int64 i = n; i < m; ++i) {
       XX[i] = 0;
     }
+    std::vector<T> tresult(m * 2);
     internal::PolyMulDcImpl<UnsignedT>(
         reinterpret_cast<const UnsignedT*>(&XX[0]),
         reinterpret_cast<const UnsignedT*>(Y), m,
         reinterpret_cast<UnsignedT*>(&tresult[0]), mod);
+    std::copy(tresult.begin(), tresult.begin() + n + m - 1, result);
   } else {
-    std::vector<T> YY(2 * v);
+    std::vector<T> YY(n);
     for (int64 i = 0; i < m; ++i) {
       YY[i] = Y[i];
     }
     for (int64 i = m; i < n; ++i) {
       YY[i] = 0;
     }
+    std::vector<T> tresult(n * 2);
     internal::PolyMulDcImpl<UnsignedT>(
         reinterpret_cast<const UnsignedT*>(X),
         reinterpret_cast<const UnsignedT*>(&YY[0]), n,
         reinterpret_cast<UnsignedT*>(&tresult[0]), mod);
+    std::copy(tresult.begin(), tresult.begin() + n + m - 1, result);
   }
-  std::copy(tresult.begin(), tresult.begin() + n + m - 1, result);
 }
 
 // Multiplies two polynomials using Divide and Conquer algorithm.

@@ -1182,35 +1182,31 @@ SL void PolyMulDcImpl(const T* X, const T* Y, const int64 n, T* result) {
   delete[] w;
 }
 }  // namespace internal
+
 // Multiplies two polynomials using Divide and Conquer algorithm.
 // size result >= n + m - 1
 template <typename T>
 SL void PolyMulDc(const T* X, const int64 n, const T* Y, const int64 m,
                   T* result) {
-  // In case n == m, we still allocate tempory result space to meet the
-  // requirement of PolyMulDcImpl.
-  const int64 v = std::max(n, m);
-  std::vector<T> tresult(v * 2);
-  if (n < m) {
-    std::vector<T> XX(2 * v);
-    for (int64 i = 0; i < n; ++i) {
-      XX[i] = X[i];
-    }
-    for (int64 i = n; i < m; ++i) {
-      XX[i] = 0;
-    }
-    internal::PolyMulDcImpl(&XX[0], Y, m, &tresult[0]);
-  } else {
-    std::vector<T> YY(2 * v);
-    for (int64 i = 0; i < m; ++i) {
-      YY[i] = Y[i];
-    }
-    for (int64 i = m; i < n; ++i) {
-      YY[i] = 0;
-    }
+  if (n == m) {
+    // In case n == m, we still allocate tempory result space to meet the
+    // requirement of PolyMulDcImpl.
+    std::vector<T> tresult(2 * n);
+    internal::PolyMulDcImpl(&X[0], &Y[0], n, &result[0]);
+    std::copy(tresult.begin(), tresult.begin() + n + m - 1, result);
+  } else if (n > m) {
+    std::vector<T> YY(n);
+    for (int64 i = 0; i < m; ++i) YY[i] = Y[i];
+    std::vector<T> tresult(2 * n);
     internal::PolyMulDcImpl(X, &YY[0], n, &tresult[0]);
+    std::copy(tresult.begin(), tresult.begin() + n + m - 1, result);
+  } else {
+    std::vector<T> XX(m);
+    for (int64 i = 0; i < n; ++i) XX[i] = X[i];
+    std::vector<T> tresult(2 * m);
+    internal::PolyMulDcImpl(&XX[0], Y, m, &tresult[0]);
+    std::copy(tresult.begin(), tresult.begin() + n + m - 1, result);
   }
-  std::copy(tresult.begin(), tresult.begin() + n + m - 1, result);
 }
 
 // Multiplies two polynomials using Divide and Conquer algorithm.
@@ -1220,23 +1216,23 @@ SL std::vector<T> PolyMulDc(const std::vector<T>& X, const std::vector<T>& Y) {
   const int64 m = static_cast<int64>(std::size(Y));
   const int64 result_size = n + m - 1;
   if (n == m) {
+    // In case n == m, we still allocate tempory result space to meet the
+    // requirement of PolyMulDcImpl.
     std::vector<T> result(2 * n);
     internal::PolyMulDcImpl(&X[0], &Y[0], n, &result[0]);
     result.resize(result_size);
     return result;
   } else if (n > m) {
-    std::vector<T> YY;
-    std::vector<T> result(2 * n);
-    YY.resize(n);
+    std::vector<T> YY(n);
     for (int64 i = 0; i < m; ++i) YY[i] = Y[i];
+    std::vector<T> result(2 * n);
     internal::PolyMulDcImpl(&X[0], &YY[0], n, &result[0]);
     result.resize(result_size);
     return result;
   } else {
-    std::vector<T> XX;
-    std::vector<T> result(2 * m);
-    XX.resize(m);
+    std::vector<T> XX(m);
     for (int64 i = 0; i < n; ++i) XX[i] = X[i];
+    std::vector<T> result(2 * m);
     internal::PolyMulDcImpl(&XX[0], &Y[0], m, &result[0]);
     result.resize(result_size);
     return result;

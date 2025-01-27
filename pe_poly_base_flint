@@ -290,7 +290,7 @@ POLY_MOD_IMPL(PolyMod, PolyDivAndMod)
 namespace internal {
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyPowerTruncImpl(const T* x, int64 m, int64 n, int64 t, T* result,
+    PolyPowerTruncImpl(const T* x, int64 m, int64 n, int64 trunc, T* result,
                        int64 mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
 
@@ -300,15 +300,15 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     nmod_poly_set_coeff_ui(u, i, x[i]);
   }
 
-  nmod_poly_init2(v, mod, t);
+  nmod_poly_init2(v, mod, trunc);
 
-  nmod_poly_pow_trunc(v, u, n, t);
+  nmod_poly_pow_trunc(v, u, n, trunc);
 
   const int64 size = nmod_poly_length(v);
   for (int64 i = 0; i < size; ++i) {
     result[i] = nmod_poly_get_coeff_ui(v, i);
   }
-  for (int64 i = size; i < t; ++i) {
+  for (int64 i = size; i < trunc; ++i) {
     result[i] = 0;
   }
 
@@ -319,26 +319,32 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyPowerTrunc(const T* x, int64 m, int64 n, int64 t, T* result,
+    PolyPowerTrunc(const T* x, int64 m, int64 n, int64 trunc, T* result,
                    int64 mod) {
   using UnsignedT = typename pe_make_unsigned<T>::type;
+  if (trunc <= 0) {
+    return;
+  }
   if (m == 0) {
-    std::fill(result, result + t, 0);
+    std::fill(result, result + trunc, 0);
     return;
   }
   if (n == 0) {
-    std::fill(result, result + t, 0);
+    std::fill(result, result + trunc, 0);
     result[0] = 1 % mod;
     return;
   }
   internal::PolyPowerTruncImpl<UnsignedT>(
-      reinterpret_cast<const UnsignedT*>(x), m, n, t,
+      reinterpret_cast<const UnsignedT*>(x), m, n, trunc,
       reinterpret_cast<UnsignedT*>(result), mod);
 }
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyPowerTrunc(const std::vector<T>& x, int64 n, int64 t, int64 mod) {
+    PolyPowerTrunc(const std::vector<T>& x, int64 n, int64 trunc, int64 mod) {
+  if (trunc <= 0) {
+    return {};
+  }
   const int64 m = static_cast<int64>(std::size(x));
   if (m == 0) {
     return {0};
@@ -347,9 +353,9 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
     return {1 % mod};
   }
 
-  std::vector<T> b(t);
+  std::vector<T> b(trunc);
 
-  PolyPowerTrunc(&x[0], m, n, t, &b[0], mod);
+  PolyPowerTrunc(&x[0], m, n, trunc, &b[0], mod);
 
   AdjustPolyLeadingZero(b);
 
@@ -402,8 +408,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 
   using UnsignedT = typename pe_make_unsigned<T>::type;
   std::vector<UnsignedT> b;
-  internal::PolyPowerImpl<UnsignedT>(reinterpret_cast<const UnsignedT*>(x), m,
-                                     n, b, mod);
+  internal::PolyPowerImpl<UnsignedT>(reinterpret_cast<const UnsignedT*>(&x[0]),
+                                     m, n, b, mod);
 
   const int64 size = std::size(b);
   std::vector<T> result(size);
@@ -421,7 +427,7 @@ namespace pmod {
 namespace internal {
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyPowerTruncImpl(const T* x, int64 m, int64 n, int64 t, T* result,
+    PolyPowerTruncImpl(const T* x, int64 m, int64 n, int64 trunc, T* result,
                        int64 mod) {
   fmpz_t xmod;
   fmpz_init_set_ui(xmod, mod);
@@ -439,16 +445,16 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     fq_nmod_poly_set_coeff_fmpz(u, i, c, ctx);
   }
 
-  fq_nmod_poly_init2(v, t, ctx);
+  fq_nmod_poly_init2(v, trunc, ctx);
 
-  fq_nmod_poly_pow_trunc(v, u, n, t, ctx);
+  fq_nmod_poly_pow_trunc(v, u, n, trunc, ctx);
 
   const int64 size = fq_nmod_poly_length(v, ctx);
   for (int64 i = 0; i < size; ++i) {
     auto t = nmod_poly_get_coeff_ui(v[0].coeffs + i, 0);
     result[i] = t;
   }
-  for (int64 i = size; i < t; ++i) {
+  for (int64 i = size; i < trunc; ++i) {
     result[i] = 0;
   }
 
@@ -462,26 +468,32 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyPowerTrunc(const T* x, int64 m, int64 n, int64 t, T* result,
+    PolyPowerTrunc(const T* x, int64 m, int64 n, int64 trunc, T* result,
                    int64 mod) {
   using UnsignedT = typename pe_make_unsigned<T>::type;
+  if (trunc <= 0) {
+    return;
+  }
   if (m == 0) {
-    fill(result, result + t, 0);
+    std::fill(result, result + trunc, 0);
     return;
   }
   if (n == 0) {
-    fill(result, result + t, 0);
+    std::fill(result, result + trunc, 0);
     result[0] = 1 % mod;
     return;
   }
   internal::PolyPowerTruncImpl<UnsignedT>(
-      reinterpret_cast<const UnsignedT*>(x), m, n, t,
+      reinterpret_cast<const UnsignedT*>(x), m, n, trunc,
       reinterpret_cast<UnsignedT*>(result), mod);
 }
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyPowerTrunc(const std::vector<T>& x, int64 n, int64 t, int64 mod) {
+    PolyPowerTrunc(const std::vector<T>& x, int64 n, int64 trunc, int64 mod) {
+  if (trunc <= 0) {
+    return {};
+  }
   const int64 m = static_cast<int64>(std::size(x));
   if (m == 0) {
     return {0};
@@ -490,9 +502,9 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
     return {1 % mod};
   }
 
-  std::vector<T> b(t);
+  std::vector<T> b(trunc);
 
-  PolyPowerTrunc(&x[0], m, n, t, &b[0], mod);
+  PolyPowerTrunc(&x[0], m, n, trunc, &b[0], mod);
 
   AdjustPolyLeadingZero(b);
 
@@ -502,7 +514,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 namespace internal {
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyPowerImpl(const T* x, int64 m, int64 n, int64 t, std::vector<T>& result,
+    PolyPowerImpl(const T* x, int64 m, int64 n, std::vector<T>& result,
                   int64 mod) {
   fmpz_t xmod;
   fmpz_init_set_ui(xmod, mod);
@@ -557,8 +569,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 
   using UnsignedT = typename pe_make_unsigned<T>::type;
   std::vector<UnsignedT> b;
-  internal::PolyPowerImpl<UnsignedT>(reinterpret_cast<const UnsignedT*>(x), m,
-                                     n, b, mod);
+  internal::PolyPowerImpl<UnsignedT>(reinterpret_cast<const UnsignedT*>(&x[0]),
+                                     m, n, b, mod);
 
   const int64 size = std::size(b);
   std::vector<T> result(size);
@@ -585,7 +597,7 @@ using nmod_poly_series_t = void (*)(nmod_poly_struct*, const nmod_poly_struct*,
 namespace internal {
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolySeriesImpl(const T* x, int64 m, int64 n, T* result, int64 mod,
+    PolySeriesImpl(const T* x, int64 m, int64 trunc, T* result, int64 mod,
                    nmod_poly_series_t trans) {
   nmod_poly_t u, v;
   nmod_poly_init2(u, mod, m);
@@ -593,9 +605,9 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     nmod_poly_set_coeff_ui(u, i, x[i]);
   }
 
-  nmod_poly_init2(v, mod, n);
-  trans(v, u, n);
-  for (int64 i = 0; i < n; ++i) {
+  nmod_poly_init2(v, mod, trunc);
+  trans(v, u, trunc);
+  for (int64 i = 0; i < trunc; ++i) {
     result[i] = nmod_poly_get_coeff_ui(v, i);
   }
 
@@ -604,87 +616,89 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 }
 }  // namespace internal
 
-// size result == n
+// size result >= trunc
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolySeries(const T* x, int64 m, int64 n, T* result, int64 mod,
+    PolySeries(const T* x, int64 m, int64 trunc, T* result, int64 mod,
                nmod_poly_series_t trans) {
   using UnsignedT = typename pe_make_unsigned<T>::type;
-  internal::PolySeriesImpl<UnsignedT>(reinterpret_cast<const UnsignedT*>(x), m,
-                                      n, reinterpret_cast<UnsignedT*>(result),
-                                      mod, trans);
+  internal::PolySeriesImpl<UnsignedT>(
+      reinterpret_cast<const UnsignedT*>(x), m, trunc,
+      reinterpret_cast<UnsignedT*>(result), mod, trans);
 }
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolySeries(const std::vector<T>& x, int64 n, int64 mod,
+    PolySeries(const std::vector<T>& x, int64 trunc, int64 mod,
                nmod_poly_series_t trans) {
   const int64 m = static_cast<int64>(std::size(x));
 
-  std::vector<T> b(n);
+  std::vector<T> b(trunc);
 
-  PolySeries(&x[0], m, n, &b[0], mod, trans);
+  PolySeries(&x[0], m, trunc, &b[0], mod, trans);
 
   return b;
 }
 
 namespace internal {
-// size result >= n
+// size result >= trunc
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyLogImpl(const T* x, int64 m, int64 n, T* result, int64 mod) {
-  PolySeries(x, m, n, result, mod, &nmod_poly_log_series);
+    PolyLogImpl(const T* x, int64 m, int64 trunc, T* result, int64 mod) {
+  PolySeries(x, m, trunc, result, mod, &nmod_poly_log_series);
 }
 }  // namespace internal
 
-// size result >= n
+// size result >= trunc
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyLog(const T* x, int64 m, int64 n, T* result, int64 mod) {
+    PolyLog(const T* x, int64 m, int64 trunc, T* result, int64 mod) {
   using UnsignedT = typename pe_make_unsigned<T>::type;
-  internal::PolyLogImpl<UnsignedT>(reinterpret_cast<const UnsignedT*>(x), m, n,
-                                   reinterpret_cast<UnsignedT*>(result), mod);
+  internal::PolyLogImpl<UnsignedT>(reinterpret_cast<const UnsignedT*>(x), m,
+                                   trunc, reinterpret_cast<UnsignedT*>(result),
+                                   mod);
 }
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyLog(const std::vector<T>& x, int64 n, int64 mod) {
+    PolyLog(const std::vector<T>& x, int64 trunc, int64 mod) {
   const int64 m = static_cast<int64>(std::size(x));
 
-  std::vector<T> b(n);
+  std::vector<T> b(trunc);
 
-  PolyLog(&x[0], m, n, &b[0], mod);
+  PolyLog(&x[0], m, trunc, &b[0], mod);
 
   return b;
 }
 
 namespace internal {
-// size result >= n
+// size result >= trunc
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyExpImpl(const T* x, int64 m, int64 n, T* result, int64 mod) {
+    PolyExpImpl(const T* x, int64 m, int64 trunc, T* result, int64 mod) {
   PE_ASSERT(x[0] == 0);
-  PolySeries(x, m, n, result, mod, &nmod_poly_exp_series);
+  PolySeries(x, m, trunc, result, mod, &nmod_poly_exp_series);
 }
 }  // namespace internal
 
-// size result >= n
+// size result >= trunc
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyExp(const T* x, int64 m, int64 n, T* result, int64 mod) {
+    PolyExp(const T* x, int64 m, int64 trunc, T* result, int64 mod) {
   using UnsignedT = typename pe_make_unsigned<T>::type;
-  internal::PolyExpImpl<UnsignedT>(reinterpret_cast<const UnsignedT*>(x), m, n,
-                                   reinterpret_cast<UnsignedT*>(result), mod);
+  internal::PolyExpImpl<UnsignedT>(reinterpret_cast<const UnsignedT*>(x), m,
+                                   trunc, reinterpret_cast<UnsignedT*>(result),
+                                   mod);
 }
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyExp(const std::vector<T>& x, int64 n, int64 mod) {
+    PolyExp(const std::vector<T>& x, int64 trunc, int64 mod) {
   const int64 m = static_cast<int64>(std::size(x));
 
-  std::vector<T> b(n);
+  std::vector<T> b(trunc);
 
-  PolyExp(&x[0], m, n, &b[0], mod);
+  PolyExp(&x[0], m, trunc, &b[0], mod);
 
   return b;
 }

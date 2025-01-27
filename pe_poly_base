@@ -1448,23 +1448,23 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 namespace internal {
 // Calculates the inverse of a polynomial using doubling algorithm.
 // The inverse of a[0] exists.
-// size b >= n
+// size b >= trunc
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyInvDoublingImpl(int64 n, const T* a, T* b, T* tmp[2], int64 mod) {
+    PolyInvDoublingImpl(int64 trunc, const T* a, T* b, T* tmp[2], int64 mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
-  if (n == 1) {
+  if (trunc == 1) {
     b[0] = ModInv(static_cast<int64>(a[0]), mod);
   } else {
-    const int64 m = (n + 1) >> 1;
+    const int64 m = (trunc + 1) >> 1;
     PolyInvDoublingImpl(m, a, b, tmp, mod);
-    std::fill(b + m, b + n, 0);
+    std::fill(b + m, b + trunc, 0);
     PolyMul(b, m, b, m, tmp[0], mod);
-    if (m + m - 2 < n - 1) {
-      tmp[0][n - 1] = 0;
+    if (m + m - 2 < trunc - 1) {
+      tmp[0][trunc - 1] = 0;
     }
-    PolyMul(a, n, tmp[0], n, tmp[1], mod);
-    for (int64 i = 0; i < n; ++i) {
+    PolyMul(a, trunc, tmp[0], trunc, tmp[1], mod);
+    for (int64 i = 0; i < trunc; ++i) {
       auto t = b[i] << 1;
       if (t >= static_cast<uint64>(mod)) t -= mod;
       t = t + mod - tmp[1][i];
@@ -1476,11 +1476,12 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 
 // Calculates the inverse of a polynomial using doubling algorithm.
 // The inverse of x[0] exists.
-// size result >= n
+// size result >= trunc
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyInvDoublingImpl(const T* x, int64 m, int64 n, T* result, int64 mod) {
-  const int64 t = std::max(n, m);
+    PolyInvDoublingImpl(const T* x, int64 m, int64 trunc, T* result,
+                        int64 mod) {
+  const int64 t = std::max(trunc, m);
   const int64 p = 1LL << pe_lgll(4 * t - 1);
 
   std::vector<T> a(p);
@@ -1491,7 +1492,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     a[i] = 0;
   }
 
-  std::vector<T> b(n);
+  std::vector<T> b(trunc);
 
   std::vector<T> tmp_data[2];
   T* tmp[2];
@@ -1500,20 +1501,20 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     tmp[i] = &tmp_data[i][0];
   }
 
-  PolyInvDoublingImpl(n, &a[0], &b[0], tmp, mod);
-  std::copy(b.begin(), b.begin() + n, result);
+  PolyInvDoublingImpl(trunc, &a[0], &b[0], tmp, mod);
+  std::copy(b.begin(), b.begin() + trunc, result);
 }
 }  // namespace internal
 
 // Calculates the inverse of a polynomial using doubling algorithm.
 // The inverse of x[0] exists.
-// size result >= n
+// size result >= trunc
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyInvDoubling(const T* x, int64 m, int64 n, T* result, int64 mod) {
+    PolyInvDoubling(const T* x, int64 m, int64 trunc, T* result, int64 mod) {
   using UnsignedT = typename pe_make_unsigned<T>::type;
   internal::PolyInvDoublingImpl<UnsignedT>(
-      reinterpret_cast<const UnsignedT*>(x), m, n,
+      reinterpret_cast<const UnsignedT*>(x), m, trunc,
       reinterpret_cast<UnsignedT*>(result), mod);
 }
 
@@ -1521,28 +1522,28 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 // The inverse of x[0] exists.
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyInvDoubling(const std::vector<T>& x, int64 n, int64 mod) {
+    PolyInvDoubling(const std::vector<T>& x, int64 trunc, int64 mod) {
   const int64 m = static_cast<int64>(std::size(x));
 
-  std::vector<T> b(n);
+  std::vector<T> b(trunc);
 
-  PolyInvDoubling(&x[0], m, n, &b[0], mod);
+  PolyInvDoubling(&x[0], m, trunc, &b[0], mod);
 
   return b;
 }
 
 // Calculates the inverse of a polynomial
 // The inverse of x[0] exists.
-// size result >= n
+// size result >= trunc
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyInv(const T* x, int64 m, int64 n, T* result, int64 mod) {
+    PolyInv(const T* x, int64 m, int64 trunc, T* result, int64 mod) {
   using UnsignedT = typename pe_make_unsigned<T>::type;
 #if HAS_POLY_FLINT
-  flint::PolyInv<UnsignedT>(reinterpret_cast<const UnsignedT*>(x), m, n,
+  flint::PolyInv<UnsignedT>(reinterpret_cast<const UnsignedT*>(x), m, trunc,
                             reinterpret_cast<UnsignedT*>(result), mod);
 #else
-  PolyInvDoubling<UnsignedT>(reinterpret_cast<const UnsignedT*>(x), m, n,
+  PolyInvDoubling<UnsignedT>(reinterpret_cast<const UnsignedT*>(x), m, trunc,
                              reinterpret_cast<UnsignedT*>(result), mod);
 #endif
 }
@@ -1551,12 +1552,12 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 // The inverse of x[0] exists.
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyInv(const std::vector<T>& x, int64 n, int64 mod) {
+    PolyInv(const std::vector<T>& x, int64 trunc, int64 mod) {
   const int64 m = static_cast<int64>(std::size(x));
 
-  std::vector<T> b(n);
+  std::vector<T> b(trunc);
 
-  PolyInv(&x[0], m, n, &b[0], mod);
+  PolyInv(&x[0], m, trunc, &b[0], mod);
 
   return b;
 }
@@ -1564,16 +1565,16 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 namespace pmod {
 // Calculates the inverse of a polynomial.
 // The inverse of x[0] exists.
-// size result >= n
+// size result >= trunc
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyInv(const T* x, int64 m, int64 n, T* result, int64 mod) {
+    PolyInv(const T* x, int64 m, int64 trunc, T* result, int64 mod) {
   using UnsignedT = typename pe_make_unsigned<T>::type;
 #if HAS_POLY_FLINT
-  flint::PolyInv<UnsignedT>(reinterpret_cast<const UnsignedT*>(x), m, n,
+  flint::PolyInv<UnsignedT>(reinterpret_cast<const UnsignedT*>(x), m, trunc,
                             reinterpret_cast<UnsignedT*>(result), mod);
 #else
-  PolyInvDoubling<UnsignedT>(reinterpret_cast<const UnsignedT*>(x), m, n,
+  PolyInvDoubling<UnsignedT>(reinterpret_cast<const UnsignedT*>(x), m, trunc,
                              reinterpret_cast<UnsignedT*>(result), mod);
 #endif
 }
@@ -1582,12 +1583,12 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 // The inverse of x[0] exists.
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyInv(const std::vector<T>& x, int64 n, int64 mod) {
+    PolyInv(const std::vector<T>& x, int64 trunc, int64 mod) {
   const int64 m = static_cast<int64>(std::size(x));
 
-  std::vector<T> b(n);
+  std::vector<T> b(trunc);
 
-  PolyInv(&x[0], m, n, &b[0], mod);
+  PolyInv(&x[0], m, trunc, &b[0], mod);
 
   return b;
 }
@@ -1820,22 +1821,22 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 namespace internal {
 // Calculates the logarithm of a polynomial.
 // x[0] = 1
-// size result >= n
+// size result >= trunc
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyLogImpl(const T* x, int64 m, int64 n, T* result, int64 mod) {
+    PolyLogImpl(const T* x, int64 m, int64 trunc, T* result, int64 mod) {
   std::vector<T> dx(m);
   PolyDerivative(x, m, &dx[0], mod);
 
-  std::vector<T> y(n);
-  PolyInv(x, m, n, &y[0], mod);
+  std::vector<T> y(trunc);
+  PolyInv(x, m, trunc, &y[0], mod);
 
-  std::vector<T> z(m - 1 + n - 1);
-  PolyMul(&dx[0], m - 1, &y[0], n, &z[0], mod);
+  std::vector<T> z(m - 1 + trunc - 1);
+  PolyMul(&dx[0], m - 1, &y[0], trunc, &z[0], mod);
 
-  InitInverse(&y[0], n - 1, mod);
+  InitInverse(&y[0], trunc - 1, mod);
 
-  for (int64 i = 0; i < n - 1; ++i) {
+  for (int64 i = 0; i < trunc - 1; ++i) {
     result[i + 1] = MulMod(z[i], y[i + 1], mod);
   }
   result[0] = 0;
@@ -1844,26 +1845,27 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 
 // Calculates the logarithm of a polynomial.
 // x[0] = 1
-// size result >= n
+// size result >= trunc
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyLog(const T* x, int64 m, int64 n, T* result, int64 mod) {
+    PolyLog(const T* x, int64 m, int64 trunc, T* result, int64 mod) {
   using UnsignedT = typename pe_make_unsigned<T>::type;
-  internal::PolyLogImpl<UnsignedT>(reinterpret_cast<const UnsignedT*>(x), m, n,
-                                   reinterpret_cast<UnsignedT*>(result), mod);
+  internal::PolyLogImpl<UnsignedT>(reinterpret_cast<const UnsignedT*>(x), m,
+                                   trunc, reinterpret_cast<UnsignedT*>(result),
+                                   mod);
 }
 
 // Calculates the logarithm of a polynomial.
 // x[0] = 1
-// size result >= n
+// size result >= trunc
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyLog(const std::vector<T>& x, int64 n, int64 mod) {
+    PolyLog(const std::vector<T>& x, int64 trunc, int64 mod) {
   const int64 m = static_cast<int64>(std::size(x));
 
-  std::vector<T> b(n);
+  std::vector<T> b(trunc);
 
-  PolyLog(&x[0], m, n, &b[0], mod);
+  PolyLog(&x[0], m, trunc, &b[0], mod);
 
   return b;
 }
@@ -1871,14 +1873,14 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 namespace internal {
 // Calculates exp(x) where x is a polynomial.
 // x[0] = 0
-// size result >= n
+// size result >= trunc
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyExpImpl(const T* x, int64 m, int64 n, T* result, int64 mod) {
+    PolyExpImpl(const T* x, int64 m, int64 trunc, T* result, int64 mod) {
   PE_ASSERT(x[0] == 0);
   std::vector<T> ret{static_cast<T>(1 % mod)};
 
-  for (int64 u = 1; u < 2 * n; u = u << 1) {
+  for (int64 u = 1; u < 2 * trunc; u = u << 1) {
     std::vector<T> t0(u);
 #if HAS_POLY_FLINT
     flint::PolyLog(&ret[0], u, u, &t0[0], mod);
@@ -1896,33 +1898,34 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     ret[0] = 1;
   }
 
-  ret.resize(n);
+  ret.resize(trunc);
   std::copy(ret.begin(), ret.end(), result);
 }
 }  // namespace internal
 
 // Calculates exp(x) where x is a polynomial.
 // x[0] = 0
-// size result >= n
+// size result >= trunc
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
-    PolyExp(const T* x, int64 m, int64 n, T* result, int64 mod) {
+    PolyExp(const T* x, int64 m, int64 trunc, T* result, int64 mod) {
   using UnsignedT = typename pe_make_unsigned<T>::type;
-  internal::PolyExpImpl<UnsignedT>(reinterpret_cast<const UnsignedT*>(x), m, n,
-                                   reinterpret_cast<UnsignedT*>(result), mod);
+  internal::PolyExpImpl<UnsignedT>(reinterpret_cast<const UnsignedT*>(x), m,
+                                   trunc, reinterpret_cast<UnsignedT*>(result),
+                                   mod);
 }
 
 // Calculates exp(x) where x is a polynomial.
 // x[0] = 0
-// size result >= n
+// size result >= trunc
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyExp(const std::vector<T>& x, int64 n, int64 mod) {
+    PolyExp(const std::vector<T>& x, int64 trunc, int64 mod) {
   const int64 m = static_cast<int64>(std::size(x));
 
-  std::vector<T> b(n);
+  std::vector<T> b(trunc);
 
-  PolyExp(&x[0], m, n, &b[0], mod);
+  PolyExp(&x[0], m, trunc, &b[0], mod);
 
   return b;
 }

@@ -26,6 +26,27 @@ SL std::string ToString(__float128 f, int dig = 20) {
   return result;
 }
 
+SL std::string ToStringF(__float128 f, int dig = 20) {
+  char buff[256];
+  const int buff_size = sizeof(buff);
+  int n = quadmath_snprintf(buff, buff_size, "%#.*Qf", dig, f);
+  if (n < buff_size) {
+    return buff;
+  }
+  n = quadmath_snprintf(NULL, 0, "%#.*Qf", dig, f);
+  if (n <= -1) {
+    return "";
+  }
+  char* str = static_cast<char*>(malloc(n + 1));
+  std::string result;
+  if (str) {
+    quadmath_snprintf(str, n + 1, "%#.*Qf", dig, f);
+    result = str;
+  }
+  free(str);
+  return result;
+}
+
 SL std::string to_string(__float128 x, int dig = 20) { return ToString(x); }
 
 SL __float128 Abs(__float128 f) { return fabsq(f); }

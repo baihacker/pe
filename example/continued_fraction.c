@@ -1,5 +1,6 @@
 #include "pe.hpp"
 using namespace pe;
+
 template <typename GBI>
 void demo() {
   std::vector<int> data{1, 2, 2, 2, 2, 2, 2, 2, 2, 2};
@@ -17,9 +18,9 @@ void demo() {
 }
 
 int main() {
-#if ENABLE_GMP
   demo<bi>();
-  demo<Mpz>();
+#if ENABLE_GMP
+  demo<bn>();
 #endif
   return 0;
 }

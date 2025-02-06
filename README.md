@@ -64,7 +64,6 @@ For a quick start, refer to [example.c](https://github.com/baihacker/pe/blob/mas
 - **pe_geometry**: Support for `Point2D` and `Point3D`.
 - **pe_initializer**: Helper classes and macros for library initialization.
 - **pe_int**: Basic integer utilities.
-- **pe_int128**: Support for `int128` and corresponding type traits.
 - **pe_internal**: Includes configuration, defines necessary types/macros, and third-party libraries.
 - **pe_io**: Methods and macros for simplified or accelerated I/O operations.
 - **pe_mat**: Matrix operations.

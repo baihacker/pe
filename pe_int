@@ -2,9 +2,212 @@
 #define PE_INT_
 
 #include "pe_base"
-#include "pe_int128"
 #include "pe_type_traits"
 #include "pe_bit"
+
+#if PE_HAS_INT128
+
+SL void PrintInt128(int128 x) {
+  char buff[64];
+  int top = 0;
+  if (x != 0) {
+    uint128 y = reinterpret_cast<uint128&>(x);
+    uint128 z = (~y) + 1;
+    if (x < 0 || y == z) buff[top++] = '-', y = z;
+    int last = top;
+    while (y > 0) buff[top++] = y % 10 + '0', y /= 10;
+    std::reverse(buff + last, buff + top);
+  } else {
+    buff[top++] = '0';
+  }
+  buff[top] = 0;
+  printf(buff);
+}
+
+SL void PrintInt128(uint128 x) {
+  char buff[64];
+  int top = 0;
+  if (x != 0) {
+    uint128 y = x;
+    while (y > 0) buff[top++] = y % 10 + '0', y /= 10;
+    std::reverse(buff, buff + top);
+  } else {
+    buff[top++] = '0';
+  }
+  buff[top] = 0;
+  printf(buff);
+}
+
+SL std::string ToString(int128 x) {
+  char buff[64];
+  int top = 0;
+  if (x != 0) {
+    uint128 y = reinterpret_cast<uint128&>(x);
+    uint128 z = (~y) + 1;
+    if (x < 0 || y == z) buff[top++] = '-', y = z;
+    int last = top;
+    while (y > 0) buff[top++] = y % 10 + '0', y /= 10;
+    std::reverse(buff + last, buff + top);
+  } else {
+    buff[top++] = '0';
+  }
+  buff[top] = 0;
+  return buff;
+}
+
+SL std::string ToString(uint128 x) {
+  char buff[64];
+  int top = 0;
+  if (x != 0) {
+    uint128 y = x;
+    while (y > 0) buff[top++] = y % 10 + '0', y /= 10;
+    std::reverse(buff, buff + top);
+  } else {
+    buff[top++] = '0';
+  }
+  buff[top] = 0;
+  return buff;
+}
+
+SL std::string to_string(int128 x) { return ToString(x); }
+
+SL std::string to_string(uint128 x) { return ToString(x); }
+
+SL std::ostream& operator<<(std::ostream& o, int128 x) {
+  return o << ToString(x);
+}
+
+SL std::ostream& operator<<(std::ostream& o, uint128 x) {
+  return o << ToString(x);
+}
+
+namespace pe {
+using ::PrintInt128;
+using ::to_string;
+using ::ToString;
+using ::operator<<;
+}  // namespace pe
+
+namespace std {
+using ::to_string;
+using ::operator<<;
+}  // namespace std
+
+inline int128 operator"" _i128(const char* sv, size_t /*sc*/) {
+  int128 r = 0;
+  int s = 1;
+  while (*sv) {
+    int now = *sv++;
+    if (now == '-') {
+      s = -s;
+    } else if (now == '+') {
+      ;
+    } else {
+      r = r * 10 + now - '0';
+    }
+  }
+  return s > 0 ? r : -r;
+}
+
+inline uint128 operator"" _u128(const char* sv, size_t /*sc*/) {
+  uint128 r = 0;
+  while (*sv) {
+    int now = *sv++;
+    if (now == '+') {
+      ;
+    } else {
+      r = r * 10 + now - '0';
+    }
+  }
+  return r;
+}
+
+namespace std {
+#if defined(__GLIBCXX__)
+// glibc++ associated with gcc 10.3 doesn't specialized numeric_limits for
+// int128 and uint128 in ansi mode.
+#if __GLIBCXX__ < 20210408 && defined(__STRICT_ANSI__)
+template <>
+struct numeric_limits<uint128> {
+  static constexpr uint128 max() { return static_cast<uint128>(-1); }
+  static constexpr uint128 min() { return 0; }
+  static constexpr uint128 lowest() { return min(); }
+  static constexpr bool is_signed = false;
+  static constexpr bool is_unsigned = true;
+  static constexpr bool is_integer = true;
+};
+
+template <>
+struct numeric_limits<int128> {
+  static constexpr int128 max() {
+    return static_cast<int128>(std::numeric_limits<uint128>::max() >> 1);
+  }
+  static constexpr int128 min() { return -max() - 1; }
+  static constexpr int128 lowest() { return min(); }
+  static constexpr bool is_signed = true;
+  static constexpr bool is_unsigned = false;
+  static constexpr bool is_integer = true;
+};
+#endif
+
+// glibc++ doesn't specialize hash for int128 and uint128 in ansi mode.
+#if defined(__STRICT_ANSI__)
+template <>
+struct hash<int128> {
+  size_t operator()(int128 val) const noexcept {
+    return static_cast<size_t>(val);
+  }
+};
+
+template <>
+struct hash<uint128> {
+  size_t operator()(uint128 val) const noexcept {
+    return static_cast<size_t>(val);
+  }
+};
+#endif
+#endif
+
+SL int128 gcd(int128 a, int128 b) {
+  while (b != 0) {
+    int128 t = a % b;
+    a = b;
+    b = t;
+  }
+  return a;
+}
+
+SL uint128 gcd(uint128 a, uint128 b) {
+  while (b != 0) {
+    uint128 t = a % b;
+    a = b;
+    b = t;
+  }
+  return a;
+}
+
+SL uint128 gcd(int128 a, uint128 b) { return gcd(static_cast<uint128>(a), b); }
+
+SL uint128 gcd(uint128 a, int128 b) { return gcd(a, static_cast<uint128>(b)); }
+
+SL int128 lcm(int128 a, int128 b) {
+  if (a == 0) return b;
+  if (b == 0) return a;
+  return a / gcd(a, b) * b;
+}
+
+SL uint128 lcm(uint128 a, uint128 b) {
+  if (a == 0) return b;
+  if (b == 0) return a;
+  return a / gcd(a, b) * b;
+}
+
+SL uint128 lcm(int128 a, uint128 b) { return lcm(static_cast<uint128>(a), b); }
+
+SL uint128 lcm(uint128 a, int128 b) { return lcm(a, static_cast<uint128>(b)); }
+}  // namespace std
+
+#endif
 
 namespace pe {
 // Operation on builtin integers

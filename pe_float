@@ -2,6 +2,7 @@
 #define PE_FLOAT128_
 
 #include "pe_base"
+#include "pe_int"
 
 #if PE_HAS_FLOAT128 && !defined(COMPILER_CLANG)
 
@@ -228,6 +229,31 @@ SL std::string ToStringF(long double f, int dig = 20) {
   free(str);
   return result;
 }
+
+#if PE_HAS_CPP20
+template <class T>
+concept PeFloatUtil = requires(T v) {
+  requires PeComparable<T>;
+  FAbs(v);
+  fabs(v);
+  Abs(v);
+  abs(v);
+  Ceil(v);
+  ceil(v);
+  Floor(v);
+  floor(v);
+  Trunc(v);
+  trunc(v);
+
+  ToString(v);
+};
+static_assert(PeFloatUtil<float>);
+static_assert(PeFloatUtil<double>);
+static_assert(PeFloatUtil<long double>);
+#if PE_HAS_FLOAT128 && !defined(COMPILER_CLANG)
+static_assert(PeFloatUtil<__float128>);
+#endif
+#endif
 }  // namespace pe
 
 #endif

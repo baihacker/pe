@@ -5,47 +5,38 @@
 #include "pe_int"
 
 #if PE_HAS_FLOAT128 && !defined(COMPILER_CLANG)
-
-SL std::string ToString(__float128 f, int dig = 20) {
+namespace pe {
+namespace internal {
+SL std::string ToStringFloat128(__float128 f, const char* format_string,
+                                int dig = 20) {
   char buff[256];
   const int buff_size = sizeof(buff);
-  int n = quadmath_snprintf(buff, buff_size, "%#.*Qe", dig, f);
+  int n = quadmath_snprintf(buff, buff_size, format_string, dig, f);
   if (n < buff_size) {
     return buff;
   }
-  n = quadmath_snprintf(NULL, 0, "%#.*Qe", dig, f);
+  n = quadmath_snprintf(NULL, 0, format_string, dig, f);
   if (n <= -1) {
     return "";
   }
   char* str = static_cast<char*>(malloc(n + 1));
   std::string result;
   if (str) {
-    quadmath_snprintf(str, n + 1, "%#.*Qe", dig, f);
+    quadmath_snprintf(str, n + 1, format_string, dig, f);
     result = str;
   }
   free(str);
   return result;
 }
+}  // namespace internal
+}  // namespace pe
+
+SL std::string ToString(__float128 f, int dig = 20) {
+  return pe::internal::ToStringFloat128(f, "%#.*Qe", dig);
+}
 
 SL std::string ToStringF(__float128 f, int dig = 20) {
-  char buff[256];
-  const int buff_size = sizeof(buff);
-  int n = quadmath_snprintf(buff, buff_size, "%#.*Qf", dig, f);
-  if (n < buff_size) {
-    return buff;
-  }
-  n = quadmath_snprintf(NULL, 0, "%#.*Qf", dig, f);
-  if (n <= -1) {
-    return "";
-  }
-  char* str = static_cast<char*>(malloc(n + 1));
-  std::string result;
-  if (str) {
-    quadmath_snprintf(str, n + 1, "%#.*Qf", dig, f);
-    result = str;
-  }
-  free(str);
-  return result;
+  return pe::internal::ToStringFloat128(f, "%#.*Qf", dig);
 }
 
 SL std::string to_string(__float128 x, int dig = 20) { return ToString(x); }
@@ -110,130 +101,52 @@ SL double FAbs(const double n) { return std::fabs(n); }
 
 SL long double FAbs(const long double n) { return std::fabs(n); }
 
-SL std::string ToString(float f, int dig = 20) {
+namespace internal {
+template <typename T>
+SL std::string ToStringFloat(T f, const char* format_string, int dig = 20) {
   char buff[256];
   const int buff_size = sizeof(buff);
-  int n = snprintf(buff, buff_size, "%#.*e", dig, f);
+  int n = snprintf(buff, buff_size, format_string, dig, f);
   if (n < buff_size) {
     return buff;
   }
-  n = snprintf(NULL, 0, "%#.*e", dig, f);
+  n = snprintf(NULL, 0, format_string, dig, f);
   if (n <= -1) {
     return "";
   }
   char* str = static_cast<char*>(malloc(n + 1));
   std::string result;
   if (str) {
-    snprintf(str, n + 1, "%#.*e", dig, f);
+    snprintf(str, n + 1, format_string, dig, f);
     result = str;
   }
   free(str);
   return result;
+}
+}  // namespace internal
+
+SL std::string ToString(float f, int dig = 20) {
+  return internal::ToStringFloat<float>(f, "%#.*e", dig);
 }
 
 SL std::string ToString(double f, int dig = 20) {
-  char buff[256];
-  const int buff_size = sizeof(buff);
-  int n = snprintf(buff, buff_size, "%#.*e", dig, f);
-  if (n < buff_size) {
-    return buff;
-  }
-  n = snprintf(NULL, 0, "%#.*e", dig, f);
-  if (n <= -1) {
-    return "";
-  }
-  char* str = static_cast<char*>(malloc(n + 1));
-  std::string result;
-  if (str) {
-    snprintf(str, n + 1, "%#.*e", dig, f);
-    result = str;
-  }
-  free(str);
-  return result;
+  return internal::ToStringFloat<float>(f, "%#.*e", dig);
 }
 
 SL std::string ToString(long double f, int dig = 20) {
-  char buff[256];
-  const int buff_size = sizeof(buff);
-  int n = snprintf(buff, buff_size, "%#.*Le", dig, f);
-  if (n < buff_size) {
-    return buff;
-  }
-  n = snprintf(NULL, 0, "%#.*Le", dig, f);
-  if (n <= -1) {
-    return "";
-  }
-  char* str = static_cast<char*>(malloc(n + 1));
-  std::string result;
-  if (str) {
-    snprintf(str, n + 1, "%#.*Le", dig, f);
-    result = str;
-  }
-  free(str);
-  return result;
+  return internal::ToStringFloat<float>(f, "%#.*Le", dig);
 }
 
 SL std::string ToStringF(float f, int dig = 20) {
-  char buff[256];
-  const int buff_size = sizeof(buff);
-  int n = snprintf(buff, buff_size, "%#.*f", dig, f);
-  if (n < buff_size) {
-    return buff;
-  }
-  n = snprintf(NULL, 0, "%#.*f", dig, f);
-  if (n <= -1) {
-    return "";
-  }
-  char* str = static_cast<char*>(malloc(n + 1));
-  std::string result;
-  if (str) {
-    snprintf(str, n + 1, "%#.*f", dig, f);
-    result = str;
-  }
-  free(str);
-  return result;
+  return internal::ToStringFloat<float>(f, "%#.*f", dig);
 }
 
 SL std::string ToStringF(double f, int dig = 20) {
-  char buff[256];
-  const int buff_size = sizeof(buff);
-  int n = snprintf(buff, buff_size, "%#.*f", dig, f);
-  if (n < buff_size) {
-    return buff;
-  }
-  n = snprintf(NULL, 0, "%#.*f", dig, f);
-  if (n <= -1) {
-    return "";
-  }
-  char* str = static_cast<char*>(malloc(n + 1));
-  std::string result;
-  if (str) {
-    snprintf(str, n + 1, "%#.*f", dig, f);
-    result = str;
-  }
-  free(str);
-  return result;
+  return internal::ToStringFloat<float>(f, "%#.*f", dig);
 }
 
 SL std::string ToStringF(long double f, int dig = 20) {
-  char buff[256];
-  const int buff_size = sizeof(buff);
-  int n = snprintf(buff, buff_size, "%#.*Lf", dig, f);
-  if (n < buff_size) {
-    return buff;
-  }
-  n = snprintf(NULL, 0, "%#.*Lf", dig, f);
-  if (n <= -1) {
-    return "";
-  }
-  char* str = static_cast<char*>(malloc(n + 1));
-  std::string result;
-  if (str) {
-    snprintf(str, n + 1, "%#.*Lf", dig, f);
-    result = str;
-  }
-  free(str);
-  return result;
+  return internal::ToStringFloat<float>(f, "%#.*Lf", dig);
 }
 
 #if PE_HAS_CPP20

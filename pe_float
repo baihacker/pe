@@ -7,7 +7,7 @@
 #if PE_HAS_FLOAT128 && !defined(COMPILER_CLANG)
 namespace pe {
 namespace internal {
-SL std::string ToStringFloat128(__float128 f, const char* format_string,
+SL std::string ToStringFloat128(float128 f, const char* format_string,
                                 int dig = 20) {
   char buff[256];
   const int buff_size = sizeof(buff);
@@ -31,31 +31,31 @@ SL std::string ToStringFloat128(__float128 f, const char* format_string,
 }  // namespace internal
 }  // namespace pe
 
-SL std::string ToString(__float128 f, int dig = 20) {
+SL std::string ToString(float128 f, int dig = 20) {
   return pe::internal::ToStringFloat128(f, "%#.*Qe", dig);
 }
 
-SL std::string ToStringF(__float128 f, int dig = 20) {
+SL std::string ToStringF(float128 f, int dig = 20) {
   return pe::internal::ToStringFloat128(f, "%#.*Qf", dig);
 }
 
-SL std::string to_string(__float128 x, int dig = 20) { return ToString(x); }
+SL std::string to_string(float128 x, int dig = 20) { return ToString(x); }
 
-SL __float128 Abs(__float128 f) { return fabsq(f); }
+SL float128 Abs(float128 f) { return fabsq(f); }
 
-SL __float128 FAbs(__float128 f) { return fabsq(f); }
+SL float128 FAbs(float128 f) { return fabsq(f); }
 
-SL __float128 Ceil(__float128 f) { return ceilq(f); }
+SL float128 Ceil(float128 f) { return ceilq(f); }
 
-SL __float128 Floor(__float128 f) { return floorq(f); }
+SL float128 Floor(float128 f) { return floorq(f); }
 
-SL __float128 Trunc(__float128 f) { return truncq(f); }
+SL float128 Trunc(float128 f) { return truncq(f); }
 
-SL __float128 Power(__float128 f, int p) {
-  return powq(f, static_cast<__float128>(p));
+SL float128 Power(float128 f, int p) {
+  return powq(f, static_cast<float128>(p));
 }
 
-SL std::ostream& operator<<(std::ostream& o, __float128 f) {
+SL std::ostream& operator<<(std::ostream& o, float128 f) {
   return o << ToString(f, 20);
 }
 
@@ -73,9 +73,7 @@ using ::ToStringF;
 }  // namespace pe
 
 namespace std {
-SL std::ostream& operator<<(std::ostream& o, __float128 f) {
-  return o << pe::ToString(f, 20);
-}
+using ::operator<<;
 }  // namespace std
 #endif
 
@@ -173,6 +171,7 @@ SL std::string ToStringF(long double f, int dig = 20) {
 
 namespace pe{
 #if PE_HAS_CPP20
+
 template <class T>
 concept PeFloatUtil = requires(T v) {
   requires PeComparable<T>;
@@ -186,13 +185,18 @@ concept PeFloatUtil = requires(T v) {
 
   ToString(v);
   to_string(v);
+
+  std::cout << v;
 };
+
 static_assert(PeFloatUtil<float>);
 static_assert(PeFloatUtil<double>);
 static_assert(PeFloatUtil<long double>);
+
 #if PE_HAS_FLOAT128 && !defined(COMPILER_CLANG)
-static_assert(PeFloatUtil<__float128>);
+static_assert(PeFloatUtil<float128>);
 #endif
+
 #endif
 }  // namespace pe
 

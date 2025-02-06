@@ -58,7 +58,7 @@ For a quick start, refer to [example.c](https://github.com/baihacker/pe/blob/mas
 - **pe_extended_signed_int**: Extended signed integer types.
 - **pe_extended_unsigned_int**: Extended unsigned integer types.
 - **pe_fft**: Fast Fourier Transform and polynomial multiplication utilities.
-- **pe_float128**: Functions for unified `__float128` operations.
+- **pe_float**: Functions for unified float operations including `__float128`.
 - **pe_fraction**: Fraction arithmetic operations.
 - **pe_gbi**: General big integer operations, corresponding to `pe_nt`.
 - **pe_geometry**: Support for `Point2D` and `Point3D`.

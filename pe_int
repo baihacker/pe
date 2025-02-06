@@ -6,7 +6,36 @@
 #include "pe_bit"
 
 #if PE_HAS_INT128
+inline int128 operator"" _i128(const char* sv, size_t /*sc*/) {
+  int128 r = 0;
+  int s = 1;
+  while (*sv) {
+    int now = *sv++;
+    if (now == '-') {
+      s = -s;
+    } else if (now == '+') {
+      ;
+    } else {
+      r = r * 10 + now - '0';
+    }
+  }
+  return s > 0 ? r : -r;
+}
 
+inline uint128 operator"" _u128(const char* sv, size_t /*sc*/) {
+  uint128 r = 0;
+  while (*sv) {
+    int now = *sv++;
+    if (now == '+') {
+      ;
+    } else {
+      r = r * 10 + now - '0';
+    }
+  }
+  return r;
+}
+
+namespace pe {
 SL void PrintInt128(int128 x) {
   char buff[64];
   int top = 0;
@@ -80,41 +109,6 @@ SL std::ostream& operator<<(std::ostream& o, int128 x) {
 SL std::ostream& operator<<(std::ostream& o, uint128 x) {
   return o << ToString(x);
 }
-
-inline int128 operator"" _i128(const char* sv, size_t /*sc*/) {
-  int128 r = 0;
-  int s = 1;
-  while (*sv) {
-    int now = *sv++;
-    if (now == '-') {
-      s = -s;
-    } else if (now == '+') {
-      ;
-    } else {
-      r = r * 10 + now - '0';
-    }
-  }
-  return s > 0 ? r : -r;
-}
-
-inline uint128 operator"" _u128(const char* sv, size_t /*sc*/) {
-  uint128 r = 0;
-  while (*sv) {
-    int now = *sv++;
-    if (now == '+') {
-      ;
-    } else {
-      r = r * 10 + now - '0';
-    }
-  }
-  return r;
-}
-
-namespace pe {
-using ::PrintInt128;
-using ::ToString;
-using ::to_string;
-using ::operator<<;
 }  // namespace pe
 
 namespace std {

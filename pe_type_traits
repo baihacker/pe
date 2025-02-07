@@ -337,16 +337,51 @@ template <typename T>
 using make_const_arg_type_t = typename make_const_arg_type<T>::type;
 
 // predicate_all
-template <template <typename T> class predicate, typename TH, typename... TT>
-struct predicate_all {
+template <template <typename T> class predicate, typename... TL>
+struct predicate_all;
+
+template <template <typename T> class predicate>
+struct predicate_all<predicate> {
+  enum { value = true };
+};
+
+template <template <typename T> class predicate, typename TH, typename... TL>
+struct predicate_all<predicate, TH, TL...> {
   enum {
-    value = predicate<TH>::value && predicate_all<predicate, TT...>::value
+    value = predicate<TH>::value && predicate_all<predicate, TL...>::value
   };
 };
 
-template <template <typename T> class predicate, typename TH>
-struct predicate_all<predicate, TH> {
-  enum { value = predicate<TH>::value };
+// predicate_any
+template <template <typename T> class predicate, typename... TL>
+struct predicate_any;
+
+template <template <typename T> class predicate>
+struct predicate_any<predicate> {
+  enum { value = false };
+};
+
+template <template <typename T> class predicate, typename TH, typename... TL>
+struct predicate_any<predicate, TH, TL...> {
+  enum {
+    value = predicate<TH>::value || predicate_any<predicate, TL...>::value
+  };
+};
+
+// predicate_none
+template <template <typename T> class predicate, typename... TL>
+struct predicate_none;
+
+template <template <typename T> class predicate>
+struct predicate_none<predicate> {
+  enum { value = true };
+};
+
+template <template <typename T> class predicate, typename TH, typename... TL>
+struct predicate_none<predicate, TH, TL...> {
+  enum {
+    value = !predicate<TH>::value && predicate_none<predicate, TL...>::value
+  };
 };
 
 // Integer type promotion

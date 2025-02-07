@@ -40,59 +40,30 @@ SL std::string ToStringF(float128 f, int dig = 20) {
 
 SL std::string to_string(float128 x, int dig = 20) { return ToString(x); }
 
+SL std::ostream& operator<<(std::ostream& o, float128 f) {
+  return o << ToString(f, 20);
+}
+
 SL float128 Abs(float128 f) { return fabsq(f); }
-
 SL float128 FAbs(float128 f) { return fabsq(f); }
-
 SL float128 Ceil(float128 f) { return ceilq(f); }
-
 SL float128 Floor(float128 f) { return floorq(f); }
-
 SL float128 Trunc(float128 f) { return truncq(f); }
-
 SL float128 Power(float128 f, int p) {
   return powq(f, static_cast<float128>(p));
 }
 
-SL std::ostream& operator<<(std::ostream& o, float128 f) {
-  return o << ToString(f, 20);
-}
+SL float128 Sqrt(float128 f) { return sqrtq(f); }
+SL float128 Cos(float128 f) { return cosq(f); }
+SL float128 Sin(float128 f) { return sinq(f); }
+SL float128 Exp(float128 f) { return expq(f); }
+SL float128 Log(float128 f) { return logq(f); }
+SL float128 Log10(float128 f) { return log10q(f); }
 }  // namespace pe
 
 #endif
 
 namespace pe {
-template <typename T>
-SL REQUIRES((is_one_of_v<T, float, double, long double>)) RETURN(T) Abs(T f) {
-  return std::fabs(f);
-}
-
-template <typename T>
-SL REQUIRES((is_one_of_v<T, float, double, long double>)) RETURN(T) FAbs(T f) {
-  return std::fabs(f);
-}
-
-template <typename T>
-SL REQUIRES((is_one_of_v<T, float, double, long double>)) RETURN(T) Floor(T f) {
-  return std::floor(f);
-}
-
-template <typename T>
-SL REQUIRES((is_one_of_v<T, float, double, long double>)) RETURN(T) Ceil(T f) {
-  return std::ceil(f);
-}
-
-template <typename T>
-SL REQUIRES((is_one_of_v<T, float, double, long double>)) RETURN(T) Trunc(T f) {
-  return std::trunc(f);
-}
-
-template <typename T>
-SL REQUIRES((is_one_of_v<T, float, double, long double>)) RETURN(T)
-    Power(T f, int p) {
-  return std::pow(f, static_cast<T>(p));
-}
-
 namespace internal {
 template <typename T>
 SL std::string ToStringFloat(T f, const char* format_string, int dig = 20) {
@@ -140,6 +111,67 @@ SL std::string ToStringF(double f, int dig = 20) {
 SL std::string ToStringF(long double f, int dig = 20) {
   return internal::ToStringFloat<long double>(f, "%#.*Lf", dig);
 }
+
+template <typename T>
+SL REQUIRES((is_one_of_v<T, float, double, long double>)) RETURN(T) Abs(T f) {
+  return std::fabs(f);
+}
+
+template <typename T>
+SL REQUIRES((is_one_of_v<T, float, double, long double>)) RETURN(T) FAbs(T f) {
+  return std::fabs(f);
+}
+
+template <typename T>
+SL REQUIRES((is_one_of_v<T, float, double, long double>)) RETURN(T) Floor(T f) {
+  return std::floor(f);
+}
+
+template <typename T>
+SL REQUIRES((is_one_of_v<T, float, double, long double>)) RETURN(T) Ceil(T f) {
+  return std::ceil(f);
+}
+
+template <typename T>
+SL REQUIRES((is_one_of_v<T, float, double, long double>)) RETURN(T) Trunc(T f) {
+  return std::trunc(f);
+}
+
+template <typename T>
+SL REQUIRES((is_one_of_v<T, float, double, long double>)) RETURN(T)
+    Power(T f, int p) {
+  return std::pow(f, static_cast<T>(p));
+}
+
+template <typename T>
+SL REQUIRES((is_one_of_v<T, float, double, long double>)) RETURN(T) Sqrt(T f) {
+  return std::sqrt(f);
+}
+
+template <typename T>
+SL REQUIRES((is_one_of_v<T, float, double, long double>)) RETURN(T) Cos(T f) {
+  return std::cos(f);
+}
+
+template <typename T>
+SL REQUIRES((is_one_of_v<T, float, double, long double>)) RETURN(T) Sin(T f) {
+  return std::sin(f);
+}
+
+template <typename T>
+SL REQUIRES((is_one_of_v<T, float, double, long double>)) RETURN(T) Exp(T f) {
+  return std::exp(f);
+}
+
+template <typename T>
+SL REQUIRES((is_one_of_v<T, float, double, long double>)) RETURN(T) Log(T f) {
+  return std::log(f);
+}
+
+template <typename T>
+SL REQUIRES((is_one_of_v<T, float, double, long double>)) RETURN(T) Log10(T f) {
+  return std::log10(f);
+}
 }  // namespace pe
 
 #if PE_HAS_CPP20
@@ -147,13 +179,14 @@ namespace pe {
 template <class T>
 concept PeFloatUtil = requires(T v) {
   requires PeComparable<T>;
-  FAbs(v);
   Abs(v);
-  Ceil(v);
+  FAbs(v);
   Floor(v);
+  Ceil(v);
   Trunc(v);
 
   Power(v, 0);
+  Sqrt(v);
 
   ToString(v);
   to_string(v);
@@ -161,12 +194,22 @@ concept PeFloatUtil = requires(T v) {
   std::cout << v;
 };
 
-static_assert(PeFloatUtil<float>);
-static_assert(PeFloatUtil<double>);
-static_assert(PeFloatUtil<long double>);
+template <class T>
+concept PeRichFloatUtil = requires(T v) {
+  requires PeFloatUtil<T>;
+  Cos(v);
+  Sin(v);
+  Exp(v);
+  Log(v);
+  Log10(v);
+};
+
+static_assert(PeRichFloatUtil<float>);
+static_assert(PeRichFloatUtil<double>);
+static_assert(PeRichFloatUtil<long double>);
 
 #if PE_HAS_FLOAT128
-static_assert(PeFloatUtil<float128>);
+static_assert(PeRichFloatUtil<float128>);
 #endif
 }  // namespace pe
 #endif

@@ -1514,5 +1514,151 @@ SL std::vector<int64> MatrixPowerMod(
 }
 #endif
 #endif
+
+template <typename T>
+class SparseMatrixAdjMap {
+ public:
+  SparseMatrixAdjMap(int n) : n_(n), m_(n) { adj_.resize(n_); }
+  SparseMatrixAdjMap(int n, int m) : n_(n), m_(m) { adj_.resize(n_); }
+
+  int Row() const { return n_; }
+
+  std::vector<std::map<int, T>>& Row(int i) {
+    PE_ASSERT(i >= 0 && i < n_);
+    return adj_[i];
+  }
+
+  const std::vector<std::map<int, T>>& Row(int i) const {
+    PE_ASSERT(i >= 0 && i < n_);
+    return adj_[i];
+  }
+
+  int Column() const { return m_; }
+
+  T& operator()(int i, int j) {
+    PE_ASSERT(i >= 0 && i < n_);
+    PE_ASSERT(j >= 0 && j < m_);
+    return adj_[i][j];
+  }
+
+  T operator()(int i, int j) const {
+    PE_ASSERT(i >= 0 && i < n_);
+    PE_ASSERT(j >= 0 && j < m_);
+    auto where = adj_[i].find(j);
+    if (where == adj_[i].end()) {
+      return 0;
+    } else {
+      return where->second;
+    }
+  }
+
+  SparseMatrixAdjMap Transpose() const {
+    SparseMatrixAdjMap t(m_, n_);
+    for (int i = 0; i < n_; ++i)
+      for (const auto& iter : adj_[i]) {
+        t.adj_[iter.first][i] = iter.second;
+      }
+    return t;
+  }
+
+  std::vector<T> MultiplyVector(const std::vector<T>& v) const {
+    PE_ASSERT(v.size() == m_);
+    std::vector<T> ret(n_);
+    for (int i = 0; i < n_; ++i) {
+      T f = 0;
+      for (const auto& iter : adj_[i]) {
+        f += v[iter.first] * iter.second;
+      }
+      ret[i] = f;
+    }
+    return ret;
+  }
+
+ private:
+  int n_;
+  int m_;
+  std::vector<std::map<int, T>> adj_;
+};
+
+template <typename T>
+class SparseMatrixAdjVec {
+ public:
+  SparseMatrixAdjVec(int n) : n_(n), m_(n) { adj_.resize(n_); }
+  SparseMatrixAdjVec(int n, int m) : n_(n), m_(m) { adj_.resize(n_); }
+  SparseMatrixAdjVec(const SparseMatrixAdjMap<T>& other)
+      : n_(other.Row()), m_(other.Column()) {
+    adj_.resize(n_);
+    for (int i = 0; i < n_; ++i) {
+      auto& target = adj_[i];
+      for (const auto& iter : other.Row(i)) {
+        target.push_back({iter.first, iter.second});
+      }
+    }
+  }
+
+  int Row() const { return n_; }
+
+  std::vector<std::pair<int, T>>& Row(int i) {
+    PE_ASSERT(i >= 0 && i < n_);
+    return adj_[i];
+  }
+
+  const std::vector<std::pair<int, T>>& Row(int i) const {
+    PE_ASSERT(i >= 0 && i < n_);
+    return adj_[i];
+  }
+
+  int Column() const { return m_; }
+
+  T& operator()(int i, int j) {
+    PE_ASSERT(i >= 0 && i < n_);
+    PE_ASSERT(j >= 0 && j < m_);
+    for (auto& iter : adj_[i]) {
+      if (iter.first == j) {
+        return iter.second;
+      }
+    }
+    adj_[i].push_back({j, 0});
+    return adj_.back().second;
+  }
+
+  T operator()(int i, int j) const {
+    PE_ASSERT(i >= 0 && i < n_);
+    PE_ASSERT(j >= 0 && j < m_);
+    for (auto& iter : adj_[i]) {
+      if (iter.first == j) {
+        return iter.second;
+      }
+    }
+    return 0;
+  }
+
+  SparseMatrixAdjVec Transpose() const {
+    SparseMatrixAdjVec t(m_, n_);
+    for (int i = 0; i < n_; ++i)
+      for (const auto& iter : adj_[i]) {
+        t.adj_[iter.first].push_back({i, iter.second});
+      }
+    return t;
+  }
+
+  std::vector<T> MultiplyVector(const std::vector<T>& v) const {
+    PE_ASSERT(v.size() == m_);
+    std::vector<T> ret(n_);
+    for (int i = 0; i < n_; ++i) {
+      T f = 0;
+      for (const auto& iter : adj_[i]) {
+        f += v[iter.first] * iter.second;
+      }
+      ret[i] = f;
+    }
+    return ret;
+  }
+
+ private:
+  int n_;
+  int m_;
+  std::vector<std::vector<std::pair<int, T>>> adj_;
+};
 }  // namespace pe
 #endif

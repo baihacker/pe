@@ -224,18 +224,18 @@ class CGSolver {
     }
   }
 
-  static std::vector<T> Solve(
-      const SparseMatrixAdjVec<T>& mat, const SparseMatrixAdjVec<T>& tmat,
-      const std::vector<T>& b, std::vector<T> x,
+  static std::vector<T> SolveAsymmetry(
+      const SparseMatrixAdjVec<T>& mat, const std::vector<T>& b,
+      std::vector<T> x,
       const std::function<int(const std::vector<T>&, const std::vector<T>&)>&
           should_stop) {
     const int size = mat.Row();
 
     PE_ASSERT(size == mat.Column());
-    PE_ASSERT(size == tmat.Row());
-    PE_ASSERT(size == tmat.Column());
     PE_ASSERT(size == b.size());
     PE_ASSERT(size == x.size());
+
+    SparseMatrixAdjVec<T> tmat = mat.Transpose();
 
     std::vector<T> x0 = std::move(x);
     std::vector<T> r0 = Sub(tmat.MultiplyVector(b),

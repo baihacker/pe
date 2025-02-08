@@ -195,8 +195,9 @@ SL void SquareFreeCounterTest() {
 PE_REGISTER_TEST(&SquareFreeCounterTest, "SquareFreeCounterTest", SMALL);
 
 SL void MValuesTest() {
-  auto compute = [&](int64 /*val*/, int /*imp*/, int64 /*vmp*/,
-                     MVVHistory* /*his*/, int /*top*/) -> int64 { return 1; };
+  auto compute = [&](int64 /*n*/, int64 /*val*/, int /*imp*/, int64 /*vmp*/,
+                     int /*emp*/, MVVHistory* /*his*/,
+                     int /*top*/) -> int64 { return 1; };
 
   assert(ForMValues<int64>(100000000000LL, compute) == 34113193);
 }

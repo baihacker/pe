@@ -3177,55 +3177,119 @@ struct PatternNumberCounter {
 #endif
 
 struct MVVHistory {
-  int64 p;  // value of a prime factor.
-  int ip;   // index of a prime factor.
-  int e;    // exponential of a prime rfactor.
+  int64 p;   // value of a prime factor.
+  int ip;    // index of a prime factor.
+  int e;     // exponential of a prime rfactor.
+  int64 pd;  // p^e
 };
 
 // Visit all values of x / (max primer factor of x) for x no more than n.
-// auto compute = [&](int64 val, int imp, int64 vmp, MVVHistory* his,
-//                    int top) -> int64 { return 1; };
-template <typename RT = int64>
+template <typename D, typename RT = int64, int TN = 1>
 struct MValueVisitor {
-  using VisitorType = std::function<RT(int64, int, int64, MVVHistory*, int)>;
+  // If top = 0, imp = -1, vmp = 1, emp = 0.
+  RT Visit(int64 n, int64 val, int imp, int64 vmp, int emp, MVVHistory* his,
+           int top) {
+    return 0;
+  }
 
-  MValueVisitor(const VisitorType& visitor) : visitor_(visitor), top_(0) {}
-
-  RT Dfs(int limit, int64 n, int64 val, int imp, int64 vmp) {
-    RT ret = visitor_(val, imp, vmp, history_, top_);
+  RT Dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp,
+         MVVHistory* history, int top) {
+    RT ret = static_cast<D&>(*this).Visit(n, val, imp, vmp, emp, history, top);
     for (int i = 0; i < limit; ++i) {
       const int64 p = plist[i];
       const int next_imp = imp == -1 ? i : imp;
       const int64 next_vmp = imp == -1 ? p : vmp;
       const int64 val_limit = n / p / next_vmp;
       if (val > val_limit) break;
-      history_[top_].ip = i;
-      history_[top_].p = p;
-      history_[top_].e = 1;
-      int& e = history_[top_++].e;
+      history[top].ip = i;
+      history[top].p = p;
+      history[top].e = 1;
+      history[top].pd = p;
+      int& e = history[top].e;
+      int64& pd = history[top].pd;
       for (int64 nextval = val * p;; ++e) {
-        ret += Dfs(i, n, nextval, next_imp, next_vmp);
+        ret += Dfs(i, n, nextval, next_imp, next_vmp, next_vmp == p ? e : emp,
+                   history, top + 1);
         if (nextval > val_limit) break;
+        pd *= p;
         nextval *= p;
       }
-      --top_;
     }
     return ret;
   }
 
-  RT Cal(int64 n) { return Dfs(FindPrimeIdxSg(n), n, 1, -1, 0); }
+  RT DfsLevel0(int limit, int64 n, int64 val, int imp, int64 vmp, int emp) {
+    RT ret;
+#if ENABLE_OPENMP
+    if (TN > 1) {
+      MVVHistory history[TN][128];
+      ret += static_cast<D&>(*this).Visit(n, val, imp, vmp, emp, history[0], 0);
+      PSum<RT> sum_helper;
+#pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
+      for (int i = 0; i < limit; ++i) {
+        MVVHistory* his = history[tid()];
+        const int64 p = plist[i];
+        const int64 val_limit = n / p / p;
+        if (val > val_limit) continue;
+        his[0].ip = i;
+        his[0].p = p;
+        his[0].e = 1;
+        his[0].pd = p;
+        int& e = his[0].e;
+        int64& pd = his[0].pd;
+        for (int64 nextval = val * p;; ++e) {
+          sum_helper += Dfs(i, n, nextval, i, p, e, his, 1);
+          if (nextval > val_limit) break;
+          pd *= p;
+          nextval *= p;
+        }
+      }
+      ret += sum_helper.value();
+    } else {
+#endif
+      MVVHistory history[128];
+      ret += Dfs(limit, n, val, imp, vmp, emp, history, 0);
+#if ENABLE_OPENMP
+    }
+#endif
+
+    return ret;
+  }
+
+  void Init(int64 n) {}
+  void Done() {}
+  RT Cal(int64 n) {
+    static_cast<D&>(*this).Init(n);
+    RT ret = DfsLevel0(FindPrimeIdxSg(n), n, 1, -1, 1, 0);
+    static_cast<D&>(*this).Done();
+    return ret;
+  }
+};
+
+template <typename RT = int64, int TN = 1>
+struct MValueVisitorHelper
+    : public MValueVisitor<MValueVisitorHelper<RT, TN>, RT, TN> {
+ public:
+  using VisitorType = std::function<RT(int64 n, int64 val, int imp, int64 vmp,
+                                       int emp, MVVHistory* his, int top)>;
+
+  MValueVisitorHelper(const VisitorType& visitor) : visitor_(visitor) {}
+
+  RT Visit(int64 n, int64 val, int imp, int64 vmp, int emp, MVVHistory* his,
+           int top) {
+    return visitor_(n, val, imp, vmp, emp, his, top);
+  }
 
  private:
-  VisitorType visitor_;
-  MVVHistory history_[128];
-  int top_;
+  const VisitorType& visitor_;
 };
 
 template <typename RT>
 RT ForMValues(
     int64 n,
-    const std::function<RT(int64, int, int64, MVVHistory*, int)>& visitor) {
-  return MValueVisitor<RT>(visitor).Cal(n);
+    const std::function<RT(int64 n, int64 val, int imp, int64 vmp, int emp,
+                           MVVHistory* his, int top)>& visitor) {
+  return MValueVisitorHelper<RT>(visitor).Cal(n);
 }
 
 template <typename D, typename RT = int64, int TN = 1,
@@ -3251,7 +3315,7 @@ struct MValueBaseEx<D, RT, TN, false> {
       ret += 1;
     }
     return ret;
-  }
+  }  // namespace pe
 
   RT Dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, RT now,
          RT now1) {
@@ -3404,8 +3468,8 @@ int64 CountPythagoreanTriple(int64 n) {
   auto _ = PrimeS0PMod<int64>(n, 4);
   auto ps1 = _[1];
   auto ps3 = _[3];
-  auto compute = [&](int64 val, int /*imp*/, int64 vmp, MVVHistory* his,
-                     int top) -> int64 {
+  auto compute = [&](int64 n, int64 val, int /*imp*/, int64 vmp, int /*emp*/,
+                     MVVHistory* his, int top) -> int64 {
     if (val == 1) {
       return 3 * ps1[n] + ps3[n] + 2;  // 2 is for 1 and 2.
     }

@@ -6,6 +6,7 @@
 #include "pe_int"
 #include "pe_float"
 #include "pe_nt"
+#include "pe_vector"
 
 namespace pe {
 class GaussianEliminationMod2 {
@@ -167,30 +168,6 @@ class GaussianEliminationSolver {
 template <typename T>
 class CGSolver {
  public:
-  static std::vector<T> Sub(const std::vector<T>& a, const std::vector<T>& b) {
-    std::vector<T> c(a.size());
-    for (int i = 0; i < a.size(); ++i) c[i] = a[i] - b[i];
-    return c;
-  }
-
-  static std::vector<T> Mul(T t, const std::vector<T>& b) {
-    std::vector<T> c(b.size());
-    for (int i = 0; i < b.size(); ++i) c[i] = t * b[i];
-    return c;
-  }
-
-  static std::vector<T> Add(const std::vector<T>& a, const std::vector<T>& b) {
-    std::vector<T> c(a.size());
-    for (int i = 0; i < a.size(); ++i) c[i] = a[i] + b[i];
-    return c;
-  }
-
-  static T InnerProduct(const std::vector<T>& a, const std::vector<T>& b) {
-    T ret = 0;
-    for (int i = 0; i < a.size(); ++i) ret += a[i] * b[i];
-    return ret;
-  }
-
   static std::vector<T> Solve(
       const SparseMatrixAdjVec<T>& mat, const std::vector<T>& b,
       std::vector<T> x,
@@ -203,21 +180,25 @@ class CGSolver {
     PE_ASSERT(size == x.size());
 
     std::vector<T> x0 = std::move(x);
-    std::vector<T> r0 = Sub(b, mat.MultiplyVector(x0));
+    std::vector<T> r0 = VectorSub(b, mat.MultiplyVector(x0));
     std::vector<T> p0 = r0;
     for (int64 k = 0;; ++k) {
       const std::vector<T> ap0 = mat.MultiplyVector(p0);
-      const T alpha0 = InnerProduct(r0, r0) / InnerProduct(p0, ap0);
-      const std::vector<T> deltax = Mul(alpha0, p0);
-      std::vector<T> r1 = Sub(r0, Mul(alpha0, ap0));
-
-      if (should_stop(deltax, r1)) {
-        return Add(x0, deltax);
+      const T alpha0 = VectorDotProduct(r0, r0) / VectorDotProduct(p0, ap0);
+      if (IsNAN(alpha0)) {
+        return x0;
       }
 
-      std::vector<T> x1 = Add(x0, deltax);
-      T beta0 = InnerProduct(r1, r1) / InnerProduct(r0, r0);
-      std::vector<T> p1 = Add(r1, Mul(beta0, p0));
+      const std::vector<T> deltax = VectorScale(alpha0, p0);
+      std::vector<T> r1 = VectorSub(r0, VectorScale(alpha0, ap0));
+
+      if (should_stop(deltax, r1)) {
+        return VectorAdd(x0, deltax);
+      }
+
+      std::vector<T> x1 = VectorAdd(x0, deltax);
+      T beta0 = VectorDotProduct(r1, r1) / VectorDotProduct(r0, r0);
+      std::vector<T> p1 = VectorAdd(r1, VectorScale(beta0, p0));
       r0 = std::move(r1);
       p0 = std::move(p1);
       x0 = std::move(x1);
@@ -238,22 +219,26 @@ class CGSolver {
     SparseMatrixAdjVec<T> tmat = mat.Transpose();
 
     std::vector<T> x0 = std::move(x);
-    std::vector<T> r0 = Sub(tmat.MultiplyVector(b),
-                            tmat.MultiplyVector(mat.MultiplyVector(x0)));
+    std::vector<T> r0 = VectorSub(tmat.MultiplyVector(b),
+                                  tmat.MultiplyVector(mat.MultiplyVector(x0)));
     std::vector<T> p0 = r0;
     for (int64 k = 0;; ++k) {
       const std::vector<T> ap0 = tmat.MultiplyVector(mat.MultiplyVector(p0));
-      const T alpha0 = InnerProduct(r0, r0) / InnerProduct(p0, ap0);
-      const std::vector<T> deltax = Mul(alpha0, p0);
-      std::vector<T> r1 = Sub(r0, Mul(alpha0, ap0));
-
-      if (should_stop(deltax, r1)) {
-        return Add(x0, deltax);
+      const T alpha0 = VectorDotProduct(r0, r0) / VectorDotProduct(p0, ap0);
+      if (IsNAN(alpha0)) {
+        return x0;
       }
 
-      std::vector<T> x1 = Add(x0, deltax);
-      T beta0 = InnerProduct(r1, r1) / InnerProduct(r0, r0);
-      std::vector<T> p1 = Add(r1, Mul(beta0, p0));
+      const std::vector<T> deltax = VectorScale(alpha0, p0);
+      std::vector<T> r1 = VectorSub(r0, VectorScale(alpha0, ap0));
+
+      if (should_stop(deltax, r1)) {
+        return VectorAdd(x0, deltax);
+      }
+
+      std::vector<T> x1 = VectorAdd(x0, deltax);
+      T beta0 = VectorDotProduct(r1, r1) / VectorDotProduct(r0, r0);
+      std::vector<T> p1 = VectorAdd(r1, VectorScale(beta0, p0));
       r0 = std::move(r1);
       p0 = std::move(p1);
       x0 = std::move(x1);
@@ -276,7 +261,7 @@ class BiCGSTABSolver {
     PE_ASSERT(size == b.size());
     PE_ASSERT(size == x.size());
 
-    std::vector<T> r0 = CGSolver<T>::Sub(b, mat.MultiplyVector(x));
+    std::vector<T> r0 = VectorSub(b, mat.MultiplyVector(x));
     std::vector<T> r0_hat = r0;  // 选择r0的一个副本作为r0_hat
     std::vector<T> p = r0;
     std::vector<T> v(size, 0);
@@ -286,24 +271,32 @@ class BiCGSTABSolver {
     std::vector<T> x0 = x;
 
     for (int64 k = 0;; ++k) {
-      T rho1 = CGSolver<T>::InnerProduct(r0_hat, r0);
+      T rho1 = VectorDotProduct(r0_hat, r0);
       T beta = (rho1 / rho0) * (alpha / omega);
-      p = CGSolver<T>::Add(r0, CGSolver<T>::Mul(beta, CGSolver<T>::Sub(p, CGSolver<T>::Mul(omega, v))));
+      p = VectorAdd(r0, VectorScale(beta, VectorSub(p, VectorScale(omega, v))));
 
       v = mat.MultiplyVector(p);
-      alpha = rho1 / CGSolver<T>::InnerProduct(r0_hat, v);
-      s = CGSolver<T>::Sub(r0, CGSolver<T>::Mul(alpha, v));
+      alpha = rho1 / VectorDotProduct(r0_hat, v);
+      if (IsNAN(alpha)) {
+        return x0;
+      }
+      s = VectorSub(r0, VectorScale(alpha, v));
 
       if (should_stop({}, s)) {
-        return CGSolver<T>::Add(x0, CGSolver<T>::Mul(alpha, p));
+        return VectorAdd(x0, VectorScale(alpha, p));
       }
 
       t = mat.MultiplyVector(s);
-      omega = CGSolver<T>::InnerProduct(t, s) / CGSolver<T>::InnerProduct(t, t);
+      omega = VectorDotProduct(t, s) / VectorDotProduct(t, t);
 
-      std::vector<T> deltax = CGSolver<T>::Add(CGSolver<T>::Mul(alpha, p), CGSolver<T>::Mul(omega, s));
-      x0 = CGSolver<T>::Add(x0, deltax);
-      r0 = CGSolver<T>::Sub(s, CGSolver<T>::Mul(omega, t));
+      if (IsNAN(omega)) {
+        return x0;
+      }
+
+      std::vector<T> deltax =
+          VectorAdd(VectorScale(alpha, p), VectorScale(omega, s));
+      x0 = VectorAdd(x0, deltax);
+      r0 = VectorSub(s, VectorScale(omega, t));
 
       if (should_stop(deltax, r0)) {
         return x0;

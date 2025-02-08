@@ -4,6 +4,13 @@
 #include "pe_base"
 #include "pe_int"
 
+namespace pe {
+template <typename T>
+SL int IsNAN(T v) {
+  return 0;
+}
+}  // namespace pe
+
 #if PE_HAS_FLOAT128
 namespace pe {
 namespace internal {
@@ -43,6 +50,8 @@ SL std::string to_string(float128 x, int dig = 20) { return ToString(x); }
 SL std::ostream& operator<<(std::ostream& o, float128 f) {
   return o << ToString(f, 20);
 }
+
+SL int IsNAN(float128 v) { return isnanq(v); }
 
 SL float128 Abs(float128 f) { return fabsq(f); }
 SL float128 FAbs(float128 f) { return fabsq(f); }
@@ -110,6 +119,12 @@ SL std::string ToStringF(double f, int dig = 20) {
 
 SL std::string ToStringF(long double f, int dig = 20) {
   return internal::ToStringFloat<long double>(f, "%#.*Lf", dig);
+}
+
+template <typename T>
+SL REQUIRES((is_one_of_v<T, float, double, long double>)) RETURN(int)
+    IsNAN(T v) {
+  return std::isnan(v);
 }
 
 template <typename T>

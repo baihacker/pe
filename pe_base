@@ -251,48 +251,31 @@
   (std::forward_as_tuple(__VA_ARGS__) <       \
    std::forward_as_tuple(PE_ADD_PREFIX_AND_DOT((target), __VA_ARGS__)))
 
-template <typename OT, typename IT>
-class Cached {
- public:
-  Cached(const std::function<OT(IT)>& impl) : impl_(impl) {}
-
-  void Clear() { mem_.clear(); }
-
-  OT operator()(IT key) {
-    auto where = mem_.find(key);
-    if (where != mem_.end()) {
-      return where->second;
-    }
-    return mem_[key] = impl_(key);
-  }
-
- private:
-  std::function<OT(IT)> impl_;
-  std::unordered_map<IT, OT> mem_;
-};
-
-#if ENABLE_OPENMP
-SL int tid(void) { return omp_get_thread_num(); }
-#endif
-
 // namespace rules
-// 1. A specialized version of std template will be added to std.
+// 1. A class template specialiations of std class template will be added to
+// std.
 //    e.g. numeric_limits for int128.
-// 2. A std entity which is not available in old std will be added to std.
+// 2. [UB] A function overload of std functions will be add to std.
+//    e.g. gcd and lcm for int128.
+// 3. [UB] A std entity which is not available in old std will be added to std.
 //    e.g. remove_cvref is not available before c++17.
-// 3. The functions that operate on a type are added to the namespace of that
+// 4. The functions that operate on a type are added to the namespace of that
 //    type itself.
-//    e.g. mpz_class is in global namespace.
+//    e.g. mpz_class is in the global namespace.
 //    e.g. int128, float128, BigInteger, MpInteger are in namespace pe.
-// 4. In addition to 3, if these functions are not in namespace pe and they are
+// 5. In addition to 4, if these functions are not in namespace pe and they are
 //    not operators, add them to pe. It's always possible to use "pe::Function"
 //    to call them. However, operators are not added because "pe::operator
 //    <operator> ()" is not often used.
 //    e.g. IsEven for mpz_class is defined in global namespace and added to pe.
 //    e.g. operator % on mpz_class is defined in global namespacee and NOT added
 //    to pe.
-// 5. operator "" _suffix is always added to global namespace.
+// 6. operator "" _suffix is always added to global namespace.
 //    e.g. operator "" x where x is one of {_i128, _u128, _bi, _mpi, _bn}.
+// 7. [UB] `using pe::operator<<` in std.
+
+// [UB]: Undefined or unspecified behavior when extending namespace std.
+// See: https://en.cppreference.com/w/cpp/language/extending_std
 
 namespace pe {
 using int64 = std::int64_t;
@@ -379,32 +362,11 @@ std::ostream& PPrintVec(std::ostream& o, const std::vector<T>& v) {
   }
   return o << "}";
 }
-}  // namespace pe
 
-// The following names are visible out of pe.
-using int64 = pe::int64;
-using uint64 = pe::uint64;
-using int32 = pe::int32;
-using uint32 = pe::uint32;
-
-#if PE_HAS_INT128
-using int128 = pe::int128;
-using uint128 = pe::uint128;
-#endif
-
-#if PE_HAS_FLOAT128
-using float128 = pe::float128;
-#endif
-
-using vi = pe::vi;
-using mii = pe::mii;
-using si = pe::si;
-
-// Undefined behavior
-// https://en.cppreference.com/w/cpp/language/extending_std
-namespace std {
 template <typename T1, typename T2>
-SL std::ostream& operator<<(std::ostream& o, const std::pair<T1, T2>& v);
+SL std::ostream& operator<<(std::ostream& o, const std::pair<T1, T2>& v) {
+  return o << "(" << v.first << ", " << v.second << ")";
+}
 
 template <typename T>
 SL std::ostream& operator<<(std::ostream& o, const std::vector<T>& v) {
@@ -477,10 +439,48 @@ SL std::ostream& operator<<(std::ostream& o,
   return o << "}";
 }
 
-template <typename T1, typename T2>
-SL std::ostream& operator<<(std::ostream& o, const std::pair<T1, T2>& v) {
-  return o << "(" << v.first << ", " << v.second << ")";
-}
-}  // namespace std
+template <typename OT, typename IT>
+class Cached {
+ public:
+  Cached(const std::function<OT(IT)>& impl) : impl_(impl) {}
 
+  void Clear() { mem_.clear(); }
+
+  OT operator()(IT key) {
+    auto where = mem_.find(key);
+    if (where != mem_.end()) {
+      return where->second;
+    }
+    return mem_[key] = impl_(key);
+  }
+
+ private:
+  std::function<OT(IT)> impl_;
+  std::unordered_map<IT, OT> mem_;
+};
+
+#if ENABLE_OPENMP
+SL int tid(void) { return omp_get_thread_num(); }
+#endif
+
+}  // namespace pe
+
+// The following names are visible out of pe.
+using int64 = pe::int64;
+using uint64 = pe::uint64;
+using int32 = pe::int32;
+using uint32 = pe::uint32;
+
+#if PE_HAS_INT128
+using int128 = pe::int128;
+using uint128 = pe::uint128;
+#endif
+
+#if PE_HAS_FLOAT128
+using float128 = pe::float128;
+#endif
+
+using vi = pe::vi;
+using mii = pe::mii;
+using si = pe::si;
 #endif

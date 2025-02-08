@@ -166,146 +166,138 @@ class GaussianEliminationSolver {
 
 // https://en.wikipedia.org/wiki/Conjugate_gradient_method
 template <typename T>
-class CGSolver {
- public:
-  static std::vector<T> Solve(
-      const SparseMatrixAdjVec<T>& mat, const std::vector<T>& b,
-      std::vector<T> x,
-      const std::function<int(const std::vector<T>&, const std::vector<T>&)>&
-          should_stop) {
-    const int size = mat.Row();
+SL std::vector<T> CGSolve(
+    const SparseMatrixAdjVec<T>& mat, const std::vector<T>& b, std::vector<T> x,
+    const std::function<int(const std::vector<T>&, const std::vector<T>&)>&
+        should_stop) {
+  const int size = mat.Row();
 
-    PE_ASSERT(size == mat.Column());
-    PE_ASSERT(size == b.size());
-    PE_ASSERT(size == x.size());
+  PE_ASSERT(size == mat.Column());
+  PE_ASSERT(size == b.size());
+  PE_ASSERT(size == x.size());
 
-    std::vector<T> x0 = std::move(x);
-    std::vector<T> r0 = VectorSub(b, mat.MultiplyVector(x0));
-    std::vector<T> p0 = r0;
-    for (int64 k = 0;; ++k) {
-      const std::vector<T> ap0 = mat.MultiplyVector(p0);
-      const T alpha0 = VectorDotProduct(r0, r0) / VectorDotProduct(p0, ap0);
-      if (IsNAN(alpha0)) {
-        return x0;
-      }
-
-      const std::vector<T> deltax = VectorScale(alpha0, p0);
-      std::vector<T> r1 = VectorSub(r0, VectorScale(alpha0, ap0));
-
-      if (should_stop(deltax, r1)) {
-        return VectorAdd(x0, deltax);
-      }
-
-      std::vector<T> x1 = VectorAdd(x0, deltax);
-      T beta0 = VectorDotProduct(r1, r1) / VectorDotProduct(r0, r0);
-      std::vector<T> p1 = VectorAdd(r1, VectorScale(beta0, p0));
-      r0 = std::move(r1);
-      p0 = std::move(p1);
-      x0 = std::move(x1);
+  std::vector<T> x0 = std::move(x);
+  std::vector<T> r0 = VectorSub(b, mat.MultiplyVector(x0));
+  std::vector<T> p0 = r0;
+  for (int64 k = 0;; ++k) {
+    const std::vector<T> ap0 = mat.MultiplyVector(p0);
+    const T alpha0 = VectorDotProduct(r0, r0) / VectorDotProduct(p0, ap0);
+    if (IsNAN(alpha0)) {
+      return x0;
     }
-  }
 
-  static std::vector<T> SolveAsymmetry(
-      const SparseMatrixAdjVec<T>& mat, const std::vector<T>& b,
-      std::vector<T> x,
-      const std::function<int(const std::vector<T>&, const std::vector<T>&)>&
-          should_stop) {
-    const int size = mat.Row();
+    const std::vector<T> deltax = VectorScale(alpha0, p0);
+    std::vector<T> r1 = VectorSub(r0, VectorScale(alpha0, ap0));
 
-    PE_ASSERT(size == mat.Column());
-    PE_ASSERT(size == b.size());
-    PE_ASSERT(size == x.size());
-
-    SparseMatrixAdjVec<T> tmat = mat.Transpose();
-
-    std::vector<T> x0 = std::move(x);
-    std::vector<T> r0 = VectorSub(tmat.MultiplyVector(b),
-                                  tmat.MultiplyVector(mat.MultiplyVector(x0)));
-    std::vector<T> p0 = r0;
-    for (int64 k = 0;; ++k) {
-      const std::vector<T> ap0 = tmat.MultiplyVector(mat.MultiplyVector(p0));
-      const T alpha0 = VectorDotProduct(r0, r0) / VectorDotProduct(p0, ap0);
-      if (IsNAN(alpha0)) {
-        return x0;
-      }
-
-      const std::vector<T> deltax = VectorScale(alpha0, p0);
-      std::vector<T> r1 = VectorSub(r0, VectorScale(alpha0, ap0));
-
-      if (should_stop(deltax, r1)) {
-        return VectorAdd(x0, deltax);
-      }
-
-      std::vector<T> x1 = VectorAdd(x0, deltax);
-      T beta0 = VectorDotProduct(r1, r1) / VectorDotProduct(r0, r0);
-      std::vector<T> p1 = VectorAdd(r1, VectorScale(beta0, p0));
-      r0 = std::move(r1);
-      p0 = std::move(p1);
-      x0 = std::move(x1);
+    if (should_stop(deltax, r1)) {
+      return VectorAdd(x0, deltax);
     }
+
+    std::vector<T> x1 = VectorAdd(x0, deltax);
+    T beta0 = VectorDotProduct(r1, r1) / VectorDotProduct(r0, r0);
+    std::vector<T> p1 = VectorAdd(r1, VectorScale(beta0, p0));
+    r0 = std::move(r1);
+    p0 = std::move(p1);
+    x0 = std::move(x1);
   }
-};
+}
+
+template <typename T>
+SL std::vector<T> CGSolveAsymmetry(
+    const SparseMatrixAdjVec<T>& mat, const std::vector<T>& b, std::vector<T> x,
+    const std::function<int(const std::vector<T>&, const std::vector<T>&)>&
+        should_stop) {
+  const int size = mat.Row();
+
+  PE_ASSERT(size == mat.Column());
+  PE_ASSERT(size == b.size());
+  PE_ASSERT(size == x.size());
+
+  SparseMatrixAdjVec<T> tmat = mat.Transpose();
+
+  std::vector<T> x0 = std::move(x);
+  std::vector<T> r0 = VectorSub(tmat.MultiplyVector(b),
+                                tmat.MultiplyVector(mat.MultiplyVector(x0)));
+  std::vector<T> p0 = r0;
+  for (int64 k = 0;; ++k) {
+    const std::vector<T> ap0 = tmat.MultiplyVector(mat.MultiplyVector(p0));
+    const T alpha0 = VectorDotProduct(r0, r0) / VectorDotProduct(p0, ap0);
+    if (IsNAN(alpha0)) {
+      return x0;
+    }
+
+    const std::vector<T> deltax = VectorScale(alpha0, p0);
+    std::vector<T> r1 = VectorSub(r0, VectorScale(alpha0, ap0));
+
+    if (should_stop(deltax, r1)) {
+      return VectorAdd(x0, deltax);
+    }
+
+    std::vector<T> x1 = VectorAdd(x0, deltax);
+    T beta0 = VectorDotProduct(r1, r1) / VectorDotProduct(r0, r0);
+    std::vector<T> p1 = VectorAdd(r1, VectorScale(beta0, p0));
+    r0 = std::move(r1);
+    p0 = std::move(p1);
+    x0 = std::move(x1);
+  }
+}
 
 // Auto generated by ChatGPT.
 template <typename T>
-class BiCGSTABSolver {
- public:
-  static std::vector<T> Solve(
-      const SparseMatrixAdjVec<T>& mat, const std::vector<T>& b,
-      std::vector<T> x,
-      const std::function<int(const std::vector<T>&, const std::vector<T>&)>&
-          should_stop) {
-    const int size = mat.Row();
+SL std::vector<T> BiCGSTABSolve(
+    const SparseMatrixAdjVec<T>& mat, const std::vector<T>& b, std::vector<T> x,
+    const std::function<int(const std::vector<T>&, const std::vector<T>&)>&
+        should_stop) {
+  const int size = mat.Row();
 
-    PE_ASSERT(size == mat.Column());
-    PE_ASSERT(size == b.size());
-    PE_ASSERT(size == x.size());
+  PE_ASSERT(size == mat.Column());
+  PE_ASSERT(size == b.size());
+  PE_ASSERT(size == x.size());
 
-    std::vector<T> r0 = VectorSub(b, mat.MultiplyVector(x));
-    std::vector<T> r0_hat = r0;  // 选择r0的一个副本作为r0_hat
-    std::vector<T> p = r0;
-    std::vector<T> v(size, 0);
-    std::vector<T> s, t;
+  std::vector<T> r0 = VectorSub(b, mat.MultiplyVector(x));
+  std::vector<T> r0_hat = r0;  // 选择r0的一个副本作为r0_hat
+  std::vector<T> p = r0;
+  std::vector<T> v(size, 0);
+  std::vector<T> s, t;
 
-    T rho0 = 1, alpha = 1, omega = 1;
-    std::vector<T> x0 = x;
+  T rho0 = 1, alpha = 1, omega = 1;
+  std::vector<T> x0 = x;
 
-    for (int64 k = 0;; ++k) {
-      T rho1 = VectorDotProduct(r0_hat, r0);
-      T beta = (rho1 / rho0) * (alpha / omega);
-      p = VectorAdd(r0, VectorScale(beta, VectorSub(p, VectorScale(omega, v))));
+  for (int64 k = 0;; ++k) {
+    T rho1 = VectorDotProduct(r0_hat, r0);
+    T beta = (rho1 / rho0) * (alpha / omega);
+    p = VectorAdd(r0, VectorScale(beta, VectorSub(p, VectorScale(omega, v))));
 
-      v = mat.MultiplyVector(p);
-      alpha = rho1 / VectorDotProduct(r0_hat, v);
-      if (IsNAN(alpha)) {
-        return x0;
-      }
-      s = VectorSub(r0, VectorScale(alpha, v));
-
-      if (should_stop({}, s)) {
-        return VectorAdd(x0, VectorScale(alpha, p));
-      }
-
-      t = mat.MultiplyVector(s);
-      omega = VectorDotProduct(t, s) / VectorDotProduct(t, t);
-
-      if (IsNAN(omega)) {
-        return x0;
-      }
-
-      std::vector<T> deltax =
-          VectorAdd(VectorScale(alpha, p), VectorScale(omega, s));
-      x0 = VectorAdd(x0, deltax);
-      r0 = VectorSub(s, VectorScale(omega, t));
-
-      if (should_stop(deltax, r0)) {
-        return x0;
-      }
-
-      rho0 = rho1;
+    v = mat.MultiplyVector(p);
+    alpha = rho1 / VectorDotProduct(r0_hat, v);
+    if (IsNAN(alpha)) {
+      return x0;
     }
+    s = VectorSub(r0, VectorScale(alpha, v));
+
+    if (should_stop({}, s)) {
+      return VectorAdd(x0, VectorScale(alpha, p));
+    }
+
+    t = mat.MultiplyVector(s);
+    omega = VectorDotProduct(t, s) / VectorDotProduct(t, t);
+
+    if (IsNAN(omega)) {
+      return x0;
+    }
+
+    std::vector<T> deltax =
+        VectorAdd(VectorScale(alpha, p), VectorScale(omega, s));
+    x0 = VectorAdd(x0, deltax);
+    r0 = VectorSub(s, VectorScale(omega, t));
+
+    if (should_stop(deltax, r0)) {
+      return x0;
+    }
+
+    rho0 = rho1;
   }
-};
+}
 
 // Returns the number of (x, y) where
 // x^2+y^2<=n and x >= 0 and y >= 0

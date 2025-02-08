@@ -3218,12 +3218,16 @@ struct MValueVisitor {
     return ret;
   }
 
-  RT DfsLevel0(int limit, int64 n, int64 val, int imp, int64 vmp, int emp) {
-    RT ret;
+  RT DfsLevel0(int limit, int64 n) {
+    constexpr int64 val = 1;
+    constexpr int imp = -1;
+    constexpr int64 vmp = 1;
+    constexpr int emp = 0;
 #if ENABLE_OPENMP
     if (TN > 1) {
       MVVHistory history[TN][128];
-      ret += static_cast<D&>(*this).Visit(n, val, imp, vmp, emp, history[0], 0);
+      RT ret =
+          static_cast<D&>(*this).Visit(n, val, imp, vmp, emp, history[0], 0);
       PSum<RT> sum_helper;
 #pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
       for (int i = 0; i < limit; ++i) {
@@ -3245,22 +3249,21 @@ struct MValueVisitor {
         }
       }
       ret += sum_helper.value();
+      return ret;
     } else {
 #endif
       MVVHistory history[128];
-      ret += Dfs(limit, n, val, imp, vmp, emp, history, 0);
+      return Dfs(limit, n, val, imp, vmp, emp, history, 0);
 #if ENABLE_OPENMP
     }
 #endif
-
-    return ret;
   }
 
   void Init(int64 n) {}
   void Done() {}
   RT Cal(int64 n) {
     static_cast<D&>(*this).Init(n);
-    RT ret = DfsLevel0(FindPrimeIdxSg(n), n, 1, -1, 1, 0);
+    RT ret = DfsLevel0(FindPrimeIdxSg(n), n);
     static_cast<D&>(*this).Done();
     return ret;
   }
@@ -3281,7 +3284,7 @@ struct MValueVisitorHelper
   }
 
  private:
-  const VisitorType& visitor_;
+  VisitorType visitor_;
 };
 
 template <typename RT>

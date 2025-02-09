@@ -2746,31 +2746,9 @@ DVA<T> MakePrefixSumPhi(const DVA<T>& ps_mu) {
   return ret;
 }
 
-// Calculates sum(1, 1 <= prime i <= j) for j in [1, 2, 3, ..., n/3, n/2, n].
-template <typename T>
-SL DVA<T> PrimeS0(const int64 n) {
-  PE_ASSERT(n >= 1);
-  DVA<T> dva(n);
-
-  for (auto& key : dva.FKeys()) dva[key] = key - 1;
-
-  for (int64 p = 2; p <= dva.m; ++p) {
-    if (dva[p] != dva[p - 1]) {
-      const auto pcnt = dva[p - 1];
-      const int64 p2 = p * p;
-      for (auto& key : dva.BKeys()) {
-        if (key < p2) break;
-        dva[key] -= dva[key / p] - pcnt;
-      }
-    }
-  }
-
-  return dva;
-}
-
 // Calculates sum(1, 1 <= prime i <= j) for j in [1, 2, 3, ..., n/3, n/2, n] in
 // parallel.
-template <typename T, int TN = 8>
+template <typename T, int TN = kDvaOperationThreads>
 SL DVA<T> PrimeS0Parallel(const int64 n) {
   PE_ASSERT(n >= 1);
   DVA<T> dva(n);
@@ -2800,55 +2778,51 @@ SL DVA<T> PrimeS0Parallel(const int64 n) {
         for (int j = idx + 1; j < ks; ++j) {
           values[j] = tmp[j];
         }
-      } else {
+      } else
 #endif
+      {
         for (int j = static_cast<int>(ks - 1); j > idx; --j) {
           const int64 v = keys[j] / p;
           values[j] -= values[v <= dva.m ? v : ks - n / v] - pcnt;
         }
-#if ENABLE_OPENMP
       }
-#endif
     }
   }
 
   return dva;
+}
+
+// Calculates sum(1, 1 <= prime i <= j) for j in [1, 2, 3, ..., n/3, n/2, n].
+template <typename T, int TN = kDvaOperationThreads>
+SL DVA<T> PrimeS0(const int64 n) {
+  PE_ASSERT(n >= 1);
+  if constexpr (TN <= 1) {
+    DVA<T> dva(n);
+
+    for (auto& key : dva.FKeys()) dva[key] = key - 1;
+
+    for (int64 p = 2; p <= dva.m; ++p) {
+      if (dva[p] != dva[p - 1]) {
+        const auto pcnt = dva[p - 1];
+        const int64 p2 = p * p;
+        for (auto& key : dva.BKeys()) {
+          if (key < p2) break;
+          dva[key] -= dva[key / p] - pcnt;
+        }
+      }
+    }
+
+    return dva;
+  } else {
+    return PrimeS0Parallel<T, TN>(n);
+  }
 }
 
 #define PrimePi PrimeS0
 
-// Calculates sum(i, 1 <= prime i <= j) for j in [1, 2, 3, ..., n/3, n/2, n].
-template <typename T>
-SL DVA<T> PrimeS1(const int64 n) {
-  PE_ASSERT(n >= 1);
-  DVA<T> dva(n);
-  for (auto& key : dva.FKeys()) {
-    if (key & 1) {
-      T v((key + 1) >> 1);
-      dva[key] = v * key - 1;
-    } else {
-      T v(key >> 1);
-      dva[key] = v * (key + 1) - 1;
-    }
-  }
-
-  for (int64 p = 2; p <= dva.m; ++p) {
-    if (dva[p] != dva[p - 1]) {
-      const auto psum = dva[p - 1];
-      const int64 p2 = p * p;
-      for (auto& key : dva.BKeys()) {
-        if (key < p2) break;
-        dva[key] -= (dva[key / p] - psum) * p;
-      }
-    }
-  }
-
-  return dva;
-}
-
 // Calculates sum(i, 1 <= prime i <= j) for j in [1, 2, 3, ..., n/3, n/2, n] in
 // parallel.
-template <typename T, int TN = 8>
+template <typename T, int TN = kDvaOperationThreads>
 SL DVA<T> PrimeS1Parallel(const int64 n) {
   PE_ASSERT(n >= 1);
   DVA<T> dva(n);
@@ -2886,19 +2860,52 @@ SL DVA<T> PrimeS1Parallel(const int64 n) {
         for (int j = idx + 1; j < ks; ++j) {
           values[j] = tmp[j];
         }
-      } else {
+      } else
 #endif
+      {
         for (int j = static_cast<int>(ks - 1); j > idx; --j) {
           const int64 v = keys[j] / p;
           values[j] -= (values[v <= dva.m ? v : ks - n / v] - psum) * p;
         }
-#if ENABLE_OPENMP
       }
-#endif
     }
   }
 
   return dva;
+}
+
+// Calculates sum(i, 1 <= prime i <= j) for j in [1, 2, 3, ..., n/3, n/2, n].
+template <typename T, int TN = kDvaOperationThreads>
+SL DVA<T> PrimeS1(const int64 n) {
+  PE_ASSERT(n >= 1);
+  if constexpr (TN <= 1) {
+    DVA<T> dva(n);
+
+    for (auto& key : dva.FKeys()) {
+      if (key & 1) {
+        T v((key + 1) >> 1);
+        dva[key] = v * key - 1;
+      } else {
+        T v(key >> 1);
+        dva[key] = v * (key + 1) - 1;
+      }
+    }
+
+    for (int64 p = 2; p <= dva.m; ++p) {
+      if (dva[p] != dva[p - 1]) {
+        const auto psum = dva[p - 1];
+        const int64 p2 = p * p;
+        for (auto& key : dva.BKeys()) {
+          if (key < p2) break;
+          dva[key] -= (dva[key / p] - psum) * p;
+        }
+      }
+    }
+
+    return dva;
+  } else {
+    return PrimeS1Parallel<T, TN>(n);
+  }
 }
 
 #define PrimeSum PrimeS1

@@ -2543,11 +2543,11 @@ DVA<T> DVAConv(const DVA<T>& ps_g, const DVA<T>& ps_h) {
     for (int64 y = 1; y <= maxx;) {
       const int64 v = maxx / y;
       const int64 maxy = maxx / v;
-      const T curr = ps_h[maxy];
+      const T curr = ps_g[maxy];
       const T delta = curr - last;
       last = curr;
 
-      now += ps_g[v] * delta;
+      now += ps_h[v] * delta;
       y = maxy + 1;
     }
     ret.values[i] = now;
@@ -2557,6 +2557,37 @@ DVA<T> DVAConv(const DVA<T>& ps_g, const DVA<T>& ps_h) {
 }
 
 // ret = Conv(g, h)
+template <typename T, int TN = kDvaOperationThreads>
+DVA<T> DVAConv(const DVA<T>& ps_g, const DVA<T>& ps_h,
+               const std::function<T(int64 maxx, int64 miny, int64 maxy,
+                                     const DVA<T>& ps_h)>& trans) {
+  PE_ASSERT(ps_g.n == ps_h.n);
+
+  DVA<T> ret(ps_g.n);
+
+#if ENABLE_OPENMP
+#pragma omp parallel for schedule(dynamic, 100) num_threads(TN)
+#endif
+  for (int64 i = 1; i < ret.key_size; ++i) {
+    const int64 maxx = ret.keys[i];
+    T now = 0;
+    T last = 0;
+    for (int64 y = 1; y <= maxx;) {
+      const int64 v = maxx / y;
+      const int64 maxy = maxx / v;
+      const T curr = ps_g[maxy];
+      const T delta = curr - last;
+      last = curr;
+
+      now += trans(maxx, y, maxy, ps_h) * delta;
+      y = maxy + 1;
+    }
+    ret.values[i] = now;
+  }
+
+  return ret;
+}
+
 template <typename T, int TN = kDvaOperationThreads /** unused */>
 DVA<T> DVAAdd(const DVA<T>& ps_g, const DVA<T>& ps_h) {
   PE_ASSERT(ps_g.n == ps_h.n);
@@ -2570,7 +2601,6 @@ DVA<T> DVAAdd(const DVA<T>& ps_g, const DVA<T>& ps_h) {
   return ret;
 }
 
-// ret = Conv(g, h)
 template <typename T, int TN = kDvaOperationThreads /** unused */>
 DVA<T> DVASub(const DVA<T>& ps_g, const DVA<T>& ps_h) {
   PE_ASSERT(ps_g.n == ps_h.n);

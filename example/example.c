@@ -378,6 +378,8 @@ void BigNumberExample() {
 #if ENABLE_GMP
   std::cout << Power(2_mpi, 128)
             << std::endl;  // MpInteger, a wrapper of mpz_class
+#endif
+#if HAS_MPZ
   std::cout << Power(MPZ(2), 128) << std::endl;  // Helper function of mpz_class
 #endif
 }

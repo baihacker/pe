@@ -5,7 +5,7 @@ using namespace pe;
 
 using RT = int64;
 
-struct Solver2 : public MValueBaseEx<Solver2, RT, 8> {
+struct Solver2 : public MValueBase<Solver2, RT, 8> {
   RT Batch(int64 n, int64 val, int imp, int64 vmp, int emp, RT now, RT now1) {
     RT ret = 0;
     int64 remain = n / val;
@@ -37,7 +37,7 @@ struct Solver2 : public MValueBaseEx<Solver2, RT, 8> {
   TimeDelta usage;
 };
 
-struct Solver3 : public MValueBaseEx<Solver3, RT, 8, true> {
+struct Solver3 : public MValueBase<Solver3, RT, 8, true> {
   RT Batch(int64 n, int64 val, int imp, int64 vmp, int emp, RT now, RT now1) {
     RT ret = 0;
     int64 remain = n / val;

@@ -1954,17 +1954,21 @@ class DVA {
   int64 key_size;
 
   explicit DVA(int64 n = 1, T element = 0)
-      : n(n), m(SqrtI(n)), is_perfect_square(m * m == n) {
-    keys.push_back(0);
+      : n(n),
+        m(SqrtI(n)),
+        is_perfect_square(m * m == n),
+        key_size(m + 1 + (n / m > m ? m : m - 1)) {
+    keys.reserve(key_size);
 
-    for (int64 i = 1; i <= m; ++i) {
+    for (int64 i = 0; i <= m; ++i) {
       keys.push_back(i);
     }
     for (int64 i = n / m > m ? m : m - 1; i >= 1; --i) {
       keys.push_back(n / i);
     }
-    key_size = static_cast<int64>(std::size(keys));
-    values.resize(std::size(keys));
+
+    values.resize(key_size);
+    values[0] = 0;
     Fill(element);
   }
 
@@ -1975,7 +1979,7 @@ class DVA {
 
   void Resize(int64 n, T element = 0) { *this = std::move(DVA<T>(n, element)); }
 
-  void Fill(T element) { std::fill(values.begin(), values.end(), element); }
+  void Fill(T element) { std::fill(values.begin() + 1, values.end(), element); }
 
   int IdxOfValue(int64 v) const {
     return static_cast<int>(v <= m ? v : key_size - n / v);

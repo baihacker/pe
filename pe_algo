@@ -2528,8 +2528,8 @@ DVA<T> DVAConv(const DVA<T>& ps_g, const DVA<T>& ps_h) {
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 100) num_threads(TN)
 #endif
-  for (int64 id = 1; id < ret.key_size; ++id) {
-    const int64 maxx = ret.keys[id];
+  for (int64 i = 1; i < ret.key_size; ++i) {
+    const int64 maxx = ret.keys[i];
     T now = 0;
     T last = 0;
     for (int64 y = 1; y <= maxx;) {
@@ -2542,7 +2542,7 @@ DVA<T> DVAConv(const DVA<T>& ps_g, const DVA<T>& ps_h) {
       now += ps_g[v] * delta;
       y = maxy + 1;
     }
-    ret.values[id] = now;
+    ret.values[i] = now;
   }
   return ret;
 }
@@ -2554,8 +2554,8 @@ DVA<T> DVAAdd(const DVA<T>& ps_g, const DVA<T>& ps_h) {
 
   DVA<T> ret(ps_g.n);
 
-  for (int64 id = 1; id < ret.key_size; ++id) {
-    ret.values[id] = ps_g.values[id] + ps_h.valus[id];
+  for (int64 i = 1; i < ret.key_size; ++i) {
+    ret.values[i] = ps_g.values[i] + ps_h.valus[i];
   }
 
   return ret;
@@ -2568,8 +2568,8 @@ DVA<T> DVASub(const DVA<T>& ps_g, const DVA<T>& ps_h) {
 
   DVA<T> ret(ps_g.n);
 
-  for (int64 id = 1; id < ret.key_size; ++id) {
-    ret.values[id] = ps_g.values[id] - ps_h.values[id];
+  for (int64 i = 1; i < ret.key_size; ++i) {
+    ret.values[i] = ps_g.values[i] - ps_h.values[i];
   }
 
   return ret;
@@ -2645,7 +2645,8 @@ DVA<T> MakePrefixSumMu(int64 n) {
     for (int64 i = max_idx + 1; i < ret.key_size; ++i) {
       const int64 maxx = ret.keys[i];
       T now = 1;
-      for (int64 y = std::max(2LL, maxx / (handled + 1) + 1); y <= maxx;) {
+      for (int64 y = std::max<int64>(2LL, maxx / (handled + 1) + 1);
+           y <= maxx;) {
         const int64 v = maxx / y;
         const int64 maxy = maxx / v;
         const int64 d = maxy - y + 1;
@@ -2657,7 +2658,7 @@ DVA<T> MakePrefixSumMu(int64 n) {
     for (int64 i = max_idx + 1; i < ret.key_size; ++i) {
       const int64 maxx = ret.keys[i];
       T now = ret.values[i];
-      for (int64 y = 2; y < std::max(2LL, maxx / (handled + 1) + 1);) {
+      for (int64 y = 2; y < std::max<int64>(2LL, maxx / (handled + 1) + 1);) {
         const int64 v = maxx / y;
         const int64 maxy = maxx / v;
         const int64 d = maxy - y + 1;
@@ -3492,13 +3493,12 @@ struct MValueVisitor {
       }
       ret += sum_helper.value();
       return ret;
-    } else {
+    } else
 #endif
+    {
       MVVHistory history[128];
       return Dfs(limit, n, val, imp, vmp, emp, history, 0);
-#if ENABLE_OPENMP
     }
-#endif
   }
 
   void Init(int64 n) {}
@@ -3585,8 +3585,9 @@ struct MValueBaseEx<D, RT, TN, false> {
         }
       }
       ret += sum_helper.value();
-    } else {
+    } else
 #endif
+    {
       for (int i = 0; i < limit; ++i) {
         const int64 p = plist[i];
         const int next_imp = imp == -1 ? i : imp;
@@ -3602,9 +3603,7 @@ struct MValueBaseEx<D, RT, TN, false> {
           nextval *= p;
         }
       }
-#if ENABLE_OPENMP
     }
-#endif
     return ret;
   }
 
@@ -3659,8 +3658,9 @@ struct MValueBaseEx<D, RT, TN, true> {
         }
       }
       ret += sum_helper.value();
-    } else {
+    } else
 #endif
+    {
       for (int i = start; i < limit; ++i) {
         const int64 p = plist[i];
         const int64 val_limit = n / (p * p);
@@ -3673,9 +3673,8 @@ struct MValueBaseEx<D, RT, TN, true> {
           nextval *= p;
         }
       }
-#if ENABLE_OPENMP
     }
-#endif
+
     return ret;
   }
 

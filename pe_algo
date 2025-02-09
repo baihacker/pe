@@ -2441,7 +2441,7 @@ SL REQUIRES((!IsNModNumberV<T>)) RETURN(std::vector<T>)
 // Note that it is required that n <= 3e13.
 template <typename T>
 SL REQUIRES((IsNModNumberV<T>)) RETURN(DVA<T>)
-    DVAConv(const DVA<T>& psa, const DVA<T>& psb) {
+    DVAConvEx(const DVA<T>& psa, const DVA<T>& psb) {
   const DVAShape shape(psa.n);
 
   std::vector<T> a(shape.key_size);
@@ -2474,15 +2474,15 @@ SL REQUIRES((IsNModNumberV<T>)) RETURN(DVA<T>)
 // Note that it is required that n <= 3e13.
 template <typename T>
 SL REQUIRES((IsNModNumberV<T>)) RETURN(DVA<T>)
-    DVAConv(const DVA<T>& psa, const DVA<T>& psb, int64 mod) {
+    DVAConvEx(const DVA<T>& psa, const DVA<T>& psb, int64 mod) {
   PE_ASSERT(T().Mod() == mod);
-  return DVAConv(psa, psb);
+  return DVAConvEx(psa, psb);
 }
 
 // Note that it is required that n <= 3e13.
 template <typename T>
 SL REQUIRES((!IsNModNumberV<T>)) RETURN(DVA<T>)
-    DVAConv(const DVA<T>& psa, const DVA<T>& psb, int64 mod) {
+    DVAConvEx(const DVA<T>& psa, const DVA<T>& psb, int64 mod) {
   const DVAShape shape(psa.n);
 
   std::vector<T> a(shape.key_size);
@@ -2512,6 +2512,169 @@ SL REQUIRES((!IsNModNumberV<T>)) RETURN(DVA<T>)
     result.values[i] = AddMod(result.values[i], result.values[i - 1], mod);
   }
   return result;
+}
+
+// ret = Conv(g, h)
+template <typename T, int TN = 8>
+DVA<T> DVAConv(const DVA<T>& ps_g, const DVA<T>& ps_h) {
+  PE_ASSERT(ps_g.n == ps_h.n);
+
+  DVA<T> ret(ps_g.n);
+
+#if ENABLE_OPENMP
+#pragma omp parallel for schedule(dynamic, 100) num_threads(TN)
+#endif
+  for (int64 id = 1; id < ret.key_size; ++id) {
+    const int64 maxx = ret.keys[id];
+    T now = 0;
+    T last = 0;
+    for (int64 y = 1; y <= maxx;) {
+      const int64 v = maxx / y;
+      const int64 maxy = maxx / v;
+      const T curr = ps_h[maxy];
+      const T delta = curr - last;
+      last = curr;
+
+      now += ps_g[v] * delta;
+      y = maxy + 1;
+    }
+    ret.values[id] = now;
+  }
+  return ret;
+}
+
+// ret = Conv(g, h)
+template <typename T, int TN = 8 /** unused */>
+DVA<T> DVASub(const DVA<T>& ps_g, const DVA<T>& ps_h) {
+  PE_ASSERT(ps_g.n == ps_h.n);
+
+  DVA<T> ret(ps_g.n);
+
+  for (int64 id = 1; id < ret.key_size; ++id) {
+    ret.values[id] = ps_g.values[id] - ps_h.values[id];
+  }
+
+  return ret;
+}
+
+// ret = Conv(g, h)
+template <typename T, int TN = 8 /** unused */>
+DVA<T> DVAAdd(const DVA<T>& ps_g, const DVA<T>& ps_h) {
+  PE_ASSERT(ps_g.n == ps_h.n);
+
+  DVA<T> ret(ps_g.n);
+
+  for (int64 id = 1; id < ret.key_size; ++id) {
+    ret.values[id] = ps_g.values[id] + ps_h.valus[id];
+  }
+
+  return ret;
+}
+
+// ps epsilon
+template <typename T, int TN = 8 /** unused */>
+DVA<T> MakePrefixSumEpsilon(int64 n) {
+  DVA<T> ret(n);
+  ret.values[1] = 1;
+  return ret;
+}
+
+// ps one
+template <typename T, int TN = 8 /** unused */>
+DVA<T> MakePrefixSumOne(int64 n) {
+  DVA<T> ret(n);
+
+  for (int64 i = 1; i < ret.key_size; ++i) {
+    ret.values[i] = ret.keys[i];
+  }
+  return ret;
+}
+
+// ps id
+template <typename T, int TN = 8 /** unused */>
+DVA<T> MakePrefixSumId(int64 n) {
+  DVA<T> ret(n);
+
+  for (int64 i = 1; i < ret.key_size; ++i) {
+    const int64 it = ret.keys[i];
+    if (it & 1) {
+      ret.values[i] = T((it + 1) >> 1) * it;
+    } else {
+      ret.values[i] = T(it >> 1) * (it + 1);
+    }
+  }
+  return ret;
+}
+
+// ps mu
+template <typename T, int TN = 1 /** unused */>
+DVA<T> MakePrefixSumMu(int64 n) {
+  PE_ASSERT(pe::mu != nullptr);
+
+  DVA<T> ret(n);
+  PE_ASSERT(ret.m <= pe::maxp);
+
+  for (int64 i = 1; i <= ret.m; ++i) {
+    ret.values[i] = ret.values[i - 1] + pe::mu[i];
+  }
+
+  for (int64 id = ret.m + 1; id < ret.key_size; ++id) {
+    const int64 maxx = ret.keys[id];
+    T now = 1;
+    for (int64 y = 2; y <= maxx;) {
+      const int64 v = maxx / y;
+      const int64 maxy = maxx / v;
+      const int64 d = maxy - y + 1;
+      now -= d * ret[v];
+      y = maxy + 1;
+    }
+    ret.values[id] = now;
+  }
+  return ret;
+}
+
+// phi = Conv(mu, id)
+// id = Conv(phi, one)
+template <typename T, int TN = 8>
+DVA<T> MakePrefixSumPhi(const DVA<T>& ps_mu) {
+  PE_ASSERT(pe::phi != nullptr);
+
+  const int64 n = ps_mu.n;
+
+  DVA<T> ret(n);
+  PE_ASSERT(ret.m <= pe::maxp);
+
+  for (int64 i = 1; i <= ret.m; ++i) {
+    ret.values[i] = ret.values[i - 1] + pe::phi[i];
+  }
+
+#if ENABLE_OPENMP
+#pragma omp parallel for schedule(dynamic, 100) num_threads(TN)
+#endif
+  for (int64 id = ret.m + 1; id < ret.key_size; ++id) {
+    const int64 maxx = ret.keys[id];
+    T now = 0;
+    T last = 0;
+    for (int64 y = 1; y <= maxx;) {
+      const int64 v = maxx / y;
+      const int64 maxy = maxx / v;
+      const T curr = ps_mu[maxy];
+      const T delta = curr - last;
+      last = curr;
+
+      T s = 0;
+      if (v & 1) {
+        s = T(v + 1 >> 1) * v;
+      } else {
+        s = T(v >> 1) * (v + 1);
+      }
+
+      now += s * delta;
+      y = maxy + 1;
+    }
+    ret.values[id] = now;
+  }
+  return ret;
 }
 
 // Calculates sum(1, 1 <= prime i <= j) for j in [1, 2, 3, ..., n/3, n/2, n].

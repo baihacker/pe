@@ -2613,7 +2613,7 @@ DVA<T> MakePrefixSumId(int64 n) {
 }
 
 // ps mu
-template <typename T, int TN = kDvaOperationThreads /** unused */>
+template <typename T, int TN = kDvaOperationThreads>
 DVA<T> MakePrefixSumMu(int64 n) {
   PE_ASSERT(pe::mu != nullptr);
 
@@ -2624,17 +2624,63 @@ DVA<T> MakePrefixSumMu(int64 n) {
     ret.values[i] = ret.values[i - 1] + pe::mu[i];
   }
 
-  for (int64 id = ret.m + 1; id < ret.key_size; ++id) {
-    const int64 maxx = ret.keys[id];
-    T now = 1;
-    for (int64 y = 2; y <= maxx;) {
-      const int64 v = maxx / y;
-      const int64 maxy = maxx / v;
-      const int64 d = maxy - y + 1;
-      now -= d * ret[v];
-      y = maxy + 1;
+  int64 max_idx = ret.m;
+  while (max_idx + 1 < ret.key_size && ret.keys[max_idx + 1] <= pe::maxp)
+    ++max_idx;
+
+  T s = ret.values[ret.m];
+  for (int64 i = ret.m + 1, j = ret.m + 1; i <= max_idx; ++i) {
+    while (j <= ret.keys[i]) s += pe::mu[j++];
+    ret.values[i] = s;
+  }
+
+  if (max_idx + 1 >= ret.key_size) {
+    return ret;
+  }
+
+#if ENABLE_OPENMP
+  if (TN > 1) {
+    const int64 handled = ret.keys[max_idx];
+#pragma omp parallel for schedule(dynamic, 100) num_threads(TN)
+    for (int64 i = max_idx + 1; i < ret.key_size; ++i) {
+      const int64 maxx = ret.keys[i];
+      T now = 1;
+      for (int64 y = std::max(2LL, maxx / (handled + 1) + 1); y <= maxx;) {
+        const int64 v = maxx / y;
+        const int64 maxy = maxx / v;
+        const int64 d = maxy - y + 1;
+        now -= d * ret[v];
+        y = maxy + 1;
+      }
+      ret.values[i] = now;
     }
-    ret.values[id] = now;
+    for (int64 i = max_idx + 1; i < ret.key_size; ++i) {
+      const int64 maxx = ret.keys[i];
+      T now = ret.values[i];
+      for (int64 y = 2; y < std::max(2LL, maxx / (handled + 1) + 1);) {
+        const int64 v = maxx / y;
+        const int64 maxy = maxx / v;
+        const int64 d = maxy - y + 1;
+        now -= d * ret[v];
+        y = maxy + 1;
+      }
+      ret.values[i] = now;
+    }
+  } else
+#endif
+  {
+    for (int64 i = max_idx + 1; i < ret.key_size; ++i) {
+      const int64 maxx = ret.keys[i];
+      T now = 1;
+      for (int64 y = 2; y <= maxx;) {
+        const int64 v = maxx / y;
+        const int64 maxy = maxx / v;
+        const int64 d = maxy - y + 1;
+        now -= d * ret[v];
+        y = maxy + 1;
+      }
+      ret.values[i] = now;
+    }
   }
 
   return ret;

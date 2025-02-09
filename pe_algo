@@ -2468,6 +2468,7 @@ SL REQUIRES((IsNModNumberV<T>)) RETURN(DVA<T>)
   for (int i = 1; i < shape.key_size; ++i) {
     result.values[i] += result.values[i - 1];
   }
+
   return result;
 }
 
@@ -2511,6 +2512,7 @@ SL REQUIRES((!IsNModNumberV<T>)) RETURN(DVA<T>)
   for (int i = 1; i < shape.key_size; ++i) {
     result.values[i] = AddMod(result.values[i], result.values[i - 1], mod);
   }
+
   return result;
 }
 
@@ -2545,20 +2547,6 @@ DVA<T> DVAConv(const DVA<T>& ps_g, const DVA<T>& ps_h) {
 
 // ret = Conv(g, h)
 template <typename T, int TN = 8 /** unused */>
-DVA<T> DVASub(const DVA<T>& ps_g, const DVA<T>& ps_h) {
-  PE_ASSERT(ps_g.n == ps_h.n);
-
-  DVA<T> ret(ps_g.n);
-
-  for (int64 id = 1; id < ret.key_size; ++id) {
-    ret.values[id] = ps_g.values[id] - ps_h.values[id];
-  }
-
-  return ret;
-}
-
-// ret = Conv(g, h)
-template <typename T, int TN = 8 /** unused */>
 DVA<T> DVAAdd(const DVA<T>& ps_g, const DVA<T>& ps_h) {
   PE_ASSERT(ps_g.n == ps_h.n);
 
@@ -2566,6 +2554,21 @@ DVA<T> DVAAdd(const DVA<T>& ps_g, const DVA<T>& ps_h) {
 
   for (int64 id = 1; id < ret.key_size; ++id) {
     ret.values[id] = ps_g.values[id] + ps_h.valus[id];
+  }
+
+  return ret;
+}
+
+
+// ret = Conv(g, h)
+template <typename T, int TN = 8 /** unused */>
+DVA<T> DVASub(const DVA<T>& ps_g, const DVA<T>& ps_h) {
+  PE_ASSERT(ps_g.n == ps_h.n);
+
+  DVA<T> ret(ps_g.n);
+
+  for (int64 id = 1; id < ret.key_size; ++id) {
+    ret.values[id] = ps_g.values[id] - ps_h.values[id];
   }
 
   return ret;
@@ -2587,6 +2590,7 @@ DVA<T> MakePrefixSumOne(int64 n) {
   for (int64 i = 1; i < ret.key_size; ++i) {
     ret.values[i] = ret.keys[i];
   }
+
   return ret;
 }
 
@@ -2603,6 +2607,7 @@ DVA<T> MakePrefixSumId(int64 n) {
       ret.values[i] = T(it >> 1) * (it + 1);
     }
   }
+
   return ret;
 }
 
@@ -2630,6 +2635,7 @@ DVA<T> MakePrefixSumMu(int64 n) {
     }
     ret.values[id] = now;
   }
+
   return ret;
 }
 
@@ -2674,6 +2680,7 @@ DVA<T> MakePrefixSumPhi(const DVA<T>& ps_mu) {
     }
     ret.values[id] = now;
   }
+
   return ret;
 }
 
@@ -2695,6 +2702,7 @@ SL DVA<T> PrimeS0(const int64 n) {
       }
     }
   }
+
   return dva;
 }
 
@@ -2741,6 +2749,7 @@ SL DVA<T> PrimeS0Parallel(const int64 n) {
 #endif
     }
   }
+
   return dva;
 }
 
@@ -2771,6 +2780,7 @@ SL DVA<T> PrimeS1(const int64 n) {
       }
     }
   }
+
   return dva;
 }
 
@@ -2825,6 +2835,7 @@ SL DVA<T> PrimeS1Parallel(const int64 n) {
 #endif
     }
   }
+
   return dva;
 }
 
@@ -2858,7 +2869,9 @@ SL DVA<T> PrimeS0Ex(const int64 n) {
       }
     }
   }
+
   for (int i = 1; i < key_size; ++i) dva[dva.keys[i]] = tree.Query(i);
+
   return dva;
 }
 
@@ -2899,6 +2912,7 @@ SL DVA<T> PrimeS1Ex(const int64 n) {
   }
 
   for (int i = 1; i < key_size; ++i) dva[dva.keys[i]] = tree.Query(i);
+
   return dva;
 }
 
@@ -3005,6 +3019,7 @@ SL std::vector<DVA<T>> PrimeS0PModEven(int64 n, int pmod) {
   for (auto key : result[0].FKeys()) {
     target[key] += key >= 2 ? 1 : 0;
   }
+
   return result;
 }
 
@@ -3033,6 +3048,7 @@ SL std::vector<DVA<T>> PrimeS0PModOdd(int64 n, int pmod) {
       }
     }
   }
+
   return result;
 }
 
@@ -3060,6 +3076,7 @@ SL std::vector<DVA<T>> PrimeS1PmodEven(int64 n, int pmod) {
       target[key] = c * (c - 1) / 2 * pmod + c * i - dec;
     }
   }
+
   for (int i = 1;; ++i) {
     const int64 p = plist[i];
     const int64 p2 = p * p;
@@ -3078,6 +3095,7 @@ SL std::vector<DVA<T>> PrimeS1PmodEven(int64 n, int pmod) {
   for (auto key : result[0].FKeys()) {
     target[key] += key >= 2 ? 2 : 0;
   }
+
   return result;
 }
 

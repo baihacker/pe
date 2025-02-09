@@ -69,9 +69,46 @@ struct Solver3 : public MValueBase<Solver3, RT, 8, true> {
   TimeDelta usage;
 };
 
+struct Solver4 : public MValueVisitor<Solver4, RT, 8> {
+  RT Visit(int64 n, int64 val, int imp, int64 vmp, int emp, MVVHistory* his,
+           int top) {
+    RT ret = 0;
+    int64 remain = n / val;
+    RT now = 1;
+    RT now1 = 1;
+    for (int i = 0; i < top; ++i) {
+      now *= his[i].e + 1;
+      if (his[i].p != vmp) {
+        now1 *= his[i].e + 1;
+      }
+    }
+    // we have remain >= vmp
+    // handle val * q where q > vmp
+    if (remain > vmp) {
+      ret += now * 2 * RT(dva[remain] - (imp + 1));
+    }
+    if (val > 1) {
+      // handle val * vmp
+      ret += now1 * (emp + 2);
+    } else {
+      // handle f(1)
+      ret += 1;
+    }
+    return ret;
+  }
+  void Init(int64 n) {
+    dva = PrimeS0Ex<int64>(n);
+    tr.Record();
+  }
+  void Done() { usage = tr.Elapsed(); }
+  DVA<int64> dva;
+  TimeRecorder tr;
+  TimeDelta usage;
+};
+
 DVA<int64> dva;
-MVVHistory history_[128];
-int top_;
+MVVHistory history[128];
+int top;
 RT Dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, RT now,
        RT now1) {
   RT ret = 0;
@@ -96,18 +133,21 @@ RT Dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp, RT now,
     const int64 next_vmp = imp == -1 ? p : vmp;
     const int64 val_limit = n / p / next_vmp;
     if (val > val_limit) break;
-    history_[top_].ip = i;
-    history_[top_].p = p;
-    history_[top_].e = 1;
-    int& e = history_[top_++].e;
+    history[top].ip = i;
+    history[top].p = p;
+    history[top].e = 1;
+    history[top].pd = p;
+    int& e = history[top].e;
+    int64& pd = history[top++].pd;
     for (int64 nextval = val * p;; ++e) {
       RT tmp = now * (e + 1);
       ret += Dfs(i, n, nextval, next_imp, next_vmp, imp == -1 ? e : emp, tmp,
                  imp == -1 ? 1 : now1 * (e + 1));
       if (nextval > val_limit) break;
+      pd *= p;
       nextval *= p;
     }
-    --top_;
+    --top;
   }
   return ret;
 }
@@ -134,17 +174,20 @@ RT Dfs1(int start, int limit, int64 n, int64 val, int imp, int64 vmp, int emp,
     const int64 p = plist[i];
     const int64 val_limit = n / p / p;
     if (val > val_limit) break;
-    history_[top_].ip = i;
-    history_[top_].p = p;
-    history_[top_].e = 1;
-    int& e = history_[top_++].e;
+    history[top].ip = i;
+    history[top].p = p;
+    history[top].e = 1;
+    history[top].pd = p;
+    int& e = history[top].e;
+    int64& pd = history[top++].pd;
     for (int64 nextval = val * p;; ++e) {
       RT tmp = now * (e + 1);
       ret += Dfs1(i + 1, limit, n, nextval, i, p, e, tmp, now);
       if (nextval > val_limit) break;
+      pd *= p;
       nextval *= p;
     }
-    --top_;
+    --top;
   }
   return ret;
 }
@@ -164,6 +207,13 @@ int main() {
 
     {
       Solver3 solve;
+      auto ans = solve.Cal(n);
+      // std::cout << ans << std::endl;
+      std::cout << solve.usage.Format() << std::endl;
+    }
+
+    {
+      Solver4 solve;
       auto ans = solve.Cal(n);
       // std::cout << ans << std::endl;
       std::cout << solve.usage.Format() << std::endl;

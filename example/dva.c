@@ -5,8 +5,8 @@ using namespace pe;
 const int64 mod = 1000000007;
 using MT = NMod64<mod>;
 
-int main() {
-  PE_INIT(maxp = 10000000, cal_phi = 1, cal_mu = 1);
+// https://en.wikipedia.org/wiki/Arithmetic_function#Relations_among_the_functions
+void ConvolutionExamples() {
   const int64 n = 10000000;
 
   auto eps = MakePrefixSumEpsilon<MT>(n);
@@ -117,7 +117,10 @@ int main() {
       PE_ASSERT(t.values[i] == omega.values[i]);
     }
   }
-  return 0;
 }
 
-// https://en.wikipedia.org/wiki/Arithmetic_function#Relations_among_the_functions
+int main() {
+  PE_INIT(maxp = 10000000, cal_phi = 1, cal_mu = 1);
+  ConvolutionExamples();
+  return 0;
+}

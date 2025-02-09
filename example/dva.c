@@ -99,5 +99,25 @@ int main() {
       PE_ASSERT(t.values[i] == d2.values[i]);
     }
   }
+
+  // Prime omega
+  // https://en.wikipedia.org/wiki/Prime_omega_function
+  DVA<MT> omega(n);
+  {
+    for (int i = 1; i <= n; ++i) {
+      omega[i] += Factorize(i).size();
+    }
+    for (int i = 1; i < omega.key_size; ++i)
+      omega.values[i] += omega.values[i - 1];
+  }
+  {
+    // omega = primeq * one
+    auto t = DVAConv<MT>(PrimeS0<MT>(n), one);
+    for (int i = 1; i < t.key_size; ++i) {
+      PE_ASSERT(t.values[i] == omega.values[i]);
+    }
+  }
   return 0;
 }
+
+// https://en.wikipedia.org/wiki/Arithmetic_function#Relations_among_the_functions

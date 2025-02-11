@@ -3334,6 +3334,95 @@ SL std::vector<DVA<NModNumber<CCMod64<mod>>>> PrimeSkPMod(const int64 n, int k,
   return result;
 }
 
+enum class Ntf {
+  Epsilon = 0,       // n => n == 1 ? 1 : 0
+  Mu,                // n => (-1)^PrimeNu(n)
+  Id0,               // n => 1
+  One = Id0,         // n => 1
+  Id1,               // n => n
+  Id = Id1,          // n => n
+  Phi,               // n => n => Sum(Gcd(d, n) == 1 ? 1 : 0, for d | n)
+  PrimeP0,           // n => IsPrime(n) ? 1 : 0
+  PrimeQ = PrimeP0,  // n => IsPrime(n) ? 1 : 0
+  PrimeP1,           // n => IsPrime(n) ? n : 0
+  D0,                // n => Sum(1, for d | n)
+  Sigma0 = D0,       // n => Sum(1, for d | n)
+  D1,                // n => Sum(d, for d | n)
+  Sigma1 = D1,       // n => Sum(d, for d | n)
+  PrimeNu            // n => Sum(1, for p | n)
+};
+
+template <typename T>
+class DVAPrefixSumMaker {
+ public:
+  DVAPrefixSumMaker(int64 n) : n_(n), cache_(32, DVA<T>(1)) {}
+
+  template <int TN = kDvaOperationThreads>
+  const DVA<T>& Make(Ntf ntf) {
+    int idx = static_cast<int>(ntf);
+    PE_ASSERT(idx >= 0 && idx < cache_.size());
+    if (cache_[idx].n != 1) {
+      return cache_[idx];
+    }
+    switch (ntf) {
+      case Ntf::Epsilon:
+        return cache_[idx] = MakePrefixSumEpsilon<T, TN>(n_);
+      case Ntf::Mu:
+        return cache_[idx] = MakePrefixSumMu<T, TN>(n_);
+      case Ntf::Id0:
+        return cache_[idx] = MakePrefixSumOne<T, TN>(n_);
+      case Ntf::Id1:
+        return cache_[idx] = MakePrefixSumId<T, TN>(n_);
+      case Ntf::PrimeP0:
+        return cache_[idx] = PrimeS0<T, TN>(n_);
+      case Ntf::PrimeP1:
+        return cache_[idx] = PrimeS1<T, TN>(n_);
+      case Ntf::Phi:
+        return cache_[idx] = MakePrefixSumPhi<T, TN>(Make<TN>(Ntf::Mu));
+      case Ntf::D0:
+        return cache_[idx] =
+                   DVAConv<T, TN>(Make<TN>(Ntf::Id0), Make<TN>(Ntf::Id0));
+      case Ntf::D1:
+        return cache_[idx] =
+                   DVAConv<T, TN>(Make<TN>(Ntf::Id1), Make<TN>(Ntf::Id0));
+      case Ntf::PrimeNu:
+        return cache_[idx] =
+                   DVAConv<T, TN>(Make<TN>(Ntf::PrimeP0), Make<TN>(Ntf::Id0));
+      default:
+        dbg(idx);
+        PE_ASSERT(0);
+    }
+  }
+
+#define DEFINE_DVA_PREFIX_SUM_FUNCTION(Identifier) \
+  template <int TN = kDvaOperationThreads>         \
+  const DVA<T>& Identifier() {                     \
+    return Make<TN>(Ntf::Identifier);              \
+  }
+
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(Epsilon);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(Mu);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(Id0);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(One);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(Id1);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(Id);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(Phi);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(PrimeP0);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(PrimeQ);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(PrimeP1);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(D0);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(Sigma0);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(D1);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(Sigma1);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(PrimeNu);
+
+#undef GENERATE_QUICK_ACCESS
+
+ private:
+  int64 n_;
+  std::vector<DVA<T>> cache_;
+};
+
 // A helper class used to calculate pi(n) with cache.
 struct CachedPi {
   CachedPi(int pivot_ = pe::maxp) : pivot_(pivot_) {

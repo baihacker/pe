@@ -1043,6 +1043,11 @@ SL int64 P1SumMod(int64 n, int64 mod) {
                : MulMod((n >> 1) % mod, (n + 1) % mod, mod);
 }
 
+template <typename T>
+SL T P1Sum(int64 n) {
+  return n & 1 ? T((n + 1) >> 1) * n : T(n >> 1) * (n + 1);
+}
+
 // Calculates sum of arithmetic progression modulo mod.
 // a <= b, a + delta, a + 2 delta, ..., a + maxk detla <= b for delta >= 0 or
 // a >= b, a + delta, a + 2 delta, ..., a + maxk delta >= b for delta < 0
@@ -1090,12 +1095,47 @@ SL int64 P2SumMod(int64 n, int64 mod) {
   return MulMod(a % mod, MulMod(b % mod, c % mod, mod), mod);
 }
 
+template <typename T>
+SL T P2Sum(int64 n) {
+  if (n <= 0) return 0;
+  // n*(n + 1)*(2 n + 1)/6
+  int64 a = n, b = n + 1, c = 2 * n + 1;
+  switch (n % 6) {
+    case 0:
+      a /= 6;
+      break;
+    case 1:
+      b >>= 1, c /= 3;
+      break;
+    case 2:
+      a >>= 1, b /= 3;
+      break;
+    case 3:
+      a /= 3, b >>= 1;
+      break;
+    case 4:
+      a >>= 1, c /= 3;
+      break;
+    case 5:
+      b /= 6;
+      break;
+  }
+  return T(a) * b * c;
+}
+
 // Calculates (1^3 + 2^3 + 3^3 + ... + n^3) % mod.
 SL int64 P3SumMod(int64 n, int64 mod) {
   if (n <= 0) return 0;
   // (n*(n + 1)/2)^2
   const int64 a = P1SumMod(n, mod);
   return MulMod(a, a, mod);
+}
+
+template <typename T>
+SL T P3Sum(int64 n) {
+  if (n <= 0) return 0;
+  const T t = P1Sum<T>(n);
+  return t * t;
 }
 
 // Calculates (1^4 + 2^4 + 3^4 + ... + n^4) % mod.
@@ -2640,12 +2680,31 @@ DVA<T> MakePrefixSumId(int64 n) {
   DVA<T> ret(n);
 
   for (int64 i = 1; i < ret.key_size; ++i) {
-    const int64 it = ret.keys[i];
-    if (it & 1) {
-      ret.values[i] = T((it + 1) >> 1) * it;
-    } else {
-      ret.values[i] = T(it >> 1) * (it + 1);
-    }
+    ret.values[i] = P1Sum<T>(ret.keys[i]);
+  }
+
+  return ret;
+}
+
+// ps id2
+template <typename T, int TN = kDvaOperationThreads /** unused */>
+DVA<T> MakePrefixSumId2(int64 n) {
+  DVA<T> ret(n);
+
+  for (int64 i = 1; i < ret.key_size; ++i) {
+    ret.values[i] = P2Sum<T>(ret.keys[i]);
+  }
+
+  return ret;
+}
+
+// ps id3
+template <typename T, int TN = kDvaOperationThreads /** unused */>
+DVA<T> MakePrefixSumId3(int64 n) {
+  DVA<T> ret(n);
+
+  for (int64 i = 1; i < ret.key_size; ++i) {
+    ret.values[i] = P3Sum<T>(ret.keys[i]);
   }
 
   return ret;
@@ -3341,6 +3400,8 @@ enum class Ntf {
   One = Id0,         // n => 1
   Id1,               // n => n
   Id = Id1,          // n => n
+  Id2,               // n => n^2
+  Id3,               // n => n^3
   Phi,               // n => n => Sum(Gcd(d, n) == 1 ? 1 : 0, for d | n)
   PrimeP0,           // n => IsPrime(n) ? 1 : 0
   PrimeQ = PrimeP0,  // n => IsPrime(n) ? 1 : 0
@@ -3349,6 +3410,10 @@ enum class Ntf {
   Sigma0 = D0,       // n => Sum(1, for d | n)
   D1,                // n => Sum(d, for d | n)
   Sigma1 = D1,       // n => Sum(d, for d | n)
+  D2,                // n => Sum(d^2, for d | n)
+  Sigma2 = D2,       // n => Sum(d^2, for d | n)
+  D3,                // n => Sum(d^3, for d | n)
+  Sigma3 = D3,       // n => Sum(d^3, for d | n)
   PrimeNu            // n => Sum(1, for p | n)
 };
 
@@ -3373,6 +3438,10 @@ class DVAPrefixSumMaker {
         return cache_[idx] = MakePrefixSumOne<T, TN>(n_);
       case Ntf::Id1:
         return cache_[idx] = MakePrefixSumId<T, TN>(n_);
+      case Ntf::Id2:
+        return cache_[idx] = MakePrefixSumId2<T, TN>(n_);
+      case Ntf::Id3:
+        return cache_[idx] = MakePrefixSumId3<T, TN>(n_);
       case Ntf::PrimeP0:
         return cache_[idx] = PrimeS0<T, TN>(n_);
       case Ntf::PrimeP1:
@@ -3385,6 +3454,12 @@ class DVAPrefixSumMaker {
       case Ntf::D1:
         return cache_[idx] =
                    DVAConv<T, TN>(Make<TN>(Ntf::Id1), Make<TN>(Ntf::Id0));
+      case Ntf::D2:
+        return cache_[idx] =
+                   DVAConv<T, TN>(Make<TN>(Ntf::Id2), Make<TN>(Ntf::Id0));
+      case Ntf::D3:
+        return cache_[idx] =
+                   DVAConv<T, TN>(Make<TN>(Ntf::Id3), Make<TN>(Ntf::Id0));
       case Ntf::PrimeNu:
         return cache_[idx] =
                    DVAConv<T, TN>(Make<TN>(Ntf::PrimeP0), Make<TN>(Ntf::Id0));
@@ -3406,6 +3481,8 @@ class DVAPrefixSumMaker {
   DEFINE_DVA_PREFIX_SUM_FUNCTION(One);
   DEFINE_DVA_PREFIX_SUM_FUNCTION(Id1);
   DEFINE_DVA_PREFIX_SUM_FUNCTION(Id);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(Id2);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(Id3);
   DEFINE_DVA_PREFIX_SUM_FUNCTION(Phi);
   DEFINE_DVA_PREFIX_SUM_FUNCTION(PrimeP0);
   DEFINE_DVA_PREFIX_SUM_FUNCTION(PrimeQ);
@@ -3414,6 +3491,10 @@ class DVAPrefixSumMaker {
   DEFINE_DVA_PREFIX_SUM_FUNCTION(Sigma0);
   DEFINE_DVA_PREFIX_SUM_FUNCTION(D1);
   DEFINE_DVA_PREFIX_SUM_FUNCTION(Sigma1);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(D2);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(Sigma2);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(D3);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(Sigma3);
   DEFINE_DVA_PREFIX_SUM_FUNCTION(PrimeNu);
 
 #undef GENERATE_QUICK_ACCESS

@@ -697,16 +697,13 @@ enum class ModContextType { STATIC, DYNAMIC };
 // The modulus is a global variable.
 template <typename T>
 struct GlobalMod {
-  using mod_type = int64;
-  using big_type = fake_int128;
-  static constexpr ModContextType mc_type = ModContextType::STATIC;
+  using ModType = int64;
+  using BigType = fake_int128;
+  static constexpr ModContextType MCType = ModContextType::STATIC;
   static int64 Mod() { return mod_value; }
   static void Set(int64 v) { mod_value = v; }
-  static T mod_value;
+  inline static T mod_value = 1;
 };
-
-template <typename T>
-T GlobalMod<T>::mod_value = 1;
 
 using DefaultMod = GlobalMod<int64>;
 using GlobalMod64 = GlobalMod<int64>;
@@ -714,9 +711,9 @@ using GlobalMod64 = GlobalMod<int64>;
 // The modulus is a compiling time constant.
 template <typename M, M mod_value = 0>
 struct CCMod {
-  using mod_type = M;
-  using big_type = M;
-  static constexpr ModContextType mc_type = ModContextType::STATIC;
+  using ModType = M;
+  using BigType = M;
+  static constexpr ModContextType MCType = ModContextType::STATIC;
   static constexpr int64 Mod() { return mod_value; }
 };
 
@@ -726,25 +723,22 @@ using CCMod64 = CCMod<int64, mod_value>;
 // The modulus is a thread local variable.
 template <typename T>
 struct TLMod {
-  using mod_type = T;
-  using big_type = T;
-  static constexpr ModContextType mc_type = ModContextType::STATIC;
+  using ModType = T;
+  using BigType = T;
+  static constexpr ModContextType MCType = ModContextType::STATIC;
   static T Mod() { return mod_value; }
   static void Set(T v) { mod_value = v; }
-  static thread_local T mod_value;
+  inline static thread_local T mod_value = 1;
 };
-
-template <typename T>
-thread_local T TLMod<T>::mod_value = 1;
 
 using TLMod64 = TLMod<int64>;
 
 // The modulus is a field of an instance.
 template <typename T>
 struct MemMod {
-  using mod_type = T;
-  using big_type = T;
-  static constexpr ModContextType mc_type = ModContextType::DYNAMIC;
+  using ModType = T;
+  using BigType = T;
+  static constexpr ModContextType MCType = ModContextType::DYNAMIC;
   MemMod(T mod_value = DefaultMod::Mod()) : mod_value(mod_value) {}
   T Mod() const { return mod_value; }
   T mod_value;
@@ -838,10 +832,10 @@ struct NModNumber;
 // Use MC::mod() to get the modulus, i.e. the modulus can be retrieve from a
 // static context (not related to an instance of the mod context)
 template <typename MC,
-          typename AP = APSB<typename MC::mod_type, typename MC::big_type>>
+          typename AP = APSB<typename MC::ModType, typename MC::BigType>>
 struct NModNumber {
   using ints = typename AP::ints;
-  static_assert(MC::mc_type == ModContextType::STATIC);
+  static_assert(MC::MCType == ModContextType::STATIC);
 
   NModNumber(ints value = 0) {
     const ints M = MC::Mod();
@@ -1028,11 +1022,11 @@ struct NModNumberM;
 // Use mc.mod() to get the modulus. i.e. the modulus is associated with
 // an instance of mod context.
 template <typename MC,
-          typename AP = APSB<typename MC::mod_type, typename MC::big_type>>
+          typename AP = APSB<typename MC::ModType, typename MC::BigType>>
 struct NModNumberM {
   using ints = typename AP::ints;
-  static_assert(MC::mc_type == ModContextType::STATIC ||
-                MC::mc_type == ModContextType::DYNAMIC);
+  static_assert(MC::MCType == ModContextType::STATIC ||
+                MC::MCType == ModContextType::DYNAMIC);
 
   NModNumberM(ints value = 0, const MC& mc = MC()) : mc(mc) {
     const ints M = Mod();

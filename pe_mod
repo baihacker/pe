@@ -699,7 +699,7 @@ template <typename T>
 struct GlobalMod {
   using ModType = int64;
   using BigType = fake_int128;
-  static constexpr ModContextType MCType = ModContextType::STATIC;
+  static constexpr ModContextType mc_type = ModContextType::STATIC;
   static int64 Mod() { return mod_value; }
   static void Set(int64 v) { mod_value = v; }
   inline static T mod_value = 1;
@@ -713,7 +713,7 @@ template <typename M, M mod_value = 0>
 struct CCMod {
   using ModType = M;
   using BigType = M;
-  static constexpr ModContextType MCType = ModContextType::STATIC;
+  static constexpr ModContextType mc_type = ModContextType::STATIC;
   static constexpr int64 Mod() { return mod_value; }
 };
 
@@ -725,7 +725,7 @@ template <typename T>
 struct TLMod {
   using ModType = T;
   using BigType = T;
-  static constexpr ModContextType MCType = ModContextType::STATIC;
+  static constexpr ModContextType mc_type = ModContextType::STATIC;
   static T Mod() { return mod_value; }
   static void Set(T v) { mod_value = v; }
   inline static thread_local T mod_value = 1;
@@ -738,7 +738,7 @@ template <typename T>
 struct MemMod {
   using ModType = T;
   using BigType = T;
-  static constexpr ModContextType MCType = ModContextType::DYNAMIC;
+  static constexpr ModContextType mc_type = ModContextType::DYNAMIC;
   MemMod(T mod_value = DefaultMod::Mod()) : mod_value(mod_value) {}
   T Mod() const { return mod_value; }
   T mod_value;
@@ -835,7 +835,7 @@ template <typename MC,
           typename AP = APSB<typename MC::ModType, typename MC::BigType>>
 struct NModNumber {
   using ints = typename AP::ints;
-  static_assert(MC::MCType == ModContextType::STATIC);
+  static_assert(MC::mc_type == ModContextType::STATIC);
 
   NModNumber(ints value = 0) {
     const ints M = MC::Mod();
@@ -1025,8 +1025,8 @@ template <typename MC,
           typename AP = APSB<typename MC::ModType, typename MC::BigType>>
 struct NModNumberM {
   using ints = typename AP::ints;
-  static_assert(MC::MCType == ModContextType::STATIC ||
-                MC::MCType == ModContextType::DYNAMIC);
+  static_assert(MC::mc_type == ModContextType::STATIC ||
+                MC::mc_type == ModContextType::DYNAMIC);
 
   NModNumberM(ints value = 0, const MC& mc = MC()) : mc(mc) {
     const ints M = Mod();

@@ -1146,6 +1146,7 @@ SL typename AP::RetType P2SumImpl(int64 n, const AP& ap) {
   return ap.Mul(a, ap.Mul(b, c));
 }
 }  // namespace internal
+
 // Calculates (1^2 + 2^2 + 3^2 + ... + n^2) % mod.
 // Assume no overflow for 2 * n + 1.
 SL int64 P2SumMod(int64 n, int64 mod) {
@@ -1173,8 +1174,6 @@ SL T P3Sum(int64 n) {
 }
 
 namespace internal {
-// Calculates (1^4 + 2^4 + 3^4 + ... + n^4) % mod.
-// Assume no overflow for 2 * n.
 template <typename AP>
 SL typename AP::RetType P4SumImpl(int64 n, const AP& ap) {
   if (n <= 0) return 0;
@@ -2789,6 +2788,54 @@ DVA<T> MakePrefixSumId3(int64 n) {
   return ret;
 }
 
+// ps id4
+template <typename T, int TN = kDvaOperationThreads /** unused */>
+DVA<T> MakePrefixSumId4(int64 n) {
+  DVA<T> ret(n);
+
+  for (int64 i = 1; i < ret.key_size; ++i) {
+    ret.values[i] = P4Sum<T>(ret.keys[i]);
+  }
+
+  return ret;
+}
+
+// ps id5
+template <typename T, int TN = kDvaOperationThreads /** unused */>
+DVA<T> MakePrefixSumId5(int64 n) {
+  DVA<T> ret(n);
+
+  for (int64 i = 1; i < ret.key_size; ++i) {
+    ret.values[i] = P5Sum<T>(ret.keys[i]);
+  }
+
+  return ret;
+}
+
+// ps id6
+template <typename T, int TN = kDvaOperationThreads /** unused */>
+DVA<T> MakePrefixSumId6(int64 n) {
+  DVA<T> ret(n);
+
+  for (int64 i = 1; i < ret.key_size; ++i) {
+    ret.values[i] = P6Sum<T>(ret.keys[i]);
+  }
+
+  return ret;
+}
+
+// ps id7
+template <typename T, int TN = kDvaOperationThreads /** unused */>
+DVA<T> MakePrefixSumId7(int64 n) {
+  DVA<T> ret(n);
+
+  for (int64 i = 1; i < ret.key_size; ++i) {
+    ret.values[i] = P7Sum<T>(ret.keys[i]);
+  }
+
+  return ret;
+}
+
 // ps mu
 template <typename T, int TN = kDvaOperationThreads>
 DVA<T> MakePrefixSumMu(int64 n) {
@@ -3481,6 +3528,10 @@ enum class Ntf {
   Id = Id1,          // n => n
   Id2,               // n => n^2
   Id3,               // n => n^3
+  Id4,               // n => n^4
+  Id5,               // n => n^5
+  Id6,               // n => n^6
+  Id7,               // n => n^7
   Phi,               // n => n => Sum(Gcd(d, n) == 1 ? 1 : 0, for d | n)
   PrimeP0,           // n => IsPrime(n) ? 1 : 0
   PrimeQ = PrimeP0,  // n => IsPrime(n) ? 1 : 0
@@ -3493,13 +3544,21 @@ enum class Ntf {
   Sigma2 = D2,       // n => Sum(d^2, for d | n)
   D3,                // n => Sum(d^3, for d | n)
   Sigma3 = D3,       // n => Sum(d^3, for d | n)
+  D4,                // n => Sum(d^4, for d | n)
+  Sigma4 = D4,       // n => Sum(d^4, for d | n)
+  D5,                // n => Sum(d^5, for d | n)
+  Sigma5 = D5,       // n => Sum(d^5, for d | n)
+  D6,                // n => Sum(d^6, for d | n)
+  Sigma6 = D6,       // n => Sum(d^6, for d | n)
+  D7,                // n => Sum(d^7, for d | n)
+  Sigma7 = D7,       // n => Sum(d^7, for d | n)
   PrimeNu            // n => Sum(1, for p | n)
 };
 
 template <typename T>
 class DVAPrefixSumMaker {
  public:
-  DVAPrefixSumMaker(int64 n) : n_(n), cache_(32, DVA<T>(1)) {}
+  DVAPrefixSumMaker(int64 n) : n_(n), cache_(64, DVA<T>(1)) {}
 
   template <int TN = kDvaOperationThreads>
   const DVA<T>& Make(Ntf ntf) {
@@ -3521,6 +3580,14 @@ class DVAPrefixSumMaker {
         return cache_[idx] = MakePrefixSumId2<T, TN>(n_);
       case Ntf::Id3:
         return cache_[idx] = MakePrefixSumId3<T, TN>(n_);
+      case Ntf::Id4:
+        return cache_[idx] = MakePrefixSumId4<T, TN>(n_);
+      case Ntf::Id5:
+        return cache_[idx] = MakePrefixSumId5<T, TN>(n_);
+      case Ntf::Id6:
+        return cache_[idx] = MakePrefixSumId6<T, TN>(n_);
+      case Ntf::Id7:
+        return cache_[idx] = MakePrefixSumId7<T, TN>(n_);
       case Ntf::PrimeP0:
         return cache_[idx] = PrimeS0<T, TN>(n_);
       case Ntf::PrimeP1:
@@ -3539,6 +3606,18 @@ class DVAPrefixSumMaker {
       case Ntf::D3:
         return cache_[idx] =
                    DVAConv<T, TN>(Make<TN>(Ntf::Id3), Make<TN>(Ntf::Id0));
+      case Ntf::D4:
+        return cache_[idx] =
+                   DVAConv<T, TN>(Make<TN>(Ntf::Id4), Make<TN>(Ntf::Id0));
+      case Ntf::D5:
+        return cache_[idx] =
+                   DVAConv<T, TN>(Make<TN>(Ntf::Id5), Make<TN>(Ntf::Id0));
+      case Ntf::D6:
+        return cache_[idx] =
+                   DVAConv<T, TN>(Make<TN>(Ntf::Id6), Make<TN>(Ntf::Id0));
+      case Ntf::D7:
+        return cache_[idx] =
+                   DVAConv<T, TN>(Make<TN>(Ntf::Id7), Make<TN>(Ntf::Id0));
       case Ntf::PrimeNu:
         return cache_[idx] =
                    DVAConv<T, TN>(Make<TN>(Ntf::PrimeP0), Make<TN>(Ntf::Id0));

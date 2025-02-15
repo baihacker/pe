@@ -1,0 +1,2940 @@
+#ifndef PE_NTF_
+#define PE_NTF_
+
+#include "pe_base"
+#include "pe_int"
+#include "pe_span"
+#include "pe_nt"
+#include "pe_fraction"
+#include "pe_poly_algo"
+#include "pe_tree"
+#include "pe_array"
+#include "pe_parallel_algo"
+
+namespace pe {
+namespace internal {
+struct ArithmeticPolicyMod {
+  using RetType = int64;
+
+  ArithmeticPolicyMod(int64 mod) : mod_(mod) {}
+  int64 Add(int64 a, int64 b) const { return AddMod(a % mod_, b % mod_, mod_); }
+  int64 Sub(int64 a, int64 b) const { return SubMod(a % mod_, b % mod_, mod_); }
+  int64 Mul(int64 a, int64 b) const { return MulMod(a % mod_, b % mod_, mod_); }
+
+ private:
+  const int64 mod_;
+};
+
+template <typename T>
+struct ArithmeticPolicyConversion {
+  using RetType = T;
+  using ArgT = make_const_arg_type_t<T>;
+
+  T Add(int64 a, int64 b) const { return T(a) + T(b); }
+  T Add(ArgT a, int64 b) const { return a + T(b); }
+  T Add(int64 a, ArgT b) const { return T(a) + b; }
+  T Add(ArgT a, ArgT b) const { return a + b; }
+
+  T Sub(int64 a, int64 b) const { return T(a) - T(b); }
+  T Sub(ArgT a, int64 b) const { return a - T(b); }
+  T Sub(int64 a, ArgT b) const { return T(a) - b; }
+  T Sub(ArgT a, ArgT b) const { return a - b; }
+
+  T Mul(int64 a, int64 b) const { return T(a) * T(b); }
+  T Mul(ArgT a, int64 b) const { return a * T(b); }
+  T Mul(int64 a, ArgT b) const { return T(a) * b; }
+  T Mul(ArgT a, ArgT b) const { return a * b; }
+};
+
+template <>
+struct ArithmeticPolicyConversion<int64> {
+  using RetType = int64;
+
+  int64 Add(int64 a, int64 b) const { return a + b; }
+
+  int64 Sub(int64 a, int64 b) const { return a - b; }
+
+  int64 Mul(int64 a, int64 b) const { return a * b; }
+};
+}  // namespace internal
+
+// Calculates (1 + 2 + 3 + ... + n) % mod.
+SL int64 P1SumMod(int64 n, int64 mod) {
+  if (n == 0) return 0;
+  if (n < 0) return Mod(-P1SumMod(-n, mod), mod);
+  return n & 1 ? MulMod(((n + 1) >> 1) % mod, n % mod, mod)
+               : MulMod((n >> 1) % mod, (n + 1) % mod, mod);
+}
+
+// Calculates sum of arithmetic progression modulo mod.
+// a <= b, a + delta, a + 2 delta, ..., a + maxk detla <= b for delta >= 0 or
+// a >= b, a + delta, a + 2 delta, ..., a + maxk delta >= b for delta < 0
+SL int64 P1SumMod(int64 a, int64 b, int64 mod, int64 delta = 1) {
+  if (delta == 0) {
+    PE_ASSERT(a == b);
+    return a;
+  }
+  if (delta > 0 && a > b) return 0;
+  if (delta < 0 && a < b) return 0;
+  const int64 maxk = (b - a) / delta;
+  PE_ASSERT(maxk >= 0);
+  const int64 t0 = MulMod((maxk + 1) % mod, Mod(a, mod), mod);
+  // delta, 2 delta, maxk delta
+  const int64 t1 = MulMod(Mod(delta, mod), P1SumMod(maxk, mod), mod);
+  return AddMod(t0, t1, mod);
+}
+
+template <typename T = int64>
+SL T P1Sum(int64 n) {
+  return n & 1 ? T((n + 1) >> 1) * n : T(n >> 1) * (n + 1);
+}
+
+namespace internal {
+template <typename AP>
+SL typename AP::RetType P2SumImpl(int64 n, const AP& ap) {
+  if (n <= 0) return 0;
+  // n*(n + 1)*(2 n + 1)/6
+  int64 a = n, b = n + 1, c = 2 * n + 1;
+  switch (n % 6) {
+    case 0:
+      a /= 6;
+      break;
+    case 1:
+      b >>= 1, c /= 3;
+      break;
+    case 2:
+      a >>= 1, b /= 3;
+      break;
+    case 3:
+      a /= 3, b >>= 1;
+      break;
+    case 4:
+      a >>= 1, c /= 3;
+      break;
+    case 5:
+      b /= 6;
+      break;
+  }
+  return ap.Mul(a, ap.Mul(b, c));
+}
+}  // namespace internal
+
+// Calculates (1^2 + 2^2 + 3^2 + ... + n^2) % mod.
+// Assume no overflow for 2 * n + 1.
+SL int64 P2SumMod(int64 n, int64 mod) {
+  return internal::P2SumImpl(n, internal::ArithmeticPolicyMod(mod));
+}
+
+template <typename T = int64>
+SL T P2Sum(int64 n) {
+  return internal::P2SumImpl(n, internal::ArithmeticPolicyConversion<T>());
+}
+
+// Calculates (1^3 + 2^3 + 3^3 + ... + n^3) % mod.
+SL int64 P3SumMod(int64 n, int64 mod) {
+  if (n <= 0) return 0;
+  // (n*(n + 1)/2)^2
+  const int64 a = P1SumMod(n, mod);
+  return MulMod(a, a, mod);
+}
+
+template <typename T = int64>
+SL T P3Sum(int64 n) {
+  if (n <= 0) return 0;
+  const T t = P1Sum<T>(n);
+  return t * t;
+}
+
+namespace internal {
+template <typename AP>
+SL typename AP::RetType P4SumImpl(int64 n, const AP& ap) {
+  if (n <= 0) return 0;
+  // (3*n*(n + 1) - 1)*(2*n + 1)*(n + 1)*n/30
+  // Handle (2*n + 1)*(n + 1)*n/6
+  int64 a = n, b = n + 1, c = 2 * n + 1;
+  switch (n % 6) {
+    case 0:
+      a /= 6;
+      break;
+    case 1:
+      b >>= 1, c /= 3;
+      break;
+    case 2:
+      a >>= 1, b /= 3;
+      break;
+    case 3:
+      a /= 3, b >>= 1;
+      break;
+    case 4:
+      a >>= 1, c /= 3;
+      break;
+    case 5:
+      b /= 6;
+      break;
+  }
+  int done = 0;
+  if (!done && a % 5 == 0) a /= 5, done = 1;
+  if (!done && b % 5 == 0) b /= 5, done = 1;
+  if (!done && c % 5 == 0) c /= 5, done = 1;
+  const auto d = ap.Mul(a, ap.Mul(b, c));
+  if (done) {
+    const auto t0 = ap.Mul(n, n + 1);
+    const auto t1 = ap.Sub(ap.Mul(3LL, t0), 1LL);
+    return ap.Mul(d, t1);
+  }
+  // Handle (3*n*n + 3*n - 1)/5
+  switch (n % 5) {
+    // 3*n*n + 3*n - 1 =
+    // 3*(n - 1)*(n - 1) + 5*n + 4*(n - 1)
+    // (n - 1)*(3*(n - 1) + 4) + 5*n
+    // (n - 1)*(3 n + 1) + 5*n
+    case 1: {
+      const auto t0 = ap.Add(ap.Mul(3LL, n), 1LL);
+      const auto t1 = ap.Add(ap.Mul((n - 1) / 5, t0), n);
+      return ap.Mul(d, t1);
+    }
+    // 3*n*n + 3*n - 1 =
+    // 3*(n - 3)*(n - 3) + 7*(3*n - 4)
+    // 3*(n - 3)*(n - 3) + 7*(3*(n - 3) + 5)
+    // 3*(n - 3)*(n - 3) + 7*3*(n - 3) + 35
+    // 3*(n - 3)*(n + 4) + 35
+    case 3: {
+      const auto t0 = ap.Mul(3LL, ap.Mul((n - 3) / 5, n + 4));
+      const auto t1 = ap.Add(t0, 7LL);
+      return ap.Mul(d, t1);
+    }
+    default:
+      PE_ASSERT(0);
+  }
+  return 0;
+}
+}  // namespace internal
+
+// Calculates (1^4 + 2^4 + 3^4 + ... + n^4) % mod.
+// Assume no overflow for 2 * n.
+SL int64 P4SumMod(int64 n, int64 mod) {
+  return internal::P4SumImpl(n, internal::ArithmeticPolicyMod(mod));
+}
+
+template <typename T = int64>
+SL T P4Sum(int64 n) {
+  return internal::P4SumImpl(n, internal::ArithmeticPolicyConversion<T>());
+}
+
+namespace internal {
+template <typename AP>
+SL typename AP::RetType P5SumImpl(int64 n, const AP& ap) {
+  if (n <= 0) return 0;
+  // n^2*(n + 1)^2*(2*n^2 + 2*n - 1)/12
+  // Handle (n (n + 1))^2/4
+  int64 a = n, b = n, c = n + 1, d = n + 1;
+  if (n % 2 == 0) {
+    a >>= 1, b >>= 1;
+  } else {
+    c >>= 1, d >>= 1;
+  }
+  int done = 0;
+  if (!done && a % 3 == 0) a /= 3, done = 1;
+  if (!done && c % 3 == 0) c /= 3, done = 1;
+  const auto e = ap.Mul(ap.Mul(a, b), ap.Mul(c, d));
+  if (done) {
+    const auto t0 = ap.Add(n, n);
+    const auto t1 = ap.Mul(t0, n);
+    const auto t2 = ap.Sub(ap.Add(t0, t1), 1LL);
+    return ap.Mul(e, t2);
+  }
+  // Handle (2*n^2 + 2*n - 1)/3
+  // We have n%3 = 1
+  // 2*n^2 + 2*n - 1 = 2*(n-1)^2 + 6n - 3
+  const auto t0 = ap.Mul((n - 1) / 3, n - 1);
+  const auto t1 = ap.Add(ap.Add(t0, t0), 2 * n - 1);
+  return ap.Mul(e, t1);
+}
+}  // namespace internal
+
+// Calculates (1^5 + 2^5 + 3^5 + ... + n^5) % mod.
+// Assume no overflow for 2 * n.
+SL int64 P5SumMod(int64 n, int64 mod) {
+  return internal::P5SumImpl(n, internal::ArithmeticPolicyMod(mod));
+}
+
+template <typename T = int64>
+SL T P5Sum(int64 n) {
+  return internal::P5SumImpl(n, internal::ArithmeticPolicyConversion<T>());
+}
+
+namespace internal {
+template <typename AP>
+SL typename AP::RetType P6SumImpl(int64 n, const AP& ap) {
+  if (n <= 0) return 0;
+  // n*(1 + n)*(1 + 2*n)*(1 - 3*n + 6*n^3 + 3*n^4)/42
+  // Handle n*(1 + n)*(1 + 2*n)/6
+  // n*(n + 1)*(2*n + 1)/6
+  int64 a = n, b = n + 1, c = 2 * n + 1;
+  switch (n % 6) {
+    case 0:
+      a /= 6;
+      break;
+    case 1:
+      b >>= 1, c /= 3;
+      break;
+    case 2:
+      a >>= 1, b /= 3;
+      break;
+    case 3:
+      a /= 3, b >>= 1;
+      break;
+    case 4:
+      a >>= 1, c /= 3;
+      break;
+    case 5:
+      b /= 6;
+      break;
+  }
+  int done = 0;
+  if (!done && a % 7 == 0) a /= 7, done = 1;
+  if (!done && b % 7 == 0) b /= 7, done = 1;
+  if (!done && c % 7 == 0) c /= 7, done = 1;
+  const auto d = ap.Mul(a, ap.Mul(b, c));
+  if (done) {
+    const auto n1 = ap.Add(n, 0LL);
+    const auto n2 = ap.Mul(n1, n1);
+    const auto n3 = ap.Mul(n1, n2);
+    const auto n4 = ap.Mul(n2, n2);
+    const auto t0 = ap.Sub(ap.Add(n4, 2 * n3), n1);
+    const auto t1 = ap.Add(ap.Mul(3LL, t0), 1LL);
+    return ap.Mul(d, t1);
+  }
+  // Handle (1 - 3*n + 6*n^3 + 3*n^4)/7
+  const auto n1 = ap.Add(n, 0LL);
+  const auto n2 = ap.Mul(n1, n1);
+  const auto n3 = ap.Mul(n1, n2);
+  switch (n % 7) {
+    // 3*(2 + 3*n + 3*n^2 + n^3)*(n - 1) + 7
+    case 1: {
+      const auto t0 = ap.Add(2LL, ap.Mul(3LL, n1));
+      const auto t1 = ap.Add(ap.Mul(3LL, n2), n3);
+      const auto t2 = ap.Mul(ap.Mul(3LL, ap.Add(t0, t1)), (n - 1) / 7);
+      const auto t3 = ap.Add(t2, 1LL);
+      return ap.Mul(d, t3);
+    }
+    // 3*(15 + 8*n + 4*n^2 + n^3)*(n - 2) + 91
+    case 2: {
+      const auto t0 = ap.Add(15LL, ap.Mul(8LL, n1));
+      const auto t1 = ap.Add(ap.Mul(4LL, n2), n3);
+      const auto t2 = ap.Mul(ap.Mul(3LL, ap.Add(t0, t1)), (n - 2) / 7);
+      const auto t3 = ap.Add(t2, 13LL);
+      return ap.Mul(d, t3);
+    }
+    // 3*(-10 + 3 n - n^2 + n^3)*(n + 3) + 91
+    case 4: {
+      const auto t0 = ap.Sub(ap.Mul(3LL, n1), 10LL);
+      const auto t1 = ap.Sub(n3, n2);
+      const auto t2 = ap.Mul(ap.Mul(3LL, ap.Add(t0, t1)), (n + 3) / 7);
+      const auto t3 = ap.Add(t2, 13LL);
+      return ap.Mul(d, t3);
+    }
+    // 3*(-1 + n^3)*(n + 2) + 7
+    case 5: {
+      const auto t0 = ap.Mul(3LL, ap.Sub(n3, 1LL));
+      const auto t1 = ap.Mul(t0, (n + 2) / 7);
+      const auto t2 = ap.Add(t1, 1LL);
+      return ap.Mul(d, t2);
+    }
+    default:
+      PE_ASSERT(0);
+  }
+  return 0;
+}
+}  // namespace internal
+
+// Calculates (1^6 + 2^6 + 3^6 + ... + n^6) % mod.
+// Assume no overflow for 2 * n.
+SL int64 P6SumMod(int64 n, int64 mod) {
+  return internal::P6SumImpl(n, internal::ArithmeticPolicyMod(mod));
+}
+
+template <typename T = int64>
+SL T P6Sum(int64 n) {
+  return internal::P6SumImpl(n, internal::ArithmeticPolicyConversion<T>());
+}
+
+namespace internal {
+template <typename AP>
+SL typename AP::RetType P7SumImpl(int64 n, const AP& ap) {
+  if (n <= 0) return 0;
+  // n^2 * (1 + n)^2 * (2 - 4 n - n^2 + 6 n^3 + 3 n^4)/24
+  // Handle (n (n + 1))^2/4
+  int64 a = n, b = n, c = n + 1, d = n + 1;
+  if (n % 2 == 0) {
+    a >>= 1, b >>= 1;
+  } else {
+    c >>= 1, d >>= 1;
+  }
+  int done3 = 0;
+  if (!done3 && a % 3 == 0) a /= 3, done3 = 1;
+  if (!done3 && c % 3 == 0) c /= 3, done3 = 1;
+  // Handle (2 - 4 n - n^2 + 6 n^3 + 3 n^4)/6
+  // Expand[1/6 (2 - 4 n - n^2 + 6 n^3 + 3 n^4) /. {n -> 6 k + f}]
+  // 1/3 - (2 f)/3 - f^2/6 + f^3 + f^4/2 - 4 k - 2 f k + 18 f^2 k +
+  // 12 f^3 k - 6 k^2 + 108 f k^2 + 108 f^2 k^2 + 216 k^3 + 432 f k^3 +
+  // 648 k^4
+  const int64 k = n / 6;
+  const auto k1 = ap.Add(k, 0LL);
+  const auto k2 = ap.Mul(k1, k1);
+  const auto k3 = ap.Mul(k2, k1);
+  const auto k4 = ap.Mul(k2, k2);
+  const int64 f1 = n % 6;
+  const int64 f2 = f1 * f1;
+  const int64 f3 = f2 * f1;
+  const int64 f4 = f2 * f2;
+  auto t0 = ap.Sub(0LL, ap.Mul(4LL, k1));
+  t0 = ap.Sub(t0, ap.Mul(2LL, ap.Mul(f1, k1)));
+  t0 = ap.Add(t0, ap.Mul(18LL, ap.Mul(f2, k1)));
+  t0 = ap.Add(t0, ap.Mul(12LL, ap.Mul(f3, k1)));
+  t0 = ap.Sub(t0, ap.Mul(6LL, k2));
+  t0 = ap.Add(t0, ap.Mul(108LL, ap.Mul(f1, k2)));
+  t0 = ap.Add(t0, ap.Mul(108LL, ap.Mul(f2, k2)));
+  t0 = ap.Add(t0, ap.Mul(216LL, k3));
+  t0 = ap.Add(t0, ap.Mul(432LL, ap.Mul(f1, k3)));
+  t0 = ap.Add(t0, ap.Mul(648LL, k4));
+  if (done3) {
+    t0 = ap.Mul(3LL, t0);
+  }
+  const auto t1 =
+      ap.Add((3 * f4 + 6 * f3 - f2 - 4 * f1 + 2) / (done3 ? 2 : 6), 0LL);
+  const auto t2 = ap.Mul(ap.Mul(a, b), ap.Mul(c, d));
+  return ap.Mul(ap.Add(t0, t1), t2);
+}
+}  // namespace internal
+
+// Calculates (1^7 + 2^7 + 3^7 + ... + n^7) % mod.
+// Assume no overflow for 2 * n.
+SL int64 P7SumMod(int64 n, int64 mod) {
+  return internal::P7SumImpl(n, internal::ArithmeticPolicyMod(mod));
+}
+
+template <typename T = int64>
+SL T P7Sum(int64 n) {
+  return internal::P7SumImpl(n, internal::ArithmeticPolicyConversion<T>());
+}
+
+SL int64 ApSumMod(int64 n, int64 mod) { return P1SumMod(n, mod); }
+
+SL int64 ApSumMod(int64 a, int64 b, int64 mod, int64 delta = 1) {
+  return P1SumMod(a, b, mod, delta);
+}
+
+SL int64 SquareSumMod(int64 n, int64 mod) { return P2SumMod(n, mod); }
+
+SL int64 CubeSumMod(int64 n, int64 mod) { return P3SumMod(n, mod); }
+
+SL int64 QuadSumMod(int64 n, int64 mod) { return P4SumMod(n, mod); }
+
+SL int64 PentSumMod(int64 n, int64 mod) { return P5SumMod(n, mod); }
+
+SL int64 HexaSumMod(int64 n, int64 mod) { return P6SumMod(n, mod); }
+
+SL int64 HeptSumMod(int64 n, int64 mod) { return P7SumMod(n, mod); }
+
+// Sum of geometric progression
+// (x^a+x^(a+1)+x^(a+2)+...+x^b) % mod
+// a >= 0
+// zero_p_zero: 0^0
+// if b < a: return 0
+SL int64 GpSumMod(int64 x, int64 a, int64 b, int64 mod, int64 zero_p_zero = 1) {
+  if (mod == 1 || b < a) return 0;
+  if (b < a) return 0;
+  x %= mod;
+  // |x 0|^(b-a) x^a
+  // |x 1|       x^a
+  int64 u = x;
+  int64 w = x;
+  int64 v1 = a == 0 && x == 0 ? zero_p_zero : PowerMod(x, a, mod);
+  int64 v2 = v1;
+  for (int64 n = b - a; n > 0; n >>= 1) {
+    if (n & 1) {
+      v2 = AddMod(MulMod(w, v1, mod), v2, mod);
+      v1 = MulMod(u, v1, mod);
+    }
+    if (n > 1) {
+      w = AddMod(MulMod(w, u, mod), w, mod);
+      u = MulMod(u, u, mod);
+    }
+  }
+  return v2;
+}
+
+
+// Calculates (1^k + 2^k + ... + n^k) % mod based on Bernoulli number
+// See
+// https://en.wikipedia.org/wiki/Bernoulli_number#Sum_of_powers
+// https://blog.csdn.net/acdreamers/article/details/38929067
+template <typename T = int64>
+struct PowerSumModerB {
+  PowerSumModerB(int64 mod, int64 maxk = 128) : mod_(mod), maxk_(maxk) {
+    Init(maxk);
+  }
+
+  ~PowerSumModerB() = default;
+
+  void Init(int64 maxk = 128) {
+    maxk_ = maxk;
+
+    bnl_ = std::vector<int64>(maxk_ + 1);
+    invs_ = std::vector<int64>(maxk_ + 2);
+
+    InitInverse(&invs_[0], maxk_ + 1, mod_);
+    InitBernoulliNumber(&bnl_[0], maxk_ + 1, &invs_[0], mod_);
+
+    bnl_[1] = mod_ - bnl_[1];
+  }
+
+  T operator()(int64 n, int64 k) const { return Cal(n, k); }
+
+  std::vector<T> operator()(const std::vector<int64>& vec) const {
+    return Cal(vec);
+  }
+
+  // n + 1, n, ..., n-k+1 is not divisible by mod
+  // 2, 3, ..., k+1 is not divisible by mod
+  T Cal(int64 n, int64 k) const {
+    PE_ASSERT(k <= maxk_);
+    if (k == 0) {
+      return n % mod_;
+    }
+
+    int64 ret = 0;
+
+    const int64 invn = PowerMod(n % mod_, mod_ - 2, mod_);
+    int64 c = PowerMod(n % mod_, k + 1, mod_);
+
+    for (int64 i = 0; i <= k; ++i) {
+      if (i > 0) {
+        c = MulMod(c, Mod(k + 2 - i, mod_), mod_);
+        c = MulMod(c, invs_[i], mod_);
+        c = MulMod(c, invn, mod_);
+      }
+
+      if (c == 0) {
+        break;
+      }
+
+      ret += MulMod(c, bnl_[i], mod_);
+      if (ret >= mod_) ret -= mod_;
+    }
+    ret = MulMod(ret, invs_[k + 1], mod_);
+    return ret;
+  }
+
+  std::vector<T> Cal(const std::vector<int64>& vec) const {
+    PE_ASSERT(std::size(vec) <= maxk_ + 1);
+    const int64 size = std::size(vec);
+    std::vector<int64> result(size + 1, 0);
+    for (int k = 0; k < size; ++k) {
+      // comb(k+1, i) b[i] n^(k+1-i) / (k + 1)
+      int64 c = invs_[k + 1];
+      for (int i = 0; i <= k; ++i) {
+        if (i > 0) {
+          c = MulMod(c, Mod(k + 2 - i, mod_), mod_);
+          c = MulMod(c, invs_[i], mod_);
+        }
+        int64 x = MulMod(c, bnl_[i], mod_);
+        const int idx = k + 1 - i;
+        result[idx] = AddMod(result[idx], MulMod(vec[k], x, mod_), mod_);
+      }
+    }
+    std::vector<T> ret(size + 1);
+    for (int i = 0; i <= size; ++i) {
+      ret[i] = result[i];
+    }
+    return result;
+  }
+
+  T CalSafe(int64 n, int64 k) const {
+    PE_ASSERT(k <= maxk_);
+    if (k == 0) {
+      return n % mod_;
+    }
+
+    int64 ret = 0;
+
+    const int64 invn = PowerMod(n % mod_, mod_ - 2, mod_);
+    int64 c = PowerMod(n % mod_, k + 1, mod_);
+
+    int64 d = 0;
+    for (int64 i = 0; i <= k; ++i) {
+      if (i > 0) {
+        auto [A, B] = ExtractFactor(k + 2 - i, mod_);
+        d += B;
+        c = MulMod(c, Mod(A, mod_), mod_);
+
+        std::tie(A, B) = ExtractFactor(i, mod_);
+        d -= B;
+        c = MulMod(c, invs_[A], mod_);
+
+        c = MulMod(c, invn, mod_);
+      }
+      if (c == 0) {
+        break;
+      }
+      if (d == 0) {
+        ret += MulMod(c, bnl_[i], mod_);
+        if (ret >= mod_) ret -= mod_;
+      }
+    }
+    ret = MulMod(ret, invs_[k + 1], mod_);
+    return ret;
+  }
+
+ private:
+  int64 mod_;
+  int64 maxk_;
+  std::vector<int64> bnl_;
+  std::vector<int64> invs_;
+};
+
+// Calculates (1^k + 2^k + ... + n^k) % mod based on Bernoulli number
+// See
+// https://en.wikipedia.org/wiki/Bernoulli_number#Sum_of_powers
+// https://blog.csdn.net/acdreamers/article/details/38929067
+template <typename T = int64>
+struct PowerSumModerB1 {
+  PowerSumModerB1(int64 mod, int64 maxk = 128) : mod_(mod), maxk_(maxk) {
+    Init(maxk);
+  }
+
+  ~PowerSumModerB1() = default;
+
+  void Init(int64 maxk = 128) {
+    maxk_ = maxk;
+
+    bnl_ = std::vector<int64>(maxk_ + 1);
+    invs_ = std::vector<int64>(maxk_ + 2);
+
+    InitInverse(&invs_[0], maxk_ + 1, mod_);
+    InitBernoulliNumber(&bnl_[0], maxk_ + 1, &invs_[0], mod_);
+  }
+
+  T operator()(int64 n, int64 k) const { return Cal(n, k); }
+
+  // n + 1, n, ..., n-k+1 is not divisible by mod
+  // 2, 3, ..., k+1 is not divisible by mod
+  T Cal(int64 n, int64 k) const {
+    PE_ASSERT(k <= maxk_);
+    if (k == 0) {
+      return n % mod_;
+    }
+
+    const int64 n1 = (n + 1) % mod_;
+    const int64 k1 = k + 1;
+
+    int64 ret = 0;
+
+    int64 c = 1 % mod_;
+    for (int64 i = 1; i <= k1; ++i) {
+      c = MulMod(c, Mod(k1 - i + 1, mod_), mod_);
+      c = MulMod(c, invs_[i], mod_);
+      c = MulMod(c, n1, mod_);
+
+      if (c == 0) {
+        break;
+      }
+
+      ret += MulMod(c, bnl_[k1 - i], mod_);
+      if (ret >= mod_) ret -= mod_;
+    }
+    ret = MulMod(ret, invs_[k1], mod_);
+    return ret;
+  }
+
+  T CalSafe(int64 n, int64 k) const {
+    PE_ASSERT(k <= maxk_);
+    if (k == 0) {
+      return n % mod_;
+    }
+
+    const int64 n1 = (n + 1) % mod_;
+    const int64 k1 = k + 1;
+
+    int64 ret = 0;
+
+    int64 c = 1 % mod_;
+    int64 d = 0;
+    for (int64 i = 1; i <= k1; ++i) {
+      auto [A, B] = ExtractFactor(k1 - i + 1, mod_);
+      d += B;
+      c = MulMod(c, Mod(A, mod_), mod_);
+
+      std::tie(A, B) = ExtractFactor(i, mod_);
+      d -= B;
+      c = MulMod(c, invs_[A], mod_);
+
+      c = MulMod(c, n1, mod_);
+
+      if (c == 0) {
+        break;
+      }
+      if (d == 0) {
+        ret += MulMod(c, bnl_[k1 - i], mod_);
+        if (ret >= mod_) ret -= mod_;
+      }
+    }
+    ret = MulMod(ret, invs_[k1], mod_);
+    return ret;
+  }
+
+ private:
+  int64 mod_;
+  int64 maxk_;
+  std::vector<int64> bnl_;
+  std::vector<int64> invs_;
+};
+
+// Calculates (1^k + 2^k + ... + n^k) % mod
+SL int64 PowerSum(int64 n, int64 k, int64 mod) {
+  return PowerSumModerB(mod, k).Cal(n, k);
+}
+
+// Calculates (1^k + 2^k + ... + n^k) % mod
+SL int64 PowerSumSafe(int64 n, int64 k, int64 mod) {
+  return PowerSumModerB(mod, k).CalSafe(n, k);
+}
+
+// Calculates (1^k + 2^k + ... + n^k) % mod and stores it in result[k].
+// comb[i][j] is Binomial coefficient.
+// Complex: O(k^2)
+// baihacker pe487
+template <typename T, int D>
+SL void InitPowerSumMod(int64 n, const int maxk, int64* result, T (*comb)[D],
+                        const int64 mod) {
+  PE_ASSERT(maxk + 1 < D);
+  result[0] = n % mod;
+  for (int i = 1; i <= maxk; ++i) {
+    int64 tmp = PowerMod(n, i + 1, mod);
+    for (int j = 2; j <= i + 1; ++j) {
+      if (j & 1) {
+        tmp = SubMod(tmp, MulMod(comb[i + 1][j], result[i + 1 - j], mod), mod);
+      } else {
+        tmp = AddMod(tmp, MulMod(comb[i + 1][j], result[i + 1 - j], mod), mod);
+      }
+    }
+    result[i] = MulMod(tmp, InvOf(comb[i + 1][1], mod), mod);
+  }
+}
+
+// Given a prime p, provides method to return
+// Comb(n, m), Inv(n), Fac(n), IFac(n)
+// The results are converted to type T.
+template <typename T = int64>
+struct PrimeModer {
+  PrimeModer(int64 p, int64 f = 0) { Init(p, f == 0 ? p : f); }
+
+  ~PrimeModer() = default;
+
+  void Init(int64 f) { Init(p_, f); }
+
+  void Init(int64 p, int64 f) {
+    p_ = p;
+    f_ = std::min(f, p_ - 1);
+    storage_.resize((f_ + 1) * 3);
+    fac_ = &storage_[0];
+    ifac_ = &storage_[f_ + 1];
+    invs_ = &storage_[2 * (f_ + 1)];
+    InitSeqProd2<int64>(fac_, ifac_, 1, f_, p_);
+    InitInverse(invs_, f_, p_);
+  }
+
+  T fac(int64 n) const { return Fac(n); }
+
+  T Fac(int64 n) const {
+    if (n >= 0 && n <= f_) {
+      return fac_[n];
+    }
+    PE_ASSERT(n >= 0 && n <= f_);
+    return 0;
+  }
+
+  T ifac(int64 n) const { return IFac(n); }
+
+  T IFac(int64 n) const {
+    if (n >= 0 && n <= f_) {
+      return ifac_[n];
+    }
+    PE_ASSERT(n >= 0 && n <= f_);
+    return 0;
+  }
+
+  T inv(int64 n) const { return Inv(n); }
+
+  T Inv(int64 n) const {
+    if (n >= 0 && n <= f_) {
+      return invs_[n];
+    }
+    return ModInv(n, p_);
+  }
+
+  T comb(int64 n, int64 m) const { return Comb(n, m); }
+
+  T Comb(int64 n, int64 m) const {
+    if (n < 0 || m > n) return 0;
+    if (m == n || m == 0) return 1;
+    if (m == 1 || m == n - 1) return n % p_;
+
+    if (n <= f_) {
+      return MulMod(MulMod(fac_[n], ifac_[m], p_), ifac_[n - m], p_);
+    }
+
+    // It's required that x % p_ <= f_ in the following code.
+
+    int64 pp = 0;
+    int64 dist = n - m;
+
+    for (int64 nn = n / p_, mm = m / p_, dd = dist / p_; nn;
+         nn /= p_, mm /= p_, dd /= p_) {
+      pp += nn - mm - dd;
+    }
+    if (pp) return 0;
+    int64 l = 1, r = 1;
+    for (int64 x = n; x; x /= p_) {
+      l = MulMod(l, Sign(x / p_), p_);
+      l = MulMod(l, fac_[x % p_], p_);
+    }
+    for (int64 x = m; x; x /= p_) {
+      r = MulMod(r, Sign(x / p_), p_);
+      r = MulMod(r, fac_[x % p_], p_);
+    }
+    for (int64 x = dist; x; x /= p_) {
+      r = MulMod(r, Sign(x / p_), p_);
+      r = MulMod(r, fac_[x % p_], p_);
+    }
+    return MulMod(InvOf(r, p_), l, p_);
+  }
+
+ private:
+  int64 Sign(int64 x) const { return x & 1 ? p_ - 1 : 1; }
+
+ private:
+  int64 p_, f_;
+  int64* fac_;
+  int64* ifac_;
+  int64* invs_;
+  std::vector<int64> storage_;
+};
+
+// Calculates the number of square free number no more than n.
+// If n is no more than pivot, use a pre-computed table.
+struct SFCounter {
+  SFCounter(int64 pivot_ = pe::maxp) : pivot_(pivot_) {
+    if (pe::maxp > 0) {
+      Init(pivot_);
+    }
+  }
+
+  ~SFCounter() = default;
+
+  void Init(int64 pivot = pe::maxp) {
+    pivot_ = pivot;
+    pre_.resize(pivot_ + 1);
+    pre_[0] = 0;
+    for (int64 i = 1; i <= pivot_; ++i) {
+      pre_[i] = pre_[i - 1] + IsSquareFree(i);
+    }
+  }
+
+  int64 operator()(int64 n) { return Cal(n); }
+
+  int64 Cal(int64 n) {
+    if (n <= pivot_) return pre_[n];
+    auto where = mem_.find(n);
+    if (where != mem_.end()) return where->second;
+    int64 ret = n;
+    for (int64 i = 2;; ++i) {
+      int64 i2 = i * i;
+      if (i2 > n) break;
+      ret -= Cal(n / i2);
+    }
+    return mem_[n] = ret;
+  }
+
+ private:
+  int64 pivot_;
+  std::vector<int64> pre_;
+  std::unordered_map<int64, int64> mem_;
+};
+
+// Calculates mu(1) + mu(2) + ... + mu(n).
+template <typename T = int64>
+struct MuSummer {
+  MuSummer(int64 pivot = pe::maxp) : pivot_(pivot) {
+    if (pe::maxp > 0) {
+      Init(pivot_);
+    }
+  }
+
+  ~MuSummer() = default;
+
+  void Init(int64 pivot = pe::maxp) {
+    pivot_ = pivot;
+
+    PE_ASSERT(pivot_ <= pe::maxp);
+    PE_ASSERT(pe::mu != nullptr);
+
+    pre_.resize(pivot_ + 1);
+    pre_[0] = 0;
+    for (int i = 1; i <= pivot_; ++i) {
+      pre_[i] = pe::mu[i] + pre_[i - 1];
+    }
+  }
+
+  T operator()(int64 n) { return Cal(n); }
+
+  T Cal(int64 n) {
+    if (n <= pivot_) return pre_[n];
+
+    auto where = mem_.find(n);
+    if (where != mem_.end()) return where->second;
+
+    T ret = 1;
+    for (int64 i = 2; i <= n;) {
+      int64 v = n / i;
+      int64 maxi = n / v;
+      ret -= (maxi - i + 1) * Cal(v);
+      i = maxi + 1;
+    }
+    return mem_[n] = ret;
+  }
+
+ private:
+  int64 pivot_;
+  std::vector<T> pre_;
+  std::unordered_map<int64, T> mem_;
+};
+
+// Calculates mu(1) + mu(2) + ... + mu(n) or phi(1) + phi(2) + ... + phi(n)
+template <typename T = int64>
+struct MuPhiSummer {
+  MuPhiSummer(int64 pivot = pe::maxp) : pivot_(pivot) {
+    if (pe::maxp > 0) {
+      Init(pivot_);
+    }
+  }
+
+  ~MuPhiSummer() = default;
+
+  void Init(int64 pivot = pe::maxp) {
+    pivot_ = pivot;
+
+    PE_ASSERT(pivot <= pe::maxp);
+    PE_ASSERT(pe::mu != nullptr);
+    PE_ASSERT(pe::phi != nullptr);
+
+    pre_sum_mu_.resize(pivot + 1);
+    pre_sum_phi_.resize(pivot + 1);
+    pre_sum_mu_[0] = pre_sum_phi_[0] = 0;
+    for (int i = 1; i <= pivot; ++i) {
+      pre_sum_mu_[i] = pe::mu[i] + pre_sum_mu_[i - 1];
+      pre_sum_phi_[i] = pe::phi[i] + pre_sum_phi_[i - 1];
+    }
+  }
+
+  T CalSumMu(int64 n) {
+    if (n <= pivot_) return pre_sum_mu_[n];
+
+    auto where = mem_sum_mu_.find(n);
+    if (where != mem_sum_mu_.end()) return where->second;
+
+    T ret = 1;
+    for (int64 i = 2; i <= n;) {
+      int64 v = n / i;
+      int64 maxi = n / v;
+      int64 d = maxi - i + 1;
+      ret -= d * CalSumMu(v);
+      i = maxi + 1;
+    }
+    return mem_sum_mu_[n] = ret;
+  }
+
+  T CalSumPhi(int64 n) {
+    if (n <= pivot_) return pre_sum_phi_[n];
+
+    auto where = mem_sum_phi_.find(n);
+    if (where != mem_sum_phi_.end()) return where->second;
+
+    T ret = 0;
+    T last = 0;
+    for (int64 k = 1; k <= n;) {
+      int64 v = n / k;
+      int64 maxk = n / v;
+      T now = CalSumMu(maxk);
+
+      T x = now - last;
+      last = now;
+
+      T s = 0;
+      if (v & 1) {
+        s = T(v + 1 >> 1) * v;
+      } else {
+        s = T(v >> 1) * (v + 1);
+      }
+      ret += s * x;
+      k = maxk + 1;
+    }
+    return mem_sum_phi_[n] = ret;
+  }
+
+ private:
+  int64 pivot_;
+
+  std::vector<T> pre_sum_mu_;
+  std::unordered_map<int64, T> mem_sum_mu_;
+
+  std::vector<T> pre_sum_phi_;
+  std::unordered_map<int64, T> mem_sum_phi_;
+};
+
+// Calculates sigma0(1) + sigma0(2) + ... + sigma0(n).
+// sigma0(i) is the number of the divisors of i.
+template <typename T = int64>
+struct Sigma0Summer {
+  Sigma0Summer(int64 pivot = pe::maxp) : pivot_(pivot) {
+    if (pe::maxp > 0) {
+      Init(pivot_);
+    }
+  }
+
+  ~Sigma0Summer() = default;
+
+  void Init(int64 pivot = pe::maxp) {
+    pivot_ = pivot;
+
+    PE_ASSERT(pivot <= pe::maxp);
+
+    pre_.resize(pivot + 1);
+    std::fill(pre_.begin(), pre_.end(), 0);
+    for (int i = 1; i <= pivot; ++i) {
+      for (int j = i; j <= pivot; j += i) {
+        ++pre_[j];
+      }
+    }
+    for (int i = 1; i <= pivot; ++i) {
+      pre_[i] += pre_[i - 1];
+    }
+  }
+
+  T operator()(int64 n) { return Cal(n); }
+
+  T Cal(int64 n) {
+    if (n <= pivot_) return pre_[n];
+
+    auto where = mem_.find(n);
+    if (where != mem_.end()) return where->second;
+
+    T ret = 0;
+    for (int64 i = 1; i * i <= n; ++i) {
+      ret += n / i;
+    }
+    ret += ret;
+    const T t = SqrtI(n);
+    return mem_[n] = ret - t * t;
+  }
+
+ private:
+  int64 pivot_;
+
+  std::vector<T> pre_;
+  std::unordered_map<int64, T> mem_;
+};
+
+// Calculates (mu(1) + mu(2) + ... + mu(n)) % mod or
+// (phi(1) + phi(2) + ... + phi(n)) % mod.
+// If n is no more than pivot, use a pre-computed table.
+struct MuPhiSumModer {
+  MuPhiSumModer(int64 mod, int64 pivot = pe::maxp) : mod_(mod), pivot_(pivot) {
+    if (pe::maxp > 0) {
+      Init(pivot_);
+    }
+  }
+
+  ~MuPhiSumModer() = default;
+
+  void Init(int64 pivot = pe::maxp) {
+    pivot_ = pivot;
+
+    PE_ASSERT(pivot <= pe::maxp);
+    PE_ASSERT(pe::mu != nullptr);
+    PE_ASSERT(pe::phi != nullptr);
+
+    pre_sum_mu_.resize(pivot + 1);
+    pre_sum_phi_.resize(pivot + 1);
+    pre_sum_mu_[0] = pre_sum_phi_[0] = 0;
+    for (int i = 1; i <= pivot; ++i) {
+      pre_sum_mu_[i] = pe::mu[i] + pre_sum_mu_[i - 1];
+      pre_sum_phi_[i] = (pe::phi[i] + pre_sum_phi_[i - 1]) % mod_;
+      if (pre_sum_mu_[i] < 0) {
+        pre_sum_mu_[i] += mod_;
+      } else if (pre_sum_mu_[i] >= mod_) {
+        pre_sum_mu_[i] -= mod_;
+      }
+    }
+  }
+
+  int64 CalSumMu(int64 n) {
+    if (n <= pivot_) return pre_sum_mu_[n];
+
+    auto where = mem_sum_mu_.find(n);
+    if (where != mem_sum_mu_.end()) return where->second;
+
+    int64 ret = 1;
+    for (int64 i = 2; i <= n;) {
+      int64 v = n / i;
+      int64 maxi = n / v;
+      ret = SubMod(ret, MulMod((maxi - i + 1) % mod_, CalSumMu(v), mod_), mod_);
+      i = maxi + 1;
+    }
+    return mem_sum_mu_[n] = ret;
+  }
+
+  int64 CalSumPhi(int64 n) {
+    if (n <= pivot_) return pre_sum_phi_[n];
+
+    auto where = mem_sum_phi_.find(n);
+    if (where != mem_sum_phi_.end()) return where->second;
+
+    int64 ret = 0;
+    int64 last = 0;
+    for (int64 k = 1; k <= n;) {
+      int64 v = n / k;
+      int64 maxk = n / v;
+      int64 now = CalSumMu(maxk);
+
+      int64 x = SubMod(now, last, mod_);
+      last = now;
+
+      int64 s = 0;
+      if (v & 1) {
+        s = MulMod((v + 1) / 2 % mod_, v % mod_, mod_);
+      } else {
+        s = MulMod(v / 2 % mod_, (v + 1) % mod_, mod_);
+      }
+      ret = AddMod(ret, MulMod(s, x, mod_), mod_);
+      k = maxk + 1;
+    }
+    return mem_sum_phi_[n] = ret;
+  }
+
+ private:
+  int64 mod_;
+  int64 pivot_;
+
+  std::vector<int64> pre_sum_mu_;
+  std::unordered_map<int64, int64> mem_sum_mu_;
+
+  std::vector<int64> pre_sum_phi_;
+  std::unordered_map<int64, int64> mem_sum_phi_;
+};
+
+// Calculates (sigma0(1) + sigma0(2) + ... + sigma0(n)) % mod.
+// sigma0(i) is the number of the divisors of i.
+struct Sigma0SumModer {
+  Sigma0SumModer(int64 mod, int64 pivot = pe::maxp) : mod_(mod), pivot_(pivot) {
+    if (pe::maxp > 0) {
+      Init(pivot_);
+    }
+  }
+
+  ~Sigma0SumModer() = default;
+
+  void Init(int64 pivot = pe::maxp) {
+    pivot_ = pivot;
+
+    PE_ASSERT(pivot <= pe::maxp);
+
+    pre_.resize(pivot + 1);
+    std::fill(pre_.begin(), pre_.end(), 0);
+    for (int i = 1; i <= pivot; ++i) {
+      for (int j = i; j <= pivot; j += i) {
+        ++pre_[j];
+      }
+    }
+    for (int i = 1; i <= pivot; ++i) {
+      pre_[i] = AddMod(pre_[i] % mod_, pre_[i - 1], mod_);
+    }
+  }
+
+  int64 operator()(int64 n) { return Cal(n); }
+
+  int64 Cal(int64 n) {
+    if (n <= pivot_) return pre_[n];
+
+    auto where = mem_.find(n);
+    if (where != mem_.end()) return where->second;
+
+    int64 ret = 0;
+    for (int64 i = 1; i * i <= n; ++i) {
+      ret += n / i;
+      if (ret >= mod_) {
+        ret -= mod_;
+      }
+    }
+    ret <<= 1;
+    if (ret >= mod_) {
+      ret -= mod_;
+    }
+    const int64 t = SqrtI(n) % mod_;
+    return mem_[n] = SubMod(ret, MulMod(t, t, mod_), mod_);
+  }
+
+ private:
+  int64 mod_;
+  int64 pivot_;
+
+  std::vector<int64> pre_;
+  std::unordered_map<int64, int64> mem_;
+};
+
+
+// A helper data structured used to group i and j if [n/i] = [n/j]
+template <typename T>
+class DVA {
+ public:
+  template <typename IT>
+  struct DVARange {
+    IT first;
+    IT last;
+    DVARange(IT first, IT last) : first(first), last(last) {}
+    IT begin() { return first; }
+    IT end() { return last; }
+  };
+
+  template <typename IT>
+  DVARange<IT> MakeRange(IT first, IT last) const {
+    return DVARange<IT>(first, last);
+  }
+
+  struct DVAItem {
+    T value;
+    int64 key;
+    int idx;
+  };
+
+  struct DVAIteratorBase {
+    using reference = DVAItem;
+    using value_type = DVAItem;
+    const std::vector<int64>& keys;
+    const std::vector<T>& values;
+    int idx;
+    const int key_size;
+
+    DVAIteratorBase(const std::vector<int64>& keys,
+                    const std::vector<T>& values, int idx, int key_size)
+        : keys(keys), values(values), idx(idx), key_size(key_size) {}
+
+    DVAItem operator*() { return DVAItem{values[idx], keys[idx], idx}; }
+
+    int operator==(const DVAIteratorBase& o) const {
+      return idx == o.idx && key_size == o.key_size;
+    }
+
+    int operator!=(const DVAIteratorBase& o) const {
+      return !(this->operator==(o));
+    }
+  };
+
+  struct DVAIterator : public DVAIteratorBase {
+    using reference = DVAItem;
+    using value_type = DVAItem;
+    using DVAIteratorBase::DVAIteratorBase;
+
+    DVAIterator& operator++() {
+      ++DVAIteratorBase::idx;
+      return *this;
+    }
+
+    DVAIterator operator++(int) {
+      return DVAIterator(DVAIteratorBase::keys, DVAIteratorBase::values,
+                         DVAIteratorBase::idx++, DVAIteratorBase::key_size);
+    }
+
+    DVAIterator& operator--() {
+      --DVAIteratorBase::idx;
+      return *this;
+    }
+
+    DVAIterator operator--(int) {
+      return DVAIterator(DVAIteratorBase::keys, DVAIteratorBase::values,
+                         DVAIteratorBase::idx--, DVAIteratorBase::key_size);
+    }
+  };
+
+  struct DVARIterator : public DVAIteratorBase {
+    using reference = DVAItem;
+    using value_type = DVAItem;
+    using DVAIteratorBase::DVAIteratorBase;
+
+    DVARIterator& operator++() {
+      --DVAIteratorBase::idx;
+      return *this;
+    }
+
+    DVARIterator operator++(int) {
+      return DVARIterator(DVAIteratorBase::keys, DVAIteratorBase::values,
+                          DVAIteratorBase::idx--, DVAIteratorBase::key_size);
+    }
+
+    DVARIterator& operator--() {
+      ++DVAIteratorBase::idx;
+      return *this;
+    }
+
+    DVARIterator operator--(int) {
+      return DVARIterator(DVAIteratorBase::keys, DVAIteratorBase::values,
+                          DVAIteratorBase::idx++, DVAIteratorBase::key_size);
+    }
+  };
+
+ public:
+  int64 n;
+  int64 m;
+  int is_perfect_square;
+
+  std::vector<int64> keys;
+  std::vector<T> values;
+  int64 key_size;
+
+  explicit DVA(int64 n = 1, T element = 0)
+      : n(n),
+        m(SqrtI(n)),
+        is_perfect_square(m * m == n),
+        key_size(m + 1 + (n / m > m ? m : m - 1)) {
+    keys.reserve(key_size);
+
+    for (int64 i = 0; i <= m; ++i) {
+      keys.push_back(i);
+    }
+    for (int64 i = n / m > m ? m : m - 1; i >= 1; --i) {
+      keys.push_back(n / i);
+    }
+
+    values.resize(key_size);
+    values[0] = 0;
+    Fill(element);
+  }
+
+  DVA(const DVA& other) = default;
+  DVA(DVA&& other) noexcept = default;
+  DVA& operator=(const DVA& other) = default;
+  DVA& operator=(DVA&& other) noexcept = default;
+
+  void Resize(int64 n, T element = 0) { *this = std::move(DVA<T>(n, element)); }
+
+  void Fill(T element) {
+    std::fill(++std::begin(values), std::end(values), element);
+    // Not work for MSVC.
+    // std::fill(std::begin(values) + 1, std::end(values), element);
+  }
+
+  int IdxOfValue(int64 v) const {
+    return static_cast<int>(v <= m ? v : key_size - n / v);
+  }
+
+  T& operator[](int64 v) { return values[IdxOfValue(v)]; }
+
+  T operator[](int64 v) const { return values[IdxOfValue(v)]; }
+
+  DVARange<std::vector<int64>::const_iterator> FKeys() const {
+    return MakeRange(keys.begin() + 1, keys.end());
+  }
+
+  DVARange<std::vector<int64>::const_reverse_iterator> BKeys() const {
+    return MakeRange(keys.rbegin(), keys.rend() - 1);
+  }
+
+  DVARange<DVAIterator> FItems() const { return MakeRange(begin(), end()); }
+
+  DVARange<DVARIterator> BItems() const { return MakeRange(rbegin(), rend()); }
+
+  DVAIterator begin() const { return DVAIterator(keys, values, 1, key_size); }
+
+  DVAIterator end() const {
+    return DVAIterator(keys, values, key_size, key_size);
+  }
+
+  DVARIterator rbegin() const {
+    return DVARIterator(keys, values, key_size - 1, key_size);
+  }
+
+  DVARIterator rend() const { return DVARIterator(keys, values, 0, key_size); }
+};
+
+struct DVAShape {
+ public:
+  DVAShape(int64 n)
+      : n(n),
+        m(SqrtI(n)),
+        is_perfect_square(m * m == n),
+        key_size(m + 1 + (n / m > m ? m : m - 1)) {}
+  int IdxOfValue(int64 v) const {
+    return static_cast<int>(v <= m ? v : key_size - n / v);
+  }
+
+ public:
+  int64 n;
+  int64 m;
+  int64 is_perfect_square;
+  int64 key_size;
+};
+
+namespace internal {
+template <typename T>
+SL REQUIRES((IsNModNumberV<T>)) RETURN(std::vector<T>)
+    DVAConvGreaterThanSqrtN(DVAShape shape, const std::vector<T>& psa,
+                            const std::vector<T>& psb,
+                            const std::vector<T>& a) {
+  // a < sqrt(n), b > sqrt(n)
+  std::vector<T> result(shape.key_size, T(0));
+  // minimal value greater than or equal to sqrt(n).
+  const int64 max_no_more_than_sqrt_n = shape.m - shape.is_perfect_square;
+  for (int64 i = 1; i <= max_no_more_than_sqrt_n; ++i) {
+    const int64 maxk = max_no_more_than_sqrt_n / i;
+    for (int64 k = 1; k <= maxk; ++k) {
+      const int64 mint = i * k;
+      const int64 maxt = i * (k + 1);
+      // [mint, maxt)
+      const int64 u =
+          std::max<int64>(shape.IdxOfValue(shape.n / maxt), shape.m);
+      const int64 v = shape.IdxOfValue(shape.n / mint);
+      if (v > u) {
+        int64 idx = shape.IdxOfValue(shape.n / k);
+        result[idx] += (psb[v] - psb[u]) * a[i];
+      }
+    }
+  }
+  return result;
+}
+
+template <typename T>
+SL REQUIRES((!IsNModNumberV<T>)) RETURN(std::vector<T>)
+    DVAConvGreaterThanSqrtN(DVAShape shape, const std::vector<T>& psa,
+                            const std::vector<T>& psb, const std::vector<T>& a,
+                            int64 mod) {
+  // a < sqrt(n), b > sqrt(n)
+  std::vector<T> result(shape.key_size, T(0));
+  // minimal value greater than or equal to sqrt(n).
+  const int64 max_no_more_than_sqrt_n = shape.m - shape.is_perfect_square;
+  for (int64 i = 1; i <= max_no_more_than_sqrt_n; ++i) {
+    const int64 maxk = max_no_more_than_sqrt_n / i;
+    for (int64 k = 1; k <= maxk; ++k) {
+      const int64 mint = i * k;
+      const int64 maxt = i * (k + 1);
+      // [mint, maxt)
+      const int64 u =
+          std::max<int64>(shape.IdxOfValue(shape.n / maxt), shape.m);
+      const int64 v = shape.IdxOfValue(shape.n / mint);
+      if (v > u) {
+        int64 idx = shape.IdxOfValue(shape.n / k);
+        result[idx] = AddMod(
+            result[idx], MulMod(SubMod(psb[v], psb[u], mod), a[i], mod), mod);
+      }
+    }
+  }
+  return result;
+}
+
+SL void DVAConvDfsTwoFactorsTwo(int max_idx, int64 maxv, int64 n,
+                                std::vector<std::pair<int64, int>>& f,
+                                int64 value1, int64 value2,
+                                std::vector<std::pair<int64, int64>>& result) {
+  if (n / (n / value2) != value2) return;
+  result.push_back({value1, value2});
+  for (int i = 0; i < max_idx; ++i) {
+    const int64 t = maxv / f[i].first;
+    int64 tvalue2 = value2;
+    for (int j = 1; j <= f[i].second; ++j) {
+      if (tvalue2 > t) {
+        break;
+      }
+      tvalue2 *= f[i].first;
+      DVAConvDfsTwoFactorsTwo(i, maxv, n, f, value1, tvalue2, result);
+    }
+  }
+}
+
+SL void DVAConvDfsTwoFactorsOne(int max_idx, int64 maxv, int64 n,
+                                std::vector<std::pair<int64, int>>& f,
+                                int64 value1,
+                                std::vector<std::pair<int64, int64>>& result) {
+  if (n / (n / value1) != value1) return;
+  DVAConvDfsTwoFactorsTwo(static_cast<int>(std::size(f)), maxv, n, f, value1, 1,
+                          result);
+  for (int i = 0; i < max_idx; ++i) {
+    const int64 t = maxv / f[i].first;
+    int64 tvalue1 = value1;
+    const int total = f[i].second;
+    for (int j = 1; j <= total; ++j) {
+      if (tvalue1 > t) {
+        break;
+      }
+      tvalue1 *= f[i].first;
+      --f[i].second;
+      DVAConvDfsTwoFactorsOne(i, maxv, n, f, tvalue1, result);
+    }
+    f[i].second = total;
+  }
+}
+
+#define DVA_CONV_DFS_FACTORS 1
+
+template <typename T, int TN = 8>
+SL REQUIRES((IsNModNumberV<T>)) RETURN(void)
+    DVAConvAdjust(DVAShape shape, int64 W, const std::vector<T>& a,
+                  const std::vector<T>& b, std::vector<T>& tans,
+                  std::vector<T>& result) {
+  const int64 S = shape.m;
+  auto [sieve, factorization] = Sieve(W, shape.n);
+#if ENABLE_OPENMP
+  const int64 FINAL_TN = TN;
+#else
+  const int64 FINAL_TN = 1;
+#endif
+  if (FINAL_TN == 1) {
+    for (int64 i = W; i <= shape.n; ++i) {
+#if DVA_CONV_DFS_FACTORS
+      std::vector<std::pair<int64, int64>> factors;
+      DVAConvDfsTwoFactorsOne(std::size(factorization[i - W]), shape.m, shape.n,
+                              factorization[i - W], 1, factors);
+      for (const auto [x, y] : factors) {
+        const int64 t = i / (x * y);
+        if (shape.n / (shape.n / t) != t) continue;
+        const int64 k0 = std::ceil(S * std::log(x));
+        const int64 k1 = std::ceil(S * std::log(y));
+        if (k0 + k1 > S * std::log(shape.n / t)) {
+          const T tmp = a[shape.IdxOfValue(x)] * b[shape.IdxOfValue(y)];
+          tans[k0 + k1] -= tmp;
+          const int64 idx = shape.IdxOfValue(shape.n / t);
+          result[idx] += tmp;
+        }
+      }
+#else
+      auto factors =
+          GetFactors(FactorizedInteger(i, factorization[i - W]), shape.m);
+      for (const int64 x : factors) {
+        if (shape.n / (shape.n / x) != x) continue;
+        const int64 have = i / x;
+        for (const int64 y : factors) {
+          if (have % y) continue;
+          if (shape.n / (shape.n / y) != y) continue;
+          const int64 t = have / y;
+          if (shape.n / (shape.n / t) != t) continue;
+          const int64 k0 = std::ceil(S * std::log(x));
+          const int64 k1 = std::ceil(S * std::log(y));
+          if (k0 + k1 > S * std::log(shape.n / t)) {
+            T tmp = a[shape.IdxOfValue(x)] * b[shape.IdxOfValue(y)];
+            tans[k0 + k1] -= tmp;
+            const int64 idx = shape.IdxOfValue(shape.n / t);
+            result[idx] += tmp;
+          }
+        }
+      }
+#endif
+    }
+  } else {
+    std::vector<std::vector<T>> tans_data(
+        FINAL_TN, std::vector<T>(std::size(tans), T(0)));
+    std::vector<std::vector<T>> result_data(
+        FINAL_TN, std::vector<T>(std::size(result), T(0)));
+#if ENABLE_OPENMP
+#pragma omp parallel for schedule(dynamic, 1000) num_threads(FINAL_TN)
+    for (int64 i = W; i <= shape.n; ++i) {
+#if DVA_CONV_DFS_FACTORS
+      std::vector<std::pair<int64, int64>> factors;
+      DVAConvDfsTwoFactorsOne(std::size(factorization[i - W]), shape.m, shape.n,
+                              factorization[i - W], 1, factors);
+      for (const auto [x, y] : factors) {
+        const int64 t = i / (x * y);
+        if (shape.n / (shape.n / t) != t) continue;
+        const int64 k0 = std::ceil(S * std::log(x));
+        const int64 k1 = std::ceil(S * std::log(y));
+        if (k0 + k1 > S * std::log(shape.n / t)) {
+          const T tmp = a[shape.IdxOfValue(x)] * b[shape.IdxOfValue(y)];
+          tans_data[tid()][k0 + k1] += tmp;
+          const int64 idx = shape.IdxOfValue(shape.n / t);
+          result_data[tid()][idx] += tmp;
+        }
+      }
+#else
+      auto factors =
+          GetFactors(FactorizedInteger(i, factorization[i - W]), shape.m);
+      for (const int64 x : factors) {
+        if (shape.n / (shape.n / x) != x) continue;
+        const int64 have = i / x;
+        for (const int64 y : factors) {
+          if (have % y) continue;
+          if (shape.n / (shape.n / y) != y) continue;
+          const int64 t = have / y;
+          if (shape.n / (shape.n / t) != t) continue;
+          const int64 k0 = std::ceil(S * std::log(x));
+          const int64 k1 = std::ceil(S * std::log(y));
+          if (k0 + k1 > S * std::log(shape.n / t)) {
+            T tmp = a[shape.IdxOfValue(x)] * b[shape.IdxOfValue(y)];
+            tans_data[tid()][k0 + k1] += tmp;
+            const int64 idx = shape.IdxOfValue(shape.n / t);
+            result_data[tid()][idx] += tmp;
+          }
+        }
+      }
+#endif
+    }
+    for (int i = 0; i < FINAL_TN; ++i) {
+      for (int j = 0; j < std::size(tans); ++j) {
+        tans[j] -= tans_data[i][j];
+      }
+      for (int j = 0; j < std::size(result); ++j) {
+        result[j] += result_data[i][j];
+      }
+    }
+#endif
+  }
+}
+
+template <typename T>
+SL REQUIRES((IsNModNumberV<T>)) RETURN(std::vector<T>)
+    DVAConvNoMoreThanSqrtN(DVAShape shape, const std::vector<T>& a,
+                           const std::vector<T>& b) {
+  // a <= sqrt(n), b <= sqrt(n)
+
+  const int64 S = shape.m;
+  const int64 W = std::max<int64>(int64(shape.n * std::exp(-2. / S) - 10), 1);
+
+  std::vector<T> tans;
+  {
+    const int64 size = std::ceil(S * std::log(shape.m));
+    std::vector<int64> u(size + 1, 0), v(size + 1, 0);
+    for (int i = 1; i <= shape.m; ++i) {
+      const int64 idx = std::ceil(S * std::log(i));
+      u[idx] = a[i].value();
+      v[idx] = b[i].value();
+    }
+    std::vector<int64> t = PolyMul(u, v, T().Mod());
+    tans.reserve(std::size(t));
+    for (int i = 0; i < std::size(t); ++i) {
+      tans.push_back(t[i]);
+    }
+  }
+
+  std::vector<T> result(shape.key_size, T(0));
+  DVAConvAdjust(shape, W, a, b, tans, result);
+
+  for (int i = 0; i < std::size(tans); ++i) {
+    int64 now = std::exp(1. * i / S);
+    if (now <= shape.n) {
+      result[shape.IdxOfValue(now)] += tans[i];
+    } else {
+      break;
+    }
+  }
+
+  return result;
+}
+
+template <typename T, int TN = 8>
+SL REQUIRES((!IsNModNumberV<T>)) RETURN(void)
+    DVAConvAdjust(DVAShape shape, int64 W, const std::vector<T>& a,
+                  const std::vector<T>& b, std::vector<T>& tans,
+                  std::vector<T>& result, int64 mod) {
+  const int64 S = shape.m;
+  auto [sieve, factorization] = Sieve(W, shape.n);
+#if ENABLE_OPENMP
+  const int64 FINAL_TN = TN;
+#else
+  const int64 FINAL_TN = 1;
+#endif
+  if (FINAL_TN == 1) {
+    for (int64 i = W; i <= shape.n; ++i) {
+#if DVA_CONV_DFS_FACTORS
+      std::vector<std::pair<int64, int64>> factors;
+      DVAConvDfsTwoFactorsOne(std::size(factorization[i - W]), shape.m, shape.n,
+                              factorization[i - W], 1, factors);
+      for (const auto [x, y] : factors) {
+        const int64 t = i / (x * y);
+        if (shape.n / (shape.n / t) != t) continue;
+        const int64 k0 = std::ceil(S * std::log(x));
+        const int64 k1 = std::ceil(S * std::log(y));
+        if (k0 + k1 > S * std::log(shape.n / t)) {
+          const T tmp =
+              MulMod(a[shape.IdxOfValue(x)], b[shape.IdxOfValue(y)], mod);
+          tans[k0 + k1] = SubMod(tans[k0 + k1], tmp, mod);
+          const int64 idx = shape.IdxOfValue(shape.n / t);
+          result[idx] = AddMod(result[idx], tmp, mod);
+        }
+      }
+#else
+      auto factors =
+          GetFactors(FactorizedInteger(i, factorization[i - W]), shape.m);
+      for (const int64 x : factors) {
+        if (shape.n / (shape.n / x) != x) continue;
+        const int64 have = i / x;
+        for (const int64 y : factors) {
+          if (have % y) continue;
+          if (shape.n / (shape.n / y) != y) continue;
+          const int64 t = have / y;
+          if (shape.n / (shape.n / t) != t) continue;
+          const int64 k0 = std::ceil(S * std::log(x));
+          const int64 k1 = std::ceil(S * std::log(y));
+          if (k0 + k1 > S * std::log(shape.n / t)) {
+            T tmp = MulMod(a[shape.IdxOfValue(x)], b[shape.IdxOfValue(y)], mod);
+            tans[k0 + k1] = SubMod(tans[k0 + k1], tmp, mod);
+            const int64 idx = shape.IdxOfValue(shape.n / t);
+            result[idx] = AddMod(result[idx], tmp, mod);
+          }
+        }
+      }
+#endif
+    }
+  } else {
+    std::vector<std::vector<T>> tans_data(
+        FINAL_TN, std::vector<T>(std::size(tans), T(0)));
+    std::vector<std::vector<T>> result_data(
+        FINAL_TN, std::vector<T>(std::size(result), T(0)));
+#if ENABLE_OPENMP
+#pragma omp parallel for schedule(dynamic, 1000) num_threads(FINAL_TN)
+    for (int64 i = W; i <= shape.n; ++i) {
+#if DVA_CONV_DFS_FACTORS
+      std::vector<std::pair<int64, int64>> factors;
+      DVAConvDfsTwoFactorsOne(std::size(factorization[i - W]), shape.m, shape.n,
+                              factorization[i - W], 1, factors);
+      for (const auto [x, y] : factors) {
+        const int64 t = i / (x * y);
+        if (shape.n / (shape.n / t) != t) continue;
+        const int64 k0 = std::ceil(S * std::log(x));
+        const int64 k1 = std::ceil(S * std::log(y));
+        if (k0 + k1 > S * std::log(shape.n / t)) {
+          const T tmp =
+              MulMod(a[shape.IdxOfValue(x)], b[shape.IdxOfValue(y)], mod);
+          tans_data[tid()][k0 + k1] =
+              AddMod(tans_data[tid()][k0 + k1], tmp, mod);
+          const int64 idx = shape.IdxOfValue(shape.n / t);
+          result_data[tid()][idx] = AddMod(result_data[tid()][idx], tmp, mod);
+        }
+      }
+#else
+      auto factors =
+          GetFactors(FactorizedInteger(i, factorization[i - W]), shape.m);
+      for (const int64 x : factors) {
+        if (shape.n / (shape.n / x) != x) continue;
+        const int64 have = i / x;
+        for (const int64 y : factors) {
+          if (have % y) continue;
+          if (shape.n / (shape.n / y) != y) continue;
+          const int64 t = have / y;
+          if (shape.n / (shape.n / t) != t) continue;
+          const int64 k0 = std::ceil(S * std::log(x));
+          const int64 k1 = std::ceil(S * std::(y));
+          if (k0 + k1 > S * std::log(shape.n / t)) {
+            T tmp = MulMod(a[shape.IdxOfValue(x)], b[shape.IdxOfValue(y)], mod);
+            tans_data[tid()][k0 + k1] =
+                AddMod(tans_data[tid()][k0 + k1], tmp, mod);
+            const int64 idx = shape.IdxOfValue(shape.n / t);
+            result_data[tid()][idx] = AddMod(result_data[tid()][idx], tmp, mod);
+          }
+        }
+      }
+#endif
+    }
+    for (int i = 0; i < FINAL_TN; ++i) {
+      for (int j = 0; j < std::size(tans); ++j) {
+        tans[j] = SubMod(tans[j], tans_data[i][j], mod);
+      }
+      for (int j = 0; j < std::size(result); ++j) {
+        result[j] = AddMod(result[j], result_data[i][j], mod);
+      }
+    }
+#endif
+  }
+}
+
+template <typename T>
+SL REQUIRES((!IsNModNumberV<T>)) RETURN(std::vector<T>)
+    DVAConvNoMoreThanSqrtN(DVAShape shape, const std::vector<T>& a,
+                           const std::vector<T>& b, int64 mod) {
+  // a <= sqrt(n), b <= sqrt(n)
+
+  const int64 S = shape.m;
+  const int64 W = std::max<int64>(int64(shape.n * std::exp(-2. / S) - 10), 1);
+
+  std::vector<T> tans;
+  {
+    const int64 size = std::ceil(S * std::log(shape.m));
+    std::vector<int64> u(size + 1, 0), v(size + 1, 0);
+    for (int i = 1; i <= shape.m; ++i) {
+      const int64 idx = std::ceil(S * std::log(i));
+      u[idx] = a[i];
+      v[idx] = b[i];
+    }
+    std::vector<int64> t = PolyMul(u, v, mod);
+    tans.reserve(std::size(t));
+    for (int i = 0; i < std::size(t); ++i) {
+      tans.push_back(t[i]);
+    }
+  }
+
+  std::vector<T> result(shape.key_size, T(0));
+  DVAConvAdjust(shape, W, a, b, tans, result, mod);
+
+  for (int i = 0; i < std::size(tans); ++i) {
+    int64 now = std::exp(1. * i / S);
+    if (now <= shape.n) {
+      int64 idx = shape.IdxOfValue(now);
+      result[idx] = AddMod(result[idx], tans[i], mod);
+    } else {
+      break;
+    }
+  }
+
+  return result;
+}
+}  // namespace internal
+
+template <typename T>
+[[deprecated("DVAConvEx doesn't work correctly for n >= 100000")]]
+SL REQUIRES((IsNModNumberV<T>)) RETURN(DVA<T>)
+    DVAConvEx(const DVA<T>& psa, const DVA<T>& psb) {
+  const DVAShape shape(psa.n);
+
+  std::vector<T> a(shape.key_size);
+  std::vector<T> b(shape.key_size);
+  a[0] = b[0] = T(0);
+  for (int i = 1; i < shape.key_size; ++i) {
+    a[i] = psa.values[i] - psa.values[i - 1];
+    b[i] = psb.values[i] - psb.values[i - 1];
+  }
+
+  DVA<T> result(shape.n);
+  auto add_to = [=](const std::vector<T>& src, std::vector<T>& target) {
+    for (int i = 0; i < shape.key_size; ++i) {
+      target[i] += src[i];
+    }
+  };
+
+  add_to(internal::DVAConvGreaterThanSqrtN(shape, psa.values, psb.values, a),
+         result.values);
+  add_to(internal::DVAConvGreaterThanSqrtN(shape, psb.values, psa.values, b),
+         result.values);
+  add_to(internal::DVAConvNoMoreThanSqrtN(shape, a, b), result.values);
+
+  for (int i = 1; i < shape.key_size; ++i) {
+    result.values[i] += result.values[i - 1];
+  }
+
+  return result;
+}
+
+template <typename T>
+[[deprecated("DVAConvEx doesn't work correctly for n >= 100000")]]
+SL REQUIRES((IsNModNumberV<T>)) RETURN(DVA<T>)
+    DVAConvEx(const DVA<T>& psa, const DVA<T>& psb, int64 mod) {
+  PE_ASSERT(T().Mod() == mod);
+  return DVAConvEx(psa, psb);
+}
+
+template <typename T>
+[[deprecated("DVAConvEx doesn't work correctly for n >= 100000")]]
+SL REQUIRES((!IsNModNumberV<T>)) RETURN(DVA<T>)
+    DVAConvEx(const DVA<T>& psa, const DVA<T>& psb, int64 mod) {
+  const DVAShape shape(psa.n);
+
+  std::vector<T> a(shape.key_size);
+  std::vector<T> b(shape.key_size);
+  a[0] = b[0] = T(0);
+  for (int i = 1; i < shape.key_size; ++i) {
+    a[i] = SubMod(psa.values[i], psa.values[i - 1], mod);
+    b[i] = SubMod(psb.values[i], psb.values[i - 1], mod);
+  }
+
+  DVA<T> result(shape.n);
+  auto add_to = [=](const std::vector<T>& src, std::vector<T>& target) {
+    for (int i = 0; i < shape.key_size; ++i) {
+      target[i] = AddMod(target[i], src[i], mod);
+    }
+  };
+
+  add_to(
+      internal::DVAConvGreaterThanSqrtN(shape, psa.values, psb.values, a, mod),
+      result.values);
+  add_to(
+      internal::DVAConvGreaterThanSqrtN(shape, psb.values, psa.values, b, mod),
+      result.values);
+  add_to(internal::DVAConvNoMoreThanSqrtN(shape, a, b, mod), result.values);
+
+  for (int i = 1; i < shape.key_size; ++i) {
+    result.values[i] = AddMod(result.values[i], result.values[i - 1], mod);
+  }
+
+  return result;
+}
+
+inline constexpr int kDvaOperationThreads = 8;
+
+// ret = Conv(g, h)
+template <typename T, int TN = kDvaOperationThreads>
+DVA<T> DVAConv(const DVA<T>& ps_g, const DVA<T>& ps_h) {
+  PE_ASSERT(ps_g.n == ps_h.n);
+
+  DVA<T> ret(ps_g.n);
+
+#if ENABLE_OPENMP
+#pragma omp parallel for schedule(dynamic, 100) num_threads(TN)
+#endif
+  for (int64 i = 1; i < ret.key_size; ++i) {
+    const int64 maxx = ret.keys[i];
+    T now = 0;
+    T last = 0;
+    for (int64 y = 1; y <= maxx;) {
+      const int64 v = maxx / y;
+      const int64 maxy = maxx / v;
+      const T curr = ps_g[maxy];
+      const T delta = curr - last;
+      last = curr;
+
+      now += ps_h[v] * delta;
+      y = maxy + 1;
+    }
+    ret.values[i] = now;
+  }
+
+  return ret;
+}
+
+// ret = Conv(g, h)
+template <typename T, int TN = kDvaOperationThreads>
+DVA<T> DVAConv(const DVA<T>& ps_g, const DVA<T>& ps_h,
+               const std::function<T(int64 maxx, int64 miny, int64 maxy,
+                                     const DVA<T>& ps_h)>& trans) {
+  PE_ASSERT(ps_g.n == ps_h.n);
+
+  DVA<T> ret(ps_g.n);
+
+#if ENABLE_OPENMP
+#pragma omp parallel for schedule(dynamic, 100) num_threads(TN)
+#endif
+  for (int64 i = 1; i < ret.key_size; ++i) {
+    const int64 maxx = ret.keys[i];
+    T now = 0;
+    T last = 0;
+    for (int64 y = 1; y <= maxx;) {
+      const int64 v = maxx / y;
+      const int64 maxy = maxx / v;
+      const T curr = ps_g[maxy];
+      const T delta = curr - last;
+      last = curr;
+
+      now += trans(maxx, y, maxy, ps_h) * delta;
+      y = maxy + 1;
+    }
+    ret.values[i] = now;
+  }
+
+  return ret;
+}
+
+template <typename T, int TN = kDvaOperationThreads /** unused */>
+DVA<T> DVAAdd(const DVA<T>& ps_g, const DVA<T>& ps_h) {
+  PE_ASSERT(ps_g.n == ps_h.n);
+
+  DVA<T> ret(ps_g.n);
+
+  for (int64 i = 1; i < ret.key_size; ++i) {
+    ret.values[i] = ps_g.values[i] + ps_h.valus[i];
+  }
+
+  return ret;
+}
+
+template <typename T, int TN = kDvaOperationThreads /** unused */>
+DVA<T> DVASub(const DVA<T>& ps_g, const DVA<T>& ps_h) {
+  PE_ASSERT(ps_g.n == ps_h.n);
+
+  DVA<T> ret(ps_g.n);
+
+  for (int64 i = 1; i < ret.key_size; ++i) {
+    ret.values[i] = ps_g.values[i] - ps_h.values[i];
+  }
+
+  return ret;
+}
+
+// ps epsilon
+template <typename T, int TN = kDvaOperationThreads /** unused */>
+DVA<T> MakePrefixSumEpsilon(int64 n) {
+  return DVA<T>(n, 1);
+}
+
+// ps one
+// ps id0
+template <typename T, int TN = kDvaOperationThreads /** unused */>
+DVA<T> MakePrefixSumOne(int64 n) {
+  DVA<T> ret(n);
+
+  for (int64 i = 1; i < ret.key_size; ++i) {
+    ret.values[i] = ret.keys[i];
+  }
+
+  return ret;
+}
+
+// ps id
+// ps id1
+template <typename T, int TN = kDvaOperationThreads /** unused */>
+DVA<T> MakePrefixSumId(int64 n) {
+  DVA<T> ret(n);
+
+  for (int64 i = 1; i < ret.key_size; ++i) {
+    ret.values[i] = P1Sum<T>(ret.keys[i]);
+  }
+
+  return ret;
+}
+
+// ps id2
+template <typename T, int TN = kDvaOperationThreads /** unused */>
+DVA<T> MakePrefixSumId2(int64 n) {
+  DVA<T> ret(n);
+
+  for (int64 i = 1; i < ret.key_size; ++i) {
+    ret.values[i] = P2Sum<T>(ret.keys[i]);
+  }
+
+  return ret;
+}
+
+// ps id3
+template <typename T, int TN = kDvaOperationThreads /** unused */>
+DVA<T> MakePrefixSumId3(int64 n) {
+  DVA<T> ret(n);
+
+  for (int64 i = 1; i < ret.key_size; ++i) {
+    ret.values[i] = P3Sum<T>(ret.keys[i]);
+  }
+
+  return ret;
+}
+
+// ps id4
+template <typename T, int TN = kDvaOperationThreads /** unused */>
+DVA<T> MakePrefixSumId4(int64 n) {
+  DVA<T> ret(n);
+
+  for (int64 i = 1; i < ret.key_size; ++i) {
+    ret.values[i] = P4Sum<T>(ret.keys[i]);
+  }
+
+  return ret;
+}
+
+// ps id5
+template <typename T, int TN = kDvaOperationThreads /** unused */>
+DVA<T> MakePrefixSumId5(int64 n) {
+  DVA<T> ret(n);
+
+  for (int64 i = 1; i < ret.key_size; ++i) {
+    ret.values[i] = P5Sum<T>(ret.keys[i]);
+  }
+
+  return ret;
+}
+
+// ps id6
+template <typename T, int TN = kDvaOperationThreads /** unused */>
+DVA<T> MakePrefixSumId6(int64 n) {
+  DVA<T> ret(n);
+
+  for (int64 i = 1; i < ret.key_size; ++i) {
+    ret.values[i] = P6Sum<T>(ret.keys[i]);
+  }
+
+  return ret;
+}
+
+// ps id7
+template <typename T, int TN = kDvaOperationThreads /** unused */>
+DVA<T> MakePrefixSumId7(int64 n) {
+  DVA<T> ret(n);
+
+  for (int64 i = 1; i < ret.key_size; ++i) {
+    ret.values[i] = P7Sum<T>(ret.keys[i]);
+  }
+
+  return ret;
+}
+
+// ps mu
+template <typename T, int TN = kDvaOperationThreads>
+DVA<T> MakePrefixSumMu(int64 n) {
+  PE_ASSERT(pe::mu != nullptr);
+
+  DVA<T> ret(n);
+  PE_ASSERT(ret.m <= pe::maxp);
+
+  for (int64 i = 1; i <= ret.m; ++i) {
+    ret.values[i] = ret.values[i - 1] + pe::mu[i];
+  }
+
+  int64 max_idx = ret.m;
+  while (max_idx + 1 < ret.key_size && ret.keys[max_idx + 1] <= pe::maxp)
+    ++max_idx;
+
+  T s = ret.values[ret.m];
+  for (int64 i = ret.m + 1, j = ret.m + 1; i <= max_idx; ++i) {
+    while (j <= ret.keys[i]) s += pe::mu[j++];
+    ret.values[i] = s;
+  }
+
+  if (max_idx + 1 >= ret.key_size) {
+    return ret;
+  }
+
+#if ENABLE_OPENMP
+  if constexpr (TN > 1) {
+    const int64 handled = ret.keys[max_idx];
+#pragma omp parallel for schedule(dynamic, 100) num_threads(TN)
+    for (int64 i = max_idx + 1; i < ret.key_size; ++i) {
+      const int64 maxx = ret.keys[i];
+      T now = 1;
+      for (int64 y = std::max<int64>(2LL, maxx / (handled + 1) + 1);
+           y <= maxx;) {
+        const int64 v = maxx / y;
+        const int64 maxy = maxx / v;
+        const int64 d = maxy - y + 1;
+        now -= d * ret[v];
+        y = maxy + 1;
+      }
+      ret.values[i] = now;
+    }
+    for (int64 i = max_idx + 1; i < ret.key_size; ++i) {
+      const int64 maxx = ret.keys[i];
+      T now = ret.values[i];
+      for (int64 y = 2; y < std::max<int64>(2LL, maxx / (handled + 1) + 1);) {
+        const int64 v = maxx / y;
+        const int64 maxy = maxx / v;
+        const int64 d = maxy - y + 1;
+        now -= d * ret[v];
+        y = maxy + 1;
+      }
+      ret.values[i] = now;
+    }
+  } else
+#endif
+  {
+    for (int64 i = max_idx + 1; i < ret.key_size; ++i) {
+      const int64 maxx = ret.keys[i];
+      T now = 1;
+      for (int64 y = 2; y <= maxx;) {
+        const int64 v = maxx / y;
+        const int64 maxy = maxx / v;
+        const int64 d = maxy - y + 1;
+        now -= d * ret[v];
+        y = maxy + 1;
+      }
+      ret.values[i] = now;
+    }
+  }
+
+  return ret;
+}
+
+// phi = Conv(mu, id)
+// id = Conv(phi, one)
+template <typename T, int TN = kDvaOperationThreads>
+DVA<T> MakePrefixSumPhi(const DVA<T>& ps_mu) {
+  PE_ASSERT(pe::phi != nullptr);
+
+  const int64 n = ps_mu.n;
+
+  DVA<T> ret(n);
+  PE_ASSERT(ret.m <= pe::maxp);
+
+  for (int64 i = 1; i <= ret.m; ++i) {
+    ret.values[i] = ret.values[i - 1] + pe::phi[i];
+  }
+
+  int64 max_idx = ret.m;
+  while (max_idx + 1 < ret.key_size && ret.keys[max_idx + 1] <= pe::maxp)
+    ++max_idx;
+
+  T s = ret.values[ret.m];
+  for (int64 i = ret.m + 1, j = ret.m + 1; i <= max_idx; ++i) {
+    while (j <= ret.keys[i]) s += pe::phi[j++];
+    ret.values[i] = s;
+  }
+
+  if (max_idx + 1 >= ret.key_size) {
+    return ret;
+  }
+
+#if ENABLE_OPENMP
+#pragma omp parallel for schedule(dynamic, 100) num_threads(TN)
+#endif
+  for (int64 i = max_idx + 1; i < ret.key_size; ++i) {
+    const int64 maxx = ret.keys[i];
+    T now = 0;
+    T last = 0;
+    for (int64 y = 1; y <= maxx;) {
+      const int64 v = maxx / y;
+      const int64 maxy = maxx / v;
+      const T curr = ps_mu[maxy];
+      const T delta = curr - last;
+      last = curr;
+
+      T s = 0;
+      if (v & 1) {
+        s = T(v + 1 >> 1) * v;
+      } else {
+        s = T(v >> 1) * (v + 1);
+      }
+
+      now += s * delta;
+      y = maxy + 1;
+    }
+    ret.values[i] = now;
+  }
+
+  return ret;
+}
+
+template <typename T, int TN = kDvaOperationThreads>
+DVA<T> MakePrefixSumPhi(int64 n) {
+  return MakePrefixSumPhi<T, TN>(MakePrefixSumMu<T, TN>(n));
+}
+
+// Calculates sum(1, 1 <= prime i <= j) for j in [1, 2, 3, ..., n/3, n/2, n] in
+// parallel.
+template <typename T, int TN = kDvaOperationThreads>
+SL DVA<T> PrimeS0Parallel(const int64 n) {
+  PE_ASSERT(n >= 1);
+  DVA<T> dva(n);
+
+  const int64 ks = dva.key_size;
+  auto* keys = &dva.keys[0];
+  auto* values = &dva.values[0];
+  std::vector<T> tmpdata(ks);
+  auto* tmp = &tmpdata[0];
+
+  for (auto& key : dva.FKeys()) dva[key] = key - 1;
+
+  int idx = 0;
+  for (int64 p = 2; p <= dva.m; ++p) {
+    if (dva[p] != dva[p - 1]) {
+      const auto pcnt = dva[p - 1];
+      const int64 p2 = p * p;
+      while (idx + 1 < ks && keys[idx + 1] < p2) ++idx;
+#if ENABLE_OPENMP
+      if (ks - idx > 400000) {
+#pragma omp parallel for schedule(dynamic, 100000) num_threads(TN)
+        for (int j = idx + 1; j < ks; ++j) {
+          const int64 v = keys[j] / p;
+          tmp[j] = values[j] - values[v <= dva.m ? v : ks - n / v] + pcnt;
+        }
+#pragma omp parallel for schedule(dynamic, 100000) num_threads(TN)
+        for (int j = idx + 1; j < ks; ++j) {
+          values[j] = tmp[j];
+        }
+      } else
+#endif
+      {
+        for (int j = static_cast<int>(ks - 1); j > idx; --j) {
+          const int64 v = keys[j] / p;
+          values[j] -= values[v <= dva.m ? v : ks - n / v] - pcnt;
+        }
+      }
+    }
+  }
+
+  return dva;
+}
+
+// Calculates sum(1, 1 <= prime i <= j) for j in [1, 2, 3, ..., n/3, n/2, n].
+template <typename T, int TN = kDvaOperationThreads>
+SL DVA<T> PrimeS0(const int64 n) {
+  PE_ASSERT(n >= 1);
+  if constexpr (TN <= 1) {
+    DVA<T> dva(n);
+
+    for (auto& key : dva.FKeys()) dva[key] = key - 1;
+
+    for (int64 p = 2; p <= dva.m; ++p) {
+      if (dva[p] != dva[p - 1]) {
+        const auto pcnt = dva[p - 1];
+        const int64 p2 = p * p;
+        for (auto& key : dva.BKeys()) {
+          if (key < p2) break;
+          dva[key] -= dva[key / p] - pcnt;
+        }
+      }
+    }
+
+    return dva;
+  } else {
+    return PrimeS0Parallel<T, TN>(n);
+  }
+}
+
+#define PrimePi PrimeS0
+
+// Calculates sum(i, 1 <= prime i <= j) for j in [1, 2, 3, ..., n/3, n/2, n] in
+// parallel.
+template <typename T, int TN = kDvaOperationThreads>
+SL DVA<T> PrimeS1Parallel(const int64 n) {
+  PE_ASSERT(n >= 1);
+  DVA<T> dva(n);
+
+  const int64 ks = dva.key_size;
+  auto* keys = &dva.keys[0];
+  auto* values = &dva.values[0];
+  std::vector<T> tmpdata(ks);
+  auto* tmp = &tmpdata[0];
+
+  for (auto& key : dva.FKeys()) {
+    if (key & 1) {
+      T v((key + 1) >> 1);
+      dva[key] = v * key - 1;
+    } else {
+      T v(key >> 1);
+      dva[key] = v * (key + 1) - 1;
+    }
+  }
+
+  int idx = 0;
+  for (int64 p = 2; p <= dva.m; ++p) {
+    if (dva[p] != dva[p - 1]) {
+      const auto psum = dva[p - 1];
+      const int64 p2 = p * p;
+      while (idx + 1 < ks && keys[idx + 1] < p2) ++idx;
+#if ENABLE_OPENMP
+      if (ks - idx > 400000) {
+#pragma omp parallel for schedule(dynamic, 100000) num_threads(TN)
+        for (int j = idx + 1; j < ks; ++j) {
+          const int64 v = keys[j] / p;
+          tmp[j] = values[j] - (values[v <= dva.m ? v : ks - n / v] - psum) * p;
+        }
+#pragma omp parallel for schedule(dynamic, 100000) num_threads(TN)
+        for (int j = idx + 1; j < ks; ++j) {
+          values[j] = tmp[j];
+        }
+      } else
+#endif
+      {
+        for (int j = static_cast<int>(ks - 1); j > idx; --j) {
+          const int64 v = keys[j] / p;
+          values[j] -= (values[v <= dva.m ? v : ks - n / v] - psum) * p;
+        }
+      }
+    }
+  }
+
+  return dva;
+}
+
+// Calculates sum(i, 1 <= prime i <= j) for j in [1, 2, 3, ..., n/3, n/2, n].
+template <typename T, int TN = kDvaOperationThreads>
+SL DVA<T> PrimeS1(const int64 n) {
+  PE_ASSERT(n >= 1);
+  if constexpr (TN <= 1) {
+    DVA<T> dva(n);
+
+    for (auto& key : dva.FKeys()) {
+      if (key & 1) {
+        T v((key + 1) >> 1);
+        dva[key] = v * key - 1;
+      } else {
+        T v(key >> 1);
+        dva[key] = v * (key + 1) - 1;
+      }
+    }
+
+    for (int64 p = 2; p <= dva.m; ++p) {
+      if (dva[p] != dva[p - 1]) {
+        const auto psum = dva[p - 1];
+        const int64 p2 = p * p;
+        for (auto& key : dva.BKeys()) {
+          if (key < p2) break;
+          dva[key] -= (dva[key / p] - psum) * p;
+        }
+      }
+    }
+
+    return dva;
+  } else {
+    return PrimeS1Parallel<T, TN>(n);
+  }
+}
+
+#define PrimeSum PrimeS1
+
+// Calculates sum(1, 1 <= prime i <= j) for j in [1, 2, 3, ..., n/3, n/2, n].
+template <typename T>
+SL DVA<T> PrimeS0Ex(const int64 n) {
+  PE_ASSERT(n >= 1);
+  DVA<T> dva(n);
+
+  const int key_size = static_cast<int>(dva.key_size);
+  RUBit<T> tree(key_size);
+
+  for (auto& key : dva.FKeys()) {
+    const int id = dva.IdxOfValue(key);
+    tree.Update(id, id, key - 1);
+  }
+
+  for (int64 p = 2; p <= dva.m; ++p) {
+    if (IsPrime(p)) {
+      const auto pcnt = tree.Query(static_cast<int>(p - 1));
+      const int64 p2 = p * p;
+      const int a = key_size - 1;
+      const int b = dva.IdxOfValue(p2);
+      for (int i = a; i >= b;) {
+        const auto delta = tree.Query(dva.IdxOfValue(dva.keys[i] / p)) - pcnt;
+        const int mini = std::max(dva.IdxOfValue(dva.keys[i] / p * p), b);
+        tree.Update(mini, i, -delta);
+        i = mini - 1;
+      }
+    }
+  }
+
+  for (int i = 1; i < key_size; ++i) dva[dva.keys[i]] = tree.Query(i);
+
+  return dva;
+}
+
+// Calculates sum(i, 1 <= prime i <= j) for j in [1, 2, 3, ..., n/3, n/2, n].
+template <typename T>
+SL DVA<T> PrimeS1Ex(const int64 n) {
+  PE_ASSERT(n >= 1);
+  DVA<T> dva(n);
+
+  const int key_size = static_cast<int>(dva.key_size);
+  RUBit<T> tree(key_size);
+
+  for (auto& key : dva.FKeys()) {
+    const int id = dva.IdxOfValue(key);
+
+    if (key & 1) {
+      T v((key + 1) >> 1);
+      tree.Update(id, id, v * key - 1);
+    } else {
+      T v(key >> 1);
+      tree.Update(id, id, v * (key + 1) - 1);
+    }
+  }
+
+  for (int64 p = 2; p <= dva.m; ++p) {
+    if (IsPrime(p)) {
+      const auto psum = tree.Query(static_cast<int>(p - 1));
+      const int64 p2 = p * p;
+      const int a = key_size - 1;
+      const int b = dva.IdxOfValue(p2);
+      for (int i = a; i >= b;) {
+        const auto delta = tree.Query(dva.IdxOfValue(dva.keys[i] / p)) - psum;
+        const int mini = std::max(dva.IdxOfValue(dva.keys[i] / p * p), b);
+        tree.Update(mini, i, -delta * p);
+        i = mini - 1;
+      }
+    }
+  }
+
+  for (int i = 1; i < key_size; ++i) dva[dva.keys[i]] = tree.Query(i);
+
+  return dva;
+}
+
+template <typename TreeType>
+SL void PrimeSkExImpl(const int64 /*n*/, int k, int64* PK, TreeType& tree,
+                      DVA<int64>& dva, int64 mod) {
+  const int key_size = static_cast<int>(dva.key_size);
+  int pid = 0;
+  for (int64 p = 2; p <= dva.m; ++p) {
+    if (IsPrime(p)) {
+      const int64 pk = PK ? PK[pid] : PowerMod(p, k, mod);
+      const auto psum = tree.Query(static_cast<int>(p - 1)).value();
+      const int64 p2 = p * p;
+      const int a = key_size - 1;
+      const int b = dva.IdxOfValue(p2);
+      for (int i = a; i >= b;) {
+        const auto delta = SubMod(
+            tree.Query(dva.IdxOfValue(dva.keys[i] / p)).value(), psum, mod);
+        const int mini = std::max(dva.IdxOfValue(dva.keys[i] / p * p), b);
+        tree.Update(mini, i, SubMod(0, MulMod(delta, pk, mod), mod));
+        i = mini - 1;
+      }
+      ++pid;
+    }
+  }
+
+  for (int i = 1; i < key_size; ++i) dva[dva.keys[i]] = tree.Query(i).value();
+}
+
+// Calculates sum(i^k, 1 <= prime i <= j) for j in [1, 2, 3, ..., n/3, n/2, n].
+// PK[x] is the kth power of the xth prime (0 based).
+SL DVA<int64> PrimeSkEx(const int64 n, int k, int64* PK, int64 mod) {
+  PowerSumModerB psm(mod);
+
+  PE_ASSERT(DefaultMod::Mod() != 1);
+  PE_ASSERT(n >= 1);
+  DVA<int64> dva(n);
+
+  const int key_size = static_cast<int>(dva.key_size);
+  RUBit<NModNumber<DefaultMod>> tree(key_size);
+
+  for (auto& key : dva.FKeys()) {
+    const int id = dva.IdxOfValue(key);
+    const int64 val = SubMod(psm.Cal(key, k), 1, mod);
+    tree.Update(id, id, val);
+  }
+
+  PrimeSkExImpl(n, k, PK, tree, dva, mod);
+
+  return dva;
+}
+
+// Calculates sum(i^k, 1 <= prime i <= j) for j in [1, 2, 3, ..., n/3, n/2, n].
+// PK[x] is the kth power of the xth prime (0 based).
+template <int64 mod>
+SL DVA<int64> PrimeSkEx(const int64 n, int k, int64* PK = nullptr) {
+  PowerSumModerB psm(mod);
+
+  PE_ASSERT(n >= 1);
+  DVA<int64> dva(n);
+
+  const int key_size = static_cast<int>(dva.key_size);
+  RUBit<NModNumber<CCMod64<mod>>> tree(key_size);
+
+  for (auto& key : dva.FKeys()) {
+    const int id = dva.IdxOfValue(key);
+    const int64 val = SubMod(psm.Cal(key, k), 1, mod);
+    tree.Update(id, id, val);
+  }
+
+  PrimeSkExImpl(n, k, PK, tree, dva, mod);
+
+  return dva;
+}
+
+template <typename T>
+SL std::vector<DVA<T>> PrimeS0PModEven(int64 n, int pmod) {
+  std::vector<DVA<T>> result;
+  result.reserve(pmod);
+  for (int i = 0; i < pmod; ++i) result.emplace_back(n);
+
+  for (int i = 1; i < pmod; i += 2) {
+    auto& target = result[i];
+    const int dec = i == 1;
+    for (auto key : result[0].FKeys()) {
+      target[key] = (key + pmod - i) / pmod - dec;
+    }
+  }
+  for (int i = 1;; ++i) {
+    const int64 p = plist[i];
+    const int64 p2 = p * p;
+    if (p2 > n) break;
+    for (auto key : result[0].BKeys()) {
+      if (key < p2) break;
+      const int rp = p % pmod;
+      for (int j = 1; j < pmod; j += 2) {
+        const int next = rp * j % pmod;
+        result[next][key] -= result[j][key / p] - result[j][p - 1];
+      }
+    }
+  }
+
+  auto& target = result[2 % pmod];
+  for (auto key : result[0].FKeys()) {
+    target[key] += key >= 2 ? 1 : 0;
+  }
+
+  return result;
+}
+
+template <typename T>
+SL std::vector<DVA<T>> PrimeS0PModOdd(int64 n, int pmod) {
+  std::vector<DVA<T>> result;
+  result.reserve(pmod);
+  for (int i = 0; i < pmod; ++i) result.emplace_back(n);
+
+  for (int i = 0; i < pmod; ++i) {
+    const int dec = (i == 1 % pmod) + (i == 0);
+    for (auto key : result[0].FKeys()) {
+      result[i][key] = (key + pmod - i) / pmod - dec;
+    }
+  }
+  for (int i = 0;; ++i) {
+    const int64 p = plist[i];
+    const int64 p2 = p * p;
+    if (p2 > n) break;
+    for (auto key : result[0].BKeys()) {
+      if (key < p2) break;
+      const int rp = p % pmod;
+      for (int j = 0; j < pmod; ++j) {
+        const int next = rp * j % pmod;
+        result[next][key] -= result[j][key / p] - result[j][p - 1];
+      }
+    }
+  }
+
+  return result;
+}
+
+// Calculates sum(1, 1 <= prime i <= j) for j in [1, 2, 3, ..., n/3, n/2, n].
+// result[x] is for the prime where p % pmod = x.
+template <typename T>
+SL std::vector<DVA<T>> PrimeS0PMod(int64 n, int pmod) {
+  return pmod & 1 ? PrimeS0PModOdd<T>(n, pmod) : PrimeS0PModEven<T>(n, pmod);
+}
+
+template <typename T>
+SL std::vector<DVA<T>> PrimeS1PmodEven(int64 n, int pmod) {
+  std::vector<DVA<T>> result;
+  for (int i = 0; i < pmod; ++i) result.emplace_back(n);
+
+  for (int i = 1; i < pmod; i += 2) {
+    auto& target = result[i];
+    const int dec = i == 1;
+    for (auto key : result[0].FKeys()) {
+#if PE_HAS_INT128
+      const int128 c = (key + pmod - i) / pmod;
+#else
+      const int64 c = (key + pmod - i) / pmod;
+#endif
+      target[key] = c * (c - 1) / 2 * pmod + c * i - dec;
+    }
+  }
+
+  for (int i = 1;; ++i) {
+    const int64 p = plist[i];
+    const int64 p2 = p * p;
+    if (p2 > n) break;
+    for (auto key : result[0].BKeys()) {
+      if (key < p2) break;
+      const int rp = p % pmod;
+      for (int j = 1; j < pmod; j += 2) {
+        const int next = rp * j % pmod;
+        result[next][key] -= (result[j][key / p] - result[j][p - 1]) * p;
+      }
+    }
+  }
+
+  auto& target = result[2 % pmod];
+  for (auto key : result[0].FKeys()) {
+    target[key] += key >= 2 ? 2 : 0;
+  }
+
+  return result;
+}
+
+template <typename T>
+SL std::vector<DVA<T>> PrimeS1PModOdd(int64 n, int pmod) {
+  std::vector<DVA<T>> result;
+  for (int i = 0; i < pmod; ++i) result.emplace_back(n);
+
+  for (int i = 0; i < pmod; ++i) {
+    auto& target = result[i];
+    const int dec = i == 1 % pmod;
+    for (auto key : result[0].FKeys()) {
+#if PE_HAS_INT128
+      const int128 c = (key + pmod - i) / pmod;
+#else
+      const int64 c = (key + pmod - i) / pmod;
+#endif
+      target[key] = c * (c - 1) / 2 * pmod + c * i - dec;
+    }
+  }
+
+  for (int i = 0;; ++i) {
+    const int64 p = plist[i];
+    const int64 p2 = p * p;
+    if (p2 > n) break;
+    for (auto key : result[0].BKeys()) {
+      if (key < p2) break;
+      const int rp = p % pmod;
+      for (int j = 0; j < pmod; ++j) {
+        const int next = rp * j % pmod;
+        result[next][key] -= (result[j][key / p] - result[j][p - 1]) * p;
+      }
+    }
+  }
+
+  return result;
+}
+
+// Calculates sum(i, 1 <= prime i <= j) for j in [1, 2, 3, ..., n/3, n/2, n].
+// result[x] is for the prime where p % pmod = x.
+template <typename T>
+SL std::vector<DVA<T>> PrimeS1PMod(int64 n, int pmod) {
+  return pmod & 1 ? PrimeS1PModOdd<T>(n, pmod) : PrimeS1PmodEven<T>(n, pmod);
+}
+
+template <int64 mod>
+SL std::vector<DVA<NModNumber<CCMod64<mod>>>> PrimeSkPMod(const int64 n, int k,
+                                                          int pmod) {
+  using MT = NModNumber<CCMod64<mod>>;
+  std::vector<DVA<MT>> result;
+  for (int i = 0; i < pmod; ++i) result.emplace_back(n);
+
+  PowerSumModerB psm(mod);
+
+  PE_ASSERT(n >= 1);
+  DVA<int64> dva(n);
+
+  const int key_size = static_cast<int>(dva.key_size);
+  RUBit<MT> tree(key_size);
+
+  std::vector<int64> vec;
+  MT power_pmod = 1;
+  // Expand (pmod * x + i) ^ k
+  for (int c = 0; c <= k; ++c, power_pmod *= pmod) {
+    // C(k, c) (pmod * x)^c i^(k - c)
+    MT coe = 1;
+    if (c > 0) {
+      vec.push_back(k - c + 1);
+      int64 it = c;
+      const int size = static_cast<int>(std::size(vec));
+      for (int i = 0; i < size; ++i) {
+        if (it > 1 && vec[i] > 1) {
+          auto t = Gcd(it, vec[i]);
+          vec[i] /= t;
+          it /= t;
+        }
+        if (vec[i] > 1) {
+          coe *= vec[i];
+        }
+      }
+    }
+    for (int i = 1; i < pmod; ++i) {
+      auto t = coe * power_pmod * PowerMod(i, k - c, mod);
+      // psm.cal() doesn't count x == 0, i.e x^c is 0.
+      // If c = 0, we need i^k, so 1 is added.
+      // If c > 0, the behavior is expected.
+      const int inc = c == 0;
+      for (auto& key : dva.FKeys()) {
+        if (key >= i) {
+          result[i][key] += t * (psm.Cal((key - i) / pmod, c) + inc);
+        }
+      }
+    }
+  }
+  MT y = PowerMod(pmod, k, mod);
+  for (auto& key : dva.FKeys()) {
+    result[0][key] += y * psm.Cal(key / pmod, k);
+  }
+  for (int i = 0; i < pmod; ++i) {
+    if (1 % pmod == i) {
+      for (auto& key : dva.FKeys()) {
+        result[i][key] -= 1;
+      }
+      break;
+    }
+  }
+
+  for (int i = 0;; ++i) {
+    const int64 p = plist[i];
+    const int64 p2 = p * p;
+    if (p2 > n) break;
+    for (auto key : result[0].BKeys()) {
+      if (key < p2) break;
+      const int64 coe = PowerMod(p, k, mod);
+      const int rp = p % pmod;
+      for (int j = 0; j < pmod; ++j) {
+        const int next = rp * j % pmod;
+        result[next][key] -= (result[j][key / p] - result[j][p - 1]) * coe;
+      }
+    }
+  }
+
+  return result;
+}
+
+enum class Ntf {
+  Epsilon = 0,       // n => n == 1 ? 1 : 0
+  Mu,                // n => (-1)^PrimeNu(n)
+  Id0,               // n => 1
+  One = Id0,         // n => 1
+  Id1,               // n => n
+  Id = Id1,          // n => n
+  Id2,               // n => n^2
+  Id3,               // n => n^3
+  Id4,               // n => n^4
+  Id5,               // n => n^5
+  Id6,               // n => n^6
+  Id7,               // n => n^7
+  Phi,               // n => n => Sum(Gcd(d, n) == 1 ? 1 : 0, for d | n)
+  PrimeP0,           // n => IsPrime(n) ? 1 : 0
+  PrimeQ = PrimeP0,  // n => IsPrime(n) ? 1 : 0
+  PrimeP1,           // n => IsPrime(n) ? n : 0
+  D0,                // n => Sum(1, for d | n)
+  Sigma0 = D0,       // n => Sum(1, for d | n)
+  D1,                // n => Sum(d, for d | n)
+  Sigma1 = D1,       // n => Sum(d, for d | n)
+  D2,                // n => Sum(d^2, for d | n)
+  Sigma2 = D2,       // n => Sum(d^2, for d | n)
+  D3,                // n => Sum(d^3, for d | n)
+  Sigma3 = D3,       // n => Sum(d^3, for d | n)
+  D4,                // n => Sum(d^4, for d | n)
+  Sigma4 = D4,       // n => Sum(d^4, for d | n)
+  D5,                // n => Sum(d^5, for d | n)
+  Sigma5 = D5,       // n => Sum(d^5, for d | n)
+  D6,                // n => Sum(d^6, for d | n)
+  Sigma6 = D6,       // n => Sum(d^6, for d | n)
+  D7,                // n => Sum(d^7, for d | n)
+  Sigma7 = D7,       // n => Sum(d^7, for d | n)
+  PrimeNu            // n => Sum(1, for p | n)
+};
+
+template <typename T>
+class DVAPrefixSumMaker {
+ public:
+  DVAPrefixSumMaker(int64 n) : n_(n), cache_(64, DVA<T>(1)) {}
+
+  template <int TN = kDvaOperationThreads>
+  const DVA<T>& Make(Ntf ntf) {
+    int idx = static_cast<int>(ntf);
+    PE_ASSERT(idx >= 0 && idx < cache_.size());
+    if (cache_[idx].n != 1) {
+      return cache_[idx];
+    }
+    switch (ntf) {
+      case Ntf::Epsilon:
+        return cache_[idx] = MakePrefixSumEpsilon<T, TN>(n_);
+      case Ntf::Mu:
+        return cache_[idx] = MakePrefixSumMu<T, TN>(n_);
+      case Ntf::Id0:
+        return cache_[idx] = MakePrefixSumOne<T, TN>(n_);
+      case Ntf::Id1:
+        return cache_[idx] = MakePrefixSumId<T, TN>(n_);
+      case Ntf::Id2:
+        return cache_[idx] = MakePrefixSumId2<T, TN>(n_);
+      case Ntf::Id3:
+        return cache_[idx] = MakePrefixSumId3<T, TN>(n_);
+      case Ntf::Id4:
+        return cache_[idx] = MakePrefixSumId4<T, TN>(n_);
+      case Ntf::Id5:
+        return cache_[idx] = MakePrefixSumId5<T, TN>(n_);
+      case Ntf::Id6:
+        return cache_[idx] = MakePrefixSumId6<T, TN>(n_);
+      case Ntf::Id7:
+        return cache_[idx] = MakePrefixSumId7<T, TN>(n_);
+      case Ntf::PrimeP0:
+        return cache_[idx] = PrimeS0<T, TN>(n_);
+      case Ntf::PrimeP1:
+        return cache_[idx] = PrimeS1<T, TN>(n_);
+      case Ntf::Phi:
+        return cache_[idx] = MakePrefixSumPhi<T, TN>(Make<TN>(Ntf::Mu));
+      case Ntf::D0:
+        return cache_[idx] =
+                   DVAConv<T, TN>(Make<TN>(Ntf::Id0), Make<TN>(Ntf::Id0));
+      case Ntf::D1:
+        return cache_[idx] =
+                   DVAConv<T, TN>(Make<TN>(Ntf::Id1), Make<TN>(Ntf::Id0));
+      case Ntf::D2:
+        return cache_[idx] =
+                   DVAConv<T, TN>(Make<TN>(Ntf::Id2), Make<TN>(Ntf::Id0));
+      case Ntf::D3:
+        return cache_[idx] =
+                   DVAConv<T, TN>(Make<TN>(Ntf::Id3), Make<TN>(Ntf::Id0));
+      case Ntf::D4:
+        return cache_[idx] =
+                   DVAConv<T, TN>(Make<TN>(Ntf::Id4), Make<TN>(Ntf::Id0));
+      case Ntf::D5:
+        return cache_[idx] =
+                   DVAConv<T, TN>(Make<TN>(Ntf::Id5), Make<TN>(Ntf::Id0));
+      case Ntf::D6:
+        return cache_[idx] =
+                   DVAConv<T, TN>(Make<TN>(Ntf::Id6), Make<TN>(Ntf::Id0));
+      case Ntf::D7:
+        return cache_[idx] =
+                   DVAConv<T, TN>(Make<TN>(Ntf::Id7), Make<TN>(Ntf::Id0));
+      case Ntf::PrimeNu:
+        return cache_[idx] =
+                   DVAConv<T, TN>(Make<TN>(Ntf::PrimeP0), Make<TN>(Ntf::Id0));
+      default:
+        dbg(idx);
+        PE_ASSERT(0);
+    }
+  }
+
+#define DEFINE_DVA_PREFIX_SUM_FUNCTION(Identifier) \
+  template <int TN = kDvaOperationThreads>         \
+  const DVA<T>& Identifier() {                     \
+    return Make<TN>(Ntf::Identifier);              \
+  }
+
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(Epsilon);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(Mu);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(Id0);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(One);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(Id1);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(Id);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(Id2);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(Id3);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(Phi);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(PrimeP0);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(PrimeQ);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(PrimeP1);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(D0);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(Sigma0);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(D1);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(Sigma1);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(D2);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(Sigma2);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(D3);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(Sigma3);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(PrimeNu);
+
+#undef GENERATE_QUICK_ACCESS
+
+ private:
+  int64 n_;
+  std::vector<DVA<T>> cache_;
+};
+
+// A helper class used to calculate pi(n) with cache.
+struct CachedPi {
+  CachedPi(int pivot_ = pe::maxp) : pivot_(pivot_) {
+    if (pe::maxp > 0) {
+      Init(pivot_);
+    }
+  }
+
+  ~CachedPi() { Release(); }
+
+  void Release() {
+    if (prepi_ != nullptr) {
+      delete[] prepi_;
+      prepi_ = nullptr;
+    }
+  }
+
+  void Init(int pivot) {
+    Release();
+    pivot_ = pivot;
+    prepi_ = new int[pivot_ + 1];
+    prepi_[0] = 0;
+    for (int i = 1; i <= pivot_; ++i) {
+      prepi_[i] = prepi_[i - 1] + IsPrime(i);
+    }
+  }
+
+  int64 operator()(int64 n) { return Cal(n); }
+
+  int64 Cal(int64 n) {
+    if (n <= pivot_) return prepi_[n];
+    auto where = pi_cache_.find(n);
+    if (where != pi_cache_.end()) return where->second;
+    return pi_cache_[n] = PrimeS0Ex<int64>(n)[n];
+  }
+
+ private:
+  int* prepi_{nullptr};
+  int pivot_;
+  std::unordered_map<int64, int64> pi_cache_;
+};
+
+}  // namespace pe
+
+#endif

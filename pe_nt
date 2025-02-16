@@ -1427,6 +1427,459 @@ Sieve(int64 start, int64 end) {
   }
   return {sieve, factorization};
 }
+
+namespace internal {
+struct ArithmeticPolicyMod {
+  using RetType = int64;
+
+  ArithmeticPolicyMod(int64 mod) : mod_(mod) {}
+  int64 Add(int64 a, int64 b) const { return AddMod(a % mod_, b % mod_, mod_); }
+  int64 Sub(int64 a, int64 b) const { return SubMod(a % mod_, b % mod_, mod_); }
+  int64 Mul(int64 a, int64 b) const { return MulMod(a % mod_, b % mod_, mod_); }
+
+ private:
+  const int64 mod_;
+};
+
+template <typename T>
+struct ArithmeticPolicyConversion {
+  using RetType = T;
+  using ArgT = make_const_arg_type_t<T>;
+
+  T Add(int64 a, int64 b) const { return T(a) + T(b); }
+  T Add(ArgT a, int64 b) const { return a + T(b); }
+  T Add(int64 a, ArgT b) const { return T(a) + b; }
+  T Add(ArgT a, ArgT b) const { return a + b; }
+
+  T Sub(int64 a, int64 b) const { return T(a) - T(b); }
+  T Sub(ArgT a, int64 b) const { return a - T(b); }
+  T Sub(int64 a, ArgT b) const { return T(a) - b; }
+  T Sub(ArgT a, ArgT b) const { return a - b; }
+
+  T Mul(int64 a, int64 b) const { return T(a) * T(b); }
+  T Mul(ArgT a, int64 b) const { return a * T(b); }
+  T Mul(int64 a, ArgT b) const { return T(a) * b; }
+  T Mul(ArgT a, ArgT b) const { return a * b; }
+};
+
+template <>
+struct ArithmeticPolicyConversion<int64> {
+  using RetType = int64;
+
+  int64 Add(int64 a, int64 b) const { return a + b; }
+
+  int64 Sub(int64 a, int64 b) const { return a - b; }
+
+  int64 Mul(int64 a, int64 b) const { return a * b; }
+};
+}  // namespace internal
+
+// Calculates (1 + 2 + 3 + ... + n) % mod.
+SL int64 P1SumMod(int64 n, int64 mod) {
+  if (n == 0) return 0;
+  if (n < 0) return Mod(-P1SumMod(-n, mod), mod);
+  return n & 1 ? MulMod(((n + 1) >> 1) % mod, n % mod, mod)
+               : MulMod((n >> 1) % mod, (n + 1) % mod, mod);
+}
+
+// Calculates sum of arithmetic progression modulo mod.
+// a <= b, a + delta, a + 2 delta, ..., a + maxk detla <= b for delta >= 0 or
+// a >= b, a + delta, a + 2 delta, ..., a + maxk delta >= b for delta < 0
+SL int64 P1SumMod(int64 a, int64 b, int64 mod, int64 delta = 1) {
+  if (delta == 0) {
+    PE_ASSERT(a == b);
+    return a;
+  }
+  if (delta > 0 && a > b) return 0;
+  if (delta < 0 && a < b) return 0;
+  const int64 maxk = (b - a) / delta;
+  PE_ASSERT(maxk >= 0);
+  const int64 t0 = MulMod((maxk + 1) % mod, Mod(a, mod), mod);
+  // delta, 2 delta, maxk delta
+  const int64 t1 = MulMod(Mod(delta, mod), P1SumMod(maxk, mod), mod);
+  return AddMod(t0, t1, mod);
+}
+
+template <typename T = int64>
+SL T P1Sum(int64 n) {
+  return n & 1 ? T((n + 1) >> 1) * n : T(n >> 1) * (n + 1);
+}
+
+namespace internal {
+template <typename AP>
+SL typename AP::RetType P2SumImpl(int64 n, const AP& ap) {
+  if (n <= 0) return 0;
+  // n*(n + 1)*(2 n + 1)/6
+  int64 a = n, b = n + 1, c = 2 * n + 1;
+  switch (n % 6) {
+    case 0:
+      a /= 6;
+      break;
+    case 1:
+      b >>= 1, c /= 3;
+      break;
+    case 2:
+      a >>= 1, b /= 3;
+      break;
+    case 3:
+      a /= 3, b >>= 1;
+      break;
+    case 4:
+      a >>= 1, c /= 3;
+      break;
+    case 5:
+      b /= 6;
+      break;
+  }
+  return ap.Mul(a, ap.Mul(b, c));
+}
+}  // namespace internal
+
+// Calculates (1^2 + 2^2 + 3^2 + ... + n^2) % mod.
+// Assume no overflow for 2 * n + 1.
+SL int64 P2SumMod(int64 n, int64 mod) {
+  return internal::P2SumImpl(n, internal::ArithmeticPolicyMod(mod));
+}
+
+template <typename T = int64>
+SL T P2Sum(int64 n) {
+  return internal::P2SumImpl(n, internal::ArithmeticPolicyConversion<T>());
+}
+
+// Calculates (1^3 + 2^3 + 3^3 + ... + n^3) % mod.
+SL int64 P3SumMod(int64 n, int64 mod) {
+  if (n <= 0) return 0;
+  // (n*(n + 1)/2)^2
+  const int64 a = P1SumMod(n, mod);
+  return MulMod(a, a, mod);
+}
+
+template <typename T = int64>
+SL T P3Sum(int64 n) {
+  if (n <= 0) return 0;
+  const T t = P1Sum<T>(n);
+  return t * t;
+}
+
+namespace internal {
+template <typename AP>
+SL typename AP::RetType P4SumImpl(int64 n, const AP& ap) {
+  if (n <= 0) return 0;
+  // (3*n*(n + 1) - 1)*(2*n + 1)*(n + 1)*n/30
+  // Handle (2*n + 1)*(n + 1)*n/6
+  int64 a = n, b = n + 1, c = 2 * n + 1;
+  switch (n % 6) {
+    case 0:
+      a /= 6;
+      break;
+    case 1:
+      b >>= 1, c /= 3;
+      break;
+    case 2:
+      a >>= 1, b /= 3;
+      break;
+    case 3:
+      a /= 3, b >>= 1;
+      break;
+    case 4:
+      a >>= 1, c /= 3;
+      break;
+    case 5:
+      b /= 6;
+      break;
+  }
+  int done = 0;
+  if (!done && a % 5 == 0) a /= 5, done = 1;
+  if (!done && b % 5 == 0) b /= 5, done = 1;
+  if (!done && c % 5 == 0) c /= 5, done = 1;
+  const auto d = ap.Mul(a, ap.Mul(b, c));
+  if (done) {
+    const auto t0 = ap.Mul(n, n + 1);
+    const auto t1 = ap.Sub(ap.Mul(3LL, t0), 1LL);
+    return ap.Mul(d, t1);
+  }
+  // Handle (3*n*n + 3*n - 1)/5
+  switch (n % 5) {
+    // 3*n*n + 3*n - 1 =
+    // 3*(n - 1)*(n - 1) + 5*n + 4*(n - 1)
+    // (n - 1)*(3*(n - 1) + 4) + 5*n
+    // (n - 1)*(3 n + 1) + 5*n
+    case 1: {
+      const auto t0 = ap.Add(ap.Mul(3LL, n), 1LL);
+      const auto t1 = ap.Add(ap.Mul((n - 1) / 5, t0), n);
+      return ap.Mul(d, t1);
+    }
+    // 3*n*n + 3*n - 1 =
+    // 3*(n - 3)*(n - 3) + 7*(3*n - 4)
+    // 3*(n - 3)*(n - 3) + 7*(3*(n - 3) + 5)
+    // 3*(n - 3)*(n - 3) + 7*3*(n - 3) + 35
+    // 3*(n - 3)*(n + 4) + 35
+    case 3: {
+      const auto t0 = ap.Mul(3LL, ap.Mul((n - 3) / 5, n + 4));
+      const auto t1 = ap.Add(t0, 7LL);
+      return ap.Mul(d, t1);
+    }
+    default:
+      PE_ASSERT(0);
+  }
+  return 0;
+}
+}  // namespace internal
+
+// Calculates (1^4 + 2^4 + 3^4 + ... + n^4) % mod.
+// Assume no overflow for 2 * n.
+SL int64 P4SumMod(int64 n, int64 mod) {
+  return internal::P4SumImpl(n, internal::ArithmeticPolicyMod(mod));
+}
+
+template <typename T = int64>
+SL T P4Sum(int64 n) {
+  return internal::P4SumImpl(n, internal::ArithmeticPolicyConversion<T>());
+}
+
+namespace internal {
+template <typename AP>
+SL typename AP::RetType P5SumImpl(int64 n, const AP& ap) {
+  if (n <= 0) return 0;
+  // n^2*(n + 1)^2*(2*n^2 + 2*n - 1)/12
+  // Handle (n (n + 1))^2/4
+  int64 a = n, b = n, c = n + 1, d = n + 1;
+  if (n % 2 == 0) {
+    a >>= 1, b >>= 1;
+  } else {
+    c >>= 1, d >>= 1;
+  }
+  int done = 0;
+  if (!done && a % 3 == 0) a /= 3, done = 1;
+  if (!done && c % 3 == 0) c /= 3, done = 1;
+  const auto e = ap.Mul(ap.Mul(a, b), ap.Mul(c, d));
+  if (done) {
+    const auto t0 = ap.Add(n, n);
+    const auto t1 = ap.Mul(t0, n);
+    const auto t2 = ap.Sub(ap.Add(t0, t1), 1LL);
+    return ap.Mul(e, t2);
+  }
+  // Handle (2*n^2 + 2*n - 1)/3
+  // We have n%3 = 1
+  // 2*n^2 + 2*n - 1 = 2*(n-1)^2 + 6n - 3
+  const auto t0 = ap.Mul((n - 1) / 3, n - 1);
+  const auto t1 = ap.Add(ap.Add(t0, t0), 2 * n - 1);
+  return ap.Mul(e, t1);
+}
+}  // namespace internal
+
+// Calculates (1^5 + 2^5 + 3^5 + ... + n^5) % mod.
+// Assume no overflow for 2 * n.
+SL int64 P5SumMod(int64 n, int64 mod) {
+  return internal::P5SumImpl(n, internal::ArithmeticPolicyMod(mod));
+}
+
+template <typename T = int64>
+SL T P5Sum(int64 n) {
+  return internal::P5SumImpl(n, internal::ArithmeticPolicyConversion<T>());
+}
+
+namespace internal {
+template <typename AP>
+SL typename AP::RetType P6SumImpl(int64 n, const AP& ap) {
+  if (n <= 0) return 0;
+  // n*(1 + n)*(1 + 2*n)*(1 - 3*n + 6*n^3 + 3*n^4)/42
+  // Handle n*(1 + n)*(1 + 2*n)/6
+  // n*(n + 1)*(2*n + 1)/6
+  int64 a = n, b = n + 1, c = 2 * n + 1;
+  switch (n % 6) {
+    case 0:
+      a /= 6;
+      break;
+    case 1:
+      b >>= 1, c /= 3;
+      break;
+    case 2:
+      a >>= 1, b /= 3;
+      break;
+    case 3:
+      a /= 3, b >>= 1;
+      break;
+    case 4:
+      a >>= 1, c /= 3;
+      break;
+    case 5:
+      b /= 6;
+      break;
+  }
+  int done = 0;
+  if (!done && a % 7 == 0) a /= 7, done = 1;
+  if (!done && b % 7 == 0) b /= 7, done = 1;
+  if (!done && c % 7 == 0) c /= 7, done = 1;
+  const auto d = ap.Mul(a, ap.Mul(b, c));
+  if (done) {
+    const auto n1 = ap.Add(n, 0LL);
+    const auto n2 = ap.Mul(n1, n1);
+    const auto n3 = ap.Mul(n1, n2);
+    const auto n4 = ap.Mul(n2, n2);
+    const auto t0 = ap.Sub(ap.Add(n4, 2 * n3), n1);
+    const auto t1 = ap.Add(ap.Mul(3LL, t0), 1LL);
+    return ap.Mul(d, t1);
+  }
+  // Handle (1 - 3*n + 6*n^3 + 3*n^4)/7
+  const auto n1 = ap.Add(n, 0LL);
+  const auto n2 = ap.Mul(n1, n1);
+  const auto n3 = ap.Mul(n1, n2);
+  switch (n % 7) {
+    // 3*(2 + 3*n + 3*n^2 + n^3)*(n - 1) + 7
+    case 1: {
+      const auto t0 = ap.Add(2LL, ap.Mul(3LL, n1));
+      const auto t1 = ap.Add(ap.Mul(3LL, n2), n3);
+      const auto t2 = ap.Mul(ap.Mul(3LL, ap.Add(t0, t1)), (n - 1) / 7);
+      const auto t3 = ap.Add(t2, 1LL);
+      return ap.Mul(d, t3);
+    }
+    // 3*(15 + 8*n + 4*n^2 + n^3)*(n - 2) + 91
+    case 2: {
+      const auto t0 = ap.Add(15LL, ap.Mul(8LL, n1));
+      const auto t1 = ap.Add(ap.Mul(4LL, n2), n3);
+      const auto t2 = ap.Mul(ap.Mul(3LL, ap.Add(t0, t1)), (n - 2) / 7);
+      const auto t3 = ap.Add(t2, 13LL);
+      return ap.Mul(d, t3);
+    }
+    // 3*(-10 + 3 n - n^2 + n^3)*(n + 3) + 91
+    case 4: {
+      const auto t0 = ap.Sub(ap.Mul(3LL, n1), 10LL);
+      const auto t1 = ap.Sub(n3, n2);
+      const auto t2 = ap.Mul(ap.Mul(3LL, ap.Add(t0, t1)), (n + 3) / 7);
+      const auto t3 = ap.Add(t2, 13LL);
+      return ap.Mul(d, t3);
+    }
+    // 3*(-1 + n^3)*(n + 2) + 7
+    case 5: {
+      const auto t0 = ap.Mul(3LL, ap.Sub(n3, 1LL));
+      const auto t1 = ap.Mul(t0, (n + 2) / 7);
+      const auto t2 = ap.Add(t1, 1LL);
+      return ap.Mul(d, t2);
+    }
+    default:
+      PE_ASSERT(0);
+  }
+  return 0;
+}
+}  // namespace internal
+
+// Calculates (1^6 + 2^6 + 3^6 + ... + n^6) % mod.
+// Assume no overflow for 2 * n.
+SL int64 P6SumMod(int64 n, int64 mod) {
+  return internal::P6SumImpl(n, internal::ArithmeticPolicyMod(mod));
+}
+
+template <typename T = int64>
+SL T P6Sum(int64 n) {
+  return internal::P6SumImpl(n, internal::ArithmeticPolicyConversion<T>());
+}
+
+namespace internal {
+template <typename AP>
+SL typename AP::RetType P7SumImpl(int64 n, const AP& ap) {
+  if (n <= 0) return 0;
+  // n^2 * (1 + n)^2 * (2 - 4 n - n^2 + 6 n^3 + 3 n^4)/24
+  // Handle (n (n + 1))^2/4
+  int64 a = n, b = n, c = n + 1, d = n + 1;
+  if (n % 2 == 0) {
+    a >>= 1, b >>= 1;
+  } else {
+    c >>= 1, d >>= 1;
+  }
+  int done3 = 0;
+  if (!done3 && a % 3 == 0) a /= 3, done3 = 1;
+  if (!done3 && c % 3 == 0) c /= 3, done3 = 1;
+  // Handle (2 - 4 n - n^2 + 6 n^3 + 3 n^4)/6
+  // Expand[1/6 (2 - 4 n - n^2 + 6 n^3 + 3 n^4) /. {n -> 6 k + f}]
+  // 1/3 - (2 f)/3 - f^2/6 + f^3 + f^4/2 - 4 k - 2 f k + 18 f^2 k +
+  // 12 f^3 k - 6 k^2 + 108 f k^2 + 108 f^2 k^2 + 216 k^3 + 432 f k^3 +
+  // 648 k^4
+  const int64 k = n / 6;
+  const auto k1 = ap.Add(k, 0LL);
+  const auto k2 = ap.Mul(k1, k1);
+  const auto k3 = ap.Mul(k2, k1);
+  const auto k4 = ap.Mul(k2, k2);
+  const int64 f1 = n % 6;
+  const int64 f2 = f1 * f1;
+  const int64 f3 = f2 * f1;
+  const int64 f4 = f2 * f2;
+  auto t0 = ap.Sub(0LL, ap.Mul(4LL, k1));
+  t0 = ap.Sub(t0, ap.Mul(2LL, ap.Mul(f1, k1)));
+  t0 = ap.Add(t0, ap.Mul(18LL, ap.Mul(f2, k1)));
+  t0 = ap.Add(t0, ap.Mul(12LL, ap.Mul(f3, k1)));
+  t0 = ap.Sub(t0, ap.Mul(6LL, k2));
+  t0 = ap.Add(t0, ap.Mul(108LL, ap.Mul(f1, k2)));
+  t0 = ap.Add(t0, ap.Mul(108LL, ap.Mul(f2, k2)));
+  t0 = ap.Add(t0, ap.Mul(216LL, k3));
+  t0 = ap.Add(t0, ap.Mul(432LL, ap.Mul(f1, k3)));
+  t0 = ap.Add(t0, ap.Mul(648LL, k4));
+  if (done3) {
+    t0 = ap.Mul(3LL, t0);
+  }
+  const auto t1 =
+      ap.Add((3 * f4 + 6 * f3 - f2 - 4 * f1 + 2) / (done3 ? 2 : 6), 0LL);
+  const auto t2 = ap.Mul(ap.Mul(a, b), ap.Mul(c, d));
+  return ap.Mul(ap.Add(t0, t1), t2);
+}
+}  // namespace internal
+
+// Calculates (1^7 + 2^7 + 3^7 + ... + n^7) % mod.
+// Assume no overflow for 2 * n.
+SL int64 P7SumMod(int64 n, int64 mod) {
+  return internal::P7SumImpl(n, internal::ArithmeticPolicyMod(mod));
+}
+
+template <typename T = int64>
+SL T P7Sum(int64 n) {
+  return internal::P7SumImpl(n, internal::ArithmeticPolicyConversion<T>());
+}
+
+SL int64 ApSumMod(int64 n, int64 mod) { return P1SumMod(n, mod); }
+
+SL int64 ApSumMod(int64 a, int64 b, int64 mod, int64 delta = 1) {
+  return P1SumMod(a, b, mod, delta);
+}
+
+SL int64 SquareSumMod(int64 n, int64 mod) { return P2SumMod(n, mod); }
+
+SL int64 CubeSumMod(int64 n, int64 mod) { return P3SumMod(n, mod); }
+
+SL int64 QuadSumMod(int64 n, int64 mod) { return P4SumMod(n, mod); }
+
+SL int64 PentSumMod(int64 n, int64 mod) { return P5SumMod(n, mod); }
+
+SL int64 HexaSumMod(int64 n, int64 mod) { return P6SumMod(n, mod); }
+
+SL int64 HeptSumMod(int64 n, int64 mod) { return P7SumMod(n, mod); }
+
+// Sum of geometric progression
+// (x^a+x^(a+1)+x^(a+2)+...+x^b) % mod
+// a >= 0
+// zero_p_zero: 0^0
+// if b < a: return 0
+SL int64 GpSumMod(int64 x, int64 a, int64 b, int64 mod, int64 zero_p_zero = 1) {
+  if (mod == 1 || b < a) return 0;
+  if (b < a) return 0;
+  x %= mod;
+  // |x 0|^(b-a) x^a
+  // |x 1|       x^a
+  int64 u = x;
+  int64 w = x;
+  int64 v1 = a == 0 && x == 0 ? zero_p_zero : PowerMod(x, a, mod);
+  int64 v2 = v1;
+  for (int64 n = b - a; n > 0; n >>= 1) {
+    if (n & 1) {
+      v2 = AddMod(MulMod(w, v1, mod), v2, mod);
+      v1 = MulMod(u, v1, mod);
+    }
+    if (n > 1) {
+      w = AddMod(MulMod(w, u, mod), w, mod);
+      u = MulMod(u, u, mod);
+    }
+  }
+  return v2;
+}
 }  // namespace pe
 // 65701
 #endif

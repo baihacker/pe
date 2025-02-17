@@ -105,15 +105,15 @@ SL void FactSumModTest() {
 PE_REGISTER_TEST(&FactSumModTest, "FactSumModTest", BIG);
 
 SL void PowerSumTest() {
-  assert(PowerSum(10, 2, 1000000007) == 385);
-  assert(PowerSum(100, 100, 1000000007) == 568830579);
-  assert(PowerSum(1000, 1000, 1000000007) == 918088852);
-  assert(PowerSum(1000, 10000, 1000000007) == 163720385);
+  assert(PowerSumMod(10, 2, 1000000007) == 385);
+  assert(PowerSumMod(100, 100, 1000000007) == 568830579);
+  assert(PowerSumMod(1000, 1000, 1000000007) == 918088852);
+  assert(PowerSumMod(1000, 10000, 1000000007) == 163720385);
 
-  assert(PowerSumSafe(10, 2, 1000000007) == 385);
-  assert(PowerSumSafe(100, 100, 1000000007) == 568830579);
-  assert(PowerSumSafe(1000, 1000, 1000000007) == 918088852);
-  assert(PowerSumSafe(1000, 10000, 1000000007) == 163720385);
+  assert(PowerSumModSafe(10, 2, 1000000007) == 385);
+  assert(PowerSumModSafe(100, 100, 1000000007) == 568830579);
+  assert(PowerSumModSafe(1000, 1000, 1000000007) == 918088852);
+  assert(PowerSumModSafe(1000, 10000, 1000000007) == 163720385);
 }
 PE_REGISTER_TEST(&PowerSumTest, "PowerSumTest", SMALL);
 

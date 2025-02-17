@@ -13,14 +13,11 @@ int main() {
   PowerSumModer moder0(mod);    // maxk = 128
   PowerSumModerB moder1(mod);   // maxk = 128
   PowerSumModerB1 moder2(mod);  // maxk = 128
-  int64 comb[32][32];
-  InitComb(comb, 31, mod);
   for (int k = 0; k <= 10; ++k) {
     std::cout << "k = " << k << std::endl;
     for (int64 n = 1; n <= 1000000000; n *= 10) {
       std::cout << "n = " << n << std::endl;
-      int64 ans[32];
-      InitPowerSumMod<int64>(n, k, ans, comb, mod);
+      std::vector<int64> ans = PowerSumModBatch(n, k, mod);
       std::cout << "InitPowerSumMod   " << ans[k] << std::endl;
       std::cout << "PowerSumModer     " << moder0.Cal(n, k) << std::endl;
       std::cout << "PowerSumModerB    " << moder1.Cal(n, k) << std::endl;

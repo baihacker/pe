@@ -251,21 +251,40 @@ SL int64 PowerSumModSafe(int64 n, int64 k, int64 mod) {
 // comb[i][j] is Binomial coefficient.
 // Complex: O(k^2)
 // baihacker pe487
-template <typename T, int D>
-SL void InitPowerSumMod(int64 n, const int maxk, int64* result, T (*comb)[D],
-                        const int64 mod) {
-  PE_ASSERT(maxk + 1 < D);
-  result[0] = n % mod;
+SL std::vector<int64> PowerSumModBatch(int64 n, const int maxk,
+                                       const int64 mod) {
+  std::vector<int64> a(maxk + 2, 0);
+  std::vector<int64> b(maxk + 2, 0);
+  int64* from = &a[0];
+  int64* to = &b[0];
+  from[0] = from[1] = Mod(1, mod);
+
+  std::vector<int64> result(maxk + 1);
+  result[0] = Mod(n, mod);
   for (int i = 1; i <= maxk; ++i) {
+    to[0] = Mod(1, mod);
+    to[1] = Mod(i + 1, mod);
     int64 tmp = PowerMod(n, i + 1, mod);
     for (int j = 2; j <= i + 1; ++j) {
+      to[j] = AddMod(from[j - 1], from[j], mod);
+      int64 t = MulMod(to[j], result[i + 1 - j], mod);
       if (j & 1) {
-        tmp = SubMod(tmp, MulMod(comb[i + 1][j], result[i + 1 - j], mod), mod);
+        tmp = SubMod(tmp, t, mod);
       } else {
-        tmp = AddMod(tmp, MulMod(comb[i + 1][j], result[i + 1 - j], mod), mod);
+        tmp = AddMod(tmp, t, mod);
       }
     }
-    result[i] = MulMod(tmp, InvOf(comb[i + 1][1], mod), mod);
+    result[i] = MulMod(tmp, InvOf(Mod(i + 1, mod), mod), mod);
+    std::swap(from, to);
+  }
+
+  return result;
+}
+
+SL void PowerSumModBatch(int64 n, const int maxk, const int64 mod,
+                         int64* result) {
+  for (int64 value : PowerSumModBatch(n, maxk, mod)) {
+    *result++ = value;
   }
 }
 

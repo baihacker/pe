@@ -374,5 +374,75 @@ Span<T> MakeSpan(T* a, int64 N) {
   return Span<T>(a, N);
 }
 
+template <typename T>
+struct AdaptToSpanTransform {
+  using Type = T;
+  enum { value = false };
+};
+
+template <typename T>
+struct AdaptToSpanTransform<std::vector<T>&> {
+  using Type = Span<T>;
+  enum { value = true };
+};
+
+template <typename T>
+struct AdaptToSpanTransform<std::vector<T>&&> {
+  using Type = Span<T>;
+  enum { value = true };
+};
+
+template <typename T>
+struct AdaptToSpanTransform<const std::vector<T>&> {
+  using Type = Span<const T>;
+  enum { value = true };
+};
+
+template <typename T>
+struct AdaptToSpanTransform<const std::vector<T>&&> {
+  using Type = Span<const T>;
+  enum { value = true };
+};
+
+template <typename T, uint64 N>
+struct AdaptToSpanTransform<std::array<T, N>&> {
+  using Type = Span<T>;
+  enum { value = true };
+};
+
+template <typename T, uint64 N>
+struct AdaptToSpanTransform<std::array<T, N>&&> {
+  using Type = Span<T>;
+  enum { value = true };
+};
+
+template <typename T, uint64 N>
+struct AdaptToSpanTransform<const std::array<T, N>&> {
+  using Type = Span<const T>;
+  enum { value = true };
+};
+
+template <typename T, uint64 N>
+struct AdaptToSpanTransform<const std::array<T, N>&&> {
+  using Type = Span<const T>;
+  enum { value = true };
+};
+
+template <typename T, int64 N>
+struct AdaptToSpanTransform<T (&)[N]> {
+  using Type = Span<T>;
+  enum { value = true };
+};
+
+#define ADAPT_TO_SPAN(func)                                                 \
+  template <typename... Args>                                               \
+  auto func(Args&&... args) -> REQUIRES(                                    \
+      (pe::predicate_any_v<AdaptToSpanTransform, Args&&...>))               \
+      RETURN(decltype(func(typename pe::AdaptToSpanTransform<Args&&>::Type( \
+          std::forward<Args>(args))...))) {                                 \
+    return func(typename pe::AdaptToSpanTransform<Args&&>::Type(            \
+        std::forward<Args>(args))...);                                      \
+  }
+
 }  // namespace pe
 #endif

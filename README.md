@@ -3,6 +3,7 @@
 [![Build Status (Windows/MSVC)](https://ci.appveyor.com/api/projects/status/scaji00tde2gb7uy?svg=true)](https://ci.appveyor.com/project/baihacker/pe-win-msvc)
 [![Build Status (Ubuntu/GCC)](https://ci.appveyor.com/api/projects/status/9bt606nax24anyen?svg=true)](https://ci.appveyor.com/project/baihacker/pe-ubuntu-gcc)
 [![Build Status (Ubuntu/Clang)](https://ci.appveyor.com/api/projects/status/nw243uvs95i0bj85?svg=true)](https://ci.appveyor.com/project/baihacker/pe-ubuntu-clang)
+[![Build Status](https://github.com/baihacker/pe/actions/workflows/ci.yml/badge.svg)](https://github.com/baihacker/pe/actions)
 [![GitHub Releases](https://img.shields.io/github/release/baihacker/pe.svg)](https://github.com/baihacker/pe/releases)
 <a href="https://projecteuler.net/recent" target="_blank">![Project Euler](https://projecteuler.net/profile/baihacker.png?)</a>
 

@@ -322,9 +322,9 @@ class CSpan : public Span<std::add_const_t<T>> {
  public:
   using base = Span<std::add_const_t<T>>;
   using base::Span;
-  CSpan(Span<std::remove_const_t<T>> other) : base(other.data(), other.size()) {}
-  CSpan(Span<std::add_const_t<T>> other)
+  CSpan(Span<std::remove_const_t<T>> other)
       : base(other.data(), other.size()) {}
+  CSpan(Span<std::add_const_t<T>> other) : base(other.data(), other.size()) {}
 };
 
 template <typename T>
@@ -450,14 +450,16 @@ struct AdaptToSpanTransform<const T (&)[N]> {
   enum { value = true };
 };
 
-#define ADAPT_TO_SPAN(func)                                                 \
-  template <typename... Args>                                               \
-  auto func(Args&&... args) -> REQUIRES(                                    \
-      (pe::predicate_any_v<AdaptToSpanTransform, Args&&...>))               \
-      RETURN(decltype(func(typename pe::AdaptToSpanTransform<Args&&>::Type( \
-          std::forward<Args>(args))...))) {                                 \
-    return func(typename pe::AdaptToSpanTransform<Args&&>::Type(            \
-        std::forward<Args>(args))...);                                      \
+template <typename T>
+using AdaptToSpanTransformT = typename AdaptToSpanTransform<T>::Type;
+
+#define ADAPT_TO_SPAN(func)                                                   \
+  template <typename... Args>                                                 \
+  auto func(Args&&... args)                                                   \
+      -> REQUIRES((pe::predicate_any_v<AdaptToSpanTransform, Args&&...>))     \
+          RETURN(decltype(func(                                               \
+              AdaptToSpanTransformT<Args&&>(std::forward<Args>(args))...))) { \
+    return func(AdaptToSpanTransformT<Args&&>(std::forward<Args>(args))...);  \
   }
 
 }  // namespace pe

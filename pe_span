@@ -318,6 +318,16 @@ class Span {
 };
 
 template <typename T>
+class CSpan : public Span<std::add_const_t<T>> {
+ public:
+  using base = Span<std::add_const_t<T>>;
+  using base::Span;
+  CSpan(Span<std::remove_const_t<T>> other) : base(other.data(), other.size()) {}
+  CSpan(Span<std::add_const_t<T>> other)
+      : base(other.data(), other.size()) {}
+};
+
+template <typename T>
 SL std::ostream& operator<<(std::ostream& o, Span<T> v) {
   const int64 size = std::size(v);
   int64 id = 0;
@@ -431,6 +441,12 @@ struct AdaptToSpanTransform<const std::array<T, N>&&> {
 template <typename T, int64 N>
 struct AdaptToSpanTransform<T (&)[N]> {
   using Type = Span<T>;
+  enum { value = true };
+};
+
+template <typename T, int64 N>
+struct AdaptToSpanTransform<const T (&)[N]> {
+  using Type = Span<const T>;
   enum { value = true };
 };
 

@@ -376,6 +376,19 @@ struct is_one_of {
 template <typename T, typename... TL>
 inline constexpr bool is_one_of_v = is_one_of<T, TL...>::value;
 
+// reduce_type
+template <template <typename T1, typename T2> class reducer, typename TH,
+          typename... TL>
+struct reduce_type {
+  using type =
+      typename reducer<TH, typename reduce_type<reducer, TL...>::type>::type;
+};
+
+template <template <typename T1, typename T2> class reducer, typename TH>
+struct reduce_type<reducer, TH> {
+  using type = TH;
+};
+
 // Integer type promotion
 template <typename T1, typename T2, bool ge, bool same>
 struct BiggerIntegralImpl {
@@ -426,13 +439,7 @@ struct BiggerIntegral<T, T> {
 
 template <typename TH, typename... TT>
 struct BiggerIntegralN {
-  using A = typename BiggerIntegralN<TT...>::type;
-  using type = typename BiggerIntegral<TH, A>::type;
-};
-
-template <typename T>
-struct BiggerIntegralN<T> {
-  using type = T;
+  using type = typename pe::reduce_type<pe::BiggerIntegral, TH, TT...>::type;
 };
 
 template <typename T>

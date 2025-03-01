@@ -463,5 +463,27 @@ using AdaptToSpanTransformT = typename AdaptToSpanTransform<T>::Type;
     return func(AdaptToSpanTransformT<Args&&>(std::forward<Args>(args))...);  \
   }
 
+template <typename T>
+struct span_like_impl<Span<T>> {
+  using ElementType = T;
+  using NonConstElementType = std::remove_const_t<T>;
+  using ConstElementType = std::add_const_t<T>;
+  enum {
+    value = true,
+    is_element_type_const = std::is_same_v<ElementType, ConstElementType>
+  };
+};
+
+template <typename T>
+struct span_like_impl<CSpan<T>> {
+  using ElementType = std::add_const_t<T>;
+  using NonConstElementType = std::remove_const_t<T>;
+  using ConstElementType = std::add_const_t<T>;
+  enum {
+    value = true,
+    is_element_type_const = std::is_same_v<ElementType, ConstElementType>
+  };
+};
+
 }  // namespace pe
 #endif

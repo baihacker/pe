@@ -491,6 +491,19 @@ struct span_like_impl<std::array<T, N>> {
   };
 };
 
+#if PE_HAS_CPP20
+template <typename T, std::size_t N>
+struct span_like_impl<std::span<T, N>> {
+  using ElementType = T;
+  using NonConstElementType = std::remove_const_t<T>;
+  using ConstElementType = std::add_const_t<T>;
+  enum {
+    value = true,
+    is_element_type_const = std::is_same_v<ElementType, ConstElementType>
+  };
+};
+#endif
+
 template <typename T>
 struct span_like : public span_like_impl<std::remove_reference_t<T>> {};
 

@@ -10,7 +10,7 @@ namespace pe {
 template <typename T, typename TM>
 SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM> &&
                        pe_is_signed_v<T> && pe_is_signed_v<TM>))
-    RETURN(IntPromotion(T, TM)) Mod(T a, TM mod) {
+    RETURN(IntPromotion<T, TM>) Mod(T a, TM mod) {
   PE_ASSERT(mod >= 1);
   ASSUME(mod >= 1);
   if (a >= 0) {
@@ -25,7 +25,7 @@ SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM> &&
 template <typename T, typename TM>
 SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM> &&
                        pe_is_signed_v<T> && pe_is_unsigned_v<TM>))
-    RETURN(IntPromotion(T, TM)) Mod(T a, TM mod) {
+    RETURN(IntPromotion<T, TM>) Mod(T a, TM mod) {
   PE_ASSERT(mod >= 1);
   ASSUME(mod >= 1);
   if (a >= 0) {
@@ -39,7 +39,7 @@ SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM> &&
 
 template <typename T, typename TM>
 SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM> &&
-                       pe_is_unsigned_v<T>)) RETURN(IntPromotion(T, TM))
+                       pe_is_unsigned_v<T>)) RETURN(IntPromotion<T, TM>)
     Mod(T a, TM mod) {
   PE_ASSERT(mod >= 1);
   ASSUME(mod >= 1);
@@ -57,7 +57,7 @@ SL constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(T) Mod(T a, T mod) {
 namespace internal {
 template <typename T, typename TM>
 SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM>))
-    RETURN(IntPromotion(T, TM)) AddModImpl(T a, T b, TM mod) {
+    RETURN(IntPromotion<T, TM>) AddModImpl(T a, T b, TM mod) {
   using ResultType = typename BiggerIntegralN<T, TM>::type;
   ASSUME(mod >= 1);
 #if 0
@@ -78,7 +78,7 @@ SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM>))
 template <typename T1, typename T2, typename TM>
 SL constexpr REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
                        is_builtin_integer_v<TM>))
-    RETURN(IntPromotion(T1, T2, TM)) AddMod(T1 a, T2 b, TM mod) {
+    RETURN(IntPromotion<T1, T2, TM>) AddMod(T1 a, T2 b, TM mod) {
   using T = typename BiggerIntegralN<T1, T2>::type;
   return internal::AddModImpl<T, TM>(a, b, mod);
 }
@@ -108,7 +108,7 @@ SL constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
 namespace internal {
 template <typename T, typename TM>
 SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM>))
-    RETURN(IntPromotion(T, TM)) SubModImpl(T a, T b, TM mod) {
+    RETURN(IntPromotion<T, TM>) SubModImpl(T a, T b, TM mod) {
   return a >= b ? a - b : mod - b + a;
 }
 }  // namespace internal
@@ -116,7 +116,7 @@ SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM>))
 template <typename T1, typename T2, typename TM>
 SL constexpr REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
                        is_builtin_integer_v<TM>))
-    RETURN(IntPromotion(T1, T2, TM)) SubMod(T1 a, T2 b, TM mod) {
+    RETURN(IntPromotion<T1, T2, TM>) SubMod(T1 a, T2 b, TM mod) {
   using T = typename BiggerIntegralN<T1, T2>::type;
   return internal::SubModImpl<T, TM>(a, b, mod);
 }
@@ -124,7 +124,7 @@ SL constexpr REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
 namespace internal {
 template <typename T, typename TM>
 SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM>))
-    RETURN(IntPromotion(T, TM)) MulModImpl(T a, T b, TM mod) {
+    RETURN(IntPromotion<T, TM>) MulModImpl(T a, T b, TM mod) {
   ASSUME(mod >= 1);
   return a * b % mod;
 }
@@ -410,7 +410,7 @@ SL constexpr REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
                        (sizeof(T1) > sizeof(int64) ||
                         sizeof(T2) > sizeof(int64) ||
                         sizeof(TM) > sizeof(int64))))
-    RETURN(IntPromotion(T1, T2, TM)) MulMod(T1 a, T2 b, TM mod) {
+    RETURN(IntPromotion<T1, T2, TM>) MulMod(T1 a, T2 b, TM mod) {
   using ResultType = typename BiggerIntegralN<T1, T2, TM>::type;
   ASSUME(mod >= 1);
   return static_cast<ResultType>(a) * static_cast<ResultType>(b) %
@@ -438,7 +438,7 @@ SL REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
               sizeof(TM) > sizeof(int32)) &&
              (sizeof(T1) <= sizeof(int64) && sizeof(T2) <= sizeof(int64) &&
               sizeof(TM) <= sizeof(int64))))
-    RETURN(IntPromotion(T1, T2, int64, TM)) MulMod(T1 a, T2 b, TM mod) {
+    RETURN(IntPromotion<T1, T2, int64, TM>) MulMod(T1 a, T2 b, TM mod) {
   using T = typename BiggerIntegralN<T1, T2>::type;
   using AtLeastInt64T = typename AtLeastInt64<T>::type;
   using ResultType = typename BiggerIntegralN<AtLeastInt64T, T>::type;
@@ -588,7 +588,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
 namespace internal {
 template <typename T, typename TN, typename TM>
 SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TN> &&
-             is_builtin_integer_v<TM>)) RETURN(IntPromotion(T, TM))
+             is_builtin_integer_v<TM>)) RETURN(IntPromotion<T, TM>)
     PowerModImpl(T x, TN n, TM mod) {
   PE_ASSERT(n >= 0);
   if (mod == 1) return 0;
@@ -606,7 +606,7 @@ SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TN> &&
 
 template <typename T, typename TN, typename TM>
 SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TN> &&
-             is_builtin_integer_v<TM>)) RETURN(IntPromotion(T, int64, TM))
+             is_builtin_integer_v<TM>)) RETURN(IntPromotion<T, int64, TM>)
     PowerMod(T x, TN n, TM mod) {
   using AtLeastInt64T = typename AtLeastInt64<T>::type;
   return internal::PowerModImpl<AtLeastInt64T, TN, TM>(x, n, mod);
@@ -620,7 +620,7 @@ SL REQUIRES((is_gbi_v<GBI>)) RETURN(GBI) Gcd(GBI m, GBI n);
 
 template <typename T0, typename T1>
 SL REQUIRES((is_general_integer_v<T0> && is_general_integer_v<T1>))
-    RETURN(IntPromotion(T0, T1)) Gcd(const T0& m, const T1& n);
+    RETURN(IntPromotion<T0, T1>) Gcd(const T0& m, const T1& n);
 
 template <typename T>
 SL REQUIRES((is_general_integer_v<T>)) RETURN(T) Gcd(const T& a);
@@ -628,12 +628,12 @@ SL REQUIRES((is_general_integer_v<T>)) RETURN(T) Gcd(const T& a);
 template <typename TH, typename... TT>
 SL REQUIRES(((sizeof...(TT) >= 2) && (is_general_integer_v<TH>) &&
              (predicate_all_v<is_general_integer, TT...>)))
-    RETURN(IntPromotion(TH, TT...)) Gcd(TH a, TT... b);
+    RETURN(IntPromotion<TH, TT...>) Gcd(TH a, TT... b);
 
 namespace internal {
 template <typename T, typename TM>
 SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM>))
-    RETURN(IntPromotion(T, TM))
+    RETURN(IntPromotion<T, TM>)
         FracModImpl(const std::vector<T>& a, std::vector<T> b, TM mod) {
   using ResultType = typename BiggerIntegralN<T, TM>::type;
   ResultType ret = 1;
@@ -662,7 +662,7 @@ SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM>))
 
 template <typename T1, typename T2 = T1, typename TM>
 SL REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
-             is_builtin_integer_v<TM>)) RETURN(IntPromotion(T1, T2, int64, TM))
+             is_builtin_integer_v<TM>)) RETURN(IntPromotion<T1, T2, int64, TM>)
     FracMod(const std::vector<T1>& a, const std::vector<T2>& b, TM mod) {
   using T = typename BiggerIntegralN<T1, T2>::type;
   using AtLeastInt64T = typename AtLeastInt64<T>::type;

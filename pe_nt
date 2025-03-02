@@ -311,7 +311,56 @@ struct ModValue {
   int ok = 0;
   T value;
   T mod;
+
+  T GetNoMoreThan(T n) {
+#if 0
+        if (n >= 0) {
+          T ret = n / mod * mod + value;
+          return ret > n ? ret - mod : ret;
+        } else {
+          T ret = (n - mod + 1) / mod * mod + value;
+          return ret > n ? ret - mod : ret;
+        }
+#else
+    T delta = n - value;
+    T k = (delta - (delta < 0 ? mod - 1 : 0)) / mod;
+    return value + k * mod;
+#endif
+  }
+
+  T GetAtLeast(T n) {
+#if 0
+        if (n >= 0) {
+          T ret = n / mod * mod + value;
+          return ret < n ? ret + mod : ret;
+        } else {
+          T ret = n / mod * mod - mod + value;
+          return ret < n ? ret + mod : ret;
+        }
+#else
+    T delta = n - value;
+    T k = delta >= 0 ? (delta + mod - 1) / mod : delta / mod;
+    return value + k * mod;
+#endif
+  }
+
+  T GetCountInRange(T min_value, T max_value) {
+    T a = GetAtLeast(min_value);
+    T b = GetNoMoreThan(max_value);
+    return a <= b ? (b - a) / mod + 1 : 0;
+  }
+
+  T GetPositiveCountNoMoreThan(T n) {
+    T a = value > 0 ? value : mod;
+    T b = GetNoMoreThan(n);
+    return a <= b ? (b - a) / mod + 1 : 0;
+  }
 };
+
+template <typename T>
+SL std::ostream& operator<<(std::ostream& o, ModValue<T> v) {
+  return o << (v.ok ? "ok" : "fail") << " " << v.value << " " << v.mod;
+}
 
 // Solves equation a x = b (mod m)
 template <typename T>

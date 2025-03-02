@@ -207,62 +207,68 @@ inline constexpr bool is_general_integer_v = is_general_integer<T>::value;
 
 // pe_is_signed
 template <typename T>
-struct pe_is_signed {
-  enum { value = std::is_signed<T>::value };
+struct pe_is_signed_impl {
+  enum { value = std::is_signed_v<T> };
 };
 
 #if PE_HAS_INT128
 template <>
-struct pe_is_signed<int128> {
+struct pe_is_signed_impl<int128> {
   enum { value = true };
 };
 
 template <>
-struct pe_is_signed<uint128> {
+struct pe_is_signed_impl<uint128> {
   enum { value = false };
 };
 #endif
 
 template <typename UT, bool is_builtin>
-struct pe_is_signed<ExtendedUnsignedIntImpl<UT, is_builtin>> {
+struct pe_is_signed_impl<ExtendedUnsignedIntImpl<UT, is_builtin>> {
   enum { value = false };
 };
 
 template <typename ET, bool is_builtin>
-struct pe_is_signed<ExtendedSignedIntImpl<ET, is_builtin>> {
+struct pe_is_signed_impl<ExtendedSignedIntImpl<ET, is_builtin>> {
   enum { value = true };
 };
+
+template <typename T>
+struct pe_is_signed : public pe_is_signed_impl<std::decay_t<T>> {};
 
 template <typename T>
 inline constexpr bool pe_is_signed_v = pe_is_signed<T>::value;
 
 // pe_is_unsigned
 template <typename T>
-struct pe_is_unsigned {
-  enum { value = std::is_unsigned<T>::value };
+struct pe_is_unsigned_impl {
+  enum { value = std::is_unsigned_v<T> };
 };
 
 #if PE_HAS_INT128
 template <>
-struct pe_is_unsigned<int128> {
+struct pe_is_unsigned_impl<int128> {
   enum { value = false };
 };
 
 template <>
-struct pe_is_unsigned<uint128> {
+struct pe_is_unsigned_impl<uint128> {
   enum { value = true };
 };
 #endif
 
 template <typename UT, bool is_builtin>
-struct pe_is_unsigned<ExtendedUnsignedIntImpl<UT, is_builtin>> {
+struct pe_is_unsigned_impl<ExtendedUnsignedIntImpl<UT, is_builtin>> {
   enum { value = true };
 };
 
 template <typename ET, bool is_builtin>
-struct pe_is_unsigned<ExtendedSignedIntImpl<ET, is_builtin>> {
+struct pe_is_unsigned_impl<ExtendedSignedIntImpl<ET, is_builtin>> {
   enum { value = false };
 };
+
+template <typename T>
+struct pe_is_unsigned : public pe_is_unsigned_impl<std::decay_t<T>> {};
 
 template <typename T>
 inline constexpr bool pe_is_unsigned_v = pe_is_unsigned<T>::value;

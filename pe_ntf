@@ -1514,6 +1514,42 @@ DVA<T> operator*(const DVA<T>& a, const DVA<T>& b) {
   return DVAConv<T>(a, b);
 }
 
+// f(x) = sum(g(d) h(x/d^2), d^2|x)
+template <typename T, int TN = kDvaOperationThreads>
+DVA<T> DVAConvDivSquare(const DVA<T>& ps_g, const DVA<T>& ps_h) {
+  PE_ASSERT(ps_g.n == ps_h.n);
+
+  DVA<T> ret(ps_g.n);
+
+#if ENABLE_OPENMP
+#pragma omp parallel for schedule(dynamic, 100) num_threads(TN)
+#endif
+  for (int64 i = 1; i < ret.key_size; ++i) {
+    const int64 maxx = ret.keys[i];
+    ASSUME(maxx > 0);
+    T now = 0;
+    T last = 0;
+    for (int64 y = 1; y <= maxx;) {
+      ASSUME(y > 0);
+      const int64 v = maxx / y / y;
+      if (v == 0) break;
+      ASSUME(v > 0);
+      const int64 maxy = SqrtI(maxx / v);
+      ASSUME(maxy > 0);
+      const T curr = ps_g[maxy];
+      const T delta = curr - last;
+      last = curr;
+
+      now += ps_h[v] * delta;
+
+      y = maxy + 1;
+    }
+    ret.values[i] = now;
+  }
+
+  return ret;
+}
+
 template <typename T, int TN = kDvaOperationThreads /** unused */>
 DVA<T> DVAAdd(const DVA<T>& ps_g, const DVA<T>& ps_h) {
   PE_ASSERT(ps_g.n == ps_h.n);
@@ -2348,39 +2384,41 @@ SL std::vector<DVA<NModNumber<CCMod64<mod>>>> PrimeSkPMod(const int64 n, int k,
 }
 
 enum class Ntf {
-  Epsilon = 0,       // n => n == 1 ? 1 : 0
-  Mu,                // n => (-1)^PrimeNu(n)
-  Id0,               // n => 1
-  One = Id0,         // n => 1
-  Id1,               // n => n
-  Id = Id1,          // n => n
-  Id2,               // n => n^2
-  Id3,               // n => n^3
-  Id4,               // n => n^4
-  Id5,               // n => n^5
-  Id6,               // n => n^6
-  Id7,               // n => n^7
-  Phi,               // n => n => Sum(Gcd(d, n) == 1 ? 1 : 0, for d | n)
-  PrimeP0,           // n => IsPrime(n) ? 1 : 0
-  PrimeQ = PrimeP0,  // n => IsPrime(n) ? 1 : 0
-  PrimeP1,           // n => IsPrime(n) ? n : 0
-  D0,                // n => Sum(1, for d | n)
-  Sigma0 = D0,       // n => Sum(1, for d | n)
-  D1,                // n => Sum(d, for d | n)
-  Sigma1 = D1,       // n => Sum(d, for d | n)
-  D2,                // n => Sum(d^2, for d | n)
-  Sigma2 = D2,       // n => Sum(d^2, for d | n)
-  D3,                // n => Sum(d^3, for d | n)
-  Sigma3 = D3,       // n => Sum(d^3, for d | n)
-  D4,                // n => Sum(d^4, for d | n)
-  Sigma4 = D4,       // n => Sum(d^4, for d | n)
-  D5,                // n => Sum(d^5, for d | n)
-  Sigma5 = D5,       // n => Sum(d^5, for d | n)
-  D6,                // n => Sum(d^6, for d | n)
-  Sigma6 = D6,       // n => Sum(d^6, for d | n)
-  D7,                // n => Sum(d^7, for d | n)
-  Sigma7 = D7,       // n => Sum(d^7, for d | n)
-  PrimeNu            // n => Sum(1, for p | n)
+  Epsilon = 0,            // n => n == 1 ? 1 : 0
+  Mu,                     // n => IsSquareFree(n) ? (-1)^PrimeNu(n) : 0
+  Id0,                    // n => 1
+  One = Id0,              // n => 1
+  Id1,                    // n => n
+  Id = Id1,               // n => n
+  Id2,                    // n => n^2
+  Id3,                    // n => n^3
+  Id4,                    // n => n^4
+  Id5,                    // n => n^5
+  Id6,                    // n => n^6
+  Id7,                    // n => n^7
+  Phi,                    // n => n => Sum(Gcd(d, n) == 1 ? 1 : 0, for d | n)
+  PrimeP0,                // n => IsPrime(n) ? 1 : 0
+  PrimeQ = PrimeP0,       // n => IsPrime(n) ? 1 : 0
+  PrimeP1,                // n => IsPrime(n) ? n : 0
+  D0,                     // n => Sum(1, for d | n)
+  Sigma0 = D0,            // n => Sum(1, for d | n)
+  D1,                     // n => Sum(d, for d | n)
+  Sigma1 = D1,            // n => Sum(d, for d | n)
+  D2,                     // n => Sum(d^2, for d | n)
+  Sigma2 = D2,            // n => Sum(d^2, for d | n)
+  D3,                     // n => Sum(d^3, for d | n)
+  Sigma3 = D3,            // n => Sum(d^3, for d | n)
+  D4,                     // n => Sum(d^4, for d | n)
+  Sigma4 = D4,            // n => Sum(d^4, for d | n)
+  D5,                     // n => Sum(d^5, for d | n)
+  Sigma5 = D5,            // n => Sum(d^5, for d | n)
+  D6,                     // n => Sum(d^6, for d | n)
+  Sigma6 = D6,            // n => Sum(d^6, for d | n)
+  D7,                     // n => Sum(d^7, for d | n)
+  Sigma7 = D7,            // n => Sum(d^7, for d | n)
+  PrimeNu,                // n => Sum(1, for p | n)
+  MuSquare,               // n => IsSquareFree(n) ? 1 : 0
+  SquareFree = MuSquare,  // n => IsSquareFree(n) ? 1 : 0
 };
 
 template <typename T>
@@ -2449,6 +2487,9 @@ class DVAPrefixSumMaker {
       case Ntf::PrimeNu:
         return cache_[idx] =
                    DVAConv<T, TN>(Make<TN>(Ntf::PrimeP0), Make<TN>(Ntf::Id0));
+      case Ntf::MuSquare:
+        return cache_[idx] = DVAConvDivSquare<T, TN>(Make<TN>(Ntf::Mu),
+                                                     Make<TN>(Ntf::Id0));
       default:
         dbg(idx);
         PE_ASSERT(0);
@@ -2494,6 +2535,8 @@ class DVAPrefixSumMaker {
   DEFINE_DVA_PREFIX_SUM_FUNCTION(D7);
   DEFINE_DVA_PREFIX_SUM_FUNCTION(Sigma7);
   DEFINE_DVA_PREFIX_SUM_FUNCTION(PrimeNu);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(MuSquare);
+  DEFINE_DVA_PREFIX_SUM_FUNCTION(SquareFree);
 
 #undef DEFINE_DVA_PREFIX_SUM_FUNCTION
 

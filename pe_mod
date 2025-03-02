@@ -43,7 +43,7 @@ SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM> &&
     Mod(T a, TM mod) {
   PE_ASSERT(mod >= 1);
   ASSUME(mod >= 1);
-  using ResultType = typename BiggerIntegralN<T, TM>::type;
+  using ResultType = int_promption_t<T, TM>;
   ResultType b = a, m = mod;
   if (b >= m) b %= m;
   return b;
@@ -58,7 +58,7 @@ namespace internal {
 template <typename T, typename TM>
 SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM>))
     RETURN(IntPromotion<T, TM>) AddModImpl(T a, T b, TM mod) {
-  using ResultType = typename BiggerIntegralN<T, TM>::type;
+  using ResultType = int_promption_t<T, TM>;
   ASSUME(mod >= 1);
 #if 0
   auto t0 = a;
@@ -79,7 +79,7 @@ template <typename T1, typename T2, typename TM>
 SL constexpr REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
                        is_builtin_integer_v<TM>))
     RETURN(IntPromotion<T1, T2, TM>) AddMod(T1 a, T2 b, TM mod) {
-  using T = typename BiggerIntegralN<T1, T2>::type;
+  using T = int_promption_t<T1, T2>;
   return internal::AddModImpl<T, TM>(a, b, mod);
 }
 
@@ -89,9 +89,7 @@ SL constexpr T SumMod(TM /*mod*/, T a) {
 }
 
 template <typename TM, typename TH, typename... TT>
-// Use BiggerIntegralN to avoid a lint warning.
-SL constexpr typename pe::BiggerIntegralN<TH, TT...>::type SumMod(TM mod, TH a,
-                                                                  TT... b) {
+SL constexpr int_promption_t<TH, TT...> SumMod(TM mod, TH a, TT... b) {
   return AddMod(a, SumMod(mod, b...), mod);
 }
 
@@ -117,7 +115,7 @@ template <typename T1, typename T2, typename TM>
 SL constexpr REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
                        is_builtin_integer_v<TM>))
     RETURN(IntPromotion<T1, T2, TM>) SubMod(T1 a, T2 b, TM mod) {
-  using T = typename BiggerIntegralN<T1, T2>::type;
+  using T = int_promption_t<T1, T2>;
   return internal::SubModImpl<T, TM>(a, b, mod);
 }
 
@@ -411,7 +409,7 @@ SL constexpr REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
                         sizeof(T2) > sizeof(int64) ||
                         sizeof(TM) > sizeof(int64))))
     RETURN(IntPromotion<T1, T2, TM>) MulMod(T1 a, T2 b, TM mod) {
-  using ResultType = typename BiggerIntegralN<T1, T2, TM>::type;
+  using ResultType = int_promption_t<T1, T2, TM>;
   ASSUME(mod >= 1);
   return static_cast<ResultType>(a) * static_cast<ResultType>(b) %
          static_cast<ResultType>(mod);
@@ -439,9 +437,9 @@ SL REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
              (sizeof(T1) <= sizeof(int64) && sizeof(T2) <= sizeof(int64) &&
               sizeof(TM) <= sizeof(int64))))
     RETURN(IntPromotion<T1, T2, int64, TM>) MulMod(T1 a, T2 b, TM mod) {
-  using T = typename BiggerIntegralN<T1, T2>::type;
+  using T = int_promption_t<T1, T2>;
   using AtLeastInt64T = typename AtLeastInt64<T>::type;
-  using ResultType = typename BiggerIntegralN<AtLeastInt64T, T>::type;
+  using ResultType = int_promption_t<AtLeastInt64T, T>;
   ASSUME(mod >= 1);
 
 #if PE_MUL_MOD_SHELL_CODE_AVAILABLE && \
@@ -566,9 +564,7 @@ SL T ProdMod(TM /*mod*/, T a) {
 }
 
 template <typename TM, typename TH, typename... TT>
-// Use BiggerIntegralN to avoid a lint warning.
-SL typename pe::BiggerIntegralN<TH, TT...>::type ProdMod(TM mod, TH a,
-                                                         TT... b) {
+SL int_promption_t<TH, TT...> ProdMod(TM mod, TH a, TT... b) {
   return MulMod(a, ProdMod(mod, b...), mod);
 }
 
@@ -592,7 +588,7 @@ SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TN> &&
     PowerModImpl(T x, TN n, TM mod) {
   PE_ASSERT(n >= 0);
   if (mod == 1) return 0;
-  using ResultType = typename BiggerIntegralN<T, TM>::type;
+  using ResultType = int_promption_t<T, TM>;
 
   ResultType ret = 1;
   auto y = Mod(x, mod);
@@ -635,7 +631,7 @@ template <typename T, typename TM>
 SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM>))
     RETURN(IntPromotion<T, TM>)
         FracModImpl(const std::vector<T>& a, std::vector<T> b, TM mod) {
-  using ResultType = typename BiggerIntegralN<T, TM>::type;
+  using ResultType = int_promption_t<T, TM>;
   ResultType ret = 1;
   const int size = std::size(b);
   int remain = size;
@@ -664,7 +660,7 @@ template <typename T1, typename T2 = T1, typename TM>
 SL REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
              is_builtin_integer_v<TM>)) RETURN(IntPromotion<T1, T2, int64, TM>)
     FracMod(const std::vector<T1>& a, const std::vector<T2>& b, TM mod) {
-  using T = typename BiggerIntegralN<T1, T2>::type;
+  using T = int_promption_t<T1, T2>;
   using AtLeastInt64T = typename AtLeastInt64<T>::type;
   return internal::FracModImpl<AtLeastInt64T, TM>(
       std::vector<AtLeastInt64T>(a.begin(), a.end()),

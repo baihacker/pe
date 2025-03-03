@@ -1439,9 +1439,34 @@ SL REQUIRES((!IsNModNumberV<T>)) RETURN(DVA<T>)
 
 constexpr int kDvaOperationThreads = 8;
 
+template <typename T, int TN = kDvaOperationThreads /** unused */>
+SL T DVAConvAt(const DVA<T>& ps_g, const DVA<T>& ps_h, int64 m) {
+  PE_ASSERT(ps_g.n == ps_h.n);
+
+  const int64 maxx = m;
+  ASSUME(maxx > 0);
+  T now = 0;
+  T last = 0;
+  for (int64 y = 1; y <= maxx;) {
+    ASSUME(y > 0);
+    const int64 v = maxx / y;
+    ASSUME(v > 0);
+    const int64 maxy = maxx / v;
+    ASSUME(maxy > 0);
+    const T curr = ps_g[maxy];
+    const T delta = curr - last;
+    last = curr;
+
+    now += ps_h[v] * delta;
+    y = maxy + 1;
+  }
+
+  return now;
+}
+
 // Returns prefix sum of f where f = g * h
 template <typename T, int TN = kDvaOperationThreads>
-DVA<T> DVAConv(const DVA<T>& ps_g, const DVA<T>& ps_h) {
+SL DVA<T> DVAConv(const DVA<T>& ps_g, const DVA<T>& ps_h) {
   PE_ASSERT(ps_g.n == ps_h.n);
 
   DVA<T> ret(ps_g.n);
@@ -1450,34 +1475,46 @@ DVA<T> DVAConv(const DVA<T>& ps_g, const DVA<T>& ps_h) {
 #pragma omp parallel for schedule(dynamic, 100) num_threads(TN)
 #endif
   for (int64 i = 1; i < ret.key_size; ++i) {
-    const int64 maxx = ret.keys[i];
-    ASSUME(maxx > 0);
-    T now = 0;
-    T last = 0;
-    for (int64 y = 1; y <= maxx;) {
-      ASSUME(y > 0);
-      const int64 v = maxx / y;
-      ASSUME(v > 0);
-      const int64 maxy = maxx / v;
-      ASSUME(maxy > 0);
-      const T curr = ps_g[maxy];
-      const T delta = curr - last;
-      last = curr;
-
-      now += ps_h[v] * delta;
-      y = maxy + 1;
-    }
-    ret.values[i] = now;
+    ret.values[i] = DVAConvAt(ps_g, ps_h, ret.keys[i]);
   }
 
   return ret;
 }
 
+template <typename T, int TN = kDvaOperationThreads /** unused */>
+SL T DVAConvAt(const DVA<T>& ps_g, const DVA<T>& ps_h,
+               const std::function<T(int64 maxx, int64 miny, int64 maxy,
+                                     T delta_g, const DVA<T>& ps_h)>& trans,
+               int64 m) {
+  PE_ASSERT(ps_g.n == ps_h.n);
+
+  const int64 maxx = m;
+  ASSUME(maxx > 0);
+  T now = 0;
+  T last = 0;
+  for (int64 y = 1; y <= maxx;) {
+    ASSUME(y > 0);
+    const int64 v = maxx / y;
+    ASSUME(v > 0);
+    const int64 maxy = maxx / v;
+    ASSUME(maxy > 0);
+    const T curr = ps_g[maxy];
+    const T delta = curr - last;
+    last = curr;
+
+    now += trans(maxx, y, maxy, delta, ps_h);
+    y = maxy + 1;
+  }
+
+  return now;
+}
+
 // Returns prefix sum of f where f = g * h
 template <typename T, int TN = kDvaOperationThreads>
-DVA<T> DVAConv(const DVA<T>& ps_g, const DVA<T>& ps_h,
-               const std::function<T(int64 maxx, int64 miny, int64 maxy,
-                                     T delta_g, const DVA<T>& ps_h)>& trans) {
+SL DVA<T> DVAConv(
+    const DVA<T>& ps_g, const DVA<T>& ps_h,
+    const std::function<T(int64 maxx, int64 miny, int64 maxy, T delta_g,
+                          const DVA<T>& ps_h)>& trans) {
   PE_ASSERT(ps_g.n == ps_h.n);
 
   DVA<T> ret(ps_g.n);
@@ -1486,37 +1523,20 @@ DVA<T> DVAConv(const DVA<T>& ps_g, const DVA<T>& ps_h,
 #pragma omp parallel for schedule(dynamic, 100) num_threads(TN)
 #endif
   for (int64 i = 1; i < ret.key_size; ++i) {
-    const int64 maxx = ret.keys[i];
-    ASSUME(maxx > 0);
-    T now = 0;
-    T last = 0;
-    for (int64 y = 1; y <= maxx;) {
-      ASSUME(y > 0);
-      const int64 v = maxx / y;
-      ASSUME(v > 0);
-      const int64 maxy = maxx / v;
-      ASSUME(maxy > 0);
-      const T curr = ps_g[maxy];
-      const T delta = curr - last;
-      last = curr;
-
-      now += trans(maxx, y, maxy, delta, ps_h);
-      y = maxy + 1;
-    }
-    ret.values[i] = now;
+    ret.values[i] = DVAConvAt(ps_g, ps_h, trans, ret.keys[i]);
   }
 
   return ret;
 }
 
 template <typename T>
-DVA<T> operator*(const DVA<T>& a, const DVA<T>& b) {
+SL DVA<T> operator*(const DVA<T>& a, const DVA<T>& b) {
   return DVAConv<T>(a, b);
 }
 
-// f(x) = sum(g(d) h(x/d^2), d^2|x)
+// Returns prefix sum of f where f(x) = sum(g(d) h(x/d^2), d^2|x)
 template <typename T, int TN = kDvaOperationThreads>
-DVA<T> DVAConvDivSquare(const DVA<T>& ps_g, const DVA<T>& ps_h) {
+SL DVA<T> DVAConvDivSquare(const DVA<T>& ps_g, const DVA<T>& ps_h) {
   PE_ASSERT(ps_g.n == ps_h.n);
 
   DVA<T> ret(ps_g.n);
@@ -1552,7 +1572,7 @@ DVA<T> DVAConvDivSquare(const DVA<T>& ps_g, const DVA<T>& ps_h) {
 
 // Returns prefix sum of g where f = g * h
 template <typename T, int TN = kDvaOperationThreads>
-DVA<T> DVAConvInverse(const DVA<T>& ps_h, const DVA<T>& ps_f) {
+SL DVA<T> DVAConvInverse(const DVA<T>& ps_h, const DVA<T>& ps_f) {
   PE_ASSERT(ps_h.n == ps_f.n);
 
   DVA<T> ret(ps_h.n);
@@ -1594,7 +1614,7 @@ DVA<T> DVAConvInverse(const DVA<T>& ps_h, const DVA<T>& ps_f) {
 }
 
 template <typename T, int TN = kDvaOperationThreads /** unused */>
-DVA<T> DVAAdd(const DVA<T>& ps_g, const DVA<T>& ps_h) {
+SL DVA<T> DVAAdd(const DVA<T>& ps_g, const DVA<T>& ps_h) {
   PE_ASSERT(ps_g.n == ps_h.n);
 
   DVA<T> ret(ps_g.n);
@@ -1607,12 +1627,12 @@ DVA<T> DVAAdd(const DVA<T>& ps_g, const DVA<T>& ps_h) {
 }
 
 template <typename T>
-DVA<T> operator+(const DVA<T>& a, const DVA<T>& b) {
+SL DVA<T> operator+(const DVA<T>& a, const DVA<T>& b) {
   return DVAAdd<T>(a, b);
 }
 
 template <typename T, int TN = kDvaOperationThreads /** unused */>
-DVA<T> DVASub(const DVA<T>& ps_g, const DVA<T>& ps_h) {
+SL DVA<T> DVASub(const DVA<T>& ps_g, const DVA<T>& ps_h) {
   PE_ASSERT(ps_g.n == ps_h.n);
 
   DVA<T> ret(ps_g.n);
@@ -1625,20 +1645,20 @@ DVA<T> DVASub(const DVA<T>& ps_g, const DVA<T>& ps_h) {
 }
 
 template <typename T>
-DVA<T> operator-(const DVA<T>& a, const DVA<T>& b) {
+SL DVA<T> operator-(const DVA<T>& a, const DVA<T>& b) {
   return DVASub<T>(a, b);
 }
 
 // ps epsilon
 template <typename T, int TN = kDvaOperationThreads /** unused */>
-DVA<T> MakePrefixSumEpsilon(int64 n) {
+SL DVA<T> MakePrefixSumEpsilon(int64 n) {
   return DVA<T>(n, 1);
 }
 
 // ps one
 // ps id0
 template <typename T, int TN = kDvaOperationThreads /** unused */>
-DVA<T> MakePrefixSumOne(int64 n) {
+SL DVA<T> MakePrefixSumOne(int64 n) {
   DVA<T> ret(n);
 
   for (int64 i = 1; i < ret.key_size; ++i) {
@@ -1651,7 +1671,7 @@ DVA<T> MakePrefixSumOne(int64 n) {
 // ps id
 // ps id1
 template <typename T, int TN = kDvaOperationThreads /** unused */>
-DVA<T> MakePrefixSumId(int64 n) {
+SL DVA<T> MakePrefixSumId(int64 n) {
   DVA<T> ret(n);
 
   for (int64 i = 1; i < ret.key_size; ++i) {
@@ -1663,7 +1683,7 @@ DVA<T> MakePrefixSumId(int64 n) {
 
 // ps id2
 template <typename T, int TN = kDvaOperationThreads /** unused */>
-DVA<T> MakePrefixSumId2(int64 n) {
+SL DVA<T> MakePrefixSumId2(int64 n) {
   DVA<T> ret(n);
 
   for (int64 i = 1; i < ret.key_size; ++i) {
@@ -1675,7 +1695,7 @@ DVA<T> MakePrefixSumId2(int64 n) {
 
 // ps id3
 template <typename T, int TN = kDvaOperationThreads /** unused */>
-DVA<T> MakePrefixSumId3(int64 n) {
+SL DVA<T> MakePrefixSumId3(int64 n) {
   DVA<T> ret(n);
 
   for (int64 i = 1; i < ret.key_size; ++i) {
@@ -1687,7 +1707,7 @@ DVA<T> MakePrefixSumId3(int64 n) {
 
 // ps id4
 template <typename T, int TN = kDvaOperationThreads /** unused */>
-DVA<T> MakePrefixSumId4(int64 n) {
+SL DVA<T> MakePrefixSumId4(int64 n) {
   DVA<T> ret(n);
 
   for (int64 i = 1; i < ret.key_size; ++i) {
@@ -1699,7 +1719,7 @@ DVA<T> MakePrefixSumId4(int64 n) {
 
 // ps id5
 template <typename T, int TN = kDvaOperationThreads /** unused */>
-DVA<T> MakePrefixSumId5(int64 n) {
+SL DVA<T> MakePrefixSumId5(int64 n) {
   DVA<T> ret(n);
 
   for (int64 i = 1; i < ret.key_size; ++i) {
@@ -1711,7 +1731,7 @@ DVA<T> MakePrefixSumId5(int64 n) {
 
 // ps id6
 template <typename T, int TN = kDvaOperationThreads /** unused */>
-DVA<T> MakePrefixSumId6(int64 n) {
+SL DVA<T> MakePrefixSumId6(int64 n) {
   DVA<T> ret(n);
 
   for (int64 i = 1; i < ret.key_size; ++i) {
@@ -1723,7 +1743,7 @@ DVA<T> MakePrefixSumId6(int64 n) {
 
 // ps id7
 template <typename T, int TN = kDvaOperationThreads /** unused */>
-DVA<T> MakePrefixSumId7(int64 n) {
+SL DVA<T> MakePrefixSumId7(int64 n) {
   DVA<T> ret(n);
 
   for (int64 i = 1; i < ret.key_size; ++i) {
@@ -1735,7 +1755,7 @@ DVA<T> MakePrefixSumId7(int64 n) {
 
 // ps mu
 template <typename T, int TN = kDvaOperationThreads>
-DVA<T> MakePrefixSumMu(int64 n) {
+SL DVA<T> MakePrefixSumMu(int64 n) {
   PE_ASSERT(pe::mu != nullptr);
 
   DVA<T> ret(n);
@@ -1811,7 +1831,7 @@ DVA<T> MakePrefixSumMu(int64 n) {
 // phi = Conv(mu, id)
 // id = Conv(phi, one)
 template <typename T, int TN = kDvaOperationThreads>
-DVA<T> MakePrefixSumPhi(const DVA<T>& ps_mu) {
+SL DVA<T> MakePrefixSumPhi(const DVA<T>& ps_mu) {
   PE_ASSERT(pe::phi != nullptr);
 
   const int64 n = ps_mu.n;
@@ -1868,7 +1888,7 @@ DVA<T> MakePrefixSumPhi(const DVA<T>& ps_mu) {
 }
 
 template <typename T, int TN = kDvaOperationThreads>
-DVA<T> MakePrefixSumPhi(int64 n) {
+SL DVA<T> MakePrefixSumPhi(int64 n) {
   return MakePrefixSumPhi<T, TN>(MakePrefixSumMu<T, TN>(n));
 }
 

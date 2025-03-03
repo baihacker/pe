@@ -1570,6 +1570,34 @@ SL DVA<T> DVAConvDivSquare(const DVA<T>& ps_g, const DVA<T>& ps_h) {
   return ret;
 }
 
+template <typename T, int TN = kDvaOperationThreads /** unused */>
+SL T DVAConvInverseAt(const DVA<T>& ps_h, const DVA<T>& ps_g,
+                      const DVA<T>& ps_f, int64 m) {
+  PE_ASSERT(ps_h.n == ps_f.n);
+  if (m == 1) {
+    return 1;
+  }
+
+  T now = 0;
+  T last = ps_h.values[1];
+  const int64 maxx = m;
+  ASSUME(maxx > 0);
+  for (int64 y = 2; y <= maxx;) {
+    ASSUME(y > 0);
+    const int64 v = maxx / y;
+    ASSUME(v > 0);
+    const int64 maxy = maxx / v;
+    ASSUME(maxy > 0);
+    const T curr = ps_h[maxy];
+    const T delta = curr - last;
+    last = curr;
+
+    now += ps_g[v] * delta;
+    y = maxy + 1;
+  }
+  return ps_f[m] - now;
+}
+
 // Returns prefix sum of g where f = g * h
 template <typename T, int TN = kDvaOperationThreads>
 SL DVA<T> DVAConvInverse(const DVA<T>& ps_h, const DVA<T>& ps_f) {
@@ -1588,24 +1616,7 @@ SL DVA<T> DVAConvInverse(const DVA<T>& ps_h, const DVA<T>& ps_f) {
 #pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
 #endif
     for (int64 k = i; k <= max_i; ++k) {
-      T now = 0;
-      T last = ps_h.values[1];
-      const int64 maxx = ret.keys[k];
-      ASSUME(maxx > 0);
-      for (int64 y = 2; y <= maxx;) {
-        ASSUME(y > 0);
-        const int64 v = maxx / y;
-        ASSUME(v > 0);
-        const int64 maxy = maxx / v;
-        ASSUME(maxy > 0);
-        const T curr = ps_h[maxy];
-        const T delta = curr - last;
-        last = curr;
-
-        now += ret[v] * delta;
-        y = maxy + 1;
-      }
-      ret.values[k] = ps_f.values[k] - now;
+      ret.values[k] = DVAConvInverseAt(ps_h, ret, ps_f, ret.keys[k]);
     }
     i = max_i + 1;
   }

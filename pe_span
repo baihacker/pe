@@ -8,55 +8,60 @@ namespace pe {
 // Also see MinGW-x86_64_14.1.0-msys2/include/c++/14.1.0/span.
 template <typename T>
 class Span {
+  using ElementType = T;
+  // Possible volatile.
+  using NonConstElementType = std::remove_const_t<T>;
+  using ConstElementType = std::add_const_t<T>;
+
+  using PointerToElementType = std::add_pointer_t<T>;
+  using ValueType = std::remove_cv_t<T>;
+
   using ConstElementAccessType = make_const_arg_type_t<T>;
   using ElementAccessType =
       std::conditional_t<std::is_const_v<T>, ConstElementAccessType,
                          std::add_lvalue_reference_t<T>>;
-  using PointerToElementType = std::add_pointer_t<T>;
-  using NonCVType = std::remove_cv_t<T>;
-  using NonConstType = std::remove_const_t<T>;
 
  public:
   constexpr Span() noexcept : p(nullptr), n(0) {}
 
   constexpr Span(const Span&) noexcept = default;
 
-  constexpr Span(std::initializer_list<NonConstType> init) noexcept
+  constexpr Span(std::initializer_list<NonConstElementType> init) noexcept
       : p(std::data(init)), n(std::size(init)) {}
 
   constexpr Span(PointerToElementType ptr, int64 n) noexcept : p(ptr), n(n) {}
 
   template <int64 N>
-  constexpr Span(const NonConstType (&a)[N]) noexcept : Span(&a[0], N) {}
+  constexpr Span(const NonConstElementType (&a)[N]) noexcept : Span(&a[0], N) {}
 
   template <int64 N>
-  constexpr Span(NonConstType (&a)[N]) noexcept : Span(&a[0], N) {}
+  constexpr Span(NonConstElementType (&a)[N]) noexcept : Span(&a[0], N) {}
 
-  constexpr Span(const std::vector<NonCVType>& v) noexcept
+  constexpr Span(const std::vector<ValueType>& v) noexcept
       : Span(&v[0], static_cast<int64>(std::size(v))) {}
 
-  constexpr Span(std::vector<NonCVType>& v) noexcept
+  constexpr Span(std::vector<ValueType>& v) noexcept
       : Span(&v[0], static_cast<int64>(std::size(v))) {}
 
-  constexpr Span(std::vector<NonCVType>&& v) noexcept
+  constexpr Span(std::vector<ValueType>&& v) noexcept
       : Span(&v[0], static_cast<int64>(std::size(v))) {}
 
-  constexpr Span(std::vector<NonCVType>&& v, int) noexcept = delete;
+  constexpr Span(std::vector<ValueType>&& v, int) noexcept = delete;
 
   template <std::size_t N>
-  constexpr Span(const std::array<NonCVType, N>& v) noexcept
-      : Span(&v[0], static_cast<int64>(std::size(v))) {}
-
-  template <std::size_t N>
-  constexpr Span(std::array<NonCVType, N>& v) noexcept
+  constexpr Span(const std::array<ValueType, N>& v) noexcept
       : Span(&v[0], static_cast<int64>(std::size(v))) {}
 
   template <std::size_t N>
-  constexpr Span(std::array<NonCVType, N>&& v) noexcept
+  constexpr Span(std::array<ValueType, N>& v) noexcept
       : Span(&v[0], static_cast<int64>(std::size(v))) {}
 
   template <std::size_t N>
-  constexpr Span(std::array<NonCVType, N>&& v, int) noexcept = delete;
+  constexpr Span(std::array<ValueType, N>&& v) noexcept
+      : Span(&v[0], static_cast<int64>(std::size(v))) {}
+
+  template <std::size_t N>
+  constexpr Span(std::array<ValueType, N>&& v, int) noexcept = delete;
 
   ~Span() noexcept = default;
 
@@ -103,7 +108,7 @@ class Span {
 
   struct Iterator : public IteratorBase {
     using difference_type = int64;
-    using value_type = NonCVType;
+    using value_type = ValueType;
 
     ElementAccessType operator*() const { return *this->iter_; }
     Iterator& operator++() {
@@ -127,7 +132,7 @@ class Span {
 
   struct ReversedIterator : public IteratorBase {
     using difference_type = int64;
-    using value_type = NonCVType;
+    using value_type = ValueType;
 
     ElementAccessType operator*() { return *this->iter_; }
     ReversedIterator& operator++() {

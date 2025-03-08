@@ -967,8 +967,7 @@ struct VectorRange
     : public RangeBase<
           VectorRange<ET>,
           ContainerRangeIter<typename std::vector<ET>::const_iterator>> {
-  using IT = typename std::vector<ET>::const_iterator;
-  using iterator = ContainerRangeIter<IT>;
+  using iterator = ContainerRangeIter<typename std::vector<ET>::const_iterator>;
   using const_iterator = iterator;
   using value_type = typename iterator::value_type;
 
@@ -976,12 +975,8 @@ struct VectorRange
 
   VectorRange(std::vector<ET>&& vec) : vec_(std::move(vec)) {}
 
-  ContainerRangeIter<IT> begin() const {
-    return ContainerRangeIter<IT>{vec_.begin()};
-  }
-  ContainerRangeIter<IT> end() const {
-    return ContainerRangeIter<IT>{vec_.end()};
-  }
+  iterator begin() const { return iterator{vec_.begin()}; }
+  iterator end() const { return iterator{vec_.end()}; }
 
   int64 CountImpl() const { return static_cast<int64>(std::size(vec_)); }
 
@@ -1043,8 +1038,8 @@ struct ArrayRange : public RangeBase<ArrayRange<ET>, ArrayRangeIter<ET>> {
 
   ArrayRange(const value_type* b, const value_type* e) : b_(b), e_(e) {}
 
-  ArrayRangeIter<ET> begin() const { return ArrayRangeIter<ET>{b_}; }
-  ArrayRangeIter<ET> end() const { return ArrayRangeIter<ET>{e_}; }
+  iterator begin() const { return iterator{b_}; }
+  iterator end() const { return iterator{e_}; }
 
   int64 CountImpl() const { return static_cast<int64>(e_ - b_); }
 
@@ -1115,12 +1110,8 @@ struct MappedRange
               const std::function<TT(typename iterator::src_arg_type)>& mapper)
       : b_(b), e_(e), mapper_(mapper) {}
 
-  MappedRangeIter<IT, TT> begin() const {
-    return MappedRangeIter<IT, TT>{b_, mapper_};
-  }
-  MappedRangeIter<IT, TT> end() const {
-    return MappedRangeIter<IT, TT>{e_, mapper_};
-  }
+  iterator begin() const { return iterator{b_, mapper_}; }
+  iterator end() const { return iterator{e_, mapper_}; }
 
   IT b_;
   IT e_;
@@ -1172,15 +1163,13 @@ struct FilterRange : public RangeBase<FilterRange<IT>, FilterRangeIter<IT>> {
               const std::function<int(const typename IT::value_type&)>& filter)
       : b_(b), e_(e), filter_(filter) {}
 
-  FilterRangeIter<IT> begin() const {
+  iterator begin() const {
     auto now = b_;
     while (now != e_ && !filter_(*now)) ++now;
-    return FilterRangeIter<IT>{now, e_, filter_};
+    return iterator{now, e_, filter_};
   }
 
-  FilterRangeIter<IT> end() const {
-    return FilterRangeIter<IT>{e_, e_, filter_};
-  }
+  iterator end() const { return iterator{e_, e_, filter_}; }
 
   IT b_;
   IT e_;
@@ -1231,8 +1220,8 @@ struct ContainerRangeI {
   using iterator = ContainerIterI<IT>;
   using const_iterator = ContainerIterI<IT>;
 
-  ContainerIterI<IT> begin() const { return ContainerIterI<IT>{b_, 0}; }
-  ContainerIterI<IT> end() const { return ContainerIterI<IT>{e_, 0}; }
+  iterator begin() const { return iterator{b_, 0}; }
+  iterator end() const { return iterator{e_, 0}; }
 
   IT b_;
   IT e_;
@@ -1279,8 +1268,8 @@ struct ArrayRangeI {
   using iterator = ArrayIterI<T>;
   using const_iterator = ArrayIterI<T>;
 
-  ArrayIterI<T> begin() const { return ArrayIterI<T>{start_, 0}; }
-  ArrayIterI<T> end() const { return ArrayIterI<T>{start_, cnt_}; }
+  iterator begin() const { return iterator{start_, 0}; }
+  iterator end() const { return iterator{start_, cnt_}; }
 
   T* start_;
   int64 cnt_;

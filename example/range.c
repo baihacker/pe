@@ -13,7 +13,23 @@ void irange_array() {
     }
   }
   {
+    std::array<int, 6> a = {1, 2, 3, 4, 5, 6};
+    for (auto iter : IRange(a)) {
+      std::cout << iter.i << " " << iter.v << std::endl;
+    }
+    for (auto iter : IRange(a)) {
+      std::cout << iter.i << " " << iter.v << std::endl;
+    }
+  }
+  {
     const int a[6] = {1, 2, 3, 4, 5, 6};
+    for (auto iter : IRange(a)) {
+      std::cout << iter.i << " " << iter.v << std::endl;
+      // ++iter.v; not allowed
+    }
+  }
+  {
+    std::array<int, 6> a = {1, 2, 3, 4, 5, 6};
     for (auto iter : IRange(a)) {
       std::cout << iter.i << " " << iter.v << std::endl;
       // ++iter.v; not allowed
@@ -144,10 +160,26 @@ void range_array_reduce() {
     std::cout << Range(a).Reduce(0, [](int& a, int b) -> void { a += b; })
               << std::endl;
   }
+  {
+    std::array<int, 6> a = {1, 2, 3, 4, 5, 6};
+    std::cout << Range(a).Reduce(ru::Add<int64>()) << std::endl;
+    std::cout << Range(a).Reduce(0, [](int& a, int b) -> void { a += b; })
+              << std::endl;
+  }
 
   // Parallel
   {
     int a[6] = {1, 2, 3, 4, 5, 6};
+    std::cout << Range(a).PReduce(ru::Add<int64>()) << std::endl;
+    std::cout << Range(a).PReduce(0, [](int& a, int b) -> void { a += b; })
+              << std::endl;
+    std::cout << Range(a).PReduce(
+                     0, [](int& a, int b) -> void { a += b; },
+                     [](int& a, int b) -> void { a += b; })
+              << std::endl;
+  }
+  {
+    std::array<int, 6> a = {1, 2, 3, 4, 5, 6};
     std::cout << Range(a).PReduce(ru::Add<int64>()) << std::endl;
     std::cout << Range(a).PReduce(0, [](int& a, int b) -> void { a += b; })
               << std::endl;
@@ -214,8 +246,9 @@ void range_map_reduce() {
                      }))
               << std::endl;
 
-    std::cout << Range(a).Map<int64>([](const auto& a) { return a.second; }).Sum()
-              << std::endl;
+    std::cout
+        << Range(a).Map<int64>([](const auto& a) { return a.second; }).Sum()
+        << std::endl;
   }
 
   // Parallel
@@ -228,8 +261,9 @@ void range_map_reduce() {
                        return x.second;
                      }))
               << std::endl;
-    std::cout << Range(a).PMap<int64>([](const auto& a) { return a.second; }).Sum()
-              << std::endl;
+    std::cout
+        << Range(a).PMap<int64>([](const auto& a) { return a.second; }).Sum()
+        << std::endl;
   }
 }
 
@@ -370,10 +404,11 @@ void range_general_example() {
                    .Reduce(ru::Reducer<int64, int>(
                        0, [=](int64& r, int v) { r += v; }))
             << std::endl;
-  // Error
-  // std::cout << range(mem).PReduce({0,0}, [](auto a, auto b) ->
-  // std::pair<const int, int> {return {0, a.second + b.second};}, 2) <<
-  // std::endl;
+
+  std::cout << Range(mem).PReduce(
+                   std::pair<int, int>{0, 0},
+                   [](auto& a, auto b) { a.second += b.second; }, 2)
+            << std::endl;
   std::vector<Pt> y;
   y.push_back({1, 2});
   y.push_back({3, 4});
@@ -403,7 +438,7 @@ void range_example() {
 }
 
 int main() {
-  PeInitializer().set_max_prime(2000000).Init();
+  PE_INIT(maxp = 2000000);
   irange_example();
   range_example();
   return 0;

@@ -953,6 +953,38 @@ struct ContainerRangeIter {
   IT iter_;
 };
 
+template <typename T>
+struct ContainerRangeIter<T*> {
+  using value_type = std::remove_cvref_t<T>;
+  using const_reference = std::add_lvalue_reference_t<std::add_const_t<T>>;
+  using reference = std::add_lvalue_reference_t<T>;
+  using const_arg_type = make_const_arg_type_t<value_type>;
+
+  reference operator*() { return *iter_; }
+
+  int operator==(const ContainerRangeIter& o) const { return iter_ == o.iter_; }
+
+  int operator!=(const ContainerRangeIter& o) const {
+    return !(this->operator==(o));
+  }
+
+  ContainerRangeIter& operator++() {
+    ++iter_;
+    return *this;
+  }
+
+  ContainerRangeIter operator++(int) { return ContainerRangeIter{iter_++}; }
+
+  ContainerRangeIter& operator--() {
+    --iter_;
+    return *this;
+  }
+
+  ContainerRangeIter operator--(int) { return ContainerRangeIter{iter_--}; }
+
+  T* iter_;
+};
+
 template <typename IT>
 struct ContainerRange
     : public RangeBase<ContainerRange<IT>, ContainerRangeIter<IT>> {
@@ -1225,6 +1257,45 @@ struct ContainerIterI {
   ContainerIterI operator--(int) { return ContainerIterI{iter_--, idx_--}; }
 
   IT iter_;
+  int64 idx_;
+};
+
+template <typename T>
+struct ContainerIterI<T*> {
+  struct ContainerItemI {
+    const int64 i;
+    const std::remove_cv_t<T> v;
+  };
+
+  using value_type = ContainerItemI;
+  using const_reference = const value_type;
+  using reference = const_reference;
+
+  reference operator*() { return ContainerItemI{idx_, *iter_}; }
+
+  int operator==(const ContainerIterI& o) const { return iter_ == o.iter_; }
+
+  int operator!=(const ContainerIterI& o) const {
+    return !(this->operator==(o));
+  }
+
+  ContainerIterI& operator++() {
+    ++idx_;
+    ++iter_;
+    return *this;
+  }
+
+  ContainerIterI operator++(int) { return ContainerIterI{iter_++, idx_++}; }
+
+  ContainerIterI& operator--() {
+    --idx_;
+    --iter_;
+    return *this;
+  }
+
+  ContainerIterI operator--(int) { return ContainerIterI{iter_--, idx_--}; }
+
+  T* iter_;
   int64 idx_;
 };
 

@@ -596,7 +596,7 @@ template <typename ET>
 struct NumberIter {
   using value_type = std::remove_cvref_t<ET>;
   using reference = value_type;
-  using arg_type = const value_type;
+  using arg_type = make_const_arg_type_t<value_type>;
 
   reference operator*() const { return i_; }
 
@@ -812,7 +812,7 @@ template <typename ET>
 struct NumberIterD {
   using value_type = std::remove_cvref_t<ET>;
   using reference = value_type;
-  using arg_type = const value_type;
+  using arg_type = make_const_arg_type_t<value_type>;
 
   reference operator*() const { return i_; }
 
@@ -864,8 +864,8 @@ struct NumberRangeD : public RangeBase<NumberRangeD<ET>, NumberIterD<ET>> {
     }
   }
 
-  NumberIterD<ET> begin() const { return NumberIterD<ET>{b_, e_, delta_}; }
-  NumberIterD<ET> end() const { return NumberIterD<ET>{e_, e_, delta_}; }
+  iterator begin() const { return iterator{b_, e_, delta_}; }
+  iterator end() const { return iterator{e_, e_, delta_}; }
 
   int64 CountImpl() const {
     return e_ == b_ ? 0LL : static_cast<int64>((e_ - b_) / delta_);
@@ -955,8 +955,8 @@ struct ContainerRange
 
   ContainerRange(IT b, IT e) : b_(b), e_(e) {}
 
-  ContainerRangeIter<IT> begin() const { return ContainerRangeIter<IT>{b_}; }
-  ContainerRangeIter<IT> end() const { return ContainerRangeIter<IT>{e_}; }
+  iterator begin() const { return iterator{b_}; }
+  iterator end() const { return iterator{e_}; }
 
   IT b_;
   IT e_;
@@ -1105,9 +1105,10 @@ struct MappedRange
   using iterator = MappedRangeIter<IT, TT>;
   using const_iterator = iterator;
   using value_type = typename iterator::value_type;
+  using arg_type = typename iterator::arg_type;
+  using src_arg_type = typename iterator::src_arg_type;
 
-  MappedRange(IT b, IT e,
-              const std::function<TT(typename iterator::src_arg_type)>& mapper)
+  MappedRange(IT b, IT e, const std::function<TT(src_arg_type)>& mapper)
       : b_(b), e_(e), mapper_(mapper) {}
 
   iterator begin() const { return iterator{b_, mapper_}; }
@@ -1115,7 +1116,7 @@ struct MappedRange
 
   IT b_;
   IT e_;
-  const std::function<TT(typename iterator::src_arg_type)> mapper_;
+  const std::function<TT(src_arg_type)> mapper_;
 };
 
 template <typename IT>
@@ -1157,10 +1158,11 @@ template <typename IT>
 struct FilterRange : public RangeBase<FilterRange<IT>, FilterRangeIter<IT>> {
   using iterator = FilterRangeIter<IT>;
   using const_iterator = iterator;
-  using value_type = typename FilterRangeIter<IT>::value_type;
+  using value_type = typename iterator::value_type;
+  using arg_type = typename iterator::arg_type;
+  using src_arg_type = typename iterator::src_arg_type;
 
-  FilterRange(IT b, IT e,
-              const std::function<int(const typename IT::value_type&)>& filter)
+  FilterRange(IT b, IT e, const std::function<int(src_arg_type)>& filter)
       : b_(b), e_(e), filter_(filter) {}
 
   iterator begin() const {
@@ -1173,7 +1175,7 @@ struct FilterRange : public RangeBase<FilterRange<IT>, FilterRangeIter<IT>> {
 
   IT b_;
   IT e_;
-  const std::function<int(typename iterator::src_arg_type)> filter_;
+  const std::function<int(src_arg_type)> filter_;
 };
 
 // IRange support. i = index.

@@ -132,7 +132,7 @@ struct RangeBase {
   using self_type = RangeBase<DERIVED, IT>;
   using value_type = typename IT::value_type;
   using reference = typename IT::reference;
-  using arg_type = typename IT::arg_type;
+  using const_arg_type = typename IT::const_arg_type;
 
   int64 CalculateDefaultPartitionSize(const int64 size, const int thread_number,
                                       const int64 partition_size) const {
@@ -142,14 +142,15 @@ struct RangeBase {
 
   // Filter
 
-  FilterRange<IT> Filter(const std::function<int(arg_type)>& filter) const {
+  FilterRange<IT> Filter(
+      const std::function<int(const_arg_type)>& filter) const {
     return FilterRange<IT>{static_cast<const DERIVED&>(*this).begin(),
                            static_cast<const DERIVED&>(*this).end(), filter};
   }
 
-  VectorRange<value_type> PFilter(const std::function<int(arg_type)>& filter,
-                                  const int thread_number,
-                                  int64 partition_size = 0) const {
+  VectorRange<value_type> PFilter(
+      const std::function<int(const_arg_type)>& filter, const int thread_number,
+      int64 partition_size = 0) const {
     std::vector<value_type> data = ToVector();
     const int size = sz(data);
     if (size == 0) {
@@ -191,7 +192,8 @@ struct RangeBase {
   }
 
   template <int TN = kDefaultThreadNumber, int64 PS = kDefaultPartitionSize>
-  VectorRange<value_type> PFilterT(const std::function<int(arg_type)>& filter) {
+  VectorRange<value_type> PFilterT(
+      const std::function<int(const_arg_type)>& filter) {
     return PFilter(filter, TN, PS);
   }
 
@@ -322,14 +324,15 @@ struct RangeBase {
   }
 
   template <typename TT>
-  MappedRange<IT, TT> Map(const std::function<TT(arg_type)>& mapper) const {
+  MappedRange<IT, TT> Map(
+      const std::function<TT(const_arg_type)>& mapper) const {
     return MappedRange<IT, TT>{static_cast<const DERIVED&>(*this).begin(),
                                static_cast<const DERIVED&>(*this).end(),
                                mapper};
   }
 
   template <typename TT>
-  VectorRange<TT> PMap(const std::function<TT(arg_type)>& mapper,
+  VectorRange<TT> PMap(const std::function<TT(const_arg_type)>& mapper,
                        const int thread_number = kDefaultThreadNumber,
                        int64 partition_size = kDefaultPartitionSize) const {
     std::vector<value_type> data = ToVector();
@@ -355,7 +358,7 @@ struct RangeBase {
 
   template <typename TT, int TN = kDefaultThreadNumber,
             int PS = kDefaultPartitionSize>
-  VectorRange<TT> PMapT(const std::function<TT(arg_type)>& mapper) const {
+  VectorRange<TT> PMapT(const std::function<TT(const_arg_type)>& mapper) const {
     return PMap(mapper, TN, PS);
   }
 
@@ -529,7 +532,7 @@ struct RangeBase {
     return VectorRange<value_type>(std::move(data));
   }
 
-  int AnyMatch(const std::function<int(arg_type)>& filter) const {
+  int AnyMatch(const std::function<int(const_arg_type)>& filter) const {
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
@@ -540,7 +543,7 @@ struct RangeBase {
     return 0;
   }
 
-  int AllMatch(const std::function<int(arg_type)>& filter) const {
+  int AllMatch(const std::function<int(const_arg_type)>& filter) const {
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
@@ -551,7 +554,7 @@ struct RangeBase {
     return 1;
   }
 
-  int NoneMatch(const std::function<int(arg_type)>& filter) const {
+  int NoneMatch(const std::function<int(const_arg_type)>& filter) const {
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
@@ -595,8 +598,9 @@ struct RangeBase {
 template <typename ET>
 struct NumberIter {
   using value_type = std::remove_cvref_t<ET>;
-  using reference = value_type;
-  using arg_type = make_const_arg_type_t<value_type>;
+  using const_reference = std::add_const_t<value_type>;
+  using reference = const_reference;
+  using const_arg_type = make_const_arg_type_t<value_type>;
 
   reference operator*() const { return i_; }
 
@@ -626,7 +630,7 @@ struct NumberRange : public RangeBase<NumberRange<ET>, NumberIter<ET>> {
   using iterator = NumberIter<ET>;
   using const_iterator = iterator;
   using value_type = typename iterator::value_type;
-  using arg_type = typename iterator::arg_type;
+  using const_arg_type = typename iterator::const_arg_type;
 
   NumberRange(value_type b, value_type e) : b_(b), e_(e) {}
 
@@ -811,8 +815,9 @@ struct NumberRange : public RangeBase<NumberRange<ET>, NumberIter<ET>> {
 template <typename ET>
 struct NumberIterD {
   using value_type = std::remove_cvref_t<ET>;
-  using reference = value_type;
-  using arg_type = make_const_arg_type_t<value_type>;
+  using const_reference = std::add_const_t<value_type>;
+  using reference = const_reference;
+  using const_arg_type = make_const_arg_type_t<value_type>;
 
   reference operator*() const { return i_; }
 
@@ -918,10 +923,15 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(NumberRangeD<int64>)
 template <typename IT>
 struct ContainerRangeIter {
   using value_type = std::remove_cvref_t<typename IT::value_type>;
+  using const_reference = std::add_lvalue_reference_t<
+      std::add_const_t<std::remove_reference_t<typename IT::reference>>>;
   using reference = typename IT::reference;
-  using arg_type = make_const_arg_type_t<value_type>;
+  using const_arg_type = make_const_arg_type_t<value_type>;
 
-  reference operator*() { return *iter_; }
+  reference operator*() {
+    dbg("here");
+    return *iter_;
+  }
 
   int operator==(const ContainerRangeIter& o) const { return iter_ == o.iter_; }
 
@@ -975,7 +985,7 @@ struct VectorRange
 
   VectorRange(std::vector<ET>&& vec) : vec_(std::move(vec)) {}
 
-  iterator begin() const { return iterator{vec_.begin()}; }
+  iterator begin() const { return iterator{vec_.cbegin()}; }
   iterator end() const { return iterator{vec_.end()}; }
 
   int64 CountImpl() const { return static_cast<int64>(std::size(vec_)); }
@@ -1002,8 +1012,9 @@ SL REQUIRES(!is_builtin_integer_v<T>) RETURN(ContainerRange<T>)
 template <typename ET>
 struct ArrayRangeIter {
   using value_type = std::remove_cvref_t<ET>;
-  using reference = const value_type&;
-  using arg_type = make_const_arg_type_t<value_type>;
+  using const_reference = const value_type&;
+  using reference = const_reference;
+  using const_arg_type = make_const_arg_type_t<value_type>;
 
   reference operator*() { return *iter_; }
 
@@ -1069,9 +1080,10 @@ SL ArrayRange<T> Range(T (&a)[N]) {
 template <typename IT, typename TT>
 struct MappedRangeIter {
   using value_type = std::remove_cvref_t<TT>;
-  using reference = value_type;
-  using arg_type = make_const_arg_type_t<value_type>;
-  using src_arg_type = typename IT::arg_type;
+  using const_reference = std::add_const_t<value_type>;
+  using reference = const_reference;
+  using const_arg_type = make_const_arg_type_t<value_type>;
+  using src_const_arg_type = typename IT::const_arg_type;
 
   reference operator*() { return mapper_(*iter_); }
 
@@ -1096,7 +1108,7 @@ struct MappedRangeIter {
   MappedRangeIter operator--(int) { return MappedRangeIter{iter_--, mapper_}; }
 
   IT iter_;
-  const std::function<TT(src_arg_type)>& mapper_;
+  const std::function<TT(src_const_arg_type)>& mapper_;
 };
 
 template <typename IT, typename TT>
@@ -1105,10 +1117,10 @@ struct MappedRange
   using iterator = MappedRangeIter<IT, TT>;
   using const_iterator = iterator;
   using value_type = typename iterator::value_type;
-  using arg_type = typename iterator::arg_type;
-  using src_arg_type = typename iterator::src_arg_type;
+  using const_arg_type = typename iterator::const_arg_type;
+  using src_const_arg_type = typename iterator::src_const_arg_type;
 
-  MappedRange(IT b, IT e, const std::function<TT(src_arg_type)>& mapper)
+  MappedRange(IT b, IT e, const std::function<TT(src_const_arg_type)>& mapper)
       : b_(b), e_(e), mapper_(mapper) {}
 
   iterator begin() const { return iterator{b_, mapper_}; }
@@ -1116,15 +1128,16 @@ struct MappedRange
 
   IT b_;
   IT e_;
-  const std::function<TT(src_arg_type)> mapper_;
+  const std::function<TT(src_const_arg_type)> mapper_;
 };
 
 template <typename IT>
 struct FilterRangeIter {
   using value_type = typename IT::value_type;
-  using reference = typename IT::reference;
-  using arg_type = typename IT::arg_type;
-  using src_arg_type = typename IT::arg_type;
+  using const_reference = typename IT::const_reference;
+  using reference = const_reference;
+  using const_arg_type = typename IT::const_arg_type;
+  using src_const_arg_type = typename IT::const_arg_type;
 
   reference operator*() { return *iter_; }
 
@@ -1151,7 +1164,7 @@ struct FilterRangeIter {
 
   IT iter_;
   IT e_;
-  const std::function<int(src_arg_type)>& filter_;
+  const std::function<int(src_const_arg_type)>& filter_;
 };
 
 template <typename IT>
@@ -1159,10 +1172,10 @@ struct FilterRange : public RangeBase<FilterRange<IT>, FilterRangeIter<IT>> {
   using iterator = FilterRangeIter<IT>;
   using const_iterator = iterator;
   using value_type = typename iterator::value_type;
-  using arg_type = typename iterator::arg_type;
-  using src_arg_type = typename iterator::src_arg_type;
+  using const_arg_type = typename iterator::const_arg_type;
+  using src_const_arg_type = typename iterator::src_const_arg_type;
 
-  FilterRange(IT b, IT e, const std::function<int(src_arg_type)>& filter)
+  FilterRange(IT b, IT e, const std::function<int(src_const_arg_type)>& filter)
       : b_(b), e_(e), filter_(filter) {}
 
   iterator begin() const {
@@ -1175,7 +1188,7 @@ struct FilterRange : public RangeBase<FilterRange<IT>, FilterRangeIter<IT>> {
 
   IT b_;
   IT e_;
-  const std::function<int(src_arg_type)> filter_;
+  const std::function<int(src_const_arg_type)> filter_;
 };
 
 // IRange support. i = index.
@@ -1187,7 +1200,8 @@ struct ContainerIterI {
   };
 
   using value_type = ContainerItemI;
-  using reference = ContainerItemI;
+  using const_reference = const value_type;
+  using reference = const_reference;
 
   ContainerItemI operator*() { return ContainerItemI{idx_, *iter_}; }
 
@@ -1237,7 +1251,8 @@ struct ArrayIterI {
   };
 
   using value_type = ContainerItemI;
-  using reference = ContainerItemI;
+  using const_reference = const value_type;
+  using reference = const_reference;
 
   ContainerItemI operator*() { return ContainerItemI{idx_, start_[idx_]}; }
 

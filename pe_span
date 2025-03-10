@@ -9,17 +9,20 @@ namespace pe {
 template <typename T>
 class Span {
  public:
-  using ElementType = T;
+  using element_type = T;
   // Possible volatile.
-  using NonConstElementType = std::remove_const_t<T>;
-  using ConstElementType = std::add_const_t<T>;
+  using non_const_element_type = std::remove_const_t<T>;
+  using const_element_type = std::add_const_t<T>;
 
-  using PointerToElementType = std::add_pointer_t<T>;
-  using ValueType = std::remove_cv_t<T>;
+  using pointer = T*;
+  using value_type = std::remove_cv_t<T>;
 
-  using ConstElementAccessType = make_const_arg_type_t<T>;
-  using ElementAccessType =
-      std::conditional_t<std::is_const_v<T>, ConstElementAccessType,
+  using reference = T&;
+  using const_reference = const_element_type&;
+
+  using const_element_access_type = make_const_arg_type_t<T>;
+  using element_access_type =
+      std::conditional_t<std::is_const_v<T>, const_element_access_type,
                          std::add_lvalue_reference_t<T>>;
 
   class iterator;
@@ -30,42 +33,43 @@ class Span {
 
   constexpr Span(const Span&) noexcept = default;
 
-  constexpr Span(std::initializer_list<NonConstElementType> init) noexcept
+  constexpr Span(std::initializer_list<non_const_element_type> init) noexcept
       : p(std::data(init)), n(std::size(init)) {}
 
-  constexpr Span(PointerToElementType ptr, int64 n) noexcept : p(ptr), n(n) {}
+  constexpr Span(pointer ptr, int64 n) noexcept : p(ptr), n(n) {}
 
   template <int64 N>
-  constexpr Span(const NonConstElementType (&a)[N]) noexcept : Span(&a[0], N) {}
+  constexpr Span(const non_const_element_type (&a)[N]) noexcept
+      : Span(&a[0], N) {}
 
   template <int64 N>
-  constexpr Span(NonConstElementType (&a)[N]) noexcept : Span(&a[0], N) {}
+  constexpr Span(non_const_element_type (&a)[N]) noexcept : Span(&a[0], N) {}
 
-  constexpr Span(const std::vector<ValueType>& v) noexcept
+  constexpr Span(const std::vector<value_type>& v) noexcept
       : Span(&v[0], static_cast<int64>(std::size(v))) {}
 
-  constexpr Span(std::vector<ValueType>& v) noexcept
+  constexpr Span(std::vector<value_type>& v) noexcept
       : Span(&v[0], static_cast<int64>(std::size(v))) {}
 
-  constexpr Span(std::vector<ValueType>&& v) noexcept
+  constexpr Span(std::vector<value_type>&& v) noexcept
       : Span(&v[0], static_cast<int64>(std::size(v))) {}
 
-  constexpr Span(std::vector<ValueType>&& v, int) noexcept = delete;
+  constexpr Span(std::vector<value_type>&& v, int) noexcept = delete;
 
   template <std::size_t N>
-  constexpr Span(const std::array<ValueType, N>& v) noexcept
-      : Span(&v[0], static_cast<int64>(std::size(v))) {}
-
-  template <std::size_t N>
-  constexpr Span(std::array<ValueType, N>& v) noexcept
+  constexpr Span(const std::array<value_type, N>& v) noexcept
       : Span(&v[0], static_cast<int64>(std::size(v))) {}
 
   template <std::size_t N>
-  constexpr Span(std::array<ValueType, N>&& v) noexcept
+  constexpr Span(std::array<value_type, N>& v) noexcept
       : Span(&v[0], static_cast<int64>(std::size(v))) {}
 
   template <std::size_t N>
-  constexpr Span(std::array<ValueType, N>&& v, int) noexcept = delete;
+  constexpr Span(std::array<value_type, N>&& v) noexcept
+      : Span(&v[0], static_cast<int64>(std::size(v))) {}
+
+  template <std::size_t N>
+  constexpr Span(std::array<value_type, N>&& v, int) noexcept = delete;
 
   ~Span() noexcept = default;
 
@@ -77,27 +81,27 @@ class Span {
 
   constexpr bool empty() const noexcept { return size() == 0; }
 
-  constexpr ElementAccessType front() const noexcept {
+  constexpr element_access_type front() const noexcept {
     PE_ASSERT(!empty());
     return *this->p;
   }
 
-  constexpr ElementAccessType back() const noexcept {
+  constexpr element_access_type back() const noexcept {
     PE_ASSERT(!empty());
     return *(this->p + (size() - 1));
   }
 
-  constexpr ElementAccessType operator[](int64 idx) const noexcept {
+  constexpr element_access_type operator[](int64 idx) const noexcept {
     // PE_ASSERT(idx < size());
     return *(this->p + idx);
   }
 
-  constexpr ElementAccessType at(int64 idx) const {
+  constexpr element_access_type at(int64 idx) const {
     PE_ASSERT(idx < size());
     return *(this->p + idx);
   }
 
-  constexpr PointerToElementType data() const noexcept { return this->p; }
+  constexpr pointer data() const noexcept { return this->p; }
 
   // iterator support
   struct IteratorBase {
@@ -107,16 +111,16 @@ class Span {
     bool operator!=(const IteratorBase& o) const {
       return !(this->operator==(o));
     }
-    PointerToElementType iter_;
+    pointer iter_;
   };
 
   struct iterator : public IteratorBase {
     using difference_type = int64;
-    using value_type = ValueType;
-    using reference = ElementAccessType;
-    using const_reference = ConstElementAccessType;
+    using value_type = value_type;
+    using reference = element_access_type;
+    using const_reference = const_element_access_type;
 
-    ElementAccessType operator*() const { return *this->iter_; }
+    element_access_type operator*() const { return *this->iter_; }
     iterator& operator++() {
       ++this->iter_;
       return *this;
@@ -133,16 +137,16 @@ class Span {
   };
 
   struct const_iterator : public iterator {
-    using reference = ConstElementAccessType;
-    using const_reference = ConstElementAccessType;
-    ConstElementAccessType operator*() const { return *this->iter_; }
+    using reference = const_element_access_type;
+    using const_reference = const_element_access_type;
+    const_element_access_type operator*() const { return *this->iter_; }
   };
 
   struct ReversedIterator : public IteratorBase {
     using difference_type = int64;
-    using value_type = ValueType;
+    using value_type = value_type;
 
-    ElementAccessType operator*() { return *this->iter_; }
+    element_access_type operator*() { return *this->iter_; }
     ReversedIterator& operator++() {
       --this->iter_;
       return *this;
@@ -158,7 +162,7 @@ class Span {
     ReversedIterator operator--(int) { return ReversedIterator{this->iter_++}; }
   };
   struct ConstReversedIterator : public ReversedIterator {
-    ConstElementAccessType operator*() const { return *this->iter_; }
+    const_element_access_type operator*() const { return *this->iter_; }
   };
 
   constexpr iterator begin() const noexcept { return iterator{this->p}; }
@@ -193,11 +197,11 @@ class Span {
 
   struct IndexedValue {
     int64 i;
-    ElementAccessType v;
+    element_access_type v;
   };
   struct ConstIndexedValue {
     int64 i;
-    ConstElementAccessType v;
+    const_element_access_type v;
   };
   struct IndexedIteratorBase {
     bool operator==(const IndexedIteratorBase& o) const {
@@ -206,7 +210,7 @@ class Span {
     bool operator!=(const IndexedIteratorBase& o) const {
       return !(this->operator==(o));
     }
-    PointerToElementType base_;
+    pointer base_;
     int64 iter_;
   };
   struct IndexedIterator : public IndexedIteratorBase {
@@ -239,7 +243,7 @@ class Span {
   };
 
   struct ItemBase {
-    PointerToElementType p;
+    pointer p;
     int64 n;
   };
   struct ItemImpl : public ItemBase {
@@ -282,7 +286,7 @@ class Span {
       return ReversedIndexedIterator{this->base_, this->iter_--};
     }
 
-    PointerToElementType base_;
+    pointer base_;
     int64 iter_;
   };
   struct ConstReversedIndexedIterator : public ReversedIndexedIterator {
@@ -328,7 +332,7 @@ class Span {
     return {this->data() + offset, count};
   }
 
-  PointerToElementType p;
+  pointer p;
   int64 n;
 };
 
@@ -484,23 +488,23 @@ using AdaptToSpanTransformT = typename AdaptToSpanTransform<T>::Type;
 
 template <typename T>
 struct span_like_impl<Span<T>> {
-  using ElementType = T;
-  using NonConstElementType = std::remove_const_t<T>;
-  using ConstElementType = std::add_const_t<T>;
+  using element_type = T;
+  using non_const_element_type = std::remove_const_t<T>;
+  using const_element_type = std::add_const_t<T>;
   enum {
     value = true,
-    is_element_type_const = std::is_same_v<ElementType, ConstElementType>
+    is_element_type_const = std::is_same_v<element_type, const_element_type>
   };
 };
 
 template <typename T>
 struct span_like_impl<CSpan<T>> {
-  using ElementType = std::add_const_t<T>;
-  using NonConstElementType = std::remove_const_t<T>;
-  using ConstElementType = std::add_const_t<T>;
+  using element_type = std::add_const_t<T>;
+  using non_const_element_type = std::remove_const_t<T>;
+  using const_element_type = std::add_const_t<T>;
   enum {
     value = true,
-    is_element_type_const = std::is_same_v<ElementType, ConstElementType>
+    is_element_type_const = std::is_same_v<element_type, const_element_type>
   };
 };
 

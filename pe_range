@@ -599,15 +599,15 @@ template <typename ET>
 struct NumberIter {
   using value_type = std::remove_cvref_t<ET>;
 
-  using const_reference = std::add_const_t<value_type>;
-  using reference = const_reference;
+  using const_reference = std::add_const_t<ET>&;
+  using reference = ET&;
 
   using const_arg_type = make_const_arg_type_t<value_type>;
 
-  using const_element_access_type = const_reference;
-  using element_access_type = reference;
+  using const_element_access_type = make_const_arg_type_t<value_type>;
+  using element_access_type = const_element_access_type;
 
-  reference operator*() const { return i_; }
+  element_access_type operator*() const { return i_; }
 
   int operator==(const NumberIter& o) const { return i_ == o.i_; }
 
@@ -821,15 +821,15 @@ template <typename ET>
 struct NumberIterD {
   using value_type = std::remove_cvref_t<ET>;
 
-  using const_reference = std::add_const_t<value_type>;
-  using reference = const_reference;
+  using const_reference = std::add_const_t<ET>&;
+  using reference = ET&;
 
   using const_arg_type = make_const_arg_type_t<value_type>;
 
-  using const_element_access_type = const_reference;
-  using element_access_type = reference;
+  using const_element_access_type = make_const_arg_type_t<value_type>;
+  using element_access_type = const_element_access_type;
 
-  reference operator*() const { return i_; }
+  element_access_type operator*() const { return i_; }
 
   int operator==(const NumberIterD& o) const { return i_ == o.i_; }
 
@@ -941,10 +941,12 @@ struct ContainerRangeIter {
 
   using const_arg_type = make_const_arg_type_t<value_type>;
 
-  using const_element_access_type = const_reference;
-  using element_access_type = reference;
+  using const_element_access_type =
+      typename iterator_type_traits::const_element_access_type;
+  using element_access_type =
+      typename iterator_type_traits::element_access_type;
 
-  reference operator*() { return *iter_; }
+  element_access_type operator*() { return *iter_; }
 
   int operator==(const ContainerRangeIter& o) const { return iter_ == o.iter_; }
 
@@ -1032,17 +1034,21 @@ SL REQUIRES(!is_builtin_integer_v<T>) RETURN(ContainerRange<T>)
 
 template <typename ET>
 struct ArrayRangeIter {
-  using value_type = std::remove_cvref_t<ET>;
+  using iterator_type_traits = pe_iterator_traits<ET*>;
 
-  using const_reference = const value_type&;
-  using reference = const_reference;
+  using value_type = typename iterator_type_traits::value_type;
+
+  using const_reference = typename iterator_type_traits::const_reference;
+  using reference = typename iterator_type_traits::reference;
 
   using const_arg_type = make_const_arg_type_t<value_type>;
 
-  using const_element_access_type = const_reference;
-  using element_access_type = reference;
+  using const_element_access_type =
+      typename iterator_type_traits::const_element_access_type;
+  using element_access_type =
+      typename iterator_type_traits::element_access_type;
 
-  reference operator*() { return *iter_; }
+  element_access_type operator*() { return *iter_; }
 
   int operator==(const ArrayRangeIter& o) const { return iter_ == o.iter_; }
 
@@ -1064,7 +1070,7 @@ struct ArrayRangeIter {
 
   ArrayRangeIter operator--(int) { return ArrayRangeIter{iter_--}; }
 
-  const value_type* iter_;
+  ET* iter_;
 };
 
 template <typename ET>
@@ -1073,15 +1079,15 @@ struct ArrayRange : public RangeBase<ArrayRange<ET>, ArrayRangeIter<ET>> {
   using const_iterator = iterator;
   using value_type = typename iterator::value_type;
 
-  ArrayRange(const value_type* b, const value_type* e) : b_(b), e_(e) {}
+  ArrayRange(ET* b, ET* e) : b_(b), e_(e) {}
 
   iterator begin() const { return iterator{b_}; }
   iterator end() const { return iterator{e_}; }
 
   int64 CountImpl() const { return static_cast<int64>(e_ - b_); }
 
-  const value_type* b_;
-  const value_type* e_;
+  ET* b_;
+  ET* e_;
 };
 
 template <typename T>
@@ -1116,7 +1122,7 @@ struct MappedRangeIter {
   using const_element_access_type = const_reference;
   using element_access_type = reference;
 
-  reference operator*() { return mapper_(*iter_); }
+  element_access_type operator*() { return mapper_(*iter_); }
 
   int operator==(const MappedRangeIter& o) const { return iter_ == o.iter_; }
 
@@ -1164,18 +1170,22 @@ struct MappedRange
 
 template <typename IT>
 struct FilterRangeIter {
-  using value_type = typename IT::value_type;
+  using iterator_type_traits = pe_iterator_traits<IT>;
 
-  using const_reference = typename IT::const_reference;
-  using reference = const_reference;
+  using value_type = typename iterator_type_traits::value_type;
 
-  using const_arg_type = typename IT::const_arg_type;
+  using const_reference = typename iterator_type_traits::const_reference;
+  using reference = typename iterator_type_traits::reference;
+
+  using const_arg_type = make_const_arg_type_t<value_type>;
   using src_const_arg_type = typename IT::const_arg_type;
 
-  using const_element_access_type = const_reference;
-  using element_access_type = reference;
+  using const_element_access_type =
+      typename iterator_type_traits::const_element_access_type;
+  using element_access_type =
+      typename iterator_type_traits::element_access_type;
 
-  reference operator*() { return *iter_; }
+  element_access_type operator*() { return *iter_; }
 
   int operator==(const FilterRangeIter& o) const { return iter_ == o.iter_; }
 
@@ -1232,7 +1242,7 @@ template <typename IT>
 struct ContainerIterI {
   struct ContainerItemI {
     const int64 i;
-    typename pe_iterator_traits<IT>::reference v;
+    typename pe_iterator_traits<IT>::value_type v;
   };
 
   using value_type = ContainerItemI;
@@ -1243,7 +1253,7 @@ struct ContainerIterI {
   using const_element_access_type = const_reference;
   using element_access_type = reference;
 
-  reference operator*() { return ContainerItemI{idx_, *iter_}; }
+  element_access_type operator*() { return ContainerItemI{idx_, *iter_}; }
 
   int operator==(const ContainerIterI& o) const { return iter_ == o.iter_; }
 
@@ -1299,7 +1309,7 @@ struct ArrayIterI {
   using const_element_access_type = const_reference;
   using element_access_type = reference;
 
-  reference operator*() { return ContainerItemI{idx_, start_[idx_]}; }
+  element_access_type operator*() { return ContainerItemI{idx_, start_[idx_]}; }
 
   int operator==(const ArrayIterI& o) const {
     return idx_ == o.idx_ && start_ == o.start_;

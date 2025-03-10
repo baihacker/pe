@@ -1222,10 +1222,20 @@ struct FilterRange : public RangeBase<FilterRange<IT>, FilterRangeIter<IT>> {
 
 // IRange support. i = index.
 template <typename IT>
+struct ContainerIterTypeTrait {
+  using element_reference = typename IT::reference;
+};
+
+template <typename T>
+struct ContainerIterTypeTrait<T*> {
+  using element_reference = std::add_lvalue_reference_t<T>;
+};
+
+template <typename IT>
 struct ContainerIterI {
   struct ContainerItemI {
     const int64 i;
-    typename IT::reference v;
+    typename ContainerIterTypeTrait<IT>::element_reference v;
   };
 
   using value_type = ContainerItemI;
@@ -1257,45 +1267,6 @@ struct ContainerIterI {
   ContainerIterI operator--(int) { return ContainerIterI{iter_--, idx_--}; }
 
   IT iter_;
-  int64 idx_;
-};
-
-template <typename T>
-struct ContainerIterI<T*> {
-  struct ContainerItemI {
-    const int64 i;
-    std::add_lvalue_reference_t<T> v;
-  };
-
-  using value_type = ContainerItemI;
-  using const_reference = const value_type;
-  using reference = const_reference;
-
-  reference operator*() { return ContainerItemI{idx_, *iter_}; }
-
-  int operator==(const ContainerIterI& o) const { return iter_ == o.iter_; }
-
-  int operator!=(const ContainerIterI& o) const {
-    return !(this->operator==(o));
-  }
-
-  ContainerIterI& operator++() {
-    ++idx_;
-    ++iter_;
-    return *this;
-  }
-
-  ContainerIterI operator++(int) { return ContainerIterI{iter_++, idx_++}; }
-
-  ContainerIterI& operator--() {
-    --idx_;
-    --iter_;
-    return *this;
-  }
-
-  ContainerIterI operator--(int) { return ContainerIterI{iter_--, idx_--}; }
-
-  T* iter_;
   int64 idx_;
 };
 

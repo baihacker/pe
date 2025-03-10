@@ -454,14 +454,28 @@ struct has_const_reference<T, std::void_t<typename T::const_reference>> {
   enum { value = true };
 };
 
-// pe_iterator_traits
+template <typename T>
+inline constexpr bool has_const_reference_v = has_const_reference<T>::value;
+
+template <typename IT, bool has_const_ref = true>
+struct pe_iterator_traits_impl {
+  using value_type = typename IT::value_type;
+  using const_reference = typename IT::const_reference;
+  using reference = typename IT::reference;
+};
+
 template <typename IT>
-struct pe_iterator_traits {
+struct pe_iterator_traits_impl<IT, false> {
   using value_type = typename IT::value_type;
   using const_reference = std::add_lvalue_reference_t<
       std::add_const_t<std::remove_reference_t<typename IT::reference>>>;
   using reference = typename IT::reference;
 };
+
+// pe_iterator_traits
+template <typename IT>
+struct pe_iterator_traits
+    : public pe_iterator_traits_impl<IT, has_const_reference_v<IT>> {};
 
 template <typename T>
 struct pe_iterator_traits<T*> {

@@ -120,6 +120,9 @@ class Span {
     using value_type = value_type;
     using reference = element_access_type;
     using const_reference = const_element_access_type;
+    using element_access_type = typename Span<T>::element_access_type;
+    using const_element_access_type =
+        typename Span<T>::const_element_access_type;
 
     element_access_type operator*() const { return *this->iter_; }
     iterator& operator++() {
@@ -140,6 +143,9 @@ class Span {
   struct const_iterator : public iterator {
     using reference = const_element_access_type;
     using const_reference = const_element_access_type;
+    using element_access_type = typename Span<T>::const_element_access_type;
+    using const_element_access_type =
+        typename Span<T>::const_element_access_type;
     const_element_access_type operator*() const { return *this->iter_; }
   };
 
@@ -488,25 +494,14 @@ using AdaptToSpanTransformT = typename AdaptToSpanTransform<T>::Type;
   }
 
 template <typename T>
-struct span_like_impl<Span<T>> {
-  using element_type = T;
-  using non_const_element_type = std::remove_const_t<T>;
-  using const_element_type = std::add_const_t<T>;
-  enum {
-    value = true,
-    is_element_type_const = std::is_same_v<element_type, const_element_type>
-  };
+struct span_like_impl<Span<T>> : public pe_element_type_traits<T> {
+  enum { value = true };
 };
 
 template <typename T>
-struct span_like_impl<CSpan<T>> {
-  using element_type = std::add_const_t<T>;
-  using non_const_element_type = std::remove_const_t<T>;
-  using const_element_type = std::add_const_t<T>;
-  enum {
-    value = true,
-    is_element_type_const = std::is_same_v<element_type, const_element_type>
-  };
+struct span_like_impl<CSpan<T>>
+    : public pe_element_type_traits<std::add_const_t<T>> {
+  enum { value = true };
 };
 
 }  // namespace pe

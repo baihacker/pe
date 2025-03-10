@@ -921,11 +921,27 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(NumberRangeD<int64>)
 }
 
 template <typename IT>
-struct ContainerRangeIter {
-  using value_type = std::remove_cvref_t<typename IT::value_type>;
+struct ContainerIterTypeTrait {
+  using value_type = typename IT::value_type;
   using const_reference = std::add_lvalue_reference_t<
       std::add_const_t<std::remove_reference_t<typename IT::reference>>>;
   using reference = typename IT::reference;
+};
+
+template <typename T>
+struct ContainerIterTypeTrait<T*> {
+  using value_type = std::remove_cvref_t<T>;
+  using const_reference = std::add_lvalue_reference_t<std::add_const_t<T>>;
+  using reference = std::add_lvalue_reference_t<T>;
+};
+
+template <typename IT>
+struct ContainerRangeIter {
+  using type_trait = ContainerIterTypeTrait<IT>;
+
+  using value_type = typename type_trait::value_type;
+  using const_reference = typename type_trait::const_reference;
+  using reference = typename type_trait::reference;
   using const_arg_type = make_const_arg_type_t<value_type>;
 
   reference operator*() { return *iter_; }
@@ -951,38 +967,6 @@ struct ContainerRangeIter {
   ContainerRangeIter operator--(int) { return ContainerRangeIter{iter_--}; }
 
   IT iter_;
-};
-
-template <typename T>
-struct ContainerRangeIter<T*> {
-  using value_type = std::remove_cvref_t<T>;
-  using const_reference = std::add_lvalue_reference_t<std::add_const_t<T>>;
-  using reference = std::add_lvalue_reference_t<T>;
-  using const_arg_type = make_const_arg_type_t<value_type>;
-
-  reference operator*() { return *iter_; }
-
-  int operator==(const ContainerRangeIter& o) const { return iter_ == o.iter_; }
-
-  int operator!=(const ContainerRangeIter& o) const {
-    return !(this->operator==(o));
-  }
-
-  ContainerRangeIter& operator++() {
-    ++iter_;
-    return *this;
-  }
-
-  ContainerRangeIter operator++(int) { return ContainerRangeIter{iter_++}; }
-
-  ContainerRangeIter& operator--() {
-    --iter_;
-    return *this;
-  }
-
-  ContainerRangeIter operator--(int) { return ContainerRangeIter{iter_--}; }
-
-  T* iter_;
 };
 
 template <typename IT>
@@ -1222,20 +1206,10 @@ struct FilterRange : public RangeBase<FilterRange<IT>, FilterRangeIter<IT>> {
 
 // IRange support. i = index.
 template <typename IT>
-struct ContainerIterTypeTrait {
-  using element_reference = typename IT::reference;
-};
-
-template <typename T>
-struct ContainerIterTypeTrait<T*> {
-  using element_reference = std::add_lvalue_reference_t<T>;
-};
-
-template <typename IT>
 struct ContainerIterI {
   struct ContainerItemI {
     const int64 i;
-    typename ContainerIterTypeTrait<IT>::element_reference v;
+    typename ContainerIterTypeTrait<IT>::reference v;
   };
 
   using value_type = ContainerItemI;

@@ -8,6 +8,7 @@ namespace pe {
 // Also see MinGW-x86_64_14.1.0-msys2/include/c++/14.1.0/span.
 template <typename T>
 class Span {
+ public:
   using ElementType = T;
   // Possible volatile.
   using NonConstElementType = std::remove_const_t<T>;
@@ -20,6 +21,9 @@ class Span {
   using ElementAccessType =
       std::conditional_t<std::is_const_v<T>, ConstElementAccessType,
                          std::add_lvalue_reference_t<T>>;
+
+  class iterator;
+  class const_iterator;
 
  public:
   constexpr Span() noexcept : p(nullptr), n(0) {}
@@ -106,34 +110,33 @@ class Span {
     PointerToElementType iter_;
   };
 
-  struct Iterator : public IteratorBase {
+  struct iterator : public IteratorBase {
     using difference_type = int64;
     using value_type = ValueType;
     using reference = ElementAccessType;
-    using const_reference = ElementAccessType;
+    using const_reference = ConstElementAccessType;
 
     ElementAccessType operator*() const { return *this->iter_; }
-    Iterator& operator++() {
+    iterator& operator++() {
       ++this->iter_;
       return *this;
     }
 
-    Iterator operator++(int) { return Iterator{this->iter_++}; }
+    iterator operator++(int) { return iterator{this->iter_++}; }
 
-    Iterator& operator--() {
+    iterator& operator--() {
       --this->iter_;
       return *this;
     }
 
-    Iterator operator--(int) { return Iterator{this->iter_--}; }
+    iterator operator--(int) { return iterator{this->iter_--}; }
   };
 
-  struct ConstIterator : public Iterator {
+  struct const_iterator : public iterator {
+    using reference = ConstElementAccessType;
+    using const_reference = ConstElementAccessType;
     ConstElementAccessType operator*() const { return *this->iter_; }
   };
-
-  using iterator = Iterator;
-  using const_iterator = ConstIterator;
 
   struct ReversedIterator : public IteratorBase {
     using difference_type = int64;
@@ -158,16 +161,18 @@ class Span {
     ConstElementAccessType operator*() const { return *this->iter_; }
   };
 
-  constexpr Iterator begin() const noexcept { return Iterator{this->p}; }
+  constexpr iterator begin() const noexcept { return iterator{this->p}; }
 
-  constexpr Iterator end() const noexcept {
-    return Iterator{this->p + this->size()};
+  constexpr iterator end() const noexcept {
+    return iterator{this->p + this->size()};
   }
 
-  constexpr Iterator cbegin() const noexcept { return ConstIterator{this->p}; }
+  constexpr const_iterator cbegin() const noexcept {
+    return const_iterator{this->p};
+  }
 
-  constexpr Iterator cend() const noexcept {
-    return ConstIterator{this->p + this->size()};
+  constexpr const_iterator cend() const noexcept {
+    return const_iterator{this->p + this->size()};
   }
 
   constexpr ReversedIterator rbegin() const noexcept {

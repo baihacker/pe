@@ -457,40 +457,7 @@ struct has_const_reference<T, std::void_t<typename T::const_reference>> {
 template <typename T>
 inline constexpr bool has_const_reference_v = has_const_reference<T>::value;
 
-template <typename IT, bool has_const_ref = true>
-struct pe_iterator_traits_impl {
-  using value_type = typename IT::value_type;
-  using const_reference = typename IT::const_reference;
-  using reference = typename IT::reference;
-};
-
-template <typename IT>
-struct pe_iterator_traits_impl<IT, false> {
-  using value_type = typename IT::value_type;
-  using const_reference = std::add_lvalue_reference_t<
-      std::add_const_t<std::remove_reference_t<typename IT::reference>>>;
-  using reference = typename IT::reference;
-};
-
-// pe_iterator_traits
-template <typename IT>
-struct pe_iterator_traits
-    : public pe_iterator_traits_impl<IT, has_const_reference_v<IT>> {};
-
-template <typename T>
-struct pe_iterator_traits<T*> {
-  using value_type = std::remove_cvref_t<T>;
-  using const_reference = std::add_lvalue_reference_t<const T>;
-  using reference = std::add_lvalue_reference_t<T>;
-};
-
-template <typename T>
-struct pe_iterator_traits<const T*> {
-  using value_type = std::remove_cvref_t<T>;
-  using const_reference = std::add_lvalue_reference_t<const T>;
-  using reference = std::add_lvalue_reference_t<const T>;
-};
-
+// pe_container_type_traits
 template <typename T>
 struct pe_container_type_traits {
   using element_type = T;
@@ -508,6 +475,37 @@ struct pe_container_type_traits {
   using element_access_type =
       std::conditional_t<std::is_const_v<T>, const_element_access_type,
                          reference>;
+};
+
+// pe_iterator_traits
+template <typename IT, bool has_const_ref = true>
+struct pe_iterator_traits_impl {
+  using value_type = typename IT::value_type;
+  using const_reference = typename IT::const_reference;
+  using reference = typename IT::reference;
+  using const_element_access_type = typename IT::const_element_access_type;
+  using element_access_type = typename IT::const_element_access_type;
+};
+
+template <typename IT>
+struct pe_iterator_traits_impl<IT, false> {
+  using value_type = typename IT::value_type;
+  using const_reference = std::add_lvalue_reference_t<
+      std::add_const_t<std::remove_reference_t<typename IT::reference>>>;
+  using reference = typename IT::reference;
+  using const_element_access_type = const_reference;
+  using element_access_type = reference;
+};
+
+template <typename IT>
+struct pe_iterator_traits
+    : public pe_iterator_traits_impl<IT, has_const_reference_v<IT>> {};
+
+template <typename T>
+struct pe_iterator_traits<T*> : public pe_container_type_traits<T> {};
+
+template <typename T>
+struct pe_iterator_traits<const T*> : public pe_container_type_traits<const T> {
 };
 
 // Span like

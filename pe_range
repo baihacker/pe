@@ -602,15 +602,18 @@ struct RangeBase {
 
 template <typename ET>
 struct NumberIter {
-  using value_type = std::remove_cvref_t<ET>;
+  using element_type_traits = pe_element_type_traits<ET>;
 
-  using const_reference = std::add_const_t<ET>;
-  using reference = const_reference;
+  using value_type = typename element_type_traits::value_type;
 
-  using const_element_access_type = make_const_arg_type_t<value_type>;
-  using element_access_type = const_element_access_type;
+  using const_reference = typename element_type_traits::const_reference;
+  using reference = typename element_type_traits::reference;
 
-  element_access_type operator*() const { return i_; }
+  using const_element_access_type =
+      typename element_type_traits::const_element_access_type;
+  using element_access_type = typename element_type_traits::element_access_type;
+
+  element_access_type operator*() { return i_; }
 
   int operator==(const NumberIter& o) const { return i_ == o.i_; }
 
@@ -821,15 +824,18 @@ struct NumberRange : public RangeBase<NumberRange<ET>, NumberIter<ET>> {
 
 template <typename ET>
 struct NumberIterD {
-  using value_type = std::remove_cvref_t<ET>;
+  using element_type_traits = pe_element_type_traits<ET>;
 
-  using const_reference = std::add_const_t<ET>;
-  using reference = const_reference;
+  using value_type = typename element_type_traits::value_type;
 
-  using const_element_access_type = make_const_arg_type_t<value_type>;
-  using element_access_type = const_element_access_type;
+  using const_reference = typename element_type_traits::const_reference;
+  using reference = typename element_type_traits::reference;
 
-  element_access_type operator*() const { return i_; }
+  using const_element_access_type =
+      typename element_type_traits::const_element_access_type;
+  using element_access_type = typename element_type_traits::element_access_type;
+
+  element_access_type operator*() { return i_; }
 
   int operator==(const NumberIterD& o) const { return i_ == o.i_; }
 
@@ -1107,13 +1113,16 @@ SL ArrayRange<T> Range(T (&a)[N]) {
 // TT: type of the mapped result
 template <typename IT, typename TT>
 struct MappedRangeIter {
-  using value_type = std::remove_cvref_t<TT>;
+  using element_type_traits = pe_no_ref_element_type_traits<TT>;
 
-  using const_reference = std::add_const_t<value_type>;
-  using reference = const_reference;
+  using value_type = typename element_type_traits::value_type;
 
-  using const_element_access_type = const_reference;
-  using element_access_type = reference;
+  using const_reference = typename element_type_traits::const_reference;
+  using reference = typename element_type_traits::reference;
+
+  using const_element_access_type =
+      typename element_type_traits::const_element_access_type;
+  using element_access_type = typename element_type_traits::element_access_type;
 
   using src_const_element_access_type = typename IT::const_element_access_type;
 
@@ -1240,12 +1249,12 @@ template <typename IT>
 struct ContainerIterI {
   struct ContainerItemI {
     const int64 i;
-    typename pe_iterator_traits<IT>::value_type v;
+    typename pe_iterator_traits<IT>::element_access_type v;
   };
 
   using value_type = ContainerItemI;
 
-  using const_reference = const value_type;
+  using const_reference = std::add_const_t<value_type>;
   using reference = const_reference;
 
   using const_element_access_type = const_reference;
@@ -1296,12 +1305,12 @@ template <typename T>
 struct ArrayIterI {
   struct ContainerItemI {
     const int64 i;
-    std::add_lvalue_reference_t<T> v;
+    typename pe_element_type_traits<T>::element_access_type v;
   };
 
   using value_type = ContainerItemI;
 
-  using const_reference = const value_type;
+  using const_reference = std::add_const_t<value_type>;
   using reference = const_reference;
 
   using const_element_access_type = const_reference;

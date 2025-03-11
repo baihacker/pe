@@ -443,19 +443,21 @@ struct at_least_int64 {
 template <typename T>
 using at_least_int64_t = typename at_least_int64<T>::type;
 
-// has_const_reference
+// has_element_access_type
 template <typename T, typename = void>
-struct has_const_reference {
+struct has_element_access_type {
   enum { value = false };
 };
 
 template <typename T>
-struct has_const_reference<T, std::void_t<typename T::const_reference>> {
+struct has_element_access_type<T,
+                               std::void_t<typename T::element_access_type>> {
   enum { value = true };
 };
 
 template <typename T>
-inline constexpr bool has_const_reference_v = has_const_reference<T>::value;
+inline constexpr bool has_element_access_type_v =
+    has_element_access_type<T>::value;
 
 // pe_element_type_traits
 template <typename T>
@@ -504,11 +506,10 @@ struct pe_no_ref_element_type_traits {
 };
 
 // pe_iterator_traits
-template <typename IT, bool has_const_ref = true>
+template <typename IT, bool has_element_access_type = true>
 struct pe_iterator_traits_impl {
   using value_type = typename IT::value_type;
 
-  using const_reference = typename IT::const_reference;
   using reference = typename IT::reference;
 
   using const_element_access_type = typename IT::const_element_access_type;
@@ -519,17 +520,16 @@ template <typename IT>
 struct pe_iterator_traits_impl<IT, false> {
   using value_type = typename IT::value_type;
 
-  using const_reference = std::add_lvalue_reference_t<
-      std::add_const_t<std::remove_reference_t<typename IT::reference>>>;
   using reference = typename IT::reference;
 
-  using const_element_access_type = const_reference;
+  using const_element_access_type = std::add_lvalue_reference_t<
+      std::add_const_t<std::remove_reference_t<typename IT::reference>>>;
   using element_access_type = reference;
 };
 
 template <typename IT>
 struct pe_iterator_traits
-    : public pe_iterator_traits_impl<IT, has_const_reference_v<IT>> {};
+    : public pe_iterator_traits_impl<IT, has_element_access_type_v<IT>> {};
 
 template <typename T>
 struct pe_iterator_traits<T*> {
@@ -537,7 +537,6 @@ struct pe_iterator_traits<T*> {
 
   using value_type = typename element_type_traits::value_type;
 
-  using const_reference = typename element_type_traits::const_reference;
   using reference = typename element_type_traits::reference;
 
   using const_element_access_type =
@@ -551,7 +550,6 @@ struct pe_iterator_traits<const T*> {
 
   using value_type = typename element_type_traits::value_type;
 
-  using const_reference = typename element_type_traits::const_reference;
   using reference = typename element_type_traits::reference;
 
   using const_element_access_type =

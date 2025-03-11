@@ -105,9 +105,11 @@ struct Line2D {
     Normalize();
   }
 
-  void Normalize() { Normalize(IntToType<is_builtin_integer_v<T>>()); }
+  void Normalize() {
+    Normalize(std::integral_constant<bool, is_builtin_integer_v<T>>());
+  }
 
-  void Normalize(IntToType<1>) {
+  void Normalize(std::true_type) {
     if (A == 0 && B == 0) {
       return;
     }
@@ -120,7 +122,7 @@ struct Line2D {
     C /= t;
   }
 
-  void Normalize(IntToType<0>) {}
+  void Normalize(std::false_type) {}
 
   int operator==(const Line2D& o) const {
     return A == o.A && B == o.B && C == o.C;

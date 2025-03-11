@@ -20,6 +20,7 @@ class Span {
   using value_type = typename element_type_traits::value_type;
 
   using reference = typename element_type_traits::reference;
+  using const_reference = typename element_type_traits::const_reference;
 
   using const_element_access_type =
       typename element_type_traits::const_element_access_type;
@@ -117,7 +118,7 @@ class Span {
   struct iterator : public IteratorBase {
     using difference_type = int64;
     using value_type = value_type;
-    using reference = element_access_type;
+    using reference = typename Span<T>::reference;
     using element_access_type = typename Span<T>::element_access_type;
     using const_element_access_type =
         typename Span<T>::const_element_access_type;
@@ -139,33 +140,39 @@ class Span {
   };
 
   struct const_iterator : public iterator {
-    using reference = const_element_access_type;
+    using reference = typename Span<T>::const_reference;
     using element_access_type = typename Span<T>::const_element_access_type;
-    using const_element_access_type =
-        typename Span<T>::const_element_access_type;
+
     const_element_access_type operator*() const { return *this->iter_; }
   };
 
-  struct ReversedIterator : public IteratorBase {
+  struct reverse_iterator : public IteratorBase {
     using difference_type = int64;
     using value_type = value_type;
+    using reference = typename Span<T>::reference;
+    using element_access_type = typename Span<T>::element_access_type;
+    using const_element_access_type =
+        typename Span<T>::const_element_access_type;
 
     element_access_type operator*() { return *this->iter_; }
-    ReversedIterator& operator++() {
+    reverse_iterator& operator++() {
       --this->iter_;
       return *this;
     }
 
-    ReversedIterator operator++(int) { return ReversedIterator{this->iter_--}; }
+    reverse_iterator operator++(int) { return reverse_iterator{this->iter_--}; }
 
-    ReversedIterator& operator--() {
+    reverse_iterator& operator--() {
       ++this->iter_;
       return *this;
     }
 
-    ReversedIterator operator--(int) { return ReversedIterator{this->iter_++}; }
+    reverse_iterator operator--(int) { return reverse_iterator{this->iter_++}; }
   };
-  struct ConstReversedIterator : public ReversedIterator {
+  struct const_reverse_iterator : public reverse_iterator {
+    using reference = typename Span<T>::const_reference;
+    using element_access_type = typename Span<T>::const_element_access_type;
+
     const_element_access_type operator*() const { return *this->iter_; }
   };
 
@@ -183,20 +190,20 @@ class Span {
     return const_iterator{this->p + this->size()};
   }
 
-  constexpr ReversedIterator rbegin() const noexcept {
-    return ReversedIterator{this->p + this->size() - 1};
+  constexpr reverse_iterator rbegin() const noexcept {
+    return reverse_iterator{this->p + this->size() - 1};
   }
 
-  constexpr ReversedIterator rend() const noexcept {
-    return ReversedIterator{this->p - 1};
+  constexpr reverse_iterator rend() const noexcept {
+    return reverse_iterator{this->p - 1};
   }
 
-  constexpr ConstReversedIterator crbegin() const noexcept {
-    return ConstReversedIterator{this->p + this->size() - 1};
+  constexpr const_reverse_iterator crbegin() const noexcept {
+    return const_reverse_iterator{this->p + this->size() - 1};
   }
 
-  constexpr ConstReversedIterator crend() const noexcept {
-    return ConstReversedIterator{this->p - 1};
+  constexpr const_reverse_iterator crend() const noexcept {
+    return const_reverse_iterator{this->p - 1};
   }
 
   struct IndexedValue {

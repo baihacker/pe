@@ -55,17 +55,17 @@ class MpInteger;
 // is_builtin_integer
 template <typename T>
 struct is_builtin_integer_impl {
-  enum { value = std::is_integral_v<T> };
+  static constexpr bool value = std::is_integral_v<T>;
 };
 
 #if PE_HAS_INT128
 template <>
 struct is_builtin_integer_impl<int128> {
-  enum { value = true };
+  static constexpr bool value = true;
 };
 template <>
 struct is_builtin_integer_impl<uint128> {
-  enum { value = true };
+  static constexpr bool value = true;
 };
 #endif
 
@@ -78,17 +78,17 @@ inline constexpr bool is_builtin_integer_v = is_builtin_integer<T>::value;
 // is_extended_integer
 template <typename T>
 struct is_extended_integer_impl {
-  enum { value = false };
+  static constexpr bool value = false;
 };
 
 template <typename ET, bool is_builtin>
 struct is_extended_integer_impl<ExtendedUnsignedIntImpl<ET, is_builtin>> {
-  enum { value = true };
+  static constexpr bool value = true;
 };
 
 template <typename ET, bool is_builtin>
 struct is_extended_integer_impl<ExtendedSignedIntImpl<ET, is_builtin>> {
-  enum { value = true };
+  static constexpr bool value = true;
 };
 
 template <typename T>
@@ -101,7 +101,8 @@ inline constexpr bool is_extended_integer_v = is_extended_integer<T>::value;
 // is_builtin_or_extended_integer
 template <typename T>
 struct is_builtin_or_extended_integer {
-  enum { value = is_builtin_integer_v<T> || is_extended_integer_v<T> };
+  static constexpr bool value =
+      is_builtin_integer_v<T> || is_extended_integer_v<T>;
 };
 
 template <typename T>
@@ -111,18 +112,18 @@ inline constexpr bool is_builtin_or_extended_integer_v =
 // is_gbi
 template <typename T>
 struct is_gbi_impl {
-  enum { value = false };
+  static constexpr bool value = false;
 };
 
 template <>
 struct is_gbi_impl<BigInteger> {
-  enum { value = true };
+  static constexpr bool value = true;
 };
 
 #if ENABLE_GMP
 template <>
 struct is_gbi_impl<MpInteger> {
-  enum { value = true };
+  static constexpr bool value = true;
 };
 
 #endif
@@ -130,7 +131,7 @@ struct is_gbi_impl<MpInteger> {
 #if defined(__GMP_PLUSPLUS__)
 template <>
 struct is_gbi_impl<mpz_class> {
-  enum { value = true };
+  static constexpr bool value = true;
 };
 #endif
 
@@ -143,9 +144,8 @@ inline constexpr bool is_gbi_v = is_gbi<T>::value;
 // is_general_integer
 template <typename T>
 struct is_general_integer_impl {
-  enum {
-    value = is_builtin_integer_v<T> || is_extended_integer_v<T> || is_gbi_v<T>
-  };
+  static constexpr bool value =
+      is_builtin_integer_v<T> || is_extended_integer_v<T> || is_gbi_v<T>;
 };
 
 template <typename T>
@@ -157,29 +157,29 @@ inline constexpr bool is_general_integer_v = is_general_integer<T>::value;
 // pe_is_signed
 template <typename T>
 struct pe_is_signed_impl {
-  enum { value = std::is_signed_v<T> };
+  static constexpr bool value = std::is_signed_v<T>;
 };
 
 #if PE_HAS_INT128
 template <>
 struct pe_is_signed_impl<int128> {
-  enum { value = true };
+  static constexpr bool value = true;
 };
 
 template <>
 struct pe_is_signed_impl<uint128> {
-  enum { value = false };
+  static constexpr bool value = false;
 };
 #endif
 
 template <typename ET, bool is_builtin>
 struct pe_is_signed_impl<ExtendedUnsignedIntImpl<ET, is_builtin>> {
-  enum { value = false };
+  static constexpr bool value = false;
 };
 
 template <typename ET, bool is_builtin>
 struct pe_is_signed_impl<ExtendedSignedIntImpl<ET, is_builtin>> {
-  enum { value = true };
+  static constexpr bool value = true;
 };
 
 template <typename T>
@@ -191,29 +191,29 @@ inline constexpr bool pe_is_signed_v = pe_is_signed<T>::value;
 // pe_is_unsigned
 template <typename T>
 struct pe_is_unsigned_impl {
-  enum { value = std::is_unsigned_v<T> };
+  static constexpr bool value = std::is_unsigned_v<T>;
 };
 
 #if PE_HAS_INT128
 template <>
 struct pe_is_unsigned_impl<int128> {
-  enum { value = false };
+  static constexpr bool value = false;
 };
 
 template <>
 struct pe_is_unsigned_impl<uint128> {
-  enum { value = true };
+  static constexpr bool value = true;
 };
 #endif
 
 template <typename ET, bool is_builtin>
 struct pe_is_unsigned_impl<ExtendedUnsignedIntImpl<ET, is_builtin>> {
-  enum { value = true };
+  static constexpr bool value = true;
 };
 
 template <typename ET, bool is_builtin>
 struct pe_is_unsigned_impl<ExtendedSignedIntImpl<ET, is_builtin>> {
-  enum { value = false };
+  static constexpr bool value = false;
 };
 
 template <typename T>
@@ -304,7 +304,7 @@ using make_const_arg_type_t = typename make_const_arg_type<T>::type;
 // predicate_all
 template <template <typename T> class predicate, typename... TT>
 struct predicate_all {
-  enum { value = (... && predicate<TT>::value) };
+  static constexpr bool value = (... && predicate<TT>::value);
 };
 
 template <template <typename T> class predicate, typename... TT>
@@ -313,7 +313,7 @@ inline constexpr bool predicate_all_v = predicate_all<predicate, TT...>::value;
 // predicate_any
 template <template <typename T> class predicate, typename... TT>
 struct predicate_any {
-  enum { value = (... || predicate<TT>::value) };
+  static constexpr bool value = (... || predicate<TT>::value);
 };
 
 template <template <typename T> class predicate, typename... TT>
@@ -322,7 +322,7 @@ inline constexpr bool predicate_any_v = predicate_any<predicate, TT...>::value;
 // predicate_none
 template <template <typename T> class predicate, typename... TT>
 struct predicate_none {
-  enum { value = (... && !predicate<TT>::value) };
+  static constexpr bool value = (... && !predicate<TT>::value);
 };
 
 template <template <typename T> class predicate, typename... TT>
@@ -332,7 +332,8 @@ inline constexpr bool predicate_none_v =
 // is_one_of
 template <typename T, typename... TT>
 struct is_one_of {
-  enum { value = (... || std::is_same_v<std::decay_t<T>, std::decay_t<TT>>)};
+  static constexpr bool value =
+      (... || std::is_same_v<std::decay_t<T>, std::decay_t<TT>>);
 };
 
 template <typename T, typename... TT>
@@ -441,13 +442,13 @@ using at_least_int64_t = typename at_least_int64<T>::type;
 // has_element_access_type
 template <typename T, typename = void>
 struct has_element_access_type {
-  enum { value = false };
+  static constexpr bool value = false;
 };
 
 template <typename T>
 struct has_element_access_type<T,
                                std::void_t<typename T::element_access_type>> {
-  enum { value = true };
+  static constexpr bool value = true;
 };
 
 template <typename T>
@@ -475,9 +476,8 @@ struct pe_element_type_traits {
       std::conditional_t<std::is_const_v<T>, const_element_access_type,
                          reference>;
 
-  enum {
-    is_element_type_const = std::is_same_v<element_type, const_element_type>
-  };
+  static constexpr bool is_element_type_const =
+      std::is_same_v<element_type, const_element_type>;
 };
 
 // pe_no_ref_element_type_traits
@@ -499,9 +499,8 @@ struct pe_no_ref_element_type_traits {
   using const_element_access_type = const_reference;
   using element_access_type = reference;
 
-  enum {
-    is_element_type_const = std::is_same_v<element_type, const_element_type>
-  };
+  static constexpr bool is_element_type_const =
+      std::is_same_v<element_type, const_element_type>;
 };
 
 // pe_iterator_traits
@@ -559,28 +558,28 @@ struct pe_iterator_traits<const T*> {
 // Span like
 template <typename T>
 struct span_like_impl : public pe_element_type_traits<T> {
-  enum { value = false };
+  static constexpr bool value = false;
 };
 
 template <typename T, uint64 N>
 struct span_like_impl<T[N]> : public pe_element_type_traits<T> {
-  enum { value = true };
+  static constexpr bool value = true;
 };
 
 template <typename T>
 struct span_like_impl<std::vector<T>> : public pe_element_type_traits<T> {
-  enum { value = true };
+  static constexpr bool value = true;
 };
 
 template <typename T, std::size_t N>
 struct span_like_impl<std::array<T, N>> : public pe_element_type_traits<T> {
-  enum { value = true };
+  static constexpr bool value = true;
 };
 
 #if PE_HAS_CPP20 && !defined(COMPILER_MSVC)
 template <typename T, std::size_t N>
 struct span_like_impl<std::span<T, N>> : public pe_element_type_traits<T> {
-  enum { value = true };
+  static constexpr bool value = true;
 };
 #endif
 

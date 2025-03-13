@@ -1,8 +1,8 @@
 load("//toolchain:pe_binary.bzl", "pe_binary")
 
 package(
-    default_visibility = [    
-        "//visibility:public",    
+    default_visibility = [
+        "//visibility:public",
     ],
 )
 

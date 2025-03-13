@@ -26,6 +26,7 @@ def _impl(ctx):
   args.add_all(["-L{}".format(p) for p in library_paths])  # 库路径
   args.add_all(["-l{}".format(lib) for lib in ctx.attr.libs])  # 链接库
   args.add_all(["-D{}".format(d) for d in ctx.attr.defines])
+  args.add_all(ctx.attr.extra_cc_flags)
 
   ctx.actions.run(
     inputs = src_files,
@@ -49,6 +50,7 @@ pe_binary = rule(
     "extra_includes": attr.string_list(),  # 额外的头文件路径
     "extra_lib_paths": attr.string_list(),  # 额外的库文件路径
     "libs": attr.string_list(),  # 要链接的库名称（例如：["m", "ws2_32"]）
+    "extra_cc_flags": attr.string_list(),
     "cc_path": attr.string(default = "g++")  # 允许覆盖编译器路径
   },
   executable = True

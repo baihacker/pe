@@ -21,11 +21,11 @@ def _impl(ctx):
   args = ctx.actions.args()
   args.add_all(src_files)  # 源文件
   args.add("-o", output)  # 输出文件
-  args.add_all(["--std=c++20", "-O3", "-march=native", "-mtune=native", "-fopenmp", "-lquadmath", "-Wl,--stack,268435456", "-static", "-lbf", "-lgmpxx", "-lflint", "-lmpfr", "-lntl", "-lgmp", "-lprimesieve", "-lprimecount", "-Wno-delete-incomplete", "-Wno-shift-count-overflow"])
+  args.add_all(["--std=c++20", "-fno-diagnostics-color", "-O3", "-march=native", "-mtune=native", "-fopenmp", "-lquadmath", "-Wl,--stack,268435456", "-static", "-lbf", "-lgmpxx", "-lflint", "-lmpfr", "-lntl", "-lgmp", "-lprimesieve", "-lprimecount", "-lzmq", "-Wno-delete-incomplete", "-Wno-shift-count-overflow"])
   args.add_all(["-I{}".format(p) for p in c_include_paths])  # 包含路径
   args.add_all(["-L{}".format(p) for p in library_paths])  # 库路径
   args.add_all(["-l{}".format(lib) for lib in ctx.attr.libs])  # 链接库
-  args.add_all(ctx.attr.linkopts)  # 链接选项
+  args.add_all(["-D{}".format(d) for d in ctx.attr.defines])
 
   ctx.actions.run(
     inputs = src_files,
@@ -45,10 +45,10 @@ pe_binary = rule(
   implementation=_impl,
   attrs={
     "srcs": attr.label_list(allow_files = [".cpp", ".c", ".cc"]),
+    "defines": attr.string_list(),  # 通过属性定义的宏
     "extra_includes": attr.string_list(),  # 额外的头文件路径
     "extra_lib_paths": attr.string_list(),  # 额外的库文件路径
     "libs": attr.string_list(),  # 要链接的库名称（例如：["m", "ws2_32"]）
-    "linkopts": attr.string_list(default = ["-static-libgcc", "-static-libstdc++"]),  # 链接选项
     "cc_path": attr.string(default = "g++")  # 允许覆盖编译器路径
   },
   executable = True

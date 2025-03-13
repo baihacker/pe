@@ -247,6 +247,9 @@ int main() {
   auto& tester = GetTester();
   const int size = (int)std::size(tester.tests);
 
+  std::stable_sort(
+      std::begin(tester.tests), std::end(tester.tests),
+      [](const auto& a, const auto& b) { return a.file < b.file; });
   bool isFirstTest = true;
 
   for (int i = 0; i < size; ++i) {
@@ -277,7 +280,7 @@ int main() {
     if (!isFirstTest) {
       std::cout << std::endl;
     }
-    std::cout << "Begin " << item.description << std::endl;
+    std::cout << "Begin " << item.file << " " << item.description << std::endl;
     TimeRecorder tr;
     item.test();
     std::cout << "End " << item.description << std::endl;

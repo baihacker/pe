@@ -19,6 +19,7 @@ def _impl(ctx):
 
   # 构建编译链接命令
   args = ctx.actions.args()
+  args.add_all(["-x", "c++"])
   args.add_all(src_files)  # 源文件
   args.add("-o", output)  # 输出文件
   args.add_all(["--std=c++20", "-fno-diagnostics-color", "-O3", "-march=native", "-mtune=native", "-fopenmp", "-lquadmath", "-Wl,--stack,268435456", "-static", "-lbf", "-lgmpxx", "-lflint", "-lmpfr", "-lntl", "-lgmp", "-lprimesieve", "-lprimecount", "-lzmq", "-Wno-delete-incomplete", "-Wno-shift-count-overflow"])

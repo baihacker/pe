@@ -1,4 +1,4 @@
-load("//toolchain:pe_binary.bzl", "pe_binary")
+load("//toolchain:pe_toolchain.bzl", "pe_binary")
 
 package(
     default_visibility = [

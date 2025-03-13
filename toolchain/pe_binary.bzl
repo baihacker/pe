@@ -33,7 +33,7 @@ def _impl(ctx):
     outputs = [output],
     executable = ctx.attr.cc_path,  # 编译器路径
     arguments = [args],
-    mnemonic = "g++",
+    mnemonic = "cc",
     use_default_shell_env = True  # 继承当前 shell 环境
   )
 

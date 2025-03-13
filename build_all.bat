@@ -1,0 +1,1 @@
+bazel build //test:all //example:all

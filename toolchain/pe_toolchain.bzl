@@ -265,7 +265,7 @@ pe_binary = rule(
         "deps": attr.label_list(),
         "cc_path": attr.string(default = "g++"),
         "ar_path": attr.string(default = "ar"),
-        "split_compile": attr.bool(default = True)
+        "split_compile": attr.bool(default = False)
     },
     executable = True
 )

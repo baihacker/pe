@@ -111,7 +111,7 @@ class BigInteger {
       SetNativeUInt64AndKeepSign(value);
     } else {
       int need = 0;
-      for (auto t = value; t > 0; ++need) {
+      for (T t = value; t > 0; ++need) {
 #if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
         t >>= 16;
         t >>= 16;
@@ -122,7 +122,7 @@ class BigInteger {
       Reserve(need);
 
       pos_ = -1;
-      for (auto t = value; t > 0;) {
+      for (T t = value; t > 0;) {
         data_[++pos_] = t & BigInteger::max_32bit_value;
 #if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
         t >>= 16;
@@ -163,7 +163,7 @@ class BigInteger {
       return;
     }
 
-    const auto n = static_cast<unsigned int>(std::size(v));
+    const unsigned int n = static_cast<unsigned int>(std::size(v));
     Reserve(n);
 
     std::copy(v.begin(), v.end(), data_);
@@ -393,7 +393,7 @@ class BigInteger {
     const int blocks = 32 / k;
     std::vector<T> ret;
     for (int i = 0; i <= pos_; ++i) {
-      auto t = data_[i];
+      unsigned int t = data_[i];
       for (int j = 0; j < blocks; ++j) {
         ret.push_back(t & mask);
         t >>= k;
@@ -419,7 +419,7 @@ class BigInteger {
       return;
     }
 
-    const auto n = static_cast<unsigned int>(std::size(v));
+    const unsigned int n = static_cast<unsigned int>(std::size(v));
     unsigned int need = (n * k + 31) >> 5;
     Reserve(need);
 
@@ -452,7 +452,7 @@ class BigInteger {
   RETURN(std::vector<T>) ToBinary(int fix_size = 1) const {
     std::vector<T> ret;
     for (int i = 0; i <= pos_; ++i) {
-      auto t = data_[i];
+      unsigned int t = data_[i];
       for (int j = 0; j < 32; ++j) {
         ret.push_back(t & 1);
         t >>= 1;
@@ -474,7 +474,7 @@ class BigInteger {
       return;
     }
 
-    const auto n = static_cast<unsigned int>(std::size(v));
+    const unsigned int n = static_cast<unsigned int>(std::size(v));
     unsigned int need = (n + 31) >> 5;
     Reserve(need);
 
@@ -557,7 +557,8 @@ class BigInteger {
       inc = t >> 32;
     }
 
-    const auto* large_data = self.pos_ > other.pos_ ? self.data_ : other.data_;
+    const unsigned int* large_data =
+        self.pos_ > other.pos_ ? self.data_ : other.data_;
     while (idx <= max_pos) {
       uint64 t = static_cast<uint64>(large_data[idx]) + inc;
       self[idx++] = t & max_32bit_value;
@@ -625,7 +626,7 @@ class BigInteger {
     }
     const int allocate_size = n + m + 8;
     const int result_size = n + m - 1;
-    auto result = ntt32::PolyMulSmall(X, Y, 0);
+    std::vector<uint64> result = ntt32::PolyMulSmall(X, Y, 0);
     result.resize(allocate_size);
     uint64 inc = 0;
     for (int i = 0; i < result_size; ++i) {
@@ -689,7 +690,7 @@ class BigInteger {
     std::fill(ret.data_, ret.data_ + new_size, 0);
 
     for (int i = 0; i <= right_pos; ++i) {
-      auto t = r[i];
+      unsigned int t = r[i];
       uint64 inc = 0;
       int j = 0;
       for (; j <= left_pos; ++j) {

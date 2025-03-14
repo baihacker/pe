@@ -194,9 +194,10 @@ struct FactSumModer {
 
     // Compute P
     std::vector<uint64> YQ;
-    auto YP = PolyBatchMulAcc(X, 0, static_cast<int>(m - 1), YQ, p_);
+    std::vector<uint64> YP =
+        PolyBatchMulAcc(X, 0, static_cast<int>(m - 1), YQ, p_);
     YP[0] = AddMod(YP[0], 1, p_);
-    auto P = PolyMultipointEvaluate(YP, V, p_);
+    std::vector<uint64> P = PolyMultipointEvaluate(YP, V, p_);
 
     // Prepare data for computing Q
     // YQ *= (m + xm)
@@ -205,13 +206,13 @@ struct FactSumModer {
     for (int i = static_cast<int>(m - 1); i >= 1; --i) {
       YQ[i] = AddMod(YQ[i], YQ[i - 1], p_);
     }
-    for (auto& i : YQ) i = MulMod(i, m, p_);
+    for (uint64& i : YQ) i = MulMod(i, m, p_);
 
     // V.extend(m)
     V.push_back(m);
 
     // Compute Q
-    auto Q = PolyMultipointEvaluate(YQ, V, p_);
+    std::vector<uint64> Q = PolyMultipointEvaluate(YQ, V, p_);
     for (int i = 1; i <= m; ++i) {
       Q[i] = MulMod(Q[i], Q[i - 1], p_);
     }
@@ -1164,8 +1165,8 @@ int64 CountPythagoreanTriple(int64 n) {
   // s = sum(f(i^2), i=1..n)
   // return (s - 4 * n) / 8
   auto _ = PrimeS0PMod<int64>(n, 4);
-  auto ps1 = _[1];
-  auto ps3 = _[3];
+  auto ps1 = std::move(_[1]);
+  auto ps3 = std::move(_[3]);
   auto compute = [&](int64 n, int64 val, int /*imp*/, int64 vmp, int /*emp*/,
                      MVVHistory* his, int top) -> int64 {
     if (val == 1) {
@@ -1295,7 +1296,7 @@ struct NotDivCounter {
   T NotDivCoprimeImpl(T n, const std::vector<int64>& L, int i) {
     T ret = n;
     for (int j = 0; j < i; ++j) {
-      const auto x = L[j];
+      const int64 x = L[j];
       if (x > n) break;
       ret -= NotDivCoprimeImpl(n / x, L, j);
     }
@@ -1334,16 +1335,16 @@ struct NotDivCounter {
       if (p > L[size - 1]) break;
 
       std::vector<int64> D;
-      for (auto& iter : R) {
+      for (int64& iter : R) {
         if (iter % p == 0) D.push_back(iter);
       }
       if (sz(D) < 2) continue;
       std::vector<int64> C;
-      for (auto& iter : R) {
+      for (int64& iter : R) {
         if (iter % p) C.push_back(iter);
       }
       std::vector<int64> B(C);
-      for (auto& iter : D) B.push_back(iter / p);
+      for (int64& iter : D) B.push_back(iter / p);
       std::sort(B.begin(), B.end());
       return NotDivImpl(n, C) - NotDivImpl(n / p, C) + NotDivImpl(n / p, B);
     }
@@ -1534,7 +1535,7 @@ struct DfaCounter {
   template <typename U>
   CT Cal(U n) {
     std::vector<int> dig;
-    for (auto x = n; !IsZero(x); x /= number_base_) {
+    for (U x = n; !IsZero(x); x /= number_base_) {
       dig.push_back(ToInt<int>(x % number_base_));
     }
     return Cal(dig);
@@ -1738,7 +1739,7 @@ struct DfaSummer {
   template <typename U>
   CT Cal(U n, int target_power = 0) {
     std::vector<int> dig;
-    for (auto x = n; !IsZero(x); x /= number_base_) {
+    for (U x = n; !IsZero(x); x /= number_base_) {
       dig.push_back(ToInt<int>(x % number_base_));
     }
 
@@ -1841,7 +1842,7 @@ struct CarlitzWordsCounter {
     std::vector<int64> it{1};
     const int64 vsize = sz(vec);
     for (int64 i = 0; i < vsize; i += 2) {
-      auto L = MakeLaguerrePoly(vec[i], IsEven(vec[i]) ? 1 : -1);
+      std::vector<int64> L = MakeLaguerrePoly(vec[i], IsEven(vec[i]) ? 1 : -1);
       for (int j = 0; j < vec[i + 1]; ++j) it = PolyMul(it, L, mod_);
     }
     int64 ret = 0;
@@ -2024,7 +2025,7 @@ SL std::optional<std::vector<std::vector<int64>>> FindRecurrence(
       break;
     }
 
-    auto recurrence =
+    std::optional<std::vector<std::vector<int64>>> recurrence =
         internal::FindRecurrenceWithDegree(terms, static_cast<int>(deg), mod);
     if (!recurrence.has_value()) {
       continue;
@@ -2047,7 +2048,8 @@ SL std::optional<int64> RecurrenceValueAtN(Span<const int64> terms, int64 n,
     return terms[n];
   }
 
-  auto recurrence = FindRecurrence(terms, mod, min_deg, max_deg);
+  std::optional<std::vector<std::vector<int64>>> recurrence =
+      FindRecurrence(terms, mod, min_deg, max_deg);
   if (!recurrence.has_value()) {
     return std::nullopt;
   }
@@ -2070,7 +2072,8 @@ SL std::optional<std::vector<int64>> RecurrenceValues(Span<const int64> terms,
                                                       int64 n, int64 mod,
                                                       int min_deg = 0,
                                                       int max_deg = -1) {
-  auto recurrence = FindRecurrence(terms, mod, min_deg, max_deg);
+  std::optional<std::vector<std::vector<int64>>> recurrence =
+      FindRecurrence(terms, mod, min_deg, max_deg);
   if (!recurrence.has_value()) {
     return std::nullopt;
   }

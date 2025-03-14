@@ -1,34 +1,3 @@
-### 公共工具函数 ###
-def _process_paths(ctx, extra_includes, extra_lib_paths):
-    """处理包含路径和库路径的公共函数"""
-    c_include_paths = list(depset(
-        extra_includes +
-        ctx.configuration.default_shell_env.get("C_INCLUDE_PATH", "").split(";")
-    ).to_list())
-    library_paths = list(depset(
-        extra_lib_paths +
-        ctx.configuration.default_shell_env.get("LIBRARY_PATH", "").split(";")
-    ).to_list())
-
-    # 过滤空值并展开变量
-    return (
-        [ctx.expand_make_variables("", p, {}) for p in c_include_paths if p],
-        [ctx.expand_make_variables("", p, {}) for p in library_paths if p]
-    )
-
-def _get_common_compile_flags(ctx):
-    """获取公共编译参数"""
-    return [
-        "--std=c++20",
-        "-fno-diagnostics-color",
-        "-O3",
-        "-march=native",
-        "-mtune=native",
-        "-fopenmp",
-        "-Wno-delete-incomplete",
-        "-Wno-shift-count-overflow"
-    ] + ctx.attr.extra_cc_flags
-
 CompilationContext = provider(
     fields = [
         "c_include_paths",
@@ -47,20 +16,65 @@ LinkContext = provider(
     ]
 )
 
+PeLibraryInfo = provider(
+    fields = {
+        "archive": "生成的静态库文件 (.a)",
+    }
+)
+
 ### 公共构建函数 ###
 def _create_compilation_context(ctx, extra_includes, extra_lib_paths):
     """创建编译上下文"""
-    # 处理路径
-    c_include_paths, library_paths = _process_paths(ctx, extra_includes, extra_lib_paths)
+    c_include_paths = list(depset(
+        extra_includes +
+        ctx.configuration.default_shell_env.get("C_INCLUDE_PATH", "").split(";")
+    ).to_list())
+
+    library_paths = list(depset(
+        extra_lib_paths +
+        ctx.configuration.default_shell_env.get("LIBRARY_PATH", "").split(";")
+    ).to_list())
+
+    c_include_paths = [ctx.expand_make_variables("", p, {}) for p in c_include_paths if p]
+    library_paths = [ctx.expand_make_variables("", p, {}) for p in library_paths if p]
 
     # 获取工具链信息
     return CompilationContext(
         c_include_paths = c_include_paths,
         library_paths = library_paths,
-        compile_flags = _get_common_compile_flags(ctx) + ctx.attr.extra_cc_flags,
+        compile_flags = [
+            "--std=c++20",
+            "-fno-diagnostics-color",
+            "-O3",
+            "-march=native",
+            "-mtune=native",
+            "-fopenmp",
+            "-Wno-delete-incomplete",
+            "-Wno-shift-count-overflow"
+        ] + ctx.attr.copts,
         defines = ctx.attr.defines,
         cc_path = ctx.attr.cc_path,
         ar_path = ctx.attr.ar_path,
+    )
+
+def _create_link_context(ctx):
+    """创建编译上下文"""
+    return LinkContext(
+        link_flags = [
+            "-static",
+            "-Wl,--stack,268435456",
+            "-lquadmath",
+            "-lbf",
+            "-lgmpxx",
+            "-lflint",
+            "-lmpfr",
+            "-lntl",
+            "-lgmp",
+            "-lprimesieve",
+            "-lprimecount",
+            "-lzmq"
+        ] + ctx.attr.linkopts,
+        libs = ctx.attr.libs
     )
 
 def _compile_sources(ctx, compilation_ctx, srcs):
@@ -77,8 +91,9 @@ def _compile_sources(ctx, compilation_ctx, srcs):
         args = ctx.actions.args()
         args.add("-c")
         args.add("-x", "c++")
-        args.add("-o", obj_file)
         args.add(src.path)
+        args.add("-o", obj_file)
+
         args.add_all(compilation_ctx.compile_flags)
         args.add_all(["-I{}".format(p) for p in compilation_ctx.c_include_paths])
         args.add_all(["-D{}".format(d) for d in compilation_ctx.defines])
@@ -126,27 +141,31 @@ def _pe_library_impl(ctx):
     output_lib = _create_archive(ctx, compilation_ctx, obj_files, "lib{}.a".format(ctx.attr.name))
 
     return [DefaultInfo(
-        files = depset([output_lib]),
-        providers = [
+                files = depset([output_lib]),
+            ),
             OutputGroupInfo(
                 objects = depset(obj_files),
                 archive = depset([output_lib])
+            ),
+            PeLibraryInfo(
+                archive = output_lib,           # 静态库文件
             )
-        ]
-    )]
+          ]
 
-def _link_executable(ctx, compilation_ctx, link_ctx, obj_files):
+def _link_executable(ctx, compilation_ctx, link_ctx, obj_files, dep_archives):
     """链接可执行文件"""
     output = ctx.actions.declare_file(ctx.attr.name + ".exe")
     args = ctx.actions.args()
     args.add_all(obj_files)
+    args.add_all(dep_archives)
     args.add("-o", output)
+
     args.add_all(link_ctx.link_flags)
     args.add_all(["-L{}".format(p) for p in compilation_ctx.library_paths])
     args.add_all(["-l{}".format(lib) for lib in link_ctx.libs])
 
     ctx.actions.run(
-        inputs = obj_files,
+        inputs = obj_files + dep_archives,
         outputs = [output],
         executable = compilation_ctx.cc_path,
         arguments = [args],
@@ -156,22 +175,26 @@ def _link_executable(ctx, compilation_ctx, link_ctx, obj_files):
     )
     return output
 
-def _build_combined(ctx, compilation_ctx, link_ctx):
+def _build_combined(ctx, compilation_ctx, link_ctx, dep_archives):
     """单命令构建模式"""
     output = ctx.actions.declare_file(ctx.attr.name + ".exe")
     args = ctx.actions.args()
     args.add_all(["-x", "c++"])
     args.add_all(ctx.files.srcs)
+    args.add_all(["-x", "none"])
+
     args.add("-o", output)
     args.add_all(compilation_ctx.compile_flags)
-    args.add_all(link_ctx.link_flags)
     args.add_all(["-I{}".format(p) for p in compilation_ctx.c_include_paths])
     args.add_all(["-D{}".format(d) for d in compilation_ctx.defines])
+
+    args.add_all(link_ctx.link_flags)
     args.add_all(["-L{}".format(p) for p in compilation_ctx.library_paths])
     args.add_all(["-l{}".format(lib) for lib in link_ctx.libs])
+    args.add_all(dep_archives)
 
     ctx.actions.run(
-        inputs = ctx.files.srcs,
+        inputs = ctx.files.srcs + dep_archives,
         outputs = [output],
         executable = compilation_ctx.cc_path,
         arguments = [args],
@@ -189,32 +212,25 @@ def _pe_binary_impl(ctx):
         ctx.attr.extra_lib_paths
     )
 
+    # 收集依赖项的静态库
+    dep_archives = []  # 依赖项的静态库
+
+    for dep in ctx.attr.deps:
+        if PeLibraryInfo in dep:
+            dep_archives.append(dep[PeLibraryInfo].archive)
+        else:
+            print("Warning: Unsupported dependency type:", dep)
+
     # 创建链接上下文
-    link_ctx = LinkContext(
-        link_flags = [
-            "-static",
-            "-Wl,--stack,268435456",
-            "-lquadmath",
-            "-lbf",
-            "-lgmpxx",
-            "-lflint",
-            "-lmpfr",
-            "-lntl",
-            "-lgmp",
-            "-lprimesieve",
-            "-lprimecount",
-            "-lzmq"
-        ],
-        libs = ctx.attr.libs
-    )
+    link_ctx = _create_link_context(ctx)
 
     if ctx.attr.split_compile:
         # 分步编译模式
         obj_files = _compile_sources(ctx, compilation_ctx, ctx.files.srcs)
-        output = _link_executable(ctx, compilation_ctx, link_ctx, obj_files)
+        output = _link_executable(ctx, compilation_ctx, link_ctx, obj_files, dep_archives)
     else:
         # 单命令模式
-        output = _build_combined(ctx, compilation_ctx, link_ctx)
+        output = _build_combined(ctx, compilation_ctx, link_ctx, dep_archives)
 
     return [DefaultInfo(
         executable = output,
@@ -228,7 +244,7 @@ pe_library = rule(
         "defines": attr.string_list(),
         "extra_includes": attr.string_list(),
         "extra_lib_paths": attr.string_list(),
-        "extra_cc_flags": attr.string_list(),
+        "copts": attr.string_list(),
         "cc_path": attr.string(default = "g++"),
         "ar_path": attr.string(default = "ar"),
     }
@@ -243,7 +259,9 @@ pe_binary = rule(
         "extra_includes": attr.string_list(),
         "extra_lib_paths": attr.string_list(),
         "libs": attr.string_list(),
-        "extra_cc_flags": attr.string_list(),
+        "copts": attr.string_list(),
+        "linkopts": attr.string_list(),
+        "deps": attr.label_list(),
         "cc_path": attr.string(default = "g++"),
         "ar_path": attr.string(default = "ar"),
         "split_compile": attr.bool(default = False)

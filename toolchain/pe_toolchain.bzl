@@ -182,6 +182,8 @@ def _build_combined(ctx, compilation_ctx, link_ctx, dep_archives):
     args = ctx.actions.args()
     args.add_all(["-x", "c++"])
     args.add_all(ctx.files.srcs)
+    args.add_all(["-x", "none"])
+    args.add_all(dep_archives)
     args.add("-o", output)
 
     args.add_all(compilation_ctx.compile_flags)
@@ -191,8 +193,6 @@ def _build_combined(ctx, compilation_ctx, link_ctx, dep_archives):
     args.add_all(link_ctx.link_flags)
     args.add_all(["-L{}".format(p) for p in compilation_ctx.library_paths])
     args.add_all(["-l{}".format(lib) for lib in link_ctx.libs])
-    args.add_all(["-x", "none"])
-    args.add_all(dep_archives)
 
     ctx.actions.run(
         inputs = ctx.files.srcs + dep_archives,

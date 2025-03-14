@@ -63,6 +63,7 @@ def _create_link_context(ctx):
         link_flags = [
             "-static",
             "-Wl,--stack,268435456",
+            "-fopenmp",
             "-lquadmath",
             "-lbf",
             "-lgmpxx",
@@ -264,7 +265,7 @@ pe_binary = rule(
         "deps": attr.label_list(),
         "cc_path": attr.string(default = "g++"),
         "ar_path": attr.string(default = "ar"),
-        "split_compile": attr.bool(default = False)
+        "split_compile": attr.bool(default = True)
     },
     executable = True
 )

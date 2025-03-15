@@ -186,7 +186,7 @@ def _link_executable(ctx, compilation_ctx, link_ctx, obj_files, dep_archives):
 
 def _build_combined(ctx, compilation_ctx, link_ctx, dep_archives):
     """单命令构建模式"""
-    output = ctx.actions.declare_file(ctx.attr.name + ".exe")
+    output = ctx.actions.declare_file(ctx.attr.name + ctx.attr.executable_suffix)
     args = ctx.actions.args()
     args.add_all(["-x", "c++"])
     args.add_all(ctx.files.srcs)
@@ -274,7 +274,8 @@ pe_binary = rule(
         "cc_path": attr.string(default = "g++"),
         "ar_path": attr.string(default = "ar"),
         "split_compile": attr.bool(default = False),
-        "enable_pe_flags": attr.bool(default = True)
+        "enable_pe_flags": attr.bool(default = True),
+        "executable_suffix": attr.string(default = ".exe"),
     },
     executable = True
 )

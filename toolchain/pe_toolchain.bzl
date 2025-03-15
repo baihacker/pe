@@ -24,15 +24,17 @@ PeLibraryInfo = provider(
 
 ### 公共构建函数 ###
 def _create_compilation_context(ctx, extra_includes, extra_lib_paths):
+    path_separator = ctx.configuration.host_path_separator
+
     """创建编译上下文"""
     c_include_paths = list(depset(
         extra_includes +
-        ctx.configuration.default_shell_env.get("C_INCLUDE_PATH", "").split(";")
+        ctx.configuration.default_shell_env.get("C_INCLUDE_PATH", "").split(path_separator)
     ).to_list())
 
     library_paths = list(depset(
         extra_lib_paths +
-        ctx.configuration.default_shell_env.get("LIBRARY_PATH", "").split(";")
+        ctx.configuration.default_shell_env.get("LIBRARY_PATH", "").split(path_separator)
     ).to_list())
 
     c_include_paths = [ctx.expand_make_variables("", p, {}) for p in c_include_paths if p]
@@ -44,13 +46,13 @@ def _create_compilation_context(ctx, extra_includes, extra_lib_paths):
         library_paths = library_paths,
         compile_flags = [
             "--std=c++20",
-            "-fno-diagnostics-color",
+            "-Wno-delete-incomplete",
+            "-Wno-shift-count-overflow",
             "-O3",
             "-march=native",
             "-mtune=native",
             "-fopenmp",
-            "-Wno-delete-incomplete",
-            "-Wno-shift-count-overflow"
+            "-fno-diagnostics-color",
         ] + ctx.attr.copts,
         defines = ctx.attr.defines,
         cc_path = ctx.attr.cc_path,

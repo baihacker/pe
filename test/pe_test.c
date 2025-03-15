@@ -34,8 +34,8 @@
 
 static TimeUsage __time_usage;
 
-PeTest& GetTester() {
-  static PeTest tester;
+TestRegistry& GetTester() {
+  static TestRegistry tester;
   return tester;
 }
 

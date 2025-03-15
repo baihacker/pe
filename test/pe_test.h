@@ -22,11 +22,11 @@ struct TestItem {
   TestSize test_size;
 };
 
-struct PeTest {
+struct TestRegistry {
   std::vector<TestItem> tests;
 };
 
-PeTest& GetTester();
+TestRegistry& GetTester();
 
 struct InitializeHelper {
   InitializeHelper(const std::function<void(void)>& action) { action(); }

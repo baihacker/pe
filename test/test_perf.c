@@ -13,8 +13,8 @@
 #include "extended_unsigned_int_test.c"
 #endif
 
-PeTest& GetTester() {
-  static PeTest tester;
+TestRegistry& GetTester() {
+  static TestRegistry tester;
   return tester;
 }
 

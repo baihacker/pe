@@ -34,7 +34,7 @@
 
 static TimeUsage __time_usage;
 
-TestRegistry& GetTester() {
+TestRegistry& GetTestRegistry() {
   static TestRegistry tester;
   return tester;
 }
@@ -244,7 +244,7 @@ int main() {
   dbg(maxp);
   dbg(maxp2);
 
-  auto& tester = GetTester();
+  auto& tester = GetTestRegistry();
   const int size = (int)std::size(tester.tests);
 
   std::stable_sort(

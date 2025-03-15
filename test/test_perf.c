@@ -13,7 +13,7 @@
 #include "extended_unsigned_int_test.c"
 #endif
 
-TestRegistry& GetTester() {
+TestRegistry& GetTestRegistry() {
   static TestRegistry tester;
   return tester;
 }
@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
       .set_ntt64_k()
       .Init();
 
-  auto& tester = GetTester();
+  auto& tester = GetTestRegistry();
   const int size = (int)std::size(tester.tests);
 
   TableFormatter tf;

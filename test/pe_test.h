@@ -26,7 +26,7 @@ struct TestRegistry {
   std::vector<TestItem> tests;
 };
 
-TestRegistry& GetTester();
+TestRegistry& GetTestRegistry();
 
 struct InitializeHelper {
   InitializeHelper(const std::function<void(void)>& action) { action(); }
@@ -41,7 +41,7 @@ struct InitializeHelper {
 
 #define PE_REGISTER_TEST(test, description, test_size)             \
   static InitializeHelper MAKE_INITIALIZER_NAME(__LINE__)([]() {   \
-    GetTester().tests.push_back(                                   \
+    GetTestRegistry().tests.push_back(                                   \
         {test, MAKE_FILE_NAME(__FILE__), description, test_size}); \
   })
 

@@ -36,7 +36,6 @@ package(
              "CONTINUOUS_INTEGRATION_TEST",
              "NO_SUPER_TEST"],
            linkopts = [
-             "-static",
              "-fopenmp",
              "-lgmpxx",
              "-lmpfr",

@@ -1,6 +1,7 @@
 #include <pe.hpp>
 using namespace pe;
 
+#if OS_TYPE_WIN
 const int64 N = 1000000000;
 LargeMemory lm;
 
@@ -19,3 +20,6 @@ int main() {
   std::cerr << tr.Elapsed().Format() << std::endl;
   return 0;
 }
+#else
+int main() { return 0; }
+#endif

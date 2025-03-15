@@ -22,6 +22,35 @@ PeLibraryInfo = provider(
     }
 )
 
+def _get_pe_compile_flags(ctx):
+    return [
+            "--std=c++20",
+            "-Wno-delete-incomplete",
+            "-Wno-shift-count-overflow",
+            "-O3",
+            "-march=native",
+            "-mtune=native",
+            "-fopenmp",
+            "-fno-diagnostics-color",
+        ] if ctx.attr.enable_pe_flags else []
+
+def _get_pe_link_flags(ctx):
+    return [
+            "-static",
+            "-Wl,--stack,268435456",
+            "-fopenmp",
+            "-lquadmath",
+            "-lbf",
+            "-lgmpxx",
+            "-lflint",
+            "-lmpfr",
+            "-lntl",
+            "-lgmp",
+            "-lprimesieve",
+            "-lprimecount",
+            "-lzmq"
+        ] if ctx.attr.enable_pe_flags else []
+
 ### 公共构建函数 ###
 def _create_compilation_context(ctx, extra_includes, extra_lib_paths):
     path_separator = ctx.configuration.host_path_separator
@@ -44,16 +73,7 @@ def _create_compilation_context(ctx, extra_includes, extra_lib_paths):
     return CompilationContext(
         c_include_paths = c_include_paths,
         library_paths = library_paths,
-        compile_flags = [
-            "--std=c++20",
-            "-Wno-delete-incomplete",
-            "-Wno-shift-count-overflow",
-            "-O3",
-            "-march=native",
-            "-mtune=native",
-            "-fopenmp",
-            "-fno-diagnostics-color",
-        ] + ctx.attr.copts,
+        compile_flags = _get_pe_compile_flags(ctx) + ctx.attr.copts,
         defines = ctx.attr.defines,
         cc_path = ctx.attr.cc_path,
         ar_path = ctx.attr.ar_path,
@@ -62,21 +82,7 @@ def _create_compilation_context(ctx, extra_includes, extra_lib_paths):
 def _create_link_context(ctx):
     """创建编译上下文"""
     return LinkContext(
-        link_flags = [
-            "-static",
-            "-Wl,--stack,268435456",
-            "-fopenmp",
-            "-lquadmath",
-            "-lbf",
-            "-lgmpxx",
-            "-lflint",
-            "-lmpfr",
-            "-lntl",
-            "-lgmp",
-            "-lprimesieve",
-            "-lprimecount",
-            "-lzmq"
-        ] + ctx.attr.linkopts,
+        link_flags = _get_pe_link_flags(ctx) + ctx.attr.linkopts,
         libs = ctx.attr.libs
     )
 
@@ -250,9 +256,9 @@ pe_library = rule(
         "copts": attr.string_list(),
         "cc_path": attr.string(default = "g++"),
         "ar_path": attr.string(default = "ar"),
+        "enable_pe_flags": attr.bool(default = True)
     }
 )
-
 
 pe_binary = rule(
     implementation = _pe_binary_impl,
@@ -267,7 +273,8 @@ pe_binary = rule(
         "deps": attr.label_list(),
         "cc_path": attr.string(default = "g++"),
         "ar_path": attr.string(default = "ar"),
-        "split_compile": attr.bool(default = False)
+        "split_compile": attr.bool(default = False),
+        "enable_pe_flags": attr.bool(default = True)
     },
     executable = True
 )

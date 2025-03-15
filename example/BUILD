@@ -45,41 +45,5 @@ package(
              "-lgmp"],
            cc_path = "g++",
            ) for x in glob(["*.c"])]
-[pe_binary(name = x[:-2] + "_clang",
-           srcs = [x],
-           executable_suffix = ".out",
-           enable_pe_flags = False,
-           copts = [
-             "-std=c++17",
-             "-Wno-delete-incomplete",
-             "-Wno-shift-count-overflow",
-             "-O3",
-             "-march=native",
-             "-mtune=native"],
-           defines = [
-             "ENABLE_ASSERT=0",
-             "TRY_TO_USE_INT128=1",
-             "ENABLE_OPENMP=0",
-             "ENABLE_EIGEN=1",
-             "ENABLE_GMP=1",
-             "ENABLE_FLINT=1",
-             "ENABLE_MPFR=1",
-             "ENABLE_NTL=1",
-             "ENABLE_ZMQ=0",
-             "ENABLE_LIBBF=0",
-             "ENABLE_PRIME_COUNT=0",
-             "ENABLE_PRIME_SIEVE=0",
-             "TEST_ALL",
-             "CONTINUOUS_INTEGRATION_TEST",
-             "NO_SUPER_TEST"],
-           linkopts = [
-             "-static",
-             "-lgmpxx",
-             "-lflint",
-             "-lmpfr",
-             "-lntl",
-             "-lgmp"],
-            cc_path = "clang++",
-           ) for x in glob(["*.c"])]
+
 filegroup(name ="gcc_builds", srcs = [x[:-2] + "_gcc" for x in glob(["*.c"])])
-filegroup(name ="clang_builds", srcs = [x[:-2] + "_clang" for x in glob(["*.c"])])

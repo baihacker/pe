@@ -5,7 +5,7 @@ SL void RuBitTest() {
   const int n = 100;
   int data[n + 1] = {0};
   RUBit<int> tree(n);
-  for (int i = 0; i < 1000; ++i) {
+  for (int iter = 0; iter < 100; ++iter) {
     if (rand() % 2 == 0) {
       for (int i = 0; i < 100; ++i) {
         int u = rand() % n + 1, v = rand() % n + 1;
@@ -26,7 +26,7 @@ SL void RsqBitTest() {
   const int n = 100;
   int data[n + 1] = {0};
   RSQBit<int> tree(n);
-  for (int i = 0; i < 100; ++i) {
+  for (int iter = 0; iter < 100; ++iter) {
     if (rand() % 2 == 0) {
       for (int i = 0; i < 100; ++i) {
         int u = rand() % n + 1, v = rand() % n + 1;

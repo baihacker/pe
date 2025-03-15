@@ -22,6 +22,27 @@ jobs:
       - name: Run tests
         run: ./pe_test.out
 
+  gcc-build-examples:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y g++ libeigen3-dev libgmp-dev libflint-dev libntl-dev
+
+      - name: Install Bazel
+        uses: actions/setup-bazel@v3
+        with:
+          version: '5.0.0'
+
+      - name: Build examples
+        run: |
+          export CPLUS_INCLUDE_PATH="$(pwd)":"/usr/include/flint":"/usr/include/eigen3":${CPLUS_INCLUDE_PATH}
+          export LIBRARY_PATH="/usr/lib":${LIBRARY_PATH}
+          bazel build --ignore_all_rc_files //example:gcc_builds --action_env=CPLUS_INCLUDE_PATH=${CPLUS_INCLUDE_PATH} --action_env=LIBRARY_PATH=${LIBRARY_PATH}
+
   clang-build-and-test:
     runs-on: ubuntu-latest
 

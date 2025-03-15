@@ -25,7 +25,7 @@ package(
              "ENABLE_OPENMP=1",
              "ENABLE_EIGEN=1",
              "ENABLE_GMP=1",
-             "ENABLE_FLINT=0",
+             "ENABLE_FLINT=1",
              "ENABLE_MPFR=1",
              "ENABLE_NTL=1",
              "ENABLE_ZMQ=0",
@@ -38,6 +38,7 @@ package(
            linkopts = [
              "-fopenmp",
              "-lgmpxx",
+             "-lflint",
              "-lmpfr",
              "-lntl",
              "-lgmp"],

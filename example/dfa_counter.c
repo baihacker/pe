@@ -9,7 +9,7 @@ int64 cal(int64 n) {
   return 0;
 }
 
-int64 bf(int64 n) { return XRange(1LL, n).Map<int64>(cal).Sum(); }
+int64 bf(int64 n) { return XRange<int64>(1LL, n).Map<int64>(cal).Sum(); }
 
 int main() {
   PE_INIT(maxp = 1000000);

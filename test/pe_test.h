@@ -19,7 +19,7 @@ struct TestItem {
   TestMethodT test;
   std::string file;
   std::string description;
-  TestSize testSize;
+  TestSize test_size;
 };
 
 struct PeTest {
@@ -39,9 +39,10 @@ struct InitializeHelper {
 #define MAKE_FILE_NAME_IMPL(FILE_NAME) std::string(FILE_NAME)
 #define MAKE_FILE_NAME(FILE_NAME) MAKE_FILE_NAME_IMPL(FILE_NAME)
 
-#define PE_REGISTER_TEST(t, d, s)                                     \
-  static InitializeHelper MAKE_INITIALIZER_NAME(__LINE__)([]() {      \
-    GetTester().tests.push_back({t, MAKE_FILE_NAME(__FILE__), d, s}); \
+#define PE_REGISTER_TEST(test, description, test_size)             \
+  static InitializeHelper MAKE_INITIALIZER_NAME(__LINE__)([]() {   \
+    GetTester().tests.push_back(                                   \
+        {test, MAKE_FILE_NAME(__FILE__), description, test_size}); \
   })
 
 #endif

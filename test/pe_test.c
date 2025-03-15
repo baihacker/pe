@@ -254,26 +254,26 @@ int main() {
 
   for (int i = 0; i < size; ++i) {
     auto& item = tester.tests[i];
-    if (!IsEnabledTestSize(item.testSize)) {
+    if (!IsEnabledTestSize(item.test_size)) {
       continue;
     }
 #if defined(NO_SMALL_TEST)
-    if (item.testSize == SMALL) {
+    if (item.test_size == SMALL) {
       continue;
     }
 #endif
 #if defined(NO_MEDIUM_TEST)
-    if (item.testSize == MEDIUM) {
+    if (item.test_size == MEDIUM) {
       continue;
     }
 #endif
 #if defined(NO_BIG_TEST)
-    if (item.testSize == BIG) {
+    if (item.test_size == BIG) {
       continue;
     }
 #endif
 #if defined(NO_SUPER_TEST)
-    if (item.testSize == SUPER) {
+    if (item.test_size == SUPER) {
       continue;
     }
 #endif

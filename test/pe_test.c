@@ -49,22 +49,22 @@ SL bool IsEnabledTestSize(TestSize size) {
   };
 #if defined(NO_SMALL_TEST)
   if (size == SMALL) {
-    continue;
+    return false;
   }
 #endif
 #if defined(NO_MEDIUM_TEST)
   if (size == MEDIUM) {
-    continue;
+    return false;
   }
 #endif
 #if defined(NO_BIG_TEST)
   if (size == BIG) {
-    continue;
+    return false;
   }
 #endif
 #if defined(NO_SUPER_TEST)
   if (size == SUPER) {
-    continue;
+    return false;
   }
 #endif
 

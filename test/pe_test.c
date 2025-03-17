@@ -270,13 +270,13 @@ int main() {
       std::begin(test_registry.tests), std::end(test_registry.tests),
       [](const TestItem& a, const TestItem& b) { return a.file < b.file; });
 
-  bool isFirstTest = true;
+  bool is_first_test = true;
 
   for (const TestItem& test_item : test_registry.tests) {
     if (!IsEnabledTestSize(test_item.test_size)) {
       continue;
     }
-    if (!isFirstTest) {
+    if (!is_first_test) {
       std::cout << std::endl;
     }
     std::cout << "Begin " << test_item.file << " " << test_item.description
@@ -285,7 +285,7 @@ int main() {
     test_item.test();
     std::cout << "End " << test_item.description << std::endl;
     std::cout << "Time usage " << tr.Elapsed().Format() << std::endl;
-    isFirstTest = false;
+    is_first_test = false;
   }
 
   return 0;

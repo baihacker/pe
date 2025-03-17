@@ -35,19 +35,39 @@
 static TimeUsage __time_usage;
 
 TestRegistry& GetTestRegistry() {
-  static TestRegistry tester;
-  return tester;
+  static TestRegistry test_registry;
+  return test_registry;
 }
 
-TestSize enabled_test_size[]{
-#if defined(TEST_ALL)
-    SMALL, MEDIUM, BIG, SUPER, SPECIFIED,
-#else
-    SPECIFIED,
-#endif
-};
-
 SL bool IsEnabledTestSize(TestSize size) {
+  static constexpr TestSize enabled_test_size[] = {
+#if defined(TEST_ALL)
+      SMALL, MEDIUM, BIG, SUPER, SPECIFIED,
+#else
+      SPECIFIED,
+#endif
+  };
+#if defined(NO_SMALL_TEST)
+  if (size == SMALL) {
+    continue;
+  }
+#endif
+#if defined(NO_MEDIUM_TEST)
+  if (size == MEDIUM) {
+    continue;
+  }
+#endif
+#if defined(NO_BIG_TEST)
+  if (size == BIG) {
+    continue;
+  }
+#endif
+#if defined(NO_SUPER_TEST)
+  if (size == SUPER) {
+    continue;
+  }
+#endif
+
   for (auto& iter : enabled_test_size) {
     if (iter == size) {
       return true;
@@ -244,48 +264,29 @@ int main() {
   dbg(maxp);
   dbg(maxp2);
 
-  auto& tester = GetTestRegistry();
-  const int size = (int)std::size(tester.tests);
+  TestRegistry& test_registry = GetTestRegistry();
 
   std::stable_sort(
-      std::begin(tester.tests), std::end(tester.tests),
-      [](const auto& a, const auto& b) { return a.file < b.file; });
+      std::begin(test_registry.tests), std::end(test_registry.tests),
+      [](const TestItem& a, const TestItem& b) { return a.file < b.file; });
+
   bool isFirstTest = true;
 
-  for (int i = 0; i < size; ++i) {
-    auto& item = tester.tests[i];
-    if (!IsEnabledTestSize(item.test_size)) {
+  for (const TestItem& test_item : test_registry.tests) {
+    if (!IsEnabledTestSize(test_item.test_size)) {
       continue;
     }
-#if defined(NO_SMALL_TEST)
-    if (item.test_size == SMALL) {
-      continue;
-    }
-#endif
-#if defined(NO_MEDIUM_TEST)
-    if (item.test_size == MEDIUM) {
-      continue;
-    }
-#endif
-#if defined(NO_BIG_TEST)
-    if (item.test_size == BIG) {
-      continue;
-    }
-#endif
-#if defined(NO_SUPER_TEST)
-    if (item.test_size == SUPER) {
-      continue;
-    }
-#endif
     if (!isFirstTest) {
       std::cout << std::endl;
     }
-    std::cout << "Begin " << item.file << " " << item.description << std::endl;
+    std::cout << "Begin " << test_item.file << " " << test_item.description
+              << std::endl;
     TimeRecorder tr;
-    item.test();
-    std::cout << "End " << item.description << std::endl;
+    test_item.test();
+    std::cout << "End " << test_item.description << std::endl;
     std::cout << "Time usage " << tr.Elapsed().Format() << std::endl;
     isFirstTest = false;
   }
+
   return 0;
 }

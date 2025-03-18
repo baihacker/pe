@@ -20,6 +20,7 @@ RULES = [
     ('ENABLE_ZMQ', ['zmq/zmq.h']),
     ('ENABLE_PRIME_COUNT', ['primecount.hpp']),
     ('ENABLE_PRIME_SIEVE', ['primesieve.hpp']),
+    ('ENABLE_TCMALLOC', []), # Always disable
 ]
 
 content = []

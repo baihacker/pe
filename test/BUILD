@@ -29,6 +29,23 @@ pe_binary(
 )
 
 pe_binary(
+  name = "test_tcmalloc",
+  srcs = ["pe_test.c"],
+  defines = [
+    "TEST_ALL",
+    "ENABLE_ASSERT=0",
+    "TRY_TO_USE_INT128=1",
+    "ENABLE_OPENMP=1",
+    "ENABLE_TCMALLOC=1",
+  ],
+  libs = [
+    "tcmalloc_minimal",
+    "synchronization",
+    "psapi",
+  ]
+)
+
+pe_binary(
   name = "test_noint128_noopenmp",
   srcs = ["pe_test.c"],
   defines = [

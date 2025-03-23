@@ -168,7 +168,7 @@ struct NttMod32 {
       }
       const int64 cnt = 1LL << i;
       pre_omg[i] = new unsigned[cnt];
-      auto* target = pre_omg[i];
+      unsigned int* target = pre_omg[i];
       const uint64 m = omg[i];
       unsigned last = 1;
       target[0] = 1;
@@ -189,20 +189,20 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     Ntt(T* data, const int64 n, const NttMod32& moder, bool inv = false) {
   ntt_base::NttTrans(data, n);
 
-  const auto mod = moder.mod;
+  const unsigned int mod = moder.mod;
   int id = 0;
   for (int64 h = 2; h <= n; h <<= 1) {
-    const auto* pre_omg = moder.pre_omg[++id];
+    const unsigned int* pre_omg = moder.pre_omg[++id];
     if (pre_omg) {
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 16) if (n / h > 100000)
 #endif
       for (int64 j = 0; j < n; j += h) {
-        const auto* omg = pre_omg;
+        const unsigned int* omg = pre_omg;
         const int64 half_h = h >> 1;
         const int64 limit = j + half_h;
         for (int64 k = j; k < limit; ++k) {
-          const auto u = data[k];
+          const T u = data[k];
           const auto t =
               MulMod(static_cast<uint64>(*omg++), data[k + half_h], mod);
           data[k] = AddMod(u, t, mod);
@@ -218,7 +218,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
         const int64 half_h = h >> 1;
         const int64 limit = j + half_h;
         for (int64 k = j; k < limit; ++k) {
-          const auto u = data[k];
+          const T u = data[k];
           const auto t = MulMod(omgn, data[k + half_h], mod);
           data[k] = AddMod(u, t, mod);
           data[k + half_h] = SubMod(u, t, mod);
@@ -267,7 +267,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 #endif
   for (int id = 0; id < 2; ++id) {
     const NttMod32& moder = *moder_list[id];
-    const auto tmod = moder.mod;
+    const unsigned int tmod = moder.mod;
     const bool no_mod = static_cast<uint64>(mod) <= static_cast<uint64>(tmod);
     std::vector<uint64> XX(aligned_size);
     std::vector<uint64> YY(aligned_size);
@@ -366,7 +366,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 #endif
   for (int id = 0; id < 3; ++id) {
     const NttMod32& moder = *moder_list[id];
-    const auto tmod = moder.mod;
+    const unsigned int tmod = moder.mod;
     const bool no_mod = static_cast<uint64>(mod) <= static_cast<uint64>(tmod);
     std::vector<uint64> XX(aligned_size);
     std::vector<uint64> YY(aligned_size);
@@ -483,7 +483,7 @@ struct NttMod64 {
       }
       const int64 cnt = 1LL << i;
       pre_omg[i] = new uint64[cnt];
-      auto* target = pre_omg[i];
+      uint64* target = pre_omg[i];
       const uint64 m = omg[i];
       uint64 last = 1;
       target[0] = 1;
@@ -507,22 +507,22 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     Ntt(T* data, const int64 n, const NttMod64& moder, bool inv = false) {
   ntt_base::NttTrans(data, n);
 
-  const auto mod = moder.mod;
+  const uint64 mod = moder.mod;
   int id = 0;
   for (int64 h = 2; h <= n; h <<= 1) {
-    const auto* pre_omg = moder.pre_omg[++id];
+    const uint64* pre_omg = moder.pre_omg[++id];
     if (pre_omg) {
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 16) if (n / h > 100000)
 #endif
       for (int64 j = 0; j < n; j += h) {
-        const auto* omg = pre_omg;
+        const uint64* omg = pre_omg;
         const int64 half_h = h >> 1;
         const int64 limit = j + half_h;
         for (int64 k = j; k < limit; ++k) {
-          const auto u = data[k];
+          const T u = data[k];
 #if PE_HAS_INT128
-          const auto t = Uint128ModUint64(
+          const uint64 t = Uint128ModUint64(
               static_cast<uint128>(*omg++) * data[k + half_h], mod);
 #else
           const auto t = MulMod(*omg++, data[k + half_h], mod);
@@ -540,9 +540,9 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
         const int64 half_h = h >> 1;
         const int64 limit = j + half_h;
         for (int64 k = j; k < limit; ++k) {
-          const auto u = data[k];
+          const T u = data[k];
 #if PE_HAS_INT128
-          const auto t = Uint128ModUint64(
+          const uint64 t = Uint128ModUint64(
               static_cast<uint128>(omgn) * data[k + half_h], mod);
 #else
           const auto t = MulMod(omgn, data[k + half_h], mod);
@@ -594,7 +594,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   std::vector<uint64> tresult[1];
   for (int id = 0; id < 1; ++id) {
     const NttMod64& moder = *moder_list[id];
-    const auto tmod = moder.mod;
+    const uint64 tmod = moder.mod;
     const bool no_mod = static_cast<uint64>(mod) <= static_cast<uint64>(tmod);
     std::vector<uint64> XX(aligned_size);
     std::vector<uint64> YY(aligned_size);
@@ -673,7 +673,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 #endif
   for (int id = 0; id < 2; ++id) {
     const NttMod64& moder = *moder_list[id];
-    const auto tmod = moder.mod;
+    const uint64 tmod = moder.mod;
     const bool no_mod = static_cast<uint64>(mod) <= static_cast<uint64>(tmod);
     std::vector<uint64> XX(aligned_size);
     std::vector<uint64> YY(aligned_size);
@@ -948,7 +948,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     T* v = new T[m1];
 
     for (int64 i = 0; i < m0; ++i) {
-      u[i] = AddMod(x0[i], x1[i], mod), v[i] = AddMod(y0[i], y1[i], mod);
+      u[i] = AddMod(x0[i], x1[i], mod);
+      v[i] = AddMod(y0[i], y1[i], mod);
     }
     if (m0 != m1) {
       u[m1 - 1] = x1[m1 - 1];
@@ -957,7 +958,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyMulDcImpl(u, v, m1, w, mod);
     delete[] u;
     delete[] v;
-    for (int64 i = 0; i < m1 * 2; ++i) {
+    for (int64 i = 0; i < dbm1; ++i) {
       w[i] = SubMod(w[i], AddMod(x0y0[i], x1y1[i], mod), mod);
     }
   }
@@ -1464,7 +1465,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     }
     PolyMul(a, trunc, tmp[0], trunc, tmp[1], mod);
     for (int64 i = 0; i < trunc; ++i) {
-      auto t = b[i] << 1;
+      T t = b[i] << 1;
       if (t >= static_cast<uint64>(mod)) t -= mod;
       t = t + mod - tmp[1][i];
       if (t >= static_cast<uint64>(mod)) t -= mod;
@@ -2131,8 +2132,8 @@ struct PSPTree {
   }
 
   static PSPTree* BuildMinus(const int64* values, int64 n, int64 mod) {
-    auto* ptree = new PSPTree();
-    auto& tree = *ptree;
+    PSPTree* ptree = new PSPTree();
+    PSPTree& tree = *ptree;
     tree.mod = mod;
     tree.v = values;
     tree.n = n;
@@ -2144,7 +2145,7 @@ struct PSPTree {
       tree.p.emplace_back(1 % mod);
       return ptree;
     }
-    int64 c1 = n >> 1, c2 = n - c1;
+    const int64 c1 = n >> 1, c2 = n - c1;
     tree.L = BuildMinus(values, c1, mod);
     tree.R = BuildMinus(values + c1, c2, mod);
     tree.p = PolyMul(tree.L->p, tree.R->p, mod);
@@ -2152,8 +2153,8 @@ struct PSPTree {
   }
 
   static PSPTree* BuildPlus(const int64* values, int64 n, int64 mod) {
-    auto* ptree = new PSPTree();
-    auto& tree = *ptree;
+    PSPTree* ptree = new PSPTree();
+    PSPTree& tree = *ptree;
     tree.mod = mod;
     tree.v = values;
     tree.n = n;
@@ -2165,7 +2166,7 @@ struct PSPTree {
       tree.p.emplace_back(1);
       return ptree;
     }
-    int64 c1 = n >> 1, c2 = n - c1;
+    const int64 c1 = n >> 1, c2 = n - c1;
     tree.L = BuildPlus(values, c1, mod);
     tree.R = BuildPlus(values + c1, c2, mod);
     tree.p = PolyMul(tree.L->p, tree.R->p, mod);
@@ -2243,14 +2244,14 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 
   const int64 d = static_cast<int64>(std::size(tree)) - 1;
   {
-    auto alpha = tree[d][0];
+    std::vector<T> alpha = tree[d][0];
     std::reverse(alpha.begin(), alpha.end());
     alpha = PolyInv(alpha, n, mod);
     std::reverse(alpha.begin(), alpha.end());
 
     std::vector<uint64> b(X, X + n);
     int64 degb = static_cast<int64>(std::size(b)) - 1;
-    auto t = PolyMul(alpha, b, mod);
+    std::vector<T> t = PolyMul(alpha, b, mod);
     assert(sz(t) - 1 == n - 1 + degb);
     for (int64 i = n - 1, j = 0; i <= (n - 1) + degb; ++i, ++j) {
       t[j] = t[i];
@@ -2404,7 +2405,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   std::vector<T> T0(2 * d + 2);
   std::vector<T> T1(2 * d + 2);
   for (int64 i = 0; i <= d; ++i) {
-    auto t = MulMod(h[i], pre_fact_inv[i], mod);
+    T t = MulMod(h[i], pre_fact_inv[i], mod);
     t = MulMod(t, pre_fact_inv[d - i], mod);
     if ((d - i) & 1) {
       A[i] = t == 0 ? 0 : mod - t;

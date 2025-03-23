@@ -12,8 +12,8 @@ struct ValueHolder<int32> {
 };
 
 // we don't consider: -2147483648
-const int32 ValueHolder<int32>::values[]{-2147483647, -1073741824, -1,        0,
-                                         1,           1073741824,  2147483647};
+const int32 ValueHolder<int32>::values[] = {-2147483647, -1073741824, -1, 0, 1,
+                                            1073741824,  2147483647};
 const int32 ValueHolder<int32>::mods[] = {1, 1073741824, 2147483647};
 
 template <>
@@ -21,43 +21,43 @@ struct ValueHolder<uint32> {
   static const uint32 values[];
   static const uint32 mods[];
 };
-const uint32 ValueHolder<uint32>::values[]{0u, 1u, 2147483648u, 4294967295u};
-const uint32 ValueHolder<uint32>::mods[]{1u, 2147483648u, 4294967295u};
+const uint32 ValueHolder<uint32>::values[] = {0u, 1u, 2147483648u, 4294967295u};
+const uint32 ValueHolder<uint32>::mods[] = {1u, 2147483648u, 4294967295u};
 
 template <>
 struct ValueHolder<int64> {
   static const int64 values[];
   static const int64 mods[];
 };
-const int64 ValueHolder<int64>::values[]{-9223372036854775807ll,
-                                         -4611686018427387904ll,
-                                         -2147483647ll,
-                                         -1073741824ll,
-                                         -1ll,
-                                         0ll,
-                                         1ll,
-                                         1073741824ll,
-                                         2147483647ll,
-                                         4611686018427387904ll,
-                                         9223372036854775807ll};
-const int64 ValueHolder<int64>::mods[]{1ll, 1073741824ll, 2147483647ll,
-                                       4611686018427387904ll,
-                                       9223372036854775807ll};
+const int64 ValueHolder<int64>::values[] = {-9223372036854775807ll,
+                                            -4611686018427387904ll,
+                                            -2147483647ll,
+                                            -1073741824ll,
+                                            -1ll,
+                                            0ll,
+                                            1ll,
+                                            1073741824ll,
+                                            2147483647ll,
+                                            4611686018427387904ll,
+                                            9223372036854775807ll};
+const int64 ValueHolder<int64>::mods[] = {1ll, 1073741824ll, 2147483647ll,
+                                          4611686018427387904ll,
+                                          9223372036854775807ll};
 
 template <>
 struct ValueHolder<uint64> {
   static const uint64 values[];
   static const uint64 mods[];
 };
-const uint64 ValueHolder<uint64>::values[]{0u,
-                                           1ULL,
-                                           2147483648ULL,
-                                           2147483647ULL,
-                                           9223372036854775807ULL,
-                                           18446744073709551615ULL};
-const uint64 ValueHolder<uint64>::mods[]{1ULL, 2147483648ULL, 2147483647ULL,
-                                         9223372036854775807ULL,
-                                         18446744073709551615ULL};
+const uint64 ValueHolder<uint64>::values[] = {0u,
+                                              1ULL,
+                                              2147483648ULL,
+                                              2147483647ULL,
+                                              9223372036854775807ULL,
+                                              18446744073709551615ULL};
+const uint64 ValueHolder<uint64>::mods[] = {1ULL, 2147483648ULL, 2147483647ULL,
+                                            9223372036854775807ULL,
+                                            18446744073709551615ULL};
 
 SL void ModTest() {
 #define REGULATE_MOD_TEST(T1, T2)          \

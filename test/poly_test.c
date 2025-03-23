@@ -2,11 +2,11 @@
 
 namespace poly_test {
 SL void PolyGeneralTest() {
-  NModPolyT<31> p{1, 2, 3, 31, 32};
+  NModPolyT<31> p = {1, 2, 3, 31, 32};
   assert(p[3] == 0);
   assert(p[4] == 1);
 
-  NModPolyT<31> q{1, 1};
+  NModPolyT<31> q = {1, 1};
   auto r = q * q;
   assert(r.deg() == 2);
   assert(r[0] == 1);

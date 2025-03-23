@@ -6,9 +6,9 @@ const int64 mod = 1000000007;
 SL void GfTest() {
   {
     // Fibonacci sequence
-    std::vector<int64> A{1, -1, -1};
-    std::vector<int64> B{0, 1};
-    std::vector<int64> result{0, 1};
+    std::vector<int64> A = {1, -1, -1};
+    std::vector<int64> B = {0, 1};
+    std::vector<int64> result = {0, 1};
     for (int i = 2; i <= 30; ++i) {
       result.push_back(AddMod(result[i - 2], result[i - 1], mod));
     }
@@ -61,12 +61,12 @@ PE_REGISTER_TEST(&GfTest, "GfTest", SMALL);
 
 SL void MinimalPolynomialTest() {
   const int64 P = 1000000009;
-  std::vector<int64> s{0, 1, 1, 2, 3, 5};
+  std::vector<int64> s = {0, 1, 1, 2, 3, 5};
   auto v = *FindLinearRecurrence(s, P);
   assert(v[0] == P - 1);
   assert(v[1] == P - 1);
   assert(v[2] == 1);
-  const int n = (int)std::size(v);
+  const int n = static_cast<int>(std::size(v));
   int64 ans = 0;
   for (int i = 0; i < n; ++i) ans += v[i] * s[i];
   assert(ans == P);
@@ -124,10 +124,10 @@ PE_REGISTER_TEST(&PolyMultiPointEvaluationTest, "PolyMultiPointEvaluationTest",
 
 SL void PolyBatchMulTest() {
   const int mod = 10007;
-  std::vector<int64> data{1, 1, 2, 1, 3, 1};
+  std::vector<int64> data = {1, 1, 2, 1, 3, 1};
   auto result = PolyBatchMul(data, mod);
 
-  std::vector<int64> expected{6, 11, 6, 1};
+  std::vector<int64> expected = {6, 11, 6, 1};
   assert(expected == result);
 }
 PE_REGISTER_TEST(&PolyBatchMulTest, "PolyBatchMulTest", SMALL);

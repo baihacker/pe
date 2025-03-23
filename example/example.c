@@ -324,16 +324,16 @@ void LinearRecurrenceExample() {
               << std::endl;
   }
   {
-    std::vector<int64> rec{mod - 1, mod - 1, 1};
-    std::vector<int64> init{1, 1};
+    std::vector<int64> rec = {mod - 1, mod - 1, 1};
+    std::vector<int64> init = {1, 1};
     for (int i = 2; i <= 5; ++i) {
       std::cout << ApplyLinearRecurrenceValueAtN(rec, init, i, mod)
                 << std::endl;
     }
   }
   {
-    std::vector<int64> rec{mod - 1, mod - 1, 1};
-    std::vector<int64> init{1, 1};
+    std::vector<int64> rec = {mod - 1, mod - 1, 1};
+    std::vector<int64> init = {1, 1};
     for (int i = 0; i <= 5; ++i) {
       std::cout << ApplyLinearRecurrenceSumAtN(rec, init, i, mod) << std::endl;
     }

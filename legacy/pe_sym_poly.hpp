@@ -118,7 +118,7 @@ SL std::pair<TermKey, CT> ParseTerm(const std::string& s) {
 
 template <typename CT>
 SL std::map<TermKey, CT> ParseSymPolyTerms(const std::string& s) {
-  const int size = sz(s);
+  const int size = static_cast<int>(std::size(s));
   int i = 0;
   std::map<TermKey, CT> terms;
   for (;;) {

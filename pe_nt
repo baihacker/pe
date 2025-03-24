@@ -131,7 +131,7 @@ SL std::tuple<T1, int64> ExtractFactor(T1 A, T2 B) {
   while (!IsZero(A) && A % B == 0) {
     A = static_cast<T1>(A / B), ++c;
   }
-  return std::tuple<T1, int64>{A, c};
+  return {A, c};
 }
 
 // Greatest common divisor
@@ -285,7 +285,7 @@ SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>))
   T x = 0, y = 0;
   const T r = internal::ExGcdImpl(a, b, x, y);
   PE_ASSERT(a * x + b * y == r);
-  return std::tuple<T, T, T>{r, x, y};
+  return {r, x, y};
 }
 
 template <typename T>
@@ -390,7 +390,7 @@ SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(ModValue<T>)
   T mod = m / d;
   T value = xx % mod;
 
-  return ModValue<T>{1, value, mod};
+  return {1, value, mod};
 }
 
 // Solves equation x = a (mod m1) x = b (mod m2)
@@ -421,7 +421,7 @@ SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(ModValue<T>)
   T mod = mod_value.mod * m1;
   T value = ((a + mod_value.value * m1) % mod + mod) % mod;
 
-  return ModValue<T>{1, value, mod};
+  return {1, value, mod};
 }
 
 template <typename T>
@@ -1140,27 +1140,27 @@ SL std::vector<int64> SquareRootMod(int64 n, int64 p) {
     const int64 y = x == 0 ? 0 : p - x;
     return x == y ? std::vector<int64>{x} : std::vector<int64>{x, y};
   } else {
-    return std::vector<int64>{};
+    return {};
   }
 }
 
 SL std::vector<int64> RootMod(int64 a, int64 n, int64 p,
                               const int64 returned_count = -1) {
   if (p == 2) {
-    return std::vector<int64>{a};
+    return {a};
   }
   if (a == 0) {
-    return std::vector<int64>{0};
+    return {0};
   }
   IndSolver sv(p);
   const int64 r = sv(a);
-  if (r == -1) return std::vector<int64>{};
+  if (r == -1) return {};
   // x^n = a mod p
   // n log_x = r mod q
   const int64 q = p - 1;
   ModValue<int64> t = SolveLinearEquation(n % q, r % q, q);
   if (!t.ok) {
-    return std::vector<int64>{};
+    return {};
   }
   std::vector<int64> result;
   int64 coe = PowerMod(sv.pr(), t.mod, p);

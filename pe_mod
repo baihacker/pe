@@ -394,7 +394,7 @@ SL int64 MulModInt64(int64 a, int64 b, int64 mod) {
 #endif
 
 SL void MulModSlowWarningOnce() {
-  static std::atomic_int WARNING_ONCE_FLAG{0};
+  static std::atomic_int WARNING_ONCE_FLAG = 0;
   if (WARNING_ONCE_FLAG.exchange(1) == 0) {
     fprintf(stderr, "MulMod may be very slow.\n");
   }
@@ -633,7 +633,7 @@ SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM>))
         FracModImpl(const std::vector<T>& a, std::vector<T> b, TM mod) {
   using ResultType = int_promotion_t<T, TM>;
   ResultType ret = 1;
-  const int size = std::size(b);
+  const int size = static_cast<int>(std::size(b));
   int remain = size;
   for (auto iter : a) {
     for (int i = 0; iter > 1 && remain > 0 && i < size; ++i) {
@@ -1228,24 +1228,17 @@ using TLNModM64 = NModNumber<TLMod<int64>, AP>;
 template <typename AP = APSB<int64, int64>>
 using TLNModM64Lite = NModNumber<TLMod<int64>, AP>;
 
-template <int v>
-struct NModNumberIndicator {
-  static constexpr bool value = v;
-};
-
 template <typename X>
 struct IsNModNumber {
-  static constexpr NModNumberIndicator<0> NModNumberMatch(...);
+  static constexpr std::false_type NModNumberMatch(...);
 
   template <typename MC, typename AP>
-  static constexpr NModNumberIndicator<1> NModNumberMatch(NModNumber<MC, AP>);
+  static constexpr std::true_type NModNumberMatch(NModNumber<MC, AP>);
 
   template <typename MC, typename AP>
-  static constexpr NModNumberIndicator<1> NModNumberMatch(NModNumberM<MC, AP>);
+  static constexpr std::true_type NModNumberMatch(NModNumberM<MC, AP>);
 
-  static X MakeX();
-
-  using result_type = decltype(NModNumberMatch(MakeX()));
+  using result_type = decltype(NModNumberMatch(std::declval<X>()));
 
   static constexpr bool value = result_type::value;
 };
@@ -1255,27 +1248,26 @@ inline constexpr bool IsNModNumberV = IsNModNumber<T>::value;
 
 template <typename X>
 struct IsNModNumberCCModOrGlobalMod {
-  static constexpr NModNumberIndicator<0> NModNumberCCmodOrGlobalModMatch(...);
+  static constexpr std::false_type NModNumberCCmodOrGlobalModMatch(...);
 
   template <typename T, T V, typename AP>
-  static constexpr NModNumberIndicator<1> NModNumberCCmodOrGlobalModMatch(
+  static constexpr std::true_type NModNumberCCmodOrGlobalModMatch(
       NModNumber<CCMod<T, V>, AP>);
 
   template <typename T, T V, typename AP>
-  static constexpr NModNumberIndicator<1> NModNumberCCmodOrGlobalModMatch(
+  static constexpr std::true_type NModNumberCCmodOrGlobalModMatch(
       NModNumberM<CCMod<T, V>, AP>);
 
   template <typename AP>
-  static constexpr NModNumberIndicator<1> NModNumberCCmodOrGlobalModMatch(
+  static constexpr std::true_type NModNumberCCmodOrGlobalModMatch(
       NModNumber<DefaultMod, AP>);
 
   template <typename AP>
-  static constexpr NModNumberIndicator<1> NModNumberCCmodOrGlobalModMatch(
+  static constexpr std::true_type NModNumberCCmodOrGlobalModMatch(
       NModNumberM<DefaultMod, AP>);
 
-  static X MakeX();
-
-  using result_type = decltype(NModNumberCCmodOrGlobalModMatch(MakeX()));
+  using result_type =
+      decltype(NModNumberCCmodOrGlobalModMatch(std::declval<X>()));
 
   static constexpr bool value = result_type::value;
 };
@@ -1398,7 +1390,7 @@ concept PeModNumber = requires(T v) {
 #endif
   v + v;
   v - v;
-  v* v;
+  v * v;
   PE_MOD_SELF_ARTHMETIC_OPERATION_IMPL(char);
   PE_MOD_SELF_ARTHMETIC_OPERATION_IMPL(unsigned char);
   PE_MOD_SELF_ARTHMETIC_OPERATION_IMPL(signed char);

@@ -16,8 +16,8 @@ SL std::vector<uint64> PolyMulParallelFlintForTest(const std::vector<uint64>& X,
 }
 #endif
 
-using poly_mul_t = std::vector<uint64> (*)(const std::vector<uint64>&,
-                                           const std::vector<uint64>&, int64);
+using poly_mul_t = pe::internal::PolyMulType<uint64>::CppStyleFunctionPointer;
+
 struct MulImpl {
   poly_mul_t impl;
   int size;  // 1: coe < 1e18; 3: coe < 1e28; 4: coe < 1e35

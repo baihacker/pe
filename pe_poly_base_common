@@ -78,7 +78,12 @@ SL REQUIRES((std::is_same_v<decltype((std::declval<IMPL>())(
                     const IMPL& impl, int thread_number = 8,
                     int block_size = 1 << 19) {
 #if !ENABLE_OPENMP
-  return impl(X, Y, mod);
+  const int64 n = static_cast<int64>(std::size(X));
+  const int64 m = static_cast<int64>(std::size(Y));
+  const int64 ret_size = n + m - 1;
+  std::vector<T> result(ret_size);
+  impl(&X[0], n, &Y[0], m, &result[0], mod);
+  return result;
 #else
   const int64 n = static_cast<int64>(std::size(X));
   const int64 m = static_cast<int64>(std::size(Y));

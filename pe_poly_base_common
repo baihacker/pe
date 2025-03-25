@@ -5,6 +5,7 @@
 #include "pe_type_traits"
 #include "pe_mod"
 #include "pe_nt"
+#include "pe_parallel"
 
 namespace pe {
 template <typename T>
@@ -57,6 +58,122 @@ SL void AdjustPolyLeadingZero(std::vector<T>& v) {
     PolyMul(&X[0], n, &Y[0], m, &result[0], mod);                             \
     return result;                                                            \
   }
+
+namespace internal {
+template <typename T>
+struct PolyMulType {
+  using CStyleFunctionPointer = void (*)(const T*, int64, const T*, int64, T*,
+                                         int64);
+  using CppStyleFunctionPointer = std::vector<T> (*)(const std::vector<T>&,
+                                                     const std::vector<T>&,
+                                                     int64);
+};
+template <typename T, typename IMPL>
+SL REQUIRES((std::is_same_v<decltype((std::declval<IMPL>())(
+                                std::declval<const T*>(), std::declval<int64>(),
+                                std::declval<const T*>(), std::declval<int64>(),
+                                std::declval<T*>(), std::declval<int64>())),
+                            void>)) RETURN(std::vector<T>)
+    PolyMulParallel(const std::vector<T>& X, const std::vector<T>& Y, int64 mod,
+                    const IMPL& impl, int thread_number = 8,
+                    int block_size = 1 << 19) {
+#if !ENABLE_OPENMP
+  return impl(X, Y, mod);
+#else
+  const int64 n = static_cast<int64>(std::size(X));
+  const int64 m = static_cast<int64>(std::size(Y));
+  const int64 ret_size = n + m - 1;
+  std::vector<T> result(ret_size);
+
+  std::vector<int64> x_offset = {0};
+  std::vector<int64> y_offset = {0};
+  while (x_offset.back() < n) {
+    x_offset.push_back(std::min<int64>(x_offset.back() + block_size, n));
+  }
+  while (y_offset.back() < m) {
+    y_offset.push_back(std::min<int64>(y_offset.back() + block_size, m));
+  }
+  std::vector<std::pair<int, int>> tasks;
+  for (int i = 0; i + 1 < x_offset.size(); ++i)
+    for (int j = 0; j + 1 < y_offset.size(); ++j) {
+      tasks.push_back({i, j});
+    }
+  OmpLock lock;
+#pragma omp parallel for schedule(dynamic, 1) num_threads(thread_number)
+  for (int i = 0; i < tasks.size(); ++i) {
+    std::pair<int, int> task = tasks[i];
+    const int64 x_start = x_offset[tasks[i].first];
+    const int64 x_size = x_offset[tasks[i].first + 1] - x_start;
+    const int64 y_start = y_offset[tasks[i].second];
+    const int64 y_size = y_offset[tasks[i].second + 1] - y_start;
+
+    std::vector<T> tans(x_size + y_size - 1);
+    impl(&X[0] + x_start, x_size, &Y[0] + y_start, y_size, &tans[0], mod);
+
+    OmpGuard guard(lock);
+    int64 tans_size = tans.size();
+    for (int64 j = 0; j < tans_size; ++j) {
+      result[j + x_start + y_start] =
+          AddMod(result[j + x_start + y_start], tans[j], mod);
+    }
+  }
+  return result;
+#endif
+}
+
+template <typename T, typename IMPL>
+SL REQUIRES((sizeof((std::declval<IMPL>())(std::declval<std::vector<T>>(),
+                                           std::declval<std::vector<T>>(),
+                                           std::declval<int64>())) > 0))
+    RETURN(std::vector<T>)
+        PolyMulParallel(const std::vector<T>& X, const std::vector<T>& Y,
+                        int64 mod, const IMPL& impl, int thread_number = 8,
+                        int block_size = 1 << 19) {
+#if !ENABLE_OPENMP
+  return impl(X, Y, mod);
+#else
+  const int64 n = static_cast<int64>(std::size(X));
+  const int64 m = static_cast<int64>(std::size(Y));
+  const int64 ret_size = n + m - 1;
+  std::vector<T> result(ret_size);
+
+  std::vector<int64> x_offset = {0};
+  std::vector<int64> y_offset = {0};
+  while (x_offset.back() < n) {
+    x_offset.push_back(std::min<int64>(x_offset.back() + block_size, n));
+  }
+  while (y_offset.back() < m) {
+    y_offset.push_back(std::min<int64>(y_offset.back() + block_size, m));
+  }
+  std::vector<std::pair<int, int>> tasks;
+  for (int i = 0; i + 1 < x_offset.size(); ++i)
+    for (int j = 0; j + 1 < y_offset.size(); ++j) {
+      tasks.push_back({i, j});
+    }
+  OmpLock lock;
+#pragma omp parallel for schedule(dynamic, 1) num_threads(thread_number)
+  for (int i = 0; i < tasks.size(); ++i) {
+    std::pair<int, int> task = tasks[i];
+    const int64 x_start = x_offset[tasks[i].first];
+    const int64 x_size = x_offset[tasks[i].first + 1] - x_start;
+    const int64 y_start = y_offset[tasks[i].second];
+    const int64 y_size = y_offset[tasks[i].second + 1] - y_start;
+
+    std::vector<T> tans = impl(
+        std::vector<T>(X.begin() + x_start, X.begin() + x_start + x_size),
+        std::vector<T>(Y.begin() + y_start, Y.begin() + y_start + y_size), mod);
+
+    OmpGuard guard(lock);
+    int64 tans_size = tans.size();
+    for (int64 j = 0; j < tans_size; ++j) {
+      result[j + x_start + y_start] =
+          AddMod(result[j + x_start + y_start], tans[j], mod);
+    }
+  }
+  return result;
+#endif
+}
+}  // namespace internal
 
 // For input:
 // size q >= std::max(deg X - deg Y + 1, 1)

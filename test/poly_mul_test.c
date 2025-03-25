@@ -5,6 +5,17 @@ namespace poly_mul_test {
 #if !defined(ONLY_RUN_PE_IMPLEMENTATION)
 #define ONLY_RUN_PE_IMPLEMENTATION 0
 #endif
+
+#if HAS_POLY_MUL_FLINT && !ONLY_RUN_PE_IMPLEMENTATION
+SL std::vector<uint64> PolyMulParallelFlintForTest(const std::vector<uint64>& X,
+                                                   const std::vector<uint64>& Y,
+                                                   int64 mod) {
+  return pe::internal::PolyMulParallel<
+      uint64, pe::internal::PolyMulType<uint64>::CStyleFunctionPointer>(
+      X, Y, mod, &flint::PolyMul<uint64>, 8, 1 << 19);
+}
+#endif
+
 using poly_mul_t = std::vector<uint64> (*)(const std::vector<uint64>&,
                                            const std::vector<uint64>&, int64);
 struct MulImpl {
@@ -16,6 +27,9 @@ MulImpl mul_impl[] = {
 #if HAS_POLY_MUL_FLINT && !ONLY_RUN_PE_IMPLEMENTATION
     {&flint::PolyMul<uint64>, 4, "flint n"},
     {&flint::PolyMul<uint64>, 4, "flint p"},
+#if ENABLE_OPENMP
+    {&PolyMulParallelFlintForTest, 4, "flint pn"},
+#endif
 #else
     {&ntt64::PolyMulLarge<uint64>, 4, "ntt64 l"},
 #endif

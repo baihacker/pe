@@ -37,6 +37,15 @@ SL void AdjustPolyLeadingZero(std::vector<T>& v) {
   v.resize(now + 1);
 }
 
+template <typename T>
+struct PolyMulType {
+  using CStyleFunctionPointer = void (*)(const T*, int64, const T*, int64, T*,
+                                         int64);
+  using CppStyleFunctionPointer = std::vector<T> (*)(const std::vector<T>&,
+                                                     const std::vector<T>&,
+                                                     int64);
+};
+
 #define POLY_MUL_IMPL(PolyMul, PolyMulImpl)                                   \
   template <typename T>                                                       \
   SL void PolyMul(const T* X, int64 n, const T* Y, int64 m, T* result,        \
@@ -60,14 +69,6 @@ SL void AdjustPolyLeadingZero(std::vector<T>& v) {
   }
 
 namespace internal {
-template <typename T>
-struct PolyMulType {
-  using CStyleFunctionPointer = void (*)(const T*, int64, const T*, int64, T*,
-                                         int64);
-  using CppStyleFunctionPointer = std::vector<T> (*)(const std::vector<T>&,
-                                                     const std::vector<T>&,
-                                                     int64);
-};
 template <typename T, typename IMPL>
 SL REQUIRES((std::is_same_v<decltype((std::declval<IMPL>())(
                                 std::declval<const T*>(), std::declval<int64>(),
@@ -103,6 +104,7 @@ SL REQUIRES((std::is_same_v<decltype((std::declval<IMPL>())(
     for (int j = 0; j + 1 < y_offset.size(); ++j) {
       tasks.push_back({i, j});
     }
+
   OmpLock lock;
 #pragma omp parallel for schedule(dynamic, 1) num_threads(thread_number)
   for (int i = 0; i < tasks.size(); ++i) {
@@ -116,7 +118,7 @@ SL REQUIRES((std::is_same_v<decltype((std::declval<IMPL>())(
     impl(&X[0] + x_start, x_size, &Y[0] + y_start, y_size, &tans[0], mod);
 
     OmpGuard guard(lock);
-    int64 tans_size = tans.size();
+    const int64 tans_size = tans.size();
     for (int64 j = 0; j < tans_size; ++j) {
       result[j + x_start + y_start] =
           AddMod(result[j + x_start + y_start], tans[j], mod);
@@ -155,6 +157,7 @@ SL REQUIRES((sizeof((std::declval<IMPL>())(std::declval<std::vector<T>>(),
     for (int j = 0; j + 1 < y_offset.size(); ++j) {
       tasks.push_back({i, j});
     }
+
   OmpLock lock;
 #pragma omp parallel for schedule(dynamic, 1) num_threads(thread_number)
   for (int i = 0; i < tasks.size(); ++i) {
@@ -164,12 +167,12 @@ SL REQUIRES((sizeof((std::declval<IMPL>())(std::declval<std::vector<T>>(),
     const int64 y_start = y_offset[tasks[i].second];
     const int64 y_size = y_offset[tasks[i].second + 1] - y_start;
 
-    std::vector<T> tans = impl(
+    const std::vector<T> tans = impl(
         std::vector<T>(X.begin() + x_start, X.begin() + x_start + x_size),
         std::vector<T>(Y.begin() + y_start, Y.begin() + y_start + y_size), mod);
 
     OmpGuard guard(lock);
-    int64 tans_size = tans.size();
+    const int64 tans_size = tans.size();
     for (int64 j = 0; j < tans_size; ++j) {
       result[j + x_start + y_start] =
           AddMod(result[j + x_start + y_start], tans[j], mod);

@@ -11,12 +11,12 @@ SL std::vector<uint64> PolyMulParallelFlintForTest(const std::vector<uint64>& X,
                                                    const std::vector<uint64>& Y,
                                                    int64 mod) {
   return pe::internal::PolyMulParallel<
-      uint64, pe::internal::PolyMulType<uint64>::CStyleFunctionPointer>(
+      uint64, pe::PolyMulType<uint64>::CStyleFunctionPointer>(
       X, Y, mod, &flint::PolyMul<uint64>, 8, 1 << 19);
 }
 #endif
 
-using poly_mul_t = pe::internal::PolyMulType<uint64>::CppStyleFunctionPointer;
+using poly_mul_t = pe::PolyMulType<uint64>::CppStyleFunctionPointer;
 
 struct MulImpl {
   poly_mul_t impl;

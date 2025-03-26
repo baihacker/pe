@@ -393,12 +393,14 @@ SL int64 MulModInt64(int64 a, int64 b, int64 mod) {
 }
 #endif
 
+namespace internal {
 std::once_flag show_mul_mod_slow_warning_flag;
 
 SL void MulModSlowWarningOnce() {
   std::call_once(show_mul_mod_slow_warning_flag,
                  []() { fprintf(stderr, "MulMod may be very slow.\n"); });
 }
+}  // namespace internal
 
 // If the biggest operand size is greater than sizeof(int64), just convert every
 // operand to that and multiply them directly.
@@ -475,7 +477,7 @@ SL REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
     return r;
   }
 
-  MulModSlowWarningOnce();
+  internal::MulModSlowWarningOnce();
 // 3 other implementations
 #if 0
   // Mpz based implementation

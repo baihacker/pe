@@ -9,10 +9,25 @@
 
 namespace pe {
 template <typename T>
+SL void AdjustPolyLeadingZero(std::vector<T>& v) {
+  int64 now = static_cast<int64>(std::size(v)) - 1;
+  while (now > 0 && v[now] == 0) --now;
+  v.resize(now + 1);
+}
+
+template <typename T>
+struct PolyMulType {
+  using CStyleFunctionPointer = void (*)(const T*, int64, const T*, int64, T*,
+                                         int64);
+  using CppStyleFunctionPointer = std::vector<T> (*)(const std::vector<T>&,
+                                                     const std::vector<T>&,
+                                                     int64);
+};
+
+template <typename T>
 SL void PolyMulWrapper(const T* X, int64 n, const T* Y, int64 m, T* result,
                        int64 mod,
-                       void (*impl)(const T*, int64, const T*, int64, T*,
-                                    int64)) {
+                       typename PolyMulType<T>::CStyleFunctionPointer impl) {
   int64 s1 = 0, s2 = 0;
   int64 e1 = n, e2 = m;
   while (s1 < e1 && X[s1] == 0) ++s1;
@@ -29,22 +44,6 @@ SL void PolyMulWrapper(const T* X, int64 n, const T* Y, int64 m, T* result,
   std::fill(result, result + s1 + s2, 0);
   std::fill(result + e1 + e2 - 1, result + n + m - 1, 0);
 }
-
-template <typename T>
-SL void AdjustPolyLeadingZero(std::vector<T>& v) {
-  int64 now = static_cast<int64>(std::size(v)) - 1;
-  while (now > 0 && v[now] == 0) --now;
-  v.resize(now + 1);
-}
-
-template <typename T>
-struct PolyMulType {
-  using CStyleFunctionPointer = void (*)(const T*, int64, const T*, int64, T*,
-                                         int64);
-  using CppStyleFunctionPointer = std::vector<T> (*)(const std::vector<T>&,
-                                                     const std::vector<T>&,
-                                                     int64);
-};
 
 #define POLY_MUL_IMPL(PolyMul, PolyMulImpl)                                   \
   template <typename T>                                                       \

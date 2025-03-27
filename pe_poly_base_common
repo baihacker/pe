@@ -70,11 +70,8 @@ struct PolyMulType {
 
 namespace internal {
 template <typename T, typename IMPL>
-SL REQUIRES((std::is_same_v<decltype((std::declval<IMPL>())(
-                                std::declval<const T*>(), std::declval<int64>(),
-                                std::declval<const T*>(), std::declval<int64>(),
-                                std::declval<T*>(), std::declval<int64>())),
-                            void>)) RETURN(std::vector<T>)
+SL REQUIRES((std::is_invocable_r_v<void, IMPL, const T*, int64, const T*, int64,
+                                   T*, int64>)) RETURN(std::vector<T>)
     PolyMulParallel(const std::vector<T>& X, const std::vector<T>& Y, int64 mod,
                     const IMPL& impl, int thread_number = 8,
                     int block_size = 1 << 19) {
@@ -129,9 +126,8 @@ SL REQUIRES((std::is_same_v<decltype((std::declval<IMPL>())(
 }
 
 template <typename T, typename IMPL>
-SL REQUIRES((sizeof((std::declval<IMPL>())(std::declval<std::vector<T>>(),
-                                           std::declval<std::vector<T>>(),
-                                           std::declval<int64>())) > 0))
+SL REQUIRES((std::is_invocable_r_v<std::vector<T>, IMPL, std::vector<T>,
+                                   std::vector<T>, int64>))
     RETURN(std::vector<T>)
         PolyMulParallel(const std::vector<T>& X, const std::vector<T>& Y,
                         int64 mod, const IMPL& impl, int thread_number = 8,

@@ -11,7 +11,7 @@ SL void BitTest() {
     assert(__pe_popcount32(i) == __builtin_popcount(i));
     assert(__pe_ffs32(i) == __builtin_ffs(i));
     assert(__pe_parity32(i) == __builtin_parity(i));
-#if defined(CPP_GLIBCXX)
+#if defined(STL_GLIBCXX)
     if (i > 0) {
       assert(__pe_lg32(i) == std::__lg(i));
     }
@@ -26,7 +26,7 @@ SL void BitTest() {
       assert(__pe_popcount64(target) == __builtin_popcountll(target));
       assert(__pe_ffs64(target) == __builtin_ffsll(target));
       assert(__pe_parity64(target) == __builtin_parityll(target));
-#if defined(CPP_GLIBCXX)
+#if defined(STL_GLIBCXX)
       assert(__pe_lg64(target) == std::__lg(target));
 #endif
     }

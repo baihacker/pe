@@ -88,7 +88,7 @@ SL int64 SquareRootSafe(int64 n) {
 SL int64 SquareRootUnsafe(int64 n) {
   if (n <= 0) return 0;
   if (n == 1) return 1;
-  int64 ret = SqrtI(n);
+  const int64 ret = SqrtI(n);
   return ret * ret == n ? ret : 0;
 }
 
@@ -98,7 +98,7 @@ SL int64 SquareRoot(int64 n) {
   // see Donald L. Graham, Donald E. Knuth, Oren Patashnik, CONCRETE
   // MATHEMATICS, pp 70-72
   // int64 ret = static_cast<int64>(std::sqrt(n + 0.5));
-  int64 ret = SqrtI(n);
+  const int64 ret = SqrtI(n);
   return ret * ret == n ? ret : 0;
 }
 
@@ -1138,7 +1138,11 @@ SL std::vector<int64> SquareRootMod(int64 n, int64 p) {
   const int64 x = internal::SquareRootModImpl(n, p);
   if (x != -1) {
     const int64 y = x == 0 ? 0 : p - x;
-    return x == y ? std::vector<int64>{x} : std::vector<int64>{x, y};
+    if (x == y) {
+      return {x};
+    } else {
+      return {x, y};
+    }
   } else {
     return {};
   }
@@ -1249,14 +1253,14 @@ SL IntegerFactorization FactorizeForTwoSquares(int64 n) {
 // 0, 1 are handled as special case.
 SL std::vector<std::pair<int64, int64>> PrimeTwoSquares(const int64 p) {
   if (p == 0) {
-    return std::vector<std::pair<int64, int64>>{{0LL, 0LL}};
+    return {{0LL, 0LL}};
   } else if (p == 1) {
-    return std::vector<std::pair<int64, int64>>{{0LL, 1LL}};
+    return {{0LL, 1LL}};
   } else if (p == 2) {
-    return std::vector<std::pair<int64, int64>>{{1LL, 1LL}};
+    return {{1LL, 1LL}};
   }
   if ((p & 3) != 1) {
-    return std::vector<std::pair<int64, int64>>{};
+    return {};
   }
   int128 y = 1, x = 2;
   for (x = 2; PowerMod(x, (p - 1) >> 1, p) != p - 1; ++x) {
@@ -1277,7 +1281,7 @@ SL std::vector<std::pair<int64, int64>> PrimeTwoSquares(const int64 p) {
   if (y < 0) y = -y;
   if (x < 0) x = -x;
   if (x > y) std::swap(x, y);
-  return std::vector<std::pair<int64, int64>>{{x, y}};
+  return {{x, y}};
 }
 
 namespace internal {
@@ -1340,7 +1344,7 @@ SL std::vector<std::pair<int64, int64>> TwoSquares(
   for (auto& iter : f) {
     if ((iter.first & 3) == 3) {
       if (IsOdd(iter.second)) {
-        return std::vector<std::pair<int64, int64>>{};
+        return {};
       }
     }
   }
@@ -1350,15 +1354,15 @@ SL std::vector<std::pair<int64, int64>> TwoSquares(
 // Represent n as two squares: n = x^2 + y^2 where 0 <= x <= y.
 SL std::vector<std::pair<int64, int64>> TwoSquares(const int64 n) {
   if (n == 0) {
-    return std::vector<std::pair<int64, int64>>{{0LL, 0LL}};
+    return {{0LL, 0LL}};
   } else if (n == 1) {
-    return std::vector<std::pair<int64, int64>>{{0LL, 1LL}};
+    return {{0LL, 1LL}};
   } else if (n == 2) {
-    return std::vector<std::pair<int64, int64>>{{1LL, 1LL}};
+    return {{1LL, 1LL}};
   }
   auto f = internal::FactorizeForTwoSquares(n);
   if (std::empty(f)) {
-    return std::vector<std::pair<int64, int64>>{};
+    return {};
   }
   return internal::TwoSquaresImpl(f);
 }
@@ -1379,9 +1383,9 @@ SL void ExpandTwoSquares(std::vector<std::pair<int64, int64>>& ret,
 
 SL std::vector<std::pair<int64, int64>> TwoSquaresFull(const int64 n) {
   if (n == 0) {
-    return std::vector<std::pair<int64, int64>>{{0LL, 0LL}};
+    return {{0LL, 0LL}};
   }
-  auto tmp = TwoSquares(n);
+  std::vector<std::pair<int64, int64>> tmp = TwoSquares(n);
   std::vector<std::pair<int64, int64>> ret;
   ret.reserve(std::size(tmp) * 4);
   for (auto& iter : tmp) {

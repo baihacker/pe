@@ -124,6 +124,12 @@ void DisplayCompilerInfo() {
   AddNotDefined(__STRICT_ANSI__);
 #endif
 
+#if defined(__STDC_HOSTED__)
+  AddDefined(__STDC_HOSTED__);
+#else
+  AddNotDefined(__STDC_HOSTED__);
+#endif
+
 #if defined(_MSVC_LANG)
   AddDefined(_MSVC_LANG);
 #endif
@@ -162,6 +168,18 @@ void DisplayCompilerInfo() {
   AddDefined(_X86_);
 #else
   AddNotDefined(_X86_);
+#endif
+
+#if defined(_M_ARM64)
+  AddDefined(_M_ARM64);
+#else
+  AddNotDefined(_M_ARM64);
+#endif
+
+#if defined(__aarch64__)
+  AddDefined(__aarch64__);
+#else
+  AddNotDefined(__aarch64__);
 #endif
 
 #if defined(__BYTE_ORDER__)
@@ -223,6 +241,18 @@ void DisplayCompilerInfo() {
   AddDefined(_LIBCPP_VERSION);
 #else
   AddNotDefined(_LIBCPP_VERSION);
+#endif
+
+#if defined(_MSVC_STL_VERSION)
+  AddDefined(_MSVC_STL_VERSION);
+#else
+  AddNotDefined(_MSVC_STL_VERSION);
+#endif
+
+#if defined(_MSVC_STL_UPDATE)
+  AddDefined(_MSVC_STL_UPDATE);
+#else
+  AddNotDefined(_MSVC_STL_UPDATE);
 #endif
 
 #if defined(__AVX2__)

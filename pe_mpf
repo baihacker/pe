@@ -7,12 +7,8 @@
 #include "pe_nt"
 #include "pe_mpz"
 
-#if ENABLE_GMP
-
-#define HAS_MPF 1
-
-namespace pe {
 #if PE_HAS_CPP20
+namespace pe {
 template <class T>
 concept PeFloatArithmeticOperation = requires(T v) {
   v + 1;
@@ -34,21 +30,23 @@ concept PeFloatArithmeticOperation = requires(T v) {
 #if PE_HAS_INT128
   v + (int128)1;
   v - (int128)1;
-  v*(int128)1;
+  v * (int128)1;
   v / (int128)1;
   (int128)1 + v;
   (int128)1 - v;
   (int128)1 * v;
   (int128)1 / v;
 #endif
+#if ENABLE_GMP
   v + MpInteger(1);
   v - MpInteger(1);
-  v* MpInteger(1);
+  v * MpInteger(1);
   v / MpInteger(1);
   MpInteger(1) + v;
   MpInteger(1) - v;
   MpInteger(1) * v;
   MpInteger(1) / v;
+#endif
   v + 1.;
   v - 1.;
   v * 1.;
@@ -59,7 +57,7 @@ concept PeFloatArithmeticOperation = requires(T v) {
   1. / v;
   v + (long double)1.;
   v - (long double)1.;
-  v*(long double)1.;
+  v * (long double)1.;
   v / (long double)1.;
   (long double)1. + v;
   (long double)1. - v;
@@ -67,7 +65,7 @@ concept PeFloatArithmeticOperation = requires(T v) {
   (long double)1. / v;
   v + v;
   v - v;
-  v* v;
+  v * v;
   v / v;
 };
 template <class T>
@@ -86,10 +84,12 @@ concept PeFloatSelfOperation = requires(T v) {
   v *= (int128)1;
   v /= (int128)1;
 #endif
+#if ENABLE_GMP
   v += MpInteger(1);
   v -= MpInteger(1);
   v *= MpInteger(1);
   v /= MpInteger(1);
+#endif
   v += 1.;
   v -= 1.;
   v *= 1.;
@@ -113,8 +113,12 @@ concept PeFloat = requires(T v) {
   requires PeFloatSelfOperation<T>;
   requires PeComparable<T>;
 };
+}  // namespace pe
 #endif
 
+#if ENABLE_GMP
+#define HAS_MPF 1
+namespace pe {
 class Mpf {
  public:
   static void SetDefaultPrec(int n) { mpf_set_default_prec(n); }
@@ -397,14 +401,313 @@ SL Mpf Sqrt(const Mpf& f) { return f.Sqrt(); }
 
 }  // namespace pe
 
-#if PE_HAS_CPP20
+#if ENABLE_MPFR
+#define HAS_MPFR 1
 namespace pe {
-static_assert(PeFloat<Mpf>);
-static_assert(PeFloatUtil<Mpf>);
-}  // namespace pe
+class Mpfr {
+ public:
+  static void SetDefaultPrec(int n) { mpfr_set_default_prec(n); }
+
+  static int GetDefaultPrec() { return mpfr_get_default_prec(); }
+
+  Mpfr() { mpfr_init_set_si(f, 0, MPFR_RNDNA); }
+
+  Mpfr(bool t) : Mpfr(static_cast<long>(t ? 1 : 0)) {}
+
+  Mpfr(int t) : Mpfr(static_cast<long>(t)) {}
+
+  Mpfr(long t) { mpfr_init_set_si(f, t, MPFR_RNDNA); }
+
+  Mpfr(double t) { mpfr_init_set_d(f, t, MPFR_RNDNA); }
+
+  Mpfr(long double t) : Mpfr(pe::to_string(t)) {}
+
+  Mpfr(const std::string& s) : Mpfr(s.c_str()) {}
+
+  Mpfr(const char* s) { mpfr_init_set_str(f, s, 10, MPFR_RNDNA); }
+
+  Mpfr(const mpfr_t o) { mpfr_init_set(f, o, MPFR_RNDNA); }
+
+  Mpfr(const MpInteger& o) {
+    mpfr_init2(f, 100);
+    mpfr_set_z(f, o.mpz(), MPFR_RNDNA);
+  }
+
+  template <typename T, typename TT = REQUIRES((is_builtin_integer_v<T> &&
+                                                !std::is_same<T, bool>::value))
+                            RETURN(void)>
+  Mpfr(T value) : Mpfr(MpInteger(value)) {}
+
+  Mpfr(const Mpfr& o) { mpfr_init_set(f, o.f, MPFR_RNDNA); }
+
+  Mpfr(Mpfr&& o) noexcept {
+    f[0]._mpfr_d = nullptr;
+    mpfr_swap(f, o.f);
+  }
+
+  ~Mpfr() {
+    if (f[0]._mpfr_d) {
+      mpfr_clear(f);
+    }
+  }
+
+  Mpfr& operator=(const Mpfr& o) {
+    mpfr_set(f, o.f, MPFR_RNDNA);
+    return *this;
+  }
+
+  Mpfr& operator=(Mpfr&& o) noexcept {
+    mpfr_swap(f, o.f);
+    return *this;
+  }
+
+  template <typename T,
+            typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(T)>
+  Mpfr& operator=(T value) {
+    mpfr_set_z(f, MpInteger(value).mpz(), MPFR_RNDNA);
+    return *this;
+  }
+
+ public:
+  Mpfr& operator+=(const Mpfr& a) {
+    mpfr_add(f, f, a.f, MPFR_RNDNA);
+    return *this;
+  }
+
+  Mpfr& operator-=(const Mpfr& a) {
+    mpfr_sub(f, f, a.f, MPFR_RNDNA);
+    return *this;
+  }
+
+  Mpfr& operator*=(const Mpfr& a) {
+    mpfr_mul(f, f, a.f, MPFR_RNDNA);
+    return *this;
+  }
+
+  Mpfr& operator/=(const Mpfr& a) {
+    mpfr_div(f, f, a.f, MPFR_RNDNA);
+    return *this;
+  }
+
+  Mpfr& operator++() {
+    *this += 1;
+    return *this;
+  }
+
+  Mpfr operator++(int) {
+    Mpfr ret(*this);
+    mpfr_add_ui(f, f, 1, MPFR_RNDNA);
+    return ret;
+  }
+
+  Mpfr& operator--() {
+    *this -= 1;
+    return *this;
+  }
+
+  const Mpfr& operator+() const { return *this; }
+
+  const Mpfr operator-() const {
+    Mpfr t;
+    mpfr_neg(t.f, f, MPFR_RNDNA);
+    return t;
+  }
+
+  Mpfr operator--(int) {
+    Mpfr ret(*this);
+    mpfr_sub_ui(f, f, 1, MPFR_RNDNA);
+    return ret;
+  }
+
+  Mpfr Sqrt() const {
+    Mpfr t;
+    mpfr_sqrt(t.f, f, MPFR_RNDNA);
+    return t;
+  }
+
+  Mpfr Power(unsigned long p) const {
+    Mpfr t;
+    mpfr_pow_ui(t.f, f, p, MPFR_RNDNA);
+    return t;
+  }
+
+  Mpfr Abs() const {
+    Mpfr t;
+    mpfr_abs(t.f, f, MPFR_RNDNA);
+    return t;
+  }
+
+  Mpfr Ceil() const {
+    Mpfr t;
+    mpfr_ceil(t.f, f);
+    return t;
+  }
+
+  Mpfr Floor() const {
+    Mpfr t;
+    mpfr_floor(t.f, f);
+    return t;
+  }
+
+  Mpfr Trunc() const {
+    Mpfr t;
+    mpfr_trunc(t.f, f);
+    return t;
+  }
+
+  int Sgn() const { return mpfr_sgn(f); }
+
+  void SetPrec(int n) { mpfr_set_prec(f, n); }
+
+  int Prec() const { return mpfr_get_prec(f); }
+
+ public:
+  double ToDouble() const { return mpfr_get_d(f, MPFR_RNDNA); }
+
+  std::string ToString(int dig = 20) const {
+    const int s = Sgn();
+    if (s == 0) {
+      return "0";
+    }
+    // dig < 1020
+    mpfr_exp_t e;
+    char buff[1024];
+    mpfr_get_str(buff, &e, 10, dig, f, MPFR_RNDNA);
+    const int offset = buff[0] == '-' ? 2 : 1;
+    std::string temp(buff);
+    std::string t =
+        temp.substr(0, offset) + std::string(".") + temp.substr(offset);
+    if (e - 1 != 0) t = t + "e" + pe::ToString(e - 1);
+    return t;
+  }
+
+  std::string to_string(int dig = 20) const { return ToString(dig); }
+
+  long double ToLongDouble() const {
+    std::string t = ToString(50);
+    long double result;
+    sscanf(t.c_str(), "%Lf", &result);
+    return result;
+  }
+
+  MpInteger ToMpInteger() const {
+    MpInteger z;
+    mpfr_get_z(z.mpz(), mpfr(), MPFR_RNDNA);
+    return z;
+  }
+
+  template <typename T>
+  T ToInt() const {
+    return ToMpInteger().ToInt<T>();
+  }
+
+  __mpfr_struct* mpfr() { return f; }
+  const __mpfr_struct* mpfr() const { return f; }
+
+  mpfr_t f;
+};
+
+SL Mpfr operator+(const Mpfr& a, const Mpfr& b) {
+  Mpfr t;
+  mpfr_add(t.f, a.f, b.f, MPFR_RNDNA);
+  return t;
+}
+
+SL Mpfr operator-(const Mpfr& a, const Mpfr& b) {
+  Mpfr t;
+  mpfr_sub(t.f, a.f, b.f, MPFR_RNDNA);
+  return t;
+}
+
+SL Mpfr operator*(const Mpfr& a, const Mpfr& b) {
+  Mpfr t;
+  mpfr_mul(t.f, a.f, b.f, MPFR_RNDNA);
+  return t;
+}
+
+SL Mpfr operator/(const Mpfr& a, const Mpfr& b) {
+  Mpfr t;
+  mpfr_div(t.f, a.f, b.f, MPFR_RNDNA);
+  return t;
+}
+
+SL int compare(const Mpfr& a, const Mpfr& b) { return mpfr_cmp(a.f, b.f); }
+
+#if PE_HAS_CPP20
+SL int operator<=>(const Mpfr& a, const Mpfr& b) { return mpfr_cmp(a.f, b.f); }
+
+SL int operator==(const Mpfr& a, const Mpfr& b) { return (a <=> b) == 0; }
+
+SL int operator!=(const Mpfr& a, const Mpfr& b) { return (a <=> b) != 0; }
+#else
+SL int operator<(const Mpfr& a, const Mpfr& b) { return compare(a, b) < 0; }
+
+SL int operator<=(const Mpfr& a, const Mpfr& b) { return compare(a, b) <= 0; }
+
+SL int operator>(const Mpfr& a, const Mpfr& b) { return compare(a, b) > 0; }
+
+SL int operator>=(const Mpfr& a, const Mpfr& b) { return compare(a, b) >= 0; }
+
+SL int operator==(const Mpfr& a, const Mpfr& b) { return compare(a, b) == 0; }
+
+SL int operator!=(const Mpfr& a, const Mpfr& b) { return compare(a, b) != 0; }
 #endif
+
+MpInteger& MpInteger::operator=(const Mpfr& o) {
+  *this = o.ToMpInteger();
+  return *this;
+}
+
+SL std::string ToString(const Mpfr& f, int dig = 20) { return f.ToString(dig); }
+
+SL std::string to_string(const Mpfr& f, int dig = 20) {
+  return f.ToString(dig);
+}
+
+SL std::ostream& operator<<(std::ostream& o, const Mpfr& f) {
+  return o << f.ToString(20);
+}
+
+SL Mpfr IsZero(const Mpfr& f) { return f.Sgn() == 0; }
+
+SL Mpfr IntSign(const Mpfr& f) { return f.Sgn(); }
+
+SL Mpfr Abs(const Mpfr& f) { return f.Abs(); }
+
+SL Mpfr FAbs(const Mpfr& f) { return f.Abs(); }
+
+SL Mpfr Floor(const Mpfr& f) { return f.Floor(); }
+
+SL Mpfr Ceil(const Mpfr& f) { return f.Ceil(); }
+
+SL Mpfr Trunc(const Mpfr& f) { return f.Trunc(); }
+
+SL Mpfr Power(const Mpfr& f, unsigned long p) { return f.Power(p); }
+
+SL Mpfr Sqrt(const Mpfr& f) { return f.Sqrt(); }
+
+}  // namespace pe
+#else
+#define HAS_MPFR 0
+#endif
+
 #else
 #define HAS_MPF 0
+#define HAS_MPFR 0
+#endif
+
+#if PE_HAS_CPP20
+namespace pe {
+#if HAS_MPF
+static_assert(PeFloat<Mpf>);
+static_assert(PeFloatUtil<Mpf>);
+#endif
+
+#if HAS_MPFR
+static_assert(PeFloat<Mpfr>);
+static_assert(PeFloatUtil<Mpfr>);
+#endif
+}  // namespace pe
 #endif
 
 #endif

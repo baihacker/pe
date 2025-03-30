@@ -41,7 +41,6 @@ def _get_pe_link_flags(ctx):
             "-fopenmp",
             "-lquadmath",
             "-lbf",
-            "-lgmpxx",
             "-lflint",
             "-lmpfr",
             "-lntl",

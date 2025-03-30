@@ -37,7 +37,6 @@ package(
              "NO_SUPER_TEST"],
            linkopts = [
              "-fopenmp",
-             "-lgmpxx",
              "-lflint",
              "-lmpfr",
              "-lntl",

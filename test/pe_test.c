@@ -293,6 +293,10 @@ int main() {
 
   dbg(maxp);
   dbg(maxp2);
+#if ENABLE_FLINT
+  dbg(flint_get_num_threads());
+  flint_set_num_threads(8);
+#endif
 
   TestRegistry& test_registry = GetTestRegistry();
 

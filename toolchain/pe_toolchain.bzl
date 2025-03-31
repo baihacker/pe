@@ -38,7 +38,6 @@ def _get_pe_link_flags(ctx):
     return [
             "-static",
             "-Wl,--stack,268435456",
-            "-Wl,--strip-all",
             "-fopenmp",
             "-lquadmath",
             "-lbf",

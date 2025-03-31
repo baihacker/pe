@@ -1,8 +1,8 @@
 #include "pe_test.h"
 
 namespace prime_pi_sum_test {
-int64 ps[1000001];
-int64 pc[1000001];
+std::vector<int64> ps(1000001);
+std::vector<int64> pc(1000001);
 
 SL void VerifyCnt(const int64 n, const DVA<int64>& result) {
   auto v = (int64)sqrt(n);

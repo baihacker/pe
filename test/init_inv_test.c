@@ -3,13 +3,12 @@
 namespace init_inv_test {
 const int64 mod = 1000000007;
 
-const int n = 1000000;
-int sresult[n + 1];
-int64 lresult[n + 1];
-
 SL void InitInvTest() {
-  InitInverse(sresult, n, mod);
-  InitInverse(lresult, n, mod);
+  const int n = 1000000;
+  std::vector<int> sresult(n + 1);
+  std::vector<int64> lresult(n + 1);
+  InitInverse(&sresult[0], n, mod);
+  InitInverse(&lresult[0], n, mod);
   for (int i = 1; i <= n; ++i) {
     assert((int64)i * sresult[i] % mod == 1);
     assert(sresult[i] == lresult[i]);

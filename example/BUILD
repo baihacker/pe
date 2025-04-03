@@ -23,7 +23,7 @@ package(
              "ENABLE_ASSERT=0",
              "TRY_TO_USE_INT128=1",
              "ENABLE_OPENMP=1",
-             "ENABLE_EIGEN=1",
+             "ENABLE_EIGEN=0",
              "ENABLE_GMP=1",
              "ENABLE_FLINT=1",
              "ENABLE_MPFR=1",

@@ -2,6 +2,7 @@
 #define __PE_TEST_H__
 
 #define PE_TEST_MODE
+
 #include <pe>
 using namespace pe;
 

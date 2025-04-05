@@ -33,47 +33,15 @@
 #endif
 
 static TimeUsage __time_usage;
+#ifndef ENABLED_TEST
+#define ENABLED_TEST SPECIFIED
+#endif
+
+constexpr std::string_view enabled_test_list = PE_STR(ENABLED_TEST);
 
 TestRegistry& GetTestRegistry() {
   static TestRegistry test_registry;
   return test_registry;
-}
-
-SL bool IsEnabledTestSize(TestSize size) {
-  static constexpr TestSize enabled_test_size[] = {
-#if defined(TEST_ALL)
-      SMALL, MEDIUM, BIG, SUPER, SPECIFIED,
-#else
-      SPECIFIED,
-#endif
-  };
-#if defined(NO_SMALL_TEST)
-  if (size == SMALL) {
-    return false;
-  }
-#endif
-#if defined(NO_MEDIUM_TEST)
-  if (size == MEDIUM) {
-    return false;
-  }
-#endif
-#if defined(NO_BIG_TEST)
-  if (size == BIG) {
-    return false;
-  }
-#endif
-#if defined(NO_SUPER_TEST)
-  if (size == SUPER) {
-    return false;
-  }
-#endif
-
-  for (auto& iter : enabled_test_size) {
-    if (iter == size) {
-      return true;
-    }
-  }
-  return false;
 }
 
 std::vector<std::vector<std::string>> result;
@@ -283,6 +251,14 @@ void DisplayCompilerInfo() {
 int main() {
   DisplayCompilerInfo();
 
+  std::vector<TestSize> enabled_test_size =
+      ParseTestSizeList(std::string(enabled_test_list));
+
+  auto is_enabled_test_size = [&](TestSize size) {
+    return std::find(enabled_test_size.begin(), enabled_test_size.end(),
+                     size) != enabled_test_size.end();
+  };
+
   PeInitializer()
       .set_cal_phi()
       .set_cal_mu()
@@ -306,7 +282,7 @@ int main() {
   bool is_first_test = true;
 
   for (const TestItem& test_item : test_registry.tests) {
-    if (!IsEnabledTestSize(test_item.test_size)) {
+    if (!is_enabled_test_size(test_item.test_size)) {
       continue;
     }
     if (!is_first_test) {

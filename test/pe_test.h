@@ -15,6 +15,51 @@ enum TestSize {
   SPECIFIED = 4,
 };
 
+SL bool SameStringIgnoreCase(std::string_view a, std::string_view b) {
+  if (a.size() != b.size()) {
+    return false;
+  }
+  for (int i = 0; i < a.size(); ++i) {
+    if (std::tolower(a[i]) != std::tolower(b[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+SL std::optional<TestSize> ParseTestSize(std::string_view test_size) {
+  if (SameStringIgnoreCase(test_size, "SMALL")) {
+    return SMALL;
+  } else if (SameStringIgnoreCase(test_size, "MEDIUM")) {
+    return MEDIUM;
+  } else if (SameStringIgnoreCase(test_size, "BIG")) {
+    return BIG;
+  } else if (SameStringIgnoreCase(test_size, "SUPER")) {
+    return SUPER;
+  } else if (SameStringIgnoreCase(test_size, "SPECIFIED")) {
+    return SPECIFIED;
+  } else {
+    return std::nullopt;
+  }
+}
+
+SL std::vector<TestSize> ParseTestSizeList(std::string s) {
+  std::vector<TestSize> ret;
+
+  std::replace(s.begin(), s.end(), ',', ' ');
+  std::stringstream ss(s);
+  std::string item;
+  while (ss >> item) {
+    std::optional<TestSize> size = ParseTestSize(item);
+    if (!size.has_value()) {
+      std::cerr << "Cannot parse test size: " << item << std::endl;
+    } else {
+      ret.push_back(*size);
+    }
+  }
+  return ret;
+}
+
 struct TestItem {
   TestMethodT test;
   std::string file;

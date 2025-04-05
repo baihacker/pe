@@ -47,6 +47,8 @@ SL std::vector<TestSize> ParseTestSizeList(std::string s) {
   std::vector<TestSize> ret;
 
   std::replace(s.begin(), s.end(), ',', ' ');
+  std::replace(s.begin(), s.end(), '(', ' ');
+  std::replace(s.begin(), s.end(), ')', ' ');
   std::stringstream ss(s);
   std::string item;
   while (ss >> item) {

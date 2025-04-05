@@ -37,7 +37,7 @@ static TimeUsage __time_usage;
 #define ENABLED_TEST SPECIFIED
 #endif
 
-constexpr std::string_view enabled_test_list = PE_STR(ENABLED_TEST);
+constexpr std::string_view enabled_test_list = PE_STR((ENABLED_TEST));
 
 TestRegistry& GetTestRegistry() {
   static TestRegistry test_registry;

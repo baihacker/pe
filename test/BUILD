@@ -82,7 +82,7 @@ pe_binary(
   name = "test_noint128_openmp",
   srcs = ["pe_test.c"],
   defines = [
-    "TEST_ALL",
+    "ENABLED_TEST=SMALL,MEDIUM,BIG,SUPER,SPECIFIED",
     "ENABLE_ASSERT=0",
     "TRY_TO_USE_INT128=0",
     "ENABLE_OPENMP=1",

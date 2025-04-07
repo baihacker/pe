@@ -1041,6 +1041,23 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   const int64 n = static_cast<int64>(std::size(X));
   const int64 m = static_cast<int64>(std::size(Y));
   const int64 result_size = n + m - 1;
+  if (n * m <= 2500) {
+    std::vector<T> result(result_size, 0);
+    if (n <= m) {
+      for (int64 i = 0; i < n; ++i) {
+        for (int64 j = 0; j < m; ++j) {
+          result[i + j] = AddMod(result[i + j], MulMod(X[i], Y[j], mod), mod);
+        }
+      }
+    } else {
+      for (int64 j = 0; j < m; ++j) {
+        for (int64 i = 0; i < n; ++i) {
+          result[i + j] = AddMod(result[i + j], MulMod(X[i], Y[j], mod), mod);
+        }
+      }
+    }
+    return result;
+  }
   if (n == m) {
     // In case n == m, we still allocate tempory result space to meet the
     // requirement of PolyMulDcImpl.

@@ -27,7 +27,7 @@ def _get_pe_compile_flags(ctx):
             "--std=c++20",
             "-Wno-delete-incomplete",
             "-Wno-shift-count-overflow",
-            "-O3",
+            "-O2",
             "-march=native",
             "-mtune=native",
             "-fopenmp",

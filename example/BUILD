@@ -15,7 +15,7 @@ package(
              "-std=c++17",
              "-Wno-delete-incomplete",
              "-Wno-shift-count-overflow",
-             "-O3",
+             "-O2",
              "-march=native",
              "-mtune=native",
              "-fopenmp"],

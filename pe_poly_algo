@@ -21,7 +21,7 @@ SL void InitBernoulliNumber(int64* dest, int64 n, int64* invs, int64 mod) {
     t[i] = v;
   }
 
-  auto result = PolyInv<uint64>(t, static_cast<int64>(n), mod);
+  std::vector<uint64> result = PolyInv<uint64>(t, static_cast<int64>(n), mod);
 
   uint64 c = 1;
   dest[0] = result[0];
@@ -64,7 +64,7 @@ namespace pmod {
 // http://oeis.org/A008275
 SL std::vector<int64> GenStirling1Column(int64 n, int64 m, int64 mod) {
   std::vector<int64> a = PolyLog(std::vector<int64>{1, mod - 1}, m + 1, mod);
-  for (auto& i : a) i = i == 0 ? 0 : mod - i;
+  for (int64& i : a) i = i == 0 ? 0 : mod - i;
   std::vector<int64> b = {1};
   for (int64 t = n; t > 0; t >>= 1) {
     if (t & 1) {
@@ -208,7 +208,7 @@ SL int64 GfAt(const std::vector<int64>& A, const std::vector<int64>& B,
 #else
   const int64 size = D * D;
   std::string data(size * sizeof(int64) * 3, '\0');
-  auto* buffer = reinterpret_cast<int64*>(const_cast<char*>(data.c_str()));
+  int64* buffer = reinterpret_cast<int64*>(const_cast<char*>(data.c_str()));
 
   int64* mat = buffer;
   int64* res = mat + size;
@@ -287,7 +287,7 @@ SL std::vector<int64> FindLinearRecurrence(Span<const int64> terms,
   }
 
   int64 c = ModInv(v1.back(), mod);
-  for (auto& v : v1) v = MulMod(c, v, mod);
+  for (int64& v : v1) v = MulMod(c, v, mod);
 
   return v1;
 }
@@ -406,7 +406,8 @@ SL std::optional<int64> LinearRecurrenceValueAtN(Span<const int64> terms,
     return terms[static_cast<int>(n)];
   }
 
-  auto min_poly = FindLinearRecurrence(terms, mod, min_use);
+  std::optional<std::vector<pe::int64>> min_poly =
+      FindLinearRecurrence(terms, mod, min_use);
   if (min_poly.has_value()) {
     return ApplyLinearRecurrenceValueAtN(*min_poly, terms, n, mod);
   }
@@ -415,7 +416,8 @@ SL std::optional<int64> LinearRecurrenceValueAtN(Span<const int64> terms,
 
 SL std::optional<std::vector<int64>> LinearRecurrenceValues(
     Span<const int64> terms, int64 n, int64 mod, int min_use = 2) {
-  auto min_poly = FindLinearRecurrence(terms, mod, min_use);
+  std::optional<std::vector<pe::int64>> min_poly =
+      FindLinearRecurrence(terms, mod, min_use);
   if (!min_poly.has_value()) {
     return std::nullopt;
   }

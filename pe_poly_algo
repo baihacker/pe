@@ -342,8 +342,9 @@ SL int64 PartialSumAt(Span<const int64> terms, int64 n, int64 mod) {
   return ret;
 }
 
-SL int64 PartialSumAt(Span<const int64> terms, int64 n) {
-  int64 ret = 0;
+template <typename T>
+SL T PartialSumAt(Span<const T> terms, int64 n) {
+  T ret = 0;
   for (int i = 0; i <= n; ++i) {
     ret += terms[i];
   }
@@ -637,12 +638,12 @@ class SeqExpr {
     return min_poly;
   }
 
-  std::vector<T> ToMinPoly(int64 mod) const {
-    std::vector<T> seq_relation = Evaluate(mod);
+  std::vector<int64> ToMinPoly(int64 mod) const {
+    std::vector<int64> seq_relation = Evaluate(mod);
     if (!seq_relation.empty()) {
       PE_ASSERT(seq_relation[0] == 0);
     }
-    std::vector<T> min_poly;
+    std::vector<int64> min_poly;
     for (int i = 1; i < std::size(seq_relation); ++i) {
       min_poly.push_back(SubMod(0, seq_relation[i], mod));
     }
@@ -658,20 +659,21 @@ class SeqExpr {
   T ValueAt(Span<const T> terms, int64 n) const;
   T SumAt(Span<const T> terms, int64 n) const;
 
-  std::vector<T> Generate(Span<const T> terms, int64 n, int64 mod) const {
+  std::vector<int64> Generate(Span<const int64> terms, int64 n,
+                              int64 mod) const {
     const int64 need = n + 1;
-    std::vector<T> ret(need);
+    std::vector<int64> ret(need);
     const int64 m = std::min<int64>(need, terms.size());
     for (int64 i = 0; i < m; ++i) {
       ret[i] = terms[i];
     }
 
     if (need > m) {
-      std::vector<T> seq_relation = Evaluate(mod);
+      std::vector<int64> seq_relation = Evaluate(mod);
       PE_ASSERT(std::size(seq_relation) > 0);
       PE_ASSERT(std::size(terms) + 1 >= std::size(seq_relation));
       for (int64 i = m; i < need; ++i) {
-        T val = seq_relation[0];
+        int64 val = seq_relation[0];
         for (int j = 1; j < seq_relation.size(); ++j) {
           val = AddMod(val, MulMod(seq_relation[j], ret[i - j], mod), mod);
         }
@@ -889,7 +891,7 @@ T SeqExpr<T>::SumAt(Span<const T> terms, int64 n) const {
   PE_ASSERT(std::size(seq_relation) > 0);
   PE_ASSERT(std::size(terms) + 1 >= std::size(seq_relation));
   const int d = static_cast<int>(std::size(seq_relation)) - 1;
-  if (seq_relation[0] == 0) {
+  if (seq_relation[0] == T(0)) {
     return MatrixPower<T>(
         [&](auto& m, auto& v) {
           for (int i = 0; i < d; ++i) {

@@ -16,7 +16,7 @@ void TestEigen(const std::vector<int>& data, const std::vector<int>& V) {
     for (int j = 0; j < K; ++j) m(i, j) = data[j * K + i];
 
   TimeRecorder tr;
-  v = MatrixPower(m, 4, v);
+  v = MatrixPowerEigen(m, 4, v);
   int64 s = 0;
   for (auto i : v) s += i.value();
   // std::cout << s << std::endl;
@@ -37,7 +37,7 @@ void TestEigen(const std::vector<int>& data, const std::vector<int>& V, E mod) {
     for (int j = 0; j < K; ++j) m(i, j) = data[j * K + i] % mod;
 
   TimeRecorder tr;
-  v = MatrixPower(m, 4, v, mod);
+  v = MatrixPowerEigen(m, 4, v, mod);
   int64 s = 0;
   for (auto i : v) s += i;
   // std::cout << s << std::endl;
@@ -58,7 +58,7 @@ void TestPe(const std::vector<int>& data, const std::vector<int>& V) {
     for (int j = 0; j < K; ++j) m(i, j) = data[j * K + i];
 
   TimeRecorder tr;
-  v = MatrixPower(m, 4, v);
+  v = MatrixPowerPe(m, 4, v);
   int64 s = 0;
   for (auto i : v) s += i.value();
   // std::cout << s << std::endl;
@@ -79,7 +79,7 @@ void TestPe(const std::vector<int>& data, const std::vector<int>& V, E mod) {
     for (int j = 0; j < K; ++j) m(i, j) = data[j * K + i] % mod;
 
   TimeRecorder tr;
-  v = MatrixPower(m, 4, v, mod);
+  v = MatrixPowerPe(m, 4, v, mod);
   int64 s = 0;
   for (auto i : v) s += i;
   // std::cout << s << std::endl;

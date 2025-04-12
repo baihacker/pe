@@ -696,7 +696,7 @@ SL REQUIRES((!is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 }
 
 template <typename T, int C>
-SL PeMatrix<T, -1> MatrixPower(const PeMatrix<T, C>& m, int64 n) {
+SL PeMatrix<T, -1> MatrixPowerPe(const PeMatrix<T, C>& m, int64 n) {
   const int r = m.row();
   const int c = m.col();
 
@@ -724,7 +724,7 @@ SL PeMatrix<T, -1> MatrixPower(const PeMatrix<T, C>& m, int64 n) {
 }
 
 template <typename T, int C>
-SL PeMatrix<T, -1> MatrixPower(const PeMatrix<T, C>& m, int64 n, T mod) {
+SL PeMatrix<T, -1> MatrixPowerPe(const PeMatrix<T, C>& m, int64 n, T mod) {
   const int r = m.row();
   const int c = m.col();
 
@@ -752,8 +752,8 @@ SL PeMatrix<T, -1> MatrixPower(const PeMatrix<T, C>& m, int64 n, T mod) {
 }
 
 template <typename T, int C>
-SL std::vector<T> MatrixPower(const PeMatrix<T, C>& m, int64 n,
-                              const std::vector<T>& v) {
+SL std::vector<T> MatrixPowerPe(const PeMatrix<T, C>& m, int64 n,
+                                const std::vector<T>& v) {
   const int r = m.row();
   const int c = m.col();
 
@@ -777,8 +777,8 @@ SL std::vector<T> MatrixPower(const PeMatrix<T, C>& m, int64 n,
 }
 
 template <typename T, int C>
-SL std::vector<T> MatrixPower(const PeMatrix<T, C>& m, int64 n,
-                              const std::vector<T>& v, T mod) {
+SL std::vector<T> MatrixPowerPe(const PeMatrix<T, C>& m, int64 n,
+                                const std::vector<T>& v, T mod) {
   const int r = m.row();
   const int c = m.col();
 
@@ -799,6 +799,32 @@ SL std::vector<T> MatrixPower(const PeMatrix<T, C>& m, int64 n,
   }
 
   return result;
+}
+
+template <typename T>
+SL PeMatrix<T> MatrixPowerPe(const std::function<void(PeMatrix<T>& mat)>& init,
+                             const int K, int64 n) {
+  using MatrixT = PeMatrix<T>;
+
+  MatrixT m(K, K);
+
+  init(m);
+
+  return MatrixPowerPe(m, n);
+}
+
+template <typename T>
+SL std::vector<T> MatrixPowerPe(
+    const std::function<void(PeMatrix<T>& mat, std::vector<T>& v)>& init,
+    const int K, int64 n) {
+  using MatrixT = PeMatrix<T>;
+
+  std::vector<T> v(K, 0);
+  MatrixT m(K, K);
+
+  init(m, v);
+
+  return MatrixPowerPe(m, n, v);
 }
 
 // Helper method for matrix multiplication
@@ -886,7 +912,7 @@ SL PeMatrix<int64> MatrixPowerModPe(
 
   init(m);
 
-  auto t = MatrixPower(m, n);
+  auto t = MatrixPowerPe(m, n);
 
   PeMatrix<int64> res(K, K);
   for (int i = 0; i < K; ++i) {
@@ -911,7 +937,7 @@ SL std::vector<int64> MatrixPowerModPe(
 
   init(m, v);
 
-  auto t = MatrixPower(m, n, v);
+  auto t = MatrixPowerPe(m, n, v);
 
   std::vector<int64> res(K, 0);
   for (int i = 0; i < K; ++i) {
@@ -927,27 +953,14 @@ template <typename T>
 SL REQUIRES((IsNModNumberV<T>)) RETURN(PeMatrix<T>)
     MatrixPowerModPe(const std::function<void(PeMatrix<T>& mat)>& init,
                      const int K, int64 n) {
-  using MatrixT = PeMatrix<T>;
-
-  MatrixT m(K, K);
-
-  init(m);
-
-  return MatrixPower(m, n);
+  return MatrixPowerPe(init, K, n);
 }
 
 template <typename T>
 SL REQUIRES((IsNModNumberV<T>)) RETURN(std::vector<T>) MatrixPowerModPe(
     const std::function<void(PeMatrix<T>& mat, std::vector<T>& v)>& init,
     const int K, int64 n) {
-  using MatrixT = PeMatrix<T>;
-
-  std::vector<T> v(K, 0);
-  MatrixT m(K, K);
-
-  init(m, v);
-
-  return MatrixPower(m, n, v);
+  return MatrixPowerPe(init, K, n);
 }
 
 // Version 3
@@ -963,7 +976,7 @@ SL PeMatrix<int64> MatrixPowerModPe(
 
   init(m);
 
-  auto t = MatrixPower<int128>(m, n, mod);
+  auto t = MatrixPowerPe<int128>(m, n, mod);
 
   PeMatrix<int64> res(K, K);
   for (int i = 0; i < K; ++i) {
@@ -987,7 +1000,7 @@ SL std::vector<int64> MatrixPowerModPe(
 
   init(m, v);
 
-  auto t = MatrixPower<int128>(m, n, v, mod);
+  auto t = MatrixPowerPe<int128>(m, n, v, mod);
 
   std::vector<int64> res(K, 0);
   for (int i = 0; i < K; ++i) {
@@ -1011,7 +1024,7 @@ SL PeMatrix<int64> MatrixPowerModPe(
 
   init(m);
 
-  auto t = MatrixPower(m, n);
+  auto t = MatrixPowerPe(m, n);
 
   PeMatrix<int64> res(K, K);
   for (int i = 0; i < K; ++i)
@@ -1037,7 +1050,7 @@ SL std::vector<int64> MatrixPowerModPe(
 
   init(m, v);
 
-  auto t = MatrixPower(m, n, v);
+  auto t = MatrixPowerPe(m, n, v);
 
   std::vector<int64> res(K, 0);
   for (int i = 0; i < K; ++i) {
@@ -1104,7 +1117,7 @@ struct NModEigenMatrixModFixer<NModNumberM<MC, APSBL<S>>> {
 };
 
 template <typename T>
-SL EigenMatrix<T> MatrixPower(const EigenMatrix<T>& x, int64 n) {
+SL EigenMatrix<T> MatrixPowerEigen(const EigenMatrix<T>& x, int64 n) {
   using MatrixT = EigenMatrix<T>;
 
   PE_ASSERT(n >= 0);
@@ -1132,7 +1145,8 @@ SL EigenMatrix<T> MatrixPower(const EigenMatrix<T>& x, int64 n) {
 }
 
 template <typename T>
-SL EigenMatrix<T> MatrixPower(const EigenMatrix<T>& x, int64 n, int64 mod) {
+SL EigenMatrix<T> MatrixPowerEigen(const EigenMatrix<T>& x, int64 n,
+                                   int64 mod) {
   using MatrixT = EigenMatrix<T>;
 
   PE_ASSERT(n >= 0);
@@ -1162,8 +1176,8 @@ SL EigenMatrix<T> MatrixPower(const EigenMatrix<T>& x, int64 n, int64 mod) {
 }
 
 template <typename T>
-SL std::vector<T> MatrixPower(const EigenMatrix<T>& x, int64 n,
-                              const std::vector<T>& v) {
+SL std::vector<T> MatrixPowerEigen(const EigenMatrix<T>& x, int64 n,
+                                   const std::vector<T>& v) {
   using MatrixT = EigenMatrix<T>;
 
   PE_ASSERT(n >= 0);
@@ -1200,8 +1214,8 @@ SL std::vector<T> MatrixPower(const EigenMatrix<T>& x, int64 n,
 }
 
 template <typename T>
-SL std::vector<T> MatrixPower(const EigenMatrix<T>& x, int64 n,
-                              const std::vector<T>& v, int64 mod) {
+SL std::vector<T> MatrixPowerEigen(const EigenMatrix<T>& x, int64 n,
+                                   const std::vector<T>& v, int64 mod) {
   using MatrixT = EigenMatrix<T>;
 
   PE_ASSERT(n >= 0);
@@ -1239,6 +1253,33 @@ SL std::vector<T> MatrixPower(const EigenMatrix<T>& x, int64 n,
   return result;
 }
 
+template <typename T>
+SL EigenMatrix<T> MatrixPowerEigen(
+    const std::function<void(EigenMatrix<T>& mat)>& init, const int d,
+    int64 n) {
+  using MatrixT = EigenMatrix<T>;
+
+  MatrixT m = MatrixT::Zero(d, d);
+
+  init(m);
+
+  return MatrixPowerEigen(m, n);
+}
+
+template <typename T>
+SL std::vector<T> MatrixPowerEigen(
+    const std::function<void(EigenMatrix<T>& mat, std::vector<T>& v)>& init,
+    const int d, int64 n) {
+  using MatrixT = EigenMatrix<T>;
+
+  std::vector<T> v(d, 0);
+  MatrixT m = MatrixT::Zero(d, d);
+
+  init(m, v);
+
+  return MatrixPowerEigen(m, n, v);
+}
+
 // Version 1
 // Mod is specified explicitly at compiling time.
 template <int64 mod>
@@ -1252,7 +1293,7 @@ SL EigenMatrix<int64> MatrixPowerModEigen(
 
   init(m);
 
-  auto t = MatrixPower(m, n);
+  auto t = MatrixPowerEigen(m, n);
 
   EigenMatrix<int64> res(d, d);
   for (int i = 0; i < d; ++i) {
@@ -1277,7 +1318,7 @@ SL std::vector<int64> MatrixPowerModEigen(
 
   init(m, v);
 
-  auto t = MatrixPower(m, n, v);
+  auto t = MatrixPowerEigen(m, n, v);
 
   std::vector<int64> res(d, 0);
   for (int i = 0; i < d; ++i) {
@@ -1293,27 +1334,14 @@ template <typename T>
 SL REQUIRES((IsNModNumberV<T>)) RETURN(EigenMatrix<T>)
     MatrixPowerModEigen(const std::function<void(EigenMatrix<T>& mat)>& init,
                         const int d, int64 n) {
-  using MatrixT = EigenMatrix<T>;
-
-  MatrixT m = MatrixT::Zero(d, d);
-
-  init(m);
-
-  return MatrixPower(m, n);
+  return MatrixPowerEigen(init, d, n);
 }
 
 template <typename T>
 SL REQUIRES((IsNModNumberV<T>)) RETURN(std::vector<T>) MatrixPowerModEigen(
     const std::function<void(EigenMatrix<T>& mat, std::vector<T>& v)>& init,
     const int d, int64 n) {
-  using MatrixT = EigenMatrix<T>;
-
-  std::vector<T> v(d, 0);
-  MatrixT m = MatrixT::Zero(d, d);
-
-  init(m, v);
-
-  return MatrixPower(m, n, v);
+  return MatrixPowerEigen(init, d, n);
 }
 
 // Version 3
@@ -1329,7 +1357,7 @@ SL EigenMatrix<int64> MatrixPowerModEigen(
 
   init(m);
 
-  auto t = MatrixPower(m, n, mod);
+  auto t = MatrixPowerEigen(m, n, mod);
 
   EigenMatrix<int64> res(d, d);
   for (int i = 0; i < d; ++i) {
@@ -1353,7 +1381,7 @@ SL std::vector<int64> MatrixPowerModEigen(
 
   init(m, v);
 
-  auto t = MatrixPower(m, n, v, mod);
+  auto t = MatrixPowerEigen(m, n, v, mod);
 
   std::vector<int64> res(d, 0);
   for (int i = 0; i < d; ++i) {
@@ -1377,7 +1405,7 @@ SL EigenMatrix<int64> MatrixPowerModEigen(
 
   init(m);
 
-  auto t = MatrixPower(m, n);
+  auto t = MatrixPowerEigen(m, n);
 
   EigenMatrix<int64> res(d, d);
   for (int i = 0; i < d; ++i)
@@ -1404,7 +1432,7 @@ SL std::vector<int64> MatrixPowerModEigen(
 
   init(m, v);
 
-  auto t = MatrixPower(m, n, v);
+  auto t = MatrixPowerEigen(m, n, v);
 
   std::vector<int64> res(d, 0);
   for (int i = 0; i < d; ++i) {
@@ -1418,6 +1446,37 @@ SL std::vector<int64> MatrixPowerModEigen(
 #endif  // end ENABLE_EIGEN
 
 #if ENABLE_EIGEN
+template <typename T>
+SL EigenMatrix<T> MatrixPower(const EigenMatrix<T>& x, int64 n) {
+  return MatrixPowerEigen(x, n);
+}
+template <typename T>
+SL EigenMatrix<T> MatrixPower(const EigenMatrix<T>& x, int64 n, int64 mod) {
+  return MatrixPowerEigen(x, n, mod);
+}
+template <typename T>
+SL std::vector<T> MatrixPower(const EigenMatrix<T>& x, int64 n,
+                              const std::vector<T>& v) {
+  return MatrixPowerEigen(x, n, v);
+}
+template <typename T>
+SL std::vector<T> MatrixPower(const EigenMatrix<T>& x, int64 n,
+                              const std::vector<T>& v, int64 mod) {
+  return MatrixPowerEigen(x, n, v, mod);
+}
+template <typename T>
+SL EigenMatrix<T> MatrixPower(
+    const std::function<void(EigenMatrix<T>& mat)>& init, const int d,
+    int64 n) {
+  return MatrixPowerEigen(init, d, n);
+}
+template <typename T>
+SL std::vector<T> MatrixPower(
+    const std::function<void(EigenMatrix<T>& mat, std::vector<T>& v)>& init,
+    const int d, int64 n) {
+  return MatrixPowerEigen(init, d, n);
+}
+
 template <int64 mod>
 SL EigenMatrix<int64> MatrixPowerMod(
     const std::function<void(EigenMatrix<NMod64<mod>>& mat)>& init, const int d,
@@ -1469,6 +1528,36 @@ SL std::vector<int64> MatrixPowerMod(
 }
 #endif
 #else
+template <typename T, int C>
+SL PeMatrix<T, -1> MatrixPower(const PeMatrix<T, C>& m, int64 n) {
+  return MatrixPowerPe(m, n);
+}
+template <typename T, int C>
+SL PeMatrix<T, -1> MatrixPower(const PeMatrix<T, C>& m, int64 n, T mod) {
+  return MatrixPowerPe(m, n, mod);
+}
+template <typename T, int C>
+SL std::vector<T> MatrixPower(const PeMatrix<T, C>& m, int64 n,
+                                const std::vector<T>& v) {
+  return MatrixPowerPe(m, n, v);
+}
+template <typename T, int C>
+SL std::vector<T> MatrixPower(const PeMatrix<T, C>& m, int64 n,
+                                const std::vector<T>& v, T mod) {
+  return MatrixPowerPe(m, n, v, mod);
+}
+template <typename T>
+SL PeMatrix<T> MatrixPower(const std::function<void(PeMatrix<T>& mat)>& init,
+                             const int K, int64 n) {
+  return MatrixPowerPe(init, K, n);
+}
+template <typename T>
+SL std::vector<T> MatrixPower(
+    const std::function<void(PeMatrix<T>& mat, std::vector<T>& v)>& init,
+    const int K, int64 n) {
+  return MatrixPowerPe(init, K, n);
+}
+
 template <int64 mod>
 SL PeMatrix<int64> MatrixPowerMod(
     const std::function<void(PeMatrix<NMod64<mod>>& mat)>& init, const int d,

@@ -1,6 +1,6 @@
 #include "pe_test.h"
 
-namespace poly_app_test {
+namespace poly_algo_test {
 const int64 mod = 1000000007;
 
 SL void GfTest() {
@@ -122,6 +122,30 @@ SL void PolyMultiPointEvaluationTest() {
 PE_REGISTER_TEST(&PolyMultiPointEvaluationTest, "PolyMultiPointEvaluationTest",
                  SMALL);
 
+SL void SeqExprTest() {
+  {
+    Sequence a;
+    assert((a[1] + a[2]).ValueAt({0, 1}, 20, mod) == 6765);
+    assert((a[1] + a[2]).SumAt({0, 1}, 20, mod) == 17710);
+    assert(((a[1] + a[2]).Generate({0, 1}, 20, mod) ==
+            std::vector<int64>{0,   1,   1,   2,    3,    5,    8,
+                               13,  21,  34,  55,   89,   144,  233,
+                               377, 610, 987, 1597, 2584, 4181, 6765}));
+  }
+  {
+    Sequence a;
+    assert((a[1] + a[2]).ValueAt({0, 1}, 1000, mod) == 517691607);
+    assert((a[1] + a[2]).SumAt({0, 1}, 1000, mod) == 625271545);
+  }
+  {
+    using MT = NMod64<mod>;
+    Sequence<MT> a;
+    assert((a[1] + a[2]).ValueAt({0, 1}, 1000).value() == 517691607);
+    assert((a[1] + a[2]).SumAt({0, 1}, 1000).value() == 625271545);
+  }
+}
+PE_REGISTER_TEST(&SeqExprTest, "SeqExprTest", SMALL);
+
 SL void PolyBatchMulTest() {
   const int mod = 10007;
   std::vector<int64> data = {1, 1, 2, 1, 3, 1};
@@ -131,4 +155,4 @@ SL void PolyBatchMulTest() {
   assert(expected == result);
 }
 PE_REGISTER_TEST(&PolyBatchMulTest, "PolyBatchMulTest", SMALL);
-}  // namespace poly_app_test
+}  // namespace poly_algo_test

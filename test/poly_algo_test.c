@@ -9,32 +9,34 @@ SL void PolyMultiPointEvaluationTest() {
   int n = 5000;
   const int64 mod = 1000000007;
   for (int i = 1; i <= n; ++i) data.push_back(i);
-  NModPoly p(data, mod);
   std::vector<int64> v;
   for (int i = 1; i <= n; ++i) v.push_back(i % 10007);
   {
     TimeRecorder tr;
-    auto result = PolyMultipointEvaluateNormal(p.data, v, p.mod);
+    std::vector<int64> result = PolyMultipointEvaluateNormal(data, v, mod);
     // std::cout << tr.Elapsed().Format() << std::endl;
     for (int i = 1; i <= n; ++i) {
-      assert(p.ValueAt(i % 10007) == result[i - 1]);
+      int64 value = PolyEvaluate<int64>(data, i % 10007, mod);
+      assert(value == result[i - 1]);
     }
   }
   {
     TimeRecorder tr;
-    auto result = PolyMultipointEvaluateBls(p.data, v, p.mod);
+    auto result = PolyMultipointEvaluateBls(data, v, mod);
     // std::cout << tr.Elapsed().Format() << std::endl;
     for (int i = 1; i <= n; ++i) {
-      assert(p.ValueAt(i % 10007) == result[i - 1]);
+      int64 value = PolyEvaluate<int64>(data, i % 10007, mod);
+      assert(value == result[i - 1]);
     }
   }
 #if HAS_POLY_FLINT
   {
     TimeRecorder tr;
-    auto result = flint::PolyMultipointEvaluate(p.data, v, p.mod);
+    auto result = flint::PolyMultipointEvaluate(data, v, mod);
     // std::cout << tr.Elapsed().Format() << std::endl;
     for (int i = 1; i <= n; ++i) {
-      assert(p.ValueAt(i % 10007) == result[i - 1]);
+      int64 value = PolyEvaluate<int64>(data, i % 10007, mod);
+      assert(value == result[i - 1]);
     }
   }
 #endif
@@ -89,7 +91,7 @@ SL void GetGFCoefficientTest() {
     for (int i = 2; i <= 30; ++i) {
       result.push_back(AddMod(result[i - 2], result[i - 1], mod));
     }
-    auto x = GetGFCoefficientSeries({A, mod}, {B, mod}, 30);
+    auto x = GetGFCoefficientSeries(A, B, 30, mod);
     for (int i = 0; i <= 30; ++i) {
       assert(result[i] == x[i]);
     }
@@ -124,12 +126,12 @@ SL void GetGFCoefficientTest() {
         ++coe[s];
       }
     }
-    auto gfresult = GetGFCoefficientSeries(
-        {std::vector<int64>(coe, coe + 92), mod}, {{1}, mod}, 10000);
+    auto gfresult = GetGFCoefficientSeries(std::vector<int64>(coe, coe + 92),
+                                           {1}, 10000, mod);
     for (int i = 0; i <= 10000; ++i) assert(dp[i] == gfresult[i]);
 
     std::string mine = ToString(GetGFCoefficientAt(
-        {std::vector<int64>(coe, coe + 92), mod}, {{1}, mod}, 100000000));
+        std::vector<int64>(coe, coe + 92), {1}, 100000000, mod));
     std::string expected = ToString("66666793333412666685000001"_bi % mod);
     assert(mine == expected);
   }

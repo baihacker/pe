@@ -21,7 +21,6 @@
 #include "mpi_test.c"
 #include "nt_test.c"
 #include "parallel_sort_test.c"
-#include "poly_test.c"
 #include "poly_algo_test.c"
 #include "poly_div_test.c"
 #include "poly_mul_test.c"

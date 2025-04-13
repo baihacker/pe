@@ -448,6 +448,282 @@ SL std::optional<std::vector<int64>> LinearRecurrenceValues(
 }
 
 template <typename T = int64>
+class LinearSequenceRelation {
+ public:
+  LinearSequenceRelation(const std::vector<T>& seq_relation)
+      : seq_relation_(seq_relation) {}
+  LinearSequenceRelation(std::vector<T>&& seq_relation)
+      : seq_relation_(std::move(seq_relation)) {}
+
+  std::vector<T> ToCharPoly() const {
+    if (!seq_relation_.empty()) {
+      PE_ASSERT(seq_relation_[0] == T(0));
+    }
+    std::vector<T> char_poly;
+    for (int i = 1; i < std::size(seq_relation_); ++i) {
+      char_poly.push_back(-seq_relation_[i]);
+    }
+    char_poly.push_back(1);
+    return char_poly;
+  }
+
+  std::vector<int64> ToCharPoly(int64 mod) const {
+    if (!seq_relation_.empty()) {
+      PE_ASSERT(seq_relation_[0] == 0);
+    }
+    std::vector<int64> char_poly;
+    for (int i = 1; i < std::size(seq_relation_); ++i) {
+      char_poly.push_back(SubMod(0, seq_relation_[i], mod));
+    }
+    char_poly.push_back(1);
+    return char_poly;
+  }
+
+  std::vector<int64> Generate(Span<const int64> terms, int64 n,
+                              int64 mod) const {
+    const int64 need = n + 1;
+    std::vector<int64> ret(need);
+    const int64 m = std::min<int64>(need, terms.size());
+    for (int64 i = 0; i < m; ++i) {
+      ret[i] = terms[i];
+    }
+
+    if (need > m) {
+      PE_ASSERT(std::size(seq_relation_) > 0);
+      PE_ASSERT(std::size(terms) + 1 >= std::size(seq_relation_));
+      for (int64 i = m; i < need; ++i) {
+        int64 val = seq_relation_[0];
+        for (int j = 1; j < seq_relation_.size(); ++j) {
+          val = AddMod(val, MulMod(seq_relation_[j], ret[i - j], mod), mod);
+        }
+        ret[i] = val;
+      }
+    }
+    return ret;
+  }
+
+  std::vector<T> Generate(Span<const T> terms, int64 n) const {
+    const int64 need = n + 1;
+    std::vector<T> ret(need);
+    const int64 m = std::min<int64>(need, terms.size());
+    for (int64 i = 0; i < m; ++i) {
+      ret[i] = terms[i];
+    }
+
+    if (need > m) {
+      PE_ASSERT(std::size(seq_relation_) > 0);
+      PE_ASSERT(std::size(terms) + 1 >= std::size(seq_relation_));
+      for (int64 i = m; i < need; ++i) {
+        T val = seq_relation_[0];
+        for (int j = 1; j < seq_relation_.size(); ++j) {
+          val += seq_relation_[j] * ret[i - j];
+        }
+        ret[i] = val;
+      }
+    }
+    return ret;
+  }
+
+  int64 ValueAtWithCharPoly(Span<const int64> terms, int64 n, int64 mod) const {
+    if (n < static_cast<int64>(std::size(terms))) {
+      return terms[static_cast<int>(n)];
+    }
+
+    return ApplyLinearRecurrenceValueAtN(ToCharPoly(mod), terms, n, mod);
+  }
+
+  int64 SumAtWithCharPoly(Span<const int64> terms, int64 n, int64 mod) const {
+    if (n < static_cast<int>(std::size(terms))) {
+      return PartialSumAt(terms, n, mod);
+    }
+    return ApplyLinearRecurrenceSumAtN(ToCharPoly(mod), terms, n, mod);
+  }
+
+  int64 ValueAt(Span<const int64> terms, int64 n, int64 mod) const {
+    if (n < static_cast<int64>(std::size(terms))) {
+      return terms[static_cast<int>(n)];
+    }
+
+    PE_ASSERT(std::size(seq_relation_) > 0);
+    PE_ASSERT(std::size(terms) + 1 >= std::size(seq_relation_));
+    const int d = static_cast<int>(std::size(seq_relation_)) - 1;
+    if (seq_relation_[0] == 0) {
+      return MatrixPowerMod(
+          [&](auto& m, auto& v) {
+            for (int i = 0; i < d; ++i) {
+              m(0, i) = seq_relation_[i + 1];
+            }
+            for (int i = 1; i < d; ++i) {
+              m(i, i - 1) = 1;
+            }
+            for (int i = 0; i < d; ++i) {
+              v[i] = terms[d - 1 - i];
+            }
+          },
+          d, n, mod)[d - 1];
+    } else {
+      return MatrixPowerMod(
+          [&](auto& m, auto& v) {
+            for (int i = 0; i < d; ++i) {
+              m(0, i) = seq_relation_[i + 1];
+            }
+            m(0, d) = 1;
+            for (int i = 1; i < d; ++i) {
+              m(i, i - 1) = 1;
+            }
+            m(d, d) = 1;
+            for (int i = 0; i < d; ++i) {
+              v[i] = terms[d - 1 - i];
+            }
+            v[d] = seq_relation_[0];
+          },
+          d + 1, n, mod)[d - 1];
+    }
+  }
+
+  int64 SumAt(Span<const int64> terms, int64 n, int64 mod) const {
+    if (n < static_cast<int>(std::size(terms))) {
+      return PartialSumAt(terms, n, mod);
+    }
+
+    PE_ASSERT(std::size(seq_relation_) > 0);
+    PE_ASSERT(std::size(terms) + 1 >= std::size(seq_relation_));
+    const int d = static_cast<int>(std::size(seq_relation_)) - 1;
+    if (seq_relation_[0] == 0) {
+      return MatrixPowerMod(
+          [&](auto& m, auto& v) {
+            for (int i = 0; i < d; ++i) {
+              m(0, i) = seq_relation_[i + 1];
+            }
+            for (int i = 1; i < d; ++i) {
+              m(i, i - 1) = 1;
+            }
+            m(d, d - 1) = 1;
+            m(d, d) = 1;
+            for (int i = 0; i < d; ++i) {
+              v[i] = terms[d - 1 - i];
+            }
+            v[d] = 0;
+          },
+          d + 1, n + 1, mod)[d];
+    } else {
+      return MatrixPowerMod(
+          [&](auto& m, auto& v) {
+            for (int i = 0; i < d; ++i) {
+              m(0, i) = seq_relation_[i + 1];
+            }
+            m(0, d) = 1;
+            for (int i = 1; i < d; ++i) {
+              m(i, i - 1) = 1;
+            }
+            m(d, d) = 1;
+            m(d + 1, d - 1) = 1;
+            m(d + 1, d + 1) = 1;
+            for (int i = 0; i < d; ++i) {
+              v[i] = terms[d - 1 - i];
+            }
+            v[d] = seq_relation_[0];
+            v[d + 1] = 0;
+          },
+          d + 2, n + 1, mod)[d + 1];
+    }
+  }
+
+  T ValueAt(Span<const T> terms, int64 n) const {
+    if (n < static_cast<int64>(std::size(terms))) {
+      return terms[static_cast<int>(n)];
+    }
+
+    PE_ASSERT(std::size(seq_relation_) > 0);
+    PE_ASSERT(std::size(terms) + 1 >= std::size(seq_relation_));
+    const int d = static_cast<int>(std::size(seq_relation_)) - 1;
+    if (seq_relation_[0] == T(0)) {
+      return MatrixPower<T>(
+          [&](auto& m, auto& v) {
+            for (int i = 0; i < d; ++i) {
+              m(0, i) = seq_relation_[i + 1];
+            }
+            for (int i = 1; i < d; ++i) {
+              m(i, i - 1) = 1;
+            }
+            for (int i = 0; i < d; ++i) {
+              v[i] = terms[d - 1 - i];
+            }
+          },
+          d, n)[d - 1];
+    } else {
+      return MatrixPower<T>(
+          [&](auto& m, auto& v) {
+            for (int i = 0; i < d; ++i) {
+              m(0, i) = seq_relation_[i + 1];
+            }
+            m(0, d) = 1;
+            for (int i = 1; i < d; ++i) {
+              m(i, i - 1) = 1;
+            }
+            m(d, d) = 1;
+            for (int i = 0; i < d; ++i) {
+              v[i] = terms[d - 1 - i];
+            }
+            v[d] = seq_relation_[0];
+          },
+          d + 1, n)[d - 1];
+    }
+  }
+
+  T SumAt(Span<const T> terms, int64 n) const {
+    if (n < static_cast<int>(std::size(terms))) {
+      return PartialSumAt(terms, n);
+    }
+
+    PE_ASSERT(std::size(seq_relation_) > 0);
+    PE_ASSERT(std::size(terms) + 1 >= std::size(seq_relation_));
+    const int d = static_cast<int>(std::size(seq_relation_)) - 1;
+    if (seq_relation_[0] == T(0)) {
+      return MatrixPower<T>(
+          [&](auto& m, auto& v) {
+            for (int i = 0; i < d; ++i) {
+              m(0, i) = seq_relation_[i + 1];
+            }
+            for (int i = 1; i < d; ++i) {
+              m(i, i - 1) = 1;
+            }
+            m(d, d - 1) = 1;
+            m(d, d) = 1;
+            for (int i = 0; i < d; ++i) {
+              v[i] = terms[d - 1 - i];
+            }
+            v[d] = 0;
+          },
+          d + 1, n + 1)[d];
+    } else {
+      return MatrixPower<T>(
+          [&](auto& m, auto& v) {
+            for (int i = 0; i < d; ++i) {
+              m(0, i) = seq_relation_[i + 1];
+            }
+            m(0, d) = 1;
+            for (int i = 1; i < d; ++i) {
+              m(i, i - 1) = 1;
+            }
+            m(d, d) = 1;
+            m(d + 1, d - 1) = 1;
+            m(d + 1, d + 1) = 1;
+            for (int i = 0; i < d; ++i) {
+              v[i] = terms[d - 1 - i];
+            }
+            v[d] = seq_relation_[0];
+            v[d + 1] = 0;
+          },
+          d + 2, n + 1)[d + 1];
+    }
+  }
+
+ private:
+  std::vector<T> seq_relation_;
+};
+
+template <typename T = int64>
 class SeqExpr {
  public:
   enum Type { NUMBER = 0, OFFSET = 1, MUL = 2, ADD = 3, SUB = 4 };
@@ -532,7 +808,7 @@ class SeqExpr {
     return result;
   }
 
-  std::vector<int64> Evaluate(int64 mod) const {
+  std::vector<int64> EvaluateInternal(int64 mod) const {
     switch (type_) {
       case NUMBER:
         return {Mod(value_, mod)};
@@ -545,7 +821,7 @@ class SeqExpr {
       case ADD: {
         std::vector<int64> result;
         for (const auto& item : children_) {
-          std::vector<int64> t = item.Evaluate(mod);
+          std::vector<int64> t = item.EvaluateInternal(mod);
           if (result.empty()) {
             result = t;
           } else {
@@ -559,7 +835,7 @@ class SeqExpr {
       case SUB: {
         std::vector<int64> result;
         for (const auto& item : children_) {
-          std::vector<int64> t = item.Evaluate(mod);
+          std::vector<int64> t = item.EvaluateInternal(mod);
           if (result.empty()) {
             result = t;
           } else {
@@ -571,8 +847,8 @@ class SeqExpr {
         return result;
       }
       case MUL: {
-        int64 c = children_[0].Evaluate(mod)[0];
-        std::vector<int64> result = children_[1].Evaluate(mod);
+        int64 c = children_[0].EvaluateInternal(mod)[0];
+        std::vector<int64> result = children_[1].EvaluateInternal(mod);
         for (auto& iter : result) iter = MulMod(iter, c, mod);
         return result;
       }
@@ -580,7 +856,7 @@ class SeqExpr {
     return {};
   }
 
-  std::vector<T> Evaluate() const {
+  std::vector<T> EvaluateInternal() const {
     switch (type_) {
       case NUMBER:
         return {value_};
@@ -593,7 +869,7 @@ class SeqExpr {
       case ADD: {
         std::vector<T> result;
         for (const auto& item : children_) {
-          std::vector<T> t = item.Evaluate();
+          std::vector<T> t = item.EvaluateInternal();
           if (result.empty()) {
             result = t;
           } else {
@@ -606,7 +882,7 @@ class SeqExpr {
       case SUB: {
         std::vector<T> result;
         for (const auto& item : children_) {
-          std::vector<T> t = item.Evaluate();
+          std::vector<T> t = item.EvaluateInternal();
           if (result.empty()) {
             result = t;
           } else {
@@ -617,8 +893,8 @@ class SeqExpr {
         return result;
       }
       case MUL: {
-        T c = children_[0].Evaluate()[0];
-        std::vector<T> result = children_[1].Evaluate();
+        T c = children_[0].EvaluateInternal()[0];
+        std::vector<T> result = children_[1].EvaluateInternal();
         for (auto& iter : result) iter *= c;
         return result;
       }
@@ -626,85 +902,41 @@ class SeqExpr {
     return {};
   }
 
-  std::vector<T> ToCharPoly() const {
-    std::vector<T> seq_relation = Evaluate();
-    if (!seq_relation.empty()) {
-      PE_ASSERT(seq_relation[0] == 0);
-    }
-    std::vector<T> char_poly;
-    for (int i = 1; i < std::size(seq_relation); ++i) {
-      char_poly.push_back(-seq_relation[i]);
-    }
-    char_poly.push_back(1);
-    return char_poly;
+  LinearSequenceRelation<T> Evaluate() const {
+    return LinearSequenceRelation<T>(EvaluateInternal());
   }
 
-  std::vector<int64> ToCharPoly(int64 mod) const {
-    std::vector<int64> seq_relation = Evaluate(mod);
-    if (!seq_relation.empty()) {
-      PE_ASSERT(seq_relation[0] == 0);
-    }
-    std::vector<int64> char_poly;
-    for (int i = 1; i < std::size(seq_relation); ++i) {
-      char_poly.push_back(SubMod(0, seq_relation[i], mod));
-    }
-    char_poly.push_back(1);
-    return char_poly;
+  LinearSequenceRelation<int64> Evaluate(int64 mod) const {
+    return LinearSequenceRelation<int64>(EvaluateInternal(mod));
   }
-
-  int64 ValueAtWithCharPoly(Span<const int64> terms, int64 n, int64 mod) const;
-  int64 SumAtWithCharPoly(Span<const int64> terms, int64 n, int64 mod) const;
-  int64 ValueAt(Span<const int64> terms, int64 n, int64 mod) const;
-  int64 SumAt(Span<const int64> terms, int64 n, int64 mod) const;
-
-  T ValueAt(Span<const T> terms, int64 n) const;
-  T SumAt(Span<const T> terms, int64 n) const;
 
   std::vector<int64> Generate(Span<const int64> terms, int64 n,
                               int64 mod) const {
-    const int64 need = n + 1;
-    std::vector<int64> ret(need);
-    const int64 m = std::min<int64>(need, terms.size());
-    for (int64 i = 0; i < m; ++i) {
-      ret[i] = terms[i];
-    }
-
-    if (need > m) {
-      std::vector<int64> seq_relation = Evaluate(mod);
-      PE_ASSERT(std::size(seq_relation) > 0);
-      PE_ASSERT(std::size(terms) + 1 >= std::size(seq_relation));
-      for (int64 i = m; i < need; ++i) {
-        int64 val = seq_relation[0];
-        for (int j = 1; j < seq_relation.size(); ++j) {
-          val = AddMod(val, MulMod(seq_relation[j], ret[i - j], mod), mod);
-        }
-        ret[i] = val;
-      }
-    }
-    return ret;
+    return Evaluate(mod).Generate(terms, n, mod);
   }
 
   std::vector<T> Generate(Span<const T> terms, int64 n) const {
-    const int64 need = n + 1;
-    std::vector<T> ret(need);
-    const int64 m = std::min<int64>(need, terms.size());
-    for (int64 i = 0; i < m; ++i) {
-      ret[i] = terms[i];
-    }
+    return Evaluate().Generate(terms, n);
+  }
 
-    if (need > m) {
-      std::vector<T> seq_relation = Evaluate();
-      PE_ASSERT(std::size(seq_relation) > 0);
-      PE_ASSERT(std::size(terms) + 1 >= std::size(seq_relation));
-      for (int64 i = m; i < need; ++i) {
-        T val = seq_relation[0];
-        for (int j = 1; j < seq_relation.size(); ++j) {
-          val += seq_relation[j] * ret[i - j];
-        }
-        ret[i] = val;
-      }
-    }
-    return ret;
+  int64 ValueAtWithCharPoly(Span<const int64> terms, int64 n, int64 mod) const {
+    return Evaluate(mod).ValueAtWithCharPoly(terms, n, mod);
+  }
+  int64 SumAtWithCharPoly(Span<const int64> terms, int64 n, int64 mod) const {
+    return Evaluate(mod).SumAtWithCharPoly(terms, n, mod);
+  }
+  int64 ValueAt(Span<const int64> terms, int64 n, int64 mod) const {
+    return Evaluate(mod).ValueAt(terms, n, mod);
+  }
+  int64 SumAt(Span<const int64> terms, int64 n, int64 mod) const {
+    return Evaluate(mod).SumAt(terms, n, mod);
+  }
+
+  T ValueAt(Span<const T> terms, int64 n) const {
+    return Evaluate().ValueAt(terms, n);
+  }
+  T SumAt(Span<const T> terms, int64 n) const {
+    return Evaluate().SumAt(terms, n);
   }
 
  private:
@@ -725,211 +957,5 @@ class Sequence {
   }
 };
 
-template <typename T>
-int64 SeqExpr<T>::ValueAtWithCharPoly(Span<const int64> terms, int64 n,
-                                      int64 mod) const {
-  if (n < static_cast<int64>(std::size(terms))) {
-    return terms[static_cast<int>(n)];
-  }
-
-  return ApplyLinearRecurrenceValueAtN(ToCharPoly(mod), terms, n, mod);
-}
-
-template <typename T>
-int64 SeqExpr<T>::SumAtWithCharPoly(Span<const int64> terms, int64 n,
-                                    int64 mod) const {
-  if (n < static_cast<int>(std::size(terms))) {
-    return PartialSumAt(terms, n, mod);
-  }
-  return ApplyLinearRecurrenceSumAtN(ToCharPoly(mod), terms, n, mod);
-}
-
-template <typename T>
-int64 SeqExpr<T>::ValueAt(Span<const int64> terms, int64 n, int64 mod) const {
-  if (n < static_cast<int64>(std::size(terms))) {
-    return terms[static_cast<int>(n)];
-  }
-
-  std::vector<int64> seq_relation = Evaluate(mod);
-  PE_ASSERT(std::size(seq_relation) > 0);
-  PE_ASSERT(std::size(terms) + 1 >= std::size(seq_relation));
-  const int d = static_cast<int>(std::size(seq_relation)) - 1;
-  if (seq_relation[0] == 0) {
-    return MatrixPowerMod(
-        [&](auto& m, auto& v) {
-          for (int i = 0; i < d; ++i) {
-            m(0, i) = seq_relation[i + 1];
-          }
-          for (int i = 1; i < d; ++i) {
-            m(i, i - 1) = 1;
-          }
-          for (int i = 0; i < d; ++i) {
-            v[i] = terms[d - 1 - i];
-          }
-        },
-        d, n, mod)[d - 1];
-  } else {
-    return MatrixPowerMod(
-        [&](auto& m, auto& v) {
-          for (int i = 0; i < d; ++i) {
-            m(0, i) = seq_relation[i + 1];
-          }
-          m(0, d) = 1;
-          for (int i = 1; i < d; ++i) {
-            m(i, i - 1) = 1;
-          }
-          m(d, d) = 1;
-          for (int i = 0; i < d; ++i) {
-            v[i] = terms[d - 1 - i];
-          }
-          v[d] = seq_relation[0];
-        },
-        d + 1, n, mod)[d - 1];
-  }
-}
-
-template <typename T>
-int64 SeqExpr<T>::SumAt(Span<const int64> terms, int64 n, int64 mod) const {
-  if (n < static_cast<int>(std::size(terms))) {
-    return PartialSumAt(terms, n, mod);
-  }
-
-  std::vector<int64> seq_relation = Evaluate(mod);
-  PE_ASSERT(std::size(seq_relation) > 0);
-  PE_ASSERT(std::size(terms) + 1 >= std::size(seq_relation));
-  const int d = static_cast<int>(std::size(seq_relation)) - 1;
-  if (seq_relation[0] == 0) {
-    return MatrixPowerMod(
-        [&](auto& m, auto& v) {
-          for (int i = 0; i < d; ++i) {
-            m(0, i) = seq_relation[i + 1];
-          }
-          for (int i = 1; i < d; ++i) {
-            m(i, i - 1) = 1;
-          }
-          m(d, d - 1) = 1;
-          m(d, d) = 1;
-          for (int i = 0; i < d; ++i) {
-            v[i] = terms[d - 1 - i];
-          }
-          v[d] = 0;
-        },
-        d + 1, n + 1, mod)[d];
-  } else {
-    return MatrixPowerMod(
-        [&](auto& m, auto& v) {
-          for (int i = 0; i < d; ++i) {
-            m(0, i) = seq_relation[i + 1];
-          }
-          m(0, d) = 1;
-          for (int i = 1; i < d; ++i) {
-            m(i, i - 1) = 1;
-          }
-          m(d, d) = 1;
-          m(d + 1, d - 1) = 1;
-          m(d + 1, d + 1) = 1;
-          for (int i = 0; i < d; ++i) {
-            v[i] = terms[d - 1 - i];
-          }
-          v[d] = seq_relation[0];
-          v[d + 1] = 0;
-        },
-        d + 2, n + 1, mod)[d + 1];
-  }
-}
-
-template <typename T>
-T SeqExpr<T>::ValueAt(Span<const T> terms, int64 n) const {
-  if (n < static_cast<int64>(std::size(terms))) {
-    return terms[static_cast<int>(n)];
-  }
-
-  std::vector<T> seq_relation = Evaluate();
-  PE_ASSERT(std::size(seq_relation) > 0);
-  PE_ASSERT(std::size(terms) + 1 >= std::size(seq_relation));
-  const int d = static_cast<int>(std::size(seq_relation)) - 1;
-  if (seq_relation[0] == T(0)) {
-    return MatrixPower<T>(
-        [&](auto& m, auto& v) {
-          for (int i = 0; i < d; ++i) {
-            m(0, i) = seq_relation[i + 1];
-          }
-          for (int i = 1; i < d; ++i) {
-            m(i, i - 1) = 1;
-          }
-          for (int i = 0; i < d; ++i) {
-            v[i] = terms[d - 1 - i];
-          }
-        },
-        d, n)[d - 1];
-  } else {
-    return MatrixPower<T>(
-        [&](auto& m, auto& v) {
-          for (int i = 0; i < d; ++i) {
-            m(0, i) = seq_relation[i + 1];
-          }
-          m(0, d) = 1;
-          for (int i = 1; i < d; ++i) {
-            m(i, i - 1) = 1;
-          }
-          m(d, d) = 1;
-          for (int i = 0; i < d; ++i) {
-            v[i] = terms[d - 1 - i];
-          }
-          v[d] = seq_relation[0];
-        },
-        d + 1, n)[d - 1];
-  }
-}
-
-template <typename T>
-T SeqExpr<T>::SumAt(Span<const T> terms, int64 n) const {
-  if (n < static_cast<int>(std::size(terms))) {
-    return PartialSumAt(terms, n);
-  }
-
-  std::vector<T> seq_relation = Evaluate();
-  PE_ASSERT(std::size(seq_relation) > 0);
-  PE_ASSERT(std::size(terms) + 1 >= std::size(seq_relation));
-  const int d = static_cast<int>(std::size(seq_relation)) - 1;
-  if (seq_relation[0] == T(0)) {
-    return MatrixPower<T>(
-        [&](auto& m, auto& v) {
-          for (int i = 0; i < d; ++i) {
-            m(0, i) = seq_relation[i + 1];
-          }
-          for (int i = 1; i < d; ++i) {
-            m(i, i - 1) = 1;
-          }
-          m(d, d - 1) = 1;
-          m(d, d) = 1;
-          for (int i = 0; i < d; ++i) {
-            v[i] = terms[d - 1 - i];
-          }
-          v[d] = 0;
-        },
-        d + 1, n + 1)[d];
-  } else {
-    return MatrixPower<T>(
-        [&](auto& m, auto& v) {
-          for (int i = 0; i < d; ++i) {
-            m(0, i) = seq_relation[i + 1];
-          }
-          m(0, d) = 1;
-          for (int i = 1; i < d; ++i) {
-            m(i, i - 1) = 1;
-          }
-          m(d, d) = 1;
-          m(d + 1, d - 1) = 1;
-          m(d + 1, d + 1) = 1;
-          for (int i = 0; i < d; ++i) {
-            v[i] = terms[d - 1 - i];
-          }
-          v[d] = seq_relation[0];
-          v[d + 1] = 0;
-        },
-        d + 2, n + 1)[d + 1];
-  }
-}
 }  // namespace pe
 #endif

@@ -54,11 +54,17 @@ PE_REGISTER_TEST(&PolyBatchMulTest, "PolyBatchMulTest", SMALL);
 
 SL void GenBernoulliNumberTest() {
   const int mod = 10007;
-  dbg(GenBernoulliNumber(7, mod));
   assert((GenBernoulliNumber(7, mod) ==
           std::vector<int64>{1, 5003, 1668, 0, 7672, 0, 4527, 0}));
 }
 PE_REGISTER_TEST(&GenBernoulliNumberTest, "GenBernoulliNumberTest", SMALL);
+
+SL void GenStirling1ColumnTest() {
+  const int mod = 10007;
+  assert((pmod::GenStirling1Column(3, 10, mod) ==
+          std::vector<int64>{0, 0, 0, 1, 6, 35, 225, 1624, 3125, 8047, 1881}));
+}
+PE_REGISTER_TEST(&GenStirling1ColumnTest, "GenStirling1ColumnTest", SMALL);
 
 SL void GenStirling1Test() {
   const int mod = 10007;

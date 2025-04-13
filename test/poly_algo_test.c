@@ -52,6 +52,28 @@ SL void PolyBatchMulTest() {
 }
 PE_REGISTER_TEST(&PolyBatchMulTest, "PolyBatchMulTest", SMALL);
 
+SL void GenBernoulliNumberTest() {
+  const int mod = 10007;
+  dbg(GenBernoulliNumber(7, mod));
+  assert((GenBernoulliNumber(7, mod) ==
+          std::vector<int64>{1, 5003, 1668, 0, 7672, 0, 4527, 0}));
+}
+PE_REGISTER_TEST(&GenBernoulliNumberTest, "GenBernoulliNumberTest", SMALL);
+
+SL void GenStirling1Test() {
+  const int mod = 10007;
+  assert((GenStirling1(7, mod) ==
+          std::vector<int64>{0, 720, 1764, 1624, 735, 175, 21, 1}));
+}
+PE_REGISTER_TEST(&GenStirling1Test, "GenStirling1Test", SMALL);
+
+SL void GenStirling2Test() {
+  const int mod = 10007;
+  assert((pmod::GenStirling2(7, mod) ==
+          std::vector<int64>{0, 1, 63, 301, 350, 140, 21, 1}));
+}
+PE_REGISTER_TEST(&GenStirling2Test, "GenStirling2Test", SMALL);
+
 SL void GetGFCoefficientTest() {
   {
     // Fibonacci sequence

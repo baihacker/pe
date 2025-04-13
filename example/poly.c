@@ -32,7 +32,7 @@ int main() {
     std::vector<int64> B = {1};
 
     TimeRecorder tr;
-    std::cerr << GfAt({A, mod}, {B, mod}, 99999) << std::endl;
+    std::cerr << GetGFCoefficientAt({A, mod}, {B, mod}, 99999) << std::endl;
     std::cout << tr.Elapsed().Format() << std::endl;
   }
   return 0;

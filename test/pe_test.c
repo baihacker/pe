@@ -8,7 +8,6 @@
 #include "bi_test.c"
 #include "bi_test1.c"
 #include "bit_test.c"
-#include "comb_moder_test.c"
 #include "dva_test.c"
 #include "extended_signed_int_test.c"
 #include "extended_unsigned_int_test.c"

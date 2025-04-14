@@ -1494,37 +1494,36 @@ struct ArithmeticPolicyMod {
   const int64 mod_;
 };
 
+template <typename ST = int64, typename TT = ST>
+struct OperationTraits {
+  using RetType = TT;
+  using ArgT = make_const_arg_type_t<RetType>;
+
+  static RetType Add(int64 a, int64 b) { return RetType(a) + RetType(b); }
+  static RetType Add(ArgT a, int64 b) { return a + RetType(b); }
+  static RetType Add(int64 a, ArgT b) { return RetType(a) + b; }
+  static RetType Add(ArgT a, ArgT b) { return a + b; }
+
+  static RetType Sub(int64 a, int64 b) { return RetType(a) - RetType(b); }
+  static RetType Sub(ArgT a, int64 b) { return a - RetType(b); }
+  static RetType Sub(int64 a, ArgT b) { return RetType(a) - b; }
+  static RetType Sub(ArgT a, ArgT b) { return a - b; }
+
+  static RetType Mul(int64 a, int64 b) { return RetType(a) * RetType(b); }
+  static RetType Mul(ArgT a, int64 b) { return a * RetType(b); }
+  static RetType Mul(int64 a, ArgT b) { return RetType(a) * b; }
+  static RetType Mul(ArgT a, ArgT b) { return a * b; }
+};
+
 template <typename T>
-struct ArithmeticPolicyConversion {
+struct OperationTraits<T, T> {
   using RetType = T;
-  using ArgT = make_const_arg_type_t<T>;
+  using ArgT = make_const_arg_type_t<RetType>;
 
-  static T Add(int64 a, int64 b) { return T(a) + T(b); }
-  static T Add(ArgT a, int64 b) { return a + T(b); }
-  static T Add(int64 a, ArgT b) { return T(a) + b; }
-  static T Add(ArgT a, ArgT b) { return a + b; }
-
-  static T Sub(int64 a, int64 b) { return T(a) - T(b); }
-  static T Sub(ArgT a, int64 b) { return a - T(b); }
-  static T Sub(int64 a, ArgT b) { return T(a) - b; }
-  static T Sub(ArgT a, ArgT b) { return a - b; }
-
-  static T Mul(int64 a, int64 b) { return T(a) * T(b); }
-  static T Mul(ArgT a, int64 b) { return a * T(b); }
-  static T Mul(int64 a, ArgT b) { return T(a) * b; }
-  static T Mul(ArgT a, ArgT b) { return a * b; }
+  static RetType Add(ArgT a, ArgT b) { return a + b; }
+  static RetType Sub(ArgT a, ArgT b) { return a - b; }
+  static RetType Mul(ArgT a, ArgT b) { return a * b; }
 };
-
-template <>
-struct ArithmeticPolicyConversion<int64> {
-  using RetType = int64;
-
-  static int64 Add(int64 a, int64 b) { return a + b; }
-  static int64 Sub(int64 a, int64 b) { return a - b; }
-  static int64 Mul(int64 a, int64 b) { return a * b; }
-};
-
-using ArithmeticPolicyRaw = ArithmeticPolicyConversion<int64>;
 }  // namespace internal
 
 // Calculates (1 + 2 + 3 + ... + n) % mod.
@@ -1596,7 +1595,7 @@ SL int64 P2SumMod(int64 n, int64 mod) {
 
 template <typename T = int64>
 SL T P2Sum(int64 n) {
-  return internal::P2SumImpl(n, internal::ArithmeticPolicyConversion<T>());
+  return internal::P2SumImpl(n, internal::OperationTraits<int64, T>());
 }
 
 // Calculates (1^3 + 2^3 + 3^3 + ... + n^3) % mod.
@@ -1687,7 +1686,7 @@ SL int64 P4SumMod(int64 n, int64 mod) {
 
 template <typename T = int64>
 SL T P4Sum(int64 n) {
-  return internal::P4SumImpl(n, internal::ArithmeticPolicyConversion<T>());
+  return internal::P4SumImpl(n, internal::OperationTraits<int64, T>());
 }
 
 namespace internal {
@@ -1729,7 +1728,7 @@ SL int64 P5SumMod(int64 n, int64 mod) {
 
 template <typename T = int64>
 SL T P5Sum(int64 n) {
-  return internal::P5SumImpl(n, internal::ArithmeticPolicyConversion<T>());
+  return internal::P5SumImpl(n, internal::OperationTraits<int64, T>());
 }
 
 namespace internal {
@@ -1825,7 +1824,7 @@ SL int64 P6SumMod(int64 n, int64 mod) {
 
 template <typename T = int64>
 SL T P6Sum(int64 n) {
-  return internal::P6SumImpl(n, internal::ArithmeticPolicyConversion<T>());
+  return internal::P6SumImpl(n, internal::OperationTraits<int64, T>());
 }
 
 namespace internal {
@@ -1885,7 +1884,7 @@ SL int64 P7SumMod(int64 n, int64 mod) {
 
 template <typename T = int64>
 SL T P7Sum(int64 n) {
-  return internal::P7SumImpl(n, internal::ArithmeticPolicyConversion<T>());
+  return internal::P7SumImpl(n, internal::OperationTraits<int64, T>());
 }
 
 SL int64 ApSumMod(int64 n, int64 mod) { return P1SumMod(n, mod); }

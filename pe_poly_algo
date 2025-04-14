@@ -285,7 +285,7 @@ SL std::vector<int64> FindLinearRecurrence(Span<const int64> terms,
 }
 }  // namespace internal
 
-SL int64 ApplyLinearRecurrenceNext(const std::vector<int64>& char_poly,
+SL int64 LinearRecurrenceValueNext(const std::vector<int64>& char_poly,
                                    Span<const int64> terms, int64 mod) {
   PE_ASSERT(std::size(terms) + 1 >= static_cast<int64>(std::size(char_poly)));
 
@@ -299,9 +299,8 @@ SL int64 ApplyLinearRecurrenceNext(const std::vector<int64>& char_poly,
   return ret;
 }
 
-SL int64 ApplyLinearRecurrenceValueAtN(const std::vector<int64>& char_poly,
-                                       Span<const int64> terms, int64 n,
-                                       int64 mod) {
+SL int64 LinearRecurrenceValueAt(const std::vector<int64>& char_poly,
+                                 Span<const int64> terms, int64 n, int64 mod) {
   if (n < static_cast<int64>(std::size(terms))) {
     return terms[static_cast<int>(n)];
   }
@@ -316,31 +315,9 @@ SL int64 ApplyLinearRecurrenceValueAtN(const std::vector<int64>& char_poly,
   return ans;
 }
 
-SL int64 PartialSumAt(Span<const int64> terms, int64 n, int64 mod) {
-  PE_ASSERT(n < terms.size());
-
-  int64 ret = 0;
-  for (int i = 0; i <= n; ++i) {
-    ret = AddMod(ret, terms[i], mod);
-  }
-  return ret;
-}
-
-template <typename T>
-SL T PartialSumAt(Span<const T> terms, int64 n) {
-  PE_ASSERT(n < terms.size());
-
-  T ret = 0;
-  for (int i = 0; i <= n; ++i) {
-    ret += terms[i];
-  }
-  return ret;
-}
-
 // Returns sum(terms[i], 0 <= i <= n).
-SL int64 ApplyLinearRecurrenceSumAtN(const std::vector<int64>& char_poly,
-                                     Span<const int64> terms, int64 n,
-                                     int64 mod) {
+SL int64 LinearRecurrenceSumAt(const std::vector<int64>& char_poly,
+                               Span<const int64> terms, int64 n, int64 mod) {
   if (n < static_cast<int>(std::size(terms))) {
     return PartialSumAt(terms, n, mod);
   }
@@ -356,7 +333,7 @@ SL int64 ApplyLinearRecurrenceSumAtN(const std::vector<int64>& char_poly,
     if (i < m - 1) {
       t = terms[i];
     } else {
-      t = ApplyLinearRecurrenceNext(char_poly, values, mod);
+      t = LinearRecurrenceValueNext(char_poly, values, mod);
     }
     if (i < std::size(terms)) {
       PE_ASSERT(t == terms[i]);
@@ -368,15 +345,15 @@ SL int64 ApplyLinearRecurrenceSumAtN(const std::vector<int64>& char_poly,
   std::vector<int64> char_poly_s =
       PolySub(PolyShiftLeft(char_poly, 1), char_poly, mod);
 
-  return ApplyLinearRecurrenceValueAtN(char_poly_s, sum, n, mod);
+  return LinearRecurrenceValueAt(char_poly_s, sum, n, mod);
 }
 
-SL int VerifyLinearRecurrence(Span<const int64> terms,
-                              const std::vector<int64>& char_poly, int64 mod) {
+SL int VerifyLinearRecurrence(const std::vector<int64>& char_poly,
+                              Span<const int64> terms, int64 mod) {
   int order = static_cast<int>(std::size(char_poly)) - 1;
   for (int i = static_cast<int>(std::size(char_poly)) - 1; i < std::size(terms);
        ++i) {
-    int64 value = ApplyLinearRecurrenceNext(
+    int64 value = LinearRecurrenceValueNext(
         char_poly, terms.subspan(i - order, order), mod);
     if (value != Mod(terms[i], mod)) {
       return 0;
@@ -391,16 +368,16 @@ SL std::optional<std::vector<int64>> FindLinearRecurrence(
   for (int n = (std::max(min_use, 2) + 1) / 2 * 2; n < len; n += 2) {
     std::vector<int64> char_poly =
         internal::FindLinearRecurrence(terms.subspan(0, n), mod);
-    if (VerifyLinearRecurrence(terms, char_poly, mod)) {
+    if (VerifyLinearRecurrence(char_poly, terms, mod)) {
       return char_poly;
     }
   }
   return std::nullopt;
 }
 
-SL std::optional<int64> LinearRecurrenceValueAtN(Span<const int64> terms,
-                                                 int64 n, int64 mod,
-                                                 int min_use = 2) {
+SL std::optional<int64> FindLinearRecurrenceValueAt(Span<const int64> terms,
+                                                    int64 n, int64 mod,
+                                                    int min_use = 2) {
   if (n < static_cast<int64>(std::size(terms))) {
     return terms[static_cast<int>(n)];
   }
@@ -408,12 +385,12 @@ SL std::optional<int64> LinearRecurrenceValueAtN(Span<const int64> terms,
   std::optional<std::vector<pe::int64>> char_poly =
       FindLinearRecurrence(terms, mod, min_use);
   if (char_poly.has_value()) {
-    return ApplyLinearRecurrenceValueAtN(*char_poly, terms, n, mod);
+    return LinearRecurrenceValueAt(*char_poly, terms, n, mod);
   }
   return std::nullopt;
 }
 
-SL std::optional<std::vector<int64>> LinearRecurrenceValues(
+SL std::optional<std::vector<int64>> FindLinearRecurrenceValues(
     Span<const int64> terms, int64 n, int64 mod, int min_use = 2) {
   std::optional<std::vector<pe::int64>> char_poly =
       FindLinearRecurrence(terms, mod, min_use);
@@ -427,7 +404,7 @@ SL std::optional<std::vector<int64>> LinearRecurrenceValues(
     data[i] = terms[i];
   }
   for (int64 i = m; i <= n; ++i) {
-    int64 value = ApplyLinearRecurrenceNext(*char_poly, data, mod);
+    int64 value = LinearRecurrenceValueNext(*char_poly, data, mod);
     data.push_back(value);
   }
   return data;
@@ -515,7 +492,7 @@ class LinearSequenceRelation {
       return terms[static_cast<int>(n)];
     }
 
-    return ApplyLinearRecurrenceValueAtN(ToCharPoly(mod), terms, n, mod);
+    return LinearRecurrenceValueAt(ToCharPoly(mod), terms, n, mod);
   }
 
   int64 SumAtWithCharPoly(Span<const int64> terms, int64 n, int64 mod) const {
@@ -523,7 +500,7 @@ class LinearSequenceRelation {
       return PartialSumAt(terms, n, mod);
     }
 
-    return ApplyLinearRecurrenceSumAtN(ToCharPoly(mod), terms, n, mod);
+    return LinearRecurrenceSumAt(ToCharPoly(mod), terms, n, mod);
   }
 
   int64 ValueAt(Span<const int64> terms, int64 n, int64 mod) const {

@@ -1972,7 +1972,7 @@ SL std::optional<std::vector<std::vector<int64>>> FindRecurrenceWithDegree(
 }
 }  // namespace internal
 
-SL int64 ApplyRecurrenceNext(const std::vector<std::vector<int64>>& recurrence,
+SL int64 RecurrenceValueNext(const std::vector<std::vector<int64>>& recurrence,
                              Span<const int64> terms, int64 m, int64 mod) {
   const int order = static_cast<int>(std::size(recurrence)) - 1;
   const int deg = static_cast<int>(std::size(recurrence[0])) - 1;
@@ -1998,13 +1998,12 @@ SL int64 ApplyRecurrenceNext(const std::vector<std::vector<int64>>& recurrence,
   return MulMod(SubMod(0, s, mod), ModInv(denom, mod), mod);
 }
 
-SL int VerifyRecurrence(Span<const int64> terms,
-                        const std::vector<std::vector<int64>>& recurrence,
-                        int64 mod) {
+SL int VerifyRecurrence(const std::vector<std::vector<int64>>& recurrence,
+                        Span<const int64> terms, int64 mod) {
   const int64 n = static_cast<int64>(std::size(terms));
   const int order = static_cast<int>(std::size(recurrence)) - 1;
   for (int64 i = order; i < n; ++i) {
-    int64 value = ApplyRecurrenceNext(recurrence,
+    int64 value = RecurrenceValueNext(recurrence,
                                       terms.subspan(i - order, order), i, mod);
     if (value != Mod(terms[i], mod)) {
       return 0;
@@ -2031,7 +2030,7 @@ SL std::optional<std::vector<std::vector<int64>>> FindRecurrence(
       continue;
     }
 
-    if (!VerifyRecurrence(terms, *recurrence, mod)) {
+    if (!VerifyRecurrence(*recurrence, terms, mod)) {
       continue;
     }
 
@@ -2041,9 +2040,9 @@ SL std::optional<std::vector<std::vector<int64>>> FindRecurrence(
   return std::nullopt;
 }
 
-SL std::optional<int64> RecurrenceValueAtN(Span<const int64> terms, int64 n,
-                                           int64 mod, int min_deg = 0,
-                                           int max_deg = -1) {
+SL std::optional<int64> FindRecurrenceValueAt(Span<const int64> terms, int64 n,
+                                              int64 mod, int min_deg = 0,
+                                              int max_deg = -1) {
   if (n < static_cast<int64>(std::size(terms))) {
     return terms[n];
   }
@@ -2061,17 +2060,16 @@ SL std::optional<int64> RecurrenceValueAtN(Span<const int64> terms, int64 n,
     data[i] = terms[m - order + i];
   }
   for (int64 i = m; i <= n; ++i) {
-    int64 value = ApplyRecurrenceNext(*recurrence, data, i, mod);
+    int64 value = RecurrenceValueNext(*recurrence, data, i, mod);
     data.push_back(value);
   }
 
   return data.back();
 }
 
-SL std::optional<std::vector<int64>> RecurrenceValues(Span<const int64> terms,
-                                                      int64 n, int64 mod,
-                                                      int min_deg = 0,
-                                                      int max_deg = -1) {
+SL std::optional<std::vector<int64>> FindRecurrenceValues(
+    Span<const int64> terms, int64 n, int64 mod, int min_deg = 0,
+    int max_deg = -1) {
   std::optional<std::vector<std::vector<int64>>> recurrence =
       FindRecurrence(terms, mod, min_deg, max_deg);
   if (!recurrence.has_value()) {
@@ -2084,7 +2082,7 @@ SL std::optional<std::vector<int64>> RecurrenceValues(Span<const int64> terms,
     data[i] = terms[i];
   }
   for (int64 i = m; i <= n; ++i) {
-    int64 value = ApplyRecurrenceNext(*recurrence, data, i, mod);
+    int64 value = RecurrenceValueNext(*recurrence, data, i, mod);
     data.push_back(value);
   }
 

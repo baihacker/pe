@@ -150,14 +150,14 @@ SL void LinearRecurrenceTest() {
   for (int i = 0; i < n; ++i) ans += v[i] * s[i];
   assert(ans == P);
 
-  ans = ApplyLinearRecurrenceValueAtN(v, s, 38, P);
+  ans = LinearRecurrenceValueAt(v, s, 38, P);
   assert(ans == 39088169LL);
 
   auto t = *FindLinearRecurrence({0, 1, 1, 2, 3, 5, 8, 13}, 31);
   assert(t[0] == 30);
   assert(t[1] == 30);
   assert(t[2] == 1);
-  assert(*LinearRecurrenceValueAtN({0, 1, 1, 2, 3, 5, 8, 13}, 38, P) ==
+  assert(*FindLinearRecurrenceValueAt({0, 1, 1, 2, 3, 5, 8, 13}, 38, P) ==
          39088169);
 }
 PE_REGISTER_TEST(&LinearRecurrenceTest, "LinearRecurrenceTest", SMALL);

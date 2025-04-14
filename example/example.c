@@ -317,25 +317,24 @@ void LinearRecurrenceExample() {
 
   {
     // Find the linear recurrence automatically and output the nth element.
-    std::cout << *LinearRecurrenceValueAtN({1, 2, 4, 8, 16, 32, 64}, 7, mod)
+    std::cout << *FindLinearRecurrenceValueAt({1, 2, 4, 8, 16, 32, 64}, 7, mod)
               << std::endl;
-    std::cout << *LinearRecurrenceValueAtN({1, 1, 2, 3, 5, 8, 13}, 10000000000,
-                                           mod)
+    std::cout << *FindLinearRecurrenceValueAt({1, 1, 2, 3, 5, 8, 13},
+                                              10000000000, mod)
               << std::endl;
   }
   {
     std::vector<int64> rec = {mod - 1, mod - 1, 1};
     std::vector<int64> init = {1, 1};
     for (int i = 2; i <= 5; ++i) {
-      std::cout << ApplyLinearRecurrenceValueAtN(rec, init, i, mod)
-                << std::endl;
+      std::cout << LinearRecurrenceValueAt(rec, init, i, mod) << std::endl;
     }
   }
   {
     std::vector<int64> rec = {mod - 1, mod - 1, 1};
     std::vector<int64> init = {1, 1};
     for (int i = 0; i <= 5; ++i) {
-      std::cout << ApplyLinearRecurrenceSumAtN(rec, init, i, mod) << std::endl;
+      std::cout << LinearRecurrenceSumAt(rec, init, i, mod) << std::endl;
     }
   }
 }

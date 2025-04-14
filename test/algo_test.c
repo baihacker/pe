@@ -247,28 +247,31 @@ PE_REGISTER_TEST(&CountPythagoreanTripleTest, "CountPythagoreanTripleTest",
 SL void FindRecurrenceTest() {
   const int64 mod = 1000000007;
   // Ones
-  assert(*RecurrenceValueAtN({1, 1, 1, 1, 1}, 100, mod, 1) == 1);
+  assert(*FindRecurrenceValueAt({1, 1, 1, 1, 1}, 100, mod, 1) == 1);
 
   // Factorials
-  assert(*RecurrenceValueAtN({1, 1, 2, 6, 24, 120}, 100, mod, 1) == 437918130);
+  assert(*FindRecurrenceValueAt({1, 1, 2, 6, 24, 120}, 100, mod, 1) ==
+         437918130);
 
   // Catalan numbers
-  assert(*RecurrenceValueAtN({1, 1, 2, 5, 14, 42}, 100, mod, 1) == 558488487);
+  assert(*FindRecurrenceValueAt({1, 1, 2, 5, 14, 42}, 100, mod, 1) ==
+         558488487);
 
   // Subfactorials
-  assert(*RecurrenceValueAtN({1, 0, 1, 2, 9, 44, 265}, 100, mod, 1) ==
+  assert(*FindRecurrenceValueAt({1, 0, 1, 2, 9, 44, 265}, 100, mod, 1) ==
          944828409);
 
   // Motzkin numbers
-  assert(*RecurrenceValueAtN({1, 1, 2, 4, 9, 21, 51}, 100, mod, 1) ==
+  assert(*FindRecurrenceValueAt({1, 1, 2, 4, 9, 21, 51}, 100, mod, 1) ==
          345787718);
 
   // Large SchrÃ¶der numbers
-  assert(*RecurrenceValueAtN({1, 2, 6, 22, 90, 394, 1806}, 100, mod, 1) ==
+  assert(*FindRecurrenceValueAt({1, 2, 6, 22, 90, 394, 1806}, 100, mod, 1) ==
          532944014);
 
   // Hertzsprung's problem: order 4, degree 1
-  assert(*RecurrenceValueAtN({1, 1, 0, 0, 2, 14, 90, 646, 5242, 47622, 479306,
+  assert(
+      *FindRecurrenceValueAt({1, 1, 0, 0, 2, 14, 90, 646, 5242, 47622, 479306,
                               5296790, 63779034, 831283558, 661506141},
                              100, mod, 1) == 251310489);
 }

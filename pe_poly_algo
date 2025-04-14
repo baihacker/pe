@@ -418,28 +418,27 @@ class LinearSequenceRelation {
   LinearSequenceRelation(std::vector<T>&& seq_relation)
       : seq_relation_(std::move(seq_relation)) {}
 
-  std::vector<T> ToCharPoly() const {
+  template <typename AP>
+  std::vector<typename AP::RetType> ToCharPoly(const AP& ap) const {
+    using RetType = typename AP::RetType;
+    const RetType zero = ap.Value(0);
     if (!seq_relation_.empty()) {
-      PE_ASSERT(seq_relation_[0] == T(0));
+      PE_ASSERT(seq_relation_[0] == zero);
     }
-    std::vector<T> char_poly;
+    std::vector<RetType> char_poly;
     for (int i = 1; i < std::size(seq_relation_); ++i) {
-      char_poly.push_back(-seq_relation_[i]);
+      char_poly.push_back(ap.Sub(zero, seq_relation_[i]));
     }
-    char_poly.push_back(1);
+    char_poly.push_back(ap.Value(1));
     return char_poly;
   }
 
+  std::vector<T> ToCharPoly() const {
+    return ToCharPoly(internal::OperationTraits<T, T>());
+  }
+
   std::vector<int64> ToCharPoly(int64 mod) const {
-    if (!seq_relation_.empty()) {
-      PE_ASSERT(seq_relation_[0] == 0);
-    }
-    std::vector<int64> char_poly;
-    for (int i = 1; i < std::size(seq_relation_); ++i) {
-      char_poly.push_back(SubMod(0, seq_relation_[i], mod));
-    }
-    char_poly.push_back(1);
-    return char_poly;
+    return ToCharPoly(internal::OperationTraitsWithMod<T, int64>(mod));
   }
 
   std::vector<int64> Generate(Span<const int64> terms, int64 n,
@@ -772,14 +771,64 @@ class SeqExpr {
     return result;
   }
 
+  template <typename AP>
+  std::vector<typename AP::RetType> Evaluate(const AP& ap) const {
+    using RetType = typename AP::RetType;
+    switch (type_) {
+      case NUMBER:
+        return {ap.Value(value_)};
+      case OFFSET: {
+        int pos = Abs(offset_);
+        std::vector<RetType> t(pos + 1);
+        t[pos] = ap.Value(1);
+        return t;
+      }
+      case ADD: {
+        std::vector<RetType> result;
+        for (const auto& item : children_) {
+          std::vector<RetType> t = item.Evaluate(ap);
+          if (result.empty()) {
+            result = std::move(t);
+          } else {
+            while (result.size() < t.size()) result.push_back(ap.Value(0));
+            for (int i = 0; i < t.size(); ++i)
+              result[i] = ap.Add(result[i], t[i]);
+          }
+        }
+        return result;
+      }
+      case SUB: {
+        std::vector<RetType> result;
+        for (const auto& item : children_) {
+          std::vector<RetType> t = item.Evaluate(ap);
+          if (result.empty()) {
+            result = std::move(t);
+          } else {
+            while (result.size() < t.size()) result.push_back(ap.Value(0));
+            for (int i = 0; i < t.size(); ++i)
+              result[i] = ap.Mul(result[i], t[i]);
+          }
+        }
+        return result;
+      }
+      case MUL: {
+        RetType c = children_[0].Evaluate(ap)[0];
+        std::vector<RetType> result = children_[1].Evaluate(ap);
+        for (auto& iter : result) iter = ap.Mul(iter, c);
+        return result;
+      }
+    }
+    return {};
+  }
+
   LinearSequenceRelation<T> Evaluate() const {
     return LinearSequenceRelation<T>(
-        EvaluateInternal(internal::OperationTraits<T, T>()));
+        Evaluate(internal::OperationTraits<T, T>()));
   }
 
   LinearSequenceRelation<int64> Evaluate(int64 mod) const {
     return LinearSequenceRelation<int64>(
-        EvaluateInternal(internal::OperationTraitsWithMod<T, int64>(mod)));
+        Evaluate(internal::OperationTraitsWithMod<T, int64>(mod)));
   }
 
   std::vector<int64> Generate(Span<const int64> terms, int64 n,
@@ -813,57 +862,6 @@ class SeqExpr {
 
   int64 SumAtWithCharPoly(Span<const int64> terms, int64 n, int64 mod) const {
     return Evaluate(mod).SumAtWithCharPoly(terms, n, mod);
-  }
-
- private:
-  template <typename AP>
-  std::vector<typename AP::RetType> EvaluateInternal(const AP& ap) const {
-    using RetType = typename AP::RetType;
-    switch (type_) {
-      case NUMBER:
-        return {ap.Value(value_)};
-      case OFFSET: {
-        int pos = Abs(offset_);
-        std::vector<RetType> t(pos + 1);
-        t[pos] = ap.Value(1);
-        return t;
-      }
-      case ADD: {
-        std::vector<RetType> result;
-        for (const auto& item : children_) {
-          std::vector<RetType> t = item.EvaluateInternal(ap);
-          if (result.empty()) {
-            result = std::move(t);
-          } else {
-            while (result.size() < t.size()) result.push_back(ap.Value(0));
-            for (int i = 0; i < t.size(); ++i)
-              result[i] = ap.Add(result[i], t[i]);
-          }
-        }
-        return result;
-      }
-      case SUB: {
-        std::vector<RetType> result;
-        for (const auto& item : children_) {
-          std::vector<RetType> t = item.EvaluateInternal(ap);
-          if (result.empty()) {
-            result = std::move(t);
-          } else {
-            while (result.size() < t.size()) result.push_back(ap.Value(0));
-            for (int i = 0; i < t.size(); ++i)
-              result[i] = ap.Mul(result[i], t[i]);
-          }
-        }
-        return result;
-      }
-      case MUL: {
-        RetType c = children_[0].EvaluateInternal(ap)[0];
-        std::vector<RetType> result = children_[1].EvaluateInternal(ap);
-        for (auto& iter : result) iter = ap.Mul(iter, c);
-        return result;
-      }
-    }
-    return {};
   }
 
  private:

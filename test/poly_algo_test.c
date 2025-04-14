@@ -166,7 +166,9 @@ SL void SeqExprTest() {
   {
     Sequence a;
     assert((a[1] + a[2]).ValueAt({0, 1}, 20, mod) == 6765);
+    assert((a[1] + a[2]).ValueAtWithCharPoly({0, 1}, 20, mod) == 6765);
     assert((a[1] + a[2]).SumAt({0, 1}, 20, mod) == 17710);
+    assert((a[1] + a[2]).SumAtWithCharPoly({0, 1}, 20, mod) == 17710);
     assert(((a[1] + a[2]).Generate({0, 1}, 20, mod) ==
             std::vector<int64>{0,   1,   1,   2,    3,    5,    8,
                                13,  21,  34,  55,   89,   144,  233,
@@ -175,7 +177,9 @@ SL void SeqExprTest() {
   {
     Sequence a;
     assert((a[1] + a[2]).ValueAt({0, 1}, 1000, mod) == 517691607);
+    assert((a[1] + a[2]).ValueAtWithCharPoly({0, 1}, 1000, mod) == 517691607);
     assert((a[1] + a[2]).SumAt({0, 1}, 1000, mod) == 625271545);
+    assert((a[1] + a[2]).SumAtWithCharPoly({0, 1}, 1000, mod) == 625271545);
   }
   {
     using MT = NMod64<mod>;

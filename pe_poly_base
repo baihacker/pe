@@ -1782,6 +1782,25 @@ SL REQUIRES((is_builtin_integer_v<T>))
 POLY_DIV_IMPL(PolyDiv, PolyDivAndMod)
 POLY_MOD_IMPL(PolyMod, PolyDivAndMod)
 
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
+    PolyPowerModPoly(const std::vector<T>& X, int64 n,
+                     const std::vector<T>& poly_mod, int64 mod) {
+  std::vector<T> ret = {1};
+  std::vector<T> a = PolyMod(X, poly_mod, mod);
+
+  for (; n > 0; n >>= 1) {
+    if (n & 1) {
+      ret = PolyMod(PolyMul(a, ret, mod), poly_mod, mod);
+    }
+    if (n > 1) {
+      a = PolyMod(PolyMul(a, a, mod), poly_mod, mod);
+    }
+  }
+
+  return ret;
+}
+
 namespace internal {
 // Calculates the derivative of a polynomial.
 // size result >= m

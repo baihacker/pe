@@ -1482,10 +1482,11 @@ Sieve(int64 start, int64 end) {
 }
 
 namespace internal {
-struct ArithmeticPolicyMod {
+struct OperationTraitsWithMod {
   using RetType = int64;
 
-  ArithmeticPolicyMod(int64 mod) : mod_(mod) {}
+  OperationTraitsWithMod(int64 mod) : mod_(mod) {}
+
   int64 Add(int64 a, int64 b) const { return AddMod(a % mod_, b % mod_, mod_); }
   int64 Sub(int64 a, int64 b) const { return SubMod(a % mod_, b % mod_, mod_); }
   int64 Mul(int64 a, int64 b) const { return MulMod(a % mod_, b % mod_, mod_); }
@@ -1496,33 +1497,36 @@ struct ArithmeticPolicyMod {
 
 template <typename ST = int64, typename TT = ST>
 struct OperationTraits {
-  using RetType = TT;
-  using ArgT = make_const_arg_type_t<RetType>;
+  using SourceArgT = make_const_arg_type_t<ST>;
+  using TargetArgT = make_const_arg_type_t<TT>;
 
-  static RetType Add(int64 a, int64 b) { return RetType(a) + RetType(b); }
-  static RetType Add(ArgT a, int64 b) { return a + RetType(b); }
-  static RetType Add(int64 a, ArgT b) { return RetType(a) + b; }
-  static RetType Add(ArgT a, ArgT b) { return a + b; }
+  static TT Cast(SourceArgT a) { return TT(a); }
 
-  static RetType Sub(int64 a, int64 b) { return RetType(a) - RetType(b); }
-  static RetType Sub(ArgT a, int64 b) { return a - RetType(b); }
-  static RetType Sub(int64 a, ArgT b) { return RetType(a) - b; }
-  static RetType Sub(ArgT a, ArgT b) { return a - b; }
+  static TT Add(SourceArgT a, SourceArgT b) { return TT(a) + TT(b); }
+  static TT Add(TargetArgT a, SourceArgT b) { return a + TT(b); }
+  static TT Add(SourceArgT a, TargetArgT b) { return TT(a) + b; }
+  static TT Add(TargetArgT a, TargetArgT b) { return a + b; }
 
-  static RetType Mul(int64 a, int64 b) { return RetType(a) * RetType(b); }
-  static RetType Mul(ArgT a, int64 b) { return a * RetType(b); }
-  static RetType Mul(int64 a, ArgT b) { return RetType(a) * b; }
-  static RetType Mul(ArgT a, ArgT b) { return a * b; }
+  static TT Sub(SourceArgT a, SourceArgT b) { return TT(a) - TT(b); }
+  static TT Sub(TargetArgT a, SourceArgT b) { return a - TT(b); }
+  static TT Sub(SourceArgT a, TargetArgT b) { return TT(a) - b; }
+  static TT Sub(TargetArgT a, TargetArgT b) { return a - b; }
+
+  static TT Mul(SourceArgT a, SourceArgT b) { return TT(a) * TT(b); }
+  static TT Mul(TargetArgT a, SourceArgT b) { return a * TT(b); }
+  static TT Mul(SourceArgT a, TargetArgT b) { return TT(a) * b; }
+  static TT Mul(TargetArgT a, TargetArgT b) { return a * b; }
 };
 
 template <typename T>
 struct OperationTraits<T, T> {
-  using RetType = T;
-  using ArgT = make_const_arg_type_t<RetType>;
+  using TargetArgT = make_const_arg_type_t<T>;
 
-  static RetType Add(ArgT a, ArgT b) { return a + b; }
-  static RetType Sub(ArgT a, ArgT b) { return a - b; }
-  static RetType Mul(ArgT a, ArgT b) { return a * b; }
+  static T Cast(TargetArgT a) { return a; }
+
+  static T Add(TargetArgT a, TargetArgT b) { return a + b; }
+  static T Sub(TargetArgT a, TargetArgT b) { return a - b; }
+  static T Mul(TargetArgT a, TargetArgT b) { return a * b; }
 };
 }  // namespace internal
 
@@ -1590,7 +1594,7 @@ SL typename AP::RetType P2SumImpl(int64 n, const AP& ap) {
 // Calculates (1^2 + 2^2 + 3^2 + ... + n^2) % mod.
 // Assume no overflow for 2 * n + 1.
 SL int64 P2SumMod(int64 n, int64 mod) {
-  return internal::P2SumImpl(n, internal::ArithmeticPolicyMod(mod));
+  return internal::P2SumImpl(n, internal::OperationTraitsWithMod(mod));
 }
 
 template <typename T = int64>
@@ -1681,7 +1685,7 @@ SL typename AP::RetType P4SumImpl(int64 n, const AP& ap) {
 // Calculates (1^4 + 2^4 + 3^4 + ... + n^4) % mod.
 // Assume no overflow for 2 * n.
 SL int64 P4SumMod(int64 n, int64 mod) {
-  return internal::P4SumImpl(n, internal::ArithmeticPolicyMod(mod));
+  return internal::P4SumImpl(n, internal::OperationTraitsWithMod(mod));
 }
 
 template <typename T = int64>
@@ -1723,7 +1727,7 @@ SL typename AP::RetType P5SumImpl(int64 n, const AP& ap) {
 // Calculates (1^5 + 2^5 + 3^5 + ... + n^5) % mod.
 // Assume no overflow for 2 * n.
 SL int64 P5SumMod(int64 n, int64 mod) {
-  return internal::P5SumImpl(n, internal::ArithmeticPolicyMod(mod));
+  return internal::P5SumImpl(n, internal::OperationTraitsWithMod(mod));
 }
 
 template <typename T = int64>
@@ -1819,7 +1823,7 @@ SL typename AP::RetType P6SumImpl(int64 n, const AP& ap) {
 // Calculates (1^6 + 2^6 + 3^6 + ... + n^6) % mod.
 // Assume no overflow for 2 * n.
 SL int64 P6SumMod(int64 n, int64 mod) {
-  return internal::P6SumImpl(n, internal::ArithmeticPolicyMod(mod));
+  return internal::P6SumImpl(n, internal::OperationTraitsWithMod(mod));
 }
 
 template <typename T = int64>
@@ -1879,7 +1883,7 @@ SL typename AP::RetType P7SumImpl(int64 n, const AP& ap) {
 // Calculates (1^7 + 2^7 + 3^7 + ... + n^7) % mod.
 // Assume no overflow for 2 * n.
 SL int64 P7SumMod(int64 n, int64 mod) {
-  return internal::P7SumImpl(n, internal::ArithmeticPolicyMod(mod));
+  return internal::P7SumImpl(n, internal::OperationTraitsWithMod(mod));
 }
 
 template <typename T = int64>

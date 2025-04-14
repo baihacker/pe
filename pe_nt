@@ -1482,51 +1482,118 @@ Sieve(int64 start, int64 end) {
 }
 
 namespace internal {
+template <typename ST = int64, typename TT = ST>
 struct OperationTraitsWithMod {
-  using RetType = int64;
+  using RetType = TT;
+  using SourceArgT = make_const_arg_type_t<ST>;
+  using TargetArgT = make_const_arg_type_t<TT>;
 
-  OperationTraitsWithMod(int64 mod) : mod_(mod) {}
+  OperationTraitsWithMod(TT mod) : mod_(mod) {}
 
-  int64 Add(int64 a, int64 b) const { return AddMod(a % mod_, b % mod_, mod_); }
-  int64 Sub(int64 a, int64 b) const { return SubMod(a % mod_, b % mod_, mod_); }
-  int64 Mul(int64 a, int64 b) const { return MulMod(a % mod_, b % mod_, mod_); }
+  static TT Cast(SourceArgT a) { return TT(ExtractValue(a)); }
+
+  TT Add(SourceArgT a, SourceArgT b) const {
+    return AddMod(Mod(Cast(a), mod_), Mod(Cast(b), mod_), mod_);
+  }
+  TT Add(TargetArgT a, SourceArgT b) const {
+    return AddMod(Mod(a, mod_), Mod(Cast(b), mod_), mod_);
+  }
+  TT Add(SourceArgT a, TargetArgT b) const {
+    return AddMod(Mod(Cast(a), mod_), Mod(b, mod_), mod_);
+  }
+  TT Add(TargetArgT a, TargetArgT b) const {
+    return AddMod(Mod(a, mod_), Mod(b, mod_), mod_);
+  }
+
+  TT Sub(SourceArgT a, SourceArgT b) const {
+    return SubMod(Mod(Cast(a), mod_), Mod(Cast(b), mod_), mod_);
+  }
+  TT Sub(TargetArgT a, SourceArgT b) const {
+    return SubMod(Mod(a, mod_), Mod(Cast(b), mod_), mod_);
+  }
+  TT Sub(SourceArgT a, TargetArgT b) const {
+    return SubMod(Mod(Cast(a), mod_), Mod(b, mod_), mod_);
+  }
+  TT Sub(TargetArgT a, TargetArgT b) const {
+    return SubMod(Mod(a, mod_), Mod(b, mod_), mod_);
+  }
+
+  TT Mul(SourceArgT a, SourceArgT b) const {
+    return MulMod(Mod(Cast(a), mod_), Mod(Cast(b), mod_), mod_);
+  }
+  TT Mul(TargetArgT a, SourceArgT b) const {
+    return MulMod(Mod(a, mod_), Mod(Cast(b), mod_), mod_);
+  }
+  TT Mul(SourceArgT a, TargetArgT b) const {
+    return MulMod(Mod(Cast(a), mod_), Mod(b, mod_), mod_);
+  }
+  TT Mul(TargetArgT a, TargetArgT b) const {
+    return MulMod(Mod(a, mod_), Mod(b, mod_), mod_);
+  }
 
  private:
-  const int64 mod_;
+  const TT mod_;
+};
+
+template <typename TT>
+struct OperationTraitsWithMod<TT, TT> {
+  using RetType = TT;
+  using SourceArgT = make_const_arg_type_t<TT>;
+  using TargetArgT = make_const_arg_type_t<TT>;
+
+  OperationTraitsWithMod(TargetArgT mod) : mod_(mod) {}
+
+  static TT Cast(TargetArgT a) { return a; }
+
+  TT Add(TargetArgT a, TargetArgT b) const {
+    return AddMod(Mod(a, mod_), Mod(b, mod_), mod_);
+  }
+  TT Sub(TargetArgT a, TargetArgT b) const {
+    return SubMod(Mod(a, mod_), Mod(b, mod_), mod_);
+  }
+  TT Mul(TargetArgT a, TargetArgT b) const {
+    return MulMod(Mod(a, mod_), Mod(b, mod_), mod_);
+  }
+
+ private:
+  const TT mod_;
 };
 
 template <typename ST = int64, typename TT = ST>
 struct OperationTraits {
+  using RetType = TT;
   using SourceArgT = make_const_arg_type_t<ST>;
   using TargetArgT = make_const_arg_type_t<TT>;
 
-  static TT Cast(SourceArgT a) { return TT(a); }
+  static TT Cast(SourceArgT a) { return TT(ExtractValue(a)); }
 
-  static TT Add(SourceArgT a, SourceArgT b) { return TT(a) + TT(b); }
-  static TT Add(TargetArgT a, SourceArgT b) { return a + TT(b); }
-  static TT Add(SourceArgT a, TargetArgT b) { return TT(a) + b; }
+  static TT Add(SourceArgT a, SourceArgT b) { return Cast(a) + Cast(b); }
+  static TT Add(TargetArgT a, SourceArgT b) { return a + Cast(b); }
+  static TT Add(SourceArgT a, TargetArgT b) { return Cast(a) + b; }
   static TT Add(TargetArgT a, TargetArgT b) { return a + b; }
 
-  static TT Sub(SourceArgT a, SourceArgT b) { return TT(a) - TT(b); }
-  static TT Sub(TargetArgT a, SourceArgT b) { return a - TT(b); }
-  static TT Sub(SourceArgT a, TargetArgT b) { return TT(a) - b; }
+  static TT Sub(SourceArgT a, SourceArgT b) { return Cast(a) - Cast(b); }
+  static TT Sub(TargetArgT a, SourceArgT b) { return a - Cast(b); }
+  static TT Sub(SourceArgT a, TargetArgT b) { return Cast(a) - b; }
   static TT Sub(TargetArgT a, TargetArgT b) { return a - b; }
 
-  static TT Mul(SourceArgT a, SourceArgT b) { return TT(a) * TT(b); }
-  static TT Mul(TargetArgT a, SourceArgT b) { return a * TT(b); }
-  static TT Mul(SourceArgT a, TargetArgT b) { return TT(a) * b; }
+  static TT Mul(SourceArgT a, SourceArgT b) { return Cast(a) * Cast(b); }
+  static TT Mul(TargetArgT a, SourceArgT b) { return a * Cast(b); }
+  static TT Mul(SourceArgT a, TargetArgT b) { return Cast(a) * b; }
   static TT Mul(TargetArgT a, TargetArgT b) { return a * b; }
 };
 
-template <typename T>
-struct OperationTraits<T, T> {
-  using TargetArgT = make_const_arg_type_t<T>;
+template <typename TT>
+struct OperationTraits<TT, TT> {
+  using RetType = TT;
+  using SourceArgT = make_const_arg_type_t<TT>;
+  using TargetArgT = make_const_arg_type_t<TT>;
 
-  static T Cast(TargetArgT a) { return a; }
+  static TT Cast(TargetArgT a) { return a; }
 
-  static T Add(TargetArgT a, TargetArgT b) { return a + b; }
-  static T Sub(TargetArgT a, TargetArgT b) { return a - b; }
-  static T Mul(TargetArgT a, TargetArgT b) { return a * b; }
+  static TT Add(TargetArgT a, TargetArgT b) { return a + b; }
+  static TT Sub(TargetArgT a, TargetArgT b) { return a - b; }
+  static TT Mul(TargetArgT a, TargetArgT b) { return a * b; }
 };
 }  // namespace internal
 
@@ -1594,7 +1661,8 @@ SL typename AP::RetType P2SumImpl(int64 n, const AP& ap) {
 // Calculates (1^2 + 2^2 + 3^2 + ... + n^2) % mod.
 // Assume no overflow for 2 * n + 1.
 SL int64 P2SumMod(int64 n, int64 mod) {
-  return internal::P2SumImpl(n, internal::OperationTraitsWithMod(mod));
+  return internal::P2SumImpl(
+      n, internal::OperationTraitsWithMod<int64, int64>(mod));
 }
 
 template <typename T = int64>
@@ -1685,7 +1753,8 @@ SL typename AP::RetType P4SumImpl(int64 n, const AP& ap) {
 // Calculates (1^4 + 2^4 + 3^4 + ... + n^4) % mod.
 // Assume no overflow for 2 * n.
 SL int64 P4SumMod(int64 n, int64 mod) {
-  return internal::P4SumImpl(n, internal::OperationTraitsWithMod(mod));
+  return internal::P4SumImpl(
+      n, internal::OperationTraitsWithMod<int64, int64>(mod));
 }
 
 template <typename T = int64>
@@ -1727,7 +1796,8 @@ SL typename AP::RetType P5SumImpl(int64 n, const AP& ap) {
 // Calculates (1^5 + 2^5 + 3^5 + ... + n^5) % mod.
 // Assume no overflow for 2 * n.
 SL int64 P5SumMod(int64 n, int64 mod) {
-  return internal::P5SumImpl(n, internal::OperationTraitsWithMod(mod));
+  return internal::P5SumImpl(
+      n, internal::OperationTraitsWithMod<int64, int64>(mod));
 }
 
 template <typename T = int64>
@@ -1823,7 +1893,8 @@ SL typename AP::RetType P6SumImpl(int64 n, const AP& ap) {
 // Calculates (1^6 + 2^6 + 3^6 + ... + n^6) % mod.
 // Assume no overflow for 2 * n.
 SL int64 P6SumMod(int64 n, int64 mod) {
-  return internal::P6SumImpl(n, internal::OperationTraitsWithMod(mod));
+  return internal::P6SumImpl(
+      n, internal::OperationTraitsWithMod<int64, int64>(mod));
 }
 
 template <typename T = int64>
@@ -1883,7 +1954,8 @@ SL typename AP::RetType P7SumImpl(int64 n, const AP& ap) {
 // Calculates (1^7 + 2^7 + 3^7 + ... + n^7) % mod.
 // Assume no overflow for 2 * n.
 SL int64 P7SumMod(int64 n, int64 mod) {
-  return internal::P7SumImpl(n, internal::OperationTraitsWithMod(mod));
+  return internal::P7SumImpl(
+      n, internal::OperationTraitsWithMod<int64, int64>(mod));
 }
 
 template <typename T = int64>

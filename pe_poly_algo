@@ -773,11 +773,13 @@ class SeqExpr {
   }
 
   LinearSequenceRelation<T> Evaluate() const {
-    return LinearSequenceRelation<T>(EvaluateInternal());
+    return LinearSequenceRelation<T>(
+        EvaluateInternal(internal::OperationTraits<T, T>()));
   }
 
   LinearSequenceRelation<int64> Evaluate(int64 mod) const {
-    return LinearSequenceRelation<int64>(EvaluateInternal(mod));
+    return LinearSequenceRelation<int64>(
+        EvaluateInternal(internal::OperationTraitsWithMod<T, int64>(mod)));
   }
 
   std::vector<int64> Generate(Span<const int64> terms, int64 n,
@@ -814,94 +816,50 @@ class SeqExpr {
   }
 
  private:
-  std::vector<int64> EvaluateInternal(int64 mod) const {
+  template <typename AP>
+  std::vector<typename AP::RetType> EvaluateInternal(const AP& ap) const {
+    using RetType = typename AP::RetType;
     switch (type_) {
       case NUMBER:
-        return {Mod(value_, mod)};
+        return {ap.Value(value_)};
       case OFFSET: {
         int pos = Abs(offset_);
-        std::vector<int64> t(pos + 1);
-        t[pos] = 1;
+        std::vector<RetType> t(pos + 1);
+        t[pos] = ap.Value(1);
         return t;
       }
       case ADD: {
-        std::vector<int64> result;
+        std::vector<RetType> result;
         for (const auto& item : children_) {
-          std::vector<int64> t = item.EvaluateInternal(mod);
+          std::vector<RetType> t = item.EvaluateInternal(ap);
           if (result.empty()) {
-            result = t;
+            result = std::move(t);
           } else {
-            while (result.size() < t.size()) result.push_back(0);
+            while (result.size() < t.size()) result.push_back(ap.Value(0));
             for (int i = 0; i < t.size(); ++i)
-              result[i] = AddMod(result[i], t[i], mod);
+              result[i] = ap.Add(result[i], t[i]);
           }
         }
         return result;
       }
       case SUB: {
-        std::vector<int64> result;
+        std::vector<RetType> result;
         for (const auto& item : children_) {
-          std::vector<int64> t = item.EvaluateInternal(mod);
+          std::vector<RetType> t = item.EvaluateInternal(ap);
           if (result.empty()) {
-            result = t;
+            result = std::move(t);
           } else {
-            while (result.size() < t.size()) result.push_back(0);
+            while (result.size() < t.size()) result.push_back(ap.Value(0));
             for (int i = 0; i < t.size(); ++i)
-              result[i] = MulMod(result[i], t[i], mod);
+              result[i] = ap.Mul(result[i], t[i]);
           }
         }
         return result;
       }
       case MUL: {
-        int64 c = children_[0].EvaluateInternal(mod)[0];
-        std::vector<int64> result = children_[1].EvaluateInternal(mod);
-        for (auto& iter : result) iter = MulMod(iter, c, mod);
-        return result;
-      }
-    }
-    return {};
-  }
-
-  std::vector<T> EvaluateInternal() const {
-    switch (type_) {
-      case NUMBER:
-        return {value_};
-      case OFFSET: {
-        int pos = Abs(offset_);
-        std::vector<T> t(pos + 1);
-        t[pos] = 1;
-        return t;
-      }
-      case ADD: {
-        std::vector<T> result;
-        for (const auto& item : children_) {
-          std::vector<T> t = item.EvaluateInternal();
-          if (result.empty()) {
-            result = t;
-          } else {
-            while (result.size() < t.size()) result.push_back(0);
-            for (int i = 0; i < t.size(); ++i) result[i] += t[i];
-          }
-        }
-        return result;
-      }
-      case SUB: {
-        std::vector<T> result;
-        for (const auto& item : children_) {
-          std::vector<T> t = item.EvaluateInternal();
-          if (result.empty()) {
-            result = t;
-          } else {
-            while (result.size() < t.size()) result.push_back(0);
-            for (int i = 0; i < t.size(); ++i) result[i] *= t[i];
-          }
-        }
-        return result;
-      }
-      case MUL: {
-        T c = children_[0].EvaluateInternal()[0];
-        std::vector<T> result = children_[1].EvaluateInternal();
-        for (auto& iter : result) iter *= c;
+        RetType c = children_[0].EvaluateInternal(ap)[0];
+        std::vector<RetType> result = children_[1].EvaluateInternal(ap);
+        for (auto& iter : result) iter = ap.Mul(iter, c);
         return result;
       }
     }

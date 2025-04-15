@@ -20,7 +20,7 @@ SL void InitBernoulliNumber(int64* dest, int64 n, int64* invs, int64 mod) {
     t[i] = v;
   }
 
-  std::vector<uint64> result = PolyInv<uint64>(t, static_cast<int64>(n), mod);
+  std::vector<uint64> result = PolyInv<uint64>(t, n, mod);
 
   uint64 c = 1;
   dest[0] = result[0];
@@ -132,7 +132,8 @@ SL std::vector<int64> GetGFCoefficientSeries(const std::vector<int64>& A,
   PE_ASSERT(sa > 0);
   PE_ASSERT(sb > 0);
 
-  ModValue<int64> mod_value = SolveLinearEquation<int64>(A[0], 1, mod);
+  ModValue<int64> mod_value =
+      SolveLinearEquation<int64>(Mod(A[0], mod), 1, mod);
 
   if (!mod_value.ok) return std::vector<int64>();
 
@@ -140,15 +141,16 @@ SL std::vector<int64> GetGFCoefficientSeries(const std::vector<int64>& A,
 
   // if mod_value.mod < mod, we have more than one solution.
   PE_ASSERT(mod_value.mod == mod);
-  const int64 invA0 = mod_value.value;
-  result[0] = invA0 * B[0] % mod;
+  const int64 inv_A0 = mod_value.value;
+  result[0] = MulMod(inv_A0, Mod(B[0], mod), mod);
 
   for (int64 i = 1; i <= n; ++i) {
-    int64 t = Mod(i < sb ? B[i] : 0, mod);
+    int64 t = i < sb ? Mod(B[i], mod) : 0;
     for (int64 j = 1; j <= std::min<int64>(i, sa - 1); ++j) {
-      t = SubMod(t, (j < sa ? A[j] : 0) * result[i - j] % mod, mod);
+      t = SubMod(t, MulMod(j < sa ? Mod(A[j], mod) : 0, result[i - j], mod),
+                 mod);
     }
-    result[i] = invA0 * t % mod;
+    result[i] = MulMod(inv_A0, t, mod);
   }
 
   return result;
@@ -165,7 +167,8 @@ SL int64 GetGFCoefficientAt(const std::vector<int64>& A,
   PE_ASSERT(sa > 0);
   PE_ASSERT(sb > 0);
 
-  ModValue<int64> mod_value = SolveLinearEquation<int64>(A[0], 1, mod);
+  ModValue<int64> mod_value =
+      SolveLinearEquation<int64>(Mod(A[0], mod), 1, mod);
 
   if (!mod_value.ok) return -1;
 
@@ -174,15 +177,16 @@ SL int64 GetGFCoefficientAt(const std::vector<int64>& A,
 
   // if mod_value.mod < mod, we have more than one solution.
   PE_ASSERT(mod_value.mod == mod);
-  const int64 invA0 = mod_value.value;
-  result[0] = invA0 * B[0] % mod;
+  const int64 inv_A0 = mod_value.value;
+  result[0] = MulMod(inv_A0, Mod(B[0], mod), mod);
 
   for (int i = 1; i <= m; ++i) {
-    int64 t = Mod(i < sb ? B[i] : 0, mod);
+    int64 t = i < sb ? Mod(B[i], mod) : 0;
     for (int j = 1; j <= std::min(i, sa - 1); ++j) {
-      t = SubMod(t, (j < sa ? A[j] : 0) * result[i - j] % mod, mod);
+      t = SubMod(t, MulMod(j < sa ? Mod(A[j], mod) : 0, result[i - j], mod),
+                 mod);
     }
-    result[i] = invA0 * t % mod;
+    result[i] = MulMod(inv_A0, t, mod);
   }
 
   if (m == n) {
@@ -194,7 +198,7 @@ SL int64 GetGFCoefficientAt(const std::vector<int64>& A,
   return MatrixPowerMod(
       [&](auto& mat, auto& v) {
         for (int i = 0; i < D; ++i) {
-          mat(0, i) = MulMod(invA0, Mod(i + 1 < sa ? -A[i + 1] : 0, mod), mod);
+          mat(0, i) = MulMod(inv_A0, Mod(i + 1 < sa ? -A[i + 1] : 0, mod), mod);
         }
         for (int i = 1; i < D; ++i) {
           mat(i, i - 1) = 1;
@@ -214,7 +218,7 @@ SL int64 GetGFCoefficientAt(const std::vector<int64>& A,
   int64* tmp = res + size;
 
   for (int i = 0; i < D; ++i) {
-    mat[i] = MulMod(invA0, Mod(i + 1 < sa ? -A[i + 1] : 0, mod), mod);
+    mat[i] = MulMod(inv_A0, Mod(i + 1 < sa ? -A[i + 1] : 0, mod), mod);
   }
   for (int i = 1; i < D; ++i) {
     (mat + i * D)[i - 1] = 1;

@@ -196,10 +196,122 @@ SL std::optional<DpeCommand> ParseDpeCommand(std::string_view cmd) {
   int i = 0;
   return ParseDpeCommand(cmd, i);
 }
+
+void DeserializeField(const std::vector<int64> &src, int64 &value) {
+  if (src.empty()) {
+    std::cerr << "Cannot deserlize value" << std::endl;
+    exit(-1);
+  }
+  value = src[0];
+}
+
+void DeserializeField(const std::vector<int64> &src,
+                      std::vector<int64> &value) {
+  value = src;
+}
+
+template <typename... T>
+void DeserializeObject(const std::vector<std::vector<int64>> &source,
+                       int64 &idx, std::tuple<T...> &&obj) {
+  const int field_count = std::tuple_size_v<std::tuple<T...>>;
+  const int size = source.size();
+  if (idx >= size) {
+    std::cerr << "Invalid index, idx = " << idx << ", size = " << size
+              << std::endl;
+    exit(-1);
+  }
+  if (source[idx].size() != 1) {
+    std::cerr << "Wrong object format" << std::endl;
+    exit(-1);
+  }
+  int64 source_cnt = source[idx][0];
+  if (idx + source_cnt >= size) {
+    std::cerr << "Wrong object format, insufficient data, idx = " << idx
+              << ", source_cnt = " << source_cnt << ", size = " << size
+              << std::endl;
+    exit(-1);
+  }
+  if (field_count != source_cnt) {
+    std::cerr << "Wrong field count, expected " << field_count
+              << ", actual = " << source_cnt << std::endl;
+    exit(-1);
+  }
+  ++idx;
+  std::apply(
+      [&](T &&...field) { ((DeserializeField(source[idx++], field)), ...); },
+      obj);
+}
+
+template <typename OT, typename... T>
+OT DeserializeObject(const std::vector<std::vector<int64>> &source,
+                     int64 &idx) {
+  OT obj;
+  DeserializeObject(source, idx, obj.AsTuple());
+  return obj;
+}
+
+template <typename OT, typename... T>
+OT DeserializeObject(const std::vector<std::vector<int64>> &source) {
+  int64 idx = 0;
+  return DeserializeObject<OT>(source, idx);
+}
+
+template <typename T>
+T ParseObject(const DpeCommand &command) {
+  return DeserializeObject<T>(command.args);
+}
+
+template <typename T>
+std::vector<T> ParseObjects(const DpeCommand &command) {
+  std::vector<T> ret;
+  const int64 size = command.args.size();
+  for (int64 i = 0; i < size;) {
+    ret.push_back(DeserializeObject<T>(command.args, i));
+  }
+  return ret;
+}
+
+std::vector<int64> SerializeField(int64 value) { return {value}; }
+
+std::vector<int64> SerializeField(const std::vector<int64> &value) {
+  return value;
+}
+
+template <typename... T>
+void SerializeObject(std::tuple<T...> &&obj,
+                     std::vector<std::vector<int64>> &target) {
+  const int field_count = std::tuple_size_v<std::tuple<T...>>;
+  target.push_back(std::vector<int64>{field_count});
+
+  std::apply(
+      [&](T &&...field) { ((target.push_back(SerializeField(field))), ...); },
+      obj);
+}
+
+template <typename OT, typename... T>
+void SerializeObject(const OT &obj, std::vector<std::vector<int64>> &target) {
+  SerializeObject(obj.AsTuple(), target);
+}
+
+template <typename T>
+bool AppendObject(const T &object, DpeCommand &command) {
+  SerializeObject<T>(object, command.args);
+  return true;
+}
+
+template <typename T>
+bool AppendObjects(const std::vector<T> &objects, DpeCommand &command) {
+  auto &args = command.args;
+  for (const T &object : objects) {
+    SerializeObject<T>(object, command.args);
+  }
+  return true;
+}
+
 }  // namespace internal
 
 // Distributred PE
-template <typename Derived>
+template <typename Derived, typename TaskType, typename ResultType>
 class DpeServer {
  public:
   DpeServer(std::string_view server_address, std::string_view cache_path)
@@ -213,7 +325,7 @@ class DpeServer {
     int rc = zmq_bind(responder, std::data(server_address));
     assert(rc == 0);
 
-    constexpr int buffer_length = 1 << 20;
+    constexpr int buffer_length = (1 << 20) * 100;
     char *buffer = new char[buffer_length + 1];
     for (; solved < total;) {
       int received = zmq_recv(responder, buffer, buffer_length, 0);
@@ -225,29 +337,46 @@ class DpeServer {
     delete[] buffer;
     zmq_close(responder);
     zmq_ctx_destroy(context);
+
+    AsDerived().OnFinish();
   }
+
+  std::vector<ResultType> GetAllResults(const std::vector<TaskType> &tasks) {
+    std::vector<ResultType> results;
+    for (const auto &task : tasks) {
+      results.push_back(*cache[task.Key()]);
+    }
+    return results;
+  }
+
+  void InitReducer() {}
+
+  void OnFinish() {}
 
  private:
   void Initialize() {
-    std::vector<int64> tasks = AsDerived().GetTasks();
+    AsDerived().InitReducer();
+    {
+      std::vector<TaskType> task_list = AsDerived().GenerateTasks();
 
-    cache.clear();
-    const int64 size = std::size(tasks);
-    for (int i = 0; i < size; ++i) {
-      cache[tasks[i]] = std::nullopt;
+      cache.clear();
+      const int64 size = std::size(task_list);
+      for (int i = 0; i < size; ++i) {
+        cache[task_list[i].Key()] = std::nullopt;
+        task_map[task_list[i].Key()] = std::move(task_list[i]);
+      }
     }
 
-    answer = AsDerived().GetInit();
     total = std::size(cache);
     solved = 0;
 
     LoadCache();
 
-    unsolved = std::queue<int64>();
-    for (const auto [key, value] : cache) {
+    unsolved = std::queue<std::string>();
+    for (const auto &[key, value] : cache) {
       if (value.has_value()) {
         ++solved;
-        answer = AsDerived().Reduce(answer, key, *value);
+        AsDerived().Reduce(task_map[key], *value);
       } else {
         unsolved.push(key);
       }
@@ -263,7 +392,10 @@ class DpeServer {
 
     for (const auto [key, value] : cache) {
       if (value.has_value()) {
-        fprintf(fp, "%I64d %I64d\n", key, *value);
+        DpeCommand command;
+        command.name = "Result";
+        internal::AppendObject(*value, command);
+        fprintf(fp, "%s %s\n", key.c_str(), command.ToString().c_str());
       }
     }
     fclose(fp);
@@ -274,13 +406,24 @@ class DpeServer {
     FILE *fp = fopen(std::data(cache_path), "r");
     if (!fp) return;
 
-    int64 k, v;
-    while (fscanf(fp, "%I64d %I64d", &k, &v) == 2) {
-      auto where = cache.find(k);
+    int64 buff_size = (1 << 20) * 100;
+    char *buff = new char[buff_size];
+    while (fgets(buff, buff_size, fp) != nullptr) {
+      auto *curr = buff;
+      while (!std::isspace(*curr)) ++curr;
+      std::string key(buff, curr);
+      ++curr;
+      auto where = cache.find(key);
       if (where != cache.end()) {
-        where->second = v;
+        std::optional<DpeCommand> command = internal::ParseDpeCommand(curr);
+        if (!command.has_value()) {
+          std::cerr << "Cannot parse cached result, key = " << key << std::endl;
+          exit(-1);
+        }
+        where->second = internal::ParseObject<ResultType>(*command);
       }
     }
+    delete[] buff;
     fclose(fp);
   }
 
@@ -299,46 +442,35 @@ class DpeServer {
     }
 
     if (command->name == "SetResults") {
-      std::vector<std::pair<int64, int64>> answers;
-
-      for (const auto &iter : command->args) {
-        if (std::size(iter) != 2) {
-          return "error()";
-        }
-        answers.push_back({iter[0], iter[1]});
-      }
-
-      return AsDerived().HandleSetResults(answers);
+      return AsDerived().HandleSetResults(
+          internal::ParseObjects<ResultType>(*command));
     }
     return "error()";
   }
 
   std::string HandleGetTasks(int64 max_task_count) {
-    std::vector<int64> tasks;
+    DpeCommand command;
+    command.name = "Tasks";
     for (int64 i = 0; i < max_task_count; ++i) {
       if (std::empty(unsolved)) {
         break;
       }
-      tasks.push_back(unsolved.front());
+      internal::AppendObject(task_map[unsolved.front()], command);
       unsolved.pop();
     }
 
-    DpeCommand raw_command;
-    raw_command.name = "Tasks";
-    raw_command.args.push_back(tasks);
-
-    return raw_command.ToString();
+    return command.ToString();
   }
 
-  std::string HandleSetResults(
-      const std::vector<std::pair<int64, int64>> &answers) {
-    for (const auto [key, value] : answers) {
+  std::string HandleSetResults(const std::vector<ResultType> &answers) {
+    for (const auto &result : answers) {
+      std::string key = result.Key();
       auto where = cache.find(key);
       if (where != cache.end()) {
-        where->second = value;
+        where->second = result;
         ++solved;
       }
-      answer = AsDerived().Reduce(answer, key, value);
+      AsDerived().Reduce(task_map[key], result);
       if (solved % 1000 == 0) {
         SaveCache();
       }
@@ -372,10 +504,9 @@ class DpeServer {
     }
     history_progress.push({te, solved});
     std::cerr << std::setw(6) << buff << " " << solved << " " << total << " "
-              << answer << " " << te.Format() << " " << eta << std::endl;
+              << AsDerived().GetAnswer() << " " << te.Format() << " " << eta
+              << std::endl;
   }
-
-  int64 GetInit() { return 0; }
 
   Derived &AsDerived() { return static_cast<Derived &>(*this); }
 
@@ -385,25 +516,104 @@ class DpeServer {
 
   int64 solved = 0;
 
-  std::map<int64, std::optional<int64>> cache;
-  std::queue<int64> unsolved;
-  int64 answer = 0;
+  std::map<std::string, TaskType> task_map;
+  std::map<std::string, std::optional<ResultType>> cache;
+
+  std::queue<std::string> unsolved;
   int64 total = 0;
   TimeRecorder tr;
 
   std::queue<std::pair<TimeDelta, int64>> history_progress;
 };
 
-template <typename Derived>
+template <typename Derived, typename TaskType, typename ResultType>
 class DpeClient {
  public:
   DpeClient(std::string_view target)
-      : target(target), buffer_length(1 << 20), buffer(nullptr) {}
+      : target(target),
+        buffer_length((1 << 20) * 100),
+        get_task_buffer(nullptr),
+        send_result_buffer(nullptr) {}
   ~DpeClient() {
-    if (buffer != nullptr) delete[] buffer;
+    if (get_task_buffer != nullptr) delete[] get_task_buffer;
+    if (send_result_buffer != nullptr) delete[] send_result_buffer;
   }
 
-  std::vector<int64> GetTasks(int64 task_count) {
+  void InitWorker() {}
+
+  void RunWorker(int thread_count, int task_count) {
+    AsDerived().InitWorker();
+
+    if (get_task_buffer == nullptr) {
+      get_task_buffer = new char[buffer_length];
+    }
+    if (send_result_buffer == nullptr) {
+      send_result_buffer = new char[buffer_length];
+    }
+#if ENABLE_OPENMP
+#pragma omp parallel for schedule(dynamic, 1) num_threads(thread_count)
+#endif
+    for (int i = 0; i < thread_count; ++i) {
+      for (;;) {
+        std::optional<TaskType> task = GetNextTask(task_count);
+        if (!task.has_value()) {
+          break;
+        }
+        SetResult(static_cast<Derived &>(*this).Cal(*task), task_count);
+      }
+    }
+
+    if (!outgoing.empty()) {
+      SendResultsToServer(outgoing);
+      outgoing.clear();
+    }
+  }
+
+ private:
+  std::optional<TaskType> GetNextTask(int task_count) {
+#if ENABLE_OPENMP
+    OmpGuard guard(incoming_lock);
+#endif
+    bool should_fetch = incoming.empty();
+    if (!should_fetch) {
+      should_fetch = (incoming.size() < task_count) && (rand() % 100 < 30);
+    }
+    if (should_fetch && !exhausted) {
+      std::vector<TaskType> tasks = GetTasksFromServer(task_count);
+      std::cerr << std::endl;
+      std::cerr << "Received " << std::size(tasks) << " tasks" << std::endl;
+
+      if (std::empty(tasks)) {
+        exhausted = 1;
+        std::cerr << "No more tasks" << std::endl;
+      } else {
+        std::cerr << "First task: " << tasks[0].Key() << std::endl;
+        std::cerr << "Last task: " << tasks.back().Key() << std::endl;
+        for (auto &task : tasks) {
+          incoming.push(std::move(task));
+        }
+      }
+    }
+    if (!incoming.empty()) {
+      TaskType task = incoming.front();
+      incoming.pop();
+      return task;
+    }
+    return std::nullopt;
+  }
+
+  void SetResult(ResultType result, int task_count) {
+#if ENABLE_OPENMP
+    OmpGuard guard(outgoing_lock);
+#endif
+    outgoing.push_back(result);
+    if (outgoing.size() >= task_count) {
+      SendResultsToServer(outgoing);
+      outgoing.clear();
+    }
+  }
+
+  std::vector<TaskType> GetTasksFromServer(int64 task_count) {
     void *context = zmq_ctx_new();
     void *requester = zmq_socket(context, ZMQ_REQ);
     zmq_connect(requester, std::data(target));
@@ -414,94 +624,68 @@ class DpeClient {
     std::string cmd = raw_command.ToString();
 
     zmq_send(requester, std::data(cmd), std::size(cmd), 0);
-    int cnt = zmq_recv(requester, buffer, buffer_length, 0);
+    int cnt = zmq_recv(requester, get_task_buffer, buffer_length, 0);
     zmq_close(requester);
     zmq_ctx_destroy(context);
-    buffer[cnt] = 0;
+    get_task_buffer[cnt] = 0;
 
     std::optional<DpeCommand> result =
-        internal::ParseDpeCommand(std::string_view(buffer, cnt));
+        internal::ParseDpeCommand(std::string_view(get_task_buffer, cnt));
     if (!result.has_value() || result->name != "Tasks") {
-      return {};
+      std::cerr << "Cannot parse tasks" << std::endl;
+      exit(-1);
     }
 
-    if (std::size(result->args) != 1) {
-      return {};
-    }
-
-    return result->args[0];
+    return internal::ParseObjects<TaskType>(*result);
   }
 
-  int64 SetResults(const std::vector<std::pair<int64, int64>> &answers) {
+  int64 SendResultsToServer(const std::vector<ResultType> &answers) {
     void *context = zmq_ctx_new();
     void *requester = zmq_socket(context, ZMQ_REQ);
     zmq_connect(requester, std::data(target));
 
-    DpeCommand raw_command;
-    raw_command.name = "SetResults";
+    DpeCommand command;
+    command.name = "SetResults";
+    internal::AppendObjects(answers, command);
 
-    for (auto [key, value] : answers) {
-      raw_command.args.push_back({key, value});
-    }
-
-    std::string cmd = raw_command.ToString();
+    std::string cmd = command.ToString();
     zmq_send(requester, std::data(cmd), std::size(cmd), 0);
-    zmq_recv(requester, buffer, buffer_length, 0);
+    zmq_recv(requester, send_result_buffer, buffer_length, 0);
     zmq_close(requester);
     zmq_ctx_destroy(context);
 
     return 0;
   }
 
-  void RunWorker(int thread_count, int task_count) {
-    if (buffer == nullptr) {
-      buffer = new char[buffer_length];
-    }
-#if ENABLE_OPENMP
-    OmpLock lock;
-#endif
-    for (;;) {
-      std::vector<int64> tasks = GetTasks(task_count);
-      std::cerr << std::endl;
-      std::cerr << "Received " << std::size(tasks) << " tasks" << std::endl;
-      if (std::empty(tasks)) {
-        break;
-      }
-
-      std::cerr << "First task: " << tasks[0] << std::endl;
-      std::cerr << "Last task: " << tasks.back() << std::endl;
-
-      TimeRecorder tr;
-      std::vector<std::pair<int64, int64>> answers;
-#if ENABLE_OPENMP
-#pragma omp parallel for schedule(dynamic, 1) num_threads(thread_count)
-#endif
-      for (auto key : tasks) {
-        int64 value = static_cast<Derived &>(*this).Cal(key);
-#if ENABLE_OPENMP
-        OmpGuard guard(lock);
-#endif
-        answers.push_back({key, value});
-      }
-      std::cerr << tr.Elapsed().Format() << std::endl;
-      SetResults(answers);
-    }
-  }
+  Derived &AsDerived() { return static_cast<Derived &>(*this); }
 
  private:
   std::string target;
-  const int buffer_length;
-  char *buffer;
+  const int64 buffer_length;
+  char *get_task_buffer;
+  char *send_result_buffer;
+
+#if ENABLE_OPENMP
+  OmpLock incoming_lock;
+#endif
+  std::queue<TaskType> incoming;
+
+#if ENABLE_OPENMP
+  OmpLock outgoing_lock;
+#endif
+  std::vector<ResultType> outgoing;
+
+  int64 exhausted = 0;
 };
 
-template <typename Derived>
-class DpeSolver : public DpeServer<Derived>, public DpeClient<Derived> {
+template <typename Derived, typename TaskType, typename ResultType = TaskType>
+class DpeSolver : public DpeServer<Derived, TaskType, ResultType>,
+                  public DpeClient<Derived, TaskType, ResultType> {
  public:
   DpeSolver(std::string_view server_address, std::string_view cache_path = "")
-      : DpeServer<Derived>(server_address, cache_path),
-        DpeClient<Derived>(server_address) {}
+      : DpeServer<Derived, TaskType, ResultType>(server_address, cache_path),
+        DpeClient<Derived, TaskType, ResultType>(server_address) {}
 };
-
 #endif
 }  // namespace pe
 #endif

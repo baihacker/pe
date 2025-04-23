@@ -210,6 +210,22 @@ void DeserializeField(const std::vector<int64> &src,
   value = src;
 }
 
+void DeserializeField(const std::vector<int64> &src, std::string &value) {
+  for (auto iter : src) value += char(iter);
+}
+
+void DeserializeField(const std::vector<int64> &src,
+                      std::vector<std::pair<int64, int64>> &value) {
+  const int size = static_cast<int>(src.size());
+  if (IsOdd(size)) {
+    std::cerr << "Unexpected src size: " << size << std::endl;
+    exit(-1);
+  }
+  for (int i = 0; i < size; i += 2) {
+    value.push_back({src[i], src[i + 1]});
+  }
+}
+
 template <typename... T>
 void DeserializeObject(const std::vector<std::vector<int64>> &source,
                        int64 &idx, std::tuple<T...> &&obj) {
@@ -275,6 +291,24 @@ std::vector<int64> SerializeField(int64 value) { return {value}; }
 
 std::vector<int64> SerializeField(const std::vector<int64> &value) {
   return value;
+}
+
+std::vector<int64> SerializeField(const std::string &value) {
+  std::vector<int64> ret;
+  for (auto iter : value) {
+    ret.push_back(iter);
+  }
+  return ret;
+}
+
+std::vector<int64> SerializeField(
+    const std::vector<std::pair<int64, int64>> &value) {
+  std::vector<int64> ret;
+  for (auto iter : value) {
+    ret.push_back(iter.first);
+    ret.push_back(iter.second);
+  }
+  return ret;
 }
 
 template <typename... T>

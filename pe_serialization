@@ -31,6 +31,14 @@ std::vector<int64> SerializeValue(const int128 &value) {
 }
 #endif
 
+std::vector<int64> SerializeValue(const float &value) {
+  return {static_cast<int64>(reinterpret_cast<const int &>(value))};
+}
+
+std::vector<int64> SerializeValue(const double &value) {
+  return {reinterpret_cast<const int64 &>(value)};
+}
+
 template <typename T>
 std::vector<int64> SerializeValue(const std::vector<T> &value);
 
@@ -195,6 +203,30 @@ void DeserializeValue(const std::vector<int64> &src, int64 &idx,
   DeserializeValue(src, idx, reinterpret_cast<uint128 &>(value));
 }
 #endif
+
+void DeserializeValue(const std::vector<int64> &src, int64 &idx, float &value) {
+  const int64 size = src.size();
+  if (idx >= size) {
+    std::cerr << "Invalid index (float), idx = " << idx << ", size = " << size
+              << std::endl;
+    exit(-1);
+  }
+  int t = static_cast<int>(src[idx]);
+  value = reinterpret_cast<const float &>(t);
+  idx = idx + 1;
+}
+
+void DeserializeValue(const std::vector<int64> &src, int64 &idx,
+                      double &value) {
+  const int64 size = src.size();
+  if (idx >= size) {
+    std::cerr << "Invalid index (double), idx = " << idx << ", size = " << size
+              << std::endl;
+    exit(-1);
+  }
+  value = reinterpret_cast<const double &>(src[idx]);
+  idx = idx + 1;
+}
 
 template <typename T>
 void DeserializeValue(const std::vector<int64> &src, int64 &idx,

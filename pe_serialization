@@ -7,24 +7,11 @@
 namespace pe {
 std::vector<int64> SerializeValue(int64 value) { return {value}; }
 
-std::vector<int64> SerializeValue(const std::vector<int64> &value) {
-  return value;
-}
-
 std::vector<int64> SerializeValue(const std::string &value) {
   std::vector<int64> ret;
+  ret.push_back(value.size());
   for (auto iter : value) {
     ret.push_back(iter);
-  }
-  return ret;
-}
-
-std::vector<int64> SerializeValue(
-    const std::vector<std::pair<int64, int64>> &value) {
-  std::vector<int64> ret;
-  for (auto iter : value) {
-    ret.push_back(iter.first);
-    ret.push_back(iter.second);
   }
   return ret;
 }
@@ -42,6 +29,30 @@ std::vector<int64> SerializeValue(const int128 &value) {
 }
 #endif
 
+template <typename U, typename V>
+std::vector<int64> SerializeValue(const std::pair<U, V> &value) {
+  std::vector<int64> ret;
+  for (int64 t : SerializeValue(value.first)) {
+    ret.push_back(t);
+  }
+  for (int64 t : SerializeValue(value.second)) {
+    ret.push_back(t);
+  }
+  return ret;
+}
+
+template <typename T>
+std::vector<int64> SerializeValue(const std::vector<T> &value) {
+  std::vector<int64> ret;
+  ret.push_back(value.size());
+  for (const T &iter : value) {
+    for (int64 t : SerializeValue(iter)) {
+      ret.push_back(t);
+    }
+  }
+  return ret;
+}
+
 template <typename... T>
 void SerializeObject(std::tuple<T...> &&obj,
                      std::vector<std::vector<int64>> &target) {
@@ -58,51 +69,105 @@ void SerializeObject(const OT &obj, std::vector<std::vector<int64>> &target) {
   SerializeObject(obj.AsTuple(), target);
 }
 
-void DeserializeValue(const std::vector<int64> &src, int64 &value) {
-  if (src.empty()) {
-    std::cerr << "Cannot deserlize value" << std::endl;
+void DeserializeValue(const std::vector<int64> &src, int64 &idx, int64 &value) {
+  const int64 size = src.size();
+  if (idx >= size) {
+    std::cerr << "Invalid index (int64), idx = " << idx << ", size = " << size
+              << std::endl;
     exit(-1);
   }
-  value = src[0];
+  value = src[idx];
+  idx = idx + 1;
 }
 
-void DeserializeValue(const std::vector<int64> &src,
-                      std::vector<int64> &value) {
-  value = src;
-}
-
-void DeserializeValue(const std::vector<int64> &src, std::string &value) {
-  for (auto iter : src) value += char(iter);
-}
-
-void DeserializeValue(const std::vector<int64> &src,
-                      std::vector<std::pair<int64, int64>> &value) {
-  const int size = static_cast<int>(src.size());
-  if (IsOdd(size)) {
-    std::cerr << "Unexpected src size: " << size << std::endl;
+void DeserializeValue(const std::vector<int64> &src, int64 &idx,
+                      std::string &value) {
+  const int64 size = src.size();
+  if (idx >= size) {
+    std::cerr << "Invalid index, idx = " << idx << ", size = " << size
+              << std::endl;
     exit(-1);
   }
-  for (int i = 0; i < size; i += 2) {
-    value.push_back({src[i], src[i + 1]});
+  const int64 length = src[idx];
+  if (idx + length >= size) {
+    std::cerr << "Insufficient data (string), idx = " << idx
+              << ", length = " << length << ", size = " << size << std::endl;
+    exit(-1);
   }
+  for (int64 i = idx + 1; i <= idx + length; ++i) {
+    value += char(src[i]);
+  }
+  idx = idx + length + 1;
 }
 
 #if PE_HAS_INT128
-void DeserializeValue(const std::vector<int64> &src, uint128 &value) {
+void DeserializeValue(const std::vector<int64> &src, int64 &idx,
+                      uint128 &value) {
   const int size = static_cast<int>(src.size());
-  if (size != 2) {
-    std::cerr << "Unexpected src size: " << size << std::endl;
+  if (idx >= size) {
+    std::cerr << "Invalid index, idx = " << idx << ", size = " << size
+              << std::endl;
+    exit(-1);
+  }
+  const int64 length = 2;
+  if (idx + length - 1 >= size) {
+    std::cerr << "Insufficient data (uint128), idx = " << idx
+              << ", length = " << length << ", size = " << size << std::endl;
     exit(-1);
   }
 
-  value = static_cast<uint64>(src[1]);
-  value = value << 64 | static_cast<uint64>(src[0]);
+  value = static_cast<uint64>(src[idx + 1]);
+  value = value << 64 | static_cast<uint64>(src[idx]);
+
+  idx += 2;
 }
 
-void DeserializeValue(const std::vector<int64> &src, int128 &value) {
-  DeserializeValue(src, reinterpret_cast<uint128 &>(value));
+void DeserializeValue(const std::vector<int64> &src, int64 &idx,
+                      int128 &value) {
+  DeserializeValue(src, idx, reinterpret_cast<uint128 &>(value));
 }
 #endif
+
+template <typename U, typename V>
+void DeserializeValue(const std::vector<int64> &src, int64 &idx,
+                      std::pair<U, V> &value) {
+  const int64 size = src.size();
+  if (idx >= size) {
+    std::cerr << "Invalid index, idx = " << idx << ", size = " << size
+              << std::endl;
+    exit(-1);
+  }
+  const int64 length = 2;
+  if (idx + length - 1 >= size) {
+    std::cerr << "Insufficient data (std::pair<int64, int64>), idx = " << idx
+              << ", length = " << length << ", size = " << size << std::endl;
+    exit(-1);
+  }
+
+  DeserializeValue(src, idx, value.first);
+  DeserializeValue(src, idx, value.second);
+}
+
+template <typename T>
+void DeserializeValue(const std::vector<int64> &src, int64 &idx,
+                      std::vector<T> &value) {
+  const int64 size = src.size();
+  if (idx >= size) {
+    std::cerr << "Invalid index, idx = " << idx << ", size = " << size
+              << std::endl;
+    exit(-1);
+  }
+
+  const int64 length = src[idx];
+
+  ++idx;
+
+  while (value.size() < length) {
+    T t;
+    DeserializeValue(src, idx, t);
+    value.push_back(t);
+  }
+}
 
 template <typename... T>
 void DeserializeObject(const std::vector<std::vector<int64>> &source,
@@ -131,8 +196,12 @@ void DeserializeObject(const std::vector<std::vector<int64>> &source,
     exit(-1);
   }
   ++idx;
+
   std::apply(
-      [&](T &&...field) { ((DeserializeValue(source[idx++], field)), ...); },
+      [&](T &&...field) {
+        int64 now = 0;
+        ((DeserializeValue(source[idx++], now = 0, field)), ...);
+      },
       obj);
 }
 

@@ -197,35 +197,6 @@ SL std::optional<DpeCommand> ParseDpeCommand(std::string_view cmd) {
   return ParseDpeCommand(cmd, i);
 }
 
-void DeserializeField(const std::vector<int64> &src, int64 &value) {
-  if (src.empty()) {
-    std::cerr << "Cannot deserlize value" << std::endl;
-    exit(-1);
-  }
-  value = src[0];
-}
-
-void DeserializeField(const std::vector<int64> &src,
-                      std::vector<int64> &value) {
-  value = src;
-}
-
-void DeserializeField(const std::vector<int64> &src, std::string &value) {
-  for (auto iter : src) value += char(iter);
-}
-
-void DeserializeField(const std::vector<int64> &src,
-                      std::vector<std::pair<int64, int64>> &value) {
-  const int size = static_cast<int>(src.size());
-  if (IsOdd(size)) {
-    std::cerr << "Unexpected src size: " << size << std::endl;
-    exit(-1);
-  }
-  for (int i = 0; i < size; i += 2) {
-    value.push_back({src[i], src[i + 1]});
-  }
-}
-
 std::vector<int64> SerializeField(int64 value) { return {value}; }
 
 std::vector<int64> SerializeField(const std::vector<int64> &value) {
@@ -249,6 +220,19 @@ std::vector<int64> SerializeField(
   }
   return ret;
 }
+
+#if PE_HAS_INT128
+std::vector<int64> SerializeField(const uint128 &value) {
+  std::vector<int64> ret;
+  ret.push_back(static_cast<int64>(static_cast<uint64>(value)));
+  ret.push_back(static_cast<int64>(static_cast<uint64>(value >> 64)));
+  return ret;
+}
+
+std::vector<int64> SerializeField(const int128 &value) {
+  return SerializeField(reinterpret_cast<const uint128 &>(value));
+}
+#endif
 
 template <typename... T>
 void SerializeObject(std::tuple<T...> &&obj,
@@ -280,6 +264,52 @@ bool AppendObjects(const std::vector<T> &objects, DpeCommand &command) {
   }
   return true;
 }
+
+void DeserializeField(const std::vector<int64> &src, int64 &value) {
+  if (src.empty()) {
+    std::cerr << "Cannot deserlize value" << std::endl;
+    exit(-1);
+  }
+  value = src[0];
+}
+
+void DeserializeField(const std::vector<int64> &src,
+                      std::vector<int64> &value) {
+  value = src;
+}
+
+void DeserializeField(const std::vector<int64> &src, std::string &value) {
+  for (auto iter : src) value += char(iter);
+}
+
+void DeserializeField(const std::vector<int64> &src,
+                      std::vector<std::pair<int64, int64>> &value) {
+  const int size = static_cast<int>(src.size());
+  if (IsOdd(size)) {
+    std::cerr << "Unexpected src size: " << size << std::endl;
+    exit(-1);
+  }
+  for (int i = 0; i < size; i += 2) {
+    value.push_back({src[i], src[i + 1]});
+  }
+}
+
+#if PE_HAS_INT128
+void DeserializeField(const std::vector<int64> &src, uint128 &value) {
+  const int size = static_cast<int>(src.size());
+  if (size != 2) {
+    std::cerr << "Unexpected src size: " << size << std::endl;
+    exit(-1);
+  }
+
+  value = static_cast<uint64>(src[1]);
+  value = value << 64 | static_cast<uint64>(src[0]);
+}
+
+void DeserializeField(const std::vector<int64> &src, int128 &value) {
+  DeserializeField(src, reinterpret_cast<uint128 &>(value));
+}
+#endif
 
 template <typename... T>
 void DeserializeObject(const std::vector<std::vector<int64>> &source,

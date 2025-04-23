@@ -1,0 +1,158 @@
+#ifndef PE_SERIALIZATION_
+#define PE_SERIALIZATION_
+
+#include "pe_base"
+#include "pe_int"
+
+namespace pe {
+std::vector<int64> SerializeValue(int64 value) { return {value}; }
+
+std::vector<int64> SerializeValue(const std::vector<int64> &value) {
+  return value;
+}
+
+std::vector<int64> SerializeValue(const std::string &value) {
+  std::vector<int64> ret;
+  for (auto iter : value) {
+    ret.push_back(iter);
+  }
+  return ret;
+}
+
+std::vector<int64> SerializeValue(
+    const std::vector<std::pair<int64, int64>> &value) {
+  std::vector<int64> ret;
+  for (auto iter : value) {
+    ret.push_back(iter.first);
+    ret.push_back(iter.second);
+  }
+  return ret;
+}
+
+#if PE_HAS_INT128
+std::vector<int64> SerializeValue(const uint128 &value) {
+  std::vector<int64> ret;
+  ret.push_back(static_cast<int64>(static_cast<uint64>(value)));
+  ret.push_back(static_cast<int64>(static_cast<uint64>(value >> 64)));
+  return ret;
+}
+
+std::vector<int64> SerializeValue(const int128 &value) {
+  return SerializeValue(reinterpret_cast<const uint128 &>(value));
+}
+#endif
+
+template <typename... T>
+void SerializeObject(std::tuple<T...> &&obj,
+                     std::vector<std::vector<int64>> &target) {
+  const int field_count = std::tuple_size_v<std::tuple<T...>>;
+  target.push_back(std::vector<int64>{field_count});
+
+  std::apply(
+      [&](T &&...field) { ((target.push_back(SerializeValue(field))), ...); },
+      obj);
+}
+
+template <typename OT, typename... T>
+void SerializeObject(const OT &obj, std::vector<std::vector<int64>> &target) {
+  SerializeObject(obj.AsTuple(), target);
+}
+
+void DeserializeValue(const std::vector<int64> &src, int64 &value) {
+  if (src.empty()) {
+    std::cerr << "Cannot deserlize value" << std::endl;
+    exit(-1);
+  }
+  value = src[0];
+}
+
+void DeserializeValue(const std::vector<int64> &src,
+                      std::vector<int64> &value) {
+  value = src;
+}
+
+void DeserializeValue(const std::vector<int64> &src, std::string &value) {
+  for (auto iter : src) value += char(iter);
+}
+
+void DeserializeValue(const std::vector<int64> &src,
+                      std::vector<std::pair<int64, int64>> &value) {
+  const int size = static_cast<int>(src.size());
+  if (IsOdd(size)) {
+    std::cerr << "Unexpected src size: " << size << std::endl;
+    exit(-1);
+  }
+  for (int i = 0; i < size; i += 2) {
+    value.push_back({src[i], src[i + 1]});
+  }
+}
+
+#if PE_HAS_INT128
+void DeserializeValue(const std::vector<int64> &src, uint128 &value) {
+  const int size = static_cast<int>(src.size());
+  if (size != 2) {
+    std::cerr << "Unexpected src size: " << size << std::endl;
+    exit(-1);
+  }
+
+  value = static_cast<uint64>(src[1]);
+  value = value << 64 | static_cast<uint64>(src[0]);
+}
+
+void DeserializeValue(const std::vector<int64> &src, int128 &value) {
+  DeserializeValue(src, reinterpret_cast<uint128 &>(value));
+}
+#endif
+
+template <typename... T>
+void DeserializeObject(const std::vector<std::vector<int64>> &source,
+                       int64 &idx, std::tuple<T...> &&obj) {
+  const int field_count = std::tuple_size_v<std::tuple<T...>>;
+  const int size = source.size();
+  if (idx >= size) {
+    std::cerr << "Invalid index, idx = " << idx << ", size = " << size
+              << std::endl;
+    exit(-1);
+  }
+  if (source[idx].size() != 1) {
+    std::cerr << "Wrong object format" << std::endl;
+    exit(-1);
+  }
+  int64 source_cnt = source[idx][0];
+  if (idx + source_cnt >= size) {
+    std::cerr << "Wrong object format, insufficient data, idx = " << idx
+              << ", source_cnt = " << source_cnt << ", size = " << size
+              << std::endl;
+    exit(-1);
+  }
+  if (field_count != source_cnt) {
+    std::cerr << "Wrong field count, expected " << field_count
+              << ", actual = " << source_cnt << std::endl;
+    exit(-1);
+  }
+  ++idx;
+  std::apply(
+      [&](T &&...field) { ((DeserializeValue(source[idx++], field)), ...); },
+      obj);
+}
+
+template <typename OT, typename... T>
+OT DeserializeObject(const std::vector<std::vector<int64>> &source,
+                     int64 &idx) {
+  OT obj;
+  DeserializeObject(source, idx, obj.AsTuple());
+  return obj;
+}
+
+template <typename OT, typename... T>
+OT DeserializeObject(const std::vector<std::vector<int64>> &source) {
+  int64 idx = 0;
+  return DeserializeObject<OT>(source, idx);
+}
+
+#define DECLARE_SERIALIZATION(...)                              \
+  auto AsTuple() { return std::forward_as_tuple(__VA_ARGS__); } \
+  auto AsTuple() const { return std::forward_as_tuple(__VA_ARGS__); }
+
+}  // namespace pe
+#endif

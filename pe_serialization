@@ -31,6 +31,21 @@ std::vector<int64> SerializeValue(const int128 &value) {
 }
 #endif
 
+template <typename T>
+std::vector<int64> SerializeValue(const std::vector<T> &value);
+
+template <typename T>
+std::vector<int64> SerializeValue(const std::set<T> &value);
+
+template <typename T>
+std::vector<int64> SerializeValue(const std::unordered_set<T> &value);
+
+template <typename K, typename V>
+std::vector<int64> SerializeValue(const std::map<K, V> &value);
+
+template <typename K, typename V>
+std::vector<int64> SerializeValue(const std::unordered_map<K, V> &value);
+
 template <typename U, typename V>
 std::vector<int64> SerializeValue(const std::pair<U, V> &value) {
   std::vector<int64> ret;
@@ -44,35 +59,41 @@ std::vector<int64> SerializeValue(const std::pair<U, V> &value) {
 }
 
 template <typename T>
-std::vector<int64> SerializeValue(const std::vector<T> &value) {
+std::vector<int64> SerializeVectorLike(const T &vector_like) {
   std::vector<int64> ret;
-  ret.push_back(value.size());
-  for (const T &iter : value) {
+  ret.push_back(vector_like.size());
+  for (const auto &iter : vector_like) {
     for (int64 t : SerializeValue(iter)) {
       ret.push_back(t);
     }
   }
   return ret;
+}
+
+template <typename T>
+std::vector<int64> SerializeValue(const std::vector<T> &value) {
+  return SerializeVectorLike(value);
 }
 
 template <typename T>
 std::vector<int64> SerializeValue(const std::set<T> &value) {
-  std::vector<int64> ret;
-  ret.push_back(value.size());
-  for (const T &iter : value) {
-    for (int64 t : SerializeValue(iter)) {
-      ret.push_back(t);
-    }
-  }
-  return ret;
+  return SerializeVectorLike(value);
 }
 
 template <typename T>
 std::vector<int64> SerializeValue(const std::unordered_set<T> &value) {
+  return SerializeVectorLike(value);
+}
+
+template <typename T>
+std::vector<int64> SerializeMapLike(const T &map_like) {
   std::vector<int64> ret;
-  ret.push_back(value.size());
-  for (const T &iter : value) {
-    for (int64 t : SerializeValue(iter)) {
+  ret.push_back(map_like.size());
+  for (const auto &iter : map_like) {
+    for (int64 t : SerializeValue(iter.first)) {
+      ret.push_back(t);
+    }
+    for (int64 t : SerializeValue(iter.second)) {
       ret.push_back(t);
     }
   }
@@ -81,32 +102,12 @@ std::vector<int64> SerializeValue(const std::unordered_set<T> &value) {
 
 template <typename K, typename V>
 std::vector<int64> SerializeValue(const std::map<K, V> &value) {
-  std::vector<int64> ret;
-  ret.push_back(value.size());
-  for (const auto &iter : value) {
-    for (int64 t : SerializeValue(iter.first)) {
-      ret.push_back(t);
-    }
-    for (int64 t : SerializeValue(iter.second)) {
-      ret.push_back(t);
-    }
-  }
-  return ret;
+  return SerializeMapLike(value);
 }
 
 template <typename K, typename V>
 std::vector<int64> SerializeValue(const std::unordered_map<K, V> &value) {
-  std::vector<int64> ret;
-  ret.push_back(value.size());
-  for (const auto &iter : value) {
-    for (int64 t : SerializeValue(iter.first)) {
-      ret.push_back(t);
-    }
-    for (int64 t : SerializeValue(iter.second)) {
-      ret.push_back(t);
-    }
-  }
-  return ret;
+  return SerializeMapLike(value);
 }
 
 template <typename... T>
@@ -195,6 +196,26 @@ void DeserializeValue(const std::vector<int64> &src, int64 &idx,
 }
 #endif
 
+template <typename T>
+void DeserializeValue(const std::vector<int64> &src, int64 &idx,
+                      std::vector<T> &value);
+
+template <typename T>
+void DeserializeValue(const std::vector<int64> &src, int64 &idx,
+                      std::set<T> &value);
+
+template <typename T>
+void DeserializeValue(const std::vector<int64> &src, int64 &idx,
+                      std::unordered_set<T> &value);
+
+template <typename K, typename V>
+void DeserializeValue(const std::vector<int64> &src, int64 &idx,
+                      std::map<K, V> &value);
+
+template <typename K, typename V>
+void DeserializeValue(const std::vector<int64> &src, int64 &idx,
+                      std::unordered_map<K, V> &value);
+
 template <typename U, typename V>
 void DeserializeValue(const std::vector<int64> &src, int64 &idx,
                       std::pair<U, V> &value) {
@@ -215,9 +236,9 @@ void DeserializeValue(const std::vector<int64> &src, int64 &idx,
   DeserializeValue(src, idx, value.second);
 }
 
-template <typename T>
-void DeserializeValue(const std::vector<int64> &src, int64 &idx,
-                      std::vector<T> &value) {
+template <typename T, typename C>
+void DeserializeVectorLike(const std::vector<int64> &src, int64 &idx,
+                           C &value) {
   const int64 size = src.size();
   if (idx >= size) {
     std::cerr << "Invalid index, idx = " << idx << ", size = " << size
@@ -229,37 +250,33 @@ void DeserializeValue(const std::vector<int64> &src, int64 &idx,
 
   ++idx;
 
-  while (value.size() < length) {
+  for (int64 parsed = 0; parsed < length; ++parsed) {
     T t;
     DeserializeValue(src, idx, t);
-    value.push_back(t);
+    *std::inserter(value, value.end()) = std::move(t);
   }
+}
+
+template <typename T>
+void DeserializeValue(const std::vector<int64> &src, int64 &idx,
+                      std::vector<T> &value) {
+  DeserializeVectorLike<T>(src, idx, value);
 }
 
 template <typename T>
 void DeserializeValue(const std::vector<int64> &src, int64 &idx,
                       std::set<T> &value) {
-  const int64 size = src.size();
-  if (idx >= size) {
-    std::cerr << "Invalid index, idx = " << idx << ", size = " << size
-              << std::endl;
-    exit(-1);
-  }
-
-  const int64 length = src[idx];
-
-  ++idx;
-
-  while (value.size() < length) {
-    T t;
-    DeserializeValue(src, idx, t);
-    value.insert(t);
-  }
+  DeserializeVectorLike<T>(src, idx, value);
 }
 
 template <typename T>
 void DeserializeValue(const std::vector<int64> &src, int64 &idx,
                       std::unordered_set<T> &value) {
+  DeserializeVectorLike<T>(src, idx, value);
+}
+
+template <typename K, typename V, typename T>
+void DeserializeMapLike(const std::vector<int64> &src, int64 &idx, T &value) {
   const int64 size = src.size();
   if (idx >= size) {
     std::cerr << "Invalid index, idx = " << idx << ", size = " << size
@@ -271,57 +288,25 @@ void DeserializeValue(const std::vector<int64> &src, int64 &idx,
 
   ++idx;
 
-  while (value.size() < length) {
-    T t;
-    DeserializeValue(src, idx, t);
-    value.insert(t);
+  for (int64 parsed = 0; parsed < length; ++parsed) {
+    K k;
+    DeserializeValue(src, idx, k);
+    V v;
+    DeserializeValue(src, idx, v);
+    value[k] = std::move(v);
   }
 }
 
 template <typename K, typename V>
 void DeserializeValue(const std::vector<int64> &src, int64 &idx,
                       std::map<K, V> &value) {
-  const int64 size = src.size();
-  if (idx >= size) {
-    std::cerr << "Invalid index, idx = " << idx << ", size = " << size
-              << std::endl;
-    exit(-1);
-  }
-
-  const int64 length = src[idx];
-
-  ++idx;
-
-  while (value.size() < length) {
-    K k;
-    DeserializeValue(src, idx, k);
-    V v;
-    DeserializeValue(src, idx, v);
-    value[k] = std::move(v);
-  }
+  DeserializeMapLike<K, V>(src, idx, value);
 }
 
 template <typename K, typename V>
 void DeserializeValue(const std::vector<int64> &src, int64 &idx,
                       std::unordered_map<K, V> &value) {
-  const int64 size = src.size();
-  if (idx >= size) {
-    std::cerr << "Invalid index, idx = " << idx << ", size = " << size
-              << std::endl;
-    exit(-1);
-  }
-
-  const int64 length = src[idx];
-
-  ++idx;
-
-  while (value.size() < length) {
-    K k;
-    DeserializeValue(src, idx, k);
-    V v;
-    DeserializeValue(src, idx, v);
-    value[k] = std::move(v);
-  }
+  DeserializeMapLike<K, V>(src, idx, value);
 }
 
 template <typename... T>

@@ -5,6 +5,8 @@
 #include "pe_int"
 
 namespace pe {
+std::vector<int64> SerializeValue(int value) { return {value}; }
+
 std::vector<int64> SerializeValue(int64 value) { return {value}; }
 
 std::vector<int64> SerializeValue(const std::string &value) {
@@ -53,6 +55,21 @@ std::vector<int64> SerializeValue(const std::vector<T> &value) {
   return ret;
 }
 
+template <typename K, typename V>
+std::vector<int64> SerializeValue(const std::map<K, V> &value) {
+  std::vector<int64> ret;
+  ret.push_back(value.size());
+  for (const auto &iter : value) {
+    for (int64 t : SerializeValue(iter.first)) {
+      ret.push_back(t);
+    }
+    for (int64 t : SerializeValue(iter.second)) {
+      ret.push_back(t);
+    }
+  }
+  return ret;
+}
+
 template <typename... T>
 void SerializeObject(std::tuple<T...> &&obj,
                      std::vector<std::vector<int64>> &target) {
@@ -67,6 +84,17 @@ void SerializeObject(std::tuple<T...> &&obj,
 template <typename OT, typename... T>
 void SerializeObject(const OT &obj, std::vector<std::vector<int64>> &target) {
   SerializeObject(obj.AsTuple(), target);
+}
+
+void DeserializeValue(const std::vector<int64> &src, int64 &idx, int &value) {
+  const int64 size = src.size();
+  if (idx >= size) {
+    std::cerr << "Invalid index (int64), idx = " << idx << ", size = " << size
+              << std::endl;
+    exit(-1);
+  }
+  value = static_cast<int>(src[idx]);
+  idx = idx + 1;
 }
 
 void DeserializeValue(const std::vector<int64> &src, int64 &idx, int64 &value) {
@@ -166,6 +194,29 @@ void DeserializeValue(const std::vector<int64> &src, int64 &idx,
     T t;
     DeserializeValue(src, idx, t);
     value.push_back(t);
+  }
+}
+
+template <typename K, typename V>
+void DeserializeValue(const std::vector<int64> &src, int64 &idx,
+                      std::map<K, V> &value) {
+  const int64 size = src.size();
+  if (idx >= size) {
+    std::cerr << "Invalid index, idx = " << idx << ", size = " << size
+              << std::endl;
+    exit(-1);
+  }
+
+  const int64 length = src[idx];
+
+  ++idx;
+
+  while (value.size() < length) {
+    K k;
+    DeserializeValue(src, idx, k);
+    V v;
+    DeserializeValue(src, idx, v);
+    value[k] = std::move(v);
   }
 }
 

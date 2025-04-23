@@ -226,6 +226,61 @@ void DeserializeField(const std::vector<int64> &src,
   }
 }
 
+std::vector<int64> SerializeField(int64 value) { return {value}; }
+
+std::vector<int64> SerializeField(const std::vector<int64> &value) {
+  return value;
+}
+
+std::vector<int64> SerializeField(const std::string &value) {
+  std::vector<int64> ret;
+  for (auto iter : value) {
+    ret.push_back(iter);
+  }
+  return ret;
+}
+
+std::vector<int64> SerializeField(
+    const std::vector<std::pair<int64, int64>> &value) {
+  std::vector<int64> ret;
+  for (auto iter : value) {
+    ret.push_back(iter.first);
+    ret.push_back(iter.second);
+  }
+  return ret;
+}
+
+template <typename... T>
+void SerializeObject(std::tuple<T...> &&obj,
+                     std::vector<std::vector<int64>> &target) {
+  const int field_count = std::tuple_size_v<std::tuple<T...>>;
+  target.push_back(std::vector<int64>{field_count});
+
+  std::apply(
+      [&](T &&...field) { ((target.push_back(SerializeField(field))), ...); },
+      obj);
+}
+
+template <typename OT, typename... T>
+void SerializeObject(const OT &obj, std::vector<std::vector<int64>> &target) {
+  SerializeObject(obj.AsTuple(), target);
+}
+
+template <typename T>
+bool AppendObject(const T &object, DpeCommand &command) {
+  SerializeObject<T>(object, command.args);
+  return true;
+}
+
+template <typename T>
+bool AppendObjects(const std::vector<T> &objects, DpeCommand &command) {
+  auto &args = command.args;
+  for (const T &object : objects) {
+    SerializeObject<T>(object, command.args);
+  }
+  return true;
+}
+
 template <typename... T>
 void DeserializeObject(const std::vector<std::vector<int64>> &source,
                        int64 &idx, std::tuple<T...> &&obj) {
@@ -286,63 +341,11 @@ std::vector<T> ParseObjects(const DpeCommand &command) {
   }
   return ret;
 }
-
-std::vector<int64> SerializeField(int64 value) { return {value}; }
-
-std::vector<int64> SerializeField(const std::vector<int64> &value) {
-  return value;
-}
-
-std::vector<int64> SerializeField(const std::string &value) {
-  std::vector<int64> ret;
-  for (auto iter : value) {
-    ret.push_back(iter);
-  }
-  return ret;
-}
-
-std::vector<int64> SerializeField(
-    const std::vector<std::pair<int64, int64>> &value) {
-  std::vector<int64> ret;
-  for (auto iter : value) {
-    ret.push_back(iter.first);
-    ret.push_back(iter.second);
-  }
-  return ret;
-}
-
-template <typename... T>
-void SerializeObject(std::tuple<T...> &&obj,
-                     std::vector<std::vector<int64>> &target) {
-  const int field_count = std::tuple_size_v<std::tuple<T...>>;
-  target.push_back(std::vector<int64>{field_count});
-
-  std::apply(
-      [&](T &&...field) { ((target.push_back(SerializeField(field))), ...); },
-      obj);
-}
-
-template <typename OT, typename... T>
-void SerializeObject(const OT &obj, std::vector<std::vector<int64>> &target) {
-  SerializeObject(obj.AsTuple(), target);
-}
-
-template <typename T>
-bool AppendObject(const T &object, DpeCommand &command) {
-  SerializeObject<T>(object, command.args);
-  return true;
-}
-
-template <typename T>
-bool AppendObjects(const std::vector<T> &objects, DpeCommand &command) {
-  auto &args = command.args;
-  for (const T &object : objects) {
-    SerializeObject<T>(object, command.args);
-  }
-  return true;
-}
-
 }  // namespace internal
+
+#define DECLARE_SERIALIZATION(...)                              \
+  auto AsTuple() { return std::forward_as_tuple(__VA_ARGS__); } \
+  auto AsTuple() const { return std::forward_as_tuple(__VA_ARGS__); }
 
 // Distributred PE
 template <typename Derived, typename TaskType, typename ResultType>

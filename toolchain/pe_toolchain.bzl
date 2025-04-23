@@ -295,6 +295,7 @@ pe_library = rule(
             "pe_poly_base_ntl",
             "pe_rand",
             "pe_range",
+            "pe_serialization",
             "pe_span",
             "pe_sym_poly",
             "pe_time",

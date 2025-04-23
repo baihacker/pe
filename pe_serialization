@@ -55,8 +55,47 @@ std::vector<int64> SerializeValue(const std::vector<T> &value) {
   return ret;
 }
 
+template <typename T>
+std::vector<int64> SerializeValue(const std::set<T> &value) {
+  std::vector<int64> ret;
+  ret.push_back(value.size());
+  for (const T &iter : value) {
+    for (int64 t : SerializeValue(iter)) {
+      ret.push_back(t);
+    }
+  }
+  return ret;
+}
+
+template <typename T>
+std::vector<int64> SerializeValue(const std::unordered_set<T> &value) {
+  std::vector<int64> ret;
+  ret.push_back(value.size());
+  for (const T &iter : value) {
+    for (int64 t : SerializeValue(iter)) {
+      ret.push_back(t);
+    }
+  }
+  return ret;
+}
+
 template <typename K, typename V>
 std::vector<int64> SerializeValue(const std::map<K, V> &value) {
+  std::vector<int64> ret;
+  ret.push_back(value.size());
+  for (const auto &iter : value) {
+    for (int64 t : SerializeValue(iter.first)) {
+      ret.push_back(t);
+    }
+    for (int64 t : SerializeValue(iter.second)) {
+      ret.push_back(t);
+    }
+  }
+  return ret;
+}
+
+template <typename K, typename V>
+std::vector<int64> SerializeValue(const std::unordered_map<K, V> &value) {
   std::vector<int64> ret;
   ret.push_back(value.size());
   for (const auto &iter : value) {
@@ -197,9 +236,74 @@ void DeserializeValue(const std::vector<int64> &src, int64 &idx,
   }
 }
 
+template <typename T>
+void DeserializeValue(const std::vector<int64> &src, int64 &idx,
+                      std::set<T> &value) {
+  const int64 size = src.size();
+  if (idx >= size) {
+    std::cerr << "Invalid index, idx = " << idx << ", size = " << size
+              << std::endl;
+    exit(-1);
+  }
+
+  const int64 length = src[idx];
+
+  ++idx;
+
+  while (value.size() < length) {
+    T t;
+    DeserializeValue(src, idx, t);
+    value.insert(t);
+  }
+}
+
+template <typename T>
+void DeserializeValue(const std::vector<int64> &src, int64 &idx,
+                      std::unordered_set<T> &value) {
+  const int64 size = src.size();
+  if (idx >= size) {
+    std::cerr << "Invalid index, idx = " << idx << ", size = " << size
+              << std::endl;
+    exit(-1);
+  }
+
+  const int64 length = src[idx];
+
+  ++idx;
+
+  while (value.size() < length) {
+    T t;
+    DeserializeValue(src, idx, t);
+    value.insert(t);
+  }
+}
+
 template <typename K, typename V>
 void DeserializeValue(const std::vector<int64> &src, int64 &idx,
                       std::map<K, V> &value) {
+  const int64 size = src.size();
+  if (idx >= size) {
+    std::cerr << "Invalid index, idx = " << idx << ", size = " << size
+              << std::endl;
+    exit(-1);
+  }
+
+  const int64 length = src[idx];
+
+  ++idx;
+
+  while (value.size() < length) {
+    K k;
+    DeserializeValue(src, idx, k);
+    V v;
+    DeserializeValue(src, idx, v);
+    value[k] = std::move(v);
+  }
+}
+
+template <typename K, typename V>
+void DeserializeValue(const std::vector<int64> &src, int64 &idx,
+                      std::unordered_map<K, V> &value) {
   const int64 size = src.size();
   if (idx >= size) {
     std::cerr << "Invalid index, idx = " << idx << ", size = " << size

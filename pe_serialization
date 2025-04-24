@@ -5,9 +5,27 @@
 #include "pe_int"
 
 namespace pe {
-std::vector<int64> SerializeValue(int value) { return {value}; }
+template <typename T>
+SL REQUIRES((std::is_default_constructible_v<T> &&
+             std::is_trivially_constructible_v<T> && sizeof(T) == 4))
+    RETURN(std::vector<int64>) SerializeValue(const T &value) {
+  return {static_cast<int64>(*reinterpret_cast<const uint32 *>(&value))};
+}
 
-std::vector<int64> SerializeValue(int64 value) { return {value}; }
+template <typename T>
+SL REQUIRES((std::is_default_constructible_v<T> &&
+             std::is_trivially_constructible_v<T> && sizeof(T) == 8))
+    RETURN(std::vector<int64>) SerializeValue(const T &value) {
+  return {*reinterpret_cast<const int64 *>(&value)};
+}
+
+template <typename T>
+SL REQUIRES((std::is_default_constructible_v<T> &&
+             std::is_trivially_constructible_v<T> && sizeof(T) == 16))
+    RETURN(std::vector<int64>) SerializeValue(const T &value) {
+  const int64 *ptr = reinterpret_cast<const int64 *>(&value);
+  return {ptr[0], ptr[1]};
+}
 
 std::vector<int64> SerializeValue(const std::string &value) {
   std::vector<int64> ret;
@@ -16,27 +34,6 @@ std::vector<int64> SerializeValue(const std::string &value) {
     ret.push_back(iter);
   }
   return ret;
-}
-
-#if PE_HAS_INT128
-std::vector<int64> SerializeValue(const uint128 &value) {
-  std::vector<int64> ret;
-  ret.push_back(static_cast<int64>(static_cast<uint64>(value)));
-  ret.push_back(static_cast<int64>(static_cast<uint64>(value >> 64)));
-  return ret;
-}
-
-std::vector<int64> SerializeValue(const int128 &value) {
-  return SerializeValue(reinterpret_cast<const uint128 &>(value));
-}
-#endif
-
-std::vector<int64> SerializeValue(const float &value) {
-  return {static_cast<int64>(reinterpret_cast<const int &>(value))};
-}
-
-std::vector<int64> SerializeValue(const double &value) {
-  return {reinterpret_cast<const int64 &>(value)};
 }
 
 template <typename T>
@@ -134,26 +131,59 @@ void SerializeObject(const OT &obj, std::vector<std::vector<int64>> &target) {
   SerializeObject(obj.AsTuple(), target);
 }
 
-void DeserializeValue(const std::vector<int64> &src, int64 &idx, int &value) {
+template <typename T>
+SL REQUIRES((std::is_default_constructible_v<T> &&
+             std::is_trivially_constructible_v<T> && sizeof(T) == 4))
+    RETURN(void)
+        DeserializeValue(const std::vector<int64> &src, int64 &idx, T &value) {
   const int64 size = src.size();
   if (idx >= size) {
-    std::cerr << "Invalid index (int64), idx = " << idx << ", size = " << size
-              << std::endl;
+    std::cerr << "Invalid index (sizeof(T) == 4), idx = " << idx
+              << ", size = " << size << std::endl;
     exit(-1);
   }
-  value = static_cast<int>(src[idx]);
+  uint32 t = static_cast<uint32>(src[idx]);
+  value = *reinterpret_cast<const T *>(&t);
   idx = idx + 1;
 }
 
-void DeserializeValue(const std::vector<int64> &src, int64 &idx, int64 &value) {
+template <typename T>
+SL REQUIRES((std::is_default_constructible_v<T> &&
+             std::is_trivially_constructible_v<T> && sizeof(T) == 8))
+    RETURN(void)
+        DeserializeValue(const std::vector<int64> &src, int64 &idx, T &value) {
   const int64 size = src.size();
   if (idx >= size) {
-    std::cerr << "Invalid index (int64), idx = " << idx << ", size = " << size
+    std::cerr << "Invalid index (sizeof(T) == 8), idx = " << idx
+              << ", size = " << size << std::endl;
+    exit(-1);
+  }
+  value = *reinterpret_cast<const T *>(&src[idx]);
+  idx = idx + 1;
+}
+
+template <typename T>
+SL REQUIRES((std::is_default_constructible_v<T> &&
+             std::is_trivially_constructible_v<T> && sizeof(T) == 16))
+    RETURN(void)
+        DeserializeValue(const std::vector<int64> &src, int64 &idx, T &value) {
+  const int size = static_cast<int>(src.size());
+  if (idx >= size) {
+    std::cerr << "Invalid index, idx = " << idx << ", size = " << size
               << std::endl;
     exit(-1);
   }
-  value = src[idx];
-  idx = idx + 1;
+  const int64 length = 2;
+  if (idx + length - 1 >= size) {
+    std::cerr << "Insufficient data (sizeof(T) == 16), idx = " << idx
+              << ", length = " << length << ", size = " << size << std::endl;
+    exit(-1);
+  }
+
+  int64 *ptr = reinterpret_cast<int64 *>(&value);
+  ptr[0] = src[idx];
+  ptr[1] = src[idx + 1];
+  idx = idx + 2;
 }
 
 void DeserializeValue(const std::vector<int64> &src, int64 &idx,
@@ -174,58 +204,6 @@ void DeserializeValue(const std::vector<int64> &src, int64 &idx,
     value += char(src[i]);
   }
   idx = idx + length + 1;
-}
-
-#if PE_HAS_INT128
-void DeserializeValue(const std::vector<int64> &src, int64 &idx,
-                      uint128 &value) {
-  const int size = static_cast<int>(src.size());
-  if (idx >= size) {
-    std::cerr << "Invalid index, idx = " << idx << ", size = " << size
-              << std::endl;
-    exit(-1);
-  }
-  const int64 length = 2;
-  if (idx + length - 1 >= size) {
-    std::cerr << "Insufficient data (uint128), idx = " << idx
-              << ", length = " << length << ", size = " << size << std::endl;
-    exit(-1);
-  }
-
-  value = static_cast<uint64>(src[idx + 1]);
-  value = value << 64 | static_cast<uint64>(src[idx]);
-
-  idx += 2;
-}
-
-void DeserializeValue(const std::vector<int64> &src, int64 &idx,
-                      int128 &value) {
-  DeserializeValue(src, idx, reinterpret_cast<uint128 &>(value));
-}
-#endif
-
-void DeserializeValue(const std::vector<int64> &src, int64 &idx, float &value) {
-  const int64 size = src.size();
-  if (idx >= size) {
-    std::cerr << "Invalid index (float), idx = " << idx << ", size = " << size
-              << std::endl;
-    exit(-1);
-  }
-  int t = static_cast<int>(src[idx]);
-  value = reinterpret_cast<const float &>(t);
-  idx = idx + 1;
-}
-
-void DeserializeValue(const std::vector<int64> &src, int64 &idx,
-                      double &value) {
-  const int64 size = src.size();
-  if (idx >= size) {
-    std::cerr << "Invalid index (double), idx = " << idx << ", size = " << size
-              << std::endl;
-    exit(-1);
-  }
-  value = reinterpret_cast<const double &>(src[idx]);
-  idx = idx + 1;
 }
 
 template <typename T>

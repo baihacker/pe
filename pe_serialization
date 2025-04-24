@@ -21,10 +21,11 @@ SL REQUIRES((std::is_default_constructible_v<T> &&
 
 template <typename T>
 SL REQUIRES((std::is_default_constructible_v<T> &&
-             std::is_trivially_constructible_v<T> && sizeof(T) == 16))
-    RETURN(std::vector<int64>) SerializeValue(const T &value) {
+             std::is_trivially_constructible_v<T> && sizeof(T) >= 16 &&
+             sizeof(T) % 8 == 0)) RETURN(std::vector<int64>)
+    SerializeValue(const T &value) {
   const int64 *ptr = reinterpret_cast<const int64 *>(&value);
-  return {ptr[0], ptr[1]};
+  return std::vector<int64>(ptr, ptr + sizeof(T) / 8);
 }
 
 std::vector<int64> SerializeValue(const std::string &value) {
@@ -164,26 +165,28 @@ SL REQUIRES((std::is_default_constructible_v<T> &&
 
 template <typename T>
 SL REQUIRES((std::is_default_constructible_v<T> &&
-             std::is_trivially_constructible_v<T> && sizeof(T) == 16))
-    RETURN(void)
-        DeserializeValue(const std::vector<int64> &src, int64 &idx, T &value) {
+             std::is_trivially_constructible_v<T> && sizeof(T) >= 16 &&
+             sizeof(T) % 8 == 0)) RETURN(void)
+    DeserializeValue(const std::vector<int64> &src, int64 &idx, T &value) {
   const int size = static_cast<int>(src.size());
   if (idx >= size) {
     std::cerr << "Invalid index, idx = " << idx << ", size = " << size
               << std::endl;
     exit(-1);
   }
-  const int64 length = 2;
+  const int64 length = sizeof(T) / 8;
   if (idx + length - 1 >= size) {
-    std::cerr << "Insufficient data (sizeof(T) == 16), idx = " << idx
+    std::cerr << "Insufficient data (sizeof(T) >= 16), idx = " << idx
               << ", length = " << length << ", size = " << size << std::endl;
     exit(-1);
   }
 
   int64 *ptr = reinterpret_cast<int64 *>(&value);
-  ptr[0] = src[idx];
-  ptr[1] = src[idx + 1];
-  idx = idx + 2;
+  for (int64 i = 0; i < length; ++i) {
+    ptr[i] = src[idx + i];
+  }
+
+  idx = idx + length;
 }
 
 void DeserializeValue(const std::vector<int64> &src, int64 &idx,

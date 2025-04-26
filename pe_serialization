@@ -5,30 +5,41 @@
 #include "pe_int"
 
 namespace pe {
+template <typename T, typename = void>
+struct has_as_tuple : std::false_type {};
+
 template <typename T>
-SL REQUIRES((std::is_default_constructible_v<T> &&
-             std::is_trivially_constructible_v<T> && sizeof(T) == 4))
-    RETURN(std::vector<int64>) SerializeValue(const T &value) {
+struct has_as_tuple<T, std::void_t<decltype(std::declval<T>().AsTuple())>>
+    : std::true_type {};
+
+template <typename T>
+constexpr bool has_as_tuple_v = has_as_tuple<T>::value;
+
+template <typename T>
+constexpr bool can_copy_by_byte_v =
+    !has_as_tuple_v<T> && std::is_default_constructible_v<T> &&
+    std::is_trivially_constructible_v<T>;
+
+template <typename T>
+SL REQUIRES((can_copy_by_byte_v<T> && sizeof(T) == 4))
+    RETURN(std::vector<int64>) SerializeObject(const T &value) {
   return {static_cast<int64>(*reinterpret_cast<const uint32 *>(&value))};
 }
 
 template <typename T>
-SL REQUIRES((std::is_default_constructible_v<T> &&
-             std::is_trivially_constructible_v<T> && sizeof(T) == 8))
-    RETURN(std::vector<int64>) SerializeValue(const T &value) {
+SL REQUIRES((can_copy_by_byte_v<T> && sizeof(T) == 8))
+    RETURN(std::vector<int64>) SerializeObject(const T &value) {
   return {*reinterpret_cast<const int64 *>(&value)};
 }
 
 template <typename T>
-SL REQUIRES((std::is_default_constructible_v<T> &&
-             std::is_trivially_constructible_v<T> && sizeof(T) >= 16 &&
-             sizeof(T) % 8 == 0)) RETURN(std::vector<int64>)
-    SerializeValue(const T &value) {
+SL REQUIRES((can_copy_by_byte_v<T> && sizeof(T) >= 16 && sizeof(T) % 8 == 0))
+    RETURN(std::vector<int64>) SerializeObject(const T &value) {
   const int64 *ptr = reinterpret_cast<const int64 *>(&value);
   return std::vector<int64>(ptr, ptr + sizeof(T) / 8);
 }
 
-std::vector<int64> SerializeValue(const std::string &value) {
+std::vector<int64> SerializeObject(const std::string &value) {
   std::vector<int64> ret;
   ret.push_back(value.size());
   for (auto iter : value) {
@@ -38,27 +49,30 @@ std::vector<int64> SerializeValue(const std::string &value) {
 }
 
 template <typename T>
-std::vector<int64> SerializeValue(const std::vector<T> &value);
+std::vector<int64> SerializeObject(const std::vector<T> &value);
 
 template <typename T>
-std::vector<int64> SerializeValue(const std::set<T> &value);
+std::vector<int64> SerializeObject(const std::set<T> &value);
 
 template <typename T>
-std::vector<int64> SerializeValue(const std::unordered_set<T> &value);
+std::vector<int64> SerializeObject(const std::unordered_set<T> &value);
 
 template <typename K, typename V>
-std::vector<int64> SerializeValue(const std::map<K, V> &value);
+std::vector<int64> SerializeObject(const std::map<K, V> &value);
 
 template <typename K, typename V>
-std::vector<int64> SerializeValue(const std::unordered_map<K, V> &value);
+std::vector<int64> SerializeObject(const std::unordered_map<K, V> &value);
 
 template <typename U, typename V>
-std::vector<int64> SerializeValue(const std::pair<U, V> &value) {
+std::vector<int64> SerializeObject(const std::pair<U, V> &value);
+
+template <typename U, typename V>
+std::vector<int64> SerializeObject(const std::pair<U, V> &value) {
   std::vector<int64> ret;
-  for (int64 t : SerializeValue(value.first)) {
+  for (int64 t : SerializeObject(value.first)) {
     ret.push_back(t);
   }
-  for (int64 t : SerializeValue(value.second)) {
+  for (int64 t : SerializeObject(value.second)) {
     ret.push_back(t);
   }
   return ret;
@@ -69,7 +83,7 @@ std::vector<int64> SerializeVectorLike(const T &vector_like) {
   std::vector<int64> ret;
   ret.push_back(vector_like.size());
   for (const auto &iter : vector_like) {
-    for (int64 t : SerializeValue(iter)) {
+    for (int64 t : SerializeObject(iter)) {
       ret.push_back(t);
     }
   }
@@ -77,17 +91,17 @@ std::vector<int64> SerializeVectorLike(const T &vector_like) {
 }
 
 template <typename T>
-std::vector<int64> SerializeValue(const std::vector<T> &value) {
+std::vector<int64> SerializeObject(const std::vector<T> &value) {
   return SerializeVectorLike(value);
 }
 
 template <typename T>
-std::vector<int64> SerializeValue(const std::set<T> &value) {
+std::vector<int64> SerializeObject(const std::set<T> &value) {
   return SerializeVectorLike(value);
 }
 
 template <typename T>
-std::vector<int64> SerializeValue(const std::unordered_set<T> &value) {
+std::vector<int64> SerializeObject(const std::unordered_set<T> &value) {
   return SerializeVectorLike(value);
 }
 
@@ -96,10 +110,10 @@ std::vector<int64> SerializeMapLike(const T &map_like) {
   std::vector<int64> ret;
   ret.push_back(map_like.size());
   for (const auto &iter : map_like) {
-    for (int64 t : SerializeValue(iter.first)) {
+    for (int64 t : SerializeObject(iter.first)) {
       ret.push_back(t);
     }
-    for (int64 t : SerializeValue(iter.second)) {
+    for (int64 t : SerializeObject(iter.second)) {
       ret.push_back(t);
     }
   }
@@ -107,36 +121,46 @@ std::vector<int64> SerializeMapLike(const T &map_like) {
 }
 
 template <typename K, typename V>
-std::vector<int64> SerializeValue(const std::map<K, V> &value) {
+std::vector<int64> SerializeObject(const std::map<K, V> &value) {
   return SerializeMapLike(value);
 }
 
 template <typename K, typename V>
-std::vector<int64> SerializeValue(const std::unordered_map<K, V> &value) {
+std::vector<int64> SerializeObject(const std::unordered_map<K, V> &value) {
   return SerializeMapLike(value);
 }
 
+namespace internal {
 template <typename... T>
-void SerializeObject(std::tuple<T...> &&obj,
-                     std::vector<std::vector<int64>> &target) {
+std::vector<int64> SerializeObjectImpl(std::tuple<T...> &&obj) {
+  std::vector<int64> ret;
   const int field_count = std::tuple_size_v<std::tuple<T...>>;
-  target.push_back(std::vector<int64>{field_count});
+  ret.push_back(field_count);
 
+  const auto append_elements = [](const std::vector<int64> &src,
+                                  std::vector<int64> &target) {
+    for (const int64 iter : src) {
+      target.push_back(iter);
+    }
+  };
   std::apply(
-      [&](T &&...field) { ((target.push_back(SerializeValue(field))), ...); },
+      [&](T &&...field) {
+        ((append_elements(pe::SerializeObject(field), ret)), ...);
+      },
       obj);
+  return ret;
 }
+}  // namespace internal
 
-template <typename OT, typename... T>
-void SerializeObject(const OT &obj, std::vector<std::vector<int64>> &target) {
-  SerializeObject(obj.AsTuple(), target);
+template <typename T>
+SL REQUIRES((has_as_tuple_v<T>)) RETURN(std::vector<int64>)
+    SerializeObject(const T &value) {
+  return internal::SerializeObjectImpl(value.AsTuple());
 }
 
 template <typename T>
-SL REQUIRES((std::is_default_constructible_v<T> &&
-             std::is_trivially_constructible_v<T> && sizeof(T) == 4))
-    RETURN(void)
-        DeserializeValue(const std::vector<int64> &src, int64 &idx, T &value) {
+SL REQUIRES((can_copy_by_byte_v<T> && sizeof(T) == 4)) RETURN(void)
+    DeserializeObject(const std::vector<int64> &src, int64 &idx, T &value) {
   const int64 size = src.size();
   if (idx >= size) {
     std::cerr << "Invalid index (sizeof(T) == 4), idx = " << idx
@@ -149,10 +173,8 @@ SL REQUIRES((std::is_default_constructible_v<T> &&
 }
 
 template <typename T>
-SL REQUIRES((std::is_default_constructible_v<T> &&
-             std::is_trivially_constructible_v<T> && sizeof(T) == 8))
-    RETURN(void)
-        DeserializeValue(const std::vector<int64> &src, int64 &idx, T &value) {
+SL REQUIRES((can_copy_by_byte_v<T> && sizeof(T) == 8)) RETURN(void)
+    DeserializeObject(const std::vector<int64> &src, int64 &idx, T &value) {
   const int64 size = src.size();
   if (idx >= size) {
     std::cerr << "Invalid index (sizeof(T) == 8), idx = " << idx
@@ -164,10 +186,9 @@ SL REQUIRES((std::is_default_constructible_v<T> &&
 }
 
 template <typename T>
-SL REQUIRES((std::is_default_constructible_v<T> &&
-             std::is_trivially_constructible_v<T> && sizeof(T) >= 16 &&
-             sizeof(T) % 8 == 0)) RETURN(void)
-    DeserializeValue(const std::vector<int64> &src, int64 &idx, T &value) {
+SL REQUIRES((can_copy_by_byte_v<T> && sizeof(T) >= 16 && sizeof(T) % 8 == 0))
+    RETURN(void)
+        DeserializeObject(const std::vector<int64> &src, int64 &idx, T &value) {
   const int size = static_cast<int>(src.size());
   if (idx >= size) {
     std::cerr << "Invalid index, idx = " << idx << ", size = " << size
@@ -189,8 +210,8 @@ SL REQUIRES((std::is_default_constructible_v<T> &&
   idx = idx + length;
 }
 
-void DeserializeValue(const std::vector<int64> &src, int64 &idx,
-                      std::string &value) {
+void DeserializeObject(const std::vector<int64> &src, int64 &idx,
+                       std::string &value) {
   const int64 size = src.size();
   if (idx >= size) {
     std::cerr << "Invalid index, idx = " << idx << ", size = " << size
@@ -210,28 +231,28 @@ void DeserializeValue(const std::vector<int64> &src, int64 &idx,
 }
 
 template <typename T>
-void DeserializeValue(const std::vector<int64> &src, int64 &idx,
-                      std::vector<T> &value);
+void DeserializeObject(const std::vector<int64> &src, int64 &idx,
+                       std::vector<T> &value);
 
 template <typename T>
-void DeserializeValue(const std::vector<int64> &src, int64 &idx,
-                      std::set<T> &value);
+void DeserializeObject(const std::vector<int64> &src, int64 &idx,
+                       std::set<T> &value);
 
 template <typename T>
-void DeserializeValue(const std::vector<int64> &src, int64 &idx,
-                      std::unordered_set<T> &value);
+void DeserializeObject(const std::vector<int64> &src, int64 &idx,
+                       std::unordered_set<T> &value);
 
 template <typename K, typename V>
-void DeserializeValue(const std::vector<int64> &src, int64 &idx,
-                      std::map<K, V> &value);
+void DeserializeObject(const std::vector<int64> &src, int64 &idx,
+                       std::map<K, V> &value);
 
 template <typename K, typename V>
-void DeserializeValue(const std::vector<int64> &src, int64 &idx,
-                      std::unordered_map<K, V> &value);
+void DeserializeObject(const std::vector<int64> &src, int64 &idx,
+                       std::unordered_map<K, V> &value);
 
 template <typename U, typename V>
-void DeserializeValue(const std::vector<int64> &src, int64 &idx,
-                      std::pair<U, V> &value) {
+void DeserializeObject(const std::vector<int64> &src, int64 &idx,
+                       std::pair<U, V> &value) {
   const int64 size = src.size();
   if (idx >= size) {
     std::cerr << "Invalid index, idx = " << idx << ", size = " << size
@@ -245,8 +266,8 @@ void DeserializeValue(const std::vector<int64> &src, int64 &idx,
     exit(-1);
   }
 
-  DeserializeValue(src, idx, value.first);
-  DeserializeValue(src, idx, value.second);
+  DeserializeObject(src, idx, value.first);
+  DeserializeObject(src, idx, value.second);
 }
 
 template <typename T, typename C>
@@ -265,26 +286,26 @@ void DeserializeVectorLike(const std::vector<int64> &src, int64 &idx,
 
   for (int64 parsed = 0; parsed < length; ++parsed) {
     T t;
-    DeserializeValue(src, idx, t);
+    DeserializeObject(src, idx, t);
     *std::inserter(value, value.end()) = std::move(t);
   }
 }
 
 template <typename T>
-void DeserializeValue(const std::vector<int64> &src, int64 &idx,
-                      std::vector<T> &value) {
+void DeserializeObject(const std::vector<int64> &src, int64 &idx,
+                       std::vector<T> &value) {
   DeserializeVectorLike<T>(src, idx, value);
 }
 
 template <typename T>
-void DeserializeValue(const std::vector<int64> &src, int64 &idx,
-                      std::set<T> &value) {
+void DeserializeObject(const std::vector<int64> &src, int64 &idx,
+                       std::set<T> &value) {
   DeserializeVectorLike<T>(src, idx, value);
 }
 
 template <typename T>
-void DeserializeValue(const std::vector<int64> &src, int64 &idx,
-                      std::unordered_set<T> &value) {
+void DeserializeObject(const std::vector<int64> &src, int64 &idx,
+                       std::unordered_set<T> &value) {
   DeserializeVectorLike<T>(src, idx, value);
 }
 
@@ -303,28 +324,29 @@ void DeserializeMapLike(const std::vector<int64> &src, int64 &idx, T &value) {
 
   for (int64 parsed = 0; parsed < length; ++parsed) {
     K k;
-    DeserializeValue(src, idx, k);
+    DeserializeObject(src, idx, k);
     V v;
-    DeserializeValue(src, idx, v);
+    DeserializeObject(src, idx, v);
     value[k] = std::move(v);
   }
 }
 
 template <typename K, typename V>
-void DeserializeValue(const std::vector<int64> &src, int64 &idx,
-                      std::map<K, V> &value) {
+void DeserializeObject(const std::vector<int64> &src, int64 &idx,
+                       std::map<K, V> &value) {
   DeserializeMapLike<K, V>(src, idx, value);
 }
 
 template <typename K, typename V>
-void DeserializeValue(const std::vector<int64> &src, int64 &idx,
-                      std::unordered_map<K, V> &value) {
+void DeserializeObject(const std::vector<int64> &src, int64 &idx,
+                       std::unordered_map<K, V> &value) {
   DeserializeMapLike<K, V>(src, idx, value);
 }
 
+namespace internal {
 template <typename... T>
-void DeserializeObject(const std::vector<std::vector<int64>> &source,
-                       int64 &idx, std::tuple<T...> &&obj) {
+void DeserializeObjectImpl(const std::vector<int64> &source, int64 &idx,
+                       std::tuple<T...> &&obj) {
   const int field_count = std::tuple_size_v<std::tuple<T...>>;
   const int size = source.size();
   if (idx >= size) {
@@ -332,11 +354,7 @@ void DeserializeObject(const std::vector<std::vector<int64>> &source,
               << std::endl;
     exit(-1);
   }
-  if (source[idx].size() != 1) {
-    std::cerr << "Wrong object format" << std::endl;
-    exit(-1);
-  }
-  int64 source_cnt = source[idx][0];
+  int64 source_cnt = source[idx];
   if (idx + source_cnt >= size) {
     std::cerr << "Wrong object format, insufficient data, idx = " << idx
               << ", source_cnt = " << source_cnt << ", size = " << size
@@ -351,23 +369,26 @@ void DeserializeObject(const std::vector<std::vector<int64>> &source,
   ++idx;
 
   std::apply(
-      [&](T &&...field) {
-        int64 now = 0;
-        ((DeserializeValue(source[idx++], now = 0, field)), ...);
-      },
+      [&](T &&...field) { ((pe::DeserializeObject(source, idx, field)), ...); },
       obj);
 }
+}  // namespace internal
 
-template <typename OT, typename... T>
-OT DeserializeObject(const std::vector<std::vector<int64>> &source,
-                     int64 &idx) {
+template <typename T>
+SL REQUIRES((has_as_tuple_v<T>)) RETURN(void)
+    DeserializeObject(const std::vector<int64> &source, int64 &idx, T &value) {
+  internal::DeserializeObjectImpl(source, idx, value.AsTuple());
+}
+
+template <typename OT>
+OT DeserializeObject(const std::vector<int64> &source, int64 &idx) {
   OT obj;
-  DeserializeObject(source, idx, obj.AsTuple());
+  DeserializeObject<OT>(source, idx, obj);
   return obj;
 }
 
-template <typename OT, typename... T>
-OT DeserializeObject(const std::vector<std::vector<int64>> &source) {
+template <typename OT>
+OT DeserializeObject(const std::vector<int64> &source) {
   int64 idx = 0;
   return DeserializeObject<OT>(source, idx);
 }

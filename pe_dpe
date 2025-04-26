@@ -200,30 +200,33 @@ SL std::optional<DpeCommand> ParseDpeCommand(std::string_view cmd) {
 
 template <typename T>
 bool AppendObject(const T &object, DpeCommand &command) {
-  SerializeObject<T>(object, command.args);
+  command.args.push_back(SerializeObject<T>(object));
   return true;
 }
 
 template <typename T>
 bool AppendObjects(const std::vector<T> &objects, DpeCommand &command) {
-  auto &args = command.args;
   for (const T &object : objects) {
-    SerializeObject<T>(object, command.args);
+    command.args.push_back(SerializeObject<T>(object));
   }
   return true;
 }
 
 template <typename T>
 T ParseObject(const DpeCommand &command) {
-  return DeserializeObject<T>(command.args);
+  if (command.args.empty()) {
+    std::cerr << "args are empty" << std::endl;
+    exit(-1);
+  }
+  return DeserializeObject<T>(command.args[0]);
 }
 
 template <typename T>
 std::vector<T> ParseObjects(const DpeCommand &command) {
   std::vector<T> ret;
   const int64 size = command.args.size();
-  for (int64 i = 0; i < size;) {
-    ret.push_back(DeserializeObject<T>(command.args, i));
+  for (int64 i = 0; i < size; ++i) {
+    ret.push_back(DeserializeObject<T>(command.args[i]));
   }
   return ret;
 }

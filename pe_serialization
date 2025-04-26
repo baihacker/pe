@@ -21,6 +21,10 @@ constexpr bool can_copy_by_byte_v =
     std::is_default_constructible_v<T>;
 
 template <typename T>
+SL REQUIRES((has_as_tuple_v<T>)) RETURN(std::vector<int64>)
+    SerializeObject(const T &value);
+
+template <typename T>
 SL REQUIRES((can_copy_by_byte_v<T> && sizeof(T) == 4))
     RETURN(std::vector<int64>) SerializeObject(const T &value) {
   return {static_cast<int64>(*reinterpret_cast<const uint32 *>(&value))};
@@ -157,6 +161,10 @@ SL REQUIRES((has_as_tuple_v<T>)) RETURN(std::vector<int64>)
     SerializeObject(const T &value) {
   return internal::SerializeObjectImpl(value.AsTuple());
 }
+
+template <typename T>
+SL REQUIRES((has_as_tuple_v<T>)) RETURN(void)
+    DeserializeObject(const std::vector<int64> &source, int64 &idx, T &value);
 
 template <typename T>
 SL REQUIRES((can_copy_by_byte_v<T> && sizeof(T) == 4)) RETURN(void)

@@ -17,8 +17,11 @@ constexpr bool has_as_tuple_v = has_as_tuple<T>::value;
 
 template <typename T>
 constexpr bool can_copy_by_byte_v =
-    !has_as_tuple_v<T> && std::is_trivially_copyable_v<T> &&
-    std::is_default_constructible_v<T>;
+    !has_as_tuple_v<T> && std::is_trivially_copyable_v<T>;
+
+template <typename T>
+constexpr bool support_serialization_v =
+    std::is_trivially_copyable_v<T> || has_as_tuple_v<T>;
 
 template <typename T>
 SL REQUIRES((has_as_tuple_v<T>)) RETURN(std::vector<int64>)
@@ -377,16 +380,29 @@ SL REQUIRES((has_as_tuple_v<T>)) RETURN(void)
 }
 
 template <typename OT>
-OT DeserializeObject(const std::vector<int64> &source, int64 &idx) {
+SL REQUIRES((support_serialization_v<OT>)) RETURN(void)
+    DeserializeObject(const std::vector<int64> &source, OT &obj) {
+  int64 idx = 0;
+  DeserializeObject<OT>(source, idx, obj);
+}
+
+template <typename OT>
+SL REQUIRES((support_serialization_v<OT> &&
+             std::is_default_constructible_v<OT>)) RETURN(OT)
+    DeserializeObjectFrom(const std::vector<int64> &source, int64 idx) {
   OT obj;
   DeserializeObject<OT>(source, idx, obj);
   return obj;
 }
 
 template <typename OT>
-OT DeserializeObject(const std::vector<int64> &source) {
+SL REQUIRES((support_serialization_v<OT> &&
+             std::is_default_constructible_v<OT>)) RETURN(OT)
+    DeserializeObject(const std::vector<int64> &source) {
   int64 idx = 0;
-  return DeserializeObject<OT>(source, idx);
+  OT obj;
+  DeserializeObject<OT>(source, idx, obj);
+  return obj;
 }
 
 #define DECLARE_SERIALIZATION(...)                              \

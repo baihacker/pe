@@ -17,8 +17,8 @@ constexpr bool has_as_tuple_v = has_as_tuple<T>::value;
 
 template <typename T>
 constexpr bool can_copy_by_byte_v =
-    !has_as_tuple_v<T> && std::is_default_constructible_v<T> &&
-    std::is_trivially_constructible_v<T>;
+    !has_as_tuple_v<T> && std::is_trivially_copyable_v<T> &&
+    std::is_default_constructible_v<T>;
 
 template <typename T>
 SL REQUIRES((can_copy_by_byte_v<T> && sizeof(T) == 4))
@@ -340,7 +340,7 @@ void DeserializeObject(const std::vector<int64> &src, int64 &idx,
 namespace internal {
 template <typename... T>
 void DeserializeObjectImpl(const std::vector<int64> &source, int64 &idx,
-                       std::tuple<T...> &&obj) {
+                           std::tuple<T...> &&obj) {
   const int field_count = std::tuple_size_v<std::tuple<T...>>;
   const int size = source.size();
   if (idx >= size) {

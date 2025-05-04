@@ -134,18 +134,17 @@ namespace ntt32 {
 struct NttMod32 {
   // mod = r * 2 ^ k + 1
   // mod is prime
-  const unsigned mod;
-  const unsigned r;
+  const uint32 mod;
+  const uint32 r;
   const int k;
-  const unsigned g;
+  const uint32 g;
 
-  unsigned omg[32];
-  mutable unsigned* pre_omg[32];
+  uint32 omg[32];
+  mutable uint32* pre_omg[32];
 
-  NttMod32(unsigned mod, unsigned r, int k, unsigned g)
-      : mod(mod), r(r), k(k), g(g) {
+  NttMod32(uint32 mod, uint32 r, int k, uint32 g) : mod(mod), r(r), k(k), g(g) {
     for (int i = 0; i <= k; ++i) {
-      omg[i] = static_cast<unsigned>(
+      omg[i] = static_cast<uint32>(
           PowerMod<uint64, uint64, uint64>(g, (mod - 1) >> i, mod));
     }
     std::fill(pre_omg, pre_omg + 32, nullptr);
@@ -167,10 +166,10 @@ struct NttMod32 {
         continue;
       }
       const int64 cnt = 1LL << i;
-      pre_omg[i] = new unsigned[cnt];
-      unsigned int* target = pre_omg[i];
+      pre_omg[i] = new uint32[cnt];
+      uint32* target = pre_omg[i];
       const uint64 m = omg[i];
-      unsigned last = 1;
+      uint32 last = 1;
       target[0] = 1;
       for (int64 i = 1; i < cnt; ++i) {
         last = last * m % mod;
@@ -180,8 +179,7 @@ struct NttMod32 {
   }
 };
 
-constexpr unsigned ntt_mods[] = {0, 2013265921ULL, 2281701377ULL,
-                                 3221225473ULL};
+constexpr uint32 ntt_mods[] = {0, 2013265921ULL, 2281701377ULL, 3221225473ULL};
 
 static const NttMod32 ntt_mod_1(ntt_mods[1], 15ULL, 27, 31ULL);
 static const NttMod32 ntt_mod_2(ntt_mods[2], 17ULL, 27, 3ULL);
@@ -194,20 +192,20 @@ void InitNtt(int k = 22) {
   ntt_mod_3.InitPreOmg(k);
 }
 
-template <typename T, unsigned mod>
+template <typename T, uint32 mod>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     Ntt(T* data, const int64 n, const NttMod32& moder, bool inv = false) {
   ntt_base::NttTrans(data, n);
 
   int id = 0;
   for (int64 h = 2; h <= n; h <<= 1) {
-    const unsigned int* pre_omg = moder.pre_omg[++id];
+    const uint32* pre_omg = moder.pre_omg[++id];
     if (pre_omg) {
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 16) if (n / h > 100000)
 #endif
       for (int64 j = 0; j < n; j += h) {
-        const unsigned int* omg = pre_omg;
+        const uint32* omg = pre_omg;
         const int64 half_h = h >> 1;
         const int64 limit = j + half_h;
         for (int64 k = j; k < limit; ++k) {
@@ -251,7 +249,7 @@ struct NttSmallConstant {
   static constexpr uint64 INV_M1__M2 = 1140850697;
 };
 
-template <typename T, unsigned mod>
+template <typename T, uint32 mod>
 SL std::vector<uint64> RunNtt(const NttMod32& moder, const T* X, int64 n,
                               const T* Y, int64 m, int64 target_mod) {
   const int64 aligned_size = 1LL << pe_lgll(2 * (n + m - 1) - 1);
@@ -441,15 +439,14 @@ struct NttMod64 {
   // mod = r * 2 ^ k + 1
   // mod is prime
   const uint64 mod;
-  const unsigned r;
+  const uint32 r;
   const int k;
-  const unsigned g;
+  const uint32 g;
 
   uint64 omg[64];
   mutable uint64* pre_omg[64];
 
-  NttMod64(uint64 mod, unsigned r, int k, unsigned g)
-      : mod(mod), r(r), k(k), g(g) {
+  NttMod64(uint64 mod, uint32 r, int k, uint32 g) : mod(mod), r(r), k(k), g(g) {
     for (int i = 0; i <= k; ++i) {
       omg[i] = PowerMod<uint64, uint64, uint64>(g, (mod - 1) >> i, mod);
     }

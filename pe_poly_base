@@ -183,6 +183,8 @@ struct NttMod32 {
 static const NttMod32 ntt_mod_1(2013265921ULL, 15ULL, 27, 31ULL);
 static const NttMod32 ntt_mod_2(2281701377ULL, 17ULL, 27, 3ULL);
 static const NttMod32 ntt_mod_3(3221225473ULL, 3ULL, 30, 5ULL);
+constexpr unsigned ntt_mods[] = {0, 2013265921ULL, 2281701377ULL,
+                                 3221225473ULL};
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
@@ -249,6 +251,47 @@ struct NttSmallConstant {
   static constexpr uint64 INV_M1__M2 = 1140850697;
 };
 
+template <typename T, unsigned mod>
+std::vector<uint64> RunNtt(const NttMod32& moder, const T* X, int64 n,
+                           const T* Y, int64 m, int64 target_mod) {
+  const int64 aligned_size = 1LL << pe_lgll(2 * (n + m - 1) - 1);
+  const bool no_mod =
+      static_cast<uint64>(target_mod) <= static_cast<uint64>(mod);
+  std::vector<uint64> XX(aligned_size);
+  std::vector<uint64> YY(aligned_size);
+  if (no_mod) {
+    for (int64 i = 0; i < n; ++i) XX[i] = X[i];
+  } else {
+    for (int64 i = 0; i < n; ++i) XX[i] = Mod(X[i], mod);
+  }
+  for (int64 i = n; i < aligned_size; ++i) XX[i] = 0;
+  if (no_mod) {
+    for (int64 i = 0; i < m; ++i) YY[i] = Y[i];
+  } else {
+    for (int64 i = 0; i < m; ++i) YY[i] = Mod(Y[i], mod);
+  }
+  for (int64 i = m; i < aligned_size; ++i) YY[i] = 0;
+#if ENABLE_OPENMP
+#pragma omp parallel sections if (n + m >= 100000)
+#endif
+  {
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    Ntt(&XX[0], aligned_size, moder, false);
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    Ntt(&YY[0], aligned_size, moder, false);
+  }
+  constexpr uint64 mod1 = mod;
+  for (int64 i = 0; i < aligned_size; ++i) {
+    XX[i] = static_cast<uint64>(XX[i]) * YY[i] % mod1;
+  }
+  Ntt(&XX[0], aligned_size, moder, true);
+  return XX;
+}
+
 // Multiply two polynomials.
 // Make sure the length of result is at least: n + m - 1
 template <typename T>
@@ -257,51 +300,23 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
                      int64 mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
 
-  const int64 aligned_size = 1LL << pe_lgll(2 * (n + m - 1) - 1);
-
   // TODO(baihacker): decide the size automatically.
-  const NttMod32* moder_list[2] = {&ntt_mod_1, &ntt_mod_2};
+
   std::vector<uint64> tresult[2];
+
 #if ENABLE_OPENMP
-#pragma omp parallel for schedule(dynamic, 1) num_threads(2)
+#pragma omp parallel sections
 #endif
-  for (int id = 0; id < 2; ++id) {
-    const NttMod32& moder = *moder_list[id];
-    const unsigned int tmod = moder.mod;
-    const bool no_mod = static_cast<uint64>(mod) <= static_cast<uint64>(tmod);
-    std::vector<uint64> XX(aligned_size);
-    std::vector<uint64> YY(aligned_size);
-    if (no_mod) {
-      for (int64 i = 0; i < n; ++i) XX[i] = X[i];
-    } else {
-      for (int64 i = 0; i < n; ++i) XX[i] = Mod(X[i], tmod);
-    }
-    for (int64 i = n; i < aligned_size; ++i) XX[i] = 0;
-    if (no_mod) {
-      for (int64 i = 0; i < m; ++i) YY[i] = Y[i];
-    } else {
-      for (int64 i = 0; i < m; ++i) YY[i] = Mod(Y[i], tmod);
-    }
-    for (int64 i = m; i < aligned_size; ++i) YY[i] = 0;
-#if ENABLE_OPENMP
-#pragma omp parallel sections if (n + m >= 100000)
-#endif
-    {
+  {
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-      Ntt(&XX[0], aligned_size, moder);
+    tresult[0] = RunNtt<T, ntt_mods[1]>(ntt_mod_1, X, n, Y, m, mod);
+
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-      Ntt(&YY[0], aligned_size, moder);
-    }
-    const uint64 mod = moder.mod;
-    for (int64 i = 0; i < aligned_size; ++i) {
-      XX[i] = static_cast<uint64>(XX[i]) * YY[i] % mod;
-    }
-    Ntt(&XX[0], aligned_size, moder, true);
-    tresult[id] = std::move(XX);
+    tresult[1] = RunNtt<T, ntt_mods[2]>(ntt_mod_2, X, n, Y, m, mod);
   }
 
   const int64 result_size = n + m - 1;
@@ -356,51 +371,26 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
                      int64 mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
 
-  const int64 aligned_size = 1LL << pe_lgll(2 * (n + m - 1) - 1);
-
-  // TODO(baihacker): decide the size automatically.
-  const NttMod32* moder_list[3] = {&ntt_mod_1, &ntt_mod_2, &ntt_mod_3};
   std::vector<uint64> tresult[3];
+
 #if ENABLE_OPENMP
-#pragma omp parallel for schedule(dynamic, 1) num_threads(3)
+#pragma omp parallel sections
 #endif
-  for (int id = 0; id < 3; ++id) {
-    const NttMod32& moder = *moder_list[id];
-    const unsigned int tmod = moder.mod;
-    const bool no_mod = static_cast<uint64>(mod) <= static_cast<uint64>(tmod);
-    std::vector<uint64> XX(aligned_size);
-    std::vector<uint64> YY(aligned_size);
-    if (no_mod) {
-      for (int64 i = 0; i < n; ++i) XX[i] = X[i];
-    } else {
-      for (int64 i = 0; i < n; ++i) XX[i] = Mod(X[i], tmod);
-    }
-    for (int64 i = n; i < aligned_size; ++i) XX[i] = 0;
-    if (no_mod) {
-      for (int64 i = 0; i < m; ++i) YY[i] = Y[i];
-    } else {
-      for (int64 i = 0; i < m; ++i) YY[i] = Mod(Y[i], tmod);
-    }
-    for (int64 i = m; i < aligned_size; ++i) YY[i] = 0;
-#if ENABLE_OPENMP
-#pragma omp parallel sections if (n + m >= 100000)
-#endif
-    {
+  {
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-      Ntt(&XX[0], aligned_size, moder);
+    tresult[0] = RunNtt<T, ntt_mods[1]>(ntt_mod_1, X, n, Y, m, mod);
+
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-      Ntt(&YY[0], aligned_size, moder);
-    }
-    const uint64 mod = moder.mod;
-    for (int64 i = 0; i < aligned_size; ++i) {
-      XX[i] = static_cast<uint64>(XX[i]) * YY[i] % mod;
-    }
-    Ntt(&XX[0], aligned_size, moder, true);
-    tresult[id] = std::move(XX);
+    tresult[1] = RunNtt<T, ntt_mods[2]>(ntt_mod_2, X, n, Y, m, mod);
+
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    tresult[2] = RunNtt<T, ntt_mods[3]>(ntt_mod_3, X, n, Y, m, mod);
   }
 
   const int64 result_size = n + m - 1;
@@ -501,6 +491,8 @@ struct NttMod64 {
 
 static const NttMod64 ntt_mod_1(180143985094819841ULL, 5ULL, 55, 6ULL);
 static const NttMod64 ntt_mod_2(1945555039024054273ULL, 27ULL, 56, 5ULL);
+constexpr uint64 ntt_mods[] = {0, 180143985094819841ULL,
+                               1945555039024054273ULL};
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
@@ -579,6 +571,52 @@ void InitNtt(int k = 22) {
   ntt_mod_2.InitPreOmg(k);
 }
 
+template <typename T, uint64 mod>
+std::vector<uint64> RunNtt(const NttMod64& moder, const T* X, int64 n,
+                           const T* Y, int64 m, int64 target_mod) {
+  const int64 aligned_size = 1LL << pe_lgll(2 * (n + m - 1) - 1);
+  const bool no_mod =
+      static_cast<uint64>(target_mod) <= static_cast<uint64>(mod);
+  std::vector<uint64> XX(aligned_size);
+  std::vector<uint64> YY(aligned_size);
+  if (no_mod) {
+    for (int64 i = 0; i < n; ++i) XX[i] = X[i];
+  } else {
+    for (int64 i = 0; i < n; ++i) XX[i] = Mod(X[i], mod);
+  }
+  for (int64 i = n; i < aligned_size; ++i) XX[i] = 0;
+  if (no_mod) {
+    for (int64 i = 0; i < m; ++i) YY[i] = Y[i];
+  } else {
+    for (int64 i = 0; i < m; ++i) YY[i] = Mod(Y[i], mod);
+  }
+  for (int64 i = m; i < aligned_size; ++i) YY[i] = 0;
+#if ENABLE_OPENMP
+#pragma omp parallel sections if (n + m >= 100000)
+#endif
+  {
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    Ntt(&XX[0], aligned_size, moder, false);
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    Ntt(&YY[0], aligned_size, moder, false);
+  }
+  constexpr uint64 mod1 = mod;
+  for (int64 i = 0; i < aligned_size; ++i) {
+#if PE_HAS_INT128
+    XX[i] = Uint128ModUint64(static_cast<uint128>(XX[i]) * YY[i], mod1);
+#else
+    XX[i] = MulMod(XX[i], YY[i], tmod1);
+#endif
+  }
+  Ntt(&XX[0], aligned_size, moder, true);
+
+  return XX;
+}
+
 // Multiply two polynomials.
 // Make sure the length of result is at least: n + m - 1
 template <typename T>
@@ -587,52 +625,11 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
                      int64 mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
 
-  const int64 aligned_size = 1LL << pe_lgll(2 * (n + m - 1) - 1);
-
   // TODO(baihacker): decide the size automatically.
-  const NttMod64* moder_list[1] = {&ntt_mod_2};
+
   std::vector<uint64> tresult[1];
-  for (int id = 0; id < 1; ++id) {
-    const NttMod64& moder = *moder_list[id];
-    const uint64 tmod = moder.mod;
-    const bool no_mod = static_cast<uint64>(mod) <= static_cast<uint64>(tmod);
-    std::vector<uint64> XX(aligned_size);
-    std::vector<uint64> YY(aligned_size);
-    if (no_mod) {
-      for (int64 i = 0; i < n; ++i) XX[i] = X[i];
-    } else {
-      for (int64 i = 0; i < n; ++i) XX[i] = Mod(X[i], tmod);
-    }
-    for (int64 i = n; i < aligned_size; ++i) XX[i] = 0;
-    if (no_mod) {
-      for (int64 i = 0; i < m; ++i) YY[i] = Y[i];
-    } else {
-      for (int64 i = 0; i < m; ++i) YY[i] = Mod(Y[i], tmod);
-    }
-    for (int64 i = m; i < aligned_size; ++i) YY[i] = 0;
-#if ENABLE_OPENMP
-#pragma omp parallel sections if (n + m >= 100000)
-#endif
-    {
-#if ENABLE_OPENMP
-#pragma omp section
-#endif
-      Ntt(&XX[0], aligned_size, moder);
-#if ENABLE_OPENMP
-#pragma omp section
-#endif
-      Ntt(&YY[0], aligned_size, moder);
-    }
-    const uint64 mod = moder.mod;
-    for (int64 i = 0; i < aligned_size; ++i) {
-#if PE_HAS_INT128
-      XX[i] = Uint128ModUint64(static_cast<uint128>(XX[i]) * YY[i], mod);
-#else
-      XX[i] = MulMod(XX[i], YY[i], mod);
-#endif
-    }
-    Ntt(&XX[0], aligned_size, moder, true);
-    tresult[id] = std::move(XX);
+  {
+    tresult[0] = RunNtt<T, ntt_mods[2]>(ntt_mod_2, X, n, Y, m, mod);
   }
 
   const int64 result_size = n + m - 1;
@@ -663,55 +660,21 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
                      int64 mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
 
-  const int64 aligned_size = 1LL << pe_lgll(2 * (n + m - 1) - 1);
-
   // TODO(baihacker): decide the size automatically.
-  const NttMod64* moder_list[2] = {&ntt_mod_1, &ntt_mod_2};
   std::vector<uint64> tresult[2];
 #if ENABLE_OPENMP
-#pragma omp parallel for schedule(dynamic, 1) num_threads(2)
+#pragma omp parallel sections
 #endif
-  for (int id = 0; id < 2; ++id) {
-    const NttMod64& moder = *moder_list[id];
-    const uint64 tmod = moder.mod;
-    const bool no_mod = static_cast<uint64>(mod) <= static_cast<uint64>(tmod);
-    std::vector<uint64> XX(aligned_size);
-    std::vector<uint64> YY(aligned_size);
-    if (no_mod) {
-      for (int64 i = 0; i < n; ++i) XX[i] = X[i];
-    } else {
-      for (int64 i = 0; i < n; ++i) XX[i] = Mod(X[i], tmod);
-    }
-    for (int64 i = n; i < aligned_size; ++i) XX[i] = 0;
-    if (no_mod) {
-      for (int64 i = 0; i < m; ++i) YY[i] = Y[i];
-    } else {
-      for (int64 i = 0; i < m; ++i) YY[i] = Mod(Y[i], tmod);
-    }
-    for (int64 i = m; i < aligned_size; ++i) YY[i] = 0;
-#if ENABLE_OPENMP
-#pragma omp parallel sections if (n + m >= 100000)
-#endif
-    {
+  {
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-      Ntt(&XX[0], aligned_size, moder);
+    tresult[0] = RunNtt<T, ntt_mods[1]>(ntt_mod_1, X, n, Y, m, mod);
+
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-      Ntt(&YY[0], aligned_size, moder);
-    }
-    const uint64 mod = moder.mod;
-    for (int64 i = 0; i < aligned_size; ++i) {
-#if PE_HAS_INT128
-      XX[i] = Uint128ModUint64(static_cast<uint128>(XX[i]) * YY[i], mod);
-#else
-      XX[i] = MulMod(XX[i], YY[i], mod);
-#endif
-    }
-    Ntt(&XX[0], aligned_size, moder, true);
-    tresult[id] = std::move(XX);
+    tresult[1] = RunNtt<T, ntt_mods[2]>(ntt_mod_2, X, n, Y, m, mod);
   }
 
   const int64 result_size = n + m - 1;

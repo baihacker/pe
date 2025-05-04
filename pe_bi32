@@ -20,33 +20,33 @@ static constexpr struct zero_initialize {
 
 // Predefined allocator
 struct BiAllocatorStd {
-  static unsigned int* Allocate(int& length) {
+  static uint32* Allocate(int& length) {
     length = std::max(((length + 3) >> 2) << 2, 1);
-    return new unsigned int[length];
+    return new uint32[length];
   }
-  static void Deallocate(unsigned int* data) { delete[] data; }
+  static void Deallocate(uint32* data) { delete[] data; }
 };
 
 template <int SIZE>
 struct BiAllocatorFixedSizeImpl {
-  std::vector<unsigned int*> available;
+  std::vector<uint32*> available;
   int top;
 
   BiAllocatorFixedSizeImpl() { top = 0; }
 
-  unsigned int* Allocate(int& length) {
+  uint32* Allocate(int& length) {
     if (length > SIZE) {
       dbg(length);
     }
     PE_ASSERT(length <= SIZE);
     length = SIZE;
     if (top == static_cast<int>(std::size(available))) {
-      available.push_back(new unsigned int[SIZE]);
+      available.push_back(new uint32[SIZE]);
     }
     return available[top++];
   }
 
-  void Deallocate(unsigned int* ptr) { available[--top] = ptr; }
+  void Deallocate(uint32* ptr) { available[--top] = ptr; }
 };
 
 static BiAllocatorFixedSizeImpl<1 << 16> allocator_16;
@@ -55,12 +55,10 @@ static BiAllocatorFixedSizeImpl<1 << 20> allocator_20;
 static auto& allocator_impl = allocator_16;
 
 struct BiAllocatorFixedSize {
-  static unsigned int* Allocate(int& length) {
+  static uint32* Allocate(int& length) {
     return allocator_impl.Allocate(length);
   }
-  static void Deallocate(unsigned int* data) {
-    allocator_impl.Deallocate(data);
-  }
+  static void Deallocate(uint32* data) { allocator_impl.Deallocate(data); }
 };
 }  // namespace internal
 
@@ -83,16 +81,16 @@ using BiAllocator = internal::BiAllocatorStd;
 // Friend binary operators
 // Member fields
 class BigInteger {
-  static_assert(sizeof(unsigned int) == sizeof(uint32));
+  static_assert(sizeof(uint32) == sizeof(uint32));
 
  public:
-  static constexpr unsigned int max_32bit_value = 0xFFFFFFFF;
+  static constexpr uint32 max_32bit_value = 0xFFFFFFFF;
   static constexpr uint64 bit32_value = 1ULL << 32;
-  static constexpr unsigned int output_mod = 1000000000;
-  static constexpr unsigned int output_mod_dig = 9;
+  static constexpr uint32 output_mod = 1000000000;
+  static constexpr uint32 output_mod_dig = 9;
 
-  static constexpr unsigned int div32_bit = 5;
-  static constexpr unsigned int mod32_mask = 31;
+  static constexpr uint32 div32_bit = 5;
+  static constexpr uint32 mod32_mask = 31;
 
   static constexpr int div_bit_size = 4;
 
@@ -163,7 +161,7 @@ class BigInteger {
       return;
     }
 
-    const unsigned int n = static_cast<unsigned int>(std::size(v));
+    const uint32 n = static_cast<uint32>(std::size(v));
     Reserve(n);
 
     std::copy(v.begin(), v.end(), data_);
@@ -199,7 +197,7 @@ class BigInteger {
       sign_ = 0;
       return;
     }
-    std::vector<unsigned int> value(n);
+    std::vector<uint32> value(n);
     for (int i = 0, j = n - 1; i < n; ++i, --j) {
       value[j] = str[i] - '0';
     }
@@ -207,7 +205,7 @@ class BigInteger {
     int now = n - 1;
     while (now > 0 && value[now] == 0) --now;
 
-    std::vector<unsigned int> result;
+    std::vector<uint32> result;
     do {
       uint64 add = 0;
       for (int i = now; i > 0; --i) {
@@ -232,7 +230,7 @@ class BigInteger {
 
   void Reserve(int new_size) {
     PE_ASSERT(new_size > 0);
-    unsigned int* old_data = nullptr;
+    uint32* old_data = nullptr;
     if (data_) {
       if (new_size > buffer_length_) {
         old_data = data_;
@@ -391,11 +389,11 @@ class BigInteger {
     if (k == 1) {
       return ToBinary<T>(fix_size);
     }
-    const unsigned mask = (1U << k) - 1;
+    const uint32 mask = (1U << k) - 1;
     const int blocks = 32 / k;
     std::vector<T> ret;
     for (int i = 0; i <= pos_; ++i) {
-      unsigned int t = data_[i];
+      uint32 t = data_[i];
       for (int j = 0; j < blocks; ++j) {
         ret.push_back(t & mask);
         t >>= k;
@@ -421,13 +419,13 @@ class BigInteger {
       return;
     }
 
-    const unsigned int n = static_cast<unsigned int>(std::size(v));
-    unsigned int need = (n * k + 31) >> 5;
+    const uint32 n = static_cast<uint32>(std::size(v));
+    uint32 need = (n * k + 31) >> 5;
     Reserve(need);
 
-    unsigned int value = 0;
+    uint32 value = 0;
     int offset = 0;
-    for (unsigned i = 0; i < n; ++i) {
+    for (uint32 i = 0; i < n; ++i) {
       if (v[i]) {
         value |= v[i] << offset;
       }
@@ -454,7 +452,7 @@ class BigInteger {
   RETURN(std::vector<T>) ToBinary(int fix_size = 1) const {
     std::vector<T> ret;
     for (int i = 0; i <= pos_; ++i) {
-      unsigned int t = data_[i];
+      uint32 t = data_[i];
       for (int j = 0; j < 32; ++j) {
         ret.push_back(t & 1);
         t >>= 1;
@@ -476,13 +474,13 @@ class BigInteger {
       return;
     }
 
-    const unsigned int n = static_cast<unsigned int>(std::size(v));
-    unsigned int need = (n + 31) >> 5;
+    const uint32 n = static_cast<uint32>(std::size(v));
+    uint32 need = (n + 31) >> 5;
     Reserve(need);
 
-    unsigned int value = 0;
-    unsigned int flag = 1;
-    for (unsigned i = 0; i < n; ++i) {
+    uint32 value = 0;
+    uint32 flag = 1;
+    for (uint32 i = 0; i < n; ++i) {
       if (v[i]) {
         value |= flag;
       }
@@ -505,7 +503,7 @@ class BigInteger {
   void SetNativeUInt64AndKeepSign(uint64 v) {
     if (v <= max_32bit_value) {
       Reserve(1);
-      data_[0] = static_cast<unsigned>(v);
+      data_[0] = static_cast<uint32>(v);
       pos_ = 0;
     } else {
       Reserve(2);
@@ -551,7 +549,7 @@ class BigInteger {
     const int min_pos = std::min(self.pos_, other.pos_);
 
     int idx = 0;
-    unsigned int inc = 0;
+    uint32 inc = 0;
 
     while (idx <= min_pos) {
       uint64 t = static_cast<uint64>(self[idx]) + other[idx] + inc;
@@ -559,7 +557,7 @@ class BigInteger {
       inc = t >> 32;
     }
 
-    const unsigned int* large_data =
+    const uint32* large_data =
         self.pos_ > other.pos_ ? self.data_ : other.data_;
     while (idx <= max_pos) {
       uint64 t = static_cast<uint64>(large_data[idx]) + inc;
@@ -587,25 +585,25 @@ class BigInteger {
     int max_pos = self.pos_;
     int min_pos = other.pos_;
 
-    unsigned int borrow = 0;
+    uint32 borrow = 0;
     for (int curr = 0; curr <= min_pos; ++curr) {
-      unsigned int next_borrow = 0;
+      uint32 next_borrow = 0;
       uint64 t = self[curr];
       while (t < static_cast<uint64>(other[curr]) + borrow) {
         next_borrow++;
         t += bit32_value;
       }
-      self[curr] = static_cast<unsigned>(t - other[curr] - borrow);
+      self[curr] = static_cast<uint32>(t - other[curr] - borrow);
       borrow = next_borrow;
     }
     for (int curr = min_pos + 1; curr <= max_pos; ++curr) {
-      unsigned int next_borrow = 0;
+      uint32 next_borrow = 0;
       uint64 t = self[curr];
       while (t < borrow) {
         next_borrow++;
         t += bit32_value;
       }
-      self[curr] = static_cast<unsigned>(t - borrow);
+      self[curr] = static_cast<uint32>(t - borrow);
       borrow = next_borrow;
     }
     self.FixLeadingZeros();
@@ -647,7 +645,7 @@ class BigInteger {
 
     BigInteger ret(now >> 1, internal::alloc_mem_tag);
     for (int i = 0; i < now; i += 2) {
-      ret[i >> 1] = static_cast<unsigned>((result[i + 1] << 16) | result[i]);
+      ret[i >> 1] = static_cast<uint32>((result[i + 1] << 16) | result[i]);
     }
     ret.pos_ = (now >> 1) - 1;
     ret.sign_ = 1;
@@ -692,7 +690,7 @@ class BigInteger {
     std::fill(ret.data_, ret.data_ + new_size, 0);
 
     for (int i = 0; i <= right_pos; ++i) {
-      unsigned int t = r[i];
+      uint32 t = r[i];
       uint64 inc = 0;
       int j = 0;
       for (; j <= left_pos; ++j) {
@@ -774,9 +772,9 @@ class BigInteger {
 
     const int k = div_bit_size;
 
-    std::vector<unsigned int> rb;
-    std::vector<unsigned int> rr = internal::AbsDivide<unsigned int>(
-        k, l.ToKBits<unsigned int>(k), r.ToKBits<unsigned int>(k), rb);
+    std::vector<uint32> rb;
+    std::vector<uint32> rr = internal::AbsDivide<uint32>(
+        k, l.ToKBits<uint32>(k), r.ToKBits<uint32>(k), rb);
     remain.FromKBits(k, rb);
 
     BigInteger ret(internal::zero_initialize_tag);
@@ -802,9 +800,9 @@ class BigInteger {
 
     const int k = div_bit_size;
 
-    std::vector<unsigned int> rb;
-    std::vector<unsigned int> rr = internal::AbsDivide<unsigned int>(
-        k, l.ToKBits<unsigned int>(k), r.ToKBits<unsigned int>(k), rb);
+    std::vector<uint32> rb;
+    std::vector<uint32> rr = internal::AbsDivide<uint32>(
+        k, l.ToKBits<uint32>(k), r.ToKBits<uint32>(k), rb);
 
     BigInteger ret(internal::zero_initialize_tag);
     ret.FromKBits(k, rr);
@@ -894,15 +892,15 @@ class BigInteger {
   }
 
  public:
-  const unsigned int* data() const { return data_; }
+  const uint32* data() const { return data_; }
 
-  unsigned int* data() { return data_; }
+  uint32* data() { return data_; }
 
   int size() const { return pos_ + 1; }
 
-  unsigned int operator[](int idx) const { return data_[idx]; }
+  uint32 operator[](int idx) const { return data_[idx]; }
 
-  unsigned int& operator[](int idx) { return data_[idx]; }
+  uint32& operator[](int idx) { return data_[idx]; }
 
   int sign() const { return sign_; }
 
@@ -925,7 +923,7 @@ class BigInteger {
 
   int IsOdd() const { return data_[0] & 1 ? 1 : 0; }
 
-  unsigned int LowerBits() const { return static_cast<unsigned int>(data_[0]); }
+  uint32 LowerBits() const { return static_cast<uint32>(data_[0]); }
 
   template <typename T>
   REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>))
@@ -998,8 +996,8 @@ class BigInteger {
   int BitHeight() const {
     int ret = pos_ << div32_bit;
     int hiCnt = 0;
-    unsigned int v = data_[pos_];
-    for (unsigned int x = 1; v; ++hiCnt, x <<= 1, v >>= 1) {
+    uint32 v = data_[pos_];
+    for (uint32 x = 1; v; ++hiCnt, x <<= 1, v >>= 1) {
       ;
     }
     return ret + hiCnt;
@@ -1007,7 +1005,7 @@ class BigInteger {
 
   std::string ToString() const {
     BigInteger t(*this);
-    std::vector<unsigned int> mods;
+    std::vector<uint32> mods;
     t.FixLeadingZeros();
     t.FixSign();
     std::stringstream ss;
@@ -1020,11 +1018,11 @@ class BigInteger {
       for (int i = t.pos_; i > 0; --i) {
         const uint64 x = add + t.data_[i];
         const uint64 next_add = (x % output_mod) << 32;
-        t.data_[i] = static_cast<unsigned>(x / output_mod);
+        t.data_[i] = static_cast<uint32>(x / output_mod);
         add = next_add;
       }
       uint64 x = add + t.data_[0];
-      t.data_[0] = static_cast<unsigned>(x / output_mod);
+      t.data_[0] = static_cast<uint32>(x / output_mod);
       mods.push_back(x % output_mod);
       t.FixLeadingZeros();
       t.FixSign();
@@ -1074,8 +1072,8 @@ class BigInteger {
     for (int i = 0; i < ret.pos_; ++i) {
       ret[i] ^= max_32bit_value;
     }
-    unsigned int y = ret[ret.pos_];
-    for (unsigned int x = 1; y; x <<= 1, y >>= 1) {
+    uint32 y = ret[ret.pos_];
+    for (uint32 x = 1; y; x <<= 1, y >>= 1) {
       ret[ret.pos_] ^= x;
     }
 
@@ -1618,7 +1616,7 @@ class BigInteger {
     const int max_pos = std::max(l.pos_, r.pos_);
     BigInteger ret(max_pos + 1, internal::alloc_mem_tag);
     for (int i = 0; i <= max_pos; ++i) {
-      unsigned int t = 0;
+      uint32 t = 0;
       if (i <= l.pos_) t ^= l[i];
       if (i <= r.pos_) t ^= r[i];
       ret[i] = t;
@@ -1638,7 +1636,7 @@ class BigInteger {
     const int max_pos = std::max(l.pos_, r.pos_);
     BigInteger ret(max_pos + 1, internal::alloc_mem_tag);
     for (int i = 0; i <= max_pos; ++i) {
-      unsigned int t = 0;
+      uint32 t = 0;
       if (i <= l.pos_) t |= l[i];
       if (i <= r.pos_) t |= r[i];
       ret[i] = t;
@@ -1662,7 +1660,7 @@ class BigInteger {
       return l;
     }
     const int bit_cnt = l.BitHeight();
-    std::vector<unsigned int> v(n + bit_cnt, 0);
+    std::vector<uint32> v(n + bit_cnt, 0);
     for (int i = 0, j = n; i < bit_cnt; ++i, ++j) {
       const int x = i >> BigInteger::div32_bit;
       const int y = i & BigInteger::mod32_mask;
@@ -1692,7 +1690,7 @@ class BigInteger {
       return 0;
     }
 
-    std::vector<unsigned int> v(bit_cnt - n, 0);
+    std::vector<uint32> v(bit_cnt - n, 0);
     for (int i = n, j = 0; i < bit_cnt; ++i, ++j) {
       const int x = i >> BigInteger::div32_bit;
       const int y = i & BigInteger::mod32_mask;
@@ -1713,7 +1711,7 @@ class BigInteger {
   }
 
  private:
-  unsigned int* data_;
+  uint32* data_;
   int buffer_length_;
   mutable int pos_;
   mutable int sign_;
@@ -1739,7 +1737,7 @@ SL int IsEven(const BigInteger& x) { return x.IsEven(); }
 
 SL int IsOdd(const BigInteger& x) { return x.IsOdd(); }
 
-SL unsigned int LowerBits(const BigInteger& x) { return x.LowerBits(); }
+SL uint32 LowerBits(const BigInteger& x) { return x.LowerBits(); }
 
 SL std::tuple<BigInteger, BigInteger> Div(const BigInteger& l,
                                           const BigInteger& r) {

@@ -122,11 +122,19 @@ SL constexpr REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
 namespace internal {
 template <typename T, typename TM>
 SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM>))
-    RETURN(int_promotion_t<T, TM>) MulModImpl(T a, T b, TM mod) {
+    RETURN(int_promotion_t<T, TM>) MulModDirectlyImpl(T a, T b, TM mod) {
   ASSUME(mod >= 1);
   return a * b % mod;
 }
 }  // namespace internal
+
+template <typename T1, typename T2, typename TM>
+SL constexpr REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
+                       is_builtin_integer_v<TM>))
+    RETURN(int_promotion_t<T1, T2, TM>) MulModDirectly(T1 a, T2 b, TM mod) {
+  using T = int_promotion_t<T1, T2>;
+  return internal::MulModDirectlyImpl<T, TM>(a, b, mod);
+}
 
 #if PE_HAS_INT128
 // Returns a % b.
@@ -429,15 +437,23 @@ SL constexpr REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
   return MulModUint32(a, b, mod);
 }
 
-// At least one of the operand size is sizeof(int64) and all are no more than
-// sizeof(int64).
+#if PE_MUL_MOD_SHELL_CODE_AVAILABLE || PE_MUL_MOD_GNU_ASM_AVAILABLE || \
+    PE_HAS_INT128
+#define CONSTEXPR_MUL constexpr
+#else
+#define CONSTEXPR_MUL
+#endif
+
+// At least one of the operand size is sizeof(int64) and all are no more
+// than sizeof(int64).
 template <typename T1, typename T2, typename TM>
-SL REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
-             is_builtin_integer_v<TM> &&
-             (sizeof(T1) > sizeof(int32) || sizeof(T2) > sizeof(int32) ||
-              sizeof(TM) > sizeof(int32)) &&
-             (sizeof(T1) <= sizeof(int64) && sizeof(T2) <= sizeof(int64) &&
-              sizeof(TM) <= sizeof(int64))))
+SL CONSTEXPR_MUL
+REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
+          is_builtin_integer_v<TM> &&
+          (sizeof(T1) > sizeof(int32) || sizeof(T2) > sizeof(int32) ||
+           sizeof(TM) > sizeof(int32)) &&
+          (sizeof(T1) <= sizeof(int64) && sizeof(T2) <= sizeof(int64) &&
+           sizeof(TM) <= sizeof(int64))))
     RETURN(int_promotion_t<T1, T2, int64, TM>) MulMod(T1 a, T2 b, TM mod) {
   using T = int_promotion_t<T1, T2>;
   using AtLeastInt64T = at_least_int64_t<T>;
@@ -452,10 +468,10 @@ SL REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
   return static_cast<ResultType>(MulModUint64GnuAsm(a, b, mod));
 #else
   if (mod <= PE_SOI63) {
-    return internal::MulModImpl<AtLeastInt64T, TM>(a, b, mod);
+    return MulModDirectly<AtLeastInt64T, TM>(a, b, mod);
   }
 #if PE_HAS_INT128
-  return static_cast<ResultType>(internal::MulModImpl<int128, TM>(a, b, mod));
+  return static_cast<ResultType>(MulModDirectly<int128, TM>(a, b, mod));
 #else
 
   // The openmp has issue about long double on windows.
@@ -561,17 +577,17 @@ SL REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
 }
 
 template <typename TM, typename T>
-SL T ProdMod(TM /*mod*/, T a) {
+SL CONSTEXPR_MUL T ProdMod(TM /*mod*/, T a) {
   return a;
 }
 
 template <typename TM, typename TH, typename... TT>
-SL int_promotion_t<TH, TT...> ProdMod(TM mod, TH a, TT... b) {
+SL CONSTEXPR_MUL int_promotion_t<TH, TT...> ProdMod(TM mod, TH a, TT... b) {
   return MulMod(a, ProdMod(mod, b...), mod);
 }
 
 template <typename TM, typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
+SL CONSTEXPR_MUL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
     ProdMod(TM mod, std::initializer_list<T> init) {
   T ret = 1;
   if (mod == 1) {
@@ -585,9 +601,10 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
 
 namespace internal {
 template <typename T, typename TN, typename TM>
-SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TN> &&
-             is_builtin_integer_v<TM>)) RETURN(int_promotion_t<T, TM>)
-    PowerModImpl(T x, TN n, TM mod) {
+SL CONSTEXPR_MUL REQUIRES((is_builtin_integer_v<T> &&
+                           is_builtin_integer_v<TN> &&
+                           is_builtin_integer_v<TM>))
+    RETURN(int_promotion_t<T, TM>) PowerModImpl(T x, TN n, TM mod) {
   PE_ASSERT(n >= 0);
   if (mod == 1) return 0;
   using ResultType = int_promotion_t<T, TM>;
@@ -603,9 +620,10 @@ SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TN> &&
 }  // namespace internal
 
 template <typename T, typename TN, typename TM>
-SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TN> &&
-             is_builtin_integer_v<TM>)) RETURN(int_promotion_t<T, int64, TM>)
-    PowerMod(T x, TN n, TM mod) {
+SL CONSTEXPR_MUL REQUIRES((is_builtin_integer_v<T> &&
+                           is_builtin_integer_v<TN> &&
+                           is_builtin_integer_v<TM>))
+    RETURN(int_promotion_t<T, int64, TM>) PowerMod(T x, TN n, TM mod) {
   using AtLeastInt64T = at_least_int64_t<T>;
   return internal::PowerModImpl<AtLeastInt64T, TN, TM>(x, n, mod);
 }

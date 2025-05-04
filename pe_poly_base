@@ -180,18 +180,25 @@ struct NttMod32 {
   }
 };
 
-static const NttMod32 ntt_mod_1(2013265921ULL, 15ULL, 27, 31ULL);
-static const NttMod32 ntt_mod_2(2281701377ULL, 17ULL, 27, 3ULL);
-static const NttMod32 ntt_mod_3(3221225473ULL, 3ULL, 30, 5ULL);
 constexpr unsigned ntt_mods[] = {0, 2013265921ULL, 2281701377ULL,
                                  3221225473ULL};
 
-template <typename T>
+static const NttMod32 ntt_mod_1(ntt_mods[1], 15ULL, 27, 31ULL);
+static const NttMod32 ntt_mod_2(ntt_mods[2], 17ULL, 27, 3ULL);
+static const NttMod32 ntt_mod_3(ntt_mods[3], 3ULL, 30, 5ULL);
+
+void InitNtt(int k = 22) {
+  PE_ASSERT(k <= 27 && k >= 0);
+  ntt_mod_1.InitPreOmg(k);
+  ntt_mod_2.InitPreOmg(k);
+  ntt_mod_3.InitPreOmg(k);
+}
+
+template <typename T, unsigned mod>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     Ntt(T* data, const int64 n, const NttMod32& moder, bool inv = false) {
   ntt_base::NttTrans(data, n);
 
-  const unsigned int mod = moder.mod;
   int id = 0;
   for (int64 h = 2; h <= n; h <<= 1) {
     const unsigned int* pre_omg = moder.pre_omg[++id];
@@ -237,13 +244,6 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   }
 }
 
-void InitNtt(int k = 22) {
-  PE_ASSERT(k <= 27 && k >= 0);
-  ntt_mod_1.InitPreOmg(k);
-  ntt_mod_2.InitPreOmg(k);
-  ntt_mod_3.InitPreOmg(k);
-}
-
 // The small version uses two modulus.
 struct NttSmallConstant {
   static constexpr uint64 M1 = 2013265921;
@@ -278,17 +278,17 @@ std::vector<uint64> RunNtt(const NttMod32& moder, const T* X, int64 n,
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Ntt(&XX[0], aligned_size, moder, false);
+    Ntt<uint64, mod>(&XX[0], aligned_size, moder, false);
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Ntt(&YY[0], aligned_size, moder, false);
+    Ntt<uint64, mod>(&YY[0], aligned_size, moder, false);
   }
   constexpr uint64 mod1 = mod;
   for (int64 i = 0; i < aligned_size; ++i) {
     XX[i] = static_cast<uint64>(XX[i]) * YY[i] % mod1;
   }
-  Ntt(&XX[0], aligned_size, moder, true);
+  Ntt<uint64, mod>(&XX[0], aligned_size, moder, true);
   return XX;
 }
 
@@ -489,17 +489,23 @@ struct NttMod64 {
   }
 };
 
-static const NttMod64 ntt_mod_1(180143985094819841ULL, 5ULL, 55, 6ULL);
-static const NttMod64 ntt_mod_2(1945555039024054273ULL, 27ULL, 56, 5ULL);
 constexpr uint64 ntt_mods[] = {0, 180143985094819841ULL,
                                1945555039024054273ULL};
 
-template <typename T>
+static const NttMod64 ntt_mod_1(ntt_mods[1], 5ULL, 55, 6ULL);
+static const NttMod64 ntt_mod_2(ntt_mods[2], 27ULL, 56, 5ULL);
+
+void InitNtt(int k = 22) {
+  PE_ASSERT(k <= 30 && k >= 0);
+  ntt_mod_1.InitPreOmg(k);
+  ntt_mod_2.InitPreOmg(k);
+}
+
+template <typename T, uint64 mod>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     Ntt(T* data, const int64 n, const NttMod64& moder, bool inv = false) {
   ntt_base::NttTrans(data, n);
 
-  const uint64 mod = moder.mod;
   int id = 0;
   for (int64 h = 2; h <= n; h <<= 1) {
     const uint64* pre_omg = moder.pre_omg[++id];
@@ -565,12 +571,6 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   }
 }
 
-void InitNtt(int k = 22) {
-  PE_ASSERT(k <= 30 && k >= 0);
-  ntt_mod_1.InitPreOmg(k);
-  ntt_mod_2.InitPreOmg(k);
-}
-
 template <typename T, uint64 mod>
 std::vector<uint64> RunNtt(const NttMod64& moder, const T* X, int64 n,
                            const T* Y, int64 m, int64 target_mod) {
@@ -598,11 +598,11 @@ std::vector<uint64> RunNtt(const NttMod64& moder, const T* X, int64 n,
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Ntt(&XX[0], aligned_size, moder, false);
+    Ntt<uint64, mod>(&XX[0], aligned_size, moder, false);
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Ntt(&YY[0], aligned_size, moder, false);
+    Ntt<uint64, mod>(&YY[0], aligned_size, moder, false);
   }
   constexpr uint64 mod1 = mod;
   for (int64 i = 0; i < aligned_size; ++i) {
@@ -612,7 +612,7 @@ std::vector<uint64> RunNtt(const NttMod64& moder, const T* X, int64 n,
     XX[i] = MulMod(XX[i], YY[i], tmod1);
 #endif
   }
-  Ntt(&XX[0], aligned_size, moder, true);
+  Ntt<uint64, mod>(&XX[0], aligned_size, moder, true);
 
   return XX;
 }

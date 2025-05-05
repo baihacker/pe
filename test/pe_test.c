@@ -246,6 +246,7 @@ void DisplayCompilerInfo() {
            iter[1].c_str());
   }
 }
+
 int main() {
   DisplayCompilerInfo();
 

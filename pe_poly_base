@@ -349,10 +349,10 @@ struct NttConstant {
   static constexpr uint64 IM13 = 1792765347;
   static constexpr uint64 IM23 = 1006632973;
 
-  static constexpr uint128 M13M = (uint128)IM13 * M13;
-  static constexpr uint128 M23M = (uint128)IM23 * M23;
-  static constexpr uint128 M12M = (uint128)IM12 * M12;
-  static constexpr uint128 MMM = (uint128)M1 * M2 * M3;
+  static constexpr uint128 M13M = static_cast<uint128>(IM13) * M13;
+  static constexpr uint128 M23M = static_cast<uint128>(IM23) * M23;
+  static constexpr uint128 M12M = static_cast<uint128>(IM12) * M12;
+  static constexpr uint128 MMM = static_cast<uint128>(M1) * M2 * M3;
 #else
   static constexpr uint64 INV_M1__M2 = 1140850697;
 
@@ -401,8 +401,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     const uint128 b = tresult[1][i] * NttConstant::M13M;
     const uint128 c = tresult[2][i] * NttConstant::M12M;
     const uint128 t = a + b + c;
-    const auto tmp = t < NttConstant::MMM ? t : t % NttConstant::MMM;
-    result[i] = mod > 0 ? tmp % mod : tmp;
+    const uint128 tmp = t < NttConstant::MMM ? t : t % NttConstant::MMM;
+    result[i] = static_cast<T>(mod > 0 ? Uint128ModUint64(tmp, mod) : tmp);
 #else
     const uint64 a = tresult[0][i];
     const uint64 b = tresult[1][i];
@@ -415,7 +415,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     const uint64 y2 = static_cast<uint128>(x2) * NttConstant::INV_M3__M1M2 %
                       NttConstant::M1M2;
     const uint128 t = static_cast<uint128>(y2) * NttConstant::M3 + c;
-    result[i] = mod > 0 ? t % mod : t;
+    result[i] = static_cast<T>(mod > 0 ? Uint128ModUint64(t, mod) : t);
 #else
     PE_ASSERT(mod > 0);
     const uint64 y2 = MulMod(x2, NttConstant::INV_M3__M1M2, NttConstant::M1M2);
@@ -686,7 +686,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     const uint64 y = Uint128ModUint64(
         static_cast<uint128>(x) * NttConstant::INV_M1__M2, NttConstant::M2);
     const uint128 t = static_cast<uint128>(y) * NttConstant::M1 + a;
-    result[i] = mod > 0 ? t % mod : t;
+    result[i] = static_cast<T>(mod > 0 ? Uint128ModUint64(t, mod) : t);
 #else
     PE_ASSERT(mod > 0);
     const uint64 y = MulMod(x, NttConstant::INV_M1__M2, NttConstant::M2);

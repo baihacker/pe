@@ -54,6 +54,24 @@ SL constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(T) Mod(T a, T mod) {
   return Mod<T, T>(a, mod);
 }
 
+#if PE_HAS_INT128
+// Returns a % b.
+// If possible, it uses an assembly language implementation which requires a / b
+// <= uint64_max, otherwise an exception is thrown.
+// The common use case is a = x * y whwere x < b and y < b.
+SL uint64 Uint128ModUint64(uint128 a, uint64 b) {
+#if defined(COMPILER_GNU) && PE_X86_64
+  uint64 q, r;
+  __asm__("divq\t%4"
+          : "=a"(q), "=d"(r)
+          : "0"(uint64(a)), "1"(uint64(a >> 64)), "rm"(b));
+  return r;
+#else
+  return a % b;
+#endif
+}
+#endif
+
 namespace internal {
 template <typename T, typename TM>
 SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM>))
@@ -135,24 +153,6 @@ SL constexpr REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
   using T = int_promotion_t<T1, T2>;
   return internal::MulModDirectlyImpl<T, TM>(a, b, mod);
 }
-
-#if PE_HAS_INT128
-// Returns a % b.
-// If possible, it uses an assembly language implementation which requires a / b
-// <= uint64_max, otherwise an exception is thrown.
-// The common use case is a = x * y whwere x < b and y < b.
-SL uint64 Uint128ModUint64(uint128 a, uint64 b) {
-#if defined(COMPILER_GNU) && PE_X86_64
-  uint64 q, r;
-  __asm__("divq\t%4"
-          : "=a"(q), "=d"(r)
-          : "0"(uint64(a)), "1"(uint64(a >> 64)), "rm"(b));
-  return r;
-#else
-  return a % b;
-#endif
-}
-#endif
 
 SL constexpr uint32 MulModUint32(uint32 a, uint32 b, uint32 mod) {
   if (mod >> 16) {

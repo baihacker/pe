@@ -402,11 +402,23 @@ SL int64 MulModInt64(int64 a, int64 b, int64 mod) {
 #endif
 
 namespace internal {
+#if !defined(COMPILER_CLANG)
 std::once_flag show_mul_mod_slow_warning_flag;
-
+#endif
 SL void MulModSlowWarningOnce() {
+#if defined(COMPILER_CLANG)
+  static std::atomic_int WARNING_ONCE_FLAG{0};
+  if (WARNING_ONCE_FLAG.exchange(1) == 0)
+#else
   std::call_once(show_mul_mod_slow_warning_flag,
-                 []() { fprintf(stderr, "MulMod may be very slow.\n"); });
+                 []()
+#endif
+  {
+    fprintf(stderr, "MulMod may be very slow.\n");
+  }
+#if !defined(COMPILER_CLANG)
+                );
+#endif
 }
 }  // namespace internal
 

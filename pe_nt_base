@@ -394,10 +394,18 @@ SL void FactorizeByPmask(uint64 n, IntegerFactorization& ret) {
 
 namespace internal {
 
+#if !defined(COMPILER_CLANG)
 std::once_flag factorize_slow_warning_flag;
+#endif
 
 SL void FactorizeWarningOnce(int64 n) {
-  std::call_once(factorize_slow_warning_flag, [=]() {
+#if defined(COMPILER_CLANG)
+  static std::atomic_int WARNING_ONCE_FLAG{0};
+  if (WARNING_ONCE_FLAG.exchange(1) == 0)
+#else
+  std::call_once(factorize_slow_warning_flag, [=]()
+#endif
+  {
     std::cerr << "Factorize is slow." << std::endl;
     std::cerr << std::setw(40) << "maxp = " << maxp << std::endl;
     std::cerr << std::setw(40) << "maxp2 = " << maxp2 << std::endl;
@@ -409,7 +417,10 @@ SL void FactorizeWarningOnce(int64 n) {
                 << std::endl;
     }
     std::cerr << std::setw(40) << "n = " << n << std::endl;
-  });
+  }
+#if !defined(COMPILER_CLANG)
+);
+#endif
 }
 }  // namespace internal
 

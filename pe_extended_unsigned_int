@@ -55,24 +55,23 @@ struct ExtendedUnsignedIntImpl<ET, true> {
 
  private:
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T> && pe_is_unsigned_v<T> &&
-            sizeof(T) <= sizeof(ET)))
-  RETURN(void) FromNativeInt(T v) {
+  constexpr REQUIRES((is_builtin_integer_v<T> && pe_is_unsigned_v<T> &&
+                      sizeof(T) <= sizeof(ET))) RETURN(void)
+      FromNativeInt(T v) {
     low_ = v;
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T> && pe_is_unsigned_v<T> &&
-            sizeof(T) > sizeof(ET)))
-  RETURN(void) FromNativeInt(T v) {
+  constexpr REQUIRES((is_builtin_integer_v<T> && pe_is_unsigned_v<T> &&
+                      sizeof(T) > sizeof(ET))) RETURN(void) FromNativeInt(T v) {
     low_ = v;
     hi_ = v >> half_bitsize;
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T> &&
-            sizeof(T) <= sizeof(ET)))
-  RETURN(void) FromNativeInt(T v) {
+  constexpr REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T> &&
+                      sizeof(T) <= sizeof(ET))) RETURN(void)
+      FromNativeInt(T v) {
     if (v >= 0) {
       low_ = v;
     } else {
@@ -82,14 +81,13 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T> &&
-            sizeof(T) > sizeof(ET)))
-  RETURN(void) FromNativeInt(T v) {
+  constexpr REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T> &&
+                      sizeof(T) > sizeof(ET))) RETURN(void) FromNativeInt(T v) {
     using UnsignedT = pe_make_unsigned_t<T>;
     FromNativeInt<UnsignedT>(static_cast<UnsignedT>(v));
   }
 
-  void FromString(const std::string& str) {
+  constexpr void FromString(const std::string& str) {
     const int n = static_cast<int>(std::size(str));
     if (n == 0) return;
     int idx = 0;
@@ -112,23 +110,23 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   }
 
  public:
-  ExtendedUnsignedIntImpl(ET low = 0) : low_(low), hi_(0) {}
-  ExtendedUnsignedIntImpl(ET low, ET hi) : low_(low), hi_(hi) {}
+  constexpr ExtendedUnsignedIntImpl(ET low = 0) : low_(low), hi_(0) {}
+  constexpr ExtendedUnsignedIntImpl(ET low, ET hi) : low_(low), hi_(hi) {}
 
   template <typename T,
             typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(T)>
-  ExtendedUnsignedIntImpl(T v) : low_(0), hi_(0) {
+  constexpr ExtendedUnsignedIntImpl(T v) : low_(0), hi_(0) {
     FromNativeInt<T>(v);
   }
 
-  ExtendedUnsignedIntImpl(const std::string& str) : low_(0), hi_(0) {
+  constexpr ExtendedUnsignedIntImpl(const std::string& str) : low_(0), hi_(0) {
     FromString(str);
   }
 
-  ExtendedUnsignedIntImpl(const ExtendedUnsignedIntImpl& other)
+  constexpr ExtendedUnsignedIntImpl(const ExtendedUnsignedIntImpl& other)
       : low_(other.low_), hi_(other.hi_) {}
 
-  ExtendedUnsignedIntImpl& operator=(const ET& other) {
+  constexpr ExtendedUnsignedIntImpl& operator=(const ET& other) {
     low_ = other;
     hi_ = 0;
     return *this;
@@ -136,25 +134,26 @@ struct ExtendedUnsignedIntImpl<ET, true> {
 
   template <typename T,
             typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(T)>
-  ExtendedUnsignedIntImpl& operator=(const T& other) {
+  constexpr ExtendedUnsignedIntImpl& operator=(const T& other) {
     low_ = hi_ = 0;
     FromNativeInt<T>(other);
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator=(const std::string& str) {
+  constexpr ExtendedUnsignedIntImpl& operator=(const std::string& str) {
     MakeZeroBits();
     FromString(str);
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator=(const ExtendedUnsignedIntImpl& other) {
+  constexpr ExtendedUnsignedIntImpl& operator=(
+      const ExtendedUnsignedIntImpl& other) {
     low_ = other.low_;
     hi_ = other.hi_;
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator=(
+  constexpr ExtendedUnsignedIntImpl& operator=(
       const ExtendedUnsignedIntImpl&& other) noexcept {
     low_ = std::move(other.low_);
     hi_ = std::move(other.hi_);
@@ -162,32 +161,32 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   }
 
  public:
-  void MakeAbs() {}
+  constexpr void MakeAbs() {}
 
-  void FlipBits() {
+  constexpr void FlipBits() {
     low_ = ~low_;
     hi_ = ~hi_;
   }
 
-  void MakeZeroBits() {
+  constexpr void MakeZeroBits() {
     low_ = 0;
     hi_ = 0;
   }
 
-  void AddOne() {
+  constexpr void AddOne() {
     ++low_;
     if (low_ == 0) {
       ++hi_;
     }
   }
 
-  int GetHighestBit() const { return hi_ & hibit_mask ? 1 : 0; }
+  constexpr int GetHighestBit() const { return hi_ & hibit_mask ? 1 : 0; }
 
-  void ResetHighestBit() { hi_ &= ~hibit_mask; }
+  constexpr void ResetHighestBit() { hi_ &= ~hibit_mask; }
 
-  void SetHighestBit() { hi_ |= hibit_mask; }
+  constexpr void SetHighestBit() { hi_ |= hibit_mask; }
 
-  void SetBit(int idx) {
+  constexpr void SetBit(int idx) {
     if (idx < half_bitsize) {
       low_ |= static_cast<ET>(1) << idx;
     } else {
@@ -195,7 +194,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     }
   }
 
-  void ResetBit(int idx) {
+  constexpr void ResetBit(int idx) {
     if (idx < half_bitsize) {
       low_ &= ~(static_cast<ET>(1) << idx);
     } else {
@@ -203,7 +202,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     }
   }
 
-  int GetBit(int idx) const {
+  constexpr int GetBit(int idx) const {
     if (idx < half_bitsize) {
       return low_ & (static_cast<ET>(1) << idx) ? 1 : 0;
     } else {
@@ -211,7 +210,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     }
   }
 
-  void RevBit(int idx) {
+  constexpr void RevBit(int idx) {
     if (idx < half_bitsize) {
       low_ ^= static_cast<ET>(1) << idx;
     } else {
@@ -219,7 +218,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     }
   }
 
-  int BitCount() const {
+  constexpr int BitCount() const {
     const int each = sizeof(ET) / sizeof(uint32);
 
     int ret = 0;
@@ -248,7 +247,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     return ret;
   }
 
-  void ArithmeticShiftRight(int cnt) {
+  constexpr void ArithmeticShiftRight(int cnt) {
     if (GetHighestBit()) {
       FlipBits();
       AddOne();
@@ -259,7 +258,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     }
   }
 
-  void ShiftRight(int cnt) {
+  constexpr void ShiftRight(int cnt) {
     if (cnt >= bitsize) {
       low_ = hi_ = 0;
     } else if (cnt >= half_bitsize) {
@@ -274,7 +273,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     }
   }
 
-  void ShiftLeft(int cnt) {
+  constexpr void ShiftLeft(int cnt) {
     if (cnt >= bitsize) {
       low_ = hi_ = 0;
     } else if (cnt >= half_bitsize) {
@@ -287,7 +286,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     }
   }
 
-  ET GetQuarter(int i) const {
+  constexpr ET GetQuarter(int i) const {
     switch (i & 3) {
       case 0:
         return low_ & quarter_mask;
@@ -302,14 +301,14 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   }
 
   template <typename T>
-  static void FixSize(std::vector<T>& v) {
+  constexpr static void FixSize(std::vector<T>& v) {
     if (std::empty(v)) v.push_back(0);
     int now = static_cast<int>(std::size(v)) - 1;
     while (now > 0 && v[now] == 0) --now;
     v.resize(now + 1);
   }
 
-  std::vector<uint32> ToUInt32Vector(int fix_size = 1) const {
+  constexpr std::vector<uint32> ToUInt32Vector(int fix_size = 1) const {
     const int each = sizeof(ET) / sizeof(uint32);
 
     std::vector<uint32> r;
@@ -342,7 +341,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     return r;
   }
 
-  void FromUInt32Vector(const std::vector<uint32>& bits32) {
+  constexpr void FromUInt32Vector(const std::vector<uint32>& bits32) {
     const int each = sizeof(ET) / sizeof(int32);
 
     hi_ = 0;
@@ -369,8 +368,8 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(std::vector<T>) ToKBits(int k, int fix_size = 1) const {
+  constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
+      ToKBits(int k, int fix_size = 1) const {
     if (k == 1) {
       return ToBinary<T>(fix_size);
     } else {
@@ -399,8 +398,8 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(void) FromKBits(const int k, const T* bits, const int n) {
+  constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+      FromKBits(const int k, const T* bits, const int n) {
     if (k == 1) {
       FromBinary(bits, n);
     } else {
@@ -418,8 +417,8 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(void) FromKBits(int k, const std::vector<T>& bits) {
+  constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+      FromKBits(int k, const std::vector<T>& bits) {
     if (k == 1) {
       FromBinary(&bits[0], static_cast<int>(std::size(bits)));
     } else {
@@ -428,8 +427,8 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(std::vector<T>) ToBinary(int fix_size = 1) const {
+  constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
+      ToBinary(int fix_size = 1) const {
     std::vector<T> r;
     r.reserve(bitsize);
     ET t = low_;
@@ -451,8 +450,8 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(void) FromBinary(const T* bits, const int n) {
+  constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+      FromBinary(const T* bits, const int n) {
     hi_ = 0;
     for (int i = std::min(bitsize - 1, n - 1); i >= half_bitsize; --i) {
       hi_ = (hi_ << 1) | bits[i];
@@ -465,13 +464,13 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(void) FromBinary(const std::vector<T>& bits) {
+  constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+      FromBinary(const std::vector<T>& bits) {
     FromBinary(&bits[0], static_cast<int>(std::size(bits)));
   }
 
-  static void DivideInplace(ExtendedUnsignedIntImpl& self,
-                            const ExtendedUnsignedIntImpl& other) {
+  constexpr static void DivideInplace(ExtendedUnsignedIntImpl& self,
+                                      const ExtendedUnsignedIntImpl& other) {
     if (self.IsZero()) {
       return;
     }
@@ -517,9 +516,9 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     }
   }
 
-  static void DivideInplace(ExtendedUnsignedIntImpl& self,
-                            const ExtendedUnsignedIntImpl& other,
-                            ExtendedUnsignedIntImpl& remain) {
+  constexpr static void DivideInplace(ExtendedUnsignedIntImpl& self,
+                                      const ExtendedUnsignedIntImpl& other,
+                                      ExtendedUnsignedIntImpl& remain) {
     if (self.IsZero()) {
       remain = 0;
       return;
@@ -573,8 +572,8 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     }
   }
 
-  static void RemainInplace(ExtendedUnsignedIntImpl& self,
-                            const ExtendedUnsignedIntImpl& other) {
+  constexpr static void RemainInplace(ExtendedUnsignedIntImpl& self,
+                                      const ExtendedUnsignedIntImpl& other) {
     if (self.IsZero()) {
       return;
     }
@@ -621,17 +620,17 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   }
 
  public:
-  ET& low() { return low_; }
+  constexpr ET& low() { return low_; }
 
-  ET& hi() { return hi_; }
+  constexpr ET& hi() { return hi_; }
 
-  ET low() const { return low_; }
+  constexpr ET low() const { return low_; }
 
-  ET hi() const { return hi_; }
+  constexpr ET hi() const { return hi_; }
 
-  int sign() const { return low_ || hi_ ? 1 : 0; }
+  constexpr int sign() const { return low_ || hi_ ? 1 : 0; }
 
-  int CompareTo(const ExtendedUnsignedIntImpl& other) const {
+  constexpr int CompareTo(const ExtendedUnsignedIntImpl& other) const {
     if (hi_ != other.hi_) {
       return hi_ < other.hi_ ? -1 : hi_ > other.hi_;
     } else {
@@ -639,36 +638,36 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     }
   }
 
-  int IntSign() const { return low_ || hi_ ? 1 : 0; }
+  constexpr int IntSign() const { return low_ || hi_ ? 1 : 0; }
 
-  int IsZero() const { return low_ == 0 && hi_ == 0; }
+  constexpr int IsZero() const { return low_ == 0 && hi_ == 0; }
 
-  int IsEven() const { return low_ & 1 ? 0 : 1; }
+  constexpr int IsEven() const { return low_ & 1 ? 0 : 1; }
 
-  int IsOdd() const { return low_ & 1 ? 1 : 0; }
+  constexpr int IsOdd() const { return low_ & 1 ? 1 : 0; }
 
-  uint32 LowerBits() const { return static_cast<uint32>(low_); }
+  constexpr uint32 LowerBits() const { return static_cast<uint32>(low_); }
 
-  ExtendedUnsignedIntImpl Abs() const { return *this; }
+  constexpr ExtendedUnsignedIntImpl Abs() const { return *this; }
 
-  ExtendedUnsignedIntImpl FAbs() const { return *this; }
+  constexpr ExtendedUnsignedIntImpl FAbs() const { return *this; }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T> && sizeof(T) <= sizeof(ET)))
-  RETURN(T) ToInt() const {
+  constexpr REQUIRES((is_builtin_integer_v<T> && sizeof(T) <= sizeof(ET)))
+      RETURN(T) ToInt() const {
     return static_cast<T>(low_);
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T> && sizeof(T) > sizeof(ET)))
-  RETURN(T) ToInt() const {
+  constexpr REQUIRES((is_builtin_integer_v<T> && sizeof(T) > sizeof(ET)))
+      RETURN(T) ToInt() const {
     using UnsignedT = pe_make_unsigned_t<T>;
     return static_cast<T>((static_cast<UnsignedT>(hi_) << half_bitsize) |
                           static_cast<UnsignedT>(low_));
   }
 
   template <typename T>
-  T ToFloat() const {
+  constexpr T ToFloat() const {
     auto t = ToUInt32Vector();
     const int size = static_cast<int>(std::size(t));
     T r = 0;
@@ -678,7 +677,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     return r;
   }
 
-  std::string ToString() const {
+  constexpr std::string ToString() const {
     const uint32 output_mod = 1000000000;
     if (IsZero()) {
       return "0";
@@ -720,9 +719,9 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     return ss.str();
   }
 
-  std::string to_string() const { return ToString(); }
+  constexpr std::string to_string() const { return ToString(); }
 
-  ExtendedUnsignedIntImpl Difference(
+  constexpr ExtendedUnsignedIntImpl Difference(
       const ExtendedUnsignedIntImpl& other) const {
     int t = CompareTo(other);
     if (t == 0) {
@@ -753,20 +752,21 @@ struct ExtendedUnsignedIntImpl<ET, true> {
 
  public:
   // Operators
-  ExtendedUnsignedIntImpl operator+() const { return *this; }
+  constexpr ExtendedUnsignedIntImpl operator+() const { return *this; }
 
-  ExtendedUnsignedIntImpl operator-() const {
+  constexpr ExtendedUnsignedIntImpl operator-() const {
     ExtendedUnsignedIntImpl ret(*this);
     FlipBits();
     AddOne();
     return ret;
   }
 
-  ExtendedUnsignedIntImpl operator~() const {
+  constexpr ExtendedUnsignedIntImpl operator~() const {
     return ExtendedUnsignedIntImpl(~low_, ~hi_);
   }
 
-  ExtendedUnsignedIntImpl& operator+=(const ExtendedUnsignedIntImpl& other) {
+  constexpr ExtendedUnsignedIntImpl& operator+=(
+      const ExtendedUnsignedIntImpl& other) {
     if (IsZero()) {
       low_ = other.low();
       hi_ = other.hi();
@@ -785,7 +785,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator+=(const ET& other) {
+  constexpr ExtendedUnsignedIntImpl& operator+=(const ET& other) {
     if (IsZero()) {
       low_ = other;
       hi_ = 0;
@@ -804,7 +804,8 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator-=(const ExtendedUnsignedIntImpl& other) {
+  constexpr ExtendedUnsignedIntImpl& operator-=(
+      const ExtendedUnsignedIntImpl& other) {
     if (other.IsZero()) {
       return *this;
     }
@@ -834,7 +835,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator-=(const ET& other) {
+  constexpr ExtendedUnsignedIntImpl& operator-=(const ET& other) {
     if (other == 0) {
       return *this;
     }
@@ -863,7 +864,8 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator*=(const ExtendedUnsignedIntImpl& other) {
+  constexpr ExtendedUnsignedIntImpl& operator*=(
+      const ExtendedUnsignedIntImpl& other) {
     if (IsZero() || other.IsZero()) {
       low_ = hi_ = 0;
       return *this;
@@ -888,7 +890,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator*=(const ET& other) {
+  constexpr ExtendedUnsignedIntImpl& operator*=(const ET& other) {
     if (IsZero() || other == 0) {
       low_ = hi_ = 0;
       return *this;
@@ -913,80 +915,85 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator/=(const ExtendedUnsignedIntImpl& other) {
+  constexpr ExtendedUnsignedIntImpl& operator/=(
+      const ExtendedUnsignedIntImpl& other) {
     DivideInplace(*this, other);
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator/=(const ET& other) {
+  constexpr ExtendedUnsignedIntImpl& operator/=(const ET& other) {
     return *this /= ExtendedUnsignedIntImpl(other);
   }
 
-  ExtendedUnsignedIntImpl& operator%=(const ExtendedUnsignedIntImpl& other) {
+  constexpr ExtendedUnsignedIntImpl& operator%=(
+      const ExtendedUnsignedIntImpl& other) {
     RemainInplace(*this, other);
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator%=(const ET& other) {
+  constexpr ExtendedUnsignedIntImpl& operator%=(const ET& other) {
     return *this %= ExtendedUnsignedIntImpl(other);
   }
 
-  ExtendedUnsignedIntImpl& operator&=(const ExtendedUnsignedIntImpl& other) {
+  constexpr ExtendedUnsignedIntImpl& operator&=(
+      const ExtendedUnsignedIntImpl& other) {
     low_ &= other.low();
     hi_ &= other.hi();
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator&=(const ET& other) {
+  constexpr ExtendedUnsignedIntImpl& operator&=(const ET& other) {
     low_ &= other;
     hi_ = 0;
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator^=(const ExtendedUnsignedIntImpl& other) {
+  constexpr ExtendedUnsignedIntImpl& operator^=(
+      const ExtendedUnsignedIntImpl& other) {
     low_ ^= other.low();
     hi_ ^= other.hi();
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator^=(const ET& other) {
+  constexpr ExtendedUnsignedIntImpl& operator^=(const ET& other) {
     low_ ^= other;
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator|=(const ExtendedUnsignedIntImpl& other) {
+  constexpr ExtendedUnsignedIntImpl& operator|=(
+      const ExtendedUnsignedIntImpl& other) {
     low_ |= other.low();
     hi_ |= other.hi();
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator|=(const ET& other) {
+  constexpr ExtendedUnsignedIntImpl& operator|=(const ET& other) {
     low_ |= other;
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator>>=(int cnt) {
+  constexpr ExtendedUnsignedIntImpl& operator>>=(int cnt) {
     ShiftRight(cnt);
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator<<=(int cnt) {
+  constexpr ExtendedUnsignedIntImpl& operator<<=(int cnt) {
     ShiftLeft(cnt);
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator++() {
+  constexpr ExtendedUnsignedIntImpl& operator++() {
     AddOne();
     return *this;
   }
 
-  ExtendedUnsignedIntImpl operator++(int) {
+  constexpr ExtendedUnsignedIntImpl operator++(int) {
     ExtendedUnsignedIntImpl ret(*this);
     *this += 1;
     return ret;
   }
 
-  ExtendedUnsignedIntImpl& operator--() {
+  constexpr ExtendedUnsignedIntImpl& operator--() {
     if (low_) {
       --low_;
     } else {
@@ -996,7 +1003,7 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     return *this;
   }
 
-  ExtendedUnsignedIntImpl operator--(int) {
+  constexpr ExtendedUnsignedIntImpl operator--(int) {
     ExtendedUnsignedIntImpl ret(*this);
     *this -= 1;
     return ret;
@@ -1006,99 +1013,99 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   // All the binary operators are friend operators
   // Comparison operators
 #if PE_HAS_CPP20
-  friend inline int operator<=>(const ExtendedUnsignedIntImpl& l,
-                                const ExtendedUnsignedIntImpl& r) {
+  constexpr friend inline int operator<=>(const ExtendedUnsignedIntImpl& l,
+                                          const ExtendedUnsignedIntImpl& r) {
     return l.CompareTo(r);
   }
-  friend inline int operator==(const ExtendedUnsignedIntImpl& l,
-                               const ExtendedUnsignedIntImpl& r) {
+  constexpr friend inline int operator==(const ExtendedUnsignedIntImpl& l,
+                                         const ExtendedUnsignedIntImpl& r) {
     return l.CompareTo(r) == 0;
   }
-  friend inline int operator!=(const ExtendedUnsignedIntImpl& l,
-                               const ExtendedUnsignedIntImpl& r) {
+  constexpr friend inline int operator!=(const ExtendedUnsignedIntImpl& l,
+                                         const ExtendedUnsignedIntImpl& r) {
     return l.CompareTo(r) != 0;
   }
 #else
-  friend inline int operator<(const ExtendedUnsignedIntImpl& l,
-                              const ExtendedUnsignedIntImpl& r) {
+  constexpr friend inline int operator<(const ExtendedUnsignedIntImpl& l,
+                                        const ExtendedUnsignedIntImpl& r) {
     return l.CompareTo(r) < 0;
   }
-  friend inline int operator<=(const ExtendedUnsignedIntImpl& l,
-                               const ExtendedUnsignedIntImpl& r) {
+  constexpr friend inline int operator<=(const ExtendedUnsignedIntImpl& l,
+                                         const ExtendedUnsignedIntImpl& r) {
     return l.CompareTo(r) <= 0;
   }
-  friend inline int operator>(const ExtendedUnsignedIntImpl& l,
-                              const ExtendedUnsignedIntImpl& r) {
+  constexpr friend inline int operator>(const ExtendedUnsignedIntImpl& l,
+                                        const ExtendedUnsignedIntImpl& r) {
     return l.CompareTo(r) > 0;
   }
-  friend inline int operator>=(const ExtendedUnsignedIntImpl& l,
-                               const ExtendedUnsignedIntImpl& r) {
+  constexpr friend inline int operator>=(const ExtendedUnsignedIntImpl& l,
+                                         const ExtendedUnsignedIntImpl& r) {
     return l.CompareTo(r) >= 0;
   }
-  friend inline int operator==(const ExtendedUnsignedIntImpl& l,
-                               const ExtendedUnsignedIntImpl& r) {
+  constexpr friend inline int operator==(const ExtendedUnsignedIntImpl& l,
+                                         const ExtendedUnsignedIntImpl& r) {
     return l.CompareTo(r) == 0;
   }
-  friend inline int operator!=(const ExtendedUnsignedIntImpl& l,
-                               const ExtendedUnsignedIntImpl& r) {
+  constexpr friend inline int operator!=(const ExtendedUnsignedIntImpl& l,
+                                         const ExtendedUnsignedIntImpl& r) {
     return l.CompareTo(r) != 0;
   }
 #endif
-  friend inline ExtendedUnsignedIntImpl operator+(
+  constexpr friend inline ExtendedUnsignedIntImpl operator+(
       const ExtendedUnsignedIntImpl& l, const ExtendedUnsignedIntImpl& r) {
     ExtendedUnsignedIntImpl ret(l);
     ret += r;
     return ret;
   }
-  friend inline ExtendedUnsignedIntImpl operator-(
+  constexpr friend inline ExtendedUnsignedIntImpl operator-(
       const ExtendedUnsignedIntImpl& l, const ExtendedUnsignedIntImpl& r) {
     ExtendedUnsignedIntImpl ret(l);
     ret -= r;
     return ret;
   }
-  friend inline ExtendedUnsignedIntImpl operator*(
+  constexpr friend inline ExtendedUnsignedIntImpl operator*(
       const ExtendedUnsignedIntImpl& l, const ExtendedUnsignedIntImpl& r) {
     ExtendedUnsignedIntImpl ret(l);
     ret *= r;
     return ret;
   }
-  friend inline ExtendedUnsignedIntImpl operator/(
+  constexpr friend inline ExtendedUnsignedIntImpl operator/(
       const ExtendedUnsignedIntImpl& l, const ExtendedUnsignedIntImpl& r) {
     ExtendedUnsignedIntImpl ret(l);
     ret /= r;
     return ret;
   }
-  friend inline ExtendedUnsignedIntImpl operator%(
+  constexpr friend inline ExtendedUnsignedIntImpl operator%(
       const ExtendedUnsignedIntImpl& l, const ExtendedUnsignedIntImpl& r) {
     ExtendedUnsignedIntImpl ret(l);
     ret %= r;
     return ret;
   }
-  friend inline ExtendedUnsignedIntImpl operator&(
+  constexpr friend inline ExtendedUnsignedIntImpl operator&(
       const ExtendedUnsignedIntImpl& l, const ExtendedUnsignedIntImpl& r) {
     ExtendedUnsignedIntImpl ret(l);
     ret &= r;
     return ret;
   }
-  friend inline ExtendedUnsignedIntImpl operator^(
+  constexpr friend inline ExtendedUnsignedIntImpl operator^(
       const ExtendedUnsignedIntImpl& l, const ExtendedUnsignedIntImpl& r) {
     ExtendedUnsignedIntImpl ret(l);
     ret ^= r;
     return ret;
   }
-  friend inline ExtendedUnsignedIntImpl operator|(
+  constexpr friend inline ExtendedUnsignedIntImpl operator|(
       const ExtendedUnsignedIntImpl& l, const ExtendedUnsignedIntImpl& r) {
     ExtendedUnsignedIntImpl ret(l);
     ret |= r;
     return ret;
   }
-  friend inline ExtendedUnsignedIntImpl operator<<(
+  constexpr friend inline ExtendedUnsignedIntImpl operator<<(
       const ExtendedUnsignedIntImpl& l, const int cnt) {
     ExtendedUnsignedIntImpl ret(l);
     ret <<= cnt;
     return ret;
   }
-  friend inline ExtendedUnsignedIntImpl operator>>(
+  constexpr friend inline ExtendedUnsignedIntImpl operator>>(
       const ExtendedUnsignedIntImpl& l, const int cnt) {
     ExtendedUnsignedIntImpl ret(l);
     ret >>= cnt;
@@ -1134,24 +1141,23 @@ struct ExtendedUnsignedIntImpl<ET, false> {
 
  private:
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T> && pe_is_unsigned_v<T> &&
-            sizeof(T) <= sizeof(ET)))
-  RETURN(void) FromNativeInt(T v) {
+  constexpr REQUIRES((is_builtin_integer_v<T> && pe_is_unsigned_v<T> &&
+                      sizeof(T) <= sizeof(ET))) RETURN(void)
+      FromNativeInt(T v) {
     low_ = v;
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T> && pe_is_unsigned_v<T> &&
-            sizeof(T) > sizeof(ET)))
-  RETURN(void) FromNativeInt(T v) {
+  constexpr REQUIRES((is_builtin_integer_v<T> && pe_is_unsigned_v<T> &&
+                      sizeof(T) > sizeof(ET))) RETURN(void) FromNativeInt(T v) {
     low_ = v;
     hi_ = v >> half_bitsize;
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T> &&
-            sizeof(T) <= sizeof(ET)))
-  RETURN(void) FromNativeInt(T v) {
+  constexpr REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T> &&
+                      sizeof(T) <= sizeof(ET))) RETURN(void)
+      FromNativeInt(T v) {
     if (v >= 0) {
       low_ = v;
     } else {
@@ -1161,14 +1167,13 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T> &&
-            sizeof(T) > sizeof(ET)))
-  RETURN(void) FromNativeInt(T v) {
+  constexpr REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T> &&
+                      sizeof(T) > sizeof(ET))) RETURN(void) FromNativeInt(T v) {
     using UnsignedT = pe_make_unsigned_t<T>;
     FromNativeInt<UnsignedT>(static_cast<UnsignedT>(v));
   }
 
-  void FromString(const std::string& str) {
+  constexpr void FromString(const std::string& str) {
     const int n = static_cast<int>(std::size(str));
     if (n == 0) return;
     int idx = 0;
@@ -1191,23 +1196,23 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
  public:
-  ExtendedUnsignedIntImpl(ET low = 0) : low_(low), hi_(0) {}
-  ExtendedUnsignedIntImpl(ET low, ET hi) : low_(low), hi_(hi) {}
+  constexpr ExtendedUnsignedIntImpl(ET low = 0) : low_(low), hi_(0) {}
+  constexpr ExtendedUnsignedIntImpl(ET low, ET hi) : low_(low), hi_(hi) {}
 
   template <typename T,
             typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(T)>
-  ExtendedUnsignedIntImpl(T v) : low_(0), hi_(0) {
+  constexpr ExtendedUnsignedIntImpl(T v) : low_(0), hi_(0) {
     FromNativeInt<T>(v);
   }
 
-  ExtendedUnsignedIntImpl(const std::string& str) : low_(0), hi_(0) {
+  constexpr ExtendedUnsignedIntImpl(const std::string& str) : low_(0), hi_(0) {
     FromString(str);
   }
 
-  ExtendedUnsignedIntImpl(const ExtendedUnsignedIntImpl& other)
+  constexpr ExtendedUnsignedIntImpl(const ExtendedUnsignedIntImpl& other)
       : low_(other.low_), hi_(other.hi_) {}
 
-  ExtendedUnsignedIntImpl& operator=(const ET& other) {
+  constexpr ExtendedUnsignedIntImpl& operator=(const ET& other) {
     low_ = other;
     hi_.MakeZeroBits();
     return *this;
@@ -1215,25 +1220,26 @@ struct ExtendedUnsignedIntImpl<ET, false> {
 
   template <typename T,
             typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(T)>
-  ExtendedUnsignedIntImpl& operator=(const T& other) {
+  constexpr ExtendedUnsignedIntImpl& operator=(const T& other) {
     MakeZeroBits();
     FromNativeInt<T>(other);
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator=(const std::string& str) {
+  constexpr ExtendedUnsignedIntImpl& operator=(const std::string& str) {
     MakeZeroBits();
     FromString(str);
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator=(const ExtendedUnsignedIntImpl& other) {
+  constexpr ExtendedUnsignedIntImpl& operator=(
+      const ExtendedUnsignedIntImpl& other) {
     low_ = other.low_;
     hi_ = other.hi_;
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator=(
+  constexpr ExtendedUnsignedIntImpl& operator=(
       const ExtendedUnsignedIntImpl&& other) noexcept {
     low_ = std::move(other.low_);
     hi_ = std::move(other.hi_);
@@ -1241,32 +1247,32 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
  public:
-  void MakeAbs();
+  constexpr void MakeAbs();
 
-  void FlipBits() {
+  constexpr void FlipBits() {
     low_.FlipBits();
     hi_.FlipBits();
   }
 
-  void MakeZeroBits() {
+  constexpr void MakeZeroBits() {
     low_.MakeZeroBits();
     hi_.MakeZeroBits();
   }
 
-  void AddOne() {
+  constexpr void AddOne() {
     ++low_;
     if (low_.IsZero()) {
       ++hi_;
     }
   }
 
-  int GetHighestBit() const { return hi_.GetHighestBit(); }
+  constexpr int GetHighestBit() const { return hi_.GetHighestBit(); }
 
-  void ResetHighestBit() { hi_.ResetHighestBit(); }
+  constexpr void ResetHighestBit() { hi_.ResetHighestBit(); }
 
-  void SetHighestBit() { hi_.SetHighestBit(); }
+  constexpr void SetHighestBit() { hi_.SetHighestBit(); }
 
-  void SetBit(int idx) {
+  constexpr void SetBit(int idx) {
     if (idx < half_bitsize) {
       low_.SetBit(idx);
     } else {
@@ -1274,7 +1280,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     }
   }
 
-  void ResetBit(int idx) {
+  constexpr void ResetBit(int idx) {
     if (idx < half_bitsize) {
       low_.ResetBit(idx);
     } else {
@@ -1282,7 +1288,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     }
   }
 
-  int GetBit(int idx) const {
+  constexpr int GetBit(int idx) const {
     if (idx < half_bitsize) {
       return low_.GetBit(idx);
     } else {
@@ -1290,7 +1296,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     }
   }
 
-  void RevBit(int idx) {
+  constexpr void RevBit(int idx) {
     if (idx < half_bitsize) {
       low_.RevBit(idx);
     } else {
@@ -1298,9 +1304,9 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     }
   }
 
-  int BitCount() const { return hi_.BitCount() + low_.BitCount(); }
+  constexpr int BitCount() const { return hi_.BitCount() + low_.BitCount(); }
 
-  void ArithmeticShiftRight(int cnt) {
+  constexpr void ArithmeticShiftRight(int cnt) {
     if (GetHighestBit()) {
       FlipBits();
       AddOne();
@@ -1311,7 +1317,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     }
   }
 
-  void ShiftRight(int cnt) {
+  constexpr void ShiftRight(int cnt) {
     if (cnt >= bitsize) {
       MakeZeroBits();
     } else if (cnt >= half_bitsize) {
@@ -1326,7 +1332,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     }
   }
 
-  void ShiftLeft(int cnt) {
+  constexpr void ShiftLeft(int cnt) {
     if (cnt >= bitsize) {
       MakeZeroBits();
     } else if (cnt >= half_bitsize) {
@@ -1339,7 +1345,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     }
   }
 
-  ET GetQuarter(int i) const {
+  constexpr ET GetQuarter(int i) const {
     switch (i & 3) {
       case 0:
         return low_.low();
@@ -1361,7 +1367,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     v.resize(now + 1);
   }
 
-  std::vector<uint32> ToUInt32Vector(int fix_size = 1) const {
+  constexpr std::vector<uint32> ToUInt32Vector(int fix_size = 1) const {
     const int each = sizeof(ET) / sizeof(uint32);
 
     std::vector<uint32> r;
@@ -1376,7 +1382,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     return r;
   }
 
-  void FromUInt32Vector(const std::vector<uint32>& bits32) {
+  constexpr void FromUInt32Vector(const std::vector<uint32>& bits32) {
     const int each = sizeof(ET) / sizeof(int32);
     hi_.MakeZeroBits();
     for (int i = std::min(2 * each - 1, static_cast<int>(std::size(bits32)));
@@ -1392,8 +1398,8 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(std::vector<T>) ToKBits(int k, int fix_size = 1) const {
+  constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
+      ToKBits(int k, int fix_size = 1) const {
     if (k == 1) {
       return ToBinary<T>(fix_size);
     } else {
@@ -1410,8 +1416,8 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(void) FromKBits(int k, const std::vector<T>& bits) {
+  constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+      FromKBits(int k, const std::vector<T>& bits) {
     if (k == 1) {
       FromBinary(&bits[0], static_cast<int>(std::size(bits)));
     } else {
@@ -1420,8 +1426,8 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(void) FromKBits(int k, const T* bits, const int n) {
+  constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+      FromKBits(int k, const T* bits, const int n) {
     if (k == 1) {
       FromBinary(bits, n);
       return;
@@ -1437,8 +1443,8 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(std::vector<T>) ToBinary(int fix_size = 1) const {
+  constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
+      ToBinary(int fix_size = 1) const {
     std::vector<T> r = low_.template ToBinary<T>(0);
     if (!fix_size || !hi_.IsZero()) {
       r.reserve(bitsize);
@@ -1451,14 +1457,14 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(void) FromBinary(const std::vector<T>& bits) {
+  constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+      FromBinary(const std::vector<T>& bits) {
     FromBinary(&bits[0], static_cast<int>(std::size(bits)));
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(void) FromBinary(const T* bits, const int n) {
+  constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+      FromBinary(const T* bits, const int n) {
     low_.FromBinary(bits, n);
     if (n > half_bitsize) {
       hi_.FromBinary(bits + half_bitsize, n - half_bitsize);
@@ -1467,8 +1473,8 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     }
   }
 
-  static void DivideInplace(ExtendedUnsignedIntImpl& self,
-                            const ExtendedUnsignedIntImpl& other) {
+  constexpr static void DivideInplace(ExtendedUnsignedIntImpl& self,
+                                      const ExtendedUnsignedIntImpl& other) {
     if (self.IsZero()) {
       return;
     }
@@ -1515,9 +1521,9 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     }
   }
 
-  static void DivideInplace(ExtendedUnsignedIntImpl& self,
-                            const ExtendedUnsignedIntImpl& other,
-                            ExtendedUnsignedIntImpl& remain) {
+  constexpr static void DivideInplace(ExtendedUnsignedIntImpl& self,
+                                      const ExtendedUnsignedIntImpl& other,
+                                      ExtendedUnsignedIntImpl& remain) {
     if (self.IsZero()) {
       remain.MakeZeroBits();
       return;
@@ -1571,8 +1577,8 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     }
   }
 
-  static void RemainInplace(ExtendedUnsignedIntImpl& self,
-                            const ExtendedUnsignedIntImpl& other) {
+  constexpr static void RemainInplace(ExtendedUnsignedIntImpl& self,
+                                      const ExtendedUnsignedIntImpl& other) {
     if (self.IsZero()) {
       return;
     }
@@ -1619,17 +1625,17 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
  public:
-  ET& low() { return low_; }
+  constexpr ET& low() { return low_; }
 
-  ET& hi() { return hi_; }
+  constexpr ET& hi() { return hi_; }
 
-  ET low() const { return low_; }
+  constexpr ET low() const { return low_; }
 
-  ET hi() const { return hi_; }
+  constexpr ET hi() const { return hi_; }
 
-  int sign() const { return low_.IsZero() || hi_.IsZero() ? 1 : 0; }
+  constexpr int sign() const { return low_.IsZero() || hi_.IsZero() ? 1 : 0; }
 
-  int CompareTo(const ExtendedUnsignedIntImpl& other) const {
+  constexpr int CompareTo(const ExtendedUnsignedIntImpl& other) const {
     int t = hi_.CompareTo(other.hi_);
     if (t != 0) {
       return t;
@@ -1637,36 +1643,38 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     return low_.CompareTo(other.low_);
   }
 
-  int IntSign() const { return low_.IsZero() || hi_.IsZero() ? 1 : 0; }
+  constexpr int IntSign() const {
+    return low_.IsZero() || hi_.IsZero() ? 1 : 0;
+  }
 
-  int IsZero() const { return low_.IsZero() && hi_.IsZero(); }
+  constexpr int IsZero() const { return low_.IsZero() && hi_.IsZero(); }
 
-  int IsEven() const { return LowerBits() & 1 ? 0 : 1; }
+  constexpr int IsEven() const { return LowerBits() & 1 ? 0 : 1; }
 
-  int IsOdd() const { return LowerBits() & 1 ? 1 : 0; }
+  constexpr int IsOdd() const { return LowerBits() & 1 ? 1 : 0; }
 
-  uint32 LowerBits() const { return low_.LowerBits(); }
+  constexpr uint32 LowerBits() const { return low_.LowerBits(); }
 
-  ExtendedUnsignedIntImpl Abs() const { return *this; }
+  constexpr ExtendedUnsignedIntImpl Abs() const { return *this; }
 
-  ExtendedUnsignedIntImpl FAbs() const { return *this; }
+  constexpr ExtendedUnsignedIntImpl FAbs() const { return *this; }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T> && sizeof(T) <= sizeof(ET)))
-  RETURN(T) ToInt() const {
+  constexpr REQUIRES((is_builtin_integer_v<T> && sizeof(T) <= sizeof(ET)))
+      RETURN(T) ToInt() const {
     return low_.template ToInt<T>();
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T> && sizeof(T) > sizeof(ET)))
-  RETURN(T) ToInt() const {
+  constexpr REQUIRES((is_builtin_integer_v<T> && sizeof(T) > sizeof(ET)))
+      RETURN(T) ToInt() const {
     using UnsignedT = pe_make_unsigned_t<T>;
     return static_cast<T>(hi_.template ToInt<UnsignedT>() << half_bitsize |
                           low_.template ToInt<UnsignedT>());
   }
 
   template <typename T>
-  T ToFloat() const {
+  constexpr T ToFloat() const {
     auto t = ToUInt32Vector();
     const int size = static_cast<int>(std::size(t));
     T r = 0;
@@ -1676,7 +1684,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     return r;
   }
 
-  std::string ToString() const {
+  constexpr std::string ToString() const {
     const uint32 output_mod = 1000000000;
     if (IsZero()) {
       return "0";
@@ -1716,9 +1724,9 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     return ss.str();
   }
 
-  std::string to_string() const { return ToString(); }
+  constexpr std::string to_string() const { return ToString(); }
 
-  ExtendedUnsignedIntImpl Difference(
+  constexpr ExtendedUnsignedIntImpl Difference(
       const ExtendedUnsignedIntImpl& other) const {
     int t = CompareTo(other);
     if (t == 0) {
@@ -1749,20 +1757,21 @@ struct ExtendedUnsignedIntImpl<ET, false> {
 
  public:
   // Operators
-  ExtendedUnsignedIntImpl operator+() const { return *this; }
+  constexpr ExtendedUnsignedIntImpl operator+() const { return *this; }
 
-  ExtendedUnsignedIntImpl operator-() const {
+  constexpr ExtendedUnsignedIntImpl operator-() const {
     ExtendedUnsignedIntImpl ret(*this);
     FlipBits();
     AddOne();
     return ret;
   }
 
-  ExtendedUnsignedIntImpl operator~() const {
+  constexpr ExtendedUnsignedIntImpl operator~() const {
     return ExtendedUnsignedIntImpl(~low_, ~hi_);
   }
 
-  ExtendedUnsignedIntImpl& operator+=(const ExtendedUnsignedIntImpl& other) {
+  constexpr ExtendedUnsignedIntImpl& operator+=(
+      const ExtendedUnsignedIntImpl& other) {
     if (IsZero()) {
       low_ = other.low();
       hi_ = other.hi();
@@ -1782,17 +1791,18 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator+=(const ET& other) {
+  constexpr ExtendedUnsignedIntImpl& operator+=(const ET& other) {
     return *this += ExtendedUnsignedIntImpl(other);
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(ExtendedUnsignedIntImpl&) operator+=(const T & other) {
+  constexpr REQUIRES((is_builtin_integer_v<T>))
+      RETURN(ExtendedUnsignedIntImpl&) operator+=(const T & other) {
     return *this += ExtendedUnsignedIntImpl(other);
   }
 
-  ExtendedUnsignedIntImpl& operator-=(const ExtendedUnsignedIntImpl& other) {
+  constexpr ExtendedUnsignedIntImpl& operator-=(
+      const ExtendedUnsignedIntImpl& other) {
     if (other.IsZero()) {
       return *this;
     }
@@ -1823,17 +1833,18 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator-=(const ET& other) {
+  constexpr ExtendedUnsignedIntImpl& operator-=(const ET& other) {
     return *this -= ExtendedUnsignedIntImpl(other);
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(ExtendedUnsignedIntImpl&) operator-=(const T & other) {
+  constexpr REQUIRES((is_builtin_integer_v<T>))
+      RETURN(ExtendedUnsignedIntImpl&) operator-=(const T & other) {
     return *this -= ExtendedUnsignedIntImpl(other);
   }
 
-  ExtendedUnsignedIntImpl& operator*=(const ExtendedUnsignedIntImpl& other) {
+  constexpr ExtendedUnsignedIntImpl& operator*=(
+      const ExtendedUnsignedIntImpl& other) {
     if (IsZero() || other.IsZero()) {
       low_.MakeZeroBits();
       hi_.MakeZeroBits();
@@ -1874,116 +1885,121 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator*=(const ET& other) {
+  constexpr ExtendedUnsignedIntImpl& operator*=(const ET& other) {
     return *this *= ExtendedUnsignedIntImpl(other);
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(ExtendedUnsignedIntImpl&) operator*=(const T & other) {
+  constexpr REQUIRES((is_builtin_integer_v<T>))
+      RETURN(ExtendedUnsignedIntImpl&) operator*=(const T & other) {
     return *this *= ExtendedUnsignedIntImpl(other);
   }
 
-  ExtendedUnsignedIntImpl& operator/=(const ExtendedUnsignedIntImpl& other) {
+  constexpr ExtendedUnsignedIntImpl& operator/=(
+      const ExtendedUnsignedIntImpl& other) {
     DivideInplace(*this, other);
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator/=(const ET& other) {
+  constexpr ExtendedUnsignedIntImpl& operator/=(const ET& other) {
     return *this /= ExtendedUnsignedIntImpl(other);
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(ExtendedUnsignedIntImpl&) operator/=(const T & other) {
+  constexpr REQUIRES((is_builtin_integer_v<T>))
+      RETURN(ExtendedUnsignedIntImpl&) operator/=(const T & other) {
     return *this /= ExtendedUnsignedIntImpl(other);
   }
 
-  ExtendedUnsignedIntImpl& operator%=(const ExtendedUnsignedIntImpl& other) {
+  constexpr ExtendedUnsignedIntImpl& operator%=(
+      const ExtendedUnsignedIntImpl& other) {
     RemainInplace(*this, other);
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator%=(const ET& other) {
+  constexpr ExtendedUnsignedIntImpl& operator%=(const ET& other) {
     return *this %= ExtendedUnsignedIntImpl(other);
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(ExtendedUnsignedIntImpl&) operator%=(const T & other) {
+  constexpr REQUIRES((is_builtin_integer_v<T>))
+      RETURN(ExtendedUnsignedIntImpl&) operator%=(const T & other) {
     return *this %= ExtendedUnsignedIntImpl(other);
   }
 
-  ExtendedUnsignedIntImpl& operator&=(const ExtendedUnsignedIntImpl& other) {
+  constexpr ExtendedUnsignedIntImpl& operator&=(
+      const ExtendedUnsignedIntImpl& other) {
     low_ &= other.low();
     hi_ &= other.hi();
     return *this;
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(ExtendedUnsignedIntImpl&) operator&=(const T & other) {
+  constexpr REQUIRES((is_builtin_integer_v<T>))
+      RETURN(ExtendedUnsignedIntImpl&) operator&=(const T & other) {
     return *this &= ExtendedUnsignedIntImpl(other);
   }
 
-  ExtendedUnsignedIntImpl& operator&=(const ET& other) {
+  constexpr ExtendedUnsignedIntImpl& operator&=(const ET& other) {
     return *this &= ExtendedUnsignedIntImpl(other);
   }
 
-  ExtendedUnsignedIntImpl& operator^=(const ExtendedUnsignedIntImpl& other) {
+  constexpr ExtendedUnsignedIntImpl& operator^=(
+      const ExtendedUnsignedIntImpl& other) {
     low_ ^= other.low();
     hi_ ^= other.hi();
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator^=(const ET& other) {
+  constexpr ExtendedUnsignedIntImpl& operator^=(const ET& other) {
     return *this ^= ExtendedUnsignedIntImpl(other);
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(ExtendedUnsignedIntImpl&) operator^=(const T & other) {
+  constexpr REQUIRES((is_builtin_integer_v<T>))
+      RETURN(ExtendedUnsignedIntImpl&) operator^=(const T & other) {
     return *this ^= ExtendedUnsignedIntImpl(other);
   }
 
-  ExtendedUnsignedIntImpl& operator|=(const ExtendedUnsignedIntImpl& other) {
+  constexpr ExtendedUnsignedIntImpl& operator|=(
+      const ExtendedUnsignedIntImpl& other) {
     low_ |= other.low();
     hi_ |= other.hi();
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator|=(const ET& other) {
+  constexpr ExtendedUnsignedIntImpl& operator|=(const ET& other) {
     return *this |= ExtendedUnsignedIntImpl(other);
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(ExtendedUnsignedIntImpl&) operator|=(const T & other) {
+  constexpr REQUIRES((is_builtin_integer_v<T>))
+      RETURN(ExtendedUnsignedIntImpl&) operator|=(const T & other) {
     return *this |= ExtendedUnsignedIntImpl(other);
   }
 
-  ExtendedUnsignedIntImpl& operator>>=(int cnt) {
+  constexpr ExtendedUnsignedIntImpl& operator>>=(int cnt) {
     ShiftRight(cnt);
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator<<=(int cnt) {
+  constexpr ExtendedUnsignedIntImpl& operator<<=(int cnt) {
     ShiftLeft(cnt);
     return *this;
   }
 
-  ExtendedUnsignedIntImpl& operator++() {
+  constexpr ExtendedUnsignedIntImpl& operator++() {
     AddOne();
     return *this;
   }
 
-  ExtendedUnsignedIntImpl operator++(int) {
+  constexpr ExtendedUnsignedIntImpl operator++(int) {
     ExtendedUnsignedIntImpl ret(*this);
     *this += 1;
     return ret;
   }
 
-  ExtendedUnsignedIntImpl& operator--() {
+  constexpr ExtendedUnsignedIntImpl& operator--() {
     if (!low_.IsZero()) {
       --low_;
     } else {
@@ -1993,7 +2009,7 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     return *this;
   }
 
-  ExtendedUnsignedIntImpl operator--(int) {
+  constexpr ExtendedUnsignedIntImpl operator--(int) {
     ExtendedUnsignedIntImpl ret(*this);
     *this -= 1;
     return ret;
@@ -2003,99 +2019,99 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   // All the binary operators are friend operators
   // Comparison operators
 #if PE_HAS_CPP20
-  friend inline int operator<=>(const ExtendedUnsignedIntImpl& l,
-                                const ExtendedUnsignedIntImpl& r) {
+  constexpr friend inline int operator<=>(const ExtendedUnsignedIntImpl& l,
+                                          const ExtendedUnsignedIntImpl& r) {
     return l.CompareTo(r);
   }
-  friend inline int operator==(const ExtendedUnsignedIntImpl& l,
-                               const ExtendedUnsignedIntImpl& r) {
+  constexpr friend inline int operator==(const ExtendedUnsignedIntImpl& l,
+                                         const ExtendedUnsignedIntImpl& r) {
     return l.CompareTo(r) == 0;
   }
-  friend inline int operator!=(const ExtendedUnsignedIntImpl& l,
-                               const ExtendedUnsignedIntImpl& r) {
+  constexpr friend inline int operator!=(const ExtendedUnsignedIntImpl& l,
+                                         const ExtendedUnsignedIntImpl& r) {
     return l.CompareTo(r) != 0;
   }
 #else
-  friend inline int operator<(const ExtendedUnsignedIntImpl& l,
-                              const ExtendedUnsignedIntImpl& r) {
+  constexpr friend inline int operator<(const ExtendedUnsignedIntImpl& l,
+                                        const ExtendedUnsignedIntImpl& r) {
     return l.CompareTo(r) < 0;
   }
-  friend inline int operator<=(const ExtendedUnsignedIntImpl& l,
-                               const ExtendedUnsignedIntImpl& r) {
+  constexpr friend inline int operator<=(const ExtendedUnsignedIntImpl& l,
+                                         const ExtendedUnsignedIntImpl& r) {
     return l.CompareTo(r) <= 0;
   }
-  friend inline int operator>(const ExtendedUnsignedIntImpl& l,
-                              const ExtendedUnsignedIntImpl& r) {
+  constexpr friend inline int operator>(const ExtendedUnsignedIntImpl& l,
+                                        const ExtendedUnsignedIntImpl& r) {
     return l.CompareTo(r) > 0;
   }
-  friend inline int operator>=(const ExtendedUnsignedIntImpl& l,
-                               const ExtendedUnsignedIntImpl& r) {
+  constexpr friend inline int operator>=(const ExtendedUnsignedIntImpl& l,
+                                         const ExtendedUnsignedIntImpl& r) {
     return l.CompareTo(r) >= 0;
   }
-  friend inline int operator==(const ExtendedUnsignedIntImpl& l,
-                               const ExtendedUnsignedIntImpl& r) {
+  constexpr friend inline int operator==(const ExtendedUnsignedIntImpl& l,
+                                         const ExtendedUnsignedIntImpl& r) {
     return l.CompareTo(r) == 0;
   }
-  friend inline int operator!=(const ExtendedUnsignedIntImpl& l,
-                               const ExtendedUnsignedIntImpl& r) {
+  constexpr friend inline int operator!=(const ExtendedUnsignedIntImpl& l,
+                                         const ExtendedUnsignedIntImpl& r) {
     return l.CompareTo(r) != 0;
   }
 #endif
-  friend inline ExtendedUnsignedIntImpl operator+(
+  constexpr friend inline ExtendedUnsignedIntImpl operator+(
       const ExtendedUnsignedIntImpl& l, const ExtendedUnsignedIntImpl& r) {
     ExtendedUnsignedIntImpl ret(l);
     ret += r;
     return ret;
   }
-  friend inline ExtendedUnsignedIntImpl operator-(
+  constexpr friend inline ExtendedUnsignedIntImpl operator-(
       const ExtendedUnsignedIntImpl& l, const ExtendedUnsignedIntImpl& r) {
     ExtendedUnsignedIntImpl ret(l);
     ret -= r;
     return ret;
   }
-  friend inline ExtendedUnsignedIntImpl operator*(
+  constexpr friend inline ExtendedUnsignedIntImpl operator*(
       const ExtendedUnsignedIntImpl& l, const ExtendedUnsignedIntImpl& r) {
     ExtendedUnsignedIntImpl ret(l);
     ret *= r;
     return ret;
   }
-  friend inline ExtendedUnsignedIntImpl operator/(
+  constexpr friend inline ExtendedUnsignedIntImpl operator/(
       const ExtendedUnsignedIntImpl& l, const ExtendedUnsignedIntImpl& r) {
     ExtendedUnsignedIntImpl ret(l);
     ret /= r;
     return ret;
   }
-  friend inline ExtendedUnsignedIntImpl operator%(
+  constexpr friend inline ExtendedUnsignedIntImpl operator%(
       const ExtendedUnsignedIntImpl& l, const ExtendedUnsignedIntImpl& r) {
     ExtendedUnsignedIntImpl ret(l);
     ret %= r;
     return ret;
   }
-  friend inline ExtendedUnsignedIntImpl operator&(
+  constexpr friend inline ExtendedUnsignedIntImpl operator&(
       const ExtendedUnsignedIntImpl& l, const ExtendedUnsignedIntImpl& r) {
     ExtendedUnsignedIntImpl ret(l);
     ret &= r;
     return ret;
   }
-  friend inline ExtendedUnsignedIntImpl operator^(
+  constexpr friend inline ExtendedUnsignedIntImpl operator^(
       const ExtendedUnsignedIntImpl& l, const ExtendedUnsignedIntImpl& r) {
     ExtendedUnsignedIntImpl ret(l);
     ret ^= r;
     return ret;
   }
-  friend inline ExtendedUnsignedIntImpl operator|(
+  constexpr friend inline ExtendedUnsignedIntImpl operator|(
       const ExtendedUnsignedIntImpl& l, const ExtendedUnsignedIntImpl& r) {
     ExtendedUnsignedIntImpl ret(l);
     ret |= r;
     return ret;
   }
-  friend inline ExtendedUnsignedIntImpl operator<<(
+  constexpr friend inline ExtendedUnsignedIntImpl operator<<(
       const ExtendedUnsignedIntImpl& l, const int cnt) {
     ExtendedUnsignedIntImpl ret(l);
     ret <<= cnt;
     return ret;
   }
-  friend inline ExtendedUnsignedIntImpl operator>>(
+  constexpr friend inline ExtendedUnsignedIntImpl operator>>(
       const ExtendedUnsignedIntImpl& l, const int cnt) {
     ExtendedUnsignedIntImpl ret(l);
     ret >>= cnt;

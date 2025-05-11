@@ -22,18 +22,19 @@ struct ExtendedSignedIntImpl<ET, true>
   using SignedT = ExtendedSignedIntImpl<ET, true>;
 
  public:
-  ExtendedSignedIntImpl(ET low = 0) : base(low) {}
-  ExtendedSignedIntImpl(ET low, ET hi) : base(low, hi) {}
+  constexpr ExtendedSignedIntImpl(ET low = 0) : base(low) {}
+  constexpr ExtendedSignedIntImpl(ET low, ET hi) : base(low, hi) {}
 
   template <typename T,
             typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(T)>
-  ExtendedSignedIntImpl(T v) : base(v) {}
+  constexpr ExtendedSignedIntImpl(T v) : base(v) {}
 
-  ExtendedSignedIntImpl(const std::string& str) : base(str) {}
+  constexpr ExtendedSignedIntImpl(const std::string& str) : base(str) {}
 
-  ExtendedSignedIntImpl(const ExtendedSignedIntImpl& other) : base(other) {}
+  constexpr ExtendedSignedIntImpl(const ExtendedSignedIntImpl& other)
+      : base(other) {}
 
-  ExtendedSignedIntImpl& operator=(const ET& other) {
+  constexpr ExtendedSignedIntImpl& operator=(const ET& other) {
     base::low_ = other;
     base::hi_ = 0;
     return *this;
@@ -41,23 +42,24 @@ struct ExtendedSignedIntImpl<ET, true>
 
   template <typename T,
             typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(T)>
-  ExtendedSignedIntImpl& operator=(const T& other) {
+  constexpr ExtendedSignedIntImpl& operator=(const T& other) {
     base::operator=(other);
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator=(const std::string& str) {
+  constexpr ExtendedSignedIntImpl& operator=(const std::string& str) {
     base::operator=(str);
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator=(const ExtendedSignedIntImpl& other) {
+  constexpr ExtendedSignedIntImpl& operator=(
+      const ExtendedSignedIntImpl& other) {
     base::low_ = other.low();
     base::hi_ = other.hi();
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator=(
+  constexpr ExtendedSignedIntImpl& operator=(
       const ExtendedSignedIntImpl&& other) noexcept {
     base::low_ = std::move(other.low());
     base::hi_ = std::move(other.hi());
@@ -65,15 +67,15 @@ struct ExtendedSignedIntImpl<ET, true>
   }
 
  public:
-  void MakeAbs() {
+  constexpr void MakeAbs() {
     if (base::GetHighestBit()) {
       base::FlipBits();
       base::AddOne();
     }
   }
 
-  static void DivideInplace(ExtendedSignedIntImpl& self,
-                            const ExtendedSignedIntImpl& other) {
+  constexpr static void DivideInplace(ExtendedSignedIntImpl& self,
+                                      const ExtendedSignedIntImpl& other) {
     int s1 = self.IntSign();
     int s2 = other.IntSign();
     if (s1 == 0) {
@@ -100,9 +102,9 @@ struct ExtendedSignedIntImpl<ET, true>
     }
   }
 
-  static void DivideInplace(ExtendedSignedIntImpl& self,
-                            const ExtendedSignedIntImpl& other,
-                            ExtendedSignedIntImpl& remain) {
+  constexpr static void DivideInplace(ExtendedSignedIntImpl& self,
+                                      const ExtendedSignedIntImpl& other,
+                                      ExtendedSignedIntImpl& remain) {
     int s1 = self.IntSign();
     int s2 = other.IntSign();
     if (s1 == 0) {
@@ -136,8 +138,8 @@ struct ExtendedSignedIntImpl<ET, true>
     }
   }
 
-  static void RemainInplace(ExtendedSignedIntImpl& self,
-                            const ExtendedSignedIntImpl& other) {
+  constexpr static void RemainInplace(ExtendedSignedIntImpl& self,
+                                      const ExtendedSignedIntImpl& other) {
     int s1 = self.IntSign();
     int s2 = other.IntSign();
     if (s1 == 0) {
@@ -170,9 +172,11 @@ struct ExtendedSignedIntImpl<ET, true>
 
   using base::hi;
 
-  int sign() const { return base::GetHighestBit() ? -1 : (IsZero() ? 0 : 1); }
+  constexpr int sign() const {
+    return base::GetHighestBit() ? -1 : (IsZero() ? 0 : 1);
+  }
 
-  int CompareTo(const ExtendedSignedIntImpl& other) const {
+  constexpr int CompareTo(const ExtendedSignedIntImpl& other) const {
     int s1 = IntSign();
     int s2 = other.IntSign();
     if (s1 != s2) {
@@ -188,7 +192,7 @@ struct ExtendedSignedIntImpl<ET, true>
     }
   }
 
-  int IntSign() const {
+  constexpr int IntSign() const {
     return base::GetHighestBit() ? -1 : (IsZero() ? 0 : 1);
   }
 
@@ -200,7 +204,7 @@ struct ExtendedSignedIntImpl<ET, true>
 
   using base::LowerBits;
 
-  ExtendedSignedIntImpl Abs() const {
+  constexpr ExtendedSignedIntImpl Abs() const {
     ExtendedSignedIntImpl ret(*this);
     // Note it doesn't work if *this = minimum value.
     if (ret.IntSign() < 0) {
@@ -210,7 +214,7 @@ struct ExtendedSignedIntImpl<ET, true>
     return ret;
   }
 
-  ExtendedSignedIntImpl FAbs() const {
+  constexpr ExtendedSignedIntImpl FAbs() const {
     ExtendedSignedIntImpl ret(*this);
     // Note it doesn't work if *this = minimum value.
     if (ret.IntSign() < 0) {
@@ -223,7 +227,7 @@ struct ExtendedSignedIntImpl<ET, true>
   using base::ToInt;
 
   template <typename T>
-  T ToFloat() const {
+  constexpr T ToFloat() const {
     if (IntSign() >= 0) {
       return base::template ToFloat<T>();
     } else {
@@ -231,7 +235,7 @@ struct ExtendedSignedIntImpl<ET, true>
     }
   }
 
-  std::string ToString() const {
+  constexpr std::string ToString() const {
     if (IsZero()) {
       return "0";
     }
@@ -248,39 +252,42 @@ struct ExtendedSignedIntImpl<ET, true>
     }
   }
 
-  std::string to_string() const { return ToString(); }
+  constexpr std::string to_string() const { return ToString(); }
 
-  ExtendedSignedIntImpl Difference(const ExtendedSignedIntImpl& other) const {
+  constexpr ExtendedSignedIntImpl Difference(
+      const ExtendedSignedIntImpl& other) const {
     auto t = base::Difference(other);
     return ExtendedSignedIntImpl(t.low(), t.hi());
   }
 
  public:
   // Operators
-  ExtendedSignedIntImpl operator+() const { return *this; }
+  constexpr ExtendedSignedIntImpl operator+() const { return *this; }
 
-  ExtendedSignedIntImpl operator-() const {
+  constexpr ExtendedSignedIntImpl operator-() const {
     ExtendedSignedIntImpl ret(*this);
     base::FlipBits();
     base::AddOne();
     return ret;
   }
 
-  ExtendedSignedIntImpl operator~() const {
+  constexpr ExtendedSignedIntImpl operator~() const {
     return ExtendedSignedIntImpl(~base::low_, ~base::hi_);
   }
 
-  ExtendedSignedIntImpl& operator+=(const ExtendedSignedIntImpl& other) {
+  constexpr ExtendedSignedIntImpl& operator+=(
+      const ExtendedSignedIntImpl& other) {
     base::operator+=(other);
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator+=(const ET& other) {
+  constexpr ExtendedSignedIntImpl& operator+=(const ET& other) {
     base::operator+=(other);
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator-=(const ExtendedSignedIntImpl& other) {
+  constexpr ExtendedSignedIntImpl& operator-=(
+      const ExtendedSignedIntImpl& other) {
     if (other.IsZero()) {
       return *this;
     }
@@ -292,7 +299,7 @@ struct ExtendedSignedIntImpl<ET, true>
     return *this += t;
   }
 
-  ExtendedSignedIntImpl& operator-=(const ET& other) {
+  constexpr ExtendedSignedIntImpl& operator-=(const ET& other) {
     if (other == 0) {
       return *this;
     }
@@ -304,7 +311,8 @@ struct ExtendedSignedIntImpl<ET, true>
     return *this += t;
   }
 
-  ExtendedSignedIntImpl& operator*=(const ExtendedSignedIntImpl& other) {
+  constexpr ExtendedSignedIntImpl& operator*=(
+      const ExtendedSignedIntImpl& other) {
     if (IsZero() || other.IsZero()) {
       base::low_ = base::hi_ = 0;
       return *this;
@@ -328,7 +336,7 @@ struct ExtendedSignedIntImpl<ET, true>
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator*=(const ET& other) {
+  constexpr ExtendedSignedIntImpl& operator*=(const ET& other) {
     if (IsZero() || other == 0) {
       base::low_ = base::hi_ = 0;
       return *this;
@@ -337,80 +345,85 @@ struct ExtendedSignedIntImpl<ET, true>
     return *this *= ExtendedSignedIntImpl(other);
   }
 
-  ExtendedSignedIntImpl& operator/=(const ExtendedSignedIntImpl& other) {
+  constexpr ExtendedSignedIntImpl& operator/=(
+      const ExtendedSignedIntImpl& other) {
     DivideInplace(*this, other);
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator/=(const ET& other) {
+  constexpr ExtendedSignedIntImpl& operator/=(const ET& other) {
     return *this /= ExtendedSignedIntImpl(other);
   }
 
-  ExtendedSignedIntImpl& operator%=(const ExtendedSignedIntImpl& other) {
+  constexpr ExtendedSignedIntImpl& operator%=(
+      const ExtendedSignedIntImpl& other) {
     RemainInplace(*this, other);
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator%=(const ET& other) {
+  constexpr ExtendedSignedIntImpl& operator%=(const ET& other) {
     return *this %= ExtendedSignedIntImpl(other);
   }
 
-  ExtendedSignedIntImpl& operator&=(const ExtendedSignedIntImpl& other) {
+  constexpr ExtendedSignedIntImpl& operator&=(
+      const ExtendedSignedIntImpl& other) {
     base::low_ &= other.low();
     base::hi_ &= other.hi();
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator&=(const ET& other) {
+  constexpr ExtendedSignedIntImpl& operator&=(const ET& other) {
     base::low_ &= other;
     base::hi_ = 0;
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator^=(const ExtendedSignedIntImpl& other) {
+  constexpr ExtendedSignedIntImpl& operator^=(
+      const ExtendedSignedIntImpl& other) {
     base::low_ ^= other.low();
     base::hi_ ^= other.hi();
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator^=(const ET& other) {
+  constexpr ExtendedSignedIntImpl& operator^=(const ET& other) {
     base::low_ ^= other;
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator|=(const ExtendedSignedIntImpl& other) {
+  constexpr ExtendedSignedIntImpl& operator|=(
+      const ExtendedSignedIntImpl& other) {
     base::low_ |= other.low();
     base::hi_ |= other.hi();
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator|=(const ET& other) {
+  constexpr ExtendedSignedIntImpl& operator|=(const ET& other) {
     base::low_ |= other;
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator>>=(int cnt) {
+  constexpr ExtendedSignedIntImpl& operator>>=(int cnt) {
     base::ArithmeticShiftRight(cnt);
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator<<=(int cnt) {
+  constexpr ExtendedSignedIntImpl& operator<<=(int cnt) {
     base::ShiftLeft(cnt);
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator++() {
+  constexpr ExtendedSignedIntImpl& operator++() {
     base::AddOne();
     return *this;
   }
 
-  ExtendedSignedIntImpl operator++(int) {
+  constexpr ExtendedSignedIntImpl operator++(int) {
     ExtendedSignedIntImpl ret(*this);
     ++*this;
     return ret;
   }
 
-  ExtendedSignedIntImpl& operator--() {
+  constexpr ExtendedSignedIntImpl& operator--() {
     if (base::low_) {
       --base::low_;
     } else {
@@ -420,7 +433,7 @@ struct ExtendedSignedIntImpl<ET, true>
     return *this;
   }
 
-  ExtendedSignedIntImpl operator--(int) {
+  constexpr ExtendedSignedIntImpl operator--(int) {
     ExtendedSignedIntImpl ret(*this);
     --*this;
     return ret;
@@ -430,100 +443,100 @@ struct ExtendedSignedIntImpl<ET, true>
   // All the binary operators are friend operators
   // Comparison operators
 #if PE_HAS_CPP20
-  friend inline int operator<=>(const ExtendedSignedIntImpl& l,
-                                const ExtendedSignedIntImpl& r) {
+  constexpr friend inline int operator<=>(const ExtendedSignedIntImpl& l,
+                                          const ExtendedSignedIntImpl& r) {
     return l.CompareTo(r);
   }
-  friend inline int operator==(const ExtendedSignedIntImpl& l,
-                               const ExtendedSignedIntImpl& r) {
+  constexpr friend inline int operator==(const ExtendedSignedIntImpl& l,
+                                         const ExtendedSignedIntImpl& r) {
     return l.CompareTo(r) == 0;
   }
-  friend inline int operator!=(const ExtendedSignedIntImpl& l,
-                               const ExtendedSignedIntImpl& r) {
+  constexpr friend inline int operator!=(const ExtendedSignedIntImpl& l,
+                                         const ExtendedSignedIntImpl& r) {
     return l.CompareTo(r) != 0;
   }
 #else
-  friend inline int operator<(const ExtendedSignedIntImpl& l,
-                              const ExtendedSignedIntImpl& r) {
+  constexpr friend inline int operator<(const ExtendedSignedIntImpl& l,
+                                        const ExtendedSignedIntImpl& r) {
     return l.CompareTo(r) < 0;
   }
-  friend inline int operator<=(const ExtendedSignedIntImpl& l,
-                               const ExtendedSignedIntImpl& r) {
+  constexpr friend inline int operator<=(const ExtendedSignedIntImpl& l,
+                                         const ExtendedSignedIntImpl& r) {
     return l.CompareTo(r) <= 0;
   }
-  friend inline int operator>(const ExtendedSignedIntImpl& l,
-                              const ExtendedSignedIntImpl& r) {
+  constexpr friend inline int operator>(const ExtendedSignedIntImpl& l,
+                                        const ExtendedSignedIntImpl& r) {
     return l.CompareTo(r) > 0;
   }
-  friend inline int operator>=(const ExtendedSignedIntImpl& l,
-                               const ExtendedSignedIntImpl& r) {
+  constexpr friend inline int operator>=(const ExtendedSignedIntImpl& l,
+                                         const ExtendedSignedIntImpl& r) {
     return l.CompareTo(r) >= 0;
   }
-  friend inline int operator==(const ExtendedSignedIntImpl& l,
-                               const ExtendedSignedIntImpl& r) {
+  constexpr friend inline int operator==(const ExtendedSignedIntImpl& l,
+                                         const ExtendedSignedIntImpl& r) {
     return l.CompareTo(r) == 0;
   }
-  friend inline int operator!=(const ExtendedSignedIntImpl& l,
-                               const ExtendedSignedIntImpl& r) {
+  constexpr friend inline int operator!=(const ExtendedSignedIntImpl& l,
+                                         const ExtendedSignedIntImpl& r) {
     return l.CompareTo(r) != 0;
   }
 #endif
-  friend inline ExtendedSignedIntImpl operator+(
+  constexpr friend inline ExtendedSignedIntImpl operator+(
       const ExtendedSignedIntImpl& l, const ExtendedSignedIntImpl& r) {
     ExtendedSignedIntImpl ret(l);
     ret += r;
     return ret;
   }
-  friend inline ExtendedSignedIntImpl operator-(
+  constexpr friend inline ExtendedSignedIntImpl operator-(
       const ExtendedSignedIntImpl& l, const ExtendedSignedIntImpl& r) {
     ExtendedSignedIntImpl ret(l);
     ret -= r;
     return ret;
   }
-  friend inline ExtendedSignedIntImpl operator*(
+  constexpr friend inline ExtendedSignedIntImpl operator*(
       const ExtendedSignedIntImpl& l, const ExtendedSignedIntImpl& r) {
     ExtendedSignedIntImpl ret(l);
     ret *= r;
     return ret;
   }
-  friend inline ExtendedSignedIntImpl operator/(
+  constexpr friend inline ExtendedSignedIntImpl operator/(
       const ExtendedSignedIntImpl& l, const ExtendedSignedIntImpl& r) {
     ExtendedSignedIntImpl ret(l);
     ret /= r;
     return ret;
   }
-  friend inline ExtendedSignedIntImpl operator%(
+  constexpr friend inline ExtendedSignedIntImpl operator%(
       const ExtendedSignedIntImpl& l, const ExtendedSignedIntImpl& r) {
     ExtendedSignedIntImpl ret(l);
     ret %= r;
     return ret;
   }
-  friend inline ExtendedSignedIntImpl operator&(
+  constexpr friend inline ExtendedSignedIntImpl operator&(
       const ExtendedSignedIntImpl& l, const ExtendedSignedIntImpl& r) {
     ExtendedSignedIntImpl ret(l);
     ret &= r;
     return ret;
   }
-  friend inline ExtendedSignedIntImpl operator^(
+  constexpr friend inline ExtendedSignedIntImpl operator^(
       const ExtendedSignedIntImpl& l, const ExtendedSignedIntImpl& r) {
     ExtendedSignedIntImpl ret(l);
     ret ^= r;
     return ret;
   }
-  friend inline ExtendedSignedIntImpl operator|(
+  constexpr friend inline ExtendedSignedIntImpl operator|(
       const ExtendedSignedIntImpl& l, const ExtendedSignedIntImpl& r) {
     ExtendedSignedIntImpl ret(l);
     ret |= r;
     return ret;
   }
-  friend inline ExtendedSignedIntImpl operator<<(const ExtendedSignedIntImpl& l,
-                                                 const int cnt) {
+  constexpr friend inline ExtendedSignedIntImpl operator<<(
+      const ExtendedSignedIntImpl& l, const int cnt) {
     ExtendedSignedIntImpl ret(l);
     ret <<= cnt;
     return ret;
   }
-  friend inline ExtendedSignedIntImpl operator>>(const ExtendedSignedIntImpl& l,
-                                                 const int cnt) {
+  constexpr friend inline ExtendedSignedIntImpl operator>>(
+      const ExtendedSignedIntImpl& l, const int cnt) {
     ExtendedSignedIntImpl ret(l);
     ret >>= cnt;
     return ret;
@@ -542,19 +555,19 @@ struct ExtendedSignedIntImpl<ET, false>
   using SignedT = ExtendedSignedIntImpl<ET, false>;
 
  public:
-  ExtendedSignedIntImpl(ET low = 0) : base(low) {}
-  ExtendedSignedIntImpl(ET low, ET hi) : base(low, hi) {}
+  constexpr ExtendedSignedIntImpl(ET low = 0) : base(low) {}
+  constexpr ExtendedSignedIntImpl(ET low, ET hi) : base(low, hi) {}
 
   template <typename T,
             typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(T)>
-  ExtendedSignedIntImpl(T v) : base(v) {}
+  constexpr ExtendedSignedIntImpl(T v) : base(v) {}
 
-  ExtendedSignedIntImpl(const std::string& str) : base(str) {}
+  constexpr ExtendedSignedIntImpl(const std::string& str) : base(str) {}
 
-  ExtendedSignedIntImpl(const ExtendedSignedIntImpl& other)
+  constexpr ExtendedSignedIntImpl(const ExtendedSignedIntImpl& other)
       : base(other.low(), other.hi()) {}
 
-  ExtendedSignedIntImpl& operator=(const ET& other) {
+  constexpr ExtendedSignedIntImpl& operator=(const ET& other) {
     base::low_ = other;
     base::hi_.MakeZeroBits();
     return *this;
@@ -562,23 +575,24 @@ struct ExtendedSignedIntImpl<ET, false>
 
   template <typename T,
             typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(T)>
-  ExtendedSignedIntImpl& operator=(const T& other) {
+  constexpr ExtendedSignedIntImpl& operator=(const T& other) {
     base::operator=(other);
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator=(const std::string& str) {
+  constexpr ExtendedSignedIntImpl& operator=(const std::string& str) {
     base::operator=(str);
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator=(const ExtendedSignedIntImpl& other) {
+  constexpr ExtendedSignedIntImpl& operator=(
+      const ExtendedSignedIntImpl& other) {
     base::low_ = other.low();
     base::hi_ = other.hi();
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator=(
+  constexpr ExtendedSignedIntImpl& operator=(
       const ExtendedSignedIntImpl&& other) noexcept {
     base::low_ = std::move(other.low());
     base::hi_ = std::move(other.hi());
@@ -586,15 +600,15 @@ struct ExtendedSignedIntImpl<ET, false>
   }
 
  public:
-  void MakeAbs() {
+  constexpr void MakeAbs() {
     if (base::GetHighestBit()) {
       base::FlipBits();
       base::AddOne();
     }
   }
 
-  static void DivideInplace(ExtendedSignedIntImpl& self,
-                            const ExtendedSignedIntImpl& other) {
+  constexpr static void DivideInplace(ExtendedSignedIntImpl& self,
+                                      const ExtendedSignedIntImpl& other) {
     int s1 = self.IntSign();
     int s2 = other.IntSign();
     if (s1 == 0) {
@@ -621,9 +635,9 @@ struct ExtendedSignedIntImpl<ET, false>
     }
   }
 
-  static void DivideInplace(ExtendedSignedIntImpl& self,
-                            const ExtendedSignedIntImpl& other,
-                            ExtendedSignedIntImpl& remain) {
+  constexpr static void DivideInplace(ExtendedSignedIntImpl& self,
+                                      const ExtendedSignedIntImpl& other,
+                                      ExtendedSignedIntImpl& remain) {
     int s1 = self.IntSign();
     int s2 = other.IntSign();
     if (s1 == 0) {
@@ -656,8 +670,8 @@ struct ExtendedSignedIntImpl<ET, false>
     }
   }
 
-  static void RemainInplace(ExtendedSignedIntImpl& self,
-                            const ExtendedSignedIntImpl& other) {
+  constexpr static void RemainInplace(ExtendedSignedIntImpl& self,
+                                      const ExtendedSignedIntImpl& other) {
     int s1 = self.IntSign();
     int s2 = other.IntSign();
     if (s1 == 0) {
@@ -689,11 +703,11 @@ struct ExtendedSignedIntImpl<ET, false>
 
   using base::hi;
 
-  int sign() const {
+  constexpr int sign() const {
     return base::low_.IntSign() || base::hi_.IntSign() ? 1 : 0;
   }
 
-  int CompareTo(const ExtendedSignedIntImpl& other) const {
+  constexpr int CompareTo(const ExtendedSignedIntImpl& other) const {
     int s1 = IntSign();
     int s2 = other.IntSign();
     if (s1 != s2) {
@@ -709,7 +723,7 @@ struct ExtendedSignedIntImpl<ET, false>
     }
   }
 
-  int IntSign() const {
+  constexpr int IntSign() const {
     return base::GetHighestBit() ? -1 : (IsZero() ? 0 : 1);
   }
 
@@ -721,7 +735,7 @@ struct ExtendedSignedIntImpl<ET, false>
 
   using base::LowerBits;
 
-  ExtendedSignedIntImpl Abs() const {
+  constexpr ExtendedSignedIntImpl Abs() const {
     ExtendedSignedIntImpl ret(*this);
     // Note it doesn't work if *this = minimum value.
     if (ret.IntSign() < 0) {
@@ -731,7 +745,7 @@ struct ExtendedSignedIntImpl<ET, false>
     return ret;
   }
 
-  ExtendedSignedIntImpl FAbs() const {
+  constexpr ExtendedSignedIntImpl FAbs() const {
     ExtendedSignedIntImpl ret(*this);
     // Note it doesn't work if *this = minimum value.
     if (ret.IntSign() < 0) {
@@ -744,7 +758,7 @@ struct ExtendedSignedIntImpl<ET, false>
   using base::ToInt;
 
   template <typename T>
-  T ToFloat() const {
+  constexpr T ToFloat() const {
     if (IntSign() >= 0) {
       return base::template ToFloat<T>();
     } else {
@@ -752,7 +766,7 @@ struct ExtendedSignedIntImpl<ET, false>
     }
   }
 
-  std::string ToString() const {
+  constexpr std::string ToString() const {
     if (IsZero()) {
       return "0";
     }
@@ -769,44 +783,47 @@ struct ExtendedSignedIntImpl<ET, false>
     }
   }
 
-  std::string to_string() const { return ToString(); }
+  constexpr std::string to_string() const { return ToString(); }
 
-  ExtendedSignedIntImpl Difference(const ExtendedSignedIntImpl& other) const {
+  constexpr ExtendedSignedIntImpl Difference(
+      const ExtendedSignedIntImpl& other) const {
     auto t = base::Difference(other);
     return ExtendedSignedIntImpl(t.low(), t.hi());
   }
 
  public:
   // Operators
-  ExtendedSignedIntImpl operator+() const { return *this; }
+  constexpr ExtendedSignedIntImpl operator+() const { return *this; }
 
-  ExtendedSignedIntImpl operator-() const {
+  constexpr ExtendedSignedIntImpl operator-() const {
     ExtendedSignedIntImpl ret(*this);
     base::FlipBits();
     base::AddOne();
     return ret;
   }
 
-  ExtendedSignedIntImpl operator~() const {
+  constexpr ExtendedSignedIntImpl operator~() const {
     return ExtendedSignedIntImpl(~base::low_, ~base::hi_);
   }
 
-  ExtendedSignedIntImpl& operator+=(const ExtendedSignedIntImpl& other) {
+  constexpr ExtendedSignedIntImpl& operator+=(
+      const ExtendedSignedIntImpl& other) {
     base::operator+=(other);
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator+=(const ET& other) {
+  constexpr ExtendedSignedIntImpl& operator+=(const ET& other) {
     return *this += ExtendedSignedIntImpl(other);
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(ExtendedSignedIntImpl&) operator+=(const T & other) {
+  constexpr REQUIRES((is_builtin_integer_v<T>))
+      RETURN(ExtendedSignedIntImpl&) operator+=(const T & other) {
     return *this += ExtendedSignedIntImpl(other);
   }
 
-  ExtendedSignedIntImpl& operator-=(const ExtendedSignedIntImpl& other) {
+  constexpr ExtendedSignedIntImpl& operator-=(
+      const ExtendedSignedIntImpl& other) {
     if (other.IsZero()) {
       return *this;
     }
@@ -818,17 +835,18 @@ struct ExtendedSignedIntImpl<ET, false>
     return *this += t;
   }
 
-  ExtendedSignedIntImpl& operator-=(const ET& other) {
+  constexpr ExtendedSignedIntImpl& operator-=(const ET& other) {
     return *this -= ExtendedSignedIntImpl(other);
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(ExtendedSignedIntImpl&) operator-=(const T & other) {
+  constexpr REQUIRES((is_builtin_integer_v<T>))
+      RETURN(ExtendedSignedIntImpl&) operator-=(const T & other) {
     return *this -= ExtendedSignedIntImpl(other);
   }
 
-  ExtendedSignedIntImpl& operator*=(const ExtendedSignedIntImpl& other) {
+  constexpr ExtendedSignedIntImpl& operator*=(
+      const ExtendedSignedIntImpl& other) {
     if (IsZero() || other.IsZero()) {
       base::low_.MakeZeroBits();
       base::hi_.MakeZeroBits();
@@ -854,116 +872,121 @@ struct ExtendedSignedIntImpl<ET, false>
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator*=(const ET& other) {
+  constexpr ExtendedSignedIntImpl& operator*=(const ET& other) {
     return *this *= ExtendedSignedIntImpl(other);
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(ExtendedSignedIntImpl&) operator*=(const T & other) {
+  constexpr REQUIRES((is_builtin_integer_v<T>))
+      RETURN(ExtendedSignedIntImpl&) operator*=(const T & other) {
     return *this *= ExtendedSignedIntImpl(other);
   }
 
-  ExtendedSignedIntImpl& operator/=(const ExtendedSignedIntImpl& other) {
+  constexpr ExtendedSignedIntImpl& operator/=(
+      const ExtendedSignedIntImpl& other) {
     DivideInplace(*this, other);
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator/=(const ET& other) {
+  constexpr ExtendedSignedIntImpl& operator/=(const ET& other) {
     return *this /= ExtendedSignedIntImpl(other);
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(ExtendedSignedIntImpl&) operator/=(const T & other) {
+  constexpr REQUIRES((is_builtin_integer_v<T>))
+      RETURN(ExtendedSignedIntImpl&) operator/=(const T & other) {
     return *this /= ExtendedSignedIntImpl(other);
   }
 
-  ExtendedSignedIntImpl& operator%=(const ExtendedSignedIntImpl& other) {
+  constexpr ExtendedSignedIntImpl& operator%=(
+      const ExtendedSignedIntImpl& other) {
     RemainInplace(*this, other);
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator%=(const ET& other) {
+  constexpr ExtendedSignedIntImpl& operator%=(const ET& other) {
     return *this %= ExtendedSignedIntImpl(other);
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(ExtendedSignedIntImpl&) operator%=(const T & other) {
+  constexpr REQUIRES((is_builtin_integer_v<T>))
+      RETURN(ExtendedSignedIntImpl&) operator%=(const T & other) {
     return *this %= ExtendedSignedIntImpl(other);
   }
 
-  ExtendedSignedIntImpl& operator&=(const ExtendedSignedIntImpl& other) {
+  constexpr ExtendedSignedIntImpl& operator&=(
+      const ExtendedSignedIntImpl& other) {
     base::low_ &= other.low();
     base::hi_ &= other.hi();
     return *this;
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(ExtendedSignedIntImpl&) operator&=(const T & other) {
+  constexpr REQUIRES((is_builtin_integer_v<T>))
+      RETURN(ExtendedSignedIntImpl&) operator&=(const T & other) {
     return *this &= ExtendedSignedIntImpl(other);
   }
 
-  ExtendedSignedIntImpl& operator&=(const ET& other) {
+  constexpr ExtendedSignedIntImpl& operator&=(const ET& other) {
     return *this &= ExtendedSignedIntImpl(other);
   }
 
-  ExtendedSignedIntImpl& operator^=(const ExtendedSignedIntImpl& other) {
+  constexpr ExtendedSignedIntImpl& operator^=(
+      const ExtendedSignedIntImpl& other) {
     base::low_ ^= other.low();
     base::hi_ ^= other.hi();
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator^=(const ET& other) {
+  constexpr ExtendedSignedIntImpl& operator^=(const ET& other) {
     return *this ^= ExtendedSignedIntImpl(other);
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(ExtendedSignedIntImpl&) operator^=(const T & other) {
+  constexpr REQUIRES((is_builtin_integer_v<T>))
+      RETURN(ExtendedSignedIntImpl&) operator^=(const T & other) {
     return *this ^= ExtendedSignedIntImpl(other);
   }
 
-  ExtendedSignedIntImpl& operator|=(const ExtendedSignedIntImpl& other) {
+  constexpr ExtendedSignedIntImpl& operator|=(
+      const ExtendedSignedIntImpl& other) {
     base::low_ |= other.low();
     base::hi_ |= other.hi();
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator|=(const ET& other) {
+  constexpr ExtendedSignedIntImpl& operator|=(const ET& other) {
     return *this |= ExtendedSignedIntImpl(other);
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T>))
-  RETURN(ExtendedSignedIntImpl&) operator|=(const T & other) {
+  constexpr REQUIRES((is_builtin_integer_v<T>))
+      RETURN(ExtendedSignedIntImpl&) operator|=(const T & other) {
     return *this |= ExtendedSignedIntImpl(other);
   }
 
-  ExtendedSignedIntImpl& operator>>=(int cnt) {
+  constexpr ExtendedSignedIntImpl& operator>>=(int cnt) {
     base::ArithmeticShiftRight(cnt);
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator<<=(int cnt) {
+  constexpr ExtendedSignedIntImpl& operator<<=(int cnt) {
     base::ShiftLeft(cnt);
     return *this;
   }
 
-  ExtendedSignedIntImpl& operator++() {
+  constexpr ExtendedSignedIntImpl& operator++() {
     base::AddOne();
     return *this;
   }
 
-  ExtendedSignedIntImpl operator++(int) {
+  constexpr ExtendedSignedIntImpl operator++(int) {
     ExtendedSignedIntImpl ret(*this);
     ++*this;
     return ret;
   }
 
-  ExtendedSignedIntImpl& operator--() {
+  constexpr ExtendedSignedIntImpl& operator--() {
     if (!base::low_.IsZero()) {
       --base::low_;
     } else {
@@ -973,7 +996,7 @@ struct ExtendedSignedIntImpl<ET, false>
     return *this;
   }
 
-  ExtendedSignedIntImpl operator--(int) {
+  constexpr ExtendedSignedIntImpl operator--(int) {
     ExtendedSignedIntImpl ret(*this);
     --*this;
     return ret;
@@ -983,100 +1006,100 @@ struct ExtendedSignedIntImpl<ET, false>
 // All the binary operators are friend operators
 // Comparison operators
 #if PE_HAS_CPP20
-  friend inline int operator<=>(const ExtendedSignedIntImpl& l,
-                                const ExtendedSignedIntImpl& r) {
+  constexpr friend inline int operator<=>(const ExtendedSignedIntImpl& l,
+                                          const ExtendedSignedIntImpl& r) {
     return l.CompareTo(r);
   }
-  friend inline int operator==(const ExtendedSignedIntImpl& l,
-                               const ExtendedSignedIntImpl& r) {
+  constexpr friend inline int operator==(const ExtendedSignedIntImpl& l,
+                                         const ExtendedSignedIntImpl& r) {
     return l.CompareTo(r) == 0;
   }
-  friend inline int operator!=(const ExtendedSignedIntImpl& l,
-                               const ExtendedSignedIntImpl& r) {
+  constexpr friend inline int operator!=(const ExtendedSignedIntImpl& l,
+                                         const ExtendedSignedIntImpl& r) {
     return l.CompareTo(r) != 0;
   }
 #else
-  friend inline int operator<(const ExtendedSignedIntImpl& l,
-                              const ExtendedSignedIntImpl& r) {
+  constexpr friend inline int operator<(const ExtendedSignedIntImpl& l,
+                                        const ExtendedSignedIntImpl& r) {
     return l.CompareTo(r) < 0;
   }
-  friend inline int operator<=(const ExtendedSignedIntImpl& l,
-                               const ExtendedSignedIntImpl& r) {
+  constexpr friend inline int operator<=(const ExtendedSignedIntImpl& l,
+                                         const ExtendedSignedIntImpl& r) {
     return l.CompareTo(r) <= 0;
   }
-  friend inline int operator>(const ExtendedSignedIntImpl& l,
-                              const ExtendedSignedIntImpl& r) {
+  constexpr friend inline int operator>(const ExtendedSignedIntImpl& l,
+                                        const ExtendedSignedIntImpl& r) {
     return l.CompareTo(r) > 0;
   }
-  friend inline int operator>=(const ExtendedSignedIntImpl& l,
-                               const ExtendedSignedIntImpl& r) {
+  constexpr friend inline int operator>=(const ExtendedSignedIntImpl& l,
+                                         const ExtendedSignedIntImpl& r) {
     return l.CompareTo(r) >= 0;
   }
-  friend inline int operator==(const ExtendedSignedIntImpl& l,
-                               const ExtendedSignedIntImpl& r) {
+  constexpr friend inline int operator==(const ExtendedSignedIntImpl& l,
+                                         const ExtendedSignedIntImpl& r) {
     return l.CompareTo(r) == 0;
   }
-  friend inline int operator!=(const ExtendedSignedIntImpl& l,
-                               const ExtendedSignedIntImpl& r) {
+  constexpr friend inline int operator!=(const ExtendedSignedIntImpl& l,
+                                         const ExtendedSignedIntImpl& r) {
     return l.CompareTo(r) != 0;
   }
 #endif
-  friend inline ExtendedSignedIntImpl operator+(
+  constexpr friend inline ExtendedSignedIntImpl operator+(
       const ExtendedSignedIntImpl& l, const ExtendedSignedIntImpl& r) {
     ExtendedSignedIntImpl ret(l);
     ret += r;
     return ret;
   }
-  friend inline ExtendedSignedIntImpl operator-(
+  constexpr friend inline ExtendedSignedIntImpl operator-(
       const ExtendedSignedIntImpl& l, const ExtendedSignedIntImpl& r) {
     ExtendedSignedIntImpl ret(l);
     ret -= r;
     return ret;
   }
-  friend inline ExtendedSignedIntImpl operator*(
+  constexpr friend inline ExtendedSignedIntImpl operator*(
       const ExtendedSignedIntImpl& l, const ExtendedSignedIntImpl& r) {
     ExtendedSignedIntImpl ret(l);
     ret *= r;
     return ret;
   }
-  friend inline ExtendedSignedIntImpl operator/(
+  constexpr friend inline ExtendedSignedIntImpl operator/(
       const ExtendedSignedIntImpl& l, const ExtendedSignedIntImpl& r) {
     ExtendedSignedIntImpl ret(l);
     ret /= r;
     return ret;
   }
-  friend inline ExtendedSignedIntImpl operator%(
+  constexpr friend inline ExtendedSignedIntImpl operator%(
       const ExtendedSignedIntImpl& l, const ExtendedSignedIntImpl& r) {
     ExtendedSignedIntImpl ret(l);
     ret %= r;
     return ret;
   }
-  friend inline ExtendedSignedIntImpl operator&(
+  constexpr friend inline ExtendedSignedIntImpl operator&(
       const ExtendedSignedIntImpl& l, const ExtendedSignedIntImpl& r) {
     ExtendedSignedIntImpl ret(l);
     ret &= r;
     return ret;
   }
-  friend inline ExtendedSignedIntImpl operator^(
+  constexpr friend inline ExtendedSignedIntImpl operator^(
       const ExtendedSignedIntImpl& l, const ExtendedSignedIntImpl& r) {
     ExtendedSignedIntImpl ret(l);
     ret ^= r;
     return ret;
   }
-  friend inline ExtendedSignedIntImpl operator|(
+  constexpr friend inline ExtendedSignedIntImpl operator|(
       const ExtendedSignedIntImpl& l, const ExtendedSignedIntImpl& r) {
     ExtendedSignedIntImpl ret(l);
     ret |= r;
     return ret;
   }
-  friend inline ExtendedSignedIntImpl operator<<(const ExtendedSignedIntImpl& l,
-                                                 const int cnt) {
+  constexpr friend inline ExtendedSignedIntImpl operator<<(
+      const ExtendedSignedIntImpl& l, const int cnt) {
     ExtendedSignedIntImpl ret(l);
     ret <<= cnt;
     return ret;
   }
-  friend inline ExtendedSignedIntImpl operator>>(const ExtendedSignedIntImpl& l,
-                                                 const int cnt) {
+  constexpr friend inline ExtendedSignedIntImpl operator>>(
+      const ExtendedSignedIntImpl& l, const int cnt) {
     ExtendedSignedIntImpl ret(l);
     ret >>= cnt;
     return ret;

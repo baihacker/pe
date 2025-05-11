@@ -62,24 +62,33 @@ SL void PolyMulImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
 
   const int64 size = n + m - 1;
   const limb_t* data = z1.tab;
-#if !PE_HAS_INT128
+
   const auto magic1 = (1LL << 32) % mod;
   const auto magic2 = MulMod(magic1, magic1, mod);
-#endif
-  for (int64 i = 0; i < size; ++i) {
-    const uint64 low = data[i << 1];
-    const uint64 hi = data[(i << 1) | 1];
-    if (hi == 0) {
-      result[i] = mod > 0 ? low % mod : low;
-    } else {
-#if PE_HAS_INT128
-      const uint128 t = (static_cast<uint128>(hi) << 64) | low;
-      result[i] = mod > 0 ? t % mod : t;
-#else
-      PE_ASSERT(mod > 0);
-      const auto A = MulMod(hi % mod, magic2, mod);
-      result[i] = AddMod(A, low % mod, mod);
-#endif
+
+  if (mod > 0) {
+    for (int64 i = 0; i < size; ++i) {
+      const uint64 low = data[i << 1];
+      const uint64 hi = data[(i << 1) | 1];
+      if (hi == 0) {
+        result[i] = low % mod;
+      } else {
+        result[i] = AddMod(MulMod(hi % mod, magic2, mod), low % mod, mod);
+      }
+    }
+  } else {
+    for (int64 i = 0; i < size; ++i) {
+      const uint64 low = data[i << 1];
+      const uint64 hi = data[(i << 1) | 1];
+      if (hi == 0) {
+        result[i] = low;
+      } else {
+        T it = hi;
+        it <<= 32;
+        it <<= 32;
+        it |= low;
+        result[i] = it;
+      }
     }
   }
 

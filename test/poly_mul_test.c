@@ -25,6 +25,8 @@ namespace poly_mul_test {
   MulImpl mul_impl[] = {
 #if HAS_POLY_MUL_FLINT && !ONLY_RUN_PE_IMPLEMENTATION
       {&flint::PolyMul<uint64>, flint::kPolyMulMod, "flint n"},
+      {&flint::bn_poly_mul::PolyMul<uint64>, flint::bn_poly_mul::kPolyMulMod,
+       "flint bn"},
       {&flint::pmod::PolyMul<uint64>, flint::pmod::kPolyMulMod, "flint p"},
 #if ENABLE_OPENMP
       {&PolyMulParallelFlintForTest, flint::kPolyMulMod, "flint pn"},

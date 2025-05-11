@@ -378,7 +378,7 @@ static constexpr PolyMulCoeType kPolyMulMediumMod =
 POLY_MUL_IMPL(PolyMulMedium, internal::PolyMulMediumImpl)
 
 namespace internal {
-#define NTT32_DIRECT_INT128_IMPLEMENTATION 1
+#define NTT32_DIRECT_INT128_IMPLEMENTATION 0
 
 struct NttLargeConstant {
   static constexpr uint64 M1 = 3892314113;
@@ -434,7 +434,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   }
 
   const int64 result_size = n + m - 1;
-  if (0 && (!PE_HAS_INT128 || mod > 0)) {
+  if (!PE_HAS_INT128 || mod > 0) {
     PE_ASSERT(mod > 0);
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
@@ -468,7 +468,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
       const uint128 t = a + b + c;
       const uint128 tmp =
           t < NttLargeConstant::M123 ? t : t % NttLargeConstant::M123;
-      result[i] = static_cast<T>(tmp % mod);
+      result[i] = static_cast<T>(tmp);
 #else
       const uint64 a = tresult[0][i];
       const uint64 b = tresult[1][i];

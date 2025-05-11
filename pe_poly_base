@@ -273,8 +273,8 @@ template <typename T, uint32 mod>
 SL std::vector<uint64> RunNtt(const NttMod32& moder, const T* X, int64 n,
                               const T* Y, int64 m, int64 target_mod) {
   const int64 aligned_size = 1LL << pe_lgll(2 * (n + m - 1) - 1);
-  const bool skip_mod =
-      static_cast<uint64>(target_mod) <= static_cast<uint64>(mod);
+  const bool skip_mod = target_mod > 0 && static_cast<uint64>(target_mod) <=
+                                              static_cast<uint64>(mod);
   std::vector<uint64> XX(aligned_size);
   std::vector<uint64> YY(aligned_size);
   if (skip_mod) {
@@ -808,8 +808,8 @@ template <typename T, uint64 mod>
 SL std::vector<uint64> RunNtt(const NttMod64& moder, const T* X, int64 n,
                               const T* Y, int64 m, int64 target_mod) {
   const int64 aligned_size = 1LL << pe_lgll(2 * (n + m - 1) - 1);
-  const bool skip_mod =
-      static_cast<uint64>(target_mod) <= static_cast<uint64>(mod);
+  const bool skip_mod = target_mod > 0 && static_cast<uint64>(target_mod) <=
+                                              static_cast<uint64>(mod);
   std::vector<uint64> XX(aligned_size);
   std::vector<uint64> YY(aligned_size);
   if (skip_mod) {
@@ -942,7 +942,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
           static_cast<uint128>(x) * NttLargeConstant::INV_M2__M1,
           NttLargeConstant::M1);
       const uint128 t = static_cast<uint128>(y) * NttLargeConstant::M2 + b;
-      result[i] = static_cast<T>(t % mod);
+      result[i] = static_cast<T>(t);
 #else
       PE_ASSERT(0);
 #endif

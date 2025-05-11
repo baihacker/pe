@@ -192,6 +192,7 @@ void InitNtt(int k = 22) {
   ntt_mod_3.InitPreOmg(k);
 }
 
+namespace internal {
 template <typename T, uint32 mod>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     Ntt(T* data, const int64 n, const NttMod32& moder, bool inv = false) {
@@ -282,9 +283,9 @@ SL std::vector<uint64> RunNtt(const NttMod32& moder, const T* X, int64 n,
   Ntt<uint64, mod>(&XX[0], aligned_size, moder, true);
   return XX;
 }
+}  // namespace internal
 
-static constexpr PolyUint128 kPolyMulSmallMod = ntt_mods[1];
-
+namespace internal {
 // Multiply two polynomials.
 // Make sure the length of result is at least: n + m - 1
 template <typename T>
@@ -302,18 +303,19 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     result[i] = mod > 0 ? tresult[i] % mod : tresult[i];
   }
 }
+}  // namespace internal
 
-POLY_MUL_IMPL(PolyMulSmall, PolyMulSmallImpl)
+static constexpr PolyMulCoeType kPolyMulSmallMod = ntt_mods[1];
 
+POLY_MUL_IMPL(PolyMulSmall, internal::PolyMulSmallImpl)
+
+namespace internal {
 // The medium version uses two modulus.
 struct NttMediumConstant {
   static constexpr uint64 M1 = 2013265921;
   static constexpr uint64 M2 = 2281701377;
   static constexpr uint64 INV_M1__M2 = 1140850697;
 };
-
-static constexpr PolyUint128 kPolyMulMediumMod =
-    Prod<PolyUint128>(ntt_mods[1], ntt_mods[2]);
 
 // Multiply two polynomials.
 // Make sure the length of result is at least: n + m - 1
@@ -322,8 +324,6 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyMulMediumImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
                       int64 mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
-
-  // TODO(baihacker): decide the size automatically.
 
   std::vector<uint64> tresult[2];
 
@@ -355,14 +355,19 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     result[i] = mod > 0 ? t % mod : t;
   }
 }
+}  // namespace internal
+
+static constexpr PolyMulCoeType kPolyMulMediumMod =
+    Prod<PolyMulCoeType>(ntt_mods[1], ntt_mods[2]);
 
 // Multiply two polynomials.
 // The length of result is at least n + m - 1.
-POLY_MUL_IMPL(PolyMulMedium, PolyMulMediumImpl)
+POLY_MUL_IMPL(PolyMulMedium, internal::PolyMulMediumImpl)
 
+namespace internal {
 #define NTT32_DIRECT_INT128_IMPLEMENTATION 0
 
-struct NttConstant {
+struct NttLargeConstant {
   static constexpr uint64 M1 = 2013265921;
   static constexpr uint64 M2 = 2281701377;
   static constexpr uint64 M3 = 3221225473;
@@ -385,9 +390,6 @@ struct NttConstant {
   static constexpr uint64 INV_M3__M1M2 = 1312477593879670191ULL;
 #endif
 };
-
-static constexpr PolyUint128 kPolyMulBigMod =
-    Prod<PolyUint128>(ntt_mods[1], ntt_mods[2], ntt_mods[3]);
 
 // Multiply two polynomials.
 // Make sure the length of result is at least: n + m - 1
@@ -429,14 +431,16 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
       const uint64 a = tresult[0][i];
       const uint64 b = tresult[1][i];
       const uint64 c = tresult[2][i];
-      const uint64 x1 = b >= a ? b - a : NttConstant::M2 - a + b;
-      const uint64 y1 = x1 * NttConstant::INV_M1__M2 % NttConstant::M2;
-      const uint64 modab = y1 * NttConstant::M1 + a;
-      const uint64 x2 = modab >= c ? modab - c : NttConstant::M1M2 - c + modab;
+      const uint64 x1 = b >= a ? b - a : NttLargeConstant::M2 - a + b;
+      const uint64 y1 =
+          x1 * NttLargeConstant::INV_M1__M2 % NttLargeConstant::M2;
+      const uint64 modab = y1 * NttLargeConstant::M1 + a;
+      const uint64 x2 =
+          modab >= c ? modab - c : NttLargeConstant::M1M2 - c + modab;
 
       const uint64 y2 =
-          MulMod(x2, NttConstant::INV_M3__M1M2, NttConstant::M1M2);
-      const uint64 t = MulMod(y2 % mod, NttConstant::M3 % mod, mod);
+          MulMod(x2, NttLargeConstant::INV_M3__M1M2, NttLargeConstant::M1M2);
+      const uint64 t = MulMod(y2 % mod, NttLargeConstant::M3 % mod, mod);
       result[i] = AddMod(t, c % mod, mod);
     }
   } else {
@@ -446,24 +450,27 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     for (int64 i = 0; i < result_size; ++i) {
 #if PE_HAS_INT128
 #if NTT32_DIRECT_INT128_IMPLEMENTATION
-      const uint128 a = tresult[0][i] * NttConstant::M23M;
-      const uint128 b = tresult[1][i] * NttConstant::M13M;
-      const uint128 c = tresult[2][i] * NttConstant::M12M;
+      const uint128 a = tresult[0][i] * NttLargeConstant::M23M;
+      const uint128 b = tresult[1][i] * NttLargeConstant::M13M;
+      const uint128 c = tresult[2][i] * NttLargeConstant::M12M;
       const uint128 t = a + b + c;
-      const uint128 tmp = t < NttConstant::MMM ? t : t % NttConstant::MMM;
+      const uint128 tmp =
+          t < NttLargeConstant::MMM ? t : t % NttLargeConstant::MMM;
       result[i] = static_cast<T>(tmp);
 #else
       const uint64 a = tresult[0][i];
       const uint64 b = tresult[1][i];
       const uint64 c = tresult[2][i];
-      const uint64 x1 = b >= a ? b - a : NttConstant::M2 - a + b;
-      const uint64 y1 = x1 * NttConstant::INV_M1__M2 % NttConstant::M2;
-      const uint64 modab = y1 * NttConstant::M1 + a;
-      const uint64 x2 = modab >= c ? modab - c : NttConstant::M1M2 - c + modab;
+      const uint64 x1 = b >= a ? b - a : NttLargeConstant::M2 - a + b;
+      const uint64 y1 =
+          x1 * NttLargeConstant::INV_M1__M2 % NttLargeConstant::M2;
+      const uint64 modab = y1 * NttLargeConstant::M1 + a;
+      const uint64 x2 =
+          modab >= c ? modab - c : NttLargeConstant::M1M2 - c + modab;
 
-      const uint64 y2 = static_cast<uint128>(x2) * NttConstant::INV_M3__M1M2 %
-                        NttConstant::M1M2;
-      const uint128 t = static_cast<uint128>(y2) * NttConstant::M3 + c;
+      const uint64 y2 = static_cast<uint128>(x2) *
+                        NttLargeConstant::INV_M3__M1M2 % NttLargeConstant::M1M2;
+      const uint128 t = static_cast<uint128>(y2) * NttLargeConstant::M3 + c;
       result[i] = static_cast<T>(t);
 #endif
 #else
@@ -472,10 +479,32 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     }
   }
 }
+}  // namespace internal
+
+static constexpr PolyMulCoeType kPolyMulLargeMod =
+    Prod<PolyMulCoeType>(ntt_mods[1], ntt_mods[2], ntt_mods[3]);
 
 // Multiply two polynomials.
 // The length of result is at least n + m - 1.
-POLY_MUL_IMPL(PolyMulLarge, PolyMulLargeImpl)
+POLY_MUL_IMPL(PolyMulLarge, internal::PolyMulLargeImpl)
+
+namespace internal {
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    PolyMulImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
+                int64 mod) {
+  if (PolyMulSupport(kPolyMulSmallMod, n, m, mod)) {
+    return PolyMulSmallImpl(X, n, Y, m, result, mod);
+  }
+  if (PolyMulSupport(kPolyMulMediumMod, n, m, mod)) {
+    return PolyMulMediumImpl(X, n, Y, m, result, mod);
+  }
+  return PolyMulLargeImpl(X, n, Y, m, result, mod);
+}
+}  // namespace internal
+
+static constexpr PolyMulCoeType kPolyMulMod = kPolyMulLargeMod;
+POLY_MUL_IMPL(PolyMul, internal::PolyMulImpl)
 }  // namespace ntt32
 
 // mod is 64 bit
@@ -545,6 +574,7 @@ void InitNtt(int k = 22) {
   ntt_mod_2.InitPreOmg(k);
 }
 
+namespace internal {
 template <typename T, uint64 mod>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     Ntt(T* data, const int64 n, const NttMod64& moder, bool inv = false) {
@@ -660,9 +690,9 @@ SL std::vector<uint64> RunNtt(const NttMod64& moder, const T* X, int64 n,
 
   return XX;
 }
+}  // namespace internal
 
-static constexpr PolyUint128 kPolyMulSmallMod = ntt_mods[2];
-
+namespace internal {
 // Multiply two polynomials.
 // Make sure the length of result is at least: n + m - 1
 template <typename T>
@@ -670,8 +700,6 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyMulSmallImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
                      int64 mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
-
-  // TODO(baihacker): decide the size automatically.
 
   std::vector<uint64> tresult[1];
   {
@@ -688,18 +716,19 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   }
 }
 
+}  // namespace internal
+
+static constexpr PolyMulCoeType kPolyMulSmallMod = ntt_mods[2];
 // Multiply two polynomials.
 // The length of result is at least n + m - 1.
-POLY_MUL_IMPL(PolyMulSmall, PolyMulSmallImpl)
+POLY_MUL_IMPL(PolyMulSmall, internal::PolyMulSmallImpl)
 
-struct NttConstant {
+namespace internal {
+struct NttLargeConstant {
   static constexpr uint64 M1 = 180143985094819841ULL;
   static constexpr uint64 M2 = 1945555039024054273ULL;
   static constexpr uint64 INV_M1__M2 = 714693687804754632ULL;
 };
-
-static constexpr PolyUint128 kPolyMulLargeMod =
-    Prod<PolyUint128>(ntt_mods[1], ntt_mods[2]);
 
 // Multiply two polynomials.
 // Make sure the length of result is at least: n + m - 1
@@ -709,7 +738,6 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
                      int64 mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
 
-  // TODO(baihacker): decide the size automatically.
   std::vector<uint64> tresult[2];
 #if ENABLE_OPENMP
 #pragma omp parallel sections
@@ -735,10 +763,11 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     for (int64 i = 0; i < result_size; ++i) {
       const uint64 a = tresult[0][i];
       const uint64 b = tresult[1][i];
-      const uint64 x = b >= a ? b - a : b + NttConstant::M2 - a;
+      const uint64 x = b >= a ? b - a : b + NttLargeConstant::M2 - a;
 
-      const uint64 y = MulMod(x, NttConstant::INV_M1__M2, NttConstant::M2);
-      const uint64 t = MulMod(y % mod, NttConstant::M1 % mod, mod);
+      const uint64 y =
+          MulMod(x, NttLargeConstant::INV_M1__M2, NttLargeConstant::M2);
+      const uint64 t = MulMod(y % mod, NttLargeConstant::M1 % mod, mod);
       result[i] = AddMod(t, a % mod, mod);
     }
   } else {
@@ -749,10 +778,11 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 #if PE_HAS_INT128
       const uint64 a = tresult[0][i];
       const uint64 b = tresult[1][i];
-      const uint64 x = b >= a ? b - a : b + NttConstant::M2 - a;
+      const uint64 x = b >= a ? b - a : b + NttLargeConstant::M2 - a;
       const uint64 y = Uint128ModUint64(
-          static_cast<uint128>(x) * NttConstant::INV_M1__M2, NttConstant::M2);
-      const uint128 t = static_cast<uint128>(y) * NttConstant::M1 + a;
+          static_cast<uint128>(x) * NttLargeConstant::INV_M1__M2,
+          NttLargeConstant::M2);
+      const uint128 t = static_cast<uint128>(y) * NttLargeConstant::M1 + a;
       result[i] = static_cast<T>(t);
 #else
       PE_ASSERT(0);
@@ -760,11 +790,53 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     }
   }
 }
+}  // namespace internal
+
+static constexpr PolyMulCoeType kPolyMulLargeMod =
+    Prod<PolyMulCoeType>(ntt_mods[1], ntt_mods[2]);
 
 // Multiply two polynomials.
 // The length of result is at least n + m - 1.
-POLY_MUL_IMPL(PolyMulLarge, PolyMulLargeImpl)
+POLY_MUL_IMPL(PolyMulLarge, internal::PolyMulLargeImpl)
+
+namespace internal {
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    PolyMulImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
+                int64 mod) {
+  if (PolyMulSupport(kPolyMulSmallMod, n, m, mod)) {
+    return PolyMulSmallImpl(X, n, Y, m, result, mod);
+  }
+  return PolyMulLargeImpl(X, n, Y, m, result, mod);
+}
+}  // namespace internal
+
+static constexpr PolyMulCoeType kPolyMulMod = kPolyMulLargeMod;
+POLY_MUL_IMPL(PolyMul, internal::PolyMulImpl)
 }  // namespace ntt64
+
+namespace ntt {
+namespace internal {
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    PolyMulImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
+                int64 mod) {
+  if (PolyMulSupport(ntt32::kPolyMulSmallMod, n, m, mod)) {
+    return ntt32::internal::PolyMulSmallImpl(X, n, Y, m, result, mod);
+  }
+  if (PolyMulSupport(ntt32::kPolyMulMediumMod, n, m, mod)) {
+    return ntt32::internal::PolyMulMediumImpl(X, n, Y, m, result, mod);
+  }
+  if (PolyMulSupport(ntt64::kPolyMulSmallMod, n, m, mod)) {
+    return ntt64::internal::PolyMulSmallImpl(X, n, Y, m, result, mod);
+  }
+  return ntt64::internal::PolyMulLargeImpl(X, n, Y, m, result, mod);
+}
+}  // namespace internal
+
+static constexpr PolyMulCoeType kPolyMulMod = ntt64::kPolyMulLargeMod;
+POLY_MUL_IMPL(PolyMul, internal::PolyMulImpl)
+}  // namespace ntt
 
 template <typename T>
 SL std::vector<T> PolyShift(const std::vector<T>& p, int64 m) {
@@ -1149,11 +1221,9 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 #if HAS_POLY_MUL_FLINT
     flint::PolyMul(&X[0], n, &Y[0], m, result, mod);
 #elif HAS_POLY_MUL_MIN25
-    min25::PolyMulLarge(&X[0], n, &Y[0], m, result, mod);
+    min25::PolyMul(&X[0], n, &Y[0], m, result, mod);
 #elif HAS_POLY_MUL_NTT32
-    ntt32::PolyMulLarge(&X[0], n, &Y[0], m, result, mod);
-#elif HAS_POLY_MUL_NTT64
-    ntt64::PolyMulLarge(&X[0], n, &Y[0], m, result, mod);
+    ntt::PolyMul(&X[0], n, &Y[0], m, result, mod);
 #else
 
 #if defined(COMPILER_GNU)
@@ -1810,7 +1880,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 // The inverse of Y[m-1] exists.
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>))
-    RETURN(std::tuple<std::vector<T>, std::vector<T>>)
+    RETURN(std::tuple<std::vector<T>, std::vector<T> >)
         PolyDivAndMod(const std::vector<T>& X, const std::vector<T>& Y,
                       int64 mod) {
   const int64 n = static_cast<int64>(std::size(X)) - 1;
@@ -2325,9 +2395,9 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyMultipointEvaluateBlsImpl(const T* X, int64 n, const T* V, T* result,
                                   int64 mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
-  std::vector<std::vector<std::vector<T>>> tree;
+  std::vector<std::vector<std::vector<T> > > tree;
   {
-    std::vector<std::vector<T>> from;
+    std::vector<std::vector<T> > from;
     for (int64 i = 0; i < n; ++i) {
       std::vector<T> tmp{(V[i] == 0 ? 0 : mod - V[i]) % mod, 1};
       from.push_back(tmp);
@@ -2336,7 +2406,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     tree.push_back(from);
     int64 last_size = n;
     while (last_size != 1) {
-      std::vector<std::vector<T>> to;
+      std::vector<std::vector<T> > to;
       to.reserve(last_size / 2);
       for (int64 i = 0; i < last_size / 2; ++i) {
         to.push_back(PolyMul(from[i * 2], from[i * 2 + 1], mod));
@@ -2368,7 +2438,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     t.resize(n);
     std::reverse(t.begin(), t.end());
 
-    std::vector<std::vector<T>> c(n);
+    std::vector<std::vector<T> > c(n);
     c[0] = std::move(t);
     // c[0] = std::vector<uint64>(X, X+n);
     for (int64 i = d; i > 0; --i) {

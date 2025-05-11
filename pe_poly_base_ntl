@@ -104,16 +104,15 @@ SL void PolyMulLargeModImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
 template <typename T>
 SL void PolyMulImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
                     int64 mod) {
-  if (mod < NTL_SP_BOUND) {
+  if (PolyMulSupport(NTL_SP_BOUND, n, m, mod)) {
     PolyMulSmallModImpl(X, n, Y, m, result, mod);
-  } else {
-    PolyMulLargeModImpl(X, n, Y, m, result, mod);
   }
+  PolyMulLargeModImpl(X, n, Y, m, result, mod);
 }
 }  // namespace internal
 
-static constexpr PolyUint128 kPolyMulSmallMod = NTL_SP_BOUND;
-static constexpr PolyUint128 kPolyMulLargeMod = 0;
+static constexpr PolyMulCoeType kPolyMulSmallMod = NTL_SP_BOUND;
+static constexpr PolyMulCoeType kPolyMulLargeMod = 0;
 
 POLY_MUL_IMPL(PolyMulSmallMod, internal::PolyMulSmallModImpl)
 POLY_MUL_IMPL(PolyMulLargeMod, internal::PolyMulLargeModImpl)

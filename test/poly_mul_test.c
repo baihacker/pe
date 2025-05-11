@@ -19,7 +19,7 @@ namespace poly_mul_test {
 
   struct MulImpl {
     poly_mul_t impl;
-    PolyUint128 size;
+    PolyMulCoeType size;
     const char* name;
   };
   MulImpl mul_impl[] = {
@@ -35,7 +35,7 @@ namespace poly_mul_test {
 #if HAS_POLY_MUL_NTT32
       {&ntt32::PolyMulSmall<uint64>, ntt32::kPolyMulSmallMod, "ntt32 s"},
       {&ntt32::PolyMulMedium<uint64>, ntt32::kPolyMulMediumMod, "ntt32 m"},
-      {&ntt32::PolyMulLarge<uint64>, ntt32::kPolyMulBigMod, "ntt32 l"},
+      {&ntt32::PolyMulLarge<uint64>, ntt32::kPolyMulLargeMod, "ntt32 l"},
 #endif
 #if HAS_POLY_MUL_NTT64
       {&ntt64::PolyMulSmall<uint64>, ntt64::kPolyMulSmallMod, "ntt64 s"},

@@ -266,16 +266,29 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     result[i] = mod > 0 ? tmp % mod : tmp;
   }
 }
+
 }  // namespace internal
 
-static constexpr PolyUint128 kPolyMulSmallMod = internal::m64_2::modulus();
-static constexpr PolyUint128 kPolyMulLargeMod =
-    Prod<PolyUint128>(internal::m64_1::modulus(), internal::m64_2::modulus());
-static constexpr PolyUint128 kPolyMulMod = kPolyMulLargeMod;
+static constexpr PolyMulCoeType kPolyMulSmallMod = internal::m64_2::modulus();
+static constexpr PolyMulCoeType kPolyMulLargeMod = Prod<PolyMulCoeType>(
+    internal::m64_1::modulus(), internal::m64_2::modulus());
+static constexpr PolyMulCoeType kPolyMulMod = kPolyMulLargeMod;
+
+namespace internal {
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    PolyMulImpl(const T* f, int64 n, const T* g, int64 m, T* result,
+                int64 mod) {
+  if (PolyMulSupport(kPolyMulLargeMod, n, m, mod)) {
+    return PolyMulSmallImpl(f, n, g, m, result, mod);
+  }
+  return PolyMulLargeImpl(f, n, g, m, result, mod);
+}
+}  // namespace internal
 
 POLY_MUL_IMPL(PolyMulSmall, internal::PolyMulSmallImpl)
 POLY_MUL_IMPL(PolyMulLarge, internal::PolyMulLargeImpl)
-POLY_MUL_IMPL(PolyMul, internal::PolyMulLargeImpl)
+POLY_MUL_IMPL(PolyMul, internal::PolyMulImpl)
 
 }  // namespace min25
 }  // namespace pe

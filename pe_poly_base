@@ -242,13 +242,6 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   }
 }
 
-// The small version uses two modulus.
-struct NttSmallConstant {
-  static constexpr uint64 M1 = 2013265921;
-  static constexpr uint64 M2 = 2281701377;
-  static constexpr uint64 INV_M1__M2 = 1140850697;
-};
-
 template <typename T, uint32 mod>
 SL std::vector<uint64> RunNtt(const NttMod32& moder, const T* X, int64 n,
                               const T* Y, int64 m, int64 target_mod) {
@@ -298,6 +291,33 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
                      int64 mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
 
+  std::vector<uint64> tresult =
+      RunNtt<T, ntt_mods[1]>(ntt_mod_1, X, n, Y, m, mod);
+
+  const int64 result_size = n + m - 1;
+
+  for (int64 i = 0; i < result_size; ++i) {
+    result[i] = mod > 0 ? tresult[i] % mod : tresult[i];
+  }
+}
+
+POLY_MUL_IMPL(PolyMulSmall, PolyMulSmallImpl)
+
+// The medium version uses two modulus.
+struct NttMediumConstant {
+  static constexpr uint64 M1 = 2013265921;
+  static constexpr uint64 M2 = 2281701377;
+  static constexpr uint64 INV_M1__M2 = 1140850697;
+};
+
+// Multiply two polynomials.
+// Make sure the length of result is at least: n + m - 1
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    PolyMulMediumImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
+                      int64 mod) {
+  static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
+
   // TODO(baihacker): decide the size automatically.
 
   std::vector<uint64> tresult[2];
@@ -324,16 +344,16 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   for (int64 i = 0; i < result_size; ++i) {
     const uint64 a = tresult[0][i];
     const uint64 b = tresult[1][i];
-    const uint64 x = b >= a ? b - a : b + NttSmallConstant::M2 - a;
-    const uint64 y = x * NttSmallConstant::INV_M1__M2 % NttSmallConstant::M2;
-    const uint64 t = y * NttSmallConstant::M1 + a;
+    const uint64 x = b >= a ? b - a : b + NttMediumConstant::M2 - a;
+    const uint64 y = x * NttMediumConstant::INV_M1__M2 % NttMediumConstant::M2;
+    const uint64 t = y * NttMediumConstant::M1 + a;
     result[i] = mod > 0 ? t % mod : t;
   }
 }
 
 // Multiply two polynomials.
 // The length of result is at least n + m - 1.
-POLY_MUL_IMPL(PolyMulSmall, PolyMulSmallImpl)
+POLY_MUL_IMPL(PolyMulMedium, PolyMulMediumImpl)
 
 #define NTT32_DIRECT_INT128_IMPLEMENTATION 0
 

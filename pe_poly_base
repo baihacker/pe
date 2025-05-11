@@ -392,37 +392,56 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   }
 
   const int64 result_size = n + m - 1;
+  if (!PE_HAS_INT128 || mod > 0) {
+    PE_ASSERT(mod > 0);
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
 #endif
-  for (int64 i = 0; i < result_size; ++i) {
-#if PE_HAS_INT128 && NTT32_DIRECT_INT128_IMPLEMENTATION
-    const uint128 a = tresult[0][i] * NttConstant::M23M;
-    const uint128 b = tresult[1][i] * NttConstant::M13M;
-    const uint128 c = tresult[2][i] * NttConstant::M12M;
-    const uint128 t = a + b + c;
-    const uint128 tmp = t < NttConstant::MMM ? t : t % NttConstant::MMM;
-    result[i] = static_cast<T>(mod > 0 ? tmp % mod : tmp);
-#else
-    const uint64 a = tresult[0][i];
-    const uint64 b = tresult[1][i];
-    const uint64 c = tresult[2][i];
-    const uint64 x1 = b >= a ? b - a : NttConstant::M2 - a + b;
-    const uint64 y1 = x1 * NttConstant::INV_M1__M2 % NttConstant::M2;
-    const uint64 modab = y1 * NttConstant::M1 + a;
-    const uint64 x2 = modab >= c ? modab - c : NttConstant::M1M2 - c + modab;
+    for (int64 i = 0; i < result_size; ++i) {
+      const uint64 a = tresult[0][i];
+      const uint64 b = tresult[1][i];
+      const uint64 c = tresult[2][i];
+      const uint64 x1 = b >= a ? b - a : NttConstant::M2 - a + b;
+      const uint64 y1 = x1 * NttConstant::INV_M1__M2 % NttConstant::M2;
+      const uint64 modab = y1 * NttConstant::M1 + a;
+      const uint64 x2 = modab >= c ? modab - c : NttConstant::M1M2 - c + modab;
+
+      const uint64 y2 =
+          MulMod(x2, NttConstant::INV_M3__M1M2, NttConstant::M1M2);
+      const uint64 t = MulMod(y2 % mod, NttConstant::M3 % mod, mod);
+      result[i] = AddMod(t, c % mod, mod);
+    }
+  } else {
+#if ENABLE_OPENMP
+#pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
+#endif
+    for (int64 i = 0; i < result_size; ++i) {
 #if PE_HAS_INT128
-    const uint64 y2 = static_cast<uint128>(x2) * NttConstant::INV_M3__M1M2 %
-                      NttConstant::M1M2;
-    const uint128 t = static_cast<uint128>(y2) * NttConstant::M3 + c;
-    result[i] = static_cast<T>(mod > 0 ? t % mod : t);
+#if NTT32_DIRECT_INT128_IMPLEMENTATION
+      const uint128 a = tresult[0][i] * NttConstant::M23M;
+      const uint128 b = tresult[1][i] * NttConstant::M13M;
+      const uint128 c = tresult[2][i] * NttConstant::M12M;
+      const uint128 t = a + b + c;
+      const uint128 tmp = t < NttConstant::MMM ? t : t % NttConstant::MMM;
+      result[i] = static_cast<T>(mod > 0 ? tmp % mod : tmp);
 #else
-    PE_ASSERT(mod > 0);
-    const uint64 y2 = MulMod(x2, NttConstant::INV_M3__M1M2, NttConstant::M1M2);
-    const uint64 t = MulMod(y2 % mod, NttConstant::M3 % mod, mod);
-    result[i] = AddMod(t, c % mod, mod);
+      const uint64 a = tresult[0][i];
+      const uint64 b = tresult[1][i];
+      const uint64 c = tresult[2][i];
+      const uint64 x1 = b >= a ? b - a : NttConstant::M2 - a + b;
+      const uint64 y1 = x1 * NttConstant::INV_M1__M2 % NttConstant::M2;
+      const uint64 modab = y1 * NttConstant::M1 + a;
+      const uint64 x2 = modab >= c ? modab - c : NttConstant::M1M2 - c + modab;
+
+      const uint64 y2 = static_cast<uint128>(x2) * NttConstant::INV_M3__M1M2 %
+                        NttConstant::M1M2;
+      const uint128 t = static_cast<uint128>(y2) * NttConstant::M3 + c;
+      result[i] = static_cast<T>(mod > 0 ? t % mod : t);
 #endif
+#else
+      PE_ASSERT(0);
 #endif
+    }
   }
 }
 
@@ -675,24 +694,37 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   }
 
   const int64 result_size = n + m - 1;
+  if (!PE_HAS_INT128 || mod > 0) {
+    PE_ASSERT(mod > 0);
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
 #endif
-  for (int64 i = 0; i < result_size; ++i) {
-    const uint64 a = tresult[0][i];
-    const uint64 b = tresult[1][i];
-    const uint64 x = b >= a ? b - a : b + NttConstant::M2 - a;
-#if PE_HAS_INT128
-    const uint64 y = Uint128ModUint64(
-        static_cast<uint128>(x) * NttConstant::INV_M1__M2, NttConstant::M2);
-    const uint128 t = static_cast<uint128>(y) * NttConstant::M1 + a;
-    result[i] = static_cast<T>(mod > 0 ? t % mod : t);
-#else
-    PE_ASSERT(mod > 0);
-    const uint64 y = MulMod(x, NttConstant::INV_M1__M2, NttConstant::M2);
-    const uint64 t = MulMod(y % mod, NttConstant::M1 % mod, mod);
-    result[i] = AddMod(t, a % mod, mod);
+    for (int64 i = 0; i < result_size; ++i) {
+      const uint64 a = tresult[0][i];
+      const uint64 b = tresult[1][i];
+      const uint64 x = b >= a ? b - a : b + NttConstant::M2 - a;
+
+      const uint64 y = MulMod(x, NttConstant::INV_M1__M2, NttConstant::M2);
+      const uint64 t = MulMod(y % mod, NttConstant::M1 % mod, mod);
+      result[i] = AddMod(t, a % mod, mod);
+    }
+  } else {
+#if ENABLE_OPENMP
+#pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
 #endif
+    for (int64 i = 0; i < result_size; ++i) {
+#if PE_HAS_INT128
+      const uint64 a = tresult[0][i];
+      const uint64 b = tresult[1][i];
+      const uint64 x = b >= a ? b - a : b + NttConstant::M2 - a;
+      const uint64 y = Uint128ModUint64(
+          static_cast<uint128>(x) * NttConstant::INV_M1__M2, NttConstant::M2);
+      const uint128 t = static_cast<uint128>(y) * NttConstant::M1 + a;
+      result[i] = static_cast<T>(mod > 0 ? t % mod : t);
+#else
+      PE_ASSERT(0);
+#endif
+    }
   }
 }
 

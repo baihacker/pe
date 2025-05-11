@@ -77,13 +77,16 @@
 // mod < 2^62 in all implementation.
 //
 // ntt32::PolyMulSmall
-// (mod-1)^2*n < 2281701377                                       2.3e9
+// (mod-1)^2*n < 3892314113                                       2.3e9
 //
 // ntt32::PolyMulMedium
-// (mod-1)^2*n < 4593671624212873217                              4.5e18
+// (mod-1)^2*n < 13582856483531390977                             1.3e19
 //
 // ntt32::PolyMulLarge
-// (mod-1)^2*n < 14797252050511790781119856641                    1.4e28
+// (mod-1)^2*n < 43753443300854521610234757121                    4.3e28
+//
+// ntt32::PolyMulEnormous
+// (mod-1)^2*n < 99832291828051187234748902616246255617           9.9e37
 //
 // ntt64::PolyMulSmall
 // (mod-1)^2*n < 1945555039024054273                              1.9e18
@@ -443,13 +446,15 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
       const uint64 a = tresult[0][i];
       const uint64 b = tresult[1][i];
       const uint64 c = tresult[2][i];
+
       const uint64 x1 = b >= c ? b - c : NttLargeConstant::M2 - c + b;
       const uint64 y1 =
           x1 * NttLargeConstant::INV_M3__M2 % NttLargeConstant::M2;
-      const uint64 mod_bc = y1 * NttLargeConstant::M3 + c;
-      const uint64 x2 =
-          mod_bc >= a ? mod_bc - a : NttLargeConstant::M2M3 - a + mod_bc;
+      const uint64 ans_mod_m2m3 = y1 * NttLargeConstant::M3 + c;
 
+      const uint64 x2 = ans_mod_m2m3 >= a
+                            ? ans_mod_m2m3 - a
+                            : NttLargeConstant::M2M3 - a + ans_mod_m2m3;
       const uint64 y2 =
           MulMod(x2, NttLargeConstant::INV_M1__M2M3, NttLargeConstant::M2M3);
       const uint64 t = MulMod(y2 % mod, NttLargeConstant::M1 % mod, mod);
@@ -499,6 +504,138 @@ static constexpr PolyMulCoeType kPolyMulLargeMod =
 // Multiply two polynomials.
 // The length of result is at least n + m - 1.
 POLY_MUL_IMPL(PolyMulLarge, internal::PolyMulLargeImpl)
+
+namespace internal {
+#define NTT32_DIRECT_INT128_IMPLEMENTATION 0
+
+struct NttEnormousConstant {
+  static constexpr uint64 M1 = 3892314113;
+  static constexpr uint64 M2 = 3489660929;
+  static constexpr uint64 M3 = 3221225473;
+  static constexpr uint64 M4 = 2281701377;
+
+  static constexpr uint64 INV_M2__M1 = 2594876085;
+  static constexpr uint64 INV_M4__M3 = 460175071;
+
+  static constexpr uint64 M1M2 = M1 * M2;
+  static constexpr uint64 M3M4 = M3 * M4;
+
+  static constexpr uint64 INV_M3M4__M1M2 = 4552771471729767515;
+};
+
+// Multiply two polynomials.
+// Make sure the length of result is at least: n + m - 1
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    PolyMulEnormousImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
+                        int64 mod) {
+  static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
+
+  std::vector<uint64> tresult[4];
+
+#if ENABLE_OPENMP
+#pragma omp parallel sections
+#endif
+  {
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    tresult[0] = RunNtt<T, ntt_mods[1]>(ntt_mod_1, X, n, Y, m, mod);
+
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    tresult[1] = RunNtt<T, ntt_mods[2]>(ntt_mod_2, X, n, Y, m, mod);
+
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    tresult[2] = RunNtt<T, ntt_mods[3]>(ntt_mod_3, X, n, Y, m, mod);
+
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    tresult[3] = RunNtt<T, ntt_mods[4]>(ntt_mod_4, X, n, Y, m, mod);
+  }
+
+  const int64 result_size = n + m - 1;
+  if (!PE_HAS_INT128 || mod > 0) {
+    PE_ASSERT(mod > 0);
+#if ENABLE_OPENMP
+#pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
+#endif
+    for (int64 i = 0; i < result_size; ++i) {
+      const uint64 a = tresult[0][i];
+      const uint64 b = tresult[1][i];
+      const uint64 c = tresult[2][i];
+      const uint64 d = tresult[3][i];
+
+      const uint64 x1 = a >= b ? a - b : NttEnormousConstant::M1 - b + a;
+      const uint64 y1 =
+          x1 * NttEnormousConstant::INV_M2__M1 % NttEnormousConstant::M1;
+      const uint64 ans_mod_m1m2 = y1 * NttEnormousConstant::M2 + b;
+
+      const uint64 x2 = c >= d ? c - d : NttEnormousConstant::M3 - d + c;
+      const uint64 y2 =
+          x2 * NttEnormousConstant::INV_M4__M3 % NttEnormousConstant::M3;
+      const uint64 ans_mod_m3m4 = y2 * NttEnormousConstant::M4 + d;
+
+      const uint64 x3 =
+          ans_mod_m1m2 >= ans_mod_m3m4
+              ? ans_mod_m1m2 - ans_mod_m3m4
+              : NttEnormousConstant::M1M2 - ans_mod_m3m4 + ans_mod_m1m2;
+
+      const uint64 y3 = MulMod(x3, NttEnormousConstant::INV_M3M4__M1M2,
+                               NttEnormousConstant::M1M2);
+      const uint64 t = MulMod(y3 % mod, NttEnormousConstant::M3M4 % mod, mod);
+      result[i] = AddMod(t, ans_mod_m3m4 % mod, mod);
+    }
+  } else {
+#if ENABLE_OPENMP
+#pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
+#endif
+    for (int64 i = 0; i < result_size; ++i) {
+#if PE_HAS_INT128
+      const uint64 a = tresult[0][i];
+      const uint64 b = tresult[1][i];
+      const uint64 c = tresult[2][i];
+      const uint64 d = tresult[3][i];
+
+      const uint64 x1 = a >= b ? a - b : NttEnormousConstant::M1 - b + a;
+      const uint64 y1 =
+          x1 * NttEnormousConstant::INV_M2__M1 % NttEnormousConstant::M1;
+      const uint64 ans_mod_m1m2 = y1 * NttEnormousConstant::M2 + b;
+
+      const uint64 x2 = c >= d ? c - d : NttEnormousConstant::M3 - d + c;
+      const uint64 y2 =
+          x2 * NttEnormousConstant::INV_M4__M3 % NttEnormousConstant::M3;
+      const uint64 ans_mod_m3m4 = y2 * NttEnormousConstant::M4 + d;
+
+      const uint64 x3 =
+          ans_mod_m1m2 >= ans_mod_m3m4
+              ? ans_mod_m1m2 - ans_mod_m3m4
+              : NttEnormousConstant::M1M2 - ans_mod_m3m4 + ans_mod_m1m2;
+
+      const uint64 y3 = static_cast<uint128>(x3) *
+                        NttEnormousConstant::INV_M3M4__M1M2 %
+                        NttEnormousConstant::M1M2;
+      const uint128 ans =
+          static_cast<uint128>(y3) * NttEnormousConstant::M3M4 + ans_mod_m3m4;
+      result[i] = static_cast<T>(ans);
+#else
+      PE_ASSERT(0);
+#endif
+    }
+  }
+}
+}  // namespace internal
+
+static constexpr PolyMulCoeType kPolyMulEnormousMod =
+    Prod<PolyMulCoeType>(ntt_mods[1], ntt_mods[2], ntt_mods[3], ntt_mods[4]);
+
+// Multiply two polynomials.
+// The length of result is at least n + m - 1.
+POLY_MUL_IMPL(PolyMulEnormous, internal::PolyMulEnormousImpl)
 
 namespace internal {
 template <typename T>

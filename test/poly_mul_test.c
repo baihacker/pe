@@ -36,6 +36,7 @@ namespace poly_mul_test {
       {&ntt32::PolyMulSmall<uint64>, ntt32::kPolyMulSmallMod, "ntt32 s"},
       {&ntt32::PolyMulMedium<uint64>, ntt32::kPolyMulMediumMod, "ntt32 m"},
       {&ntt32::PolyMulLarge<uint64>, ntt32::kPolyMulLargeMod, "ntt32 l"},
+      {&ntt32::PolyMulEnormous<uint64>, ntt32::kPolyMulEnormousMod, "ntt32 e"},
 #endif
 #if HAS_POLY_MUL_NTT64
       {&ntt64::PolyMulSmall<uint64>, ntt64::kPolyMulSmallMod, "ntt64 s"},

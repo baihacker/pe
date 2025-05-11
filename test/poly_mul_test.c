@@ -11,7 +11,7 @@ namespace poly_mul_test {
       const std::vector<uint64>& X, const std::vector<uint64>& Y, int64 mod) {
     return pe::internal::PolyMulParallel<
         uint64, pe::PolyMulType<uint64>::CStyleFunctionPointer>(
-        X, Y, mod, &flint::PolyMul<uint64>, 8, 1 << 19);
+        X, Y, mod, &flint::PolyMul<uint64>, 8, X.size() / 4);
   }
 #endif
 
@@ -74,12 +74,13 @@ namespace poly_mul_test {
     srand(123456789);
     if (dp == 0) {
       for (int i = 0; i < n; ++i) {
-        x.push_back((uint64)CRand63() % mod),
-            y.push_back((uint64)CRand63() % mod);
+        x.push_back((uint64)CRand63() % mod);
+        y.push_back((uint64)CRand63() % mod);
       }
     } else {
       for (int i = 0; i < n; ++i) {
-        x.push_back(dp == 1 ? 0 : mod - 1), y.push_back(dp == 1 ? 0 : mod - 1);
+        x.push_back(dp == 1 ? 0 : mod - 1);
+        y.push_back(dp == 1 ? 0 : mod - 1);
       }
     }
 
@@ -138,14 +139,15 @@ namespace poly_mul_test {
                                   100000000003,
                                   316227766016779,
                                   4611686018427387847LL};
-
+    constexpr int min_log2 = 10;
+    constexpr int max_log2 = 20;
     for (int level = 0; level < mods.size(); ++level) {
       printf("mod = %llu\n", (unsigned long long)mods[level]);
       const auto mod = mods[level];
 
       printf("log2(n)  ");
 
-      for (int n = 10; n <= 20; ++n) {
+      for (int n = 10; n <= max_log2; ++n) {
         printf("%-6d ", n);
       }
 
@@ -156,21 +158,21 @@ namespace poly_mul_test {
       std::vector<uint64> expected;
       for (int i = 0; i < M; ++i) {
         auto who = mul_impl[i];
-        if (!PolyMulSupport(who.size, 1024, mod)) continue;
+        if (!PolyMulSupport(who.size, 1 << min_log2, mod)) continue;
 
         printf("%-8s ", who.name);
         srand(314159);
-        for (int n = 10; n <= 20; ++n) {
+        for (int n = min_log2; n <= max_log2; ++n) {
           const int size = 1 << n;
-          std::vector<uint64> x, y;
-          for (int i = 0; i < size; ++i) {
-            x.push_back((uint64)CRand63() % mod),
-                y.push_back((uint64)CRand63() % mod);
-          }
-
           if (!PolyMulSupport(who.size, size, mod)) {
             printf("%-6s ", "-");
             continue;
+          }
+
+          std::vector<uint64> x, y;
+          for (int i = 0; i < size; ++i) {
+            x.push_back((uint64)CRand63() % mod);
+            y.push_back((uint64)CRand63() % mod);
           }
 
           auto start = clock();

@@ -711,11 +711,10 @@ struct NttMod64 {
   }
 };
 
-constexpr uint64 ntt_mods[] = {0, 180143985094819841ULL,
-                               1945555039024054273ULL};
+constexpr uint64 ntt_mods[] = {0, 1945555039024054273, 180143985094819841};
 
-static const NttMod64 ntt_mod_1(ntt_mods[1], 5ULL, 55, 6ULL);
-static const NttMod64 ntt_mod_2(ntt_mods[2], 27ULL, 56, 5ULL);
+static const NttMod64 ntt_mod_1(ntt_mods[1], 27, 56, 5);
+static const NttMod64 ntt_mod_2(ntt_mods[2], 5, 55, 6);
 
 void InitNtt(int k = 22) {
   PE_ASSERT(k <= 30 && k >= 0);
@@ -852,7 +851,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 
   std::vector<uint64> tresult[1];
   {
-    tresult[0] = RunNtt<T, ntt_mods[2]>(ntt_mod_2, X, n, Y, m, mod);
+    tresult[0] = RunNtt<T, ntt_mods[1]>(ntt_mod_1, X, n, Y, m, mod);
   }
 
   const int64 result_size = n + m - 1;
@@ -867,16 +866,16 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 
 }  // namespace internal
 
-static constexpr PolyMulCoeType kPolyMulSmallMod = ntt_mods[2];
+static constexpr PolyMulCoeType kPolyMulSmallMod = ntt_mods[1];
 // Multiply two polynomials.
 // The length of result is at least n + m - 1.
 POLY_MUL_IMPL(PolyMulSmall, internal::PolyMulSmallImpl)
 
 namespace internal {
 struct NttLargeConstant {
-  static constexpr uint64 M1 = 180143985094819841ULL;
-  static constexpr uint64 M2 = 1945555039024054273ULL;
-  static constexpr uint64 INV_M1__M2 = 714693687804754632ULL;
+  static constexpr uint64 M1 = 1945555039024054273;
+  static constexpr uint64 M2 = 180143985094819841;
+  static constexpr uint64 INV_M2__M1 = 714693687804754632;
 };
 
 // Multiply two polynomials.
@@ -912,12 +911,12 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     for (int64 i = 0; i < result_size; ++i) {
       const uint64 a = tresult[0][i];
       const uint64 b = tresult[1][i];
-      const uint64 x = b >= a ? b - a : b + NttLargeConstant::M2 - a;
 
+      const uint64 x = a >= b ? a - b : NttLargeConstant::M1 - b + a;
       const uint64 y =
-          MulMod(x, NttLargeConstant::INV_M1__M2, NttLargeConstant::M2);
-      const uint64 t = MulMod(y % mod, NttLargeConstant::M1 % mod, mod);
-      result[i] = AddMod(t, a % mod, mod);
+          MulMod(x, NttLargeConstant::INV_M2__M1, NttLargeConstant::M1);
+      const uint64 t = MulMod(y % mod, NttLargeConstant::M2 % mod, mod);
+      result[i] = AddMod(t, b % mod, mod);
     }
   } else {
 #if ENABLE_OPENMP
@@ -927,12 +926,13 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 #if PE_HAS_INT128
       const uint64 a = tresult[0][i];
       const uint64 b = tresult[1][i];
-      const uint64 x = b >= a ? b - a : b + NttLargeConstant::M2 - a;
+
+      const uint64 x = a >= b ? a - b : NttLargeConstant::M1 - b + a;
       const uint64 y = Uint128ModUint64(
-          static_cast<uint128>(x) * NttLargeConstant::INV_M1__M2,
-          NttLargeConstant::M2);
-      const uint128 t = static_cast<uint128>(y) * NttLargeConstant::M1 + a;
-      result[i] = static_cast<T>(t);
+          static_cast<uint128>(x) * NttLargeConstant::INV_M2__M1,
+          NttLargeConstant::M1);
+      const uint128 t = static_cast<uint128>(y) * NttLargeConstant::M2 + b;
+      result[i] = static_cast<T>(t % mod);
 #else
       PE_ASSERT(0);
 #endif

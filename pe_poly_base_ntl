@@ -72,8 +72,8 @@ SL void CopyPoly(NTL::zz_pX& p, T* x, int64 n, long /*mod*/) {
 }
 
 template <typename T>
-SL void PolyMulSmallModImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
-                            int64 mod) {
+SL void PolyMulSmallImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
+                         int64 mod) {
   NTL::zz_p::init(static_cast<long>(mod));
 
   NTL::zz_pX x, y, z;
@@ -86,8 +86,8 @@ SL void PolyMulSmallModImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
 }
 
 template <typename T>
-SL void PolyMulLargeModImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
-                            int64 mod) {
+SL void PolyMulLargeImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
+                         int64 mod) {
   NTL::ZZ tmp(0);
   ZZFromBytes(tmp, reinterpret_cast<const unsigned char*>(&mod), sizeof(T));
   NTL::ZZ_p::init(tmp);
@@ -105,17 +105,17 @@ template <typename T>
 SL void PolyMulImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
                     int64 mod) {
   if (PolyMulSupport(NTL_SP_BOUND, n, m, mod)) {
-    PolyMulSmallModImpl(X, n, Y, m, result, mod);
+    PolyMulSmallImpl(X, n, Y, m, result, mod);
   }
-  PolyMulLargeModImpl(X, n, Y, m, result, mod);
+  PolyMulLargeImpl(X, n, Y, m, result, mod);
 }
 }  // namespace internal
 
 static constexpr PolyMulCoeType kPolyMulSmallMod = NTL_SP_BOUND;
 static constexpr PolyMulCoeType kPolyMulLargeMod = 0;
 
-POLY_MUL_IMPL(PolyMulSmallMod, internal::PolyMulSmallModImpl)
-POLY_MUL_IMPL(PolyMulLargeMod, internal::PolyMulLargeModImpl)
+POLY_MUL_IMPL(PolyMulSmall, internal::PolyMulSmallImpl)
+POLY_MUL_IMPL(PolyMulLarge, internal::PolyMulLargeImpl)
 POLY_MUL_IMPL(PolyMul, internal::PolyMulImpl)
 
 namespace internal {

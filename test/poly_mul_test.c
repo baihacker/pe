@@ -53,8 +53,8 @@ namespace poly_mul_test {
       {&libbf::PolyMul<uint64>, libbf::kPolyMulMod, "libbf"},
 #endif
 #if HAS_POLY_MUL_NTL && !ONLY_RUN_PE_IMPLEMENTATION
-      {&ntl::PolyMulSmallMod<uint64>, ntl::kPolyMulSmallMod, "ntl s"},
-      {&ntl::PolyMulLargeMod<uint64>, ntl::kPolyMulLargeMod, "ntl l"},
+      {&ntl::PolyMulSmall<uint64>, ntl::kPolyMulSmallMod, "ntl s"},
+      {&ntl::PolyMulLarge<uint64>, ntl::kPolyMulLargeMod, "ntl l"},
 #endif
       //    {&PolyMul<uint64>, 4, "default"},
   };

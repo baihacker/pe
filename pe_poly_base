@@ -180,17 +180,29 @@ struct NttMod32 {
   }
 };
 
-constexpr uint32 ntt_mods[] = {0, 2013265921ULL, 2281701377ULL, 3221225473ULL};
+/*
+3892314113: 29 * 2^27 + 1, 3
+3489660929: 13 * 2^28 + 1, 3
+3221225473: 3 * 2^30 + 1, 5
+2281701377: 17 * 2^27 + 1, 3
+2013265921: 15 * 2^27 + 1, 31
+*/
 
-static const NttMod32 ntt_mod_1(ntt_mods[1], 15ULL, 27, 31ULL);
-static const NttMod32 ntt_mod_2(ntt_mods[2], 17ULL, 27, 3ULL);
-static const NttMod32 ntt_mod_3(ntt_mods[3], 3ULL, 30, 5ULL);
+constexpr uint32 ntt_mods[] = {
+    0, 3892314113, 3489660929, 3221225473, 2281701377,
+};
+
+static const NttMod32 ntt_mod_1(ntt_mods[1], 29, 27, 3);
+static const NttMod32 ntt_mod_2(ntt_mods[2], 13, 28, 3);
+static const NttMod32 ntt_mod_3(ntt_mods[3], 3, 30, 5);
+static const NttMod32 ntt_mod_4(ntt_mods[4], 17, 27, 3);
 
 void InitNtt(int k = 22) {
   PE_ASSERT(k <= 27 && k >= 0);
   ntt_mod_1.InitPreOmg(k);
   ntt_mod_2.InitPreOmg(k);
   ntt_mod_3.InitPreOmg(k);
+  ntt_mod_4.InitPreOmg(k);
 }
 
 namespace internal {
@@ -313,9 +325,9 @@ POLY_MUL_IMPL(PolyMulSmall, internal::PolyMulSmallImpl)
 namespace internal {
 // The medium version uses two modulus.
 struct NttMediumConstant {
-  static constexpr uint64 M1 = 2013265921;
-  static constexpr uint64 M2 = 2281701377;
-  static constexpr uint64 INV_M1__M2 = 1140850697;
+  static constexpr uint64 M1 = ntt_mods[1];
+  static constexpr uint64 M2 = ntt_mods[2];
+  static constexpr uint64 INV_M2__M1 = 2594876085;
 };
 
 // Multiply two polynomials.
@@ -350,9 +362,9 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   for (int64 i = 0; i < result_size; ++i) {
     const uint64 a = tresult[0][i];
     const uint64 b = tresult[1][i];
-    const uint64 x = b >= a ? b - a : b + NttMediumConstant::M2 - a;
-    const uint64 y = x * NttMediumConstant::INV_M1__M2 % NttMediumConstant::M2;
-    const uint64 t = y * NttMediumConstant::M1 + a;
+    const uint64 x = a >= b ? a - b : a + NttMediumConstant::M1 - b;
+    const uint64 y = x * NttMediumConstant::INV_M2__M1 % NttMediumConstant::M1;
+    const uint64 t = y * NttMediumConstant::M2 + b;
     result[i] = mod > 0 ? t % mod : t;
   }
 }
@@ -366,30 +378,29 @@ static constexpr PolyMulCoeType kPolyMulMediumMod =
 POLY_MUL_IMPL(PolyMulMedium, internal::PolyMulMediumImpl)
 
 namespace internal {
-#define NTT32_DIRECT_INT128_IMPLEMENTATION 0
+#define NTT32_DIRECT_INT128_IMPLEMENTATION 1
 
 struct NttLargeConstant {
-  static constexpr uint64 M1 = 2013265921;
-  static constexpr uint64 M2 = 2281701377;
+  static constexpr uint64 M1 = 3892314113;
+  static constexpr uint64 M2 = 3489660929;
   static constexpr uint64 M3 = 3221225473;
 #if PE_HAS_INT128 && NTT32_DIRECT_INT128_IMPLEMENTATION
   static constexpr uint64 M12 = M1 * M2;
   static constexpr uint64 M13 = M1 * M3;
   static constexpr uint64 M23 = M2 * M3;
-  static constexpr uint64 IM12 = 2300875347;
-  static constexpr uint64 IM13 = 1792765347;
-  static constexpr uint64 IM23 = 1006632973;
+  static constexpr uint64 INV_M12__M3 = 2576980436;
+  static constexpr uint64 INV_M13__M2 = 1163220197;
+  static constexpr uint64 INV_M23__M1 = 3373338954;
 
-  static constexpr uint128 M13M = static_cast<uint128>(IM13) * M13;
-  static constexpr uint128 M23M = static_cast<uint128>(IM23) * M23;
-  static constexpr uint128 M12M = static_cast<uint128>(IM12) * M12;
-  static constexpr uint128 MMM = static_cast<uint128>(M1) * M2 * M3;
-#else
-  static constexpr uint64 INV_M1__M2 = 1140850697;
-
-  static constexpr uint64 M1M2 = M1 * M2;
-  static constexpr uint64 INV_M3__M1M2 = 1312477593879670191ULL;
+  static constexpr uint128 M13M = static_cast<uint128>(INV_M13__M2) * M13;
+  static constexpr uint128 M23M = static_cast<uint128>(INV_M23__M1) * M23;
+  static constexpr uint128 M12M = static_cast<uint128>(INV_M12__M3) * M12;
+  static constexpr uint128 M123 = static_cast<uint128>(M1) * M2 * M3;
 #endif
+  static constexpr uint64 INV_M3__M2 = 13;
+
+  static constexpr uint64 M2M3 = M2 * M3;
+  static constexpr uint64 INV_M1__M2M3 = 1498797794963418808;
 };
 
 // Multiply two polynomials.
@@ -423,7 +434,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   }
 
   const int64 result_size = n + m - 1;
-  if (!PE_HAS_INT128 || mod > 0) {
+  if (0 && (!PE_HAS_INT128 || mod > 0)) {
     PE_ASSERT(mod > 0);
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
@@ -432,17 +443,17 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
       const uint64 a = tresult[0][i];
       const uint64 b = tresult[1][i];
       const uint64 c = tresult[2][i];
-      const uint64 x1 = b >= a ? b - a : NttLargeConstant::M2 - a + b;
+      const uint64 x1 = b >= c ? b - c : NttLargeConstant::M2 - c + b;
       const uint64 y1 =
-          x1 * NttLargeConstant::INV_M1__M2 % NttLargeConstant::M2;
-      const uint64 modab = y1 * NttLargeConstant::M1 + a;
+          x1 * NttLargeConstant::INV_M3__M2 % NttLargeConstant::M2;
+      const uint64 mod_bc = y1 * NttLargeConstant::M3 + c;
       const uint64 x2 =
-          modab >= c ? modab - c : NttLargeConstant::M1M2 - c + modab;
+          mod_bc >= a ? mod_bc - a : NttLargeConstant::M2M3 - a + mod_bc;
 
       const uint64 y2 =
-          MulMod(x2, NttLargeConstant::INV_M3__M1M2, NttLargeConstant::M1M2);
-      const uint64 t = MulMod(y2 % mod, NttLargeConstant::M3 % mod, mod);
-      result[i] = AddMod(t, c % mod, mod);
+          MulMod(x2, NttLargeConstant::INV_M1__M2M3, NttLargeConstant::M2M3);
+      const uint64 t = MulMod(y2 % mod, NttLargeConstant::M1 % mod, mod);
+      result[i] = AddMod(t, a % mod, mod);
     }
   } else {
 #if ENABLE_OPENMP
@@ -456,22 +467,22 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
       const uint128 c = tresult[2][i] * NttLargeConstant::M12M;
       const uint128 t = a + b + c;
       const uint128 tmp =
-          t < NttLargeConstant::MMM ? t : t % NttLargeConstant::MMM;
-      result[i] = static_cast<T>(tmp);
+          t < NttLargeConstant::M123 ? t : t % NttLargeConstant::M123;
+      result[i] = static_cast<T>(tmp % mod);
 #else
       const uint64 a = tresult[0][i];
       const uint64 b = tresult[1][i];
       const uint64 c = tresult[2][i];
-      const uint64 x1 = b >= a ? b - a : NttLargeConstant::M2 - a + b;
+      const uint64 x1 = b >= c ? b - c : NttLargeConstant::M2 - c + b;
       const uint64 y1 =
-          x1 * NttLargeConstant::INV_M1__M2 % NttLargeConstant::M2;
-      const uint64 modab = y1 * NttLargeConstant::M1 + a;
+          x1 * NttLargeConstant::INV_M3__M2 % NttLargeConstant::M2;
+      const uint64 mod_bc = y1 * NttLargeConstant::M3 + c;
       const uint64 x2 =
-          modab >= c ? modab - c : NttLargeConstant::M1M2 - c + modab;
+          mod_bc >= a ? mod_bc - a : NttLargeConstant::M2M3 - a + mod_bc;
 
       const uint64 y2 = static_cast<uint128>(x2) *
-                        NttLargeConstant::INV_M3__M1M2 % NttLargeConstant::M1M2;
-      const uint128 t = static_cast<uint128>(y2) * NttLargeConstant::M3 + c;
+                        NttLargeConstant::INV_M1__M2M3 % NttLargeConstant::M2M3;
+      const uint128 t = static_cast<uint128>(y2) * NttLargeConstant::M1 + a;
       result[i] = static_cast<T>(t);
 #endif
 #else

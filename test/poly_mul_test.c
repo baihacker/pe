@@ -124,12 +124,19 @@ namespace poly_mul_test {
     TestImpl(2, 1479725, 100000000003);
     // 1e35
     TestImpl(2, 1000000, 316227766016779);
+    // 2e43
+    TestImpl(2, 1000000, 4611686018427387847);
   }
   PE_REGISTER_TEST(&PolyMulTest, "PolyMulTest", SUPER);
 
   SL void PolyMulPerformanceTest() {
-    std::array<uint64, 6> mods = {97,         100019,       1000003,
-                                  1000000007, 100000000003, 316227766016779};
+    std::array<uint64, 7> mods = {97,
+                                  100019,
+                                  1000003,
+                                  1000000007,
+                                  100000000003,
+                                  316227766016779,
+                                  4611686018427387847LL};
 
     for (int level = 0; level < mods.size(); ++level) {
       printf("mod = %llu\n", (unsigned long long)mods[level]);

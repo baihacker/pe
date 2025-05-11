@@ -973,6 +973,8 @@ template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyMulImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
                 int64 mod) {
+#if 1
+  // ntt64 friendly
   if (PolyMulSupport(ntt32::kPolyMulSmallMod, n, m, mod)) {
     return ntt32::internal::PolyMulSmallImpl(X, n, Y, m, result, mod);
   }
@@ -985,6 +987,18 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   if (PolyMulSupport(ntt64::kPolyMulLargeMod, n, m, mod)) {
     return ntt64::internal::PolyMulLargeImpl(X, n, Y, m, result, mod);
   }
+#else
+  // ntt32 friendly
+  if (PolyMulSupport(ntt32::kPolyMulSmallMod, n, m, mod)) {
+    return ntt32::internal::PolyMulSmallImpl(X, n, Y, m, result, mod);
+  }
+  if (PolyMulSupport(ntt32::kPolyMulMediumMod, n, m, mod)) {
+    return ntt32::internal::PolyMulMediumImpl(X, n, Y, m, result, mod);
+  }
+  if (PolyMulSupport(ntt32::kPolyMulLargeMod, n, m, mod)) {
+    return ntt32::internal::PolyMulLargeImpl(X, n, Y, m, result, mod);
+  }
+#endif
   return ntt32::internal::PolyMulEnormousImpl(X, n, Y, m, result, mod);
 }
 }  // namespace internal

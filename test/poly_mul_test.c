@@ -7,175 +7,180 @@ namespace poly_mul_test {
 #endif
 
 #if HAS_POLY_MUL_FLINT && !ONLY_RUN_PE_IMPLEMENTATION
-SL std::vector<uint64> PolyMulParallelFlintForTest(const std::vector<uint64>& X,
-                                                   const std::vector<uint64>& Y,
-                                                   int64 mod) {
-  return pe::internal::PolyMulParallel<
-      uint64, pe::PolyMulType<uint64>::CStyleFunctionPointer>(
-      X, Y, mod, &flint::PolyMul<uint64>, 8, 1 << 19);
-}
+  SL std::vector<uint64> PolyMulParallelFlintForTest(
+      const std::vector<uint64>& X, const std::vector<uint64>& Y, int64 mod) {
+    return pe::internal::PolyMulParallel<
+        uint64, pe::PolyMulType<uint64>::CStyleFunctionPointer>(
+        X, Y, mod, &flint::PolyMul<uint64>, 8, 1 << 19);
+  }
 #endif
 
-using poly_mul_t = pe::PolyMulType<uint64>::CppStyleFunctionPointer;
+  using poly_mul_t = pe::PolyMulType<uint64>::CppStyleFunctionPointer;
 
-struct MulImpl {
-  poly_mul_t impl;
-  int size;  // 1: coe < 1e18; 3: coe < 1e28; 4: coe < 1e35
-  const char* name;
-};
-MulImpl mul_impl[] = {
+  struct MulImpl {
+    poly_mul_t impl;
+    PolyUint128 size;
+    const char* name;
+  };
+  MulImpl mul_impl[] = {
 #if HAS_POLY_MUL_FLINT && !ONLY_RUN_PE_IMPLEMENTATION
-    {&flint::PolyMul<uint64>, 4, "flint n"},
-    {&flint::PolyMul<uint64>, 4, "flint p"},
+      {&flint::PolyMul<uint64>, flint::kPolyMulMod, "flint n"},
+      {&flint::pmod::PolyMul<uint64>, flint::pmod::kPolyMulMod, "flint p"},
 #if ENABLE_OPENMP
-    {&PolyMulParallelFlintForTest, 4, "flint pn"},
+      {&PolyMulParallelFlintForTest, flint::kPolyMulMod, "flint pn"},
 #endif
 #else
-    {&ntt64::PolyMulLarge<uint64>, 4, "ntt64 l"},
+      {&ntt64::PolyMulLarge<uint64>, ntt64::kPolyMulLargeMod, "ntt64 l"},
 #endif
 #if HAS_POLY_MUL_NTT32
-    {&ntt32::PolyMulSmall<uint64>, 0, "ntt32 s"},
-    {&ntt32::PolyMulMedium<uint64>, 1, "ntt32 m"},
-    {&ntt32::PolyMulLarge<uint64>, 3, "ntt32 l"},
+      {&ntt32::PolyMulSmall<uint64>, ntt32::kPolyMulSmallMod, "ntt32 s"},
+      {&ntt32::PolyMulMedium<uint64>, ntt32::kPolyMulMediumMod, "ntt32 m"},
+      {&ntt32::PolyMulLarge<uint64>, ntt32::kPolyMulBigMod, "ntt32 l"},
 #endif
 #if HAS_POLY_MUL_NTT64
-    {&ntt64::PolyMulSmall<uint64>, 1, "ntt64 s"},
+      {&ntt64::PolyMulSmall<uint64>, ntt64::kPolyMulSmallMod, "ntt64 s"},
 #endif
 #if HAS_POLY_MUL_FLINT && HAS_POLY_MUL_NTT64 && !ONLY_RUN_PE_IMPLEMENTATION
-    {&ntt64::PolyMulLarge<uint64>, 4, "ntt64 l"},
+      {&ntt64::PolyMulLarge<uint64>, ntt64::kPolyMulLargeMod, "ntt64 l"},
 #endif
 #if HAS_POLY_MUL_MIN25_SMALL && !ONLY_RUN_PE_IMPLEMENTATION
-    {&min25::PolyMulSmall<uint64>, 1, "Min_25 s"},
+      {&min25::PolyMulSmall<uint64>, min25::kPolyMulSmallMod, "Min_25 s"},
 #endif
 #if HAS_POLY_MUL_MIN25 && !ONLY_RUN_PE_IMPLEMENTATION
-    {&min25::PolyMulLarge<uint64>, 4, "Min_25 l"},
+      {&min25::PolyMulLarge<uint64>, min25::kPolyMulLargeMod, "Min_25 l"},
 #endif
 #if HAS_POLY_MUL_LIBBF && !ONLY_RUN_PE_IMPLEMENTATION
-    {&libbf::PolyMul<uint64>, 4, "libbf"},
+      {&libbf::PolyMul<uint64>, libbf::kPolyMulMod, "libbf"},
 #endif
 #if HAS_POLY_MUL_NTL && !ONLY_RUN_PE_IMPLEMENTATION
-    {&ntl::PolyMulLargeMod<uint64>, 4, "ntl lm"},
-    {&ntl::PolyMul<uint64>, 4, "ntl"},
+      {&ntl::PolyMulSmallMod<uint64>, ntl::kPolyMulSmallMod, "ntl s"},
+      {&ntl::PolyMulLargeMod<uint64>, ntl::kPolyMulLargeMod, "ntl l"},
 #endif
-    //    {&PolyMul<uint64>, 4, "default"},
-};
+      //    {&PolyMul<uint64>, 4, "default"},
+  };
 
-const char* data_policy[3] = {
-    "random",
-    "min mod",
-    "max mod",
-};
+  const char* data_policy[3] = {
+      "random",
+      "min mod",
+      "max mod",
+  };
 
-SL void TestImpl(int dp, int size, int n, int64 mod) {
-  fprintf(stderr, "%-8s : data = %s, size = %d, n = %d, mod = %lld\n", "config",
-          data_policy[dp], size, n, (long long)mod);
+  SL void TestImpl(int dp, int n, int64 mod) {
+    fprintf(stderr, "%-8s : data = %s, n = %d, mod = %lld\n", "config",
+            data_policy[dp], n, (long long)mod);
 
-  std::vector<uint64> x, y;
-  srand(123456789);
-  if (dp == 0) {
-    for (int i = 0; i < n; ++i) {
-      x.push_back((uint64)CRand63() % mod),
-          y.push_back((uint64)CRand63() % mod);
-    }
-  } else {
-    for (int i = 0; i < n; ++i) {
-      x.push_back(dp == 1 ? 0 : mod - 1), y.push_back(dp == 1 ? 0 : mod - 1);
-    }
-  }
-
-  const int M = sizeof(mul_impl) / sizeof(mul_impl[0]);
-
-  std::vector<uint64> expected;
-  for (int i = 0; i < M; ++i) {
-    auto who = mul_impl[i];
-    if (i > 0) {
-      if (who.size < size) {
-        continue;
+    std::vector<uint64> x, y;
+    srand(123456789);
+    if (dp == 0) {
+      for (int i = 0; i < n; ++i) {
+        x.push_back((uint64)CRand63() % mod),
+            y.push_back((uint64)CRand63() % mod);
+      }
+    } else {
+      for (int i = 0; i < n; ++i) {
+        x.push_back(dp == 1 ? 0 : mod - 1), y.push_back(dp == 1 ? 0 : mod - 1);
       }
     }
-    auto start = clock();
-    auto result = who.impl(x, y, mod);
-    auto end = clock();
-    fprintf(stderr, "%-8s : %.3f\n", who.name,
-            1. * (end - start) / CLOCKS_PER_SEC);
-    if (i == 0) {
-      expected = result;
-    } else {
-      assert(expected == result);
-    }
-  }
-}
-
-SL void PolyMulTest() {
-  // uint128 target = 2655355665167707426;
-  // target = target * 100000000000000000 + 92721528518903091;
-  // std::cerr << Uint128ModUint64(target, 100000000003) << std::endl;
-
-  TestImpl(0, 1, 1000000, 100019);
-  TestImpl(0, 3, 1479725, 100000000003);
-  TestImpl(0, 4, 1000000, 316227766016779);
-
-  // TestImpl(1, 0, 1000000, 100019);
-  // TestImpl(1, 1, 1479725, 100000000003);
-  // TestImpl(1, 2, 1000000, 316227766016779);
-
-  // 1e18
-  TestImpl(2, 1, 999996, 1000003);
-  // 1e28
-  TestImpl(2, 3, 1479725, 100000000003);
-  // 1e35
-  TestImpl(2, 4, 1000000, 316227766016779);
-}
-PE_REGISTER_TEST(&PolyMulTest, "PolyMulTest", SUPER);
-
-SL void PolyMulPerformanceTest() {
-  uint64 mods[5] = {100019, 1000003, 1000000007, 100000000003, 316227766016779};
-
-  for (int level = 0; level <= 4; ++level) {
-    printf("mod = %llu\n", (unsigned long long)mods[level]);
-    const auto mod = mods[level];
-
-    printf("log2(n)  ");
-
-    for (int n = 10; n <= 20; ++n) {
-      printf("%-6d ", n);
-    }
-
-    puts("");
 
     const int M = sizeof(mul_impl) / sizeof(mul_impl[0]);
 
     std::vector<uint64> expected;
     for (int i = 0; i < M; ++i) {
       auto who = mul_impl[i];
-      if (who.size < level) continue;
-
-      printf("%-8s ", who.name);
-      srand(314159);
-      for (int n = 10; n <= 20; ++n) {
-        const int size = 1 << n;
-        std::vector<uint64> x, y;
-        for (int i = 0; i < size; ++i) {
-          x.push_back((uint64)CRand63() % mod),
-              y.push_back((uint64)CRand63() % mod);
+      if (i > 0) {
+        if (!PolyMulSupport(who.size, n, mod)) {
+          continue;
         }
-
-        auto start = clock();
-        who.impl(x, y, mod);
-        auto end = clock();
-#if 1
-        printf("%-6.3f ", 1. * (end - start) / CLOCKS_PER_SEC);
-#else
-        uint64 a = n * (1 << n);
-        uint64 b = end - start;
-        printf("%-6.3f ", 1e5 * b / a);
-#endif
       }
-      puts("");
+      auto start = clock();
+      auto result = who.impl(x, y, mod);
+      auto end = clock();
+      fprintf(stderr, "%-8s : %.3f\n", who.name,
+              1. * (end - start) / CLOCKS_PER_SEC);
+      if (i == 0) {
+        expected = result;
+      } else {
+        assert(expected == result);
+      }
     }
   }
-}
 
-PE_REGISTER_TEST(&PolyMulPerformanceTest, "PolyMulPerformanceTest", SUPER);
+  SL void PolyMulTest() {
+    // uint128 target = 2655355665167707426;
+    // target = target * 100000000000000000 + 92721528518903091;
+    // std::cerr << Uint128ModUint64(target, 100000000003) << std::endl;
+
+    TestImpl(0, 1000000, 100019);
+    TestImpl(0, 1479725, 100000000003);
+    TestImpl(0, 1000000, 316227766016779);
+
+    // TestImpl(1, 0, 1000000, 100019);
+    // TestImpl(1, 1, 1479725, 100000000003);
+    // TestImpl(1, 2, 1000000, 316227766016779);
+
+    // 1e18
+    TestImpl(2, 999996, 1000003);
+    // 1e28
+    TestImpl(2, 1479725, 100000000003);
+    // 1e35
+    TestImpl(2, 1000000, 316227766016779);
+  }
+  PE_REGISTER_TEST(&PolyMulTest, "PolyMulTest", SUPER);
+
+  SL void PolyMulPerformanceTest() {
+    std::array<uint64, 6> mods = {97,         100019,       1000003,
+                                  1000000007, 100000000003, 316227766016779};
+
+    for (int level = 0; level < mods.size(); ++level) {
+      printf("mod = %llu\n", (unsigned long long)mods[level]);
+      const auto mod = mods[level];
+
+      printf("log2(n)  ");
+
+      for (int n = 10; n <= 20; ++n) {
+        printf("%-6d ", n);
+      }
+
+      puts("");
+
+      const int M = sizeof(mul_impl) / sizeof(mul_impl[0]);
+
+      std::vector<uint64> expected;
+      for (int i = 0; i < M; ++i) {
+        auto who = mul_impl[i];
+        if (!PolyMulSupport(who.size, 1024, mod)) continue;
+
+        printf("%-8s ", who.name);
+        srand(314159);
+        for (int n = 10; n <= 20; ++n) {
+          const int size = 1 << n;
+          std::vector<uint64> x, y;
+          for (int i = 0; i < size; ++i) {
+            x.push_back((uint64)CRand63() % mod),
+                y.push_back((uint64)CRand63() % mod);
+          }
+
+          if (!PolyMulSupport(who.size, size, mod)) {
+            printf("%-6s ", "-");
+            continue;
+          }
+
+          auto start = clock();
+          who.impl(x, y, mod);
+          auto end = clock();
+#if 1
+          printf("%-6.3f ", 1. * (end - start) / CLOCKS_PER_SEC);
+#else
+          uint64 a = n * (1 << n);
+          uint64 b = end - start;
+          printf("%-6.3f ", 1e5 * b / a);
+#endif
+        }
+        puts("");
+      }
+    }
+  }
+
+  PE_REGISTER_TEST(&PolyMulPerformanceTest, "PolyMulPerformanceTest", SUPER);
 #endif
 }  // namespace poly_mul_test

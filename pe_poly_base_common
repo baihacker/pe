@@ -3,11 +3,31 @@
 
 #include "pe_base"
 #include "pe_type_traits"
+#include "pe_int"
+#include "pe_extended_int"
 #include "pe_mod"
 #include "pe_nt"
 #include "pe_parallel"
 
 namespace pe {
+
+#if PE_HAS_INT128
+using PolyUint128 = uint128;
+#else
+using PolyUint128 = uint128e;
+#endif
+
+template <typename T>
+constexpr SL int PolyMulSupport(const PolyUint128& mod, int64 n, T mod1) {
+  return mod == 0 || PolyUint128(1) * (mod1 - 1) * (mod1 - 1) * n < mod;
+}
+
+template <typename T>
+constexpr SL int PolyMulSupport(const PolyUint128& mod, int64 n, int64 m,
+                                T mod1) {
+  return PolyMulSupport(mod, std::min(n, m), mod1);
+}
+
 template <typename T>
 SL void AdjustPolyLeadingZero(std::vector<T>& v) {
   int64 now = static_cast<int64>(std::size(v)) - 1;

@@ -36,7 +36,7 @@ class UnsafeMod {
 
   UnsafeMod() = default;
   UnsafeMod(word_t n) : x(Init(n)) {};
-  static word_t modulus() { return mod; }
+  constexpr static word_t modulus() { return mod; }
   static word_t Init(word_t w) { return Reduce(dword_t(w) * r2); }
   static word_t Reduce(const dword_t w) {
     return word_t(w >> word_bits) + mod -
@@ -267,6 +267,11 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   }
 }
 }  // namespace internal
+
+static constexpr PolyUint128 kPolyMulSmallMod = internal::m64_2::modulus();
+static constexpr PolyUint128 kPolyMulLargeMod =
+    Prod<PolyUint128>(internal::m64_1::modulus(), internal::m64_2::modulus());
+static constexpr PolyUint128 kPolyMulMod = kPolyMulLargeMod;
 
 POLY_MUL_IMPL(PolyMulSmall, internal::PolyMulSmallImpl)
 POLY_MUL_IMPL(PolyMulLarge, internal::PolyMulLargeImpl)

@@ -17,7 +17,8 @@ extern "C" {
 void* PeBfRealloc(void*, void* ptr, size_t size) { return realloc(ptr, size); }
 }
 template <typename T>
-SL void BfNttInit(const T* X, int64 n, bf_context_t* context, bf_t* target) {
+SL void BfNttInit(const T* X, int64 n, int64 mod, bf_context_t* context,
+                  bf_t* target) {
   bf_init(context, target);
 
   bf_set_ui(target, 1);
@@ -27,9 +28,20 @@ SL void BfNttInit(const T* X, int64 n, bf_context_t* context, bf_t* target) {
 
   const int64 len = target->len;
   limb_t* data = target->tab;
-  for (int64 i = 0; i < n; ++i) {
-    data[i << 1] = static_cast<limb_t>(X[i]);
-    data[(i << 1) | 1] = 0;
+  if (mod == 0) {
+    for (int64 i = 0; i < n; ++i) {
+      T t = X[i];
+      PE_ASSERT((t >> 64) == 0);
+      data[i << 1] = static_cast<limb_t>(X[i]);
+      data[(i << 1) | 1] = 0;
+    }
+  } else {
+    for (int64 i = 0; i < n; ++i) {
+      T t = X[i];
+      PE_ASSERT((t >> 64) == 0);
+      data[i << 1] = Mod(X[i], mod);
+      data[(i << 1) | 1] = 0;
+    }
   }
 }
 
@@ -44,8 +56,8 @@ SL void PolyMulImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
   bf_context_t bf_context;
   bf_context_init(&bf_context, PeBfRealloc, nullptr);
 
-  BfNttInit(X, n, &bf_context, &x);
-  BfNttInit(Y, m, &bf_context, &y);
+  BfNttInit(X, n, mod, &bf_context, &x);
+  BfNttInit(Y, m, mod, &bf_context, &y);
 
   bf_t z0, z1, toadd;
   bf_init(&bf_context, &z0);

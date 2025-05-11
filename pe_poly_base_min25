@@ -203,8 +203,13 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 
   std::vector<m64_2> f1(ntt_size), g1(ntt_size);
 
-  for (int64 i = 0; i < n; ++i) f1[i] = f[i];
-  for (int64 i = 0; i < m; ++i) g1[i] = g[i];
+  if (mod > 0 && mod <= m64_1::modulus()) {
+    for (int64 i = 0; i < n; ++i) f1[i] = f[i];
+    for (int64 i = 0; i < m; ++i) g1[i] = g[i];
+  } else {
+    for (int64 i = 0; i < n; ++i) f1[i] = Mod(f[i], m64_1::modulus());
+    for (int64 i = 0; i < m; ++i) g1[i] = Mod(g[i], m64_1::modulus());
+  }
   Convolve(std::data(f1), n, std::data(g1), m, false);
 
   const int64 ret_size = n + m - 1;
@@ -247,16 +252,26 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 #pragma omp section
 #endif
     {
-      for (int64 i = 0; i < n; ++i) f1[i] = f[i];
-      for (int64 i = 0; i < m; ++i) g1[i] = g[i];
+      if (mod > 0 && mod <= m64_1::modulus()) {
+        for (int64 i = 0; i < n; ++i) f1[i] = f[i];
+        for (int64 i = 0; i < m; ++i) g1[i] = g[i];
+      } else {
+        for (int64 i = 0; i < n; ++i) f1[i] = Mod(f[i], m64_1::modulus());
+        for (int64 i = 0; i < m; ++i) g1[i] = Mod(g[i], m64_1::modulus());
+      }
       Convolve(std::data(f1), n, std::data(g1), m, false);
     }
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
     {
-      for (int64 i = 0; i < n; ++i) f2[i] = f[i];
-      for (int64 i = 0; i < m; ++i) g2[i] = g[i];
+      if (mod > 0 && mod <= m64_2::modulus()) {
+        for (int64 i = 0; i < n; ++i) f2[i] = f[i];
+        for (int64 i = 0; i < m; ++i) g2[i] = g[i];
+      } else {
+        for (int64 i = 0; i < n; ++i) f2[i] = Mod(f[i], m64_2::modulus());
+        for (int64 i = 0; i < m; ++i) g2[i] = Mod(g[i], m64_2::modulus());
+      }
       Convolve(std::data(f2), n, std::data(g2), m, false);
     }
   }

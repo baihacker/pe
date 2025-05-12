@@ -72,7 +72,7 @@ namespace bn_poly_mul {
 namespace internal {
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
     PolyMulImpl(const T* X, const int64 n, const T* Y, const int64 m, T* result,
                 int64 mod) {
   const int64 mod_bit = mod == 0 ? sizeof(T) * 8 : HighestBitIndex(mod) + 1;
@@ -87,7 +87,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     mpz_ptr ptr = COEFF_TO_PTR(*a);
     if (sizeof(T) <= sizeof(mp_limb_t)) {
       for (int i = 0; i < n; ++i) {
-        ptr->_mp_d[i * need_limb] = X[i];
+        ptr->_mp_d[i * need_limb] = ToInt<mp_limb_t>(X[i]);
       }
     } else {
       for (int i = 0; i < n; ++i) {
@@ -102,7 +102,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     mpz_ptr ptr = COEFF_TO_PTR(*b);
     if (sizeof(T) <= sizeof(mp_limb_t)) {
       for (int i = 0; i < m; ++i) {
-        ptr->_mp_d[i * need_limb] = Y[i];
+        ptr->_mp_d[i * need_limb] = ToInt<mp_limb_t>(Y[i]);
       }
     } else {
       for (int i = 0; i < m; ++i) {
@@ -147,116 +147,11 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
         const auto magic2 = MulMod(magic1, magic1, mod);
         for (int64 i = 0; i < all_size; ++i) {
           const int64 offset = i * need_limb;
-          T it = 0;
+          uint64 it = 0;
           for (int j = need_limb - 1; j >= 0; --j) {
             const mp_limb_t v =
                 offset + j >= has_size ? 0 : ptr->_mp_d[offset + j];
             it = AddMod(MulMod(it, magic2, mod), v % mod, mod);
-          }
-          result[i] = it;
-        }
-      }
-    } else {
-      if (need_limb == 1) {
-        for (int64 i = 0; i < all_size; ++i) {
-          const int64 offset = i * need_limb;
-          const mp_limb_t v = offset >= has_size ? 0 : ptr->_mp_d[offset];
-          result[i] = v;
-        }
-      } else {
-        for (int64 i = 0; i < all_size; ++i) {
-          const int64 offset = i * need_limb;
-          T it = 0;
-          for (int j = need_limb - 1; j >= 0; --j) {
-            const mp_limb_t v =
-                offset + j >= has_size ? 0 : ptr->_mp_d[offset + j];
-            it <<= 32;
-            it <<= 32;
-            it |= v;
-          }
-          result[i] = it;
-        }
-      }
-    }
-  }
-  fmpz_clear(a);
-  fmpz_clear(b);
-}
-
-template <typename T>
-SL REQUIRES((is_extended_integer_v<T>)) RETURN(void)
-    PolyMulImpl(const T* X, const int64 n, const T* Y, const int64 m, T* result,
-                int64 mod) {
-  const int64 mod_bit = mod == 0 ? sizeof(T) * 8 : HighestBitIndex(mod) + 1;
-  const int64 need_bit = mod_bit * 2 + HighestBitIndex(std::min(n, m)) + 1;
-  const int64 need_limb =
-      (need_bit + sizeof(mp_limb_t) * 8 - 1) / (sizeof(mp_limb_t) * 8);
-
-  fmpz_t a, b;
-  fmpz_init(a);
-  {
-    fmpz_setbit(a, need_limb * n * sizeof(mp_limb_t) * 8);
-    mpz_ptr ptr = COEFF_TO_PTR(*a);
-
-    for (int i = 0; i < n; ++i) {
-      *reinterpret_cast<T*>(ptr->_mp_d + i * need_limb) = X[i];
-    }
-
-    fmpz_clrbit(a, need_limb * n * sizeof(mp_limb_t) * 8);
-  }
-  fmpz_init(b);
-  {
-    fmpz_setbit(b, need_limb * m * sizeof(mp_limb_t) * 8);
-    mpz_ptr ptr = COEFF_TO_PTR(*b);
-
-    for (int i = 0; i < m; ++i) {
-      *reinterpret_cast<T*>(ptr->_mp_d + i * need_limb) = Y[i];
-    }
-
-    fmpz_clrbit(b, need_limb * m * sizeof(mp_limb_t) * 8);
-  }
-
-  fmpz_mul(a, a, b);
-
-  if (!COEFF_IS_MPZ(*a)) {
-    result[0] = *a;
-    for (int64 i = 1; i < n + m - 1; ++i) {
-      result[i] = 0;
-    }
-  } else {
-    mpz_ptr ptr = COEFF_TO_PTR(*a);
-
-    const int64 has_size = ptr->_mp_size;
-    const int64 all_size = n + m - 1;
-
-    if (mod > 0) {
-      if (need_limb == 1) {
-        for (int64 i = 0; i < all_size; ++i) {
-          const int64 offset = i * need_limb;
-          const mp_limb_t v = offset >= has_size ? 0 : ptr->_mp_d[offset];
-          result[i] = v % mod;
-        }
-      } else if (need_limb == 2) {
-        const auto magic1 = (1LL << 32) % mod;
-        const auto magic2 = MulMod(magic1, magic1, mod);
-        for (int64 i = 0; i < all_size; ++i) {
-          const int64 offset = i * need_limb;
-          const mp_limb_t hi =
-              offset + 1 >= has_size ? 0 : ptr->_mp_d[offset + 1];
-          const mp_limb_t low = offset >= has_size ? 0 : ptr->_mp_d[offset];
-          result[i] = AddMod(MulMod(hi % mod, magic2, mod), low % mod, mod);
-        }
-      } else {
-        const auto magic1 = (1LL << 32) % mod;
-        const auto magic2 = MulMod(magic1, magic1, mod);
-        for (int64 i = 0; i < all_size; ++i) {
-          const int64 offset = i * need_limb;
-          T it = 0;
-          for (int j = need_limb - 1; j >= 0; --j) {
-            const mp_limb_t v =
-                offset + j >= has_size ? 0 : ptr->_mp_d[offset + j];
-            it = it * magic2 % mod + v % mod;
-            if (it >= mod) it -= mod;
           }
           result[i] = it;
         }

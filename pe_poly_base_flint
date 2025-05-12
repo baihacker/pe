@@ -31,6 +31,22 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    InitNmodPoly(nmod_poly_t a, const T* X, const int64 n, int64 mod) {
+  for (int64 i = 0; i < n; ++i) {
+    nmod_poly_set_coeff_ui(a, i, X[i]);
+  }
+}
+
+template <typename T>
+SL REQUIRES((is_extended_integer_v<T>)) RETURN(void)
+    InitNmodPoly(nmod_poly_t a, const T* X, const int64 n, int64 mod) {
+  for (int64 i = 0; i < n; ++i) {
+    nmod_poly_set_coeff_ui(a, i, ToInt<uint64>(Mod(X[i], mod)));
+  }
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
     PolyMulImpl(const T* X, const int64 n, const T* Y, const int64 m, T* result,
                 int64 mod) {
   PE_ASSERT(mod > 0);
@@ -39,12 +55,9 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   nmod_poly_init2(a, mod, n);
   nmod_poly_init2(b, mod, m);
 
-  for (int64 i = 0; i < n; ++i) {
-    nmod_poly_set_coeff_ui(a, i, X[i]);
-  }
-  for (int64 i = 0; i < m; ++i) {
-    nmod_poly_set_coeff_ui(b, i, Y[i]);
-  }
+  InitNmodPoly<T>(a, X, n, mod);
+  InitNmodPoly<T>(b, Y, m, mod);
+
   nmod_poly_mul(a, a, b);
 
   const int64 size = static_cast<int64>(a[0].length);
@@ -70,6 +83,53 @@ POLY_MUL_IMPL(PolyMul, internal::PolyMulImpl)
 
 namespace bn_poly_mul {
 namespace internal {
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    InitAsFmpz(fmpz_t a, const T* X, const int64 n, const int64 need_limb,
+               int64 mod) {
+  fmpz_setbit(a, need_limb * n * sizeof(mp_limb_t) * 8);
+  mpz_ptr ptr = COEFF_TO_PTR(*a);
+  if (mod > 0) {
+    for (int i = 0; i < n; ++i) {
+      ptr->_mp_d[i * need_limb] = Mod(X[i], mod);
+    }
+  } else {
+    if (sizeof(T) <= sizeof(mp_limb_t)) {
+      for (int i = 0; i < n; ++i) {
+        ptr->_mp_d[i * need_limb] = X[i];
+      }
+    } else {
+      for (int i = 0; i < n; ++i) {
+        *reinterpret_cast<T*>(ptr->_mp_d + i * need_limb) = X[i];
+      }
+    }
+  }
+  fmpz_clrbit(a, need_limb * n * sizeof(mp_limb_t) * 8);
+}
+
+template <typename T>
+SL REQUIRES((is_extended_integer_v<T>)) RETURN(void)
+    InitAsFmpz(fmpz_t a, const T* X, const int64 n, const int64 need_limb,
+               int64 mod) {
+  fmpz_setbit(a, need_limb * n * sizeof(mp_limb_t) * 8);
+  mpz_ptr ptr = COEFF_TO_PTR(*a);
+  if (mod > 0) {
+    for (int i = 0; i < n; ++i) {
+      ptr->_mp_d[i * need_limb] = ToInt<mp_limb_t>(Mod(X[i], mod));
+    }
+  } else {
+    if (sizeof(T) <= sizeof(mp_limb_t)) {
+      for (int i = 0; i < n; ++i) {
+        ptr->_mp_d[i * need_limb] = ToInt<mp_limb_t>(X[i]);
+      }
+    } else {
+      for (int i = 0; i < n; ++i) {
+        *reinterpret_cast<T*>(ptr->_mp_d + i * need_limb) = X[i];
+      }
+    }
+  }
+  fmpz_clrbit(a, need_limb * n * sizeof(mp_limb_t) * 8);
+}
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
@@ -82,35 +142,10 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
 
   fmpz_t a, b;
   fmpz_init(a);
-  {
-    fmpz_setbit(a, need_limb * n * sizeof(mp_limb_t) * 8);
-    mpz_ptr ptr = COEFF_TO_PTR(*a);
-    if (sizeof(T) <= sizeof(mp_limb_t)) {
-      for (int i = 0; i < n; ++i) {
-        ptr->_mp_d[i * need_limb] = ToInt<mp_limb_t>(X[i]);
-      }
-    } else {
-      for (int i = 0; i < n; ++i) {
-        *reinterpret_cast<T*>(ptr->_mp_d + i * need_limb) = X[i];
-      }
-    }
-    fmpz_clrbit(a, need_limb * n * sizeof(mp_limb_t) * 8);
-  }
   fmpz_init(b);
-  {
-    fmpz_setbit(b, need_limb * m * sizeof(mp_limb_t) * 8);
-    mpz_ptr ptr = COEFF_TO_PTR(*b);
-    if (sizeof(T) <= sizeof(mp_limb_t)) {
-      for (int i = 0; i < m; ++i) {
-        ptr->_mp_d[i * need_limb] = ToInt<mp_limb_t>(Y[i]);
-      }
-    } else {
-      for (int i = 0; i < m; ++i) {
-        *reinterpret_cast<T*>(ptr->_mp_d + i * need_limb) = Y[i];
-      }
-    }
-    fmpz_clrbit(b, need_limb * m * sizeof(mp_limb_t) * 8);
-  }
+
+  InitAsFmpz<T>(a, X, n, need_limb, mod);
+  InitAsFmpz<T>(b, Y, m, need_limb, mod);
 
   fmpz_mul(a, a, b);
 
@@ -191,8 +226,35 @@ POLY_MUL_IMPL(PolyMul, internal::PolyMulImpl)
 
 namespace pmod {
 namespace internal {
+
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    InitFqNmodPoly(fq_nmod_poly_t a, const T* X, const int64 n,
+                   fq_nmod_ctx_t ctx, int64 mod) {
+  fmpz_t c;
+  fmpz_init(c);
+  for (int64 i = 0; i < n; ++i) {
+    fmpz_set_si(c, X[i]);
+    fq_nmod_poly_set_coeff_fmpz(a, i, c, ctx);
+  }
+  fmpz_clear(c);
+}
+
+template <typename T>
+SL REQUIRES((is_extended_integer_v<T>)) RETURN(void)
+    InitFqNmodPoly(fq_nmod_poly_t a, const T* X, const int64 n,
+                   fq_nmod_ctx_t ctx, int64 mod) {
+  fmpz_t c;
+  fmpz_init(c);
+  for (int64 i = 0; i < n; ++i) {
+    fmpz_set_si(c, ToInt<uint64>(Mod(X[i], mod)));
+    fq_nmod_poly_set_coeff_fmpz(a, i, c, ctx);
+  }
+  fmpz_clear(c);
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
     PolyMulImpl(const T* X, const int64 n, const T* Y, const int64 m, T* result,
                 int64 mod) {
   PE_ASSERT(mod > 0);
@@ -207,16 +269,9 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   fq_nmod_poly_init2(a, n, ctx);
   fq_nmod_poly_init2(b, m, ctx);
 
-  fmpz_t c;
-  fmpz_init(c);
-  for (int64 i = 0; i < n; ++i) {
-    fmpz_set_si(c, X[i]);
-    fq_nmod_poly_set_coeff_fmpz(a, i, c, ctx);
-  }
-  for (int64 i = 0; i < m; ++i) {
-    fmpz_set_si(c, Y[i]);
-    fq_nmod_poly_set_coeff_fmpz(b, i, c, ctx);
-  }
+  InitFqNmodPoly<T>(a, X, n, ctx, mod);
+  InitFqNmodPoly<T>(b, Y, m, ctx, mod);
+
   fq_nmod_poly_mul(a, a, b, ctx);
 
   const int64 size = static_cast<int64>(a[0].length);
@@ -230,7 +285,6 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   fq_nmod_poly_clear(b, ctx);
   fq_nmod_ctx_clear(ctx);
   fmpz_clear(xmod);
-  fmpz_clear(c);
 }
 }  // namespace internal
 static constexpr PolyMulCoeType kPolyMulMod = 0;

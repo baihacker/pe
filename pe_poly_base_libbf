@@ -16,15 +16,17 @@ namespace internal {
 extern "C" {
 void* PeBfRealloc(void*, void* ptr, size_t size) { return realloc(ptr, size); }
 }
+
 template <typename T>
-SL void BfNttInit(const T* X, int64 n, int64 mod, bf_context_t* context,
-                  bf_t* target) {
+SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
+    BfNttInit(const T* X, int64 n, int64 mod, bf_context_t* context,
+              bf_t* target) {
   bf_init(context, target);
 
   bf_set_ui(target, 1);
 
   bf_resize(target, 2 * n);
-  target->expn = pe_clzll(X[n - 1]);
+  target->expn = pe_clzll(ToInt<limb_t>(X[n - 1]));
 
   const int64 len = target->len;
   limb_t* data = target->tab;
@@ -32,14 +34,14 @@ SL void BfNttInit(const T* X, int64 n, int64 mod, bf_context_t* context,
     for (int64 i = 0; i < n; ++i) {
       T t = X[i];
       PE_ASSERT((t >> 64) == 0);
-      data[i << 1] = static_cast<limb_t>(X[i]);
+      data[i << 1] = ToInt<limb_t>(X[i]);
       data[(i << 1) | 1] = 0;
     }
   } else {
     for (int64 i = 0; i < n; ++i) {
       T t = X[i];
       PE_ASSERT((t >> 64) == 0);
-      data[i << 1] = Mod(X[i], mod);
+      data[i << 1] = ToInt<limb_t>(Mod(X[i], mod));
       data[(i << 1) | 1] = 0;
     }
   }
@@ -50,8 +52,9 @@ SL void BfNttDeinit(bf_t* target) { bf_delete(target); }
 static constexpr PolyMulCoeType kPolyMulLargeMod = 0;
 
 template <typename T>
-SL void PolyMulImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
-                    int64 mod) {
+SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
+    PolyMulImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
+                int64 mod) {
   bf_t x, y;
   bf_context_t bf_context;
   bf_context_init(&bf_context, PeBfRealloc, nullptr);

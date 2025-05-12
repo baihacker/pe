@@ -14,7 +14,8 @@ namespace pe {
 namespace ntl {
 namespace internal {
 template <typename T>
-SL void InitPoly(NTL::ZZ_pX& p, const T* x, int64 n, int64 mod) {
+SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
+    InitPoly(NTL::ZZ_pX& p, const T* x, int64 n, int64 mod) {
   NTL::ZZ tmp(0);
   p.SetLength(n);
   if (mod >> 32) {
@@ -25,13 +26,14 @@ SL void InitPoly(NTL::ZZ_pX& p, const T* x, int64 n, int64 mod) {
     }
   } else {
     for (int64 i = 0; i < n; ++i) {
-      p[i] = x[i];
+      p[i] = ToInt<uint64>(Mod(x[i], mod));
     }
   }
 }
 
 template <typename T>
-SL void CopyPoly(NTL::ZZ_pX& p, T* x, int64 n, int64 mod) {
+SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
+    CopyPoly(NTL::ZZ_pX& p, T* x, int64 n, int64 mod) {
   const int64 d = deg(p);
   const int64 m = std::min(d, n - 1);
   if (mod >> 32) {
@@ -52,15 +54,17 @@ SL void CopyPoly(NTL::ZZ_pX& p, T* x, int64 n, int64 mod) {
 }
 
 template <typename T>
-SL void InitPoly(NTL::zz_pX& p, const T* x, int64 n, long /*mod*/) {
+SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
+    InitPoly(NTL::zz_pX& p, const T* x, int64 n, long mod) {
   p.SetLength(n);
   for (int64 i = 0; i < n; ++i) {
-    p[i]._zz_p__rep = static_cast<long>(x[i]);
+    p[i]._zz_p__rep = ToInt<long>(Mod(x[i], mod));
   }
 }
 
 template <typename T>
-SL void CopyPoly(NTL::zz_pX& p, T* x, int64 n, long /*mod*/) {
+SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
+    CopyPoly(NTL::zz_pX& p, T* x, int64 n, long /*mod*/) {
   const int64 d = deg(p);
   const int64 m = std::min(d, n - 1);
   for (int64 i = 0; i <= m; ++i) {
@@ -72,8 +76,9 @@ SL void CopyPoly(NTL::zz_pX& p, T* x, int64 n, long /*mod*/) {
 }
 
 template <typename T>
-SL void PolyMulSmallImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
-                         int64 mod) {
+SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
+    PolyMulSmallImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
+                     int64 mod) {
   PE_ASSERT(mod > 0);
 
   NTL::zz_p::init(static_cast<long>(mod));
@@ -88,8 +93,9 @@ SL void PolyMulSmallImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
 }
 
 template <typename T>
-SL void PolyMulLargeImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
-                         int64 mod) {
+SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
+    PolyMulLargeImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
+                     int64 mod) {
   PE_ASSERT(mod > 0);
 
   NTL::ZZ tmp(0);
@@ -106,8 +112,9 @@ SL void PolyMulLargeImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
 }
 
 template <typename T>
-SL void PolyMulImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
-                    int64 mod) {
+SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
+    PolyMulImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
+                int64 mod) {
   if (PolyMulAcceptLengthAndMod(NTL_SP_BOUND, n, m, mod)) {
     PolyMulSmallImpl(X, n, Y, m, result, mod);
   }

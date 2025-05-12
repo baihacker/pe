@@ -92,7 +92,7 @@ namespace poly_mul_test {
     for (int i = 0; i < M; ++i) {
       auto who = mul_impl[i];
       if (i > 0) {
-        if (!PolyMulSupport(who.size, n, mod)) {
+        if (!PolyMulAcceptLengthAndMod(who.size, n, mod)) {
           continue;
         }
       }
@@ -160,13 +160,13 @@ namespace poly_mul_test {
       std::vector<uint64> expected;
       for (int i = 0; i < M; ++i) {
         auto who = mul_impl[i];
-        if (!PolyMulSupport(who.size, 1 << min_log2, mod)) continue;
+        if (!PolyMulAcceptLengthAndMod(who.size, 1 << min_log2, mod)) continue;
 
         printf("%-8s ", who.name);
         srand(314159);
         for (int n = min_log2; n <= max_log2; ++n) {
           const int size = 1 << n;
-          if (!PolyMulSupport(who.size, size, mod)) {
+          if (!PolyMulAcceptLengthAndMod(who.size, size, mod)) {
             printf("%-6s ", "-");
             continue;
           }

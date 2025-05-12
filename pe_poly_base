@@ -650,14 +650,28 @@ template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyMulImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
                 int64 mod) {
-  if (PolyMulSupport(kPolyMulSmallMod, n, m, mod)) {
-    return PolyMulSmallImpl(X, n, Y, m, result, mod);
-  }
-  if (PolyMulSupport(kPolyMulMediumMod, n, m, mod)) {
-    return PolyMulMediumImpl(X, n, Y, m, result, mod);
-  }
-  if (PolyMulSupport(kPolyMulLargeMod, n, m, mod)) {
-    return PolyMulLargeImpl(X, n, Y, m, result, mod);
+  using ImplFunctionPointerType = pe::PolyMulType<T>::CStyleFunctionPointer;
+  using Item = std::pair<ImplFunctionPointerType, PolyMulCoeType>;
+  constexpr std::array<std::pair<ImplFunctionPointerType, PolyMulCoeType>, 3>
+      impls = {
+          Item{&ntt32::internal::PolyMulSmallImpl<T>, ntt32::kPolyMulSmallMod},
+          Item{&ntt32::internal::PolyMulMediumImpl<T>,
+               ntt32::kPolyMulMediumMod},
+      };
+  if (mod > 0) {
+    for (int i = 0; i < impls.size(); ++i) {
+      if (PolyMulAcceptLengthAndMod(impls[i].second, n, m, mod)) {
+        return (*impls[i].first)(X, n, Y, m, result, mod);
+      }
+    }
+  } else {
+    const T maxv1 = *std::max_element(X, X + n);
+    const T maxv2 = *std::max_element(Y, X + m);
+    for (int i = 0; i < impls.size(); ++i) {
+      if (PolyMulAcceptLengthAndValue(impls[i].second, n, maxv1, m, maxv2)) {
+        return (*impls[i].first)(X, n, Y, m, result, mod);
+      }
+    }
   }
   return PolyMulEnormousImpl(X, n, Y, m, result, mod);
 }
@@ -963,8 +977,16 @@ template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyMulImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
                 int64 mod) {
-  if (PolyMulSupport(kPolyMulSmallMod, n, m, mod)) {
-    return PolyMulSmallImpl(X, n, Y, m, result, mod);
+  if (mod > 0) {
+    if (PolyMulAcceptLengthAndMod(kPolyMulSmallMod, n, m, mod)) {
+      return PolyMulSmallImpl(X, n, Y, m, result, mod);
+    }
+  } else {
+    const T maxv1 = *std::max_element(X, X + n);
+    const T maxv2 = *std::max_element(Y, X + m);
+    if (PolyMulAcceptLengthAndValue(kPolyMulSmallMod, n, maxv1, m, maxv2)) {
+      return PolyMulSmallImpl(X, n, Y, m, result, mod);
+    }
   }
   return PolyMulLargeImpl(X, n, Y, m, result, mod);
 }
@@ -980,32 +1002,44 @@ template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyMulImpl(const T* X, int64 n, const T* Y, int64 m, T* result,
                 int64 mod) {
+  using ImplFunctionPointerType = pe::PolyMulType<T>::CStyleFunctionPointer;
+  using Item = std::pair<ImplFunctionPointerType, PolyMulCoeType>;
 #if 1
   // ntt64 friendly
-  if (PolyMulSupport(ntt32::kPolyMulSmallMod, n, m, mod)) {
-    return ntt32::internal::PolyMulSmallImpl(X, n, Y, m, result, mod);
-  }
-  if (PolyMulSupport(ntt64::kPolyMulSmallMod, n, m, mod)) {
-    return ntt64::internal::PolyMulSmallImpl(X, n, Y, m, result, mod);
-  }
-  if (PolyMulSupport(ntt32::kPolyMulMediumMod, n, m, mod)) {
-    return ntt32::internal::PolyMulMediumImpl(X, n, Y, m, result, mod);
-  }
-  if (PolyMulSupport(ntt64::kPolyMulLargeMod, n, m, mod)) {
-    return ntt64::internal::PolyMulLargeImpl(X, n, Y, m, result, mod);
-  }
+  constexpr std::array<std::pair<ImplFunctionPointerType, PolyMulCoeType>, 4>
+      impls = {
+          Item{&ntt32::internal::PolyMulSmallImpl<T>, ntt32::kPolyMulSmallMod},
+          Item{&ntt64::internal::PolyMulSmallImpl<T>, ntt64::kPolyMulSmallMod},
+          Item{&ntt32::internal::PolyMulMediumImpl<T>,
+               ntt32::kPolyMulMediumMod},
+          Item{&ntt64::internal::PolyMulLargeImpl<T>, ntt64::kPolyMulLargeMod},
+      };
 #else
   // ntt32 friendly
-  if (PolyMulSupport(ntt32::kPolyMulSmallMod, n, m, mod)) {
-    return ntt32::internal::PolyMulSmallImpl(X, n, Y, m, result, mod);
-  }
-  if (PolyMulSupport(ntt32::kPolyMulMediumMod, n, m, mod)) {
-    return ntt32::internal::PolyMulMediumImpl(X, n, Y, m, result, mod);
-  }
-  if (PolyMulSupport(ntt32::kPolyMulLargeMod, n, m, mod)) {
-    return ntt32::internal::PolyMulLargeImpl(X, n, Y, m, result, mod);
-  }
+  constexpr std::array<std::pair<ImplFunctionPointerType, PolyMulCoeType>, 3>
+      impls = {
+          Item{&ntt32::internal::PolyMulSmallImpl<T>, ntt32::kPolyMulSmallMod},
+          Item{&ntt32::internal::PolyMulMediumImpl<T>,
+               ntt32::kPolyMulMediumMod},
+          Item{&ntt32::internal::PolyMulLargeImpl<T>, ntt32::kPolyMulLargeMod},
+      };
 #endif
+  if (mod > 0) {
+    for (int i = 0; i < impls.size(); ++i) {
+      if (PolyMulAcceptLengthAndMod(impls[i].second, n, m, mod)) {
+        return (*impls[i].first)(X, n, Y, m, result, mod);
+      }
+    }
+  } else {
+    const T maxv1 = *std::max_element(X, X + n);
+    const T maxv2 = *std::max_element(Y, Y + m);
+    for (int i = 0; i < impls.size(); ++i) {
+      if (PolyMulAcceptLengthAndValue(impls[i].second, n, maxv1, m, maxv2)) {
+        return (*impls[i].first)(X, n, Y, m, result, mod);
+      }
+    }
+  }
+
   return ntt32::internal::PolyMulEnormousImpl(X, n, Y, m, result, mod);
 }
 }  // namespace internal

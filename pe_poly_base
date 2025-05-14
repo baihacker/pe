@@ -223,7 +223,7 @@ template <typename T, uint32 mod>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     Ntt(T* data, const int64 n, const NttMod32& moder, bool inv = false) {
   ntt_base::NttTrans(data, n);
-
+  using AtLeastUint64T = at_least_uint64_t<T>;
   int id = 0;
   for (int64 h = 2; h <= n; h <<= 1) {
     const uint32* pomg = moder.pre_omg[++id];
@@ -236,9 +236,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
         const int64 half_h = h >> 1;
         const int64 limit = j + half_h;
         for (int64 k = j; k < limit; ++k) {
-          const T u = data[k];
-          const auto t =
-              MulMod(static_cast<uint64>(*omg++), data[k + half_h], mod);
+          const AtLeastUint64T u = data[k];
+          const auto t = MulMod(*omg++, data[k + half_h], mod);
           data[k] = AddMod(u, t, mod);
           data[k + half_h] = SubMod(u, t, mod);
         }
@@ -252,7 +251,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
         const int64 half_h = h >> 1;
         const int64 limit = j + half_h;
         for (int64 k = j; k < limit; ++k) {
-          const T u = data[k];
+          const AtLeastUint64T u = data[k];
           const auto t = MulMod(omgn, data[k + half_h], mod);
           data[k] = AddMod(u, t, mod);
           data[k + half_h] = SubMod(u, t, mod);
@@ -270,23 +269,23 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 }
 
 template <typename T, uint32 mod>
-SL std::vector<uint64> RunNtt(const NttMod32& moder, const T* X, int64 n,
+SL std::vector<uint32> RunNtt(const NttMod32& moder, const T* X, int64 n,
                               const T* Y, int64 m, int64 target_mod) {
   const int64 aligned_size = 1LL << pe_lgll(2 * (n + m - 1) - 1);
   const bool skip_mod = target_mod > 0 && static_cast<uint64>(target_mod) <=
                                               static_cast<uint64>(mod);
-  std::vector<uint64> XX(aligned_size);
-  std::vector<uint64> YY(aligned_size);
+  std::vector<uint32> XX(aligned_size);
+  std::vector<uint32> YY(aligned_size);
   if (skip_mod) {
-    for (int64 i = 0; i < n; ++i) XX[i] = ToInt<uint64>(X[i]);
+    for (int64 i = 0; i < n; ++i) XX[i] = ToInt<uint32>(X[i]);
   } else {
-    for (int64 i = 0; i < n; ++i) XX[i] = ToInt<uint64>(Mod(X[i], mod));
+    for (int64 i = 0; i < n; ++i) XX[i] = ToInt<uint32>(Mod(X[i], mod));
   }
   for (int64 i = n; i < aligned_size; ++i) XX[i] = 0;
   if (skip_mod) {
-    for (int64 i = 0; i < m; ++i) YY[i] = ToInt<uint64>(Y[i]);
+    for (int64 i = 0; i < m; ++i) YY[i] = ToInt<uint32>(Y[i]);
   } else {
-    for (int64 i = 0; i < m; ++i) YY[i] = ToInt<uint64>(Mod(Y[i], mod));
+    for (int64 i = 0; i < m; ++i) YY[i] = ToInt<uint32>(Mod(Y[i], mod));
   }
   for (int64 i = m; i < aligned_size; ++i) YY[i] = 0;
 #if ENABLE_OPENMP
@@ -296,17 +295,17 @@ SL std::vector<uint64> RunNtt(const NttMod32& moder, const T* X, int64 n,
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Ntt<uint64, mod>(&XX[0], aligned_size, moder, false);
+    Ntt<uint32, mod>(&XX[0], aligned_size, moder, false);
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Ntt<uint64, mod>(&YY[0], aligned_size, moder, false);
+    Ntt<uint32, mod>(&YY[0], aligned_size, moder, false);
   }
   constexpr uint64 mod1 = mod;
   for (int64 i = 0; i < aligned_size; ++i) {
     XX[i] = static_cast<uint64>(XX[i]) * YY[i] % mod1;
   }
-  Ntt<uint64, mod>(&XX[0], aligned_size, moder, true);
+  Ntt<uint32, mod>(&XX[0], aligned_size, moder, true);
   return XX;
 }
 }  // namespace internal
@@ -320,7 +319,7 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
                      int64 mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
 
-  std::vector<uint64> tresult =
+  std::vector<uint32> tresult =
       RunNtt<T, ntt_mods[1]>(ntt_mod_1, X, n, Y, m, mod);
 
   const int64 result_size = n + m - 1;
@@ -351,7 +350,7 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
                       int64 mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
 
-  std::vector<uint64> tresult[2];
+  std::vector<uint32> tresult[2];
 
 #if ENABLE_OPENMP
 #pragma omp parallel sections
@@ -424,7 +423,7 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
                      int64 mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
 
-  std::vector<uint64> tresult[3];
+  std::vector<uint32> tresult[3];
 
 #if ENABLE_OPENMP
 #pragma omp parallel sections
@@ -540,7 +539,7 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
                         int64 mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
 
-  std::vector<uint64> tresult[4];
+  std::vector<uint32> tresult[4];
 
 #if ENABLE_OPENMP
 #pragma omp parallel sections

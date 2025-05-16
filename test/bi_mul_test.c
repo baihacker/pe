@@ -1,7 +1,6 @@
 #include "pe_test.h"
 
 namespace bi_test {
-
 template <typename T>
 SL void BiMulTestImpl(int x, int y) {
   for (int s1 = -1; s1 <= 1; ++s1)

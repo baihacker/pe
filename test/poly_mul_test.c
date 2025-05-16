@@ -195,5 +195,84 @@ SL void PolyMulPerformanceTest() {
 }
 
 PE_REGISTER_TEST(&PolyMulPerformanceTest, "PolyMulPerformanceTest", SUPER);
+
+void PolyMulZeroModTest() {
+  std::vector<int64> a = {1, 2, 3};
+  std::vector<int64> expected = {1, 4, 10, 12, 9};
+  {
+    std::vector<int64> actual = ntt32::PolyMul(a, a, 0);
+    assert(actual == expected);
+  }
+  {
+    std::vector<int64> actual = ntt64::PolyMul(a, a, 0);
+    assert(actual == expected);
+  }
+#if HAS_POLY_MUL_MIN25 && !ONLY_RUN_PE_IMPLEMENTATION
+  {
+    std::vector<int64> actual = min25::PolyMul(a, a, 0);
+    assert(actual == expected);
+  }
+#endif
+#if HAS_POLY_MUL_LIBBF && !ONLY_RUN_PE_IMPLEMENTATION
+  {
+    std::vector<int64> actual = libbf::PolyMul(a, a, 0);
+    assert(actual == expected);
+  }
+#endif
+#if HAS_POLY_MUL_FLINT && !ONLY_RUN_PE_IMPLEMENTATION
+  {
+    std::vector<int64> actual = flint::bn_poly_mul::PolyMul(a, a, 0);
+    assert(actual == expected);
+  }
+#endif
+}
+PE_REGISTER_TEST(&PolyMulZeroModTest, "PolyMulZeroModTest", SMALL);
+
+void PolyMulExtendedInt() {
+  constexpr int64 mod = 97;
+  std::vector<uint1024e> a = {1, 2, 3};
+  std::vector<uint1024e> expected = {1, 4, 10, 12, 9};
+  {
+    std::vector<uint1024e> actual = ntt32::PolyMul(a, a, mod);
+    assert(actual == expected);
+  }
+  {
+    std::vector<uint1024e> actual = ntt64::PolyMul(a, a, mod);
+    assert(actual == expected);
+  }
+#if HAS_POLY_MUL_MIN25 && !ONLY_RUN_PE_IMPLEMENTATION
+  {
+    std::vector<uint1024e> actual = min25::PolyMul(a, a, mod);
+    assert(actual == expected);
+  }
+#endif
+#if HAS_POLY_MUL_LIBBF && !ONLY_RUN_PE_IMPLEMENTATION
+  {
+    std::vector<uint1024e> actual = libbf::PolyMul(a, a, mod);
+    assert(actual == expected);
+  }
+#endif
+#if HAS_POLY_MUL_NTL && !ONLY_RUN_PE_IMPLEMENTATION
+  {
+    std::vector<uint1024e> actual = ntl::PolyMul(a, a, mod);
+    assert(actual == expected);
+  }
+#endif
+#if HAS_POLY_MUL_FLINT && !ONLY_RUN_PE_IMPLEMENTATION
+  {
+    std::vector<uint1024e> actual = flint::PolyMul(a, a, mod);
+    assert(actual == expected);
+  }
+  {
+    std::vector<uint1024e> actual = flint::bn_poly_mul::PolyMul(a, a, mod);
+    assert(actual == expected);
+  }
+  {
+    std::vector<uint1024e> actual = flint::pmod::PolyMul(a, a, mod);
+    assert(actual == expected);
+  }
+#endif
+}
+PE_REGISTER_TEST(&PolyMulExtendedInt, "PolyMulExtendedInt", SMALL);
 #endif
 }  // namespace poly_mul_test

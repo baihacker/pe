@@ -50,10 +50,13 @@ PE_REGISTER_TEST(&BiMulTestBig_BigInteger, "BiMulTestBig_BigInteger", BIG);
 #endif
 
 #if ENABLE_GMP
+
 SL void BiMulTestMedium_MpInteger() { BiMulTestImpl<MpInteger>(1000, 500); }
 
+#if !defined(CONTINUOUS_INTEGRATION_TEST)
 PE_REGISTER_TEST(&BiMulTestMedium_MpInteger, "BiMulTestMedium_MpInteger",
                  MEDIUM);
+#endif
 
 SL void BiMulTestBig_MpInteger() { BiMulTestImpl<MpInteger>(10, 10000); }
 
@@ -65,8 +68,10 @@ PE_REGISTER_TEST(&BiMulTestBig_MpInteger, "BiMulTestBig_MpInteger", BIG);
 #if ENABLE_FLINT
 SL void BiMulTestMedium_FMpInteger() { BiMulTestImpl<FMpInteger>(1000, 500); }
 
+#if !defined(CONTINUOUS_INTEGRATION_TEST)
 PE_REGISTER_TEST(&BiMulTestMedium_FMpInteger, "BiMulTestMedium_FMpInteger",
                  MEDIUM);
+#endif
 
 SL void BiMulTestBig_FMpInteger() { BiMulTestImpl<FMpInteger>(10, 10000); }
 

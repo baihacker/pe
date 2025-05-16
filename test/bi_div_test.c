@@ -25,8 +25,8 @@ SL void BiDivTestImpl(int x, int y) {
                 }
               }
             }
-            std::string expectedResult1;
-            std::string expectedResult2;
+            std::string expected_result1;
+            std::string expected_result2;
             {
               T a = s1;
               T b = s2;
@@ -34,22 +34,22 @@ SL void BiDivTestImpl(int x, int y) {
               for (auto& iter : B) b *= iter;
               T c = a / b;
               T d = a % b;
-              expectedResult1 = ToString(c);
-              expectedResult2 = ToString(d);
+              expected_result1 = ToString(c);
+              expected_result2 = ToString(d);
             }
-            std::string myResult1;
-            std::string myResult2;
+            std::string actual_result1;
+            std::string actual_result2;
             {
               bi a = s1;
               bi b = s2;
               for (auto& iter : A) a *= iter;
               for (auto& iter : B) b *= iter;
               auto [c, d] = Div(a, b);
-              myResult1 = ToString(c);
-              myResult2 = ToString(d);
+              actual_result1 = ToString(c);
+              actual_result2 = ToString(d);
             }
-            assert(expectedResult1 == myResult1);
-            assert(expectedResult2 == myResult2);
+            assert(expected_result1 == actual_result1);
+            assert(expected_result2 == actual_result2);
           }
 }
 
@@ -66,8 +66,6 @@ SL void BiDivTestBig_BigInteger() { BiDivTestImpl<BigInteger>(10, 2000); }
 PE_REGISTER_TEST(&BiDivTestBig_BigInteger, "BiDivTestBig_BigInteger", BIG);
 #endif
 
-
-
 #if ENABLE_GMP
 SL void BiDivTestMedium_MpInteger() { BiDivTestImpl<MpInteger>(100, 500); }
 
@@ -82,8 +80,6 @@ SL void BiDivTestBig_MpInteger() { BiDivTestImpl<MpInteger>(10, 2000); }
 PE_REGISTER_TEST(&BiDivTestBig_MpInteger, "BiDivTestBig_MpInteger", BIG);
 #endif
 #endif
-
-
 
 #if ENABLE_FLINT
 SL void BiDivTestMedium_FMpInteger() { BiDivTestImpl<FMpInteger>(100, 500); }

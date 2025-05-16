@@ -12,7 +12,7 @@ SL void BiMulTestImpl(int x, int y) {
           A.push_back(rand());
           B.push_back(rand());
         }
-        std::string expectedResult;
+        std::string expected_result;
         {
           T a = s1;
           T b = s2;
@@ -20,9 +20,9 @@ SL void BiMulTestImpl(int x, int y) {
           for (auto& iter : B) b *= iter;
 
           T c = a * b;
-          expectedResult = ToString(c);
+          expected_result = ToString(c);
         }
-        std::string myResult;
+        std::string actual_result;
         {
           bi a = s1;
           bi b = s2;
@@ -31,9 +31,9 @@ SL void BiMulTestImpl(int x, int y) {
           bi c = a * b;
           std::stringstream ss;
           ss << c;
-          ss >> myResult;
+          ss >> actual_result;
         }
-        assert(expectedResult == myResult);
+        assert(expected_result == actual_result);
       }
 }
 
@@ -50,8 +50,6 @@ SL void BiMulTestBig_BigInteger() { BiMulTestImpl<BigInteger>(10, 10000); }
 PE_REGISTER_TEST(&BiMulTestBig_BigInteger, "BiMulTestBig_BigInteger", BIG);
 #endif
 
-
-
 #if ENABLE_GMP
 SL void BiMulTestMedium_MpInteger() { BiMulTestImpl<MpInteger>(1000, 500); }
 
@@ -64,8 +62,6 @@ SL void BiMulTestBig_MpInteger() { BiMulTestImpl<MpInteger>(10, 10000); }
 PE_REGISTER_TEST(&BiMulTestBig_MpInteger, "BiMulTestBig_MpInteger", BIG);
 #endif
 #endif
-
-
 
 #if ENABLE_FLINT
 SL void BiMulTestMedium_FMpInteger() { BiMulTestImpl<FMpInteger>(1000, 500); }

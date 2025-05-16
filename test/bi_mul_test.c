@@ -50,7 +50,6 @@ PE_REGISTER_TEST(&BiMulTestBig_BigInteger, "BiMulTestBig_BigInteger", BIG);
 #endif
 
 #if ENABLE_GMP
-
 SL void BiMulTestMedium_MpInteger() { BiMulTestImpl<MpInteger>(1000, 500); }
 
 #if !defined(CONTINUOUS_INTEGRATION_TEST)

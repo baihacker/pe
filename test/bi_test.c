@@ -346,6 +346,31 @@ SL void TestUtilities() {
   // std::cout << tr.Elapsed().Format() << " " << v.bitCount() << std::endl;
 }
 
+template <typename T>
+SL void BiCorrectnessTestImpl() {
+  for (int i = -100; i <= 100; ++i)
+    for (int j = -100; j <= 100; ++j) {
+      T a(i), b(j);
+      assert(i + j == a + b);
+      assert(i - j == a - b);
+      assert(i * j == a * b);
+      if (j != 0) {
+        assert(i / j == a / b);
+        assert(i % j == a % b);
+      }
+      if (i >= 0 && j >= 0) {
+        assert((i & j) == (a & b));
+        assert((i ^ j) == (a ^ b));
+        assert((i | j) == (a | b));
+      }
+      assert((i > j) == (bool)(a > b));
+      assert((i < j) == (bool)(a < b));
+      assert((i == j) == (bool)(a == b));
+      assert((i >= j) == (bool)(a >= b));
+      assert((i <= j) == (bool)(a <= b));
+    }
+}
+
 SL void BiTest() {
   TestConstructor();
   TestAssignmentOperator();
@@ -353,6 +378,13 @@ SL void BiTest() {
   TestCompareOperator();
   TestBitOperator();
   TestUtilities();
+  BiCorrectnessTestImpl<BigInteger>();
+#if ENABLE_GMP
+  BiCorrectnessTestImpl<MpInteger>();
+#endif
+#if ENABLE_FLINT
+  BiCorrectnessTestImpl<FMpInteger>();
+#endif
 }
 PE_REGISTER_TEST(&BiTest, "BiTest", SMALL);
 }  // namespace bi_test

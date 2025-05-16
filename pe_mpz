@@ -179,7 +179,7 @@ class MpInteger {
       v >>= MpInteger::LIMB_BIT / 2;
 #endif
     }
-    mpz_init2(z, cnt * MpInteger::LIMB_BIT * cnt);
+    mpz_init2(z, cnt * MpInteger::LIMB_BIT);
     auto* t = z->_mp_d;
     for (int i = 0; i < cnt; ++i) {
       *t++ = MpInteger::LIMB_MASK & value;
@@ -936,6 +936,803 @@ inline pe::MpInteger operator"" _mpi(const char* sv, size_t /*sc*/) {
 
 inline pe::MpInteger operator"" _mpi(unsigned long long v) {
   return pe::MpInteger(v);
+}
+
+#if ENABLE_FLINT
+
+namespace pe {
+
+// Adapter of fmpz_t
+class FMpInteger {
+ public:
+  static constexpr int LIMB_BIT = sizeof(mp_limb_t) * 8;
+  static constexpr mp_limb_t LIMB_MASK = -1;
+
+  template <typename T>
+  REQUIRES((is_builtin_integer_v<T> && pe_is_unsigned_v<T> &&
+            !std::is_same<T, bool>::value))
+  RETURN(void) FromNativeInt(T value) {
+    if (value == 0) {
+      fmpz_init(z);
+      return;
+    }
+    std::vector<uint64> vec;
+    int cnt = 0;
+    for (auto v = value; v;) {
+      vec.push_back(FMpInteger::LIMB_MASK & value);
+#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
+      v >>= MpInteger::LIMB_BIT / 4;
+      v >>= MpInteger::LIMB_BIT / 4;
+      v >>= MpInteger::LIMB_BIT / 4;
+      v >>= MpInteger::LIMB_BIT / 4;
+#else
+      v >>= MpInteger::LIMB_BIT / 2;
+      v >>= MpInteger::LIMB_BIT / 2;
+#endif
+    }
+
+    fmpz_init(z);
+    fmpz_set_ui_array(z, &vec[0], vec.size());
+  }
+
+  template <typename T>
+  REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>))
+  RETURN(void) FromNativeInt(T value) {
+    if (value == 0) {
+      fmpz_init(z);
+      return;
+    }
+
+    using UnsignedT = pe_make_unsigned_t<T>;
+    if (value > 0) {
+      FromNativeInt<UnsignedT>(static_cast<UnsignedT>(value));
+    } else {
+      // Note: it works for value = T::min()
+      FromNativeInt<UnsignedT>(static_cast<UnsignedT>(-value));
+      fmpz_neg(z, z);
+    }
+  }
+
+  void FromUInt32Vector(const std::vector<uint32>& v) {
+    if (std::empty(v)) {
+      fmpz_init(z);
+      return;
+    }
+
+    const int n = static_cast<int>(std::size(v));
+    fmpz_init2(z, static_cast<mp_bitcnt_t>(std::size(v) * 32));
+
+    for (int i = n - 1; i >= 0; --i) {
+      fmpz_mul_2exp(z, z, 32);
+      fmpz_add_ui(z, z, v[i]);
+    }
+  }
+
+  template <typename T>
+  REQUIRES((is_extended_integer_v<T> && pe_is_unsigned_v<T>))
+  RETURN(void) FromExtendedInt(const T& value) {
+    FromUInt32Vector(value.ToUInt32Vector());
+  }
+
+  template <typename T>
+  REQUIRES((is_extended_integer_v<T> && pe_is_signed_v<T>))
+  RETURN(void) FromExtendedInt(const T& value) {
+    if (value.IntSign() >= 0) {
+      FromUInt32Vector(value.ToUInt32Vector());
+    } else {
+      T tmp = value;
+      tmp.MakeAbs();
+      FromUInt32Vector(tmp.ToUInt32Vector());
+      fmpz_neg(z, z);
+    }
+  }
+
+ public:
+  FMpInteger() {
+    fmpz_init(z);  // zero value
+  }
+
+  FMpInteger(int val) : FMpInteger(static_cast<long>(val)) {}
+
+  FMpInteger(unsigned int val) : FMpInteger(static_cast<unsigned long>(val)) {}
+
+  FMpInteger(long val) { fmpz_init_set_si(z, val); }
+
+  FMpInteger(unsigned long val) { fmpz_init_set_ui(z, val); }
+
+  FMpInteger(const std::string& s) {
+    fmpz_init(z);
+    fmpz_set_str(z, s.c_str(), 10);
+  }
+
+  FMpInteger(const char* s) {
+    fmpz_init(z);
+    fmpz_set_str(z, s, 10);
+  }
+
+  FMpInteger(const fmpz_t o) { fmpz_init_set(z, o); }
+
+  template <typename T,
+            typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(void)>
+  FMpInteger(T value) {
+    FromNativeInt(value);
+  }
+
+  template <typename T,
+            typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(T)>
+  FMpInteger(const std::vector<T>& v) {
+    FromUInt32Vector(v);
+  }
+
+  template <typename T,
+            typename TT = REQUIRES((is_extended_integer_v<T>)) RETURN(void)>
+  FMpInteger(const T& value) {
+    FromExtendedInt(value);
+  }
+
+  FMpInteger(const FMpInteger& o) { fmpz_init_set(z, o.z); }
+
+  FMpInteger(FMpInteger&& o) noexcept { fmpz_swap(z, o.z); }
+
+  ~FMpInteger() { fmpz_clear(z); }
+
+  FMpInteger& operator=(int val) {
+    fmpz_set_si(z, val);
+    return *this;
+  }
+
+  FMpInteger& operator=(long val) {
+    fmpz_set_si(z, val);
+    return *this;
+  }
+
+  FMpInteger& operator=(unsigned int val) {
+    fmpz_set_ui(z, val);
+    return *this;
+  }
+
+  FMpInteger& operator=(unsigned long val) {
+    fmpz_set_ui(z, val);
+    return *this;
+  }
+
+  template <typename T,
+            typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(T)>
+  FMpInteger& operator=(T value) {
+    *this = FMpInteger(value);
+    return *this;
+  }
+
+  FMpInteger& operator=(const std::string& s) {
+    fmpz_set_str(z, s.c_str(), 10);
+    return *this;
+  }
+
+  FMpInteger& operator=(const char* s) {
+    fmpz_set_str(z, s, 10);
+    return *this;
+  }
+
+  FMpInteger& operator=(const FMpInteger& o) {
+    fmpz_set(z, o.z);
+    return *this;
+  }
+
+  FMpInteger& operator=(FMpInteger&& o) noexcept {
+    fmpz_swap(z, o.z);
+    return *this;
+  }
+
+  // Defiend in pe_mpf
+  inline FMpInteger& operator=(const Mpf& o);
+
+#if ENABLE_MPFR
+  inline FMpInteger& operator=(const Mpfr& o);
+#endif
+
+ public:
+  fmpz* mpz() { return z; }
+
+  const fmpz* mpz() const { return z; }
+
+  int size() const { return fmpz_size(z); }
+
+  mp_limb_t* data() {
+    if (COEFF_IS_MPZ(*z)) {
+      mpz_ptr s = COEFF_TO_PTR(*z);
+      return s->_mp_d;
+    } else {
+      return reinterpret_cast<mp_limb_t*>(&z[0]);
+    }
+  }
+
+  const mp_limb_t* data() const {
+    if (COEFF_IS_MPZ(*z)) {
+      mpz_ptr s = COEFF_TO_PTR(*z);
+      return s->_mp_d;
+    } else {
+      return reinterpret_cast<const mp_limb_t*>(&z[0]);
+    }
+  }
+
+  mp_limb_t operator[](int idx) const { return data()[idx]; }
+
+  mp_limb_t& operator[](int idx) { return data()[idx]; }
+
+  int sign() const { return fmpz_sgn(z); }
+
+  int CompareTo(const FMpInteger& other) const { return fmpz_cmp(z, other.z); }
+
+  int IntSign() const { return fmpz_sgn(z); }
+
+  int IsZero() const { return IntSign() == 0; }
+
+  int IsEven() const { return fmpz_is_even(z) ? 1 : 0; }
+
+  int IsOdd() const { return fmpz_is_odd(z) ? 1 : 0; }
+
+  FMpInteger Abs() const {
+    FMpInteger t;
+    fmpz_abs(t.z, z);
+    return t;
+  }
+
+  FMpInteger FAbs() const {
+    FMpInteger t;
+    fmpz_abs(t.z, z);
+    return t;
+  }
+
+  uint32 LowerBits() const { return static_cast<uint32>(data()[0]); }
+
+  void SetBit(int idx) { fmpz_setbit(z, idx); }
+
+  void ResetBit(int idx) { fmpz_clrbit(z, idx); }
+
+  int GetBit(int idx) const { return fmpz_tstbit(z, idx); }
+
+  void RevBit(int idx) { fmpz_combit(z, idx); }
+
+  int BitCount() const { return fmpz_popcnt(z); }
+
+  int SizeInBase(int base = 10) const {
+    return static_cast<int>(fmpz_sizeinbase(z, base));
+  }
+
+  std::string ToString() const {
+    size_t size = fmpz_sizeinbase(z, 10) + 1;
+
+    char* buff = new char[size + 1];
+    fmpz_get_str(buff, 10, z);
+    std::string ret(buff);
+    delete[] buff;
+    return ret;
+  }
+
+  std::string to_string() const { return ToString(); }
+
+  template <typename T>
+  REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>))
+  RETURN(T) ToInt() const {
+    using UnsignedT = pe_make_unsigned_t<T>;
+    UnsignedT v = ToInt<UnsignedT>();
+    if (IntSign() < 0) {
+      v = ~v + 1;
+    }
+    return static_cast<T>(v);
+  }
+
+  template <typename T>
+  REQUIRES((is_builtin_integer_v<T> && pe_is_unsigned_v<T>))
+  RETURN(T) ToInt() const {
+    T result = 0;
+    const auto* buff = data();
+    for (int i = size() - 1; i >= 0; --i) {
+#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
+      result <<= sizeof(mp_limb_t) * 2;
+      result <<= sizeof(mp_limb_t) * 2;
+      result <<= sizeof(mp_limb_t) * 2;
+      result = static_cast<T>((result << sizeof(mp_limb_t) * 2) | buff[i]);
+#else
+      result = (result << sizeof(mp_limb_t) * 8) | buff[i];
+#endif
+    }
+    return result;
+  }
+
+  template <typename T>
+  T ToFloat() const {
+    T result = 0;
+    const auto* buff = data();
+    T each = 1;
+    for (int i = 0; i < 8; ++i) {
+      each *= 1LL << sizeof(mp_limb_t);
+    }
+    for (int i = size() - 1; i >= 0; --i) {
+      result = result * each + buff[i];
+    }
+    if (IntSign() < 0) {
+      result = -result;
+    }
+    return result;
+  }
+
+  FMpInteger NRootI(int n) const {
+    FMpInteger ret;
+    fmpz_root(ret.mpz(), mpz(), n);
+    return ret;
+  }
+
+  FMpInteger SqrtI() const {
+    FMpInteger ret;
+    fmpz_sqrt(ret.mpz(), mpz());
+    return ret;
+  }
+
+ public:
+  // Operators
+  const FMpInteger& operator+() const { return *this; }
+
+  const FMpInteger operator-() const {
+    FMpInteger ret(*this);
+    fmpz_neg(ret.z, ret.z);
+    return ret;
+  }
+
+  FMpInteger operator~() const {
+    FMpInteger ret;
+    fmpz_complement(ret.z, z);
+    return ret;
+  }
+
+  template <typename T>
+  REQUIRES((is_builtin_integer_v<T> && (std::is_same<T, unsigned int>::value ||
+                                        std::is_same<T, unsigned long>::value)))
+  RETURN(FMpInteger&) operator+=(T val) {
+    fmpz_add_ui(z, z, val);
+    return *this;
+  }
+
+  FMpInteger& operator-=(const FMpInteger& o) {
+    fmpz_sub(z, z, o.z);
+    return *this;
+  }
+
+  template <typename T>
+  REQUIRES((is_builtin_integer_v<T> && (std::is_same<T, unsigned int>::value ||
+                                        std::is_same<T, unsigned long>::value)))
+  RETURN(FMpInteger&) operator-=(T val) {
+    fmpz_sub_ui(z, z, val);
+    return *this;
+  }
+
+  FMpInteger& operator*=(const FMpInteger& o) {
+    fmpz_mul(z, z, o.z);
+    return *this;
+  }
+
+  template <typename T>
+  REQUIRES((is_builtin_integer_v<T> &&
+            (std::is_same<T, int>::value || std::is_same<T, long>::value)))
+  RETURN(FMpInteger&) operator*=(T val) {
+    fmpz_mul_si(z, z, val);
+    return *this;
+  }
+
+  template <typename T>
+  REQUIRES((is_builtin_integer_v<T> && (std::is_same<T, unsigned int>::value ||
+                                        std::is_same<T, unsigned long>::value)))
+  RETURN(FMpInteger&) operator*=(T val) {
+    fmpz_mul_ui(z, z, val);
+    return *this;
+  }
+
+  FMpInteger& operator/=(const FMpInteger& o) {
+    fmpz_tdiv_q(z, z, o.z);
+    return *this;
+  }
+
+  template <typename T>
+  REQUIRES((is_builtin_integer_v<T> && (std::is_same<T, unsigned int>::value ||
+                                        std::is_same<T, unsigned long>::value)))
+  FMpInteger&
+  operator/=(T val) {
+    fmpz_tdiv_q_ui(z, z, val);
+    return *this;
+  }
+
+  FMpInteger& operator%=(const FMpInteger& o) {
+    fmpz_t q;
+    fmpz_init(q);
+    fmpz_tdiv_qr(q, z, z, o.z);
+    fmpz_clear(q);
+    return *this;
+  }
+
+  FMpInteger& operator&=(const FMpInteger& o) {
+    fmpz_and(z, z, o.z);
+    return *this;
+  }
+
+  FMpInteger& operator^=(const FMpInteger& o) {
+    fmpz_xor(z, z, o.z);
+    return *this;
+  }
+
+  FMpInteger& operator|=(const FMpInteger& o) {
+    fmpz_or(z, z, o.z);
+    return *this;
+  }
+
+  FMpInteger& operator>>=(int cnt) {
+    fmpz_tdiv_q_2exp(z, z, cnt);
+    return *this;
+  }
+
+  FMpInteger& operator<<=(int cnt) {
+    fmpz_mul_2exp(z, z, cnt);
+    return *this;
+  }
+
+  FMpInteger& operator++() {
+    *this += 1;
+    return *this;
+  }
+
+  FMpInteger operator++(int) {
+    FMpInteger ret(*this);
+    *this += 1;
+    return ret;
+  }
+
+  FMpInteger& operator--() {
+    *this -= 1;
+    return *this;
+  }
+
+  FMpInteger operator--(int) {
+    FMpInteger ret(*this);
+    *this -= 1;
+    return ret;
+  }
+
+ public:
+// compare operators
+#if PE_HAS_CPP20
+  friend inline int operator<=>(const FMpInteger& l, const FMpInteger& r) {
+    return fmpz_cmp(l.z, r.z);
+  }
+
+  friend inline int operator==(const FMpInteger& l, const FMpInteger& r) {
+    return (l <=> r) == 0;
+  }
+
+  friend inline int operator!=(const FMpInteger& l, const FMpInteger& r) {
+    return (l <=> r) != 0;
+  }
+#else
+  friend inline int operator<(const FMpInteger& l, const FMpInteger& r) {
+    return fmpz_cmp(l.z, r.z) < 0;
+  }
+
+  friend inline int operator<=(const FMpInteger& l, const FMpInteger& r) {
+    return fmpz_cmp(l.z, r.z) <= 0;
+  }
+
+  friend inline int operator>(const FMpInteger& l, const FMpInteger& r) {
+    return fmpz_cmp(l.z, r.z) > 0;
+  }
+
+  friend inline int operator>=(const FMpInteger& l, const FMpInteger& r) {
+    return fmpz_cmp(l.z, r.z) >= 0;
+  }
+
+  friend inline int operator==(const FMpInteger& l, const FMpInteger& r) {
+    return fmpz_cmp(l.z, r.z) == 0;
+  }
+
+  friend inline int operator!=(const FMpInteger& l, const FMpInteger& r) {
+    return fmpz_cmp(l.z, r.z) != 0;
+  }
+#endif
+
+  // binary operators
+  friend inline FMpInteger operator+(const FMpInteger& l, const FMpInteger& r) {
+    FMpInteger ret;
+    fmpz_add(ret.z, l.z, r.z);
+    return ret;
+  }
+
+  template <typename T>
+  friend inline REQUIRES((is_builtin_integer_v<T> &&
+                          (std::is_same<T, unsigned int>::value ||
+                           std::is_same<T, unsigned long>::value)))
+      RETURN(FMpInteger) operator+(const FMpInteger & l, T r) {
+    FMpInteger ret;
+    fmpz_add_ui(ret.z, l.z, r);
+    return ret;
+  }
+
+  template <typename T>
+  friend inline REQUIRES((is_builtin_integer_v<T> &&
+                          (std::is_same<T, unsigned int>::value ||
+                           std::is_same<T, unsigned long>::value)))
+      RETURN(FMpInteger) operator+(T l, const FMpInteger & r) {
+    FMpInteger ret;
+    fmpz_add_ui(ret.z, r.z, l);
+    return ret;
+  }
+
+  friend inline FMpInteger operator-(const FMpInteger& l, const FMpInteger& r) {
+    FMpInteger ret;
+    fmpz_sub(ret.z, l.z, r.z);
+    return ret;
+  }
+
+  template <typename T>
+  friend inline REQUIRES((is_builtin_integer_v<T> &&
+                          (std::is_same<T, unsigned int>::value ||
+                           std::is_same<T, unsigned long>::value)))
+      RETURN(FMpInteger) operator-(const FMpInteger & l, T r) {
+    FMpInteger ret;
+    fmpz_sub_ui(ret.z, l.z, r);
+    return ret;
+  }
+
+  template <typename T>
+  friend inline REQUIRES((is_builtin_integer_v<T> &&
+                          (std::is_same<T, unsigned int>::value ||
+                           std::is_same<T, unsigned long>::value)))
+      RETURN(FMpInteger) operator-(T l, const FMpInteger & r) {
+    FMpInteger ret;
+    fmpz_ui_sub(ret.z, l, r.z);
+    return ret;
+  }
+
+  friend inline FMpInteger operator*(const FMpInteger& l, const FMpInteger& r) {
+    FMpInteger ret;
+    fmpz_mul(ret.z, l.z, r.z);
+    return ret;
+  }
+
+  template <typename T>
+  friend inline REQUIRES((is_builtin_integer_v<T> &&
+                          (std::is_same<T, int>::value ||
+                           std::is_same<T, long>::value)))
+      RETURN(FMpInteger) operator*(const FMpInteger & l, T r) {
+    FMpInteger ret;
+    fmpz_mul_si(ret.z, l.z, r);
+    return ret;
+  }
+
+  template <typename T>
+  friend inline REQUIRES((is_builtin_integer_v<T> &&
+                          (std::is_same<T, int>::value ||
+                           std::is_same<T, long>::value)))
+      RETURN(FMpInteger) operator*(T l, const FMpInteger & r) {
+    FMpInteger ret;
+    fmpz_mul_si(ret.z, r.z, l);
+    return ret;
+  }
+
+  template <typename T>
+  friend inline REQUIRES((is_builtin_integer_v<T> &&
+                          (std::is_same<T, unsigned int>::value ||
+                           std::is_same<T, unsigned long>::value)))
+      RETURN(FMpInteger) operator*(const FMpInteger & l, T r) {
+    FMpInteger ret;
+    fmpz_mul_ui(ret.z, l.z, r);
+    return ret;
+  }
+
+  template <typename T>
+  friend inline REQUIRES((is_builtin_integer_v<T> &&
+                          (std::is_same<T, unsigned int>::value ||
+                           std::is_same<T, unsigned long>::value)))
+      RETURN(FMpInteger) operator*(T l, const FMpInteger & r) {
+    FMpInteger ret;
+    fmpz_mul_ui(ret.z, r.z, l);
+    return ret;
+  }
+
+  friend inline FMpInteger operator/(const FMpInteger& l, const FMpInteger& r) {
+    FMpInteger ret;
+    fmpz_tdiv_q(ret.z, l.z, r.z);
+    return ret;
+  }
+
+  template <typename T>
+  friend inline REQUIRES(
+      (is_builtin_integer_v<T> &&
+       !std::is_same<typename std::remove_cvref<T>::type, FMpInteger>::value &&
+       (std::is_same<T, unsigned int>::value ||
+        std::is_same<T, unsigned long>::value)))
+      RETURN(FMpInteger) operator/(const FMpInteger & l, T r) {
+    FMpInteger ret;
+    fmpz_tdiv_q_ui(ret.z, l.z, r);
+    return ret;
+  }
+
+  friend inline FMpInteger operator%(const FMpInteger& l, const FMpInteger& r) {
+    FMpInteger ret;
+    fmpz_t q;
+    fmpz_init(q);
+    fmpz_tdiv_qr(q, ret.z, l.z, r.z);
+    fmpz_clear(q);
+    return ret;
+  }
+
+  template <typename T>
+  friend inline REQUIRES(
+      (is_builtin_integer_v<T> &&
+       !std::is_same<typename std::remove_cvref<T>::type, FMpInteger>::value &&
+       (std::is_same<T, unsigned int>::value ||
+        std::is_same<T, unsigned long>::value)))
+      RETURN(FMpInteger) operator%(const FMpInteger & l, T r) {
+    FMpInteger ret;
+    fmpz_tdiv_r_ui(ret.z, l.z, r);
+    return ret;
+  }
+
+  friend inline FMpInteger operator>>(const FMpInteger& l,
+                                      const FMpInteger& cnt) {
+    FMpInteger ret;
+    fmpz_tdiv_q_2exp(ret.z, l.z, cnt.ToInt<int>());
+    return ret;
+  }
+
+  friend inline FMpInteger operator>>(const FMpInteger& l, int cnt) {
+    FMpInteger ret;
+    fmpz_tdiv_q_2exp(ret.z, l.z, cnt);
+    return ret;
+  }
+
+  friend inline FMpInteger operator<<(const FMpInteger& l,
+                                      const FMpInteger& cnt) {
+    FMpInteger ret;
+    fmpz_mul_2exp(ret.z, l.z, cnt.ToInt<int>());
+    return ret;
+  }
+
+  friend inline FMpInteger operator<<(const FMpInteger& l, int cnt) {
+    FMpInteger ret;
+    fmpz_mul_2exp(ret.z, l.z, cnt);
+    return ret;
+  }
+
+  friend inline FMpInteger operator&(const FMpInteger& l, const FMpInteger& r) {
+    FMpInteger ret;
+    fmpz_and(ret.z, l.z, r.z);
+    return ret;
+  }
+
+  friend inline FMpInteger operator|(const FMpInteger& l, const FMpInteger& r) {
+    FMpInteger ret;
+    fmpz_or(ret.z, l.z, r.z);
+    return ret;
+  }
+
+  friend inline FMpInteger operator^(const FMpInteger& l, const FMpInteger& r) {
+    FMpInteger ret;
+    fmpz_xor(ret.z, l.z, r.z);
+    return ret;
+  }
+
+  friend inline std::ostream& operator<<(std::ostream& o,
+                                         const FMpInteger& val) {
+    return o << val.ToString();
+  }
+
+  FMpInteger& operator+=(const FMpInteger& o) {
+    fmpz_add(z, z, o.z);
+    return *this;
+  }
+
+ private:
+  fmpz_t z;
+};
+
+template <>
+struct Gbi<FMpInteger> {
+  template <typename T,
+            typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(T)>
+  static FMpInteger Of(T value) {
+    return FMpInteger(value);
+  }
+
+  static FMpInteger Of(const std::string& s) { return FMpInteger(s); }
+};
+
+SL int IsZero(const FMpInteger& x) { return x.IsZero(); }
+
+SL int IntSign(const FMpInteger& x) { return x.IntSign(); }
+
+SL int IsEven(const FMpInteger& x) { return x.IsEven(); }
+
+SL int IsOdd(const FMpInteger& x) { return x.IsOdd(); }
+
+SL uint32 LowerBits(const FMpInteger& x) { return x.LowerBits(); }
+
+SL FMpInteger Abs(const FMpInteger& x) { return x.Abs(); }
+
+SL FMpInteger FAbs(const FMpInteger& x) { return x.Abs(); }
+
+template <typename T>
+SL T ToInt(const FMpInteger& x) {
+  return x.ToInt<T>();
+}
+template <typename T>
+SL T ToFloat(const FMpInteger& x) {
+  return x.ToFloat<T>();
+}
+
+SL std::string ToString(const FMpInteger& x) { return x.ToString(); }
+
+SL std::string to_string(const FMpInteger& x) { return ToString(x); }
+
+SL std::tuple<FMpInteger, FMpInteger> Div(const FMpInteger& l,
+                                          const FMpInteger& r) {
+  return {l / r, l % r};
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T> &&
+             (std::is_same<T, unsigned int>::value ||
+              std::is_same<T, unsigned long>::value))) RETURN(FMpInteger)
+    Power(const FMpInteger& base, T n) {
+  FMpInteger ret;
+  fmpz_pow_ui(ret.mpz(), base.mpz(), n);
+  return ret;
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T> &&
+             (std::is_same<T, int>::value || std::is_same<T, long>::value)))
+    RETURN(FMpInteger) Power(const FMpInteger& base, T n) {
+  using UnsignedT = pe_make_unsigned_t<T>;
+  FMpInteger ret;
+  fmpz_pow_ui(ret.mpz(), base.mpz(), static_cast<UnsignedT>(n));
+  return ret;
+}
+
+SL FMpInteger PowerMod(const FMpInteger& base, const FMpInteger& n,
+                       const FMpInteger& mod) {
+  FMpInteger ret;
+  fmpz_powm(ret.mpz(), base.mpz(), n.mpz(), mod.mpz());
+  return ret;
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T> &&
+             (std::is_same<T, unsigned int>::value ||
+              std::is_same<T, unsigned long>::value))) RETURN(FMpInteger)
+    PowerMod(const FMpInteger& base, T n, const FMpInteger& mod) {
+  FMpInteger ret;
+  fmpz_powm(ret.mpz(), base.mpz(), n, mod.mpz());
+  return ret;
+}
+
+SL FMpInteger Gcd(const FMpInteger& l, const FMpInteger& r) {
+  FMpInteger ret;
+  fmpz_gcd(ret.mpz(), l.mpz(), r.mpz());
+  return ret;
+}
+}  // namespace pe
+#endif
+
+#if PE_HAS_CPP20
+namespace pe {
+static_assert(PeGbi<FMpInteger>);
+static_assert(PeFraction<Fraction<FMpInteger>>);
+}  // namespace pe
+#endif
+
+inline pe::FMpInteger operator"" _fmpi(const char* sv, size_t /*sc*/) {
+  return pe::FMpInteger(std::string(sv));
+}
+
+inline pe::FMpInteger operator"" _fmpi(unsigned long long v) {
+  return pe::FMpInteger(v);
 }
 
 inline pe::MpInteger operator"" _bn(const char* sv, size_t /*sc*/) {

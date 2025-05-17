@@ -76,7 +76,7 @@ SL T ToInt(const Mpz& x) {
 
   const int sgn = val[0]._mp_size > 0 ? 1 : -1;
   const int size = sgn > 0 ? val[0]._mp_size : -val[0]._mp_size;
-  const auto* data = val[0]._mp_d;
+  const mp_limb_t* data = val[0]._mp_d;
 
   at_least_int64_t<T> r = 0;
   for (int i = size - 1; i >= 0; --i) {
@@ -94,7 +94,7 @@ SL T ToFloat(const Mpz& x) {
 
   const int sgn = val[0]._mp_size > 0 ? 1 : -1;
   const int size = sgn > 0 ? val[0]._mp_size : -val[0]._mp_size;
-  const auto* data = val[0]._mp_d;
+  const mp_limb_t* data = val[0]._mp_d;
 
   T each = 1LL << sizeof(mp_limb_t) * 4;
   each = each * each;
@@ -167,7 +167,7 @@ class MpInteger {
       return;
     }
     int cnt = 0;
-    for (auto v = value; v;) {
+    for (T v = value; v;) {
       ++cnt;
 #if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
       v >>= MpInteger::LIMB_BIT / 4;
@@ -180,7 +180,7 @@ class MpInteger {
 #endif
     }
     mpz_init2(z, cnt * MpInteger::LIMB_BIT);
-    auto* t = z->_mp_d;
+    mp_limb_t* t = z->_mp_d;
     for (int i = 0; i < cnt; ++i) {
       *t++ = MpInteger::LIMB_MASK & value;
 #if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
@@ -436,7 +436,7 @@ class MpInteger {
   REQUIRES((is_builtin_integer_v<T> && pe_is_unsigned_v<T>))
   RETURN(T) ToInt() const {
     T result = 0;
-    const auto* buff = data();
+    const mp_limb_t* buff = data();
     for (int i = size() - 1; i >= 0; --i) {
 #if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
       result <<= sizeof(mp_limb_t) * 2;
@@ -453,7 +453,7 @@ class MpInteger {
   template <typename T>
   T ToFloat() const {
     T result = 0;
-    const auto* buff = data();
+    const mp_limb_t* buff = data();
     T each = 1;
     for (int i = 0; i < 8; ++i) {
       each *= 1LL << sizeof(mp_limb_t);

@@ -81,18 +81,4 @@ PE_REGISTER_TEST(&BiDivTestBig_MpInteger, "BiDivTestBig_MpInteger", BIG);
 #endif
 #endif
 
-#if ENABLE_FLINT
-SL void BiDivTestMedium_FMpInteger() { BiDivTestImpl<FMpInteger>(100, 500); }
-
-#if !defined(CONTINUOUS_INTEGRATION_TEST)
-PE_REGISTER_TEST(&BiDivTestMedium_FMpInteger, "BiDivTestMedium_FMpInteger",
-                 MEDIUM);
-#endif
-
-SL void BiDivTestBig_FMpInteger() { BiDivTestImpl<FMpInteger>(10, 2000); }
-
-#if !defined(CONTINUOUS_INTEGRATION_TEST)
-PE_REGISTER_TEST(&BiDivTestBig_FMpInteger, "BiDivTestBig_FMpInteger", BIG);
-#endif
-#endif
 }  // namespace bi_test

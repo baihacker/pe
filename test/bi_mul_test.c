@@ -63,19 +63,4 @@ SL void BiMulTestBig_MpInteger() { BiMulTestImpl<MpInteger>(10, 10000); }
 PE_REGISTER_TEST(&BiMulTestBig_MpInteger, "BiMulTestBig_MpInteger", BIG);
 #endif
 #endif
-
-#if ENABLE_FLINT
-SL void BiMulTestMedium_FMpInteger() { BiMulTestImpl<FMpInteger>(1000, 500); }
-
-#if !defined(CONTINUOUS_INTEGRATION_TEST)
-PE_REGISTER_TEST(&BiMulTestMedium_FMpInteger, "BiMulTestMedium_FMpInteger",
-                 MEDIUM);
-#endif
-
-SL void BiMulTestBig_FMpInteger() { BiMulTestImpl<FMpInteger>(10, 10000); }
-
-#if !defined(CONTINUOUS_INTEGRATION_TEST)
-PE_REGISTER_TEST(&BiMulTestBig_FMpInteger, "BiMulTestBig_FMpInteger", BIG);
-#endif
-#endif
 }  // namespace bi_test

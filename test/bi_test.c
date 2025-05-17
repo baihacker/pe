@@ -382,9 +382,6 @@ SL void BiTest() {
 #if ENABLE_GMP
   BiCorrectnessTestImpl<MpInteger>();
 #endif
-#if ENABLE_FLINT
-  BiCorrectnessTestImpl<FMpInteger>();
-#endif
 }
 PE_REGISTER_TEST(&BiTest, "BiTest", SMALL);
 }  // namespace bi_test

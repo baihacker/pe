@@ -53,6 +53,10 @@ MulImpl mul_impl[] = {
 #if HAS_POLY_MUL_MIN25 && !ONLY_RUN_PE_IMPLEMENTATION
     {&min25::PolyMulLarge<uint64>, min25::kPolyMulLargeMod, "Min_25 l"},
 #endif
+#if HAS_POLY_MUL_GMP && !ONLY_RUN_PE_IMPLEMENTATION
+    {&gmp::bn_poly_mul::PolyMul<uint64>, gmp::bn_poly_mul::kPolyMulMod,
+     "gmp bn"},
+#endif
 #if HAS_POLY_MUL_LIBBF && !ONLY_RUN_PE_IMPLEMENTATION
     {&libbf::PolyMul<uint64>, libbf::kPolyMulMod, "libbf"},
 #endif

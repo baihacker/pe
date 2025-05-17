@@ -1,0 +1,157 @@
+#ifndef PE_POLY_BASE_GMP_
+#define PE_POLY_BASE_GMP_
+
+#include "pe_base"
+#include "pe_type_traits"
+#include "pe_poly_base_common"
+
+#if ENABLE_GMP
+
+#define HAS_POLY_MUL_GMP 1
+
+namespace pe {
+namespace gmp {
+
+namespace bn_poly_mul {
+namespace internal {
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    InitAsMpz(mpz_t a, const T* X, const int64 n, const int64 need_limb,
+              int64 mod) {
+  mpz_init(a);
+  mpz_setbit(a, need_limb * n * sizeof(mp_limb_t) * 8);
+  mpz_ptr ptr = a;
+  if (mod > 0) {
+    for (int i = 0; i < n; ++i) {
+      ptr->_mp_d[i * need_limb] = Mod(X[i], mod);
+    }
+  } else {
+    if (sizeof(T) <= sizeof(mp_limb_t)) {
+      for (int i = 0; i < n; ++i) {
+        ptr->_mp_d[i * need_limb] = X[i];
+      }
+    } else {
+      for (int i = 0; i < n; ++i) {
+        *reinterpret_cast<T*>(ptr->_mp_d + i * need_limb) = X[i];
+      }
+    }
+  }
+  mpz_clrbit(a, need_limb * n * sizeof(mp_limb_t) * 8);
+}
+
+template <typename T>
+SL REQUIRES((is_extended_integer_v<T>)) RETURN(void)
+    InitAsMpz(mpz_t a, const T* X, const int64 n, const int64 need_limb,
+              int64 mod) {
+  mpz_init(a);
+  mpz_setbit(a, need_limb * n * sizeof(mp_limb_t) * 8);
+  mpz_ptr ptr = a;
+  if (mod > 0) {
+    for (int i = 0; i < n; ++i) {
+      ptr->_mp_d[i * need_limb] = ToInt<mp_limb_t>(Mod(X[i], mod));
+    }
+  } else {
+    if (sizeof(T) <= sizeof(mp_limb_t)) {
+      for (int i = 0; i < n; ++i) {
+        ptr->_mp_d[i * need_limb] = ToInt<mp_limb_t>(X[i]);
+      }
+    } else {
+      for (int i = 0; i < n; ++i) {
+        *reinterpret_cast<T*>(ptr->_mp_d + i * need_limb) = X[i];
+      }
+    }
+  }
+  mpz_clrbit(a, need_limb * n * sizeof(mp_limb_t) * 8);
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
+    PolyMulImpl(const T* X, const int64 n, const T* Y, const int64 m, T* result,
+                int64 mod) {
+  const int64 mod_bit = mod == 0 ? sizeof(T) * 8 : HighestBitIndex(mod) + 1;
+  const int64 need_bit = mod_bit * 2 + HighestBitIndex(std::min(n, m)) + 1;
+  const int64 need_limb =
+      (need_bit + sizeof(mp_limb_t) * 8 - 1) / (sizeof(mp_limb_t) * 8);
+
+  mpz_t a, b;
+
+  InitAsMpz<T>(a, X, n, need_limb, mod);
+  InitAsMpz<T>(b, Y, m, need_limb, mod);
+
+  mpz_mul(a, a, b);
+
+  mpz_ptr ptr = a;
+  const int64 has_size = ptr->_mp_size;
+  const int64 all_size = n + m - 1;
+
+  if (mod > 0) {
+    if (need_limb == 1) {
+      for (int64 i = 0; i < all_size; ++i) {
+        const int64 offset = i * need_limb;
+        const mp_limb_t v = offset >= has_size ? 0 : ptr->_mp_d[offset];
+        result[i] = v % mod;
+      }
+    } else if (need_limb == 2) {
+      const auto magic1 = (1LL << 32) % mod;
+      const auto magic2 = MulMod(magic1, magic1, mod);
+      for (int64 i = 0; i < all_size; ++i) {
+        const int64 offset = i * need_limb;
+        const mp_limb_t hi =
+            offset + 1 >= has_size ? 0 : ptr->_mp_d[offset + 1];
+        const mp_limb_t low = offset >= has_size ? 0 : ptr->_mp_d[offset];
+        result[i] = AddMod(MulMod(hi % mod, magic2, mod), low % mod, mod);
+      }
+    } else {
+      const auto magic1 = (1LL << 32) % mod;
+      const auto magic2 = MulMod(magic1, magic1, mod);
+      for (int64 i = 0; i < all_size; ++i) {
+        const int64 offset = i * need_limb;
+        uint64 it = 0;
+        for (int j = need_limb - 1; j >= 0; --j) {
+          const mp_limb_t v =
+              offset + j >= has_size ? 0 : ptr->_mp_d[offset + j];
+          it = AddMod(MulMod(it, magic2, mod), v % mod, mod);
+        }
+        result[i] = it;
+      }
+    }
+  } else {
+    if (need_limb == 1) {
+      for (int64 i = 0; i < all_size; ++i) {
+        const int64 offset = i * need_limb;
+        const mp_limb_t v = offset >= has_size ? 0 : ptr->_mp_d[offset];
+        result[i] = v;
+      }
+    } else {
+      for (int64 i = 0; i < all_size; ++i) {
+        const int64 offset = i * need_limb;
+        T it = 0;
+        for (int j = need_limb - 1; j >= 0; --j) {
+          const mp_limb_t v =
+              offset + j >= has_size ? 0 : ptr->_mp_d[offset + j];
+          it <<= 32;
+          it <<= 32;
+          it |= v;
+        }
+        result[i] = it;
+      }
+    }
+  }
+
+  mpz_clear(a);
+  mpz_clear(b);
+}
+}  // namespace internal
+
+static constexpr PolyMulCoeType kPolyMulMod = 0;
+
+POLY_MUL_IMPL(PolyMul, internal::PolyMulImpl)
+}  // namespace bn_poly_mul
+
+}  // namespace gmp
+}  // namespace pe
+#else
+#define HAS_POLY_MUL_GMP 0
+#endif
+
+#endif

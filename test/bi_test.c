@@ -7,10 +7,15 @@ SL void TestConstructorImpl() {
          std::numeric_limits<T>::min());
   assert(BigInteger(std::numeric_limits<T>::max()).ToInt<T>() ==
          std::numeric_limits<T>::max());
+#if ENABLE_GMP
+  assert(MpInteger(std::numeric_limits<T>::min()).ToInt<T>() ==
+         std::numeric_limits<T>::min());
+  assert(MpInteger(std::numeric_limits<T>::max()).ToInt<T>() ==
+         std::numeric_limits<T>::max());
+#endif
 }
 
 SL void TestConstructor() {
-  BigInteger x;
   // TestConstructorImpl<bool>();
   TestConstructorImpl<char>();
   TestConstructorImpl<signed char>();
@@ -35,15 +40,30 @@ SL void TestConstructor() {
 
 template <typename T>
 SL void TestAssignmentImpl() {
-  BigInteger x;
-  x = T();
-  assert(x.ToInt<T>() == T());
+  {
+    BigInteger x;
+    x = T();
+    assert(x.ToInt<T>() == T());
 
-  x = std::numeric_limits<T>::max();
-  assert(x.ToInt<T>() == std::numeric_limits<T>::max());
+    x = std::numeric_limits<T>::max();
+    assert(x.ToInt<T>() == std::numeric_limits<T>::max());
 
-  x = std::numeric_limits<T>::min();
-  assert(x.ToInt<T>() == std::numeric_limits<T>::min());
+    x = std::numeric_limits<T>::min();
+    assert(x.ToInt<T>() == std::numeric_limits<T>::min());
+  }
+#if ENABLE_GMP
+  {
+    MpInteger x;
+    x = T();
+    assert(x.ToInt<T>() == T());
+
+    x = std::numeric_limits<T>::max();
+    assert(x.ToInt<T>() == std::numeric_limits<T>::max());
+
+    x = std::numeric_limits<T>::min();
+    assert(x.ToInt<T>() == std::numeric_limits<T>::min());
+  }
+#endif
 }
 
 SL void TestAssignmentOperator() {
@@ -73,9 +93,9 @@ SL void TestAssignmentOperator() {
   assert(x.ToString() == s);
 }
 
-template <typename T>
-SL void TestAsmdImpl() {
-  BigInteger x;
+template <typename BT, typename T>
+SL void TestAsmdInternal() {
+  BT x;
   x += T(1);
   x = x + T(1);
   x = T(1) + x;
@@ -108,6 +128,14 @@ SL void TestAsmdImpl() {
   x++;
   --x;
   x--;
+}
+
+template <typename T>
+SL void TestAsmdImpl() {
+  TestAsmdInternal<BigInteger, T>();
+#if ENABLE_GMP
+  TestAsmdInternal<MpInteger, T>();
+#endif
 }
 
 SL void TestAsmdOperator() {
@@ -254,9 +282,9 @@ SL void TestAsmdOperator() {
   }
 }
 
-template <typename T>
-SL void TestCompareOperatorImpl() {
-  BigInteger x;
+template <typename BT, typename T>
+SL void TestCompareOperatorInternal() {
+  BT x;
   assert((x == T(0)) == 1);
   assert((x > T(0)) == 0);
   assert((x < T(0)) == 0);
@@ -287,6 +315,14 @@ SL void TestCompareOperatorImpl() {
   assert((x != x) == 0);
 }
 
+template <typename T>
+SL void TestCompareOperatorImpl() {
+  TestCompareOperatorInternal<BigInteger, T>();
+#if ENABLE_GMP
+  TestCompareOperatorInternal<MpInteger, T>();
+#endif
+}
+
 SL void TestCompareOperator() {
   // TestCompareOperatorImpl<bool>();
   TestCompareOperatorImpl<char>();
@@ -309,49 +345,54 @@ SL void TestCompareOperator() {
   TestCompareOperatorImpl<uint256e>();
 }
 
+template <typename T>
 SL void TestBitOperator() {
-  BigInteger x;
+  T x;
   for (int i = 0; i <= 19; ++i) x.SetBit(i);
-  assert(x.ToInt<int>() == 1048575);
+  assert(x.template ToInt<int>() == 1048575);
   x.RevBit(0);
-  assert(x.ToInt<int>() == 1048574);
+  assert(x.template ToInt<int>() == 1048574);
   x.ResetBit(1);
-  assert(x.ToInt<int>() == 1048572);
+  assert(x.template ToInt<int>() == 1048572);
   assert(x.BitCount() == 18);
 
-  BigInteger y;
+  T y;
   y.SetBit(0);
 
   x = x | y;
-  assert(x.ToInt<int>() == 1048573);
+  assert(x.template ToInt<int>() == 1048573);
 
-  x = x & BigInteger(1048575 - 4);
-  assert(x.ToInt<int>() == 1048573 - 4);
+  x = x & T(1048575 - 4);
+  assert(x.template ToInt<int>() == 1048573 - 4);
 
   x = x ^ x;
-  assert(x.ToInt<int>() == 0);
+  assert(x.template ToInt<int>() == 0);
 
   x = x ^ y;
-  assert(x.ToInt<int>() == 1);
+  assert(x.template ToInt<int>() == 1);
 }
 
+template <typename T>
 SL void TestUtilities() {
-  PowerMod(BigInteger(5), 10, BigInteger("123456789"));
-  PowerMod(BigInteger(5), BigInteger(10), BigInteger("123456789"));
+  PowerMod(T(5), 10, T("123456789"));
+  PowerMod(T(5), T(10), T("123456789"));
 
-  Power(BigInteger(2), 10u);
-  Power(BigInteger(2), 10);
+  Power(T(2), 10u);
+  Power(T(2), 10);
 
-  Gcd(12_bi, 8_bi);
-  123456789123456789_bi * 2 * 5_bi * "10"_bi;
-
-  Power(BigInteger(2), 20);
-  Power(BigInteger(2), 20LL);
+  Power(T(2), 20);
+  Power(T(2), 20LL);
 
   TimeRecorder tr;
-  BigInteger v(1);
+  T v(1);
   for (int i = 1; i <= 100000; ++i) v *= i;
   // std::cout << tr.Elapsed().Format() << " " << v.bitCount() << std::endl;
+}
+
+SL void TestBigIntegerUtilities() {
+  TestUtilities<BigInteger>();
+  Gcd(12_bi, 8_bi);
+  123456789123456789_bi * 2 * 5_bi * "10"_bi;
 }
 
 template <typename T>
@@ -384,11 +425,13 @@ SL void BiTest() {
   TestAssignmentOperator();
   TestAsmdOperator();
   TestCompareOperator();
-  TestBitOperator();
-  TestUtilities();
+  TestBitOperator<BigInteger>();
+  TestBigIntegerUtilities();
   BiCorrectnessTestImpl<BigInteger>();
 #if ENABLE_GMP
   BiCorrectnessTestImpl<MpInteger>();
+  TestBitOperator<MpInteger>();
+  TestUtilities<MpInteger>();
 #endif
 }
 PE_REGISTER_TEST(&BiTest, "BiTest", SMALL);

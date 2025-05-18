@@ -4,46 +4,35 @@
 namespace mpi_test {
 
 template <typename T>
-SL void TestConstructorImp() {
-  // std::cout << typeid(T).name() << std::endl;
-  // std::cout << MpInteger(T()) << std::endl;
-  // std::cout << MpInteger(T(0)) << " " << MpInteger(T(1)) << std::endl;
-  // std::cout << MpInteger(std::numeric_limits<T>::min()) << " " <<
-  // std::numeric_limits<T>::min()
-  //      << std::endl;
-  // std::cout << MpInteger(std::numeric_limits<T>::max()) << " " <<
-  // std::numeric_limits<T>::max()
-  //      << std::endl;
-
+SL void TestConstructorImpl() {
   assert(MpInteger(std::numeric_limits<T>::min()).ToInt<T>() ==
          std::numeric_limits<T>::min());
   assert(MpInteger(std::numeric_limits<T>::max()).ToInt<T>() ==
          std::numeric_limits<T>::max());
-
-  // std::cout << std::endl;
 }
 
 SL void TestConstructor() {
-  // std::cout << MpInteger() << std::endl;
   MpInteger x;
   // TestConstructorImp<bool>();
-  TestConstructorImp<char>();
-  TestConstructorImp<signed char>();
-  TestConstructorImp<unsigned char>();
-  TestConstructorImp<short>();
-  TestConstructorImp<int>();
-  TestConstructorImp<long>();
-  TestConstructorImp<long long>();
+  TestConstructorImpl<char>();
+  TestConstructorImpl<signed char>();
+  TestConstructorImpl<unsigned char>();
+  TestConstructorImpl<short>();
+  TestConstructorImpl<int>();
+  TestConstructorImpl<long>();
+  TestConstructorImpl<long long>();
 #if PE_HAS_INT128
-  TestConstructorImp<int128>();
+  TestConstructorImpl<int128>();
 #endif
-  TestConstructorImp<unsigned short>();
-  TestConstructorImp<unsigned int>();
-  TestConstructorImp<unsigned long>();
-  TestConstructorImp<unsigned long long>();
+  TestConstructorImpl<unsigned short>();
+  TestConstructorImpl<unsigned int>();
+  TestConstructorImpl<unsigned long>();
+  TestConstructorImpl<unsigned long long>();
 #if PE_HAS_INT128
-  TestConstructorImp<uint128>();
+  TestConstructorImpl<uint128>();
 #endif
+  TestConstructorImpl<int256e>();
+  TestConstructorImpl<uint256e>();
 }
 
 template <typename T>
@@ -62,8 +51,6 @@ SL void TestAssignmentImpl() {
 SL void TestAssignmentOperator() {
   // TestAssignmentImpl<bool>();
   TestAssignmentImpl<char>();
-  TestAssignmentImpl<signed char>();
-  TestAssignmentImpl<unsigned char>();
   TestAssignmentImpl<short>();
   TestAssignmentImpl<int>();
   TestAssignmentImpl<long>();
@@ -71,6 +58,7 @@ SL void TestAssignmentOperator() {
 #if PE_HAS_INT128
   TestAssignmentImpl<int128>();
 #endif
+  TestAssignmentImpl<unsigned char>();
   TestAssignmentImpl<unsigned short>();
   TestAssignmentImpl<unsigned int>();
   TestAssignmentImpl<unsigned long>();
@@ -78,6 +66,8 @@ SL void TestAssignmentOperator() {
 #if PE_HAS_INT128
   TestAssignmentImpl<uint128>();
 #endif
+  TestAssignmentImpl<int256e>();
+  TestAssignmentImpl<uint256e>();
 
   std::string s = "123456789123456789123456789";
   MpInteger x;
@@ -115,13 +105,16 @@ SL void TestAsmdImpl() {
   x = x % T(2);
   x = 1;
   x = x % x;
+  
+  ++x;
+  x++;
+  --x;
+  x--;
 }
 
 SL void TestAsmdOperator() {
   // TestAsmdImpl<bool>();
   TestAsmdImpl<char>();
-  TestAsmdImpl<signed char>();
-  TestAsmdImpl<unsigned char>();
   TestAsmdImpl<short>();
   TestAsmdImpl<int>();
   TestAsmdImpl<long>();
@@ -129,6 +122,7 @@ SL void TestAsmdOperator() {
 #if PE_HAS_INT128
   TestAsmdImpl<int128>();
 #endif
+  TestAsmdImpl<unsigned char>();
   TestAsmdImpl<unsigned short>();
   TestAsmdImpl<unsigned int>();
   TestAsmdImpl<unsigned long>();
@@ -136,6 +130,8 @@ SL void TestAsmdOperator() {
 #if PE_HAS_INT128
   TestAsmdImpl<uint128>();
 #endif
+  TestAsmdImpl<int256e>();
+  TestAsmdImpl<uint256e>();
 
   for (int a = -10; a <= 10; ++a) {
     for (int b = -10; b <= 10; ++b) {
@@ -294,8 +290,6 @@ SL void TestCompareOperatorImpl() {
 SL void TestCompareOperator() {
   // TestCompareOperatorImpl<bool>();
   TestCompareOperatorImpl<char>();
-  TestCompareOperatorImpl<signed char>();
-  TestCompareOperatorImpl<unsigned char>();
   TestCompareOperatorImpl<short>();
   TestCompareOperatorImpl<int>();
   TestCompareOperatorImpl<long>();
@@ -303,6 +297,7 @@ SL void TestCompareOperator() {
 #if PE_HAS_INT128
   TestCompareOperatorImpl<int128>();
 #endif
+  TestCompareOperatorImpl<unsigned char>();
   TestCompareOperatorImpl<unsigned short>();
   TestCompareOperatorImpl<unsigned int>();
   TestCompareOperatorImpl<unsigned long>();

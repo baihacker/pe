@@ -165,9 +165,19 @@ class BigInteger {
     Reserve(n);
 
     std::copy(v.begin(), v.end(), data_);
+    pos_ = n - 1;
+    sign_ = 1;
 
     FixLeadingZeros();
     FixSign();
+  }
+
+  std::vector<uint32> ToUInt32Vector() const {
+    if (sign_ == 0) {
+      return {0};
+    }
+
+    return std::vector<uint32>(data_, data_ + pos_ + 1);
   }
 
   template <typename T>
@@ -275,12 +285,6 @@ class BigInteger {
   template <typename T, typename = std::enable_if_t<is_builtin_integer_v<T>>>
   BigInteger(T value) : BigInteger(internal::zero_initialize_tag) {
     FromNativeInt(value);
-  }
-
-  template <typename T, typename = std::enable_if_t<is_builtin_integer_v<T>>>
-  BigInteger(const std::vector<T>& v)
-      : BigInteger(internal::zero_initialize_tag) {
-    FromUInt32Vector(v);
   }
 
   template <typename T, typename = std::enable_if_t<is_extended_integer_v<T>>>
@@ -949,6 +953,18 @@ class BigInteger {
 #endif
     }
     return result;
+  }
+
+  template <typename T>
+  REQUIRES((is_extended_integer_v<T>))
+  RETURN(T) ToInt() const {
+    T ret;
+    ret.FromUInt32Vector(ToUInt32Vector());
+    if (IntSign() < 0) {
+      ret.FlipBits();
+      ret.AddOne();
+    }
+    return ret;
   }
 
   template <typename T>

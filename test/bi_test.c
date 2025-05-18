@@ -29,6 +29,8 @@ SL void TestConstructor() {
 #if PE_HAS_INT128
   TestConstructorImpl<uint128>();
 #endif
+  TestConstructorImpl<int256e>();
+  TestConstructorImpl<uint256e>();
 }
 
 template <typename T>
@@ -62,6 +64,8 @@ SL void TestAssignmentOperator() {
 #if PE_HAS_INT128
   TestAssignmentImpl<uint128>();
 #endif
+  TestAssignmentImpl<int256e>();
+  TestAssignmentImpl<uint256e>();
 
   std::string s = "123456789123456789123456789";
   BigInteger x;
@@ -124,6 +128,8 @@ SL void TestAsmdOperator() {
 #if PE_HAS_INT128
   TestAsmdImpl<uint128>();
 #endif
+  TestAsmdImpl<int256e>();
+  TestAsmdImpl<uint256e>();
 
   for (int A : {-10000, 0, 10000}) {
     for (int a = A - 10; a <= A + 10; ++a) {
@@ -299,6 +305,8 @@ SL void TestCompareOperator() {
 #if PE_HAS_INT128
   TestCompareOperatorImpl<uint128>();
 #endif
+  TestCompareOperatorImpl<int256e>();
+  TestCompareOperatorImpl<uint256e>();
 }
 
 SL void TestBitOperator() {

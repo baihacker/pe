@@ -290,6 +290,7 @@ pe_library = rule(
             "pe_poly_base",
             "pe_poly_base_common",
             "pe_poly_base_flint",
+            "pe_poly_base_gmp",
             "pe_poly_base_libbf",
             "pe_poly_base_min25",
             "pe_poly_base_ntl",

@@ -103,9 +103,9 @@ SL void TestImpl(int dp, int n, int64 mod) {
         continue;
       }
     }
-    auto start = clock();
-    auto result = who.impl(x, y, mod);
-    auto end = clock();
+    clock_t start = clock();
+    std::vector<uint64> result = who.impl(x, y, mod);
+    clock_t end = clock();
     fprintf(stderr, "%-8s : %.3f\n", who.name,
             1. * (end - start) / CLOCKS_PER_SEC);
     if (expected.empty()) {
@@ -186,9 +186,9 @@ SL void PolyMulPerformanceTest() {
           y.push_back((uint64)CRand63() % mod);
         }
 
-        auto start = clock();
+        clock_t start = clock();
         who.impl(x, y, mod);
-        auto end = clock();
+        clock_t end = clock();
 #if 1
         printf("%-6.3f ", 1. * (end - start) / CLOCKS_PER_SEC);
 #else

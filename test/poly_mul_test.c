@@ -93,11 +93,11 @@ SL void TestImpl(int dp, int n, int64 mod) {
     }
   }
 
-  const int M = sizeof(mul_impl) / sizeof(mul_impl[0]);
+  const int M = std::size(mul_impl);
 
   std::vector<uint64> expected;
   for (int i = 0; i < M; ++i) {
-    auto who = mul_impl[i];
+    MulImpl who = mul_impl[i];
     if (i > 0) {
       if (!PolyMulAcceptLengthAndMod(who.size, n, mod)) {
         continue;
@@ -151,8 +151,8 @@ SL void PolyMulPerformanceTest() {
   constexpr int min_log2 = 10;
   constexpr int max_log2 = 20;
   for (int level = 0; level < mods.size(); ++level) {
-    printf("mod = %llu\n", (unsigned long long)mods[level]);
-    const auto mod = mods[level];
+    const uint64 mod = mods[level];
+    printf("mod = %llu\n", (unsigned long long)mod);
 
     printf("log2(n)  ");
 
@@ -162,11 +162,11 @@ SL void PolyMulPerformanceTest() {
 
     puts("");
 
-    const int M = sizeof(mul_impl) / sizeof(mul_impl[0]);
+    const int M = std::size(mul_impl);
 
     std::vector<uint64> expected;
     for (int i = 0; i < M; ++i) {
-      auto who = mul_impl[i];
+      MulImpl who = mul_impl[i];
       if (!PolyMulAcceptLengthAndMod(who.size, 1 << min_log2, mod)) continue;
 
       printf("%-8s ", who.name);

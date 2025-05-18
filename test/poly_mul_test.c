@@ -179,6 +179,8 @@ SL void PolyMulPerformanceTest() {
         }
 
         std::vector<uint64> x, y;
+        x.reserve(size);
+        y.reserve(size);
         for (int i = 0; i < size; ++i) {
           x.push_back((uint64)CRand63() % mod);
           y.push_back((uint64)CRand63() % mod);

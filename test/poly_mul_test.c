@@ -64,7 +64,7 @@ MulImpl mul_impl[] = {
     {&ntl::PolyMulSmall<uint64>, ntl::kPolyMulSmallMod, "ntl s"},
     {&ntl::PolyMulLarge<uint64>, ntl::kPolyMulLargeMod, "ntl l"},
 #endif
-    //    {&PolyMul<uint64>, 4, "default"},
+    //  {&PolyMul<uint64>, 4, "default"},
 };
 
 const char* data_policy[3] = {
@@ -78,6 +78,8 @@ SL void TestImpl(int dp, int n, int64 mod) {
           data_policy[dp], n, (long long)mod);
 
   std::vector<uint64> x, y;
+  x.reserve(n);
+  y.reserve(n);
   srand(123456789);
   if (dp == 0) {
     for (int i = 0; i < n; ++i) {
@@ -106,7 +108,7 @@ SL void TestImpl(int dp, int n, int64 mod) {
     auto end = clock();
     fprintf(stderr, "%-8s : %.3f\n", who.name,
             1. * (end - start) / CLOCKS_PER_SEC);
-    if (i == 0) {
+    if (expected.empty()) {
       expected = result;
     } else {
       assert(expected == result);

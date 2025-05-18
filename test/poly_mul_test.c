@@ -156,7 +156,7 @@ SL void PolyMulPerformanceTest() {
 
     printf("log2(n)  ");
 
-    for (int n = 10; n <= max_log2; ++n) {
+    for (int n = min_log2; n <= max_log2; ++n) {
       printf("%-6d ", n);
     }
 

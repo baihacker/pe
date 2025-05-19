@@ -1398,7 +1398,8 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   constexpr void FromUInt32Vector(const std::vector<uint32>& bits32) {
     const int each = sizeof(ET) / sizeof(int32);
     hi_.MakeZeroBits();
-    for (int i = std::min(2 * each - 1, static_cast<int>(std::size(bits32)) - 1);
+    for (int i =
+             std::min(2 * each - 1, static_cast<int>(std::size(bits32)) - 1);
          i >= each; --i) {
       hi_ = (hi_ << 32) | bits32[i];
     }
@@ -2166,6 +2167,12 @@ SL int IsOdd(const ExtendedUnsignedIntImpl<ET, is_builtin_integer>& x) {
 }
 
 template <typename ET, bool is_builtin_integer>
+SL int SameParity(const ExtendedUnsignedIntImpl<ET, is_builtin_integer>& l,
+                  const ExtendedUnsignedIntImpl<ET, is_builtin_integer>& r) {
+  return SameParity(l.LowerBits(), r.LowerBits());
+}
+
+template <typename ET, bool is_builtin_integer>
 SL uint32 LowerBits(const ExtendedUnsignedIntImpl<ET, is_builtin_integer>& x) {
   return x.LowerBits();
 }
@@ -2180,45 +2187,6 @@ template <typename ET, bool is_builtin_integer>
 SL ExtendedUnsignedIntImpl<ET, is_builtin_integer> FAbs(
     const ExtendedUnsignedIntImpl<ET, is_builtin_integer>& x) {
   return x;
-}
-
-template <typename ET, bool is_builtin_integer>
-SL int SameParity(const ExtendedUnsignedIntImpl<ET, is_builtin_integer>& l,
-                  const ExtendedUnsignedIntImpl<ET, is_builtin_integer>& r) {
-  return SameParity(l.LowerBits(), r.LowerBits());
-}
-
-template <typename ET, bool is_builtin_integer>
-SL std::tuple<ExtendedUnsignedIntImpl<ET, is_builtin_integer>,
-              ExtendedUnsignedIntImpl<ET, is_builtin_integer>>
-Div(const ExtendedUnsignedIntImpl<ET, is_builtin_integer>& l,
-    const ExtendedUnsignedIntImpl<ET, is_builtin_integer>& r) {
-  ExtendedUnsignedIntImpl<ET, is_builtin_integer> remain;
-  ExtendedUnsignedIntImpl<ET, is_builtin_integer> d(l);
-  ExtendedUnsignedIntImpl<ET, is_builtin_integer>::DivideInplace(d, r, remain);
-  return {d, remain};
-}
-
-template <typename T, typename ET, bool is_builtin_integer>
-SL T ToInt(const ExtendedUnsignedIntImpl<ET, is_builtin_integer>& x) {
-  return x.template ToInt<T>();
-}
-
-template <typename T, typename ET, bool is_builtin_integer>
-SL T ToFloat(const ExtendedUnsignedIntImpl<ET, is_builtin_integer>& x) {
-  return x.template ToFloat<T>();
-}
-
-template <typename ET, bool is_builtin_integer>
-SL std::string ToString(
-    const ExtendedUnsignedIntImpl<ET, is_builtin_integer>& x) {
-  return x.ToString();
-}
-
-template <typename ET, bool is_builtin_integer>
-SL std::string to_string(
-    const ExtendedUnsignedIntImpl<ET, is_builtin_integer>& x) {
-  return ToString(x);
 }
 
 template <typename ET, bool is_builtin_integer, typename TN>
@@ -2260,6 +2228,39 @@ SL REQUIRES((is_builtin_integer_v<TN> && is_builtin_integer_v<TM>))
     if (n > 1) x = x * x % mod;
   }
   return ret;
+}
+
+template <typename ET, bool is_builtin_integer>
+SL std::tuple<ExtendedUnsignedIntImpl<ET, is_builtin_integer>,
+              ExtendedUnsignedIntImpl<ET, is_builtin_integer>>
+Div(const ExtendedUnsignedIntImpl<ET, is_builtin_integer>& l,
+    const ExtendedUnsignedIntImpl<ET, is_builtin_integer>& r) {
+  ExtendedUnsignedIntImpl<ET, is_builtin_integer> remain;
+  ExtendedUnsignedIntImpl<ET, is_builtin_integer> d(l);
+  ExtendedUnsignedIntImpl<ET, is_builtin_integer>::DivideInplace(d, r, remain);
+  return {d, remain};
+}
+
+template <typename T, typename ET, bool is_builtin_integer>
+SL T ToInt(const ExtendedUnsignedIntImpl<ET, is_builtin_integer>& x) {
+  return x.template ToInt<T>();
+}
+
+template <typename T, typename ET, bool is_builtin_integer>
+SL T ToFloat(const ExtendedUnsignedIntImpl<ET, is_builtin_integer>& x) {
+  return x.template ToFloat<T>();
+}
+
+template <typename ET, bool is_builtin_integer>
+SL std::string ToString(
+    const ExtendedUnsignedIntImpl<ET, is_builtin_integer>& x) {
+  return x.ToString();
+}
+
+template <typename ET, bool is_builtin_integer>
+SL std::string to_string(
+    const ExtendedUnsignedIntImpl<ET, is_builtin_integer>& x) {
+  return ToString(x);
 }
 
 template <typename ET>

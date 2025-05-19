@@ -93,6 +93,69 @@ SL REQUIRES((is_gbi_v<GBI>)) RETURN(GBI) CeilDiv(const GBI& a, const GBI& b) {
   return q;
 }
 
+template <typename GBI, typename TM>
+SL REQUIRES((is_gbi_v<GBI>)) RETURN(int_promotion_t<GBI, TM>)
+    Mod(const GBI& a, TM mod) {
+  if (IntSign(a) >= 0) {
+    return a >= mod ? a % mod : a;
+  } else {
+    auto tmp = a % mod;
+    if (tmp < 0) tmp += mod;
+    return tmp;
+  }
+}
+
+template <typename GBI, typename TN>
+SL REQUIRES((is_gbi_v<GBI> && is_builtin_integer_v<TN>)) RETURN(GBI)
+    PowerMod(const GBI& l, TN n, const GBI& mod) {
+  PE_ASSERT(n >= 0);
+  if (mod == 1) {
+    return 0;
+  }
+  GBI ret(1);
+  GBI x(l % mod);
+  for (; n > 0; n >>= 1) {
+    if (n & 1) ret = ret * x % mod;
+    if (n > 1) x = x * x % mod;
+  }
+  return ret;
+}
+
+template <typename GBI, typename TN, typename TM>
+SL REQUIRES((is_gbi_v<GBI> && is_builtin_integer_v<TN> &&
+             is_builtin_integer_v<TM>)) RETURN(GBI)
+    PowerMod(const GBI& l, TN n, TM mod) {
+  PE_ASSERT(n >= 0);
+  if (mod == 1) {
+    return 0;
+  }
+  GBI ret(1);
+  GBI x(l % mod);
+  for (; n > 0; n >>= 1) {
+    if (n & 1) ret = ret * x % mod;
+    if (n > 1) x = x * x % mod;
+  }
+  return ret;
+}
+
+template <typename GBI>
+SL REQUIRES((is_gbi_v<GBI>)) RETURN(GBI)
+    PowerMod(const GBI& l, const GBI& m, const GBI& mod) {
+  PE_ASSERT(IntSign(m) >= 0);
+  if (mod == 1) {
+    return 0;
+  }
+  GBI ret(1);
+  GBI x(l % mod);
+  GBI n(m);
+  for (; !IsZero(n);) {
+    if (IsOdd(n)) ret = ret * x % mod;
+    n >>= 1;
+    if (!IsZero(n)) x = x * x % mod;
+  }
+  return ret;
+}
+
 template <typename T, typename GBI>
 SL REQUIRES((is_gbi_v<GBI>)) RETURN(T) ToInt(const GBI& x);
 
@@ -202,18 +265,6 @@ concept PeGbi = requires(T v) {
 #endif
 
 template <typename GBI, typename TM>
-SL REQUIRES((is_gbi_v<GBI>)) RETURN(int_promotion_t<GBI, TM>)
-    Mod(const GBI& a, TM mod) {
-  if (IntSign(a) >= 0) {
-    return a >= mod ? a % mod : a;
-  } else {
-    auto tmp = a % mod;
-    if (tmp < 0) tmp += mod;
-    return tmp;
-  }
-}
-
-template <typename GBI, typename TM>
 SL REQUIRES((is_gbi_v<GBI>)) RETURN(GBI) AddMod(GBI a, const GBI& b, TM mod) {
   a += b;
   if (a >= mod) {
@@ -235,57 +286,6 @@ template <typename GBI, typename TM>
 SL REQUIRES((is_gbi_v<GBI>)) RETURN(GBI)
     MulMod(const GBI& a, const GBI& b, TM mod) {
   return a * b % mod;
-}
-
-template <typename GBI, typename TN>
-SL REQUIRES((is_gbi_v<GBI> && is_builtin_integer_v<TN>)) RETURN(GBI)
-    PowerMod(const GBI& l, TN n, const GBI& mod) {
-  PE_ASSERT(n >= 0);
-  if (mod == 1) {
-    return 0;
-  }
-  GBI ret(1);
-  GBI x(l % mod);
-  for (; n > 0; n >>= 1) {
-    if (n & 1) ret = ret * x % mod;
-    if (n > 1) x = x * x % mod;
-  }
-  return ret;
-}
-
-template <typename GBI, typename TN, typename TM>
-SL REQUIRES((is_gbi_v<GBI> && is_builtin_integer_v<TN> &&
-             is_builtin_integer_v<TM>)) RETURN(GBI)
-    PowerMod(const GBI& l, TN n, TM mod) {
-  PE_ASSERT(n >= 0);
-  if (mod == 1) {
-    return 0;
-  }
-  GBI ret(1);
-  GBI x(l % mod);
-  for (; n > 0; n >>= 1) {
-    if (n & 1) ret = ret * x % mod;
-    if (n > 1) x = x * x % mod;
-  }
-  return ret;
-}
-
-template <typename GBI>
-SL REQUIRES((is_gbi_v<GBI>)) RETURN(GBI)
-    PowerMod(const GBI& l, const GBI& m, const GBI& mod) {
-  PE_ASSERT(IntSign(m) >= 0);
-  if (mod == 1) {
-    return 0;
-  }
-  GBI ret(1);
-  GBI x(l % mod);
-  GBI n(m);
-  for (; !IsZero(n);) {
-    if (IsOdd(n)) ret = ret * x % mod;
-    n >>= 1;
-    if (!IsZero(n)) x = x * x % mod;
-  }
-  return ret;
 }
 
 template <typename GBI>

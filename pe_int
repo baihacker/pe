@@ -266,6 +266,44 @@ SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TN>))
   return ret;
 }
 
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::tuple<T, T>)
+    Div(const T& a, const T& b) {
+  return {a / b, a % b};
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
+    FloorDiv(const T& a, const T& b) {
+  if (a > 0 && b > 0) {
+    return a / b;
+  }
+  if (a < 0 && b < 0) {
+    return a / b;
+  }
+  T q = a / b;
+  if (((a < 0) != (b < 0)) && a % b != 0) {
+    --q;
+  }
+  return q;
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
+    CeilDiv(const T& a, const T& b) {
+  if (a > 0 && b > 0) {
+    return 1 + (a - 1) / b;
+  }
+  if (a < 0 && b < 0) {
+    return 1 + (a + 1) / b;
+  }
+  T q = a / b;
+  if (((a < 0) == (b < 0)) && a % b != 0) {
+    ++q;
+  }
+  return q;
+}
+
 template <typename TARGET, typename T>
 SL constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(TARGET) ToInt(T v) {
   return static_cast<TARGET>(v);
@@ -314,44 +352,6 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::string)
   std::reverse(result.begin(), result.end());
   return result;
 }
-
-template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::tuple<T, T>)
-    Div(const T& a, const T& b) {
-  return {a / b, a % b};
-}
-
-template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
-    FloorDiv(const T& a, const T& b) {
-  if (a > 0 && b > 0) {
-    return a / b;
-  }
-  if (a < 0 && b < 0) {
-    return a / b;
-  }
-  T q = a / b;
-  if (((a < 0) != (b < 0)) && a % b != 0) {
-    --q;
-  }
-  return q;
-}
-
-template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
-    CeilDiv(const T& a, const T& b) {
-  if (a > 0 && b > 0) {
-    return 1 + (a - 1) / b;
-  }
-  if (a < 0 && b < 0) {
-    return 1 + (a + 1) / b;
-  }
-  T q = a / b;
-  if (((a < 0) == (b < 0)) && a % b != 0) {
-    ++q;
-  }
-  return q;
-}
 }  // namespace pe
 
 #if PE_HAS_CPP20
@@ -385,6 +385,7 @@ concept PeIntegerUtil = requires(T v) {
   Prod<T>(v, v);
   Prod<T>(v, v, v);
   Power(v, 10);
+  Div(v, v);
   ToInt<char>(v);
   ToInt<unsigned char>(v);
   ToInt<signed char>(v);
@@ -409,7 +410,6 @@ concept PeIntegerUtil = requires(T v) {
 #if PE_HAS_FLOAT128
   ToFloat<float128>(v);
 #endif
-  Div(v, v);
   ToString(v);
   to_string(v);
 

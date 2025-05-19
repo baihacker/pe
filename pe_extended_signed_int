@@ -14,6 +14,10 @@ namespace pe {
 template <typename ET, bool is_builtin>
 struct ExtendedSignedIntImpl;
 
+template <typename T>
+SL REQUIRES((is_extended_integer_v<T>)) RETURN(std::string)
+    ToString(const T& x);
+
 template <typename ET>
 struct ExtendedSignedIntImpl<ET, true>
     : public ExtendedUnsignedIntImpl<ET, true> {
@@ -266,8 +270,8 @@ struct ExtendedSignedIntImpl<ET, true>
 
   constexpr ExtendedSignedIntImpl operator-() const {
     ExtendedSignedIntImpl ret(*this);
-    base::FlipBits();
-    base::AddOne();
+    ret.FlipBits();
+    ret.AddOne();
     return ret;
   }
 
@@ -797,8 +801,8 @@ struct ExtendedSignedIntImpl<ET, false>
 
   constexpr ExtendedSignedIntImpl operator-() const {
     ExtendedSignedIntImpl ret(*this);
-    base::FlipBits();
-    base::AddOne();
+    ret.FlipBits();
+    ret.AddOne();
     return ret;
   }
 
@@ -1110,134 +1114,9 @@ struct ExtendedSignedIntImpl<ET, false>
   }
 };
 
-template <typename ET, bool is_builtin_integer>
-SL int IsZero(const ExtendedSignedIntImpl<ET, is_builtin_integer>& x) {
-  return x.IsZero();
-}
-
-template <typename ET, bool is_builtin_integer>
-SL int IntSign(const ExtendedSignedIntImpl<ET, is_builtin_integer>& x) {
-  return x.IntSign();
-}
-
-template <typename ET, bool is_builtin_integer>
-SL int IsEven(const ExtendedSignedIntImpl<ET, is_builtin_integer>& x) {
-  return x.IsEven();
-}
-
-template <typename ET, bool is_builtin_integer>
-SL int IsOdd(const ExtendedSignedIntImpl<ET, is_builtin_integer>& x) {
-  return x.IsOdd();
-}
-
-template <typename ET, bool is_builtin_integer>
-SL int SameParity(const ExtendedSignedIntImpl<ET, is_builtin_integer>& l,
-                  const ExtendedSignedIntImpl<ET, is_builtin_integer>& r) {
-  return SameParity(l.LowerBits(), r.LowerBits());
-}
-
-template <typename ET, bool is_builtin_integer>
-SL uint32 LowerBits(const ExtendedSignedIntImpl<ET, is_builtin_integer>& x) {
-  return x.LowerBits();
-}
-
-template <typename ET, bool is_builtin_integer>
-SL ExtendedSignedIntImpl<ET, is_builtin_integer> Abs(
-    const ExtendedSignedIntImpl<ET, is_builtin_integer>& x) {
-  return x;
-}
-
-template <typename ET, bool is_builtin_integer>
-SL ExtendedSignedIntImpl<ET, is_builtin_integer> FAbs(
-    const ExtendedSignedIntImpl<ET, is_builtin_integer>& x) {
-  return x;
-}
-
-template <typename ET, bool is_builtin_integer, typename T2>
-SL REQUIRES((is_builtin_integer_v<T2>))
-    RETURN(ExtendedSignedIntImpl<ET, is_builtin_integer>)
-        Power(ExtendedSignedIntImpl<ET, is_builtin_integer> x, T2 n) {
-  PE_ASSERT(n >= 0);
-  ExtendedSignedIntImpl<ET, is_builtin_integer> ret = 1;
-  for (; n > 0; n >>= 1) {
-    if (n & 1) ret *= x;
-    if (n > 1) x *= x;
-  }
-  return ret;
-}
-
-template <typename ET, bool is_builtin_integer, typename T2>
-SL REQUIRES((is_builtin_integer_v<T2>))
-    RETURN(ExtendedSignedIntImpl<ET, is_builtin_integer>)
-        PowerMod(ExtendedSignedIntImpl<ET, is_builtin_integer> x, T2 n,
-                 const ExtendedSignedIntImpl<ET, is_builtin_integer>& mod) {
-  PE_ASSERT(n >= 0);
-  ExtendedSignedIntImpl<ET, is_builtin_integer> ret = 1;
-  for (; n > 0; n >>= 1) {
-    if (n & 1) ret = ret * x % mod;
-    if (n > 1) x = x * x % mod;
-  }
-  return ret;
-}
-
-template <typename ET, bool is_builtin_integer, typename T2, typename T3>
-SL REQUIRES((is_builtin_integer_v<T2> && is_builtin_integer_v<T3>))
-    RETURN(ExtendedSignedIntImpl<ET, is_builtin_integer>)
-        PowerMod(ExtendedSignedIntImpl<ET, is_builtin_integer> x, T2 n,
-                 T3 mod) {
-  PE_ASSERT(n >= 0);
-  ExtendedSignedIntImpl<ET, is_builtin_integer> ret = 1;
-  for (; n > 0; n >>= 1) {
-    if (n & 1) ret = ret * x % mod;
-    if (n > 1) x = x * x % mod;
-  }
-  return ret;
-}
-
-template <typename ET, bool is_builtin_integer>
-SL std::tuple<ExtendedSignedIntImpl<ET, is_builtin_integer>,
-              ExtendedSignedIntImpl<ET, is_builtin_integer>>
-Div(const ExtendedSignedIntImpl<ET, is_builtin_integer>& l,
-    const ExtendedSignedIntImpl<ET, is_builtin_integer>& r) {
-  ExtendedSignedIntImpl<ET, is_builtin_integer> remain;
-  ExtendedSignedIntImpl<ET, is_builtin_integer> d(l);
-  ExtendedSignedIntImpl<ET, is_builtin_integer>::DivideInplace(d, r, remain);
-  return {d, remain};
-}
-
-template <typename T, typename ET, bool is_builtin_integer>
-SL T ToInt(const ExtendedSignedIntImpl<ET, is_builtin_integer>& x) {
-  return x.template ToInt<T>();
-}
-
-template <typename T, typename ET, bool is_builtin_integer>
-SL T ToFloat(const ExtendedSignedIntImpl<ET, is_builtin_integer>& x) {
-  return x.template ToFloat<T>();
-}
-
-template <typename ET, bool is_builtin_integer>
-SL std::string ToString(
-    const ExtendedSignedIntImpl<ET, is_builtin_integer>& x) {
-  return x.ToString();
-}
-
-template <typename ET, bool is_builtin_integer>
-SL std::string to_string(
-    const ExtendedSignedIntImpl<ET, is_builtin_integer>& x) {
-  return ToString(x);
-}
-
 template <typename ET>
 using ExtendedSignedInt = ExtendedSignedIntImpl<typename ExtractET<ET>::type,
                                                 is_builtin_integer_v<ET>>;
 }  // namespace pe
 
-#if PE_HAS_CPP20
-namespace pe {
-static_assert(PeIntegerUtil<ExtendedSignedInt<uint64>>);
-#if PE_HAS_INT128
-static_assert(PeIntegerUtil<ExtendedSignedInt<uint128>>);
-#endif
-}  // namespace pe
-#endif
 #endif

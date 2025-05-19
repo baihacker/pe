@@ -41,12 +41,184 @@ struct numeric_limits<pe::ExtendedSignedIntImpl<ET, is_builtin_integer>> {
 }  // namespace std
 
 namespace pe {
+template <typename T>
+SL REQUIRES((is_extended_integer_v<T>)) RETURN(int) IsZero(const T& x) {
+  return x.IsZero();
+}
+
+template <typename T>
+SL REQUIRES((is_extended_integer_v<T>)) RETURN(int) IntSign(const T& x) {
+  return x.IntSign();
+}
+
+template <typename T>
+SL REQUIRES((is_extended_integer_v<T>)) RETURN(int) IsEven(const T& x) {
+  return x.IsEven();
+}
+
+template <typename T>
+SL REQUIRES((is_extended_integer_v<T>)) RETURN(int) IsOdd(const T& x) {
+  return x.IsOdd();
+}
+
+template <typename T0, typename T1>
+SL REQUIRES((is_extended_integer_v<T0> && is_extended_integer_v<T1>))
+    RETURN(int) SameParity(const T0& l, const T1& r) {
+  return SameParity(l.LowerBits(), r.LowerBits());
+}
+
+template <typename T>
+SL REQUIRES((is_extended_integer_v<T>)) RETURN(uint32) LowerBits(const T& x) {
+  return x.LowerBits();
+}
+
+template <typename T>
+SL REQUIRES((is_extended_integer_v<T> && pe_is_unsigned_v<T>)) RETURN(T)
+    Abs(const T& x) {
+  return x;
+}
+
+template <typename T>
+SL REQUIRES((is_extended_integer_v<T> && pe_is_unsigned_v<T>)) RETURN(T)
+    FAbs(const T& x) {
+  return x;
+}
+
+template <typename T>
+SL REQUIRES((is_extended_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
+    Abs(const T& x) {
+  return IntSign(x) >= 0 ? x : -x;
+}
+
+template <typename T>
+SL REQUIRES((is_extended_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
+    FAbs(const T& x) {
+  return IntSign(x) >= 0 ? x : -x;
+}
+
+template <typename T, typename TN>
+SL REQUIRES((is_extended_integer_v<T> && is_builtin_integer_v<TN>)) RETURN(T)
+    Power(T x, TN n) {
+  PE_ASSERT(n >= 0);
+  T ret = 1;
+  for (; n > 0; n >>= 1) {
+    if (n & 1) ret *= x;
+    if (n > 1) x *= x;
+  }
+  return ret;
+}
+
+template <typename T, typename TN>
+SL REQUIRES((is_extended_integer_v<T> && is_builtin_integer_v<TN>)) RETURN(T)
+    PowerMod(T x, TN n, const T& mod) {
+  PE_ASSERT(n >= 0);
+  T ret = 1;
+  for (; n > 0; n >>= 1) {
+    if (n & 1) ret = ret * x % mod;
+    if (n > 1) x = x * x % mod;
+  }
+  return ret;
+}
+
+template <typename T, typename TN, typename TM>
+SL REQUIRES((is_extended_integer_v<T> && is_builtin_integer_v<TN> &&
+             is_builtin_integer_v<TM>)) RETURN(T) PowerMod(T x, TN n, TM mod) {
+  PE_ASSERT(n >= 0);
+  T ret = 1;
+  for (; n > 0; n >>= 1) {
+    if (n & 1) ret = ret * x % mod;
+    if (n > 1) x = x * x % mod;
+  }
+  return ret;
+}
+
+template <typename T>
+SL REQUIRES(is_extended_integer_v<T>) RETURN(std::tuple<T, T>)
+    Div(const T& l, const T& r) {
+  T remain;
+  T d(l);
+  T::DivideInplace(d, r, remain);
+  return {d, remain};
+}
+
+template <typename T>
+SL REQUIRES((is_extended_integer_v<T>)) RETURN(T)
+    FloorDiv(const T& a, const T& b) {
+  if (IntSign(a) > 0 && IntSign(b) > 0) {
+    return a / b;
+  }
+  if (IntSign(a) < 0 && IntSign(b) < 0) {
+    return a / b;
+  }
+  T q = a / b;
+  if (((IntSign(a) < 0) != (IntSign(b) < 0)) && !IsZero(a % b)) {
+    --q;
+  }
+  return q;
+}
+
+template <typename T>
+SL REQUIRES((is_extended_integer_v<T>)) RETURN(T)
+    CeilDiv(const T& a, const T& b) {
+  if (IntSign(a) > 0 && IntSign(b) > 0) {
+    return 1 + (a - 1) / b;
+  }
+  if (IntSign(a) < 0 && IntSign(b) < 0) {
+    return 1 + (a + 1) / b;
+  }
+  T q = a / b;
+  if (((IntSign(a) < 0) == (IntSign(b) < 0)) && !IsZero(a % b)) {
+    ++q;
+  }
+  return q;
+}
+
 template <typename T, typename TM>
 SL constexpr REQUIRES((is_extended_integer_v<T>)) RETURN(int_promotion_t<T, TM>)
     Mod(T a, TM mod) {
   return a % mod;
 }
+
+template <typename TT, typename T>
+SL REQUIRES((is_extended_integer_v<T>)) RETURN(TT) ToInt(const T& x) {
+  return x.template ToInt<TT>();
+}
+
+template <typename TT, typename T>
+SL REQUIRES((is_extended_integer_v<T>)) RETURN(TT) ToFloat(const T& x) {
+  return x.template ToFloat<TT>();
+}
+
+template <typename T>
+SL REQUIRES((is_extended_integer_v<T>)) RETURN(std::string)
+    ToString(const T& x) {
+  return x.ToString();
+}
+
+template <typename T>
+SL REQUIRES((is_extended_integer_v<T>)) RETURN(std::string)
+    to_string(const T& x) {
+  return ToString(x);
+}
 }  // namespace pe
+
+#if PE_HAS_CPP20
+namespace pe {
+static_assert(PeIntegerUtil<ExtendedUnsignedInt<uint64>>);
+#if PE_HAS_INT128
+static_assert(PeIntegerUtil<ExtendedUnsignedInt<uint128>>);
+#endif
+}  // namespace pe
+#endif
+
+#if PE_HAS_CPP20
+namespace pe {
+static_assert(PeIntegerUtil<ExtendedSignedInt<uint64>>);
+#if PE_HAS_INT128
+static_assert(PeIntegerUtil<ExtendedSignedInt<uint128>>);
+#endif
+}  // namespace pe
+#endif
 
 namespace pe {
 using uint128e = ExtendedUnsignedInt<uint64>;

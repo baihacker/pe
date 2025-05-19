@@ -252,6 +252,23 @@ SL REQUIRES((is_gbi_v<GBI> && is_builtin_integer_v<TN>)) RETURN(GBI)
   return ret;
 }
 
+template <typename GBI, typename TN, typename TM>
+SL REQUIRES((is_gbi_v<GBI> && is_builtin_integer_v<TN> &&
+             is_builtin_integer_v<TM>)) RETURN(GBI)
+    PowerMod(const GBI& l, TN n, TM mod) {
+  PE_ASSERT(n >= 0);
+  if (mod == 1) {
+    return 0;
+  }
+  GBI ret(1);
+  GBI x(l % mod);
+  for (; n > 0; n >>= 1) {
+    if (n & 1) ret = ret * x % mod;
+    if (n > 1) x = x * x % mod;
+  }
+  return ret;
+}
+
 template <typename GBI>
 SL REQUIRES((is_gbi_v<GBI>)) RETURN(GBI)
     PowerMod(const GBI& l, const GBI& m, const GBI& mod) {

@@ -204,18 +204,20 @@ SL REQUIRES((is_extended_integer_v<T>)) RETURN(std::string)
 
 #if PE_HAS_CPP20
 namespace pe {
-static_assert(PeIntegerUtil<ExtendedUnsignedInt<uint64>>);
-#if PE_HAS_INT128
-static_assert(PeIntegerUtil<ExtendedUnsignedInt<uint128>>);
-#endif
-}  // namespace pe
-#endif
+template <class T>
+concept PeExtendedInteger = requires(T v) {
+  requires static_cast<bool>(is_extended_integer_v<T>);
+  requires PeArithmeticOperation<T>;
+  requires PeSelfOperation<T>;
+  requires PeComparable<T>;
+  requires PeIntegerUtil<T>;
+};
 
-#if PE_HAS_CPP20
-namespace pe {
-static_assert(PeIntegerUtil<ExtendedSignedInt<uint64>>);
+static_assert(PeExtendedInteger<ExtendedUnsignedInt<uint64>>);
+static_assert(PeExtendedInteger<ExtendedSignedInt<uint64>>);
 #if PE_HAS_INT128
-static_assert(PeIntegerUtil<ExtendedSignedInt<uint128>>);
+static_assert(PeExtendedInteger<ExtendedUnsignedInt<uint128>>);
+static_assert(PeExtendedInteger<ExtendedSignedInt<uint128>>);
 #endif
 }  // namespace pe
 #endif

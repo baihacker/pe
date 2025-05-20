@@ -4,6 +4,7 @@
 #include "pe_base"
 #include "pe_type_traits"
 #include "pe_bit"
+#include "pe_mod"
 
 #if PE_HAS_INT128
 inline int128 operator"" _i128(const char* sv, size_t /*sc*/) {
@@ -304,26 +305,6 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
   return q;
 }
 
-template <typename T, typename TM>
-SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM> &&
-                       pe_is_signed_v<T> && pe_is_signed_v<TM>))
-    RETURN(int_promotion_t<T, TM>) Mod(T a, TM mod);
-
-template <typename T, typename TM>
-SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM> &&
-                       pe_is_signed_v<T> && pe_is_unsigned_v<TM>))
-    RETURN(int_promotion_t<T, TM>) Mod(T a, TM mod);
-
-template <typename T, typename TM>
-SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM> &&
-                       pe_is_unsigned_v<T>)) RETURN(int_promotion_t<T, TM>)
-    Mod(T a, TM mod);
-
-template <typename T, typename TN, typename TM>
-SL REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TN> &&
-             is_builtin_integer_v<TM>)) RETURN(int_promotion_t<T, int64, TM>)
-    PowerMod(T x, TN n, TM mod);
-
 template <typename TARGET, typename T>
 SL constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(TARGET) ToInt(T v) {
   return static_cast<TARGET>(v);
@@ -409,10 +390,16 @@ concept PeIntegerUtil = requires(T v) {
   Div(v, v);
   FloorDiv(v, v);
   CeilDiv(v, v);
-  Mod(v, v);
   Mod(v, 10);
-  PowerMod(v, 10, v);
+  Mod(v, v);
+  AddMod(v, v, 10);
+  AddMod(v, v, v);
+  SubMod(v, v, 10);
+  SubMod(v, v, v);
+  MulMod(v, v, 10);
+  MulMod(v, v, v);
   PowerMod(v, 10, 10);
+  PowerMod(v, 10, v);
   ToInt<char>(v);
   ToInt<unsigned char>(v);
   ToInt<signed char>(v);
@@ -554,7 +541,6 @@ concept PeSelfOperation = requires(T v) {
 }  // namespace pe
 #endif
 
-// Modular arithmetic is implemented in pe_mod.
 // Other utilities are implemented in pe_nt_base and pe_nt.
 namespace pe {
 namespace internal {

@@ -18,7 +18,8 @@ template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     InitAsMpz(mpz_t a, const T* X, const int64 n, const int64 need_limb,
               int64 mod) {
-  mpz_setbit(a, need_limb * n * sizeof(mp_limb_t) * 8);
+  mpz_setbit(a,
+             static_cast<mp_bitcnt_t>(need_limb * n * sizeof(mp_limb_t) * 8));
   mpz_ptr ptr = a;
   if (mod > 0) {
     for (int i = 0; i < n; ++i) {
@@ -35,7 +36,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
       }
     }
   }
-  mpz_clrbit(a, need_limb * n * sizeof(mp_limb_t) * 8);
+  mpz_clrbit(a,
+             static_cast<mp_bitcnt_t>(need_limb * n * sizeof(mp_limb_t) * 8));
 }
 
 template <typename T>
@@ -107,7 +109,7 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
       for (int64 i = 0; i < all_size; ++i) {
         const int64 offset = i * need_limb;
         uint64 it = 0;
-        for (int j = need_limb - 1; j >= 0; --j) {
+        for (int j = static_cast<int>(need_limb - 1); j >= 0; --j) {
           const mp_limb_t v =
               offset + j >= has_size ? 0 : ptr->_mp_d[offset + j];
           it = AddMod(MulMod(it, magic2, mod), v % mod, mod);
@@ -126,7 +128,7 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
       for (int64 i = 0; i < all_size; ++i) {
         const int64 offset = i * need_limb;
         T it = 0;
-        for (int j = need_limb - 1; j >= 0; --j) {
+        for (int j = static_cast<int>(need_limb - 1); j >= 0; --j) {
           const mp_limb_t v =
               offset + j >= has_size ? 0 : ptr->_mp_d[offset + j];
           it <<= 32;

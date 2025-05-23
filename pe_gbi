@@ -215,23 +215,18 @@ SL REQUIRES((is_gbi_v<GBI>)) RETURN(GBI) Gcd(GBI m, GBI n) {
 }
 
 template <typename GBI>
-SL REQUIRES((is_gbi_v<GBI>)) RETURN(GBI)
-    ExGcd(const GBI& a, const GBI& b, GBI& x, GBI& y) {
-  if (IsZero(b)) {
-    x = 1;
-    y = 0;
-    return a;
+SL REQUIRES((is_gbi_v<GBI>)) RETURN(GBI) ExGcd(GBI a, GBI b, GBI& x, GBI& y) {
+  GBI s = 1, t = 0;
+  GBI u = 0, v = 1;
+  while (!IsZero(b)) {
+    auto [q, r] = Div(a, b);
+    std::swap(s -= t * q, t);
+    std::swap(u -= v * q, v);
+    std::swap(a = std::move(r), b);
   }
-
-  GBI x1 = 0, y1 = 0;
-  GBI ret = ExGcd(b, GBI(a % b), x1, y1);
-  // b * x1 + (a%b) * y1 = ret
-  // b * x1 + (a - a / b * b) * y1 = ret
-  // b * x1 + a * y1 - a / b * b * y1 = ret
-  // y1 * a + (x1 - a / b * y1) b = ret
-  y = x1 - a / b * y1;
-  x = std::move(y1);
-  return ret;
+  x = std::move(s);
+  y = std::move(u);
+  return a;
 }
 
 template <typename GBI>

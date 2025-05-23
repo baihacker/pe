@@ -33,7 +33,7 @@ int main() {
   //   const int64 t5 = (t2 + t4) % mod;
   //   const int64 t6 = 7 % mod;
   //   const int64 t7 = (t5 * t6) % mod;
-  //   const int64 t8 = t7 * InvOf(t3, mod) % mod;
+  //   const int64 t8 = t7 * ModInv(t3, mod) % mod;
   //   return t8;
   // }
   return 0;

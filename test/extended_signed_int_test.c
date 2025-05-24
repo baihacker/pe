@@ -47,9 +47,9 @@ SL void TestConstructor() {
   s = "-123456789123456789123456789";
   assert(TestT(s).ToString() == s);
 
-  assert(TestT(-1).BitCount() == sizeof(TestT) * 8);
+  assert(TestT(-1).Popcount() == sizeof(TestT) * 8);
 
-  assert((TestT(-1) >> 10).BitCount() == sizeof(TestT) * 8);
+  assert((TestT(-1) >> 10).Popcount() == sizeof(TestT) * 8);
 }
 
 template <typename T>
@@ -359,7 +359,7 @@ SL void TestBitOperator() {
   assert(x.ToInt<int>() == 1048574);
   x.ResetBit(1);
   assert(x.ToInt<int>() == 1048572);
-  assert(x.BitCount() == 18);
+  assert(x.Popcount() == 18);
 
   TestT y;
   y.SetBit(0);

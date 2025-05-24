@@ -105,7 +105,7 @@ SL void TestAsmdImpl() {
   x = x % T(2);
   x = 1;
   x = x % x;
-  
+
   ++x;
   x++;
   --x;
@@ -315,7 +315,7 @@ SL void TestBitOperator() {
   assert(x.ToInt<int>() == 1048574);
   x.ResetBit(1);
   assert(x.ToInt<int>() == 1048572);
-  assert(x.BitCount() == 18);
+  assert(x.Popcount() == 18);
 
   MpInteger y;
   y.SetBit(0);

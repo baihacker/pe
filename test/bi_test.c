@@ -318,7 +318,7 @@ SL void TestBitOperator() {
   assert(x.ToInt<int>() == 1048574);
   x.ResetBit(1);
   assert(x.ToInt<int>() == 1048572);
-  assert(x.BitCount() == 18);
+  assert(x.Popcount() == 18);
 
   BigInteger y;
   y.SetBit(0);

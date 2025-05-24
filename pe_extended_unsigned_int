@@ -186,6 +186,43 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     }
   }
 
+  constexpr int BitWidth() const {
+    if (hi_) {
+      return pe::BitWidth(hi_) + sizeof(low_) * 8;
+    } else {
+      return pe::BitWidth(low_);
+    }
+  }
+
+  constexpr int Popcount() const {
+    const int each = sizeof(ET) / sizeof(uint32);
+
+    int ret = 0;
+    ET t = low_;
+    for (int i = 0; t && i < each; ++i) {
+      ret += pe_popcount(static_cast<uint32>(t));
+#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
+      t >>= 16;
+      t >>= 16;
+#else
+      t >>= 32;
+#endif
+    }
+
+    t = hi_;
+    for (int i = 0; t && i < each; ++i) {
+      ret += pe_popcount(static_cast<uint32>(t));
+#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
+      t >>= 16;
+      t >>= 16;
+#else
+      t >>= 32;
+#endif
+    }
+
+    return ret;
+  }
+
   constexpr int GetHighestBit() const { return hi_ & hibit_mask ? 1 : 0; }
 
   constexpr void ResetHighestBit() { hi_ &= ~hibit_mask; }
@@ -222,35 +259,6 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     } else {
       hi_ ^= static_cast<ET>(1) << (idx - half_bitsize);
     }
-  }
-
-  constexpr int BitCount() const {
-    const int each = sizeof(ET) / sizeof(uint32);
-
-    int ret = 0;
-    ET t = low_;
-    for (int i = 0; t && i < each; ++i) {
-      ret += pe_popcount(static_cast<uint32>(t));
-#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
-      t >>= 16;
-      t >>= 16;
-#else
-      t >>= 32;
-#endif
-    }
-
-    t = hi_;
-    for (int i = 0; t && i < each; ++i) {
-      ret += pe_popcount(static_cast<uint32>(t));
-#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
-      t >>= 16;
-      t >>= 16;
-#else
-      t >>= 32;
-#endif
-    }
-
-    return ret;
   }
 
   constexpr void ArithmeticShiftRight(int cnt) {
@@ -1279,6 +1287,16 @@ struct ExtendedUnsignedIntImpl<ET, false> {
     }
   }
 
+  constexpr int BitWidth() const {
+    if (!hi_.IsZero()) {
+      return hi_.BitWidth() + sizeof(low_) * 8;
+    } else {
+      return low_.BitWidth();
+    }
+  }
+
+  constexpr int Popcount() const { return hi_.Popcount() + low_.Popcount(); }
+
   constexpr int GetHighestBit() const { return hi_.GetHighestBit(); }
 
   constexpr void ResetHighestBit() { hi_.ResetHighestBit(); }
@@ -1316,8 +1334,6 @@ struct ExtendedUnsignedIntImpl<ET, false> {
       hi_.RevBit(idx - half_bitsize);
     }
   }
-
-  constexpr int BitCount() const { return hi_.BitCount() + low_.BitCount(); }
 
   constexpr void ArithmeticShiftRight(int cnt) {
     if (GetHighestBit()) {

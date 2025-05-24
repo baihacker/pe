@@ -979,6 +979,16 @@ class BigInteger {
     return result;
   }
 
+  int BitWidth() const {
+    return (pos_ << div32_bit) + pe::BitWidth(data_[pos_]);
+  }
+
+  int Popcount() const {
+    int ret = 0;
+    for (int i = pos_; i >= 0; --i) ret += pe_popcount(data_[i]);
+    return ret;
+  }
+
   void SetBit(int idx) {
     const int x = idx >> div32_bit;
     const int y = idx & mod32_mask;
@@ -1001,22 +1011,6 @@ class BigInteger {
     const int x = idx >> div32_bit;
     const int y = idx & mod32_mask;
     data_[x] = pe::RevBit(data_[x], y);
-  }
-
-  int BitCount() const {
-    int ret = 0;
-    for (int i = pos_; i >= 0; --i) ret += pe_popcount(data_[i]);
-    return ret;
-  }
-
-  int BitHeight() const {
-    int ret = pos_ << div32_bit;
-    int hiCnt = 0;
-    uint32 v = data_[pos_];
-    for (uint32 x = 1; v; ++hiCnt, x <<= 1, v >>= 1) {
-      ;
-    }
-    return ret + hiCnt;
   }
 
   std::string ToString() const {
@@ -1675,7 +1669,7 @@ class BigInteger {
     if (n == 0) {
       return l;
     }
-    const int bit_cnt = l.BitHeight();
+    const int bit_cnt = l.BitWidth();
     std::vector<uint32> v(n + bit_cnt, 0);
     for (int i = 0, j = n; i < bit_cnt; ++i, ++j) {
       const int x = i >> BigInteger::div32_bit;
@@ -1701,7 +1695,7 @@ class BigInteger {
     if (n == 0) {
       return l;
     }
-    const int bit_cnt = l.BitHeight();
+    const int bit_cnt = l.BitWidth();
     if (n >= bit_cnt) {
       return 0;
     }
@@ -1745,38 +1739,12 @@ struct Gbi<BigInteger> {
   static BigInteger Of(const std::string& s) { return BigInteger(s); }
 };
 
-SL int IsZero(const BigInteger& x) { return x.IsZero(); }
-
-SL int IntSign(const BigInteger& x) { return x.sign(); }
-
-SL int IsEven(const BigInteger& x) { return x.IsEven(); }
-
-SL int IsOdd(const BigInteger& x) { return x.IsOdd(); }
-
-SL uint32 LowerBits(const BigInteger& x) { return x.LowerBits(); }
-
 SL std::tuple<BigInteger, BigInteger> Div(const BigInteger& l,
                                           const BigInteger& r) {
   BigInteger remain;
   BigInteger d = Divide(l, r, remain);
   return {std::move(d), std::move(remain)};
 }
-
-template <typename T>
-SL T ToInt(const BigInteger& x) {
-  return x.ToInt<T>();
-}
-
-template <typename T>
-SL T ToFloat(const BigInteger& x) {
-  return x.ToFloat<T>();
-}
-
-// Power operation has a default implementation
-
-SL std::string ToString(const BigInteger& x) { return x.ToString(); }
-
-SL std::string to_string(const BigInteger& x) { return ToString(x); }
 }  // namespace pe
 
 #if PE_HAS_CPP20

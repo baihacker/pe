@@ -98,6 +98,8 @@ template <typename T>
 SL REQUIRES((is_signed_extended_integer_v<T> || is_gbi_v<T>))
     RETURN(ModValue<T>) Crt2(T a, const T& m1, T b, const T& m2) {
   PE_ASSERT(!IsZero(m1) && !IsZero(m2));
+  if (IntSign(m1) < 0) m1 = -m1;
+  if (IntSign(m2) < 0) m2 = -m2;
   // x = a (mod m1)
   // x = b (mod m2)
   // x = k0 m1 + a
@@ -105,11 +107,13 @@ SL REQUIRES((is_signed_extended_integer_v<T> || is_gbi_v<T>))
   // k0 m1 = b - a (mod m2)
   a %= m1;
   b %= m2;
-  if (a < 0) a = -a;
-  if (b < 0) b = -b;
+  if (a < 0) a += m1;
+  if (b < 0) b += m2;
 
   ModValue<T> mod_value = SolveLinearEquation(m1, b - a, m2);
-  if (!mod_value.ok) return 0;
+  if (!mod_value.ok) {
+    return ModValue<T>{0};
+  }
   // k0 = k1 * s + t
   // x = (k1 * s + t) * m1 + a
   // x = k1 * s * m1 + (a + t * m1)

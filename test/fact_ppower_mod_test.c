@@ -1,33 +1,34 @@
 #include "pe_test.h"
 
 namespace fact_ppower_mod_test {
-SL void FactPPowerModTest() {
-  bi N = 1;
+SL void FactPPowerModTest_BigInteger() {
+  BigInteger N = 1;
   for (int i = 1; i <= 20; ++i) N *= i;
 
-  bi v = 0;
-  for (bi n = N; !IsZero(n); n >>= 1, v += n) {
+  BigInteger v = 0;
+  for (BigInteger n = N; !IsZero(n); n >>= 1, v += n) {
     ;
   }
 
-  bi mod = Power(bi(2), 48);
-  bi ans = 1;
-  FactPPowerModer<bi> moder(2, 48);
+  BigInteger mod = Power(BigInteger(2), 48);
+  BigInteger ans = 1;
+  FactPPowerModer<BigInteger> moder(2, 48);
   int i = 0;
   while (N > 1) {
     ans = ans * moder.Cal(N) % mod;
     N >>= 1;
   }
 
-  ans = ans * (Power(bi(2), v[0] & 3)) % mod;
+  ans = ans * (Power(BigInteger(2), v[0] & 3)) % mod;
 
   assert(ans == 21171469991580LL);
 }
 
-PE_REGISTER_TEST(&FactPPowerModTest, "FactPPowerModTest", SMALL);
+PE_REGISTER_TEST(&FactPPowerModTest_BigInteger, "FactPPowerModTest_BigInteger",
+                 SMALL);
 
 #if ENABLE_GMP
-SL void MpIntegerFactPPowerModTest() {
+SL void FactPPowerModTest_MpInteger() {
   MpInteger N = 1;
   for (int i = 1; i <= 20; ++i) N *= i;
 
@@ -50,7 +51,7 @@ SL void MpIntegerFactPPowerModTest() {
   assert(ToInt<int64>(ans) == 21171469991580LL);
 }
 
-PE_REGISTER_TEST(&MpIntegerFactPPowerModTest, "MpIntegerFactPPowerModTest",
+PE_REGISTER_TEST(&FactPPowerModTest_MpInteger, "FactPPowerModTest_MpInteger",
                  SMALL);
 #endif
 }  // namespace fact_ppower_mod_test

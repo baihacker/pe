@@ -27,9 +27,10 @@ SL REQUIRES((is_gbi_v<T>)) RETURN(T) Gcd(T m, T n) {
   return m;
 }
 
+namespace internal {
 template <typename T>
 SL REQUIRES((is_signed_extended_integer_v<T> || is_gbi_v<T>)) RETURN(T)
-    ExGcd(T a, T b, T& x, T& y) {
+    ExGcdImpl(T a, T b, T& x, T& y) {
   T s = 1, t = 0;
   T u = 0, v = 1;
   while (!IsZero(b)) {
@@ -42,13 +43,23 @@ SL REQUIRES((is_signed_extended_integer_v<T> || is_gbi_v<T>)) RETURN(T)
   y = std::move(u);
   return a;
 }
+}  // namespace internal
+
+template <typename T>
+SL REQUIRES((is_signed_extended_integer_v<T> || is_gbi_v<T>)) RETURN(T)
+    ExGcd(T a, T b, T& x, T& y) {
+  PE_ASSERT(!IsZero(a) || !IsZero(b));
+  T r = internal::ExGcdImpl(a, b, x, y);
+  PE_ASSERT(a * x + b * y == r);
+  return r;
+}
 
 template <typename T>
 SL REQUIRES((is_signed_extended_integer_v<T> || is_gbi_v<T>))
     RETURN(std::tuple<T, T, T>) ExGcd(const T& a, const T& b) {
   PE_ASSERT(!IsZero(a) || !IsZero(b));
   T x = 0, y = 0;
-  const T r = ExGcd(a, b, x, y);
+  T r = internal::ExGcdImpl(a, b, x, y);
   PE_ASSERT(a * x + b * y == r);
   return {std::move(r), std::move(x), std::move(y)};
 }
@@ -77,12 +88,12 @@ SL REQUIRES((is_signed_extended_integer_v<T> || is_gbi_v<T>))
   a %= m;
   b %= m;
 
-  if (a < 0) a += m;
-  if (b < 0) b += m;
+  if (IntSign(a) < 0) a += m;
+  if (IntSign(b) < 0) b += m;
 
   T xx = 0, yy = 0, d = ExGcd(a, m, xx, yy);
 
-  if (!(b % d).isZero()) return ModValue<T>{0};
+  if (!IsZero(b % d)) return ModValue<T>{0};
 
   xx = (xx % m + m) % m;
   xx = xx * (b / d) % m;
@@ -107,8 +118,8 @@ SL REQUIRES((is_signed_extended_integer_v<T> || is_gbi_v<T>))
   // k0 m1 = b - a (mod m2)
   a %= m1;
   b %= m2;
-  if (a < 0) a += m1;
-  if (b < 0) b += m2;
+  if (IntSign(a) < 0) a += m1;
+  if (IntSign(b) < 0) b += m2;
 
   ModValue<T> mod_value = SolveLinearEquation(m1, b - a, m2);
   if (!mod_value.ok) {
@@ -167,7 +178,8 @@ SL std::vector<Fraction<T>> FromContinuedFractionN(const std::vector<DT>& data,
 
   std::vector<Fraction<T>> result(n);
   for (int i = 0; i < n; ++i) {
-    result[i].a = std::move(p[i + 1]), result[i].b = std::move(q[i + 1]);
+    result[i].a = std::move(p[i + 1]);
+    result[i].b = std::move(q[i + 1]);
   }
 
   return result;

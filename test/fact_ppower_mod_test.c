@@ -26,32 +26,6 @@ SL void FactPPowerModTest() {
 
 PE_REGISTER_TEST(&FactPPowerModTest, "FactPPowerModTest", SMALL);
 
-#if HAS_MPZ && 0
-SL void MpzFactPPowerModtest() {
-  Mpz N = 1;
-  for (int i = 1; i <= 20; ++i) N *= i;
-
-  Mpz v = 0;
-  for (Mpz n = N; !IsZero(n); n >>= 1, v += n)
-    ;
-
-  Mpz mod = Power(Mpz(2), 48);
-  Mpz ans = 1;
-  FactPPowerModer<Mpz> moder(2, 48);
-  int i = 0;
-  while (N > 1) {
-    ans = ans * moder.cal(N) % mod;
-    N >>= 1;
-  }
-
-  ans = ans * (Power(Mpz(2), LowerBits(v) % 4)) % mod;
-
-  assert(ToInt<int64>(ans) == 21171469991580LL);
-}
-
-PE_REGISTER_TEST(&MpzFactPPowerModtest, "MpzFactPPowerModtest", SMALL);
-#endif
-
 #if ENABLE_GMP
 SL void MpIntegerFactPPowerModTest() {
   MpInteger N = 1;

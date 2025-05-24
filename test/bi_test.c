@@ -344,6 +344,7 @@ SL void TestBitOperator() {
     assert(Popcount(z) == 1);
     for (int i = 10; i <= 100; i += 10) {
       assert(BitWidth(z << i) == i + 1);
+      assert(Popcount((z << i) - 1) == i);
     }
   }
 }

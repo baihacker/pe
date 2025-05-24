@@ -334,6 +334,18 @@ SL void TestBitOperator() {
 
   x = x ^ y;
   assert(x.ToInt<int>() == 1);
+
+  {
+    BigInteger z;
+    assert(BitWidth(z) == 0);
+    assert(Popcount(z) == 0);
+    z = 1;
+    assert(BitWidth(z) == 1);
+    assert(Popcount(z) == 1);
+    for (int i = 10; i <= 100; i += 10) {
+      assert(BitWidth(z << i) == i + 1);
+    }
+  }
 }
 
 SL void TestUtilities() {

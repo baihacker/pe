@@ -15,11 +15,11 @@ SL void RandomTest() {
     }
 
     int t0 = clock();
-    auto ans0 = flint::PolyMul(x, y, mod);
+    std::vector<uint64> ans0 = flint::PolyMul(x, y, mod);
     int t1 = clock();
-    auto ans1 = fft::PolyMulFft(x, y, mod);
+    std::vector<uint64> ans1 = fft::PolyMulFft(x, y, mod);
     int t2 = clock();
-    auto ans2 = fft::PolyMulFftSmall(x, y, mod);
+    std::vector<uint64> ans2 = fft::PolyMulFftSmall(x, y, mod);
     int t3 = clock();
     // std::cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << " " << (t3-t1)*1e-3
     // << std::endl;
@@ -38,9 +38,9 @@ SL void RandomTest() {
     }
 
     int t0 = clock();
-    auto ans0 = flint::PolyMul(x, y, mod);
+    std::vector<uint64> ans0 = flint::PolyMul(x, y, mod);
     int t1 = clock();
-    auto ans1 = fft::PolyMulFft(x, y, mod);
+    std::vector<uint64> ans1 = fft::PolyMulFft(x, y, mod);
     int t2 = clock();
     // std::cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << std::endl;
 
@@ -57,9 +57,9 @@ SL void RandomTest() {
     }
 
     int t0 = clock();
-    auto ans0 = flint::PolyMul(x, y, mod);
+    std::vector<uint64> ans0 = flint::PolyMul(x, y, mod);
     int t1 = clock();
-    auto ans1 = fft::PolyMulFft(x, y, mod);
+    std::vector<uint64> ans1 = fft::PolyMulFft(x, y, mod);
     int t2 = clock();
     // std::cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << std::endl;
 
@@ -79,11 +79,11 @@ SL void LimitTest() {
     }
 
     int t0 = clock();
-    auto ans0 = flint::PolyMul(x, y, mod);
+    std::vector<uint64> ans0 = flint::PolyMul(x, y, mod);
     int t1 = clock();
-    auto ans1 = fft::PolyMulFft(x, y, mod);
+    std::vector<uint64> ans1 = fft::PolyMulFft(x, y, mod);
     int t2 = clock();
-    auto ans2 = fft::PolyMulFftSmall(x, y, mod);
+    std::vector<uint64> ans2 = fft::PolyMulFftSmall(x, y, mod);
     int t3 = clock();
     // std::cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << " " << (t3-t1)*1e-3
     // << std::endl;
@@ -102,9 +102,9 @@ SL void LimitTest() {
     }
 
     int t0 = clock();
-    auto ans0 = flint::PolyMul(x, y, mod);
+    std::vector<uint64> ans0 = flint::PolyMul(x, y, mod);
     int t1 = clock();
-    auto ans1 = fft::PolyMulFft(x, y, mod);
+    std::vector<uint64> ans1 = fft::PolyMulFft(x, y, mod);
     int t2 = clock();
     // std::cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << std::endl;
     assert(ans0 == ans1);
@@ -120,9 +120,9 @@ SL void LimitTest() {
     }
 
     int t0 = clock();
-    auto ans0 = flint::PolyMul(x, y, mod);
+    std::vector<uint64> ans0 = flint::PolyMul(x, y, mod);
     int t1 = clock();
-    auto ans1 = fft::PolyMulFft(x, y, mod);
+    std::vector<uint64> ans1 = fft::PolyMulFft(x, y, mod);
     int t2 = clock();
     // std::cerr << (t1 - t0)*1e-3 << " " << (t2-t1)*1e-3 << std::endl;
     assert(ans0 == ans1);

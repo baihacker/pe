@@ -270,6 +270,7 @@ pe_library = rule(
             "pe_geometry",
             "pe_initializer",
             "pe_int",
+            "pe_int_algo",
             "pe_internal",
             "pe_io",
             "pe_mat",

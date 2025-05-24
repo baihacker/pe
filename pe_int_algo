@@ -1,0 +1,349 @@
+#ifndef PE_INT_ALGO_
+#define PE_INT_ALGO_
+
+#include "pe_base"
+#include "pe_type_traits"
+#include "pe_bit"
+#include "pe_int"
+#include "pe_nt"
+#include "pe_fraction"
+#include "pe_extended_unsigned_int"
+#include "pe_extended_signed_int"
+#include "pe_gbi"
+
+namespace pe {
+// is_signed_extended_integer
+template <typename T>
+inline constexpr bool is_signed_extended_integer_v =
+    is_extended_integer_v<T> && pe_is_signed_v<T> || is_gbi_v<T>;
+
+template <typename T>
+SL REQUIRES((is_gbi_v<T>)) RETURN(T) Gcd(T m, T n) {
+  while (!IsZero(n)) {
+    T t = m % n;
+    m = std::move(n);
+    n = std::move(t);
+  }
+  return m;
+}
+
+template <typename T>
+SL REQUIRES((is_signed_extended_integer_v<T> || is_gbi_v<T>)) RETURN(T)
+    ExGcd(T a, T b, T& x, T& y) {
+  T s = 1, t = 0;
+  T u = 0, v = 1;
+  while (!IsZero(b)) {
+    auto [q, r] = Div(a, b);
+    std::swap(s -= t * q, t);
+    std::swap(u -= v * q, v);
+    std::swap(a = std::move(r), b);
+  }
+  x = std::move(s);
+  y = std::move(u);
+  return a;
+}
+
+template <typename T>
+SL REQUIRES((is_signed_extended_integer_v<T> || is_gbi_v<T>))
+    RETURN(std::tuple<T, T, T>) ExGcd(const T& a, const T& b) {
+  PE_ASSERT(!IsZero(a) || !IsZero(b));
+  T x = 0, y = 0;
+  const T r = ExGcd(a, b, x, y);
+  PE_ASSERT(a * x + b * y == r);
+  return {std::move(r), std::move(x), std::move(y)};
+}
+
+template <typename T>
+SL REQUIRES((is_signed_extended_integer_v<T> || is_gbi_v<T>)) RETURN(T)
+    ModInv(T a, const T& mod) {
+  T b = mod, s = 1, t = 0, old_a = a;
+  while (IntSign(b) > 0) {
+    std::swap(s -= t * (a / b), t);
+    std::swap(a %= b, b);
+  }
+  if (a > 1) {
+    std::cerr << "mod inv error: " << old_a << " " << mod << std::endl;
+    exit(1);
+  }
+  return IntSign(s) < 0 ? s + mod : s;
+}
+
+// Solves equation a x = b (mod m)
+template <typename T>
+SL REQUIRES((is_signed_extended_integer_v<T> || is_gbi_v<T>))
+    RETURN(ModValue<T>) SolveLinearEquation(T a, T b, const T& m) {
+  PE_ASSERT(!IsZero(m));
+
+  a %= m;
+  b %= m;
+
+  if (a < 0) a += m;
+  if (b < 0) b += m;
+
+  T xx = 0, yy = 0, d = ExGcd(a, m, xx, yy);
+
+  if (!(b % d).isZero()) return ModValue<T>{0};
+
+  xx = (xx % m + m) % m;
+  xx = xx * (b / d) % m;
+
+  T mod = m / d;
+  T value = xx % mod;
+
+  return {1, std::move(value), std::move(mod)};
+}
+
+// Solves equation x = a (mod m1) x = b (mod m2)
+template <typename T>
+SL REQUIRES((is_signed_extended_integer_v<T> || is_gbi_v<T>))
+    RETURN(ModValue<T>) Crt2(T a, const T& m1, T b, const T& m2) {
+  PE_ASSERT(!IsZero(m1) && !IsZero(m2));
+  // x = a (mod m1)
+  // x = b (mod m2)
+  // x = k0 m1 + a
+  // k0 m1 + a = b (mod m2)
+  // k0 m1 = b - a (mod m2)
+  a %= m1;
+  b %= m2;
+  if (a < 0) a = -a;
+  if (b < 0) b = -b;
+
+  ModValue<T> mod_value = SolveLinearEquation(m1, b - a, m2);
+  if (!mod_value.ok) return 0;
+  // k0 = k1 * s + t
+  // x = (k1 * s + t) * m1 + a
+  // x = k1 * s * m1 + (a + t * m1)
+
+  T mod = mod_value.mod * m1;
+  T value = ((a + mod_value.value * m1) % mod + mod) % mod;
+
+  return {1, std::move(value), std::move(mod)};
+}
+
+template <typename T>
+SL REQUIRES((is_signed_extended_integer_v<T> || is_gbi_v<T>))
+    RETURN(ModValue<T>) CrtN(const T* val, const T* mod, int n) {
+  ModValue<T> ret = {1, 0, 1};
+  for (int i = 0; i < n; ++i) {
+    ret = Crt2(ret.value, ret.mod, val[i], mod[i]);
+    if (!ret.ok) {
+      return {0};
+    }
+  }
+  return ret;
+}
+
+template <typename T>
+SL REQUIRES((is_signed_extended_integer_v<T> || is_gbi_v<T>))
+    RETURN(ModValue<T>)
+        CrtN(const std::vector<T>& val, const std::vector<T>& mod) {
+  return CrtN<T>(&val[0], &mod[0], std::size(val));
+}
+
+// Returns f[0], f[1], f[2], ..., f[min(pos, std::size(data)-1)] if pos >= 0
+// Returns f[0], f[1], f[2], ..., f[std::size(data)-1] if pos < 0
+// https://en.wikipedia.org/wiki/Continued_fraction#Some_useful_theorems
+template <typename T, typename DT>
+SL std::vector<Fraction<T>> FromContinuedFractionN(const std::vector<DT>& data,
+                                                   int pos = -1) {
+  const int size = static_cast<int>(std::size(data));
+  const int n = pos < 0 ? size : std::min(size, pos + 1);
+  if (n == 0) {
+    return std::vector<Fraction<T>>();
+  }
+
+  std::vector<T> p(n + 1), q(n + 1);
+  p[0] = 1, q[0] = 0;
+  p[1] = data[0], q[1] = 1;
+
+  for (int i = 2; i <= n; ++i) {
+    p[i] = p[i - 1] * data[i - 1] + p[i - 2];
+    q[i] = q[i - 1] * data[i - 1] + q[i - 2];
+  }
+
+  std::vector<Fraction<T>> result(n);
+  for (int i = 0; i < n; ++i) {
+    result[i].a = std::move(p[i + 1]), result[i].b = std::move(q[i + 1]);
+  }
+
+  return result;
+}
+
+// Returns f[min(pos, std::size(data)-1)] if pos >= 0
+// Returns f[std::size(data)-1] if pos < 0
+template <typename T, typename DT>
+SL Fraction<T> FromContinuedFraction(const std::vector<DT>& data,
+                                     int pos = -1) {
+  const int size = static_cast<int>(std::size(data));
+  const int n = pos < 0 ? size - 1 : std::min(size - 1, pos);
+  PE_ASSERT(n >= 0);
+
+  T p0 = 1, q0 = 0, p1 = data[0], q1 = 1;
+
+  for (int i = 1; i <= n; ++i) {
+    T p = p1 * data[i] + p0;
+    T q = q1 * data[i] + q0;
+    p0 = std::move(p1), p1 = std::move(p);
+    q0 = std::move(q1), q1 = std::move(q);
+  }
+
+  Fraction<T> t;
+  t.a = p1, t.b = q1;
+  return t;
+}
+
+template <typename T>
+SL T FindIntegerPart(const T& a, const T& q, const T& b, const T& c) {
+  // a q^(1/2) + b >= c x
+  long double test =
+      (ToFloat<long double>(a) * std::sqrt(ToFloat<long double>(q)) +
+       ToFloat<long double>(b)) /
+      ToFloat<long double>(c);
+  T now = static_cast<int64>(test);
+  const T target = a * a * q;
+  for (;;) {
+    T next = now + 1;
+    T t = sq(T(c * next - b));
+    if (t <= target) {
+      now = next;
+    } else {
+      break;
+    }
+  }
+  return now;
+}
+
+// Convert p sqrt(q) to continued fraction
+// Note: q is square free
+template <typename T>
+SL std::vector<T> ToContinuedFraction(int64 p, int64 q, int n) {
+  std::vector<T> result;
+  T a = p, f = q, b = 0, c = 1;
+  // (a f^(1/2) + b) / c
+  T val = FindIntegerPart(a, f, b, c);
+  result.push_back(val);
+  b = b - val * c;
+
+  while (std::size(result) < n) {
+    // (a f^(1/2) + b) / c
+    // c * (aq^(1/2) - b)
+    T cc = a * a * f - b * b;
+    T aa = c * a;
+    T bb = -c * b;
+    T val = FindIntegerPart(aa, f, bb, cc);
+    result.push_back(val);
+    a = aa;
+    b = bb - val * cc;
+    c = cc;
+    T t = Gcd(a, b);
+    T d = Abs(Gcd(t, c));
+    if (d > 1) {
+      a /= d;
+      b /= d;
+      c /= d;
+    }
+  }
+
+  return result;
+}
+
+template <typename T, typename DT>
+SL std::vector<Fraction<T>> FromCfN(const std::vector<DT>& data, int pos = -1) {
+  return FromContinuedFractionN<T, DT>(data, pos);
+}
+
+template <typename T, typename DT>
+SL Fraction<T> FromCf(const std::vector<DT>& data, int pos = -1) {
+  return FromContinuedFraction<T, DT>(data, pos);
+}
+
+template <typename T>
+SL std::vector<T> ToCf(int64 p, int64 q, int n) {
+  return ToContinuedFraction<T>(p, q, n);
+}
+
+// Computes n! mod p^e
+// Note: if i % p == 0, then the contribution of i is 1.
+// The complexity is at least max(e*e, p*e)
+// It is slow if N is very big, e.g. N = 10^10000. ((10^10000)! mod p^e)
+#if PE_HAS_CPP20
+template <PeGbi T>
+#else
+template <typename T>
+#endif
+struct FactPPowerModer {
+  static_assert(is_signed_extended_integer_v<T> || is_gbi_v<T>);
+
+  std::vector<T> f_;
+  int64 p_;
+  int64 e_;
+  T mod_;
+  T phi_;
+
+  FactPPowerModer(const int64 p, const int64 e) : p_(p), e_(e) {
+    int64 pe = p_ * e_;
+    mod_ = Power(T(p_), e_);
+    phi_ = Power(T(p_), (e_ - 1)) * (p_ - 1);
+    f_.resize(pe + 1, 1);
+    for (int i = 1; i <= pe; ++i) {
+      if (i % p_ == 0) {
+        f_[i] = f_[i - 1];
+      } else {
+        f_[i] = f_[i - 1] * i % mod_;
+      }
+    }
+  }
+
+  T Cal(const T& n) {
+    auto [u, v] = Div(n, p_);
+    int64 vv = ToInt<int64>(v);
+    int64 r = (e_ + 1) >> 1;
+
+    T ret = 1;
+    // f_(up, p_)
+    const T u2 = u * u;
+
+    for (int j = 1; j <= r; ++j) {
+      T beta_numer = u;
+      T beta_denom = j;
+      const int j2 = j * j;
+      for (int i = 1; i <= r; ++i) {
+        if (i != j) beta_numer *= u2 - i * i, beta_denom *= j2 - i * i;
+      }
+      T beta = beta_numer / beta_denom % phi_;
+      if (IntSign(beta) < 0) beta += phi_;
+      ret = ret * PowerMod(f_[j * p_], beta, mod_) % mod_;
+    }
+
+    if (p_ == 2) {
+      int64 left_mod4 = ((LowerBits(u * p_ + 1) & 4) >> 1) + 1;
+      int64 right_mod4 = LowerBits(ret) & 3;
+      if (left_mod4 != right_mod4) {
+        ret = (mod_ - ret) % mod_;
+      }
+    }
+
+    // f_(v, p_)
+    ret = ret * f_[vv] % mod_;
+
+    // (p_ + v, v)_p
+    for (int j = 1; j < e_; ++j) {
+      T base = f_[j * p_ + vv] * ModInv(f_[vv] * f_[j * p_], mod_) % mod_;
+      T alpha_numer = u;
+      T alpha_denom = j;
+      for (int i = 1; i < e_; ++i) {
+        if (i != j) {
+          alpha_numer *= u - i;
+          alpha_denom *= j - i;
+        }
+      }
+      T alpha = alpha_numer / alpha_denom % phi_;
+      if (IntSign(alpha) < 0) alpha += phi_;
+      ret = ret * PowerMod(base, alpha, mod_) % mod_;
+    }
+
+    return ret;
+  }
+};
+}  // namespace pe
+#endif

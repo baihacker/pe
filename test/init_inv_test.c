@@ -1,10 +1,10 @@
 #include "pe_test.h"
 
 namespace init_inv_test {
-const int64 mod = 1000000007;
+constexpr int64 mod = 1000000007;
 
 SL void InitInvTest() {
-  const int n = 1000000;
+  constexpr int n = 1000000;
   std::vector<int> sresult(n + 1);
   std::vector<int64> lresult(n + 1);
   InitInverse(&sresult[0], n, mod);

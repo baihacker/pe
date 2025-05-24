@@ -2,9 +2,9 @@
 
 namespace mat_mul_test {
 #if ENABLE_EIGEN && PE_HAS_INT128
-const int K = 500;
-const int64 mod = 1000000007;
-const int show = 1;
+constexpr int K = 500;
+constexpr int64 mod = 1000000007;
+constexpr int show = 1;
 
 template <typename E>
 void TestEigen(const std::vector<int>& data, const std::vector<int>& V) {
@@ -18,7 +18,7 @@ void TestEigen(const std::vector<int>& data, const std::vector<int>& V) {
   TimeRecorder tr;
   v = MatrixPowerEigen(m, 4, v);
   int64 s = 0;
-  for (auto i : v) s += i.value();
+  for (E i : v) s += i.value();
   // std::cout << s << std::endl;
   if (show) {
     std::cout << tr.Elapsed().Format() << std::endl;
@@ -39,7 +39,7 @@ void TestEigen(const std::vector<int>& data, const std::vector<int>& V, E mod) {
   TimeRecorder tr;
   v = MatrixPowerEigen(m, 4, v, mod);
   int64 s = 0;
-  for (auto i : v) s += i;
+  for (E i : v) s += i;
   // std::cout << s << std::endl;
   if (show) {
     std::cout << tr.Elapsed().Format() << std::endl;
@@ -60,7 +60,7 @@ void TestPe(const std::vector<int>& data, const std::vector<int>& V) {
   TimeRecorder tr;
   v = MatrixPowerPe(m, 4, v);
   int64 s = 0;
-  for (auto i : v) s += i.value();
+  for (E i : v) s += i.value();
   // std::cout << s << std::endl;
   if (show) {
     std::cout << tr.Elapsed().Format() << std::endl;
@@ -81,7 +81,7 @@ void TestPe(const std::vector<int>& data, const std::vector<int>& V, E mod) {
   TimeRecorder tr;
   v = MatrixPowerPe(m, 4, v, mod);
   int64 s = 0;
-  for (auto i : v) s += i;
+  for (E i : v) s += i;
   // std::cout << s << std::endl;
   if (show) {
     std::cout << tr.Elapsed().Format() << std::endl;
@@ -234,7 +234,7 @@ SL void MatMulTest() {
     TimeRecorder tr;
     v = MatrixPower(m, 4, v, mod);
     int64 s = 0;
-    for (auto i : v) s += i;
+    for (E i : v) s += i;
     // std::cout << s << std::endl;
     if (show) {
       std::cout << tr.Elapsed().Format() << std::endl;
@@ -254,7 +254,7 @@ SL void MatMulTest() {
     TimeRecorder tr;
     v = MatrixPower(m, 4, v, mod);
     int64 s = 0;
-    for (auto i : v) s += i;
+    for (E i : v) s += i;
     // std::cout << s << std::endl;
     if (show) {
       std::cout << tr.Elapsed().Format() << std::endl;

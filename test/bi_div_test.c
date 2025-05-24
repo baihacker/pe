@@ -40,8 +40,8 @@ SL void BiDivTestImpl(int x, int y) {
             std::string actual_result1;
             std::string actual_result2;
             {
-              bi a = s1;
-              bi b = s2;
+              BigInteger a = s1;
+              BigInteger b = s2;
               for (auto& iter : A) a *= iter;
               for (auto& iter : B) b *= iter;
               auto [c, d] = Div(a, b);

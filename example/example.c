@@ -383,9 +383,9 @@ void BigNumberExample() {
 void FractionExample() {
   std::cout << std::endl << __func__ << std::endl;
 
-  Fraction<bi> x;
+  Fraction<BigInteger> x;
   for (int i = 1; i < 100; ++i) {
-    x = x + Fraction<bi>(1, i);
+    x = x + Fraction<BigInteger>(1, i);
   }
   // 1/1 + 1/2 + 1/3 + ... + 1/99
   std::cout << x << std::endl;

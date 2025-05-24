@@ -271,13 +271,13 @@ SL void TestAsmdOperator() {
   }
 
   for (int e1 = 10; e1 <= 30; e1 += 4) {
-    bi A = Power("10"_bi, e1);
+    BigInteger A = Power("10"_bi, e1);
     for (int e2 = 10; e2 <= 30; e2 += 4) {
-      bi B = Power("10"_bi, e2);
+      BigInteger B = Power("10"_bi, e2);
       for (int64 i = -10; i <= 10; ++i) {
         for (int64 j = -10; j <= 10; ++j) {
-          bi a = A + i;
-          bi b = B + j;
+          BigInteger a = A + i;
+          BigInteger b = B + j;
           TestT x = a.ToString();
           TestT y = b.ToString();
           assert((x + y).ToString() == (a + b).ToString());

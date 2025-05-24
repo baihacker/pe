@@ -23,11 +23,11 @@ SL void BiMulTestImpl(int x, int y) {
         }
         std::string actual_result;
         {
-          bi a = s1;
-          bi b = s2;
+          BigInteger a = s1;
+          BigInteger b = s2;
           for (auto& iter : A) a *= iter;
           for (auto& iter : B) b *= iter;
-          bi c = a * b;
+          BigInteger c = a * b;
           std::stringstream ss;
           ss << c;
           ss >> actual_result;

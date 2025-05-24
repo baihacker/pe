@@ -10,7 +10,7 @@ using namespace pe;
 // Note: the result may not be unique.
 
 int main() {
-  mma::FRHelper<bi> helper;
+  mma::FRHelper<BigInteger> helper;
   helper
       .set_values({1, 0, 1, 6, 90, 2040, 67950, 3110940, 187530840, 14398171200,
                    1371785398200})
@@ -36,13 +36,13 @@ int main() {
   helper.Validate(result);
 
   // Validate the result by more data.
-  std::vector<bi> dp0 = {1, 0, 1, 6, 90, 2040, 67950};
+  std::vector<BigInteger> dp0 = {1, 0, 1, 6, 90, 2040, 67950};
   for (int64 i = 7; i < 100; ++i) {
     dp0.push_back((2 * i * (i - 1) * dp0[i - 1] + i * sq(i - 1) * dp0[i - 2]) /
                   2);
   }
 
-  std::vector<bi> dp1 = {1, 0, 1, 6, 90, 2040, 67950};
+  std::vector<BigInteger> dp1 = {1, 0, 1, 6, 90, 2040, 67950};
   for (int64 i = 7; i < 100; ++i) {
     dp1.push_back(i * sq(i - 1) *
                   ((2 * i - 3) * dp1[i - 2] + sq(i - 2) * dp1[i - 3]) / 2);

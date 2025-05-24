@@ -18,9 +18,9 @@ void demo() {
 }
 
 int main() {
-  demo<bi>();
+  demo<BigInteger>();
 #if ENABLE_GMP
-  demo<bn>();
+  demo<MpInteger>();
 #endif
   return 0;
 }

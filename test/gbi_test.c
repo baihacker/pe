@@ -1,19 +1,19 @@
 #include "pe_test.h"
 
 namespace gbi_test {
-template <typename T>
+template <typename TestT>
 class GbiTests {
  public:
   template <typename NT>
   SL void TestConstructorImpl() {
-    assert(T(std::numeric_limits<NT>::min()).template ToInt<NT>() ==
+    assert(TestT(std::numeric_limits<NT>::min()).template ToInt<NT>() ==
            std::numeric_limits<NT>::min());
-    assert(T(std::numeric_limits<NT>::max()).template ToInt<NT>() ==
+    assert(TestT(std::numeric_limits<NT>::max()).template ToInt<NT>() ==
            std::numeric_limits<NT>::max());
   }
 
   SL void TestConstructor() {
-    T x;
+    TestT x;
     // TestConstructorImpl<bool>();
     TestConstructorImpl<char>();
     TestConstructorImpl<signed char>();
@@ -38,7 +38,7 @@ class GbiTests {
 
   template <typename NT>
   SL void TestAssignmentImpl() {
-    T x;
+    TestT x;
     x = NT();
     assert(x.template ToInt<NT>() == NT());
 
@@ -72,14 +72,14 @@ class GbiTests {
     TestAssignmentImpl<uint256e>();
 
     std::string s = "123456789123456789123456789";
-    T x;
+    TestT x;
     x = s;
     assert(x.ToString() == s);
   }
 
   template <typename NT>
   SL void TestAsmdImpl() {
-    T x;
+    TestT x;
     x += NT(1);
     x = x + NT(1);
     x = NT(1) + x;
@@ -138,59 +138,59 @@ class GbiTests {
     for (int A : {-10000, 0, 10000}) {
       for (int a = A - 10; a <= A + 10; ++a) {
         for (int b = -10; b <= 10; ++b) {
-          assert((T(a) + T(b)).template ToInt<int>() == (a + b));
-          assert((T(a) += T(b)).template ToInt<int>() == (a + b));
-          assert((T(a) - T(b)).template ToInt<int>() == (a - b));
-          assert((T(a) -= T(b)).template ToInt<int>() == (a - b));
-          assert((T(a) * T(b)).template ToInt<int>() == (a * b));
-          assert((T(a) *= T(b)).template ToInt<int>() == (a * b));
+          assert((TestT(a) + TestT(b)).template ToInt<int>() == (a + b));
+          assert((TestT(a) += TestT(b)).template ToInt<int>() == (a + b));
+          assert((TestT(a) - TestT(b)).template ToInt<int>() == (a - b));
+          assert((TestT(a) -= TestT(b)).template ToInt<int>() == (a - b));
+          assert((TestT(a) * TestT(b)).template ToInt<int>() == (a * b));
+          assert((TestT(a) *= TestT(b)).template ToInt<int>() == (a * b));
           if (b != 0) {
-            assert((T(a) / T(b)).template ToInt<int>() == (a / b));
-            assert((T(a) /= T(b)).template ToInt<int>() == (a / b));
-            assert((T(a) % T(b)).template ToInt<int>() == (a % b));
-            assert((T(a) %= T(b)).template ToInt<int>() == (a % b));
+            assert((TestT(a) / TestT(b)).template ToInt<int>() == (a / b));
+            assert((TestT(a) /= TestT(b)).template ToInt<int>() == (a / b));
+            assert((TestT(a) % TestT(b)).template ToInt<int>() == (a % b));
+            assert((TestT(a) %= TestT(b)).template ToInt<int>() == (a % b));
           }
           if (a >= 0 && b >= 0) {
-            assert((T(a) | T(b)).template ToInt<int>() == (a | b));
-            assert((T(a) |= T(b)).template ToInt<int>() == (a | b));
-            assert((T(a) & T(b)).template ToInt<int>() == (a & b));
-            assert((T(a) &= T(b)).template ToInt<int>() == (a & b));
-            assert((T(a) ^ T(b)).template ToInt<int>() == (a ^ b));
-            assert((T(a) ^= T(b)).template ToInt<int>() == (a ^ b));
+            assert((TestT(a) | TestT(b)).template ToInt<int>() == (a | b));
+            assert((TestT(a) |= TestT(b)).template ToInt<int>() == (a | b));
+            assert((TestT(a) & TestT(b)).template ToInt<int>() == (a & b));
+            assert((TestT(a) &= TestT(b)).template ToInt<int>() == (a & b));
+            assert((TestT(a) ^ TestT(b)).template ToInt<int>() == (a ^ b));
+            assert((TestT(a) ^= TestT(b)).template ToInt<int>() == (a ^ b));
           }
 
-          assert((T(a) + b).template ToInt<int>() == (a + b));
-          assert((T(a) += b).template ToInt<int>() == (a + b));
-          assert((T(a) - b).template ToInt<int>() == (a - b));
-          assert((T(a) -= b).template ToInt<int>() == (a - b));
-          assert((T(a) * b).template ToInt<int>() == (a * b));
-          assert((T(a) *= b).template ToInt<int>() == (a * b));
+          assert((TestT(a) + b).template ToInt<int>() == (a + b));
+          assert((TestT(a) += b).template ToInt<int>() == (a + b));
+          assert((TestT(a) - b).template ToInt<int>() == (a - b));
+          assert((TestT(a) -= b).template ToInt<int>() == (a - b));
+          assert((TestT(a) * b).template ToInt<int>() == (a * b));
+          assert((TestT(a) *= b).template ToInt<int>() == (a * b));
           if (b != 0) {
-            assert((T(a) / b).template ToInt<int>() == (a / b));
-            assert((T(a) /= b).template ToInt<int>() == (a / b));
-            assert((T(a) % b).template ToInt<int>() == (a % b));
-            assert((T(a) %= b).template ToInt<int>() == (a % b));
+            assert((TestT(a) / b).template ToInt<int>() == (a / b));
+            assert((TestT(a) /= b).template ToInt<int>() == (a / b));
+            assert((TestT(a) % b).template ToInt<int>() == (a % b));
+            assert((TestT(a) %= b).template ToInt<int>() == (a % b));
           }
           if (a >= 0 && b >= 0) {
-            assert((T(a) | b).template ToInt<int>() == (a | b));
-            assert((T(a) |= b).template ToInt<int>() == (a | b));
-            assert((T(a) & b).template ToInt<int>() == (a & b));
-            assert((T(a) &= b).template ToInt<int>() == (a & b));
-            assert((T(a) ^ b).template ToInt<int>() == (a ^ b));
-            assert((T(a) ^= b).template ToInt<int>() == (a ^ b));
+            assert((TestT(a) | b).template ToInt<int>() == (a | b));
+            assert((TestT(a) |= b).template ToInt<int>() == (a | b));
+            assert((TestT(a) & b).template ToInt<int>() == (a & b));
+            assert((TestT(a) &= b).template ToInt<int>() == (a & b));
+            assert((TestT(a) ^ b).template ToInt<int>() == (a ^ b));
+            assert((TestT(a) ^= b).template ToInt<int>() == (a ^ b));
           }
 
-          assert((a + T(b)).template ToInt<int>() == (a + b));
-          assert((a - T(b)).template ToInt<int>() == (a - b));
-          assert((a * T(b)).template ToInt<int>() == (a * b));
+          assert((a + TestT(b)).template ToInt<int>() == (a + b));
+          assert((a - TestT(b)).template ToInt<int>() == (a - b));
+          assert((a * TestT(b)).template ToInt<int>() == (a * b));
           if (b != 0) {
-            assert((a / T(b)).template ToInt<int>() == (a / b));
-            assert((a % T(b)).template ToInt<int>() == (a % b));
+            assert((a / TestT(b)).template ToInt<int>() == (a / b));
+            assert((a % TestT(b)).template ToInt<int>() == (a % b));
           }
           if (a >= 0 && b >= 0) {
-            assert((a | T(b)).template ToInt<int>() == (a | b));
-            assert((a & T(b)).template ToInt<int>() == (a & b));
-            assert((a ^ T(b)).template ToInt<int>() == (a ^ b));
+            assert((a | TestT(b)).template ToInt<int>() == (a | b));
+            assert((a & TestT(b)).template ToInt<int>() == (a & b));
+            assert((a ^ TestT(b)).template ToInt<int>() == (a ^ b));
           }
         }
       }
@@ -199,59 +199,59 @@ class GbiTests {
     for (int64 A : {-10000000000LL, -10000LL, 0LL, 10000LL, 10000000000LL}) {
       for (int64 a = A - 10; a <= A + 10; ++a) {
         for (int64 b = -10; b <= 10; ++b) {
-          assert((T(a) + T(b)).template ToInt<int64>() == (a + b));
-          assert((T(a) += T(b)).template ToInt<int64>() == (a + b));
-          assert((T(a) - T(b)).template ToInt<int64>() == (a - b));
-          assert((T(a) -= T(b)).template ToInt<int64>() == (a - b));
-          assert((T(a) * T(b)).template ToInt<int64>() == (a * b));
-          assert((T(a) *= T(b)).template ToInt<int64>() == (a * b));
+          assert((TestT(a) + TestT(b)).template ToInt<int64>() == (a + b));
+          assert((TestT(a) += TestT(b)).template ToInt<int64>() == (a + b));
+          assert((TestT(a) - TestT(b)).template ToInt<int64>() == (a - b));
+          assert((TestT(a) -= TestT(b)).template ToInt<int64>() == (a - b));
+          assert((TestT(a) * TestT(b)).template ToInt<int64>() == (a * b));
+          assert((TestT(a) *= TestT(b)).template ToInt<int64>() == (a * b));
           if (b != 0) {
-            assert((T(a) / T(b)).template ToInt<int64>() == (a / b));
-            assert((T(a) /= T(b)).template ToInt<int64>() == (a / b));
-            assert((T(a) % T(b)).template ToInt<int64>() == (a % b));
-            assert((T(a) %= T(b)).template ToInt<int64>() == (a % b));
+            assert((TestT(a) / TestT(b)).template ToInt<int64>() == (a / b));
+            assert((TestT(a) /= TestT(b)).template ToInt<int64>() == (a / b));
+            assert((TestT(a) % TestT(b)).template ToInt<int64>() == (a % b));
+            assert((TestT(a) %= TestT(b)).template ToInt<int64>() == (a % b));
           }
           if (a >= 0 && b >= 0) {
-            assert((T(a) | T(b)).template ToInt<int64>() == (a | b));
-            assert((T(a) |= T(b)).template ToInt<int64>() == (a | b));
-            assert((T(a) & T(b)).template ToInt<int64>() == (a & b));
-            assert((T(a) &= T(b)).template ToInt<int64>() == (a & b));
-            assert((T(a) ^ T(b)).template ToInt<int64>() == (a ^ b));
-            assert((T(a) ^= T(b)).template ToInt<int64>() == (a ^ b));
+            assert((TestT(a) | TestT(b)).template ToInt<int64>() == (a | b));
+            assert((TestT(a) |= TestT(b)).template ToInt<int64>() == (a | b));
+            assert((TestT(a) & TestT(b)).template ToInt<int64>() == (a & b));
+            assert((TestT(a) &= TestT(b)).template ToInt<int64>() == (a & b));
+            assert((TestT(a) ^ TestT(b)).template ToInt<int64>() == (a ^ b));
+            assert((TestT(a) ^= TestT(b)).template ToInt<int64>() == (a ^ b));
           }
 
-          assert((T(a) + b).template ToInt<int64>() == (a + b));
-          assert((T(a) += b).template ToInt<int64>() == (a + b));
-          assert((T(a) - b).template ToInt<int64>() == (a - b));
-          assert((T(a) -= b).template ToInt<int64>() == (a - b));
-          assert((T(a) * b).template ToInt<int64>() == (a * b));
-          assert((T(a) *= b).template ToInt<int64>() == (a * b));
+          assert((TestT(a) + b).template ToInt<int64>() == (a + b));
+          assert((TestT(a) += b).template ToInt<int64>() == (a + b));
+          assert((TestT(a) - b).template ToInt<int64>() == (a - b));
+          assert((TestT(a) -= b).template ToInt<int64>() == (a - b));
+          assert((TestT(a) * b).template ToInt<int64>() == (a * b));
+          assert((TestT(a) *= b).template ToInt<int64>() == (a * b));
           if (b != 0) {
-            assert((T(a) / b).template ToInt<int64>() == (a / b));
-            assert((T(a) /= b).template ToInt<int64>() == (a / b));
-            assert((T(a) % b).template ToInt<int64>() == (a % b));
-            assert((T(a) %= b).template ToInt<int64>() == (a % b));
+            assert((TestT(a) / b).template ToInt<int64>() == (a / b));
+            assert((TestT(a) /= b).template ToInt<int64>() == (a / b));
+            assert((TestT(a) % b).template ToInt<int64>() == (a % b));
+            assert((TestT(a) %= b).template ToInt<int64>() == (a % b));
           }
           if (a >= 0 && b >= 0) {
-            assert((T(a) | b).template ToInt<int64>() == (a | b));
-            assert((T(a) |= b).template ToInt<int64>() == (a | b));
-            assert((T(a) & b).template ToInt<int64>() == (a & b));
-            assert((T(a) &= b).template ToInt<int64>() == (a & b));
-            assert((T(a) ^ b).template ToInt<int64>() == (a ^ b));
-            assert((T(a) ^= b).template ToInt<int64>() == (a ^ b));
+            assert((TestT(a) | b).template ToInt<int64>() == (a | b));
+            assert((TestT(a) |= b).template ToInt<int64>() == (a | b));
+            assert((TestT(a) & b).template ToInt<int64>() == (a & b));
+            assert((TestT(a) &= b).template ToInt<int64>() == (a & b));
+            assert((TestT(a) ^ b).template ToInt<int64>() == (a ^ b));
+            assert((TestT(a) ^= b).template ToInt<int64>() == (a ^ b));
           }
 
-          assert((a + T(b)).template ToInt<int64>() == (a + b));
-          assert((a - T(b)).template ToInt<int64>() == (a - b));
-          assert((a * T(b)).template ToInt<int64>() == (a * b));
+          assert((a + TestT(b)).template ToInt<int64>() == (a + b));
+          assert((a - TestT(b)).template ToInt<int64>() == (a - b));
+          assert((a * TestT(b)).template ToInt<int64>() == (a * b));
           if (b != 0) {
-            assert((a / T(b)).template ToInt<int64>() == (a / b));
-            assert((a % T(b)).template ToInt<int64>() == (a % b));
+            assert((a / TestT(b)).template ToInt<int64>() == (a / b));
+            assert((a % TestT(b)).template ToInt<int64>() == (a % b));
           }
           if (a >= 0 && b >= 0) {
-            assert((a | T(b)).template ToInt<int64>() == (a | b));
-            assert((a & T(b)).template ToInt<int64>() == (a & b));
-            assert((a ^ T(b)).template ToInt<int64>() == (a ^ b));
+            assert((a | TestT(b)).template ToInt<int64>() == (a | b));
+            assert((a & TestT(b)).template ToInt<int64>() == (a & b));
+            assert((a ^ TestT(b)).template ToInt<int64>() == (a ^ b));
           }
         }
       }
@@ -260,7 +260,7 @@ class GbiTests {
 
   template <typename NT>
   SL void TestCompareOperatorImpl() {
-    T x;
+    TestT x;
     assert((x == NT(0)) == 1);
     assert((x > NT(0)) == 0);
     assert((x < NT(0)) == 0);
@@ -314,7 +314,7 @@ class GbiTests {
   }
 
   SL void TestBitOperator() {
-    T x;
+    TestT x;
     for (int i = 0; i <= 19; ++i) x.SetBit(i);
     assert(x.template ToInt<int>() == 1048575);
     x.RevBit(0);
@@ -323,13 +323,13 @@ class GbiTests {
     assert(x.template ToInt<int>() == 1048572);
     assert(x.Popcount() == 18);
 
-    T y;
+    TestT y;
     y.SetBit(0);
 
     x = x | y;
     assert(x.template ToInt<int>() == 1048573);
 
-    x = x & T(1048575 - 4);
+    x = x & TestT(1048575 - 4);
     assert(x.template ToInt<int>() == 1048573 - 4);
 
     x = x ^ x;
@@ -339,7 +339,7 @@ class GbiTests {
     assert(x.template ToInt<int>() == 1);
 
     {
-      T z;
+      TestT z;
       assert(BitWidth(z) == 0);
       assert(Popcount(z) == 0);
       z = 1;
@@ -351,7 +351,7 @@ class GbiTests {
       }
     }
     {
-      T a;
+      TestT a;
       SetBit(a, 120);
       assert(BitWidth(a) == 121);
       assert(Popcount(a) == 1);
@@ -376,7 +376,7 @@ class GbiTests {
   SL void TestCorrectness() {
     for (int i = -100; i <= 100; ++i)
       for (int j = -100; j <= 100; ++j) {
-        T a(i), b(j);
+        TestT a(i), b(j);
         assert(i + j == a + b);
         assert(i - j == a - b);
         assert(i * j == a * b);

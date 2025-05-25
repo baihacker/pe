@@ -425,7 +425,7 @@ PE_REGISTER_TEST(&GbiTest_BigInteger, "GbiTest_BigInteger", SMALL);
 
 #if ENABLE_GMP
 SL void GbiTest_MpInteger() {
-  gbi_test::GbiTests<BigInteger> tester;
+  gbi_test::GbiTests<MpInteger> tester;
   tester.TestConstructor();
   tester.TestAssignmentOperator();
   tester.TestAsmdOperator();

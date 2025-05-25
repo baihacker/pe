@@ -33,7 +33,7 @@ int64 solve_nth_sum(int64 n) {
 }
 
 int main() {
-  const std::vector<int64> init{0LL, 1LL, 1LL, 2LL, 3LL, 5LL, 8LL};
+  const std::vector<int64> init = {0LL, 1LL, 1LL, 2LL, 3LL, 5LL, 8LL};
 
   for (int64 n = 1; n <= 1000000000; n *= 10) {
     // Use Berlekamp Massey algorithm to find the recurrence.

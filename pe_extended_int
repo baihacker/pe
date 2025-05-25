@@ -208,6 +208,24 @@ SL REQUIRES((is_extended_integer_v<T> && is_builtin_integer_v<TN> &&
   return ret;
 }
 
+template <typename T>
+SL REQUIRES((is_extended_integer_v<T>)) RETURN(T)
+    PowerMod(const T& l, const T& m, const T& mod) {
+  PE_ASSERT(IntSign(m) >= 0);
+  if (mod == 1) {
+    return 0;
+  }
+  T ret = 1;
+  T x = l % mod;
+  T n = m;
+  for (; !IsZero(n);) {
+    if (IsOdd(n)) ret = ret * x % mod;
+    n >>= 1;
+    if (!IsZero(n)) x = x * x % mod;
+  }
+  return ret;
+}
+
 template <typename TT, typename T>
 SL REQUIRES((is_extended_integer_v<T>)) RETURN(TT) ToInt(const T& x) {
   return x.template ToInt<TT>();

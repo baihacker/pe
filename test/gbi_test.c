@@ -406,9 +406,51 @@ class GbiTests {
 
     Power(TestT(2), 10u);
     Power(TestT(2), 10);
-
     Power(TestT(2), 20);
     Power(TestT(2), 20LL);
+
+    {
+      TestT p;
+      SetBit(p, 607);
+      --p;
+      auto ans = SolveLinearEquation<TestT>(123456789, 987654321, p);
+      assert(Mod(ans.value * 123456789, p) == 987654321);
+    }
+    {
+      TestT p;
+      SetBit(p, 607);
+      --p;
+      TestT ans = ModInv<TestT>(123456789, p);
+      assert(Mod(ans * 123456789, p) == 1);
+    }
+    {
+      TestT p1;
+      SetBit(p1, 107);
+      --p1;
+      TestT p2;
+      SetBit(p2, 127);
+      --p2;
+      TestT p3;
+      SetBit(p3, 607);
+      --p3;
+      auto ans = CrtN<TestT>({123, 456, 789}, {p1, p2, p3});
+      assert(Mod(ans.value, p1) == 123);
+      assert(Mod(ans.value, p2) == 456);
+      assert(Mod(ans.value, p3) == 789);
+    }
+    {
+      std::vector<int> cf = {1};
+      for (int i = 0; i < 128; ++i) {
+        cf.push_back(2);
+      }
+      std::vector<Fraction<TestT>> x = FromContinuedFractionN<TestT, int>(cf);
+      Fraction<TestT> ans = FromContinuedFraction<TestT, int>(cf);
+      assert(x.back() == ans);
+      assert(ans.a ==
+             TestT("11940799687771084222816790191714476900294896923393"));
+      assert(ans.b ==
+             TestT("8443420432013143050795938339643913980856932710785"));
+    }
   }
 };
 

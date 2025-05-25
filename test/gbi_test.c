@@ -401,13 +401,13 @@ class GbiTests {
   }
 
   SL void TestUtilities() {
-    PowerMod(TestT(5), 10, TestT("123456789"));
-    PowerMod(TestT(5), TestT(10), TestT("123456789"));
+    assert(PowerMod(TestT(5), 10, TestT("123456789")) == 9765625);
+    assert(PowerMod(TestT(5), TestT(10), TestT("123456789")) == 9765625);
 
-    Power(TestT(2), 10u);
-    Power(TestT(2), 10);
-    Power(TestT(2), 20);
-    Power(TestT(2), 20LL);
+    assert(Power(TestT(2), 10u) == 1024);
+    assert(Power(TestT(2), 10) == 1024);
+    assert(Power(TestT(2), 20) == 1048576);
+    assert(Power(TestT(2), 20LL) == 1048576);
 
     {
       TestT x(2);

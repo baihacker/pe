@@ -33,19 +33,19 @@ SL void BitTest() {
   }
 
   int x = 0;
-  x = SetBit(x, 20);
+  SetBit(x, 20);
   assert(x == (1 << 20));
   assert(GetBit(x, 20) == 1);
 
-  x = RevBit(x, 20);
+  RevBit(x, 20);
   assert(x == 0);
   assert(GetBit(x, 20) == 0);
 
-  x = RevBit(x, 21);
+  RevBit(x, 21);
   assert(x == (1 << 21));
   assert(GetBit(x, 21) == 1);
 
-  x = ResetBit(x, 21);
+  ResetBit(x, 21);
   assert(x == 0);
   assert(GetBit(x, 21) == 0);
 }

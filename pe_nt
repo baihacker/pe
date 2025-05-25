@@ -281,6 +281,19 @@ SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
   y = u;
   return a;
 }
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
+    ExGcdImpl(T a, T b, T& x) {
+  T s = 1, t = 0;
+  while (b != 0) {
+    const T tmp = a / b;
+    std::swap(s -= t * tmp, t);
+    std::swap(a -= b * tmp, b);
+  }
+  x = s;
+  return a;
+}
 }  // namespace internal
 
 template <typename T>
@@ -300,6 +313,13 @@ SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>))
   const T r = internal::ExGcdImpl(a, b, x, y);
   PE_ASSERT(a * x + b * y == r);
   return {r, x, y};
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
+    ExGcd(T a, T b, T& x) {
+  PE_ASSERT(a != 0 || b != 0);
+  return internal::ExGcdImpl(a, b, x);
 }
 
 template <typename T>
@@ -338,7 +358,7 @@ SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(ModValue<T>)
   if (a < 0) a += m;
   if (b < 0) b += m;
 
-  T xx = 0, yy = 0, d = ExGcd(a, m, xx, yy);
+  T xx = 0, d = ExGcd(a, m, xx);
 
   if (b % d) return ModValue<T>{0};
 

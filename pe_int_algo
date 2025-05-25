@@ -43,6 +43,19 @@ SL REQUIRES((is_signed_extended_integer_v<T> || is_gbi_v<T>)) RETURN(T)
   y = std::move(u);
   return a;
 }
+
+template <typename T>
+SL REQUIRES((is_signed_extended_integer_v<T> || is_gbi_v<T>)) RETURN(T)
+    ExGcdImpl(T a, T b, T& x) {
+  T s = 1, t = 0;
+  while (!IsZero(b)) {
+    auto [q, r] = Div(a, b);
+    std::swap(s -= t * q, t);
+    std::swap(a = std::move(r), b);
+  }
+  x = std::move(s);
+  return a;
+}
 }  // namespace internal
 
 template <typename T>
@@ -66,11 +79,19 @@ SL REQUIRES((is_signed_extended_integer_v<T> || is_gbi_v<T>))
 
 template <typename T>
 SL REQUIRES((is_signed_extended_integer_v<T> || is_gbi_v<T>)) RETURN(T)
+    ExGcd(T a, T b, T& x) {
+  PE_ASSERT(!IsZero(a) || !IsZero(b));
+  return internal::ExGcdImpl(a, b, x);
+}
+
+template <typename T>
+SL REQUIRES((is_signed_extended_integer_v<T> || is_gbi_v<T>)) RETURN(T)
     ModInv(T a, const T& mod) {
   T b = mod, s = 1, t = 0, old_a = a;
   while (IntSign(b) > 0) {
-    std::swap(s -= t * (a / b), t);
-    std::swap(a %= b, b);
+    auto [q, r] = Div(a, b);
+    std::swap(s -= t * q, t);
+    std::swap(a = std::move(r), b);
   }
   if (a > 1) {
     std::cerr << "mod inv error: " << old_a << " " << mod << std::endl;
@@ -91,7 +112,7 @@ SL REQUIRES((is_signed_extended_integer_v<T> || is_gbi_v<T>))
   if (IntSign(a) < 0) a += m;
   if (IntSign(b) < 0) b += m;
 
-  T xx = 0, yy = 0, d = ExGcd(a, m, xx, yy);
+  T xx = 0, d = ExGcd(a, m, xx);
 
   if (!IsZero(b % d)) return ModValue<T>{0};
 

@@ -374,6 +374,43 @@ SL void TestBitOperator() {
 
   x = x ^ y;
   assert(x.ToInt<int>() == 1);
+
+  {
+    TestT z;
+    assert(BitWidth(z) == 0);
+    assert(Popcount(z) == 0);
+    z = 1;
+    assert(BitWidth(z) == 1);
+    assert(Popcount(z) == 1);
+    for (int i = 10; i <= 100; i += 10) {
+      assert(BitWidth(z << i) == i + 1);
+      assert(Popcount((z << i) - 1) == i);
+    }
+  }
+  {
+    TestT a;
+    SetBit(a, 120);
+    assert(BitWidth(a) == 121);
+    assert(Popcount(a) == 1);
+    for (int i = 0; i < 120; ++i) {
+      assert(GetBit(a, i) == 0);
+    }
+    assert(GetBit(a, 120) == 1);
+    RevBit(a, 120);
+    assert(IsZero(a));
+  }
+  {
+    TestT a;
+    RevBit(a, 120);
+    assert(BitWidth(a) == 121);
+    assert(Popcount(a) == 1);
+    for (int i = 0; i < 120; ++i) {
+      assert(GetBit(a, i) == 0);
+    }
+    assert(GetBit(a, 120) == 1);
+    ResetBit(a, 120);
+    assert(IsZero(a));
+  }
 }
 
 SL void TestUtilities() {

@@ -399,7 +399,6 @@ SL void TestUtilities() {
   ToInt<int>(x);
   ToFloat<float>(x);
   ToFloat<double>(x);
-  // std::cout << tr.Elapsed().Format() << " " << v.bitCount() << std::endl;
 }
 
 SL void ExtendedUnsignedIntTest() {

@@ -197,6 +197,9 @@ SL Fraction<T> FromContinuedFraction(const std::vector<DT>& data,
   T p0 = 1, q0 = 0, p1 = data[0], q1 = 1;
 
   for (int i = 1; i <= n; ++i) {
+    if (data[i] == 0) {
+      break;
+    }
     T p = p1 * data[i] + p0;
     T q = q1 * data[i] + q0;
     p0 = std::move(p1), p1 = std::move(p);
@@ -208,58 +211,43 @@ SL Fraction<T> FromContinuedFraction(const std::vector<DT>& data,
   return t;
 }
 
-template <typename T>
-SL T FindIntegerPart(const T& a, const T& q, const T& b, const T& c) {
-  // a q^(1/2) + b >= c x
-  long double test =
-      (ToFloat<long double>(a) * std::sqrt(ToFloat<long double>(q)) +
-       ToFloat<long double>(b)) /
-      ToFloat<long double>(c);
-  T now = static_cast<int64>(test);
-  const T target = a * a * q;
-  for (;;) {
-    T next = now + 1;
-    T t = sq(T(c * next - b));
-    if (t <= target) {
-      now = next;
-    } else {
-      break;
-    }
+// Convert p / q to continued fraction
+template <typename T, typename DT = int64>
+SL std::vector<T> ToContinuedFraction(DT p, DT q, int n = -1) {
+  std::vector<T> result;
+  if (n >= 0) {
+    result.reserve(n);
   }
-  return now;
+  while (q != 0 && (n == -1 || result.size() < n)) {
+    auto [quotient, remainder] = Div(p, q);
+    result.push_back(std::move(quotient));
+    std::swap(p = std::move(remainder), q);
+  }
+  while (n >= 0 && result.size() < n) {
+    result.push_back(0);
+  }
+  return result;
 }
 
-// Convert p sqrt(q) to continued fraction
-// Note: q is square free
+// Convert (x + y sqrt(w)) / z to continued fraction
 template <typename T>
-SL std::vector<T> ToContinuedFraction(int64 p, int64 q, int n) {
-  std::vector<T> result;
-  T a = p, f = q, b = 0, c = 1;
-  // (a f^(1/2) + b) / c
-  T val = FindIntegerPart(a, f, b, c);
-  result.push_back(val);
-  b = b - val * c;
-
-  while (std::size(result) < n) {
-    // (a f^(1/2) + b) / c
-    // c * (aq^(1/2) - b)
-    T cc = a * a * f - b * b;
-    T aa = c * a;
-    T bb = -c * b;
-    T val = FindIntegerPart(aa, f, bb, cc);
-    result.push_back(val);
-    a = aa;
-    b = bb - val * cc;
-    c = cc;
-    T t = Gcd(a, b);
-    T d = Abs(Gcd(t, c));
-    if (d > 1) {
-      a /= d;
-      b /= d;
-      c /= d;
-    }
+SL std::vector<T> ToContinuedFraction(int64 x, int64 y, int64 w, int64 z,
+                                      int n) {
+  PE_ASSERT(w > 0);
+  const int64 sqrt_w = SqrtI(w);
+  if (sqrt_w * sqrt_w == w) {
+    return ToContinuedFraction<T>(x + y * sqrt_w, z, n);
   }
-
+  T p = T(x) * z;
+  const T d = T(w) * y * y * z * z;
+  T q = T(z) * z;
+  const T dd = T(sqrt_w) * y * z;
+  std::vector<T> result;
+  while (result.size() < n) {
+    result.emplace_back((p + dd) / q);
+    p = result.back() * q - p;
+    q = (d - p * p) / q;
+  }
   return result;
 }
 
@@ -273,9 +261,14 @@ SL Fraction<T> FromCf(const std::vector<DT>& data, int pos = -1) {
   return FromContinuedFraction<T, DT>(data, pos);
 }
 
+template <typename T, typename DT = int64>
+SL std::vector<T> ToCf(DT p, DT q, int n = -1) {
+  return ToContinuedFraction<T, DT>(p, q, n);
+}
+
 template <typename T>
-SL std::vector<T> ToCf(int64 p, int64 q, int n) {
-  return ToContinuedFraction<T>(p, q, n);
+SL std::vector<T> ToCf(int64 x, int64 y, int64 w, int64 z, int n) {
+  return ToContinuedFraction<T>(x, y, w, z, n);
 }
 
 // Computes n! mod p^e

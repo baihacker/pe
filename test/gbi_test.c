@@ -398,14 +398,14 @@ class GbiTests {
   }
 
   SL void TestUtilities() {
-    PowerMod(BigInteger(5), 10, BigInteger("123456789"));
-    PowerMod(BigInteger(5), BigInteger(10), BigInteger("123456789"));
+    PowerMod(TestT(5), 10, TestT("123456789"));
+    PowerMod(TestT(5), TestT(10), TestT("123456789"));
 
-    Power(BigInteger(2), 10u);
-    Power(BigInteger(2), 10);
+    Power(TestT(2), 10u);
+    Power(TestT(2), 10);
 
-    Power(BigInteger(2), 20);
-    Power(BigInteger(2), 20LL);
+    Power(TestT(2), 20);
+    Power(TestT(2), 20LL);
   }
 };
 

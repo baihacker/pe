@@ -377,28 +377,28 @@ SL void TestBitOperator() {
 }
 
 SL void TestUtilities() {
+  PowerMod(TestT(5), 10, TestT("123456789"));
+  PowerMod(TestT(5), TestT(10), TestT("123456789"));
+
   Power(TestT(2), 10u);
   Power(TestT(2), 10);
-
   Power(TestT(2), 20);
   Power(TestT(2), 20LL);
 
-  TimeRecorder tr;
-  TestT v(1);
-  for (int i = 1; i <= 100000; ++i) v *= i;
-
-  TestT x(2);
-  Div(x, x);
-  IntSign(x);
-  IsZero(x);
-  IsEven(x);
-  IsOdd(x);
-  LowerBits(x);
-  Abs(x);
-  FAbs(x);
-  ToInt<int>(x);
-  ToFloat<float>(x);
-  ToFloat<double>(x);
+  {
+    TestT x(2);
+    Div(x, x);
+    IntSign(x);
+    IsZero(x);
+    IsEven(x);
+    IsOdd(x);
+    LowerBits(x);
+    Abs(x);
+    FAbs(x);
+    ToInt<int>(x);
+    ToFloat<float>(x);
+    ToFloat<double>(x);
+  }
 }
 
 SL void ExtendedUnsignedIntTest() {

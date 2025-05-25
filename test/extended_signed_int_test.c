@@ -379,28 +379,69 @@ SL void TestBitOperator() {
 }
 
 SL void TestUtilities() {
+  PowerMod(TestT(5), 10, TestT("123456789"));
+  PowerMod(TestT(5), TestT(10), TestT("123456789"));
+
   Power(TestT(2), 10u);
   Power(TestT(2), 10);
-
   Power(TestT(2), 20);
   Power(TestT(2), 20LL);
 
-  TimeRecorder tr;
-  TestT v(1);
-  for (int i = 1; i <= 100000; ++i) v *= i;
-
-  TestT x(2);
-  Div(x, x);
-  IntSign(x);
-  IsZero(x);
-  IsEven(x);
-  IsOdd(x);
-  LowerBits(x);
-  Abs(x);
-  FAbs(x);
-  ToInt<int>(x);
-  ToFloat<float>(x);
-  ToFloat<double>(x);
+  {
+    TestT x(2);
+    Div(x, x);
+    IntSign(x);
+    IsZero(x);
+    IsEven(x);
+    IsOdd(x);
+    LowerBits(x);
+    Abs(x);
+    FAbs(x);
+    ToInt<int>(x);
+    ToFloat<float>(x);
+    ToFloat<double>(x);
+  }
+  {
+    TestT p;
+    SetBit(p, 127);
+    --p;
+    auto ans = SolveLinearEquation<TestT>(123456789, 987654321, p);
+    assert(Mod(ans.value * 123456789, p) == 987654321);
+  }
+  {
+    TestT p;
+    SetBit(p, 127);
+    --p;
+    TestT ans = ModInv<TestT>(123456789, p);
+    assert(Mod(ans * 123456789, p) == 1);
+  }
+  {
+    TestT p1;
+    SetBit(p1, 89);
+    --p1;
+    TestT p2;
+    SetBit(p2, 107);
+    --p2;
+    TestT p3;
+    SetBit(p3, 127);
+    --p3;
+    auto ans = CrtN<TestT>({123, 456, 789}, {p1, p2, p3});
+    assert(Mod(ans.value, p1) == 123);
+    assert(Mod(ans.value, p2) == 456);
+    assert(Mod(ans.value, p3) == 789);
+  }
+  {
+    std::vector<int> cf = {1};
+    for (int i = 0; i < 128; ++i) {
+      cf.push_back(2);
+    }
+    std::vector<Fraction<TestT>> x = FromContinuedFractionN<TestT, int>(cf);
+    Fraction<TestT> ans = FromContinuedFraction<TestT, int>(cf);
+    assert(x.back() == ans);
+    assert(ans.a ==
+           TestT("11940799687771084222816790191714476900294896923393"));
+    assert(ans.b == TestT("8443420432013143050795938339643913980856932710785"));
+  }
 }
 
 SL void ExtendedSignedIntTest() {

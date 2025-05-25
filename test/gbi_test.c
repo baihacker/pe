@@ -410,28 +410,42 @@ class GbiTests {
     Power(TestT(2), 20LL);
 
     {
+      TestT x(2);
+      Div(x, x);
+      IntSign(x);
+      IsZero(x);
+      IsEven(x);
+      IsOdd(x);
+      LowerBits(x);
+      Abs(x);
+      FAbs(x);
+      ToInt<int>(x);
+      ToFloat<float>(x);
+      ToFloat<double>(x);
+    }
+    {
       TestT p;
-      SetBit(p, 607);
+      SetBit(p, 127);
       --p;
       auto ans = SolveLinearEquation<TestT>(123456789, 987654321, p);
       assert(Mod(ans.value * 123456789, p) == 987654321);
     }
     {
       TestT p;
-      SetBit(p, 607);
+      SetBit(p, 127);
       --p;
       TestT ans = ModInv<TestT>(123456789, p);
       assert(Mod(ans * 123456789, p) == 1);
     }
     {
       TestT p1;
-      SetBit(p1, 107);
+      SetBit(p1, 89);
       --p1;
       TestT p2;
-      SetBit(p2, 127);
+      SetBit(p2, 107);
       --p2;
       TestT p3;
-      SetBit(p3, 607);
+      SetBit(p3, 127);
       --p3;
       auto ans = CrtN<TestT>({123, 456, 789}, {p1, p2, p3});
       assert(Mod(ans.value, p1) == 123);

@@ -929,56 +929,6 @@ class BigInteger {
 
   uint32 LowerBits() const { return static_cast<uint32>(data_[0]); }
 
-  template <typename T>
-  REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>))
-  RETURN(T) ToInt() const {
-    using UnsignedT = pe_make_unsigned_t<T>;
-    UnsignedT v = ToInt<UnsignedT>();
-    if (IntSign() < 0) {
-      v = ~v + 1;
-    }
-    return static_cast<T>(v);
-  }
-
-  template <typename T>
-  REQUIRES((is_builtin_integer_v<T> && pe_is_unsigned_v<T>))
-  RETURN(T) ToInt() const {
-    T result = 0;
-    for (int i = pos_; i >= 0; --i) {
-#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
-      result <<= 16;
-      result = (result << 16) | data_[i];
-#else
-      result = (result << 32) | data_[i];
-#endif
-    }
-    return result;
-  }
-
-  template <typename T>
-  REQUIRES((is_extended_integer_v<T>))
-  RETURN(T) ToInt() const {
-    T ret;
-    ret.FromUInt32Vector(ToUInt32Vector());
-    if (IntSign() < 0) {
-      ret.FlipBits();
-      ret.AddOne();
-    }
-    return ret;
-  }
-
-  template <typename T>
-  T ToFloat() const {
-    T result = 0;
-    for (int i = pos_; i >= 0; --i) {
-      result = result * 4294967296 + data_[i];
-    }
-    if (sign_ < 0) {
-      result = -result;
-    }
-    return result;
-  }
-
   int BitWidth() const {
     return (pos_ << div32_bit) + pe::BitWidth(data_[pos_]);
   }
@@ -1038,6 +988,56 @@ class BigInteger {
       FixLeadingZeros();
       FixSign();
     }
+  }
+
+  template <typename T>
+  REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>))
+  RETURN(T) ToInt() const {
+    using UnsignedT = pe_make_unsigned_t<T>;
+    UnsignedT v = ToInt<UnsignedT>();
+    if (IntSign() < 0) {
+      v = ~v + 1;
+    }
+    return static_cast<T>(v);
+  }
+
+  template <typename T>
+  REQUIRES((is_builtin_integer_v<T> && pe_is_unsigned_v<T>))
+  RETURN(T) ToInt() const {
+    T result = 0;
+    for (int i = pos_; i >= 0; --i) {
+#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
+      result <<= 16;
+      result = (result << 16) | data_[i];
+#else
+      result = (result << 32) | data_[i];
+#endif
+    }
+    return result;
+  }
+
+  template <typename T>
+  REQUIRES((is_extended_integer_v<T>))
+  RETURN(T) ToInt() const {
+    T ret;
+    ret.FromUInt32Vector(ToUInt32Vector());
+    if (IntSign() < 0) {
+      ret.FlipBits();
+      ret.AddOne();
+    }
+    return ret;
+  }
+
+  template <typename T>
+  T ToFloat() const {
+    T result = 0;
+    for (int i = pos_; i >= 0; --i) {
+      result = result * 4294967296 + data_[i];
+    }
+    if (sign_ < 0) {
+      result = -result;
+    }
+    return result;
   }
 
   std::string ToString() const {

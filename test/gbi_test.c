@@ -465,6 +465,28 @@ class GbiTests {
       assert(ans.b ==
              TestT("8443420432013143050795938339643913980856932710785"));
     }
+    {
+      TestT N = 1;
+      for (int i = 1; i <= 20; ++i) N *= i;
+
+      TestT v = 0;
+      for (TestT n = N; !IsZero(n); n >>= 1, v += n) {
+        ;
+      }
+
+      TestT mod = Power(TestT(2), 48);
+      TestT ans = 1;
+      FactPPowerModer<TestT> moder(2, 48);
+      int i = 0;
+      while (N > 1) {
+        ans = ans * moder.Cal(N) % mod;
+        N >>= 1;
+      }
+
+      ans = ans * (Power(TestT(2), v[0] & 3)) % mod;
+
+      assert(ans == 21171469991580LL);
+    }
   }
 };
 

@@ -11,7 +11,6 @@
 #include "dva_test.c"
 #include "extended_signed_int_test.c"
 #include "extended_unsigned_int_test.c"
-#include "fact_ppower_mod_test.c"
 #include "gbi_test.c"
 #include "init_inv_test.c"
 #include "int128_test.c"

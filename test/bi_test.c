@@ -347,6 +347,27 @@ SL void TestBitOperator() {
       assert(Popcount((z << i) - 1) == i);
     }
   }
+  {
+    BigInteger a;
+    SetBit(a, 120);
+    assert(BitWidth(a) == 121);
+    assert(Popcount(a) == 1);
+    for (int i = 0; i < 120; ++i) {
+      assert(GetBit(a, i) == 0);
+    }
+    assert(GetBit(a, 120) == 1);
+    RevBit(a, 120);
+    assert(IsZero(a));
+    RevBit(a, 240);
+    assert(BitWidth(a) == 241);
+    assert(Popcount(a) == 1);
+    for (int i = 0; i < 240; ++i) {
+      assert(GetBit(a, i) == 0);
+    }
+    assert(GetBit(a, 240) == 1);
+    ResetBit(a, 240);
+    assert(IsZero(a));
+  }
 }
 
 SL void TestUtilities() {

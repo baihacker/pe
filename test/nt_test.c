@@ -190,6 +190,14 @@ SL void SquareRootModTest() {
       for (auto x : ans) {
         assert(x * x % p == n);
       }
+#if ENABLE_FLINT && GMP_LIMB_BITS == 64
+      {
+        std::vector<int64> ans = flint::SquareRootMod(n, p);
+        for (auto x : ans) {
+          assert(x * x % p == n);
+        }
+      }
+#endif
       cnt += !std::empty(ans);
     }
     if (p > 2) {

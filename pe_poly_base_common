@@ -100,7 +100,7 @@ SL void PolyMulWrapper(const T* X, int64 n, const T* Y, int64 m, T* result,
     const int64 m = static_cast<int64>(std::size(Y));                         \
     const int64 ret_size = n + m - 1;                                         \
     std::vector<T> result(ret_size);                                          \
-    PolyMul(&X[0], n, &Y[0], m, &result[0], mod);                             \
+    PolyMul(std::data(X), n, std::data(Y), m, std::data(result), mod);        \
     return result;                                                            \
   }
 
@@ -116,7 +116,7 @@ SL REQUIRES((std::is_invocable_r_v<void, IMPL, const T*, int64, const T*, int64,
   const int64 m = static_cast<int64>(std::size(Y));
   const int64 ret_size = n + m - 1;
   std::vector<T> result(ret_size);
-  impl(&X[0], n, &Y[0], m, &result[0], mod);
+  impl(std::data(X), n, std::data(Y), m, std::data(result), mod);
   return result;
 #else
   const int64 n = static_cast<int64>(std::size(X));
@@ -148,7 +148,8 @@ SL REQUIRES((std::is_invocable_r_v<void, IMPL, const T*, int64, const T*, int64,
     const int64 y_size = y_offset[tasks[i].second + 1] - y_start;
 
     std::vector<T> tans(x_size + y_size - 1);
-    impl(&X[0] + x_start, x_size, &Y[0] + y_start, y_size, &tans[0], mod);
+    impl(std::data(X) + x_start, x_size, std::data(Y) + y_start, y_size,
+         std::data(tans), mod);
 
     OmpGuard guard(lock);
     const int64 tans_size = tans.size();
@@ -243,7 +244,8 @@ SL REQUIRES((std::is_invocable_r_v<std::vector<T>, IMPL, std::vector<T>,
                                                                            \
     std::vector<T> q(std::max<int64>(n - m + 1, 1LL));                     \
     std::vector<T> r(m);                                                   \
-    PolyDivAndMod(&X[0], n, &Y[0], m, &q[0], &r[0], mod);                  \
+    PolyDivAndMod(std::data(X), n, std::data(Y), m, std::data(q),          \
+                  std::data(r), mod);                                      \
                                                                            \
     r[m] = 0;                                                              \
     AdjustPolyLeadingZero(r);                                              \
@@ -264,7 +266,7 @@ SL REQUIRES((std::is_invocable_r_v<std::vector<T>, IMPL, std::vector<T>,
     const int64 m = static_cast<int64>(std::size(Y));                          \
                                                                                \
     std::vector<T> q(std::max<int64>(n - m + 1, 1LL));                         \
-    PolyDiv(&X[0], n, &Y[0], m, &q[0], mod);                                   \
+    PolyDiv(std::data(X), n, std::data(Y), m, std::data(q), mod);              \
     return q;                                                                  \
   }
 
@@ -282,7 +284,7 @@ SL REQUIRES((std::is_invocable_r_v<std::vector<T>, IMPL, std::vector<T>,
     const int64 m = static_cast<int64>(std::size(Y));                          \
                                                                                \
     std::vector<T> r(m);                                                       \
-    PolyMod(&X[0], n, &Y[0], m, &r[0], mod);                                   \
+    PolyMod(std::data(X), n, std::data(Y), m, std::data(r), mod);              \
     AdjustPolyLeadingZero(r);                                                  \
     return r;                                                                  \
   }

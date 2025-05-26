@@ -94,18 +94,18 @@ SL void PolyMulFftSmallImpl(uint64* x, uint64* y, uint64* z, const int n,
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Fft(&a[0], n);
+    Fft(std::data(a), n);
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Fft(&b[0], n);
+    Fft(std::data(b), n);
   }
 
   for (int i = 0; i < n; ++i) {
     a[i] = a[i] * b[i];
   }
 
-  Fft(&a[0], n, 1);
+  Fft(std::data(a), n, 1);
   const double coe = 1. / n;
   for (int i = 0; i < n; ++i) {
     z[i] = uint64(a[i].x + 0.01) % mod;
@@ -131,11 +131,11 @@ SL void PolyMulFftImpl(uint64* x, uint64* y, uint64* z, const int n,
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Fft(&a[0], n);
+    Fft(std::data(a), n);
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Fft(&b[0], n);
+    Fft(std::data(b), n);
   }
   for (int i = 0; i < n; ++i) {
     int j = (n - i) & (n - 1);
@@ -158,11 +158,11 @@ SL void PolyMulFftImpl(uint64* x, uint64* y, uint64* z, const int n,
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Fft(&a[0], n);
+    Fft(std::data(a), n);
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Fft(&b[0], n);
+    Fft(std::data(b), n);
   }
   for (int i = 0; i < n; ++i) {
     const uint64 da = static_cast<uint64>(a[i].x / n + 0.5) % mod;
@@ -175,35 +175,35 @@ SL void PolyMulFftImpl(uint64* x, uint64* y, uint64* z, const int n,
 }
 }  // namespace fft_internal
 
-#define POLY_MULL_FFT_IMPL(PolyMulFft, PolyMulFftImpl)                 \
-  template <typename T>                                                \
-  SL void PolyMulFft(const T* x, const int n, const T* y, const int m, \
-                     T* result, int64 mod) {                           \
-    const int p = 1 << pe_lg(2 * (n + m - 1) - 1);                     \
-                                                                       \
-    std::vector<uint64> xx(p), yy(p), zz(p);                           \
-                                                                       \
-    std::copy(x, x + n, &xx[0]);                                       \
-    std::fill(xx.begin() + n, xx.end(), 0);                            \
-                                                                       \
-    std::copy(y, y + m, &yy[0]);                                       \
-    std::fill(yy.begin() + m, yy.end(), 0);                            \
-                                                                       \
-    PolyMulFftImpl(&xx[0], &yy[0], &zz[0], p, mod);                    \
-                                                                       \
-    std::copy(zz.begin(), zz.begin() + n + m - 1, result);             \
-  }                                                                    \
-                                                                       \
-  template <typename T>                                                \
-  SL std::vector<T> PolyMulFft(const std::vector<T>& x,                \
-                               const std::vector<T>& y, int64 mod) {   \
-    const int n = (int)std::size(x);                                   \
-    const int m = (int)std::size(y);                                   \
-    std::vector<T> z(n + m - 1);                                       \
-                                                                       \
-    PolyMulFft(&x[0], n, &y[0], m, &z[0], mod);                        \
-                                                                       \
-    return z;                                                          \
+#define POLY_MULL_FFT_IMPL(PolyMulFft, PolyMulFftImpl)                   \
+  template <typename T>                                                  \
+  SL void PolyMulFft(const T* x, const int n, const T* y, const int m,   \
+                     T* result, int64 mod) {                             \
+    const int p = 1 << pe_lg(2 * (n + m - 1) - 1);                       \
+                                                                         \
+    std::vector<uint64> xx(p), yy(p), zz(p);                             \
+                                                                         \
+    std::copy(x, x + n, std::data(xx));                                  \
+    std::fill(xx.begin() + n, xx.end(), 0);                              \
+                                                                         \
+    std::copy(y, y + m, std::data(yy));                                  \
+    std::fill(yy.begin() + m, yy.end(), 0);                              \
+                                                                         \
+    PolyMulFftImpl(std::data(xx), std::data(yy), std::data(zz), p, mod); \
+                                                                         \
+    std::copy(zz.begin(), zz.begin() + n + m - 1, result);               \
+  }                                                                      \
+                                                                         \
+  template <typename T>                                                  \
+  SL std::vector<T> PolyMulFft(const std::vector<T>& x,                  \
+                               const std::vector<T>& y, int64 mod) {     \
+    const int n = (int)std::size(x);                                     \
+    const int m = (int)std::size(y);                                     \
+    std::vector<T> z(n + m - 1);                                         \
+                                                                         \
+    PolyMulFft(std::data(x), n, std::data(y), m, std::data(z), mod);     \
+                                                                         \
+    return z;                                                            \
   }
 
 using fft_internal::InitFftK;

@@ -7,7 +7,7 @@ SL void ParallelSortTest() {
   std::vector<int> arr(n);
   for (int i = 0; i < n; ++i) arr[i] = rand();
   TimeRecorder tr;
-  ParallelSort<8>(&arr[0], &arr[0] + n);
+  ParallelSort<8>(std::data(arr), std::data(arr) + n);
   std::cerr << tr.Elapsed().Format() << std::endl;
   for (int i = 1; i < n; ++i) {
     assert(arr[i - 1] <= arr[i]);

@@ -294,17 +294,17 @@ SL std::vector<uint32> RunNtt(const NttMod32& moder, const T* X, int64 n,
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Ntt<uint32, mod>(&XX[0], aligned_size, moder, false);
+    Ntt<uint32, mod>(std::data(XX), aligned_size, moder, false);
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Ntt<uint32, mod>(&YY[0], aligned_size, moder, false);
+    Ntt<uint32, mod>(std::data(YY), aligned_size, moder, false);
   }
   constexpr uint64 mod1 = mod;
   for (int64 i = 0; i < aligned_size; ++i) {
     XX[i] = static_cast<uint64>(XX[i]) * YY[i] % mod1;
   }
-  Ntt<uint32, mod>(&XX[0], aligned_size, moder, true);
+  Ntt<uint32, mod>(std::data(XX), aligned_size, moder, true);
   return XX;
 }
 }  // namespace internal
@@ -842,11 +842,11 @@ SL std::vector<uint64> RunNtt(const NttMod64& moder, const T* X, int64 n,
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Ntt<uint64, mod>(&XX[0], aligned_size, moder, false);
+    Ntt<uint64, mod>(std::data(XX), aligned_size, moder, false);
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Ntt<uint64, mod>(&YY[0], aligned_size, moder, false);
+    Ntt<uint64, mod>(std::data(YY), aligned_size, moder, false);
   }
   constexpr uint64 mod1 = mod;
   for (int64 i = 0; i < aligned_size; ++i) {
@@ -856,7 +856,7 @@ SL std::vector<uint64> RunNtt(const NttMod64& moder, const T* X, int64 n,
     XX[i] = MulMod(XX[i], YY[i], mod1);
 #endif
   }
-  Ntt<uint64, mod>(&XX[0], aligned_size, moder, true);
+  Ntt<uint64, mod>(std::data(XX), aligned_size, moder, true);
 
   return XX;
 }
@@ -1107,7 +1107,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   const int64 m = static_cast<int64>(std::size(Y));
 
   std::vector<T> result(std::max(n, m));
-  PolyAdd(&X[0], n, &Y[0], m, &result[0], mod);
+  PolyAdd(std::data(X), n, std::data(Y), m, std::data(result), mod);
 
   return result;
 }
@@ -1134,7 +1134,7 @@ SL std::vector<T> PolyAdd(const std::vector<T>& X, const std::vector<T>& Y) {
   const int64 m = static_cast<int64>(std::size(Y));
 
   std::vector<T> result(std::max(n, m));
-  PolyAdd(&X[0], n, &Y[0], m, &result[0]);
+  PolyAdd(std::data(X), n, std::data(Y), m, std::data(result));
 
   return result;
 }
@@ -1165,7 +1165,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   const int64 m = static_cast<int64>(std::size(Y));
 
   std::vector<T> result(std::max(n, m));
-  PolySub(&X[0], n, &Y[0], m, &result[0], mod);
+  PolySub(std::data(X), n, std::data(Y), m, std::data(result), mod);
 
   return result;
 }
@@ -1194,7 +1194,7 @@ SL std::vector<T> PolySub(const std::vector<T>& X, const std::vector<T>& Y) {
   const int64 m = static_cast<int64>(std::size(Y));
 
   std::vector<T> result(std::max(n, m));
-  PolySub(&X[0], n, &Y[0], m, &result[0]);
+  PolySub(std::data(X), n, std::data(Y), m, std::data(result));
 
   return result;
 }
@@ -1335,7 +1335,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     internal::PolyMulDcImpl<UnsignedT>(
         reinterpret_cast<const UnsignedT*>(X),
         reinterpret_cast<const UnsignedT*>(Y), n,
-        reinterpret_cast<UnsignedT*>(&tresult[0]), mod);
+        reinterpret_cast<UnsignedT*>(std::data(tresult)), mod);
     std::copy(tresult.begin(), tresult.begin() + n + m - 1, result);
   } else if (n > m) {
     std::vector<T> YY(n);
@@ -1343,17 +1343,17 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     std::vector<T> tresult(2 * n);
     internal::PolyMulDcImpl<UnsignedT>(
         reinterpret_cast<const UnsignedT*>(X),
-        reinterpret_cast<const UnsignedT*>(&YY[0]), n,
-        reinterpret_cast<UnsignedT*>(&tresult[0]), mod);
+        reinterpret_cast<const UnsignedT*>(std::data(YY)), n,
+        reinterpret_cast<UnsignedT*>(std::data(tresult)), mod);
     std::copy(tresult.begin(), tresult.begin() + n + m - 1, result);
   } else {
     std::vector<T> XX(m);
     for (int64 i = 0; i < n; ++i) XX[i] = X[i];
     std::vector<T> tresult(2 * m);
     internal::PolyMulDcImpl<UnsignedT>(
-        reinterpret_cast<const UnsignedT*>(&XX[0]),
+        reinterpret_cast<const UnsignedT*>(std::data(XX)),
         reinterpret_cast<const UnsignedT*>(Y), m,
-        reinterpret_cast<UnsignedT*>(&tresult[0]), mod);
+        reinterpret_cast<UnsignedT*>(std::data(tresult)), mod);
     std::copy(tresult.begin(), tresult.begin() + n + m - 1, result);
   }
 }
@@ -1389,9 +1389,9 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
     // requirement of PolyMulDcImpl.
     std::vector<T> result(2 * n);
     internal::PolyMulDcImpl<UnsignedT>(
-        reinterpret_cast<const UnsignedT*>(&X[0]),
-        reinterpret_cast<const UnsignedT*>(&Y[0]), n,
-        reinterpret_cast<UnsignedT*>(&result[0]), mod);
+        reinterpret_cast<const UnsignedT*>(std::data(X)),
+        reinterpret_cast<const UnsignedT*>(std::data(Y)), n,
+        reinterpret_cast<UnsignedT*>(std::data(result)), mod);
     result.resize(result_size);
     return result;
   } else if (n > m) {
@@ -1399,9 +1399,9 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
     for (int64 i = 0; i < m; ++i) YY[i] = Y[i];
     std::vector<T> result(2 * n);
     internal::PolyMulDcImpl<UnsignedT>(
-        reinterpret_cast<const UnsignedT*>(&X[0]),
-        reinterpret_cast<const UnsignedT*>(&YY[0]), n,
-        reinterpret_cast<UnsignedT*>(&result[0]), mod);
+        reinterpret_cast<const UnsignedT*>(std::data(X)),
+        reinterpret_cast<const UnsignedT*>(std::data(YY)), n,
+        reinterpret_cast<UnsignedT*>(std::data(result)), mod);
     result.resize(result_size);
     return result;
   } else {
@@ -1409,9 +1409,9 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
     for (int64 i = 0; i < n; ++i) XX[i] = X[i];
     std::vector<T> result(2 * m);
     internal::PolyMulDcImpl<UnsignedT>(
-        reinterpret_cast<const UnsignedT*>(&XX[0]),
-        reinterpret_cast<const UnsignedT*>(&Y[0]), m,
-        reinterpret_cast<UnsignedT*>(&result[0]), mod);
+        reinterpret_cast<const UnsignedT*>(std::data(XX)),
+        reinterpret_cast<const UnsignedT*>(std::data(Y)), m,
+        reinterpret_cast<UnsignedT*>(std::data(result)), mod);
     result.resize(result_size);
     return result;
   }
@@ -1427,11 +1427,11 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   const int is_big = std::max(n, m) >= 50;
   if (is_big) {
 #if HAS_POLY_MUL_FLINT
-    flint::PolyMul(&X[0], n, &Y[0], m, result, mod);
+    flint::PolyMul(X, n, Y, m, result, mod);
 #elif HAS_POLY_MUL_MIN25
-    min25::PolyMul(&X[0], n, &Y[0], m, result, mod);
+    min25::PolyMul(X, n, Y, m, result, mod);
 #elif HAS_POLY_MUL_NTT32
-    ntt::PolyMul(&X[0], n, &Y[0], m, result, mod);
+    ntt::PolyMul(X, n, Y, m, result, mod);
 #else
 
 #if defined(COMPILER_GNU)
@@ -1440,10 +1440,10 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 #pragma message("PolyMul may be very slow.")
 #endif
 
-    PolyMulDc(&X[0], n, &Y[0], m, result, mod);
+    PolyMulDc(X, n, Y, m, result, mod);
 #endif
   } else {
-    PolyMulDc(&X[0], n, &Y[0], m, result, mod);
+    PolyMulDc(X, n, Y, m, result, mod);
   }
 }
 
@@ -1455,7 +1455,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   const int64 m = static_cast<int64>(std::size(Y));
 
   std::vector<T> result(n + m - 1);
-  PolyMul(&X[0], n, &Y[0], m, &result[0], mod);
+  PolyMul(std::data(X), n, std::data(Y), m, std::data(result), mod);
 
   return result;
 }
@@ -1559,19 +1559,19 @@ SL void PolyMulDc(const T* X, const int64 n, const T* Y, const int64 m,
     // In case n == m, we still allocate tempory result space to meet the
     // requirement of PolyMulDcImpl.
     std::vector<T> tresult(2 * n);
-    internal::PolyMulDcImpl(&X[0], &Y[0], n, &result[0]);
+    internal::PolyMulDcImpl(std::data(X), std::data(Y), n, std::data(result));
     std::copy(tresult.begin(), tresult.begin() + n + m - 1, result);
   } else if (n > m) {
     std::vector<T> YY(n);
     for (int64 i = 0; i < m; ++i) YY[i] = Y[i];
     std::vector<T> tresult(2 * n);
-    internal::PolyMulDcImpl(X, &YY[0], n, &tresult[0]);
+    internal::PolyMulDcImpl(X, std::data(YY), n, std::data(tresult));
     std::copy(tresult.begin(), tresult.begin() + n + m - 1, result);
   } else {
     std::vector<T> XX(m);
     for (int64 i = 0; i < n; ++i) XX[i] = X[i];
     std::vector<T> tresult(2 * m);
-    internal::PolyMulDcImpl(&XX[0], Y, m, &tresult[0]);
+    internal::PolyMulDcImpl(std::data(XX), Y, m, std::data(tresult));
     std::copy(tresult.begin(), tresult.begin() + n + m - 1, result);
   }
 }
@@ -1586,21 +1586,21 @@ SL std::vector<T> PolyMulDc(const std::vector<T>& X, const std::vector<T>& Y) {
     // In case n == m, we still allocate tempory result space to meet the
     // requirement of PolyMulDcImpl.
     std::vector<T> result(2 * n);
-    internal::PolyMulDcImpl(&X[0], &Y[0], n, &result[0]);
+    internal::PolyMulDcImpl(std::data(X), std::data(Y), n, std::data(result));
     result.resize(result_size);
     return result;
   } else if (n > m) {
     std::vector<T> YY(n);
     for (int64 i = 0; i < m; ++i) YY[i] = Y[i];
     std::vector<T> result(2 * n);
-    internal::PolyMulDcImpl(&X[0], &YY[0], n, &result[0]);
+    internal::PolyMulDcImpl(std::data(X), std::data(YY), n, std::data(result));
     result.resize(result_size);
     return result;
   } else {
     std::vector<T> XX(m);
     for (int64 i = 0; i < n; ++i) XX[i] = X[i];
     std::vector<T> result(2 * m);
-    internal::PolyMulDcImpl(&XX[0], &Y[0], m, &result[0]);
+    internal::PolyMulDcImpl(std::data(XX), std::data(Y), m, std::data(result));
     result.resize(result_size);
     return result;
   }
@@ -1610,7 +1610,7 @@ SL std::vector<T> PolyMulDc(const std::vector<T>& X, const std::vector<T>& Y) {
 template <typename T>
 SL void PolyMul(const T* X, const int64 n, const T* Y, const int64 m,
                 T* result) {
-  PolyMulDc(&X[0], n, &Y[0], m, result);
+  PolyMulDc(std::data(X), n, std::data(Y), m, result);
 }
 
 // Multiplies two polynomials.
@@ -1620,7 +1620,7 @@ SL std::vector<T> PolyMul(const std::vector<T>& X, const std::vector<T>& Y) {
   const int64 m = static_cast<int64>(std::size(Y));
 
   std::vector<T> result(n + m - 1);
-  PolyMul(&X[0], n, &Y[0], m, &result[0]);
+  PolyMul(std::data(X), n, std::data(Y), m, std::data(result));
 
   return result;
 }
@@ -1725,11 +1725,11 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    ope(&XX[0], size, mod, false);
+    ope(std::data(XX), size, mod, false);
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    ope(&YY[0], size, mod, false);
+    ope(std::data(YY), size, mod, false);
   }
   using UnsignedT = pe_make_unsigned_t<T>;
   for (int64 i = 0; i < size; ++i) {
@@ -1756,8 +1756,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   const int64 size = std::max(nn, mm);
   std::vector<T> result(size);
 
-  internal::PolyConvolutionImpl<T>(&X[0], n, &Y[0], m, &result[0], mod,
-                                   &fwt::FWTOr<T>);
+  internal::PolyConvolutionImpl<T>(std::data(X), n, std::data(Y), m,
+                                   std::data(result), mod, &fwt::FWTOr<T>);
 
   return result;
 }
@@ -1780,8 +1780,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   const int64 size = std::max(nn, mm);
   std::vector<T> result(size);
 
-  internal::PolyConvolutionImpl<T>(&X[0], n, &Y[0], m, &result[0], mod,
-                                   &fwt::FWTAnd<T>);
+  internal::PolyConvolutionImpl<T>(std::data(X), n, std::data(Y), m,
+                                   std::data(result), mod, &fwt::FWTAnd<T>);
 
   return result;
 }
@@ -1804,8 +1804,9 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   const int64 size = std::max(nn, mm);
   std::vector<T> result(size);
 
-  internal::PolyConvolutionImpl<T>(&X[0], n, &Y[0], m, &result[0],
-                                   static_cast<T>(mod), &fwt::FWTXor<T>);
+  internal::PolyConvolutionImpl<T>(std::data(X), n, std::data(Y), m,
+                                   std::data(result), static_cast<T>(mod),
+                                   &fwt::FWTXor<T>);
 
   return result;
 }
@@ -1863,7 +1864,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     tmp[i] = &tmp_data[i][0];
   }
 
-  PolyInvDoublingImpl(trunc, &a[0], &b[0], tmp, mod);
+  PolyInvDoublingImpl(trunc, std::data(a), std::data(b), tmp, mod);
   std::copy(b.begin(), b.begin() + trunc, result);
 }
 }  // namespace internal
@@ -1889,7 +1890,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 
   std::vector<T> b(trunc);
 
-  PolyInvDoubling(&x[0], m, trunc, &b[0], mod);
+  PolyInvDoubling(std::data(x), m, trunc, std::data(b), mod);
 
   return b;
 }
@@ -1919,7 +1920,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 
   std::vector<T> b(trunc);
 
-  PolyInv(&x[0], m, trunc, &b[0], mod);
+  PolyInv(std::data(x), m, trunc, std::data(b), mod);
 
   return b;
 }
@@ -1950,7 +1951,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 
   std::vector<T> b(trunc);
 
-  PolyInv(&x[0], m, trunc, &b[0], mod);
+  PolyInv(std::data(x), m, trunc, std::data(b), mod);
 
   return b;
 }
@@ -1990,7 +1991,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   }
   if (r) {
     std::vector<T> tmp(n);
-    PolyMul(&Y[0], m, &Z[0], n - m + 1, &tmp[0], mod);
+    PolyMul(Y, m, std::data(Z), n - m + 1, std::data(tmp), mod);
     for (int64 i = 0; i < m; ++i) {
       r[i] = X[i] >= tmp[i] ? X[i] - tmp[i] : X[i] + mod - tmp[i];
     }
@@ -2091,7 +2092,8 @@ SL REQUIRES((is_builtin_integer_v<T>))
 
   std::vector<T> q(std::max<int64>(n - m + 1, 1LL));
   std::vector<T> r(m + 1);
-  PolyDivAndMod(&X[0], n + 1, &Y[0], m + 1, &q[0], &r[0], mod);
+  PolyDivAndMod(std::data(X), n + 1, std::data(Y), m + 1, std::data(q),
+                std::data(r), mod);
 
   r[m] = 0;
   AdjustPolyLeadingZero(r);
@@ -2153,7 +2155,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 
   std::vector<T> b(m);
 
-  PolyDerivative(&x[0], m, &b[0], mod);
+  PolyDerivative(std::data(x), m, std::data(b), mod);
 
   return b;
 }
@@ -2166,7 +2168,7 @@ template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyIntegralImpl(const T* x, int64 m, T* result, int64 mod) {
   std::vector<T> y(m + 1);
-  InitInverse(&y[0], m, mod);
+  InitInverse(std::data(y), m, mod);
   for (int64 i = 0; i < m; ++i) {
     result[i + 1] = MulMod(x[i], y[i + 1], mod);
   }
@@ -2194,7 +2196,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 
   std::vector<T> b(m);
 
-  PolyIntegral(&x[0], m, &b[0], mod);
+  PolyIntegral(std::data(x), m, std::data(b), mod);
 
   return b;
 }
@@ -2207,15 +2209,15 @@ template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyLogImpl(const T* x, int64 m, int64 trunc, T* result, int64 mod) {
   std::vector<T> dx(m);
-  PolyDerivative(x, m, &dx[0], mod);
+  PolyDerivative(x, m, std::data(dx), mod);
 
   std::vector<T> y(trunc);
-  PolyInv(x, m, trunc, &y[0], mod);
+  PolyInv(x, m, trunc, std::data(y), mod);
 
   std::vector<T> z(m - 1 + trunc - 1);
-  PolyMul(&dx[0], m - 1, &y[0], trunc, &z[0], mod);
+  PolyMul(std::data(dx), m - 1, std::data(y), trunc, std::data(z), mod);
 
-  InitInverse(&y[0], trunc - 1, mod);
+  InitInverse(std::data(y), trunc - 1, mod);
 
   for (int64 i = 0; i < trunc - 1; ++i) {
     result[i + 1] = MulMod(z[i], y[i + 1], mod);
@@ -2246,7 +2248,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 
   std::vector<T> b(trunc);
 
-  PolyLog(&x[0], m, trunc, &b[0], mod);
+  PolyLog(std::data(x), m, trunc, std::data(b), mod);
 
   return b;
 }
@@ -2264,16 +2266,16 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   for (int64 u = 1; u < 2 * trunc; u = u << 1) {
     std::vector<T> t0(u);
 #if HAS_POLY_FLINT
-    flint::PolyLog(&ret[0], u, u, &t0[0], mod);
+    flint::PolyLog(std::data(ret), u, u, &t0[0], mod);
 #else
-    PolyLog(&ret[0], u, u, &t0[0], mod);
+    PolyLog(std::data(ret), u, u, &t0[0], mod);
 #endif
     std::vector<T> t1(u);
     PolySub(x, std::min(u, m), &t0[0], u, &t1[0], mod);
     t1[0] = AddMod(1, t1[0], mod);
 
     std::vector<T> t2(u << 1);
-    PolyMul(&ret[0], u, &t1[0], u, &t2[0], mod);
+    PolyMul(std::data(ret), u, &t1[0], u, &t2[0], mod);
     t2.resize(u << 1);
     ret = std::move(t2);
     ret[0] = 1;
@@ -2306,7 +2308,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 
   std::vector<T> b(trunc);
 
-  PolyExp(&x[0], m, trunc, &b[0], mod);
+  PolyExp(std::data(x), m, trunc, std::data(b), mod);
 
   return b;
 }
@@ -2333,9 +2335,9 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     }
   }
 #if HAS_POLY_FLINT
-  flint::PolyExp(&t[0], n, n, result, mod);
+  flint::PolyExp(std::data(t), n, n, result, mod);
 #else
-  PolyExp(&t[0], n, n, result, mod);
+  PolyExp(std::data(t), n, n, result, mod);
 #endif
 }
 
@@ -2349,9 +2351,9 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   }
 
   std::vector<int64> invs(n);
-  InitInverse(&invs[0], n - 1, mod);
+  InitInverse(std::data(invs), n - 1, mod);
 
-  PolyEulerTransform(x, m, n, result, mod, &invs[0]);
+  PolyEulerTransform(x, m, n, result, mod, std::data(invs));
 }
 
 // Euler transforms a polynomial.
@@ -2364,7 +2366,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 
   std::vector<T> b(n);
 
-  PolyEulerTransform(&x[0], m, n, &b[0], mod, invs);
+  PolyEulerTransform(std::data(x), m, n, std::data(b), mod, invs);
 
   return b;
 }
@@ -2378,7 +2380,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 
   std::vector<T> b(n);
 
-  PolyEulerTransform(&x[0], m, n, &b[0], mod);
+  PolyEulerTransform(std::data(x), m, n, std::data(b), mod);
 
   return b;
 }
@@ -2407,9 +2409,9 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     }
   }
 #if HAS_POLY_FLINT
-  flint::PolyExp(&t[0], n, n, result, mod);
+  flint::PolyExp(std::data(t), n, n, result, mod);
 #else
-  PolyExp(&t[0], n, n, result, mod);
+  PolyExp(std::data(t), n, n, result, mod);
 #endif
 }
 
@@ -2424,9 +2426,9 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   }
 
   std::vector<int64> invs(n);
-  InitInverse(&invs[0], n - 1, mod);
+  InitInverse(std::data(invs), n - 1, mod);
 
-  PolyEulerTransform(x, m, y, n, result, mod, &invs[0]);
+  PolyEulerTransform(x, m, y, n, result, mod, std::data(invs));
 }
 
 // Extended euler transforms a polynomial
@@ -2439,7 +2441,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 
   std::vector<T> b(n);
 
-  PolyEulerTransform(&x[0], m, &y[0], n, &b[0], mod, invs);
+  PolyEulerTransform(std::data(x), m, std::data(y), n, std::data(b), mod, invs);
 
   return b;
 }
@@ -2454,7 +2456,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 
   std::vector<T> b(n);
 
-  PolyEulerTransform(&x[0], m, &y[0], n, &b[0], mod);
+  PolyEulerTransform(std::data(x), m, std::data(y), n, std::data(b), mod);
 
   return b;
 }
@@ -2475,7 +2477,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
     PolyEvaluate(const std::vector<T>& x, T v, T mod) {
-  return PolyEvaluate<T>(&x[0], static_cast<int64>(std::size(x)), v, mod);
+  return PolyEvaluate<T>(std::data(x), static_cast<int64>(std::size(x)), v,
+                         mod);
 }
 
 // Evaluates a polynomial at v.
@@ -2491,7 +2494,8 @@ SL T PolyEvaluate(const T1* x, int64 n, T2 v) {
 // Evaluates a polynomial at v.
 template <typename T, typename T1, typename T2>
 SL T PolyEvaluate(const std::vector<T1>& x, T2 v) {
-  return PolyEvaluate<T, T1, T2>(&x[0], static_cast<int64>(std::size(x)), v);
+  return PolyEvaluate<T, T1, T2>(std::data(x), static_cast<int64>(std::size(x)),
+                                 v);
 }
 
 namespace internal {
@@ -2569,12 +2573,13 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 
   std::vector<T> m(std::max(std::size(psp->L->p), std::size(psp->R->p)));
   PolyMod(X, n, reinterpret_cast<const T*>(&psp->L->p[0]),
-          static_cast<int64>(std::size(psp->L->p)), &m[0], mod);
-  PolyMultipointEvaluateNormalImpl(
-      &m[0], static_cast<int64>(std::size(psp->L->p)) - 1, psp->L, result, mod);
+          static_cast<int64>(std::size(psp->L->p)), std::data(m), mod);
+  PolyMultipointEvaluateNormalImpl(std::data(m),
+                                   static_cast<int64>(std::size(psp->L->p)) - 1,
+                                   psp->L, result, mod);
   PolyMod(X, n, reinterpret_cast<const T*>(&psp->R->p[0]),
-          static_cast<int64>(std::size(psp->R->p)), &m[0], mod);
-  PolyMultipointEvaluateNormalImpl(&m[0],
+          static_cast<int64>(std::size(psp->R->p)), std::data(m), mod);
+  PolyMultipointEvaluateNormalImpl(std::data(m),
                                    static_cast<int64>(std::size(psp->R->p)) - 1,
                                    psp->R, result + c1, mod);
 }
@@ -2710,7 +2715,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
                                  const std::vector<T>& V, int64 mod) {
   const int64 n = static_cast<int64>(std::size(X));
   std::vector<T> result(n);
-  PolyMultipointEvaluateNormal(&X[0], n, &V[0], &result[0], mod);
+  PolyMultipointEvaluateNormal(std::data(X), n, std::data(V), std::data(result),
+                               mod);
   return result;
 }
 
@@ -2733,7 +2739,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
                               int64 mod) {
   const int64 n = static_cast<int64>(std::size(X));
   std::vector<T> result(n);
-  PolyMultipointEvaluateBls(&X[0], n, &V[0], &result[0], mod);
+  PolyMultipointEvaluateBls(std::data(X), n, std::data(V), std::data(result),
+                            mod);
   return result;
 }
 
@@ -2763,7 +2770,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
                            int64 mod) {
   const int64 n = static_cast<int64>(std::size(X));
   std::vector<T> result(n);
-  PolyMultipointEvaluate(&X[0], n, &V[0], &result[0], mod);
+  PolyMultipointEvaluate(std::data(X), n, std::data(V), std::data(result), mod);
   return result;
 }
 
@@ -2810,8 +2817,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     B[j - 1] = MulMod(T1[j], T0[j - 1], mod);
   }
 
-  PolyMul(&A[0], d + 1, &B[0], 2 * d + 1, &C[0], mod);
-  std::copy(&C[0] + d, &C[0] + 2 * d + 1, result);
+  PolyMul(std::data(A), d + 1, std::data(B), 2 * d + 1, std::data(C), mod);
+  std::copy(std::data(C) + d, std::data(C) + 2 * d + 1, result);
 
   for (int64 i = 0, j = d + 1; i <= d; ++i, ++j) {
     result[i] = MulMod(result[i], T0[j], mod);
@@ -2836,7 +2843,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
                        const T* pre_fact_inv, T mod) {
   const int64 d = static_cast<int64>(std::size(values)) - 1;
   std::vector<T> result(d + 1);
-  PolyOffsetEvaluate(d, &values[0], &result[0], offset, pre_fact_inv, mod);
+  PolyOffsetEvaluate(d, std::data(values), std::data(result), offset,
+                     pre_fact_inv, mod);
   return result;
 }
 
@@ -2863,13 +2871,13 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    PolyBatchMulImpl(X, s, s + half, &A[0], mod);
+    PolyBatchMulImpl(X, s, s + half, std::data(A), mod);
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    PolyBatchMulImpl(X, s + half, e, &B[0], mod);
+    PolyBatchMulImpl(X, s + half, e, std::data(B), mod);
   }
-  PolyMul(&A[0], half + 1, &B[0], n - half + 1, result, mod);
+  PolyMul(std::data(A), half + 1, std::data(B), n - half + 1, result, mod);
 }
 }  // namespace internal
 
@@ -2893,7 +2901,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
     PolyBatchMul(const std::vector<T>& X, int64 mod) {
   const int64 n = static_cast<int64>(std::size(X));
   std::vector<T> result(n / 2 + 1);
-  PolyBatchMul(&X[0], n / 2, &result[0], mod);
+  PolyBatchMul(std::data(X), n / 2, std::data(result), mod);
   return result;
 }
 

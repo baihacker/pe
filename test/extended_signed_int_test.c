@@ -468,6 +468,20 @@ SL void TestUtilities() {
     assert(Mod(ans.value, p3) == 789);
   }
   {
+    TestT x = 1;
+    Gcd(x);
+    Gcd(x, x);
+    Gcd(x, x, x);
+    Gcd(x, x, x, x);
+    Gcd(x, x, x, x, x);
+    Lcm(x);
+    Lcm(x, x);
+    Lcm(x, x, x);
+    Lcm(x, x, x, x);
+    Lcm(x, x, x, x, x);
+    ExGcd(x, x);
+  }
+  {
     std::vector<int> cf = {1};
     for (int i = 0; i < 128; ++i) {
       cf.push_back(2);

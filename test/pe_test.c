@@ -1,7 +1,7 @@
 #include "pe_test.h"
 
 #if 0
-#include "nt_test.c"
+#include "poly_mul_test.c"
 #else
 #include "algo_test.c"
 #include "array_test.c"

@@ -72,6 +72,28 @@ SL void SqrtITest() {
 
 PE_REGISTER_TEST(&SqrtITest, "SqrtITest", SMALL);
 
+SL void RootITest() {
+  for (int64 v = 2, k = 1; k <= 50; v *= 2, ++k) {
+    for (int i = 2; i <= 16; ++i) {
+      int64 ans = RootI(v, i);
+      int64 val1 = Power(ans, i);
+      int64 val2 = Power(ans + 1, i);
+      assert(val1 <= v);
+      assert(val2 > v);
+    }
+  }
+  for (int64 v = 10, k = 1; k <= 15; v *= 10, ++k) {
+    for (int i = 2; i <= 16; ++i) {
+      int64 ans = RootI(v, i);
+      int64 val1 = Power(ans, i);
+      int64 val2 = Power(ans + 1, i);
+      assert(val1 <= v);
+      assert(val2 > v);
+    }
+  }
+}
+PE_REGISTER_TEST(&RootITest, "RootITest", SMALL);
+
 SL void LogITest() {
   for (int i = 2; i <= 16; ++i) {
     for (int64 n = 2, k = 1; k <= 50; n *= 2, ++k) {

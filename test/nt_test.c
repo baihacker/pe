@@ -76,15 +76,15 @@ SL void LogITest() {
   for (int i = 2; i <= 16; ++i) {
     for (int64 n = 2, k = 1; k <= 50; n *= 2, ++k) {
       int ans = LogI(i, n);
-      int64 val1 = Power<int64, int64>(i, ans);
-      int64 val2 = Power<int64, int64>(i, ans + 1);
+      int64 val1 = Power(i, ans);
+      int64 val2 = Power(i, ans + 1);
       assert(val1 <= n);
       assert(val2 > n);
     }
     for (int64 n = 10, k = 1; k <= 15; n *= 10, ++k) {
       int ans = LogI(i, n);
-      int64 val1 = Power<int64, int64>(i, ans);
-      int64 val2 = Power<int64, int64>(i, ans + 1);
+      int64 val1 = Power(i, ans);
+      int64 val2 = Power(i, ans + 1);
       assert(val1 <= n);
       assert(val2 > n);
     }

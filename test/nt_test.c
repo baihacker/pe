@@ -36,6 +36,26 @@ SL void ParityTest() {
 }
 PE_REGISTER_TEST(&ParityTest, "ParityTest", SMALL);
 
+SL void LogITest() {
+  for (int i = 2; i <= 16; ++i) {
+    for (int64 n = 2, k = 1; k <= 50; n *= 2, ++k) {
+      int ans = LogI(i, n);
+      int64 val1 = Power<int64, int64>(i, ans);
+      int64 val2 = Power<int64, int64>(i, ans + 1);
+      assert(val1 <= n);
+      assert(val2 > n);
+    }
+    for (int64 n = 10, k = 1; k <= 15; n *= 10, ++k) {
+      int ans = LogI(i, n);
+      int64 val1 = Power<int64, int64>(i, ans);
+      int64 val2 = Power<int64, int64>(i, ans + 1);
+      assert(val1 <= n);
+      assert(val2 > n);
+    }
+  }
+}
+PE_REGISTER_TEST(&LogITest, "LogITest", SMALL);
+
 SL void GcdTest() {
   assert(Gcd({2, 4, 6}) == 2);
   assert(Gcd(2, 4, 6) == 2);

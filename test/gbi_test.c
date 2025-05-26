@@ -487,6 +487,26 @@ class GbiTests {
 
       assert(ans == 21171469991580LL);
     }
+    {
+      for (int i = 2; i <= 16; ++i) {
+        for (int64 k = 1; k <= 100; ++k) {
+          TestT n = Power<TestT>(2, k);
+          int ans = LogI(i, n);
+          TestT val1 = Power<TestT>(i, ans);
+          TestT val2 = Power<TestT>(i, ans + 1);
+          assert(val1 <= n);
+          assert(val2 > n);
+        }
+        for (int64 k = 1; k <= 100; ++k) {
+          TestT n = Power<TestT>(10, k);
+          int ans = LogI(i, n);
+          TestT val1 = Power<TestT>(i, ans);
+          TestT val2 = Power<TestT>(i, ans + 1);
+          assert(val1 <= n);
+          assert(val2 > n);
+        }
+      }
+    }
   }
 };
 

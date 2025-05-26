@@ -257,6 +257,7 @@ int main() {
   };
 
   PeInitializer()
+      .set_max_prime(2000000)
       .set_cal_phi()
       .set_cal_mu()
       .set_fft_k()

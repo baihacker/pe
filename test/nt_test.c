@@ -36,6 +36,42 @@ SL void ParityTest() {
 }
 PE_REGISTER_TEST(&ParityTest, "ParityTest", SMALL);
 
+SL void SqrtITest() {
+  int f = 0;
+  for (int64 i = 1; i <= 10000000; ++i) {
+    const int64 num = i * i;
+    for (int64 offset = -10; offset <= 10; ++offset) {
+      int64 n = offset + num;
+      if (n < 0) {
+        continue;
+      }
+      int64 u = SqrtI(n);
+      assert(u * u <= n);
+      assert((u + 1) * (u + 1) > n);
+    }
+  }
+
+  assert(SqrtI(9999999999999999) == 99999999);
+  assert(SqrtI(9999999999999999 + 1) == 99999999 + 1);
+  assert(SqrtI(999999999999999999) == 999999999);
+  assert(SqrtI(999999999999999999 + 1) == 999999999 + 1);
+
+  {
+    const int64 x = 3037000499;
+    assert(SqrtI(x * x + 1) == x);
+    assert(SqrtI(x * x) == x);
+    assert(SqrtI(x * x - 1) == x - 1);
+  }
+  {
+    const uint64 x = 4294967295;
+    assert(SqrtI(x * x + 1) == x);
+    assert(SqrtI(x * x) == x);
+    assert(SqrtI(x * x - 1) == x - 1);
+  }
+}
+
+PE_REGISTER_TEST(&SqrtITest, "SqrtITest", SMALL);
+
 SL void LogITest() {
   for (int i = 2; i <= 16; ++i) {
     for (int64 n = 2, k = 1; k <= 50; n *= 2, ++k) {

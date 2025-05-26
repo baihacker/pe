@@ -211,18 +211,20 @@ SL void SquareRootModTest() {
 PE_REGISTER_TEST(&SquareRootModTest, "SquareRootModTest", SMALL);
 
 #if PE_HAS_INT128
-SL void TestNTwoSquares(int64 n, int64 expected) {
-  int64 real = 0;
+SL void TestTwoSquaresImpl(int64 n, int64 expected_count) {
+  int64 actual_count = 0;
   auto f = TwoSquares(n);
   for (auto& iter : f) {
     if (iter.first == 0) {
-      real += 4;
+      actual_count += 4;
     } else {
-      real += iter.first == iter.second ? 4 : 8;
+      actual_count += iter.first == iter.second ? 4 : 8;
     }
   }
-  assert(expected == real);
-  for (auto& iter : f) assert(sq(iter.first) + sq(iter.second) == n);
+  assert(expected_count == actual_count);
+  for (auto& iter : f) {
+    assert(sq(iter.first) + sq(iter.second) == n);
+  }
 }
 
 SL void TwoSquaresTest() {
@@ -240,12 +242,12 @@ SL void TwoSquaresTest() {
   };
   int64 offset = 0;
   for (int64 n = 2; n <= 10000; ++n) {
-    TestNTwoSquares(offset + n, num_solutions(offset + n));
+    TestTwoSquaresImpl(offset + n, num_solutions(offset + n));
   }
   // 1e12
   offset = 1000000000000;
   for (int64 n = 2; n <= 10000; ++n) {
-    TestNTwoSquares(offset + n, num_solutions(offset + n));
+    TestTwoSquaresImpl(offset + n, num_solutions(offset + n));
   }
 }
 

@@ -442,7 +442,7 @@ SL void TestUtilities() {
     TestT p;
     SetBit(p, 127);
     --p;
-    auto ans = SolveLinearEquation<TestT>(123456789, 987654321, p);
+    ModValue<TestT> ans = SolveLinearEquation<TestT>(123456789, 987654321, p);
     assert(Mod(ans.value * 123456789, p) == 987654321);
   }
   {
@@ -462,7 +462,7 @@ SL void TestUtilities() {
     TestT p3;
     SetBit(p3, 127);
     --p3;
-    auto ans = CrtN<TestT>({123, 456, 789}, {p1, p2, p3});
+    ModValue<TestT> ans = CrtN<TestT>({123, 456, 789}, {p1, p2, p3});
     assert(Mod(ans.value, p1) == 123);
     assert(Mod(ans.value, p2) == 456);
     assert(Mod(ans.value, p3) == 789);

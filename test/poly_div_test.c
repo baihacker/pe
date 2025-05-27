@@ -46,19 +46,19 @@ SL void TestImpl(int dp, int size, int n, int64 mod) {
     x[n - 1] = y[n / 2 - 1] = 1;
   }
 
-  const int M = sizeof(div_impl) / sizeof(div_impl[0]);
+  const int M = std::size(div_impl);
 
   std::vector<uint64> expected;
   for (int i = 0; i < M; ++i) {
-    auto who = div_impl[i];
+    DivImpl who = div_impl[i];
     if (i > 0) {
       if (who.size < size) {
         continue;
       }
     }
-    auto start = clock();
-    auto result = who.impl(x, y, mod);
-    auto end = clock();
+    clock_t start = clock();
+    std::vector<uint64> result = who.impl(x, y, mod);
+    clock_t end = clock();
     fprintf(stderr, "%-8s : %.3f\n", who.name,
             1. * (end - start) / CLOCKS_PER_SEC);
     if (i == 0) {
@@ -81,11 +81,13 @@ SL void PolyDivTest() {
 PE_REGISTER_TEST(&PolyDivTest, "PolyDivTest", SUPER);
 
 SL void PolyDivPerformanceTest() {
-  uint64 mods[5] = {100019, 1000003, 1000000007, 100000000003, 316227766016779};
-
-  for (int level = 0; level <= 4; ++level) {
+  constexpr std::array<uint64, 5> mods = {100019, 1000003, 1000000007,
+                                          100000000003, 316227766016779};
+  constexpr int min_log2 = 10;
+  constexpr int max_log2 = 20;
+  for (int level = 0; level < mods.size(); ++level) {
     printf("mod = %llu\n", (unsigned long long)mods[level]);
-    const auto mod = mods[level];
+    const uint64 mod = mods[level];
 
     printf("log2(n)  ");
 
@@ -95,15 +97,15 @@ SL void PolyDivPerformanceTest() {
 
     puts("");
 
-    const int M = sizeof(div_impl) / sizeof(div_impl[0]);
+    const int M = std::size(div_impl);
 
     std::vector<uint64> expected;
     for (int i = 0; i < M; ++i) {
-      auto who = div_impl[i];
+      DivImpl who = div_impl[i];
 
       printf("%-8s ", who.name);
       srand(314159);
-      for (int n = 10; n <= 20; ++n) {
+      for (int n = min_log2; n <= max_log2; ++n) {
         if (who.size == 0 && n > 14) {
           printf("%-6s ", "-");
           continue;
@@ -114,9 +116,9 @@ SL void PolyDivPerformanceTest() {
         for (int i = 0; i < size / 2; ++i) y.push_back((uint64)CRand63() % mod);
         x[size - 1] = y[size / 2 - 1] = 1;
 
-        auto start = clock();
+        clock_t start = clock();
         who.impl(x, y, mod);
-        auto end = clock();
+        clock_t end = clock();
 #if 1
         printf("%-6.3f ", 1. * (end - start) / CLOCKS_PER_SEC);
 #else

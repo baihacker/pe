@@ -96,8 +96,8 @@ SL REQUIRES((is_gbi_v<T> && is_builtin_integer_v<TN>)) RETURN(T)
 
 template <typename T>
 SL REQUIRES((is_gbi_v<T>)) RETURN(std::tuple<T, T>)
-    Div(const T& l, const T& r) {
-  return {l / r, l % r};
+    Div(const T& a, const T& b) {
+  return {a / b, a % b};
 }
 
 template <typename T>
@@ -171,13 +171,13 @@ SL REQUIRES((is_gbi_v<T>)) RETURN(T) MulMod(const T& a, const T& b, TM mod) {
 
 template <typename T, typename TN>
 SL REQUIRES((is_gbi_v<T> && is_builtin_integer_v<TN>)) RETURN(T)
-    PowerMod(const T& l, TN n, const T& mod) {
+    PowerMod(T x, TN n, const T& mod) {
   PE_ASSERT(n >= 0);
   if (mod == 1) {
     return 0;
   }
   T ret = 1;
-  T x = l % mod;
+  x %= mod;
   for (; n > 0; n >>= 1) {
     if (n & 1) ret = ret * x % mod;
     if (n > 1) x = x * x % mod;
@@ -187,14 +187,13 @@ SL REQUIRES((is_gbi_v<T> && is_builtin_integer_v<TN>)) RETURN(T)
 
 template <typename T, typename TN, typename TM>
 SL REQUIRES((is_gbi_v<T> && is_builtin_integer_v<TN> &&
-             is_builtin_integer_v<TM>)) RETURN(T)
-    PowerMod(const T& l, TN n, TM mod) {
+             is_builtin_integer_v<TM>)) RETURN(T) PowerMod(T x, TN n, TM mod) {
   PE_ASSERT(n >= 0);
   if (mod == 1) {
     return 0;
   }
   T ret = 1;
-  T x = l % mod;
+  x %= mod;
   for (; n > 0; n >>= 1) {
     if (n & 1) ret = ret * x % mod;
     if (n > 1) x = x * x % mod;
@@ -203,17 +202,16 @@ SL REQUIRES((is_gbi_v<T> && is_builtin_integer_v<TN> &&
 }
 
 template <typename T>
-SL REQUIRES((is_gbi_v<T>)) RETURN(T)
-    PowerMod(const T& l, const T& m, const T& mod) {
-  PE_ASSERT(IntSign(m) >= 0);
+SL REQUIRES((is_gbi_v<T>)) RETURN(T) PowerMod(T x, const T& n, const T& mod) {
+  PE_ASSERT(IntSign(n) >= 0);
   if (mod == 1) {
     return 0;
   }
   T ret = 1;
-  T x = l % mod;
-  const int bit_width = BitWidth(m);
+  x %= mod;
+  const int bit_width = BitWidth(n);
   for (int i = 0; i < bit_width; ++i) {
-    if (GetBit(m, i)) ret = ret * x % mod;
+    if (GetBit(n, i)) ret = ret * x % mod;
     if (i + 1 < bit_width) x = x * x % mod;
   }
   return ret;

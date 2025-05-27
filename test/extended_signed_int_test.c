@@ -469,17 +469,17 @@ SL void TestUtilities() {
   }
   {
     TestT x = 1;
-    Gcd(x);
-    Gcd(x, x);
-    Gcd(x, x, x);
-    Gcd(x, x, x, x);
-    Gcd(x, x, x, x, x);
-    Lcm(x);
-    Lcm(x, x);
-    Lcm(x, x, x);
-    Lcm(x, x, x, x);
-    Lcm(x, x, x, x, x);
-    ExGcd(x, x);
+    assert(Gcd(x) == 1);
+    assert(Gcd(x, x) == 1);
+    assert(Gcd(x, x, x) == 1);
+    assert(Gcd(x, x, x, x) == 1);
+    assert(Gcd(x, x, x, x, x) == 1);
+    assert(Lcm(x) == 1);
+    assert(Lcm(x, x) == 1);
+    assert(Lcm(x, x, x) == 1);
+    assert(Lcm(x, x, x, x) == 1);
+    assert(Lcm(x, x, x, x, x) == 1);
+    assert(std::get<0>(ExGcd(x, x)) == 1);
   }
   {
     std::vector<int> cf = {1};

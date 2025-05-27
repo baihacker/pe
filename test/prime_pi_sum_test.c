@@ -5,7 +5,7 @@ std::vector<int64> ps(1000001);
 std::vector<int64> pc(1000001);
 
 SL void VerifyCnt(const int64 n, const DVA<int64>& result) {
-  auto v = (int64)sqrt(n);
+  int64 v = static_cast<int64>(std::sqrt(n));
   for (int j = 1; j <= v; ++j) {
     assert(result[j] == pc[j]);
     assert(result[n / j] == pc[n / j]);
@@ -13,7 +13,7 @@ SL void VerifyCnt(const int64 n, const DVA<int64>& result) {
 }
 
 SL void VerifySum(const int64 n, const DVA<int64>& result) {
-  auto v = (int64)std::sqrt(n);
+  int64 v = static_cast<int64>(std::sqrt(n));
   for (int j = 1; j <= v; ++j) {
     assert(result[j] == ps[j]);
     assert(result[n / j] == ps[n / j]);

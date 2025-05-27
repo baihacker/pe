@@ -32,7 +32,7 @@ int64 compute(std::vector<int> coe) {
     return where->second;
   }
   int64 dp[S + 1] = {1};
-  for (auto& iter : coe)
+  for (int& iter : coe)
     for (int i = 0; i + iter <= S; ++i) {
       dp[i + iter] += dp[i];
     }
@@ -43,7 +43,7 @@ int64 solve1() {
   PartitionMobius pm(mod);
   std::vector<int> pattern = {1, 2, 3, 4, 5};
   MT ret = 0;
-  for (auto p : Partition::GenPartitions(5)) {
+  for (Partition p : Partition::GenPartitions(5)) {
     std::map<int, int> mem;
     for (int i = 0; i < 5; ++i) mem[p.colors[i]] += pattern[i];
     std::vector<int> key;

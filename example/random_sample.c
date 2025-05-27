@@ -56,7 +56,7 @@ double CalPi_Rand() {
 double CalPi_Halton() {
   int ok = 0;
   for (int i = 0; i < sample_count; ++i) {
-    auto p = Halton(i, 2);
+    std::vector<double> p = Halton(i, 2);
     if (p[0] * p[0] + p[1] * p[1] < 1) {
       ++ok;
     }

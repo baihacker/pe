@@ -213,7 +213,7 @@ RT Dfs1(int start, int limit, int64 n, int64 val, int imp, int64 vmp, int emp,
 
 void RunCorrectnessTest() {
   TableFormatter tf;
-  auto& line = tf.AppendLine();
+  std::vector<std::string>& line = tf.AppendLine();
   line.push_back("n");
   line.push_back("Solver0");
   line.push_back("Solver1");
@@ -231,7 +231,7 @@ void RunCorrectnessTest() {
     ::dva = PrimeS0Ex<int64>(n);
     int64 a5 = Dfs(pcnt, n, 1, -1, 1, 0, 1, 1);
     int64 a6 = Dfs1(0, pcnt, n, 1, -1, 1, 0, 1, 1);
-    auto& line = tf.AppendLine();
+    std::vector<std::string>& line = tf.AppendLine();
     line.push_back("1e" + pe::ToString(e));
     line.push_back(pe::ToString(a0));
     line.push_back(pe::ToString(a1));
@@ -246,7 +246,7 @@ void RunCorrectnessTest() {
 
 void RunPerfTest() {
   TableFormatter tf;
-  auto& line = tf.AppendLine();
+  std::vector<std::string>& line = tf.AppendLine();
   line.push_back("n");
   line.push_back("Solver2");
   line.push_back("Solver3");
@@ -255,11 +255,11 @@ void RunPerfTest() {
   line.push_back("Dfs1");
   for (int64 n = 1000000, e = 6; n <= 1000000000000; n *= 10, ++e) {
     // std::cout << "n = " << n << std::endl;
-    auto& line = tf.AppendLine();
+    std::vector<std::string>& line = tf.AppendLine();
     line.push_back("1e" + pe::ToString(e));
     {
       Solver2 solve;
-      auto ans = solve.Cal(n);
+      RT ans = solve.Cal(n);
       // std::cout << ans << std::endl;
       // std::cout << solve.usage.Format() << std::endl;
       line.push_back(solve.usage.Format());
@@ -267,7 +267,7 @@ void RunPerfTest() {
 
     {
       Solver3 solve;
-      auto ans = solve.Cal(n);
+      RT ans = solve.Cal(n);
       // std::cout << ans << std::endl;
       // std::cout << solve.usage.Format() << std::endl;
       line.push_back(solve.usage.Format());
@@ -275,7 +275,7 @@ void RunPerfTest() {
 
     {
       Solver4 solve;
-      auto ans = solve.Cal(n);
+      RT ans = solve.Cal(n);
       // std::cout << ans << std::endl;
       // std::cout << solve.usage.Format() << std::endl;
       line.push_back(solve.usage.Format());
@@ -284,7 +284,7 @@ void RunPerfTest() {
     {
       ::dva = PrimeS0Ex<int64>(n);
       TimeRecorder tr;
-      auto ans = Dfs(pcnt, n, 1, -1, 1, 0, 1, 1);
+      RT ans = Dfs(pcnt, n, 1, -1, 1, 0, 1, 1);
       // std::cout << ans << std::endl;
       // std::cout << tr.Elapsed().Format() << std::endl;
       line.push_back(tr.Elapsed().Format());
@@ -293,7 +293,7 @@ void RunPerfTest() {
     {
       ::dva = PrimeS0Ex<int64>(n);
       TimeRecorder tr;
-      auto ans = Dfs1(0, pcnt, n, 1, -1, 1, 0, 1, 1);
+      RT ans = Dfs1(0, pcnt, n, 1, -1, 1, 0, 1, 1);
       // std::cout << ans << std::endl;
       // std::cout << tr.Elapsed().Format() << std::endl;
       line.push_back(tr.Elapsed().Format());

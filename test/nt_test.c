@@ -142,7 +142,7 @@ SL void GetFactorsTest() {
     std::vector<pe::int64> result = GetFactors(12, limit);
     std::sort(std::begin(result), std::end(result));
     std::vector<int64> expected;
-    for (auto iter : {1, 2, 3, 4, 6, 12}) {
+    for (int64 iter : {1, 2, 3, 4, 6, 12}) {
       if (limit < 0 || iter <= limit) {
         expected.push_back(iter);
       }
@@ -154,7 +154,7 @@ SL void GetFactorsTest() {
 PE_REGISTER_TEST(&GetFactorsTest, "GetFactorsTest", SMALL);
 
 SL int IsSquareFreeNormal(int64 n) {
-  for (auto& iter : Factorize(n)) {
+  for (std::pair<int64, int>& iter : Factorize(n)) {
     if (iter.second > 1) {
       return 0;
     }
@@ -187,13 +187,13 @@ SL void SquareRootModTest() {
     int cnt = 0;
     for (int n = 0; n < p; ++n) {
       std::vector<int64> ans = pmod::SquareRootMod(n, p);
-      for (auto x : ans) {
+      for (int64 x : ans) {
         assert(x * x % p == n);
       }
 #if ENABLE_FLINT && GMP_LIMB_BITS == 64
       {
         std::vector<int64> ans = flint::SquareRootMod(n, p);
-        for (auto x : ans) {
+        for (int64 x : ans) {
           assert(x * x % p == n);
         }
       }
@@ -213,8 +213,8 @@ PE_REGISTER_TEST(&SquareRootModTest, "SquareRootModTest", SMALL);
 #if PE_HAS_INT128
 SL void TestTwoSquaresImpl(int64 n, int64 expected_count) {
   int64 actual_count = 0;
-  auto f = TwoSquares(n);
-  for (auto& iter : f) {
+  std::vector<std::pair<int64, int64>> f = TwoSquares(n);
+  for (std::pair<int64, int64>& iter : f) {
     if (iter.first == 0) {
       actual_count += 4;
     } else {
@@ -222,7 +222,7 @@ SL void TestTwoSquaresImpl(int64 n, int64 expected_count) {
     }
   }
   assert(expected_count == actual_count);
-  for (auto& iter : f) {
+  for (std::pair<int64, int64>& iter : f) {
     assert(sq(iter.first) + sq(iter.second) == n);
   }
 }
@@ -230,7 +230,7 @@ SL void TestTwoSquaresImpl(int64 n, int64 expected_count) {
 SL void TwoSquaresTest() {
   auto num_solutions = [=](int64 n) -> int64 {
     int64 ret = 1;
-    for (auto& iter : Factorize(n)) {
+    for (std::pair<int64, int>& iter : Factorize(n)) {
       int mod4 = iter.first & 3;
       if (mod4 == 3) {
         if (IsOdd(iter.second)) return 0;
@@ -283,8 +283,8 @@ SL void CountCoprimeTest() {
   const int64 mod = 17;
   using MT = NMod64<mod>;
   for (int64 a = 1; a <= 100; ++a) {
-    auto f = Factorize(a);
-    auto rm = GetRadFactorsWithMu(a);
+    IntegerFactorization f = Factorize(a);
+    std::vector<std::pair<int64, int>> rm = GetRadFactorsWithMu(a);
     for (int64 n = 1; n <= 1000; n *= 10) {
       int64 ans0 = 0;
       int64 ans1 = CountCoprime(n, a);
@@ -302,8 +302,8 @@ SL void CountCoprimeTest() {
   }
 
   for (int64 a = 1; a <= 100; ++a) {
-    auto f = Factorize(a);
-    auto rm = GetRadFactorsWithMu(a);
+    IntegerFactorization f = Factorize(a);
+    std::vector<std::pair<int64, int>> rm = GetRadFactorsWithMu(a);
     for (int64 n = 1; n <= 1000; n *= 10) {
       int64 ans0 = 0;
       int64 ans1 = CountCoprime<MT>(n, a).value();
@@ -322,8 +322,8 @@ SL void CountCoprimeTest() {
   }
 
   for (int64 a = 1; a <= 100; ++a) {
-    auto f = Factorize(a);
-    auto rm = GetRadFactorsWithMu(a);
+    IntegerFactorization f = Factorize(a);
+    std::vector<std::pair<int64, int>> rm = GetRadFactorsWithMu(a);
     for (int64 n = 1; n <= 1000; n *= 10) {
       for (int64 remain = 0; remain < 5; ++remain) {
         int64 ans0 = 0;
@@ -343,8 +343,8 @@ SL void CountCoprimeTest() {
   }
 
   for (int64 a = 1; a <= 100; ++a) {
-    auto f = Factorize(a);
-    auto rm = GetRadFactorsWithMu(a);
+    IntegerFactorization f = Factorize(a);
+    std::vector<std::pair<int64, int>> rm = GetRadFactorsWithMu(a);
     for (int64 n = 1; n <= 1000; n *= 10) {
       for (int64 remain = 0; remain < 5; ++remain) {
         int64 ans0 = 0;
@@ -370,8 +370,8 @@ SL void SumCoprimeTest() {
   const int64 mod = 17;
   using MT = NMod64<mod>;
   for (int64 a = 1; a <= 100; ++a) {
-    auto f = Factorize(a);
-    auto rm = GetRadFactorsWithMu(a);
+    IntegerFactorization f = Factorize(a);
+    std::vector<std::pair<int64, int>> rm = GetRadFactorsWithMu(a);
     for (int64 n = 1; n <= 1000; n *= 10) {
       int64 ans0 = 0;
       int64 ans1 = SumCoprime(n, a);
@@ -389,8 +389,8 @@ SL void SumCoprimeTest() {
   }
 
   for (int64 a = 1; a <= 100; ++a) {
-    auto f = Factorize(a);
-    auto rm = GetRadFactorsWithMu(a);
+    IntegerFactorization f = Factorize(a);
+    std::vector<std::pair<int64, int>> rm = GetRadFactorsWithMu(a);
     for (int64 n = 1; n <= 1000; n *= 10) {
       int64 ans0 = 0;
       int64 ans1 = SumCoprime<MT>(n, a).value();
@@ -409,8 +409,8 @@ SL void SumCoprimeTest() {
   }
 
   for (int64 a = 1; a <= 100; ++a) {
-    auto f = Factorize(a);
-    auto rm = GetRadFactorsWithMu(a);
+    IntegerFactorization f = Factorize(a);
+    std::vector<std::pair<int64, int>> rm = GetRadFactorsWithMu(a);
     for (int64 n = 1; n <= 1000; n *= 10) {
       for (int64 remain = 0; remain < 5; ++remain) {
         int64 ans0 = 0;
@@ -430,8 +430,8 @@ SL void SumCoprimeTest() {
   }
 
   for (int64 a = 1; a <= 100; ++a) {
-    auto f = Factorize(a);
-    auto rm = GetRadFactorsWithMu(a);
+    IntegerFactorization f = Factorize(a);
+    std::vector<std::pair<int64, int>> rm = GetRadFactorsWithMu(a);
     for (int64 n = 1; n <= 1000; n *= 10) {
       for (int64 remain = 0; remain < 5; ++remain) {
         int64 ans0 = 0;

@@ -60,21 +60,21 @@ const uint64 ValueHolder<uint64>::mods[] = {1ULL, 2147483648ULL, 2147483647ULL,
                                             18446744073709551615ULL};
 
 SL void ModTest() {
-#define REGULATE_MOD_TEST(T1, T2)          \
-  for (auto v : ValueHolder<T1>::values)   \
-    for (auto m : ValueHolder<T2>::mods) { \
-      int128 x = v;                        \
-      int128 y = m;                        \
-      x %= y;                              \
-      if (x < 0) x += y;                   \
-      auto ans = Mod(v, m);                \
-      if (ans != x) {                      \
-        dbg(v);                            \
-        dbg(m);                            \
-        dbg(ans);                          \
-        dbg(x);                            \
-      }                                    \
-      assert(ans == x);                    \
+#define REGULATE_MOD_TEST(T1, T2)        \
+  for (T1 v : ValueHolder<T1>::values)   \
+    for (T2 m : ValueHolder<T2>::mods) { \
+      int128 x = v;                      \
+      int128 y = m;                      \
+      x %= y;                            \
+      if (x < 0) x += y;                 \
+      auto ans = Mod(v, m);              \
+      if (ans != x) {                    \
+        dbg(v);                          \
+        dbg(m);                          \
+        dbg(ans);                        \
+        dbg(x);                          \
+      }                                  \
+      assert(ans == x);                  \
     }
   REGULATE_MOD_TEST(int32, int32)
   REGULATE_MOD_TEST(uint32, int32)
@@ -102,15 +102,15 @@ PE_REGISTER_TEST(&ModTest, "ModTest", SMALL);
 SL void FracModTest() {
   const int mod = 1000000007;
   for (int64 n = 1; n <= 10; ++n) {
-    auto v = FracMod<int64>({n, n + 1, 2 * n + 1}, {2, 3}, mod);
-    auto expected = (int128)n * (n + 1) * (2 * n + 1) / 6 % mod;
+    int64 v = FracMod<int64, int64>({n, n + 1, 2 * n + 1}, {2, 3}, mod);
+    int128 expected = (int128)n * (n + 1) * (2 * n + 1) / 6 % mod;
     assert(v == expected);
   }
 
   for (int i = 1; i <= 10; ++i) {
-    const int64 n = 100000000000 + i;
-    auto v = FracMod<int64>({n, n + 1, 2 * n + 1}, {2, 3}, mod);
-    auto expected = (int128)n * (n + 1) * (2 * n + 1) / 6 % mod;
+    int64 n = 100000000000 + i;
+    int64 v = FracMod<int64, int64>({n, n + 1, 2 * n + 1}, {2, 3}, mod);
+    int128 expected = (int128)n * (n + 1) * (2 * n + 1) / 6 % mod;
     assert(v == expected);
   }
 }

@@ -22,7 +22,7 @@ SL void PolyMultiPointEvaluationTest() {
   }
   {
     TimeRecorder tr;
-    auto result = PolyMultipointEvaluateBls(data, v, mod);
+    std::vector<int64> result = PolyMultipointEvaluateBls(data, v, mod);
     // std::cout << tr.Elapsed().Format() << std::endl;
     for (int i = 1; i <= n; ++i) {
       int64 value = PolyEvaluate<int64>(data, i % 10007, mod);
@@ -32,7 +32,7 @@ SL void PolyMultiPointEvaluationTest() {
 #if HAS_POLY_FLINT
   {
     TimeRecorder tr;
-    auto result = flint::PolyMultipointEvaluate(data, v, mod);
+    std::vector<int64> result = flint::PolyMultipointEvaluate(data, v, mod);
     // std::cout << tr.Elapsed().Format() << std::endl;
     for (int i = 1; i <= n; ++i) {
       int64 value = PolyEvaluate<int64>(data, i % 10007, mod);
@@ -47,7 +47,7 @@ PE_REGISTER_TEST(&PolyMultiPointEvaluationTest, "PolyMultiPointEvaluationTest",
 SL void PolyBatchMulTest() {
   const int mod = 10007;
   std::vector<int64> data = {1, 1, 2, 1, 3, 1};
-  auto result = PolyBatchMul(data, mod);
+  std::vector<int64> result = PolyBatchMul(data, mod);
 
   std::vector<int64> expected = {6, 11, 6, 1};
   assert(expected == result);
@@ -91,7 +91,7 @@ SL void GetGFCoefficientTest() {
     for (int i = 2; i <= 30; ++i) {
       result.push_back(AddMod(result[i - 2], result[i - 1], mod));
     }
-    auto x = GetGFCoefficientSeries(A, B, 30, mod);
+    std::vector<int64> x = GetGFCoefficientSeries(A, B, 30, mod);
     for (int i = 0; i <= 30; ++i) {
       assert(result[i] == x[i]);
     }
@@ -105,7 +105,7 @@ SL void GetGFCoefficientTest() {
     // Example 4: A closed form for change.
     int64 dp[10000 + 1] = {1};
     int64 can[5] = {1, 5, 10, 25, 50};
-    for (auto each : can) {
+    for (int64 each : can) {
       for (int j = 0; j + each <= 10000; ++j) {
         if (dp[j]) {
           dp[j + each] = AddMod(dp[j + each], dp[j], mod);
@@ -126,8 +126,8 @@ SL void GetGFCoefficientTest() {
         ++coe[s];
       }
     }
-    auto gfresult = GetGFCoefficientSeries(std::vector<int64>(coe, coe + 92),
-                                           {1}, 10000, mod);
+    std::vector<int64> gfresult = GetGFCoefficientSeries(
+        std::vector<int64>(coe, coe + 92), {1}, 10000, mod);
     for (int i = 0; i <= 10000; ++i) assert(dp[i] == gfresult[i]);
 
     std::string mine = ToString(GetGFCoefficientAt(
@@ -141,7 +141,7 @@ PE_REGISTER_TEST(&GetGFCoefficientTest, "GetGFCoefficientTest", SMALL);
 SL void LinearRecurrenceTest() {
   const int64 P = 1000000009;
   std::vector<int64> s = {0, 1, 1, 2, 3, 5};
-  auto v = *FindLinearRecurrence(s, P);
+  std::vector<int64> v = *FindLinearRecurrence(s, P);
   assert(v[0] == P - 1);
   assert(v[1] == P - 1);
   assert(v[2] == 1);
@@ -153,7 +153,7 @@ SL void LinearRecurrenceTest() {
   ans = LinearRecurrenceValueAt(v, s, 38, P);
   assert(ans == 39088169LL);
 
-  auto t = *FindLinearRecurrence({0, 1, 1, 2, 3, 5, 8, 13}, 31);
+  std::vector<int64> t = *FindLinearRecurrence({0, 1, 1, 2, 3, 5, 8, 13}, 31);
   assert(t[0] == 30);
   assert(t[1] == 30);
   assert(t[2] == 1);

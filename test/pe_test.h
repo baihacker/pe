@@ -6,8 +6,6 @@
 #include <pe>
 using namespace pe;
 
-using TestMethodT = std::function<void()>;
-
 enum TestSize {
   SMALL = 0,
   MEDIUM = 1,
@@ -64,7 +62,7 @@ SL std::vector<TestSize> ParseTestSizeList(std::string s) {
 }
 
 struct TestItem {
-  TestMethodT test;
+  std::function<void()> test;
   std::string file;
   std::string description;
   TestSize test_size;

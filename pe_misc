@@ -23,7 +23,7 @@ class GaussianEliminationMod2 {
   }
 
   void FillZero() {
-    for (auto& iter : data) {
+    for (std::vector<uint64>& iter : data) {
       std::fill(iter.begin(), iter.end(), 0);
     }
   }
@@ -90,7 +90,7 @@ class GaussianEliminationSolver {
   void FillZero() { Fill(0); }
 
   void Fill(double v) {
-    for (auto& iter : data) {
+    for (std::vector<double>& iter : data) {
       std::fill(iter.begin(), iter.end(), v);
     }
   }
@@ -113,15 +113,15 @@ class GaussianEliminationSolver {
     while (x < row && y < col) {
       int best_id = x;
       if (select_row) {
-        double bestV = FAbs(At(x, y));
+        double best_v = FAbs(At(x, y));
         for (int i = x + 1; i < row; ++i) {
-          auto now = FAbs(At(i, y));
-          if (now > bestV) {
+          double now = FAbs(At(i, y));
+          if (now > best_v) {
             best_id = i;
-            bestV = now;
+            best_v = now;
           }
         }
-        if (DbSgn(bestV) == 0) {
+        if (DbSgn(best_v) == 0) {
           ++y;
           continue;
         }
@@ -353,7 +353,7 @@ SL int64 CountPtInCircleQ1(int64 n) {
         int64 curr_v = sq(x + vx + 2 * cx) + sq(y - vy - 2 * cy);
         // auto f0 = Abs((y-vy)*cx + (x+vx)*cy) > (m + 1) *
         // sqrt((sq(cx)+sq(cy)));
-        auto f1 = cx * (x + vx + cx) >= cy * (y - vy - cy);
+        const bool f1 = cx * (x + vx + cx) >= cy * (y - vy - cy);
         // auto f2 = x + vx + 2 * cx > m || y - vy - 2*cy < 0 || last_v != -1 &&
         // curr_v > last_v;
         if (f1) {
@@ -532,7 +532,7 @@ struct Partition {
   void GenParts() {
     std::map<int, int> mem, mem1;
     parts.resize(0);
-    for (auto& iter : colors) ++mem[iter];
+    for (int& iter : colors) ++mem[iter];
     for (auto& iter : mem) ++mem1[iter.second], parts.push_back(iter.second);
     std::sort(parts.begin(), parts.end());
 
@@ -581,7 +581,7 @@ struct PartitionMobius {
     int64 ret = IsOdd(std::size(partition.colors) + std::size(partition.parts))
                     ? mod_ - 1
                     : 1;
-    for (auto& iter : partition.parts) {
+    for (int iter : partition.parts) {
       ret = MulMod(ret, fac_[iter - 1], mod_);
     }
     return ret;
@@ -719,7 +719,7 @@ struct MultiSet {
     }
 
     Iterator& operator--() {
-      auto& data = *data_;
+      std::vector<Node>& data = *data_;
       if (data[idx_].ch[0]) {
         idx_ = data[idx_].ch[0];
         while (data[idx_].ch[1]) idx_ = data[idx_].ch[1];
@@ -750,14 +750,14 @@ struct MultiSet {
   }
 
   Iterator begin() {
-    auto t = end();
+    Iterator t = end();
     return ++t;
   }
 
   Iterator end() { return Iterator(0, data_); }
 
   Iterator rbegin() {
-    auto t = end();
+    Iterator t = end();
     return --t;
   }
 
@@ -831,7 +831,7 @@ struct MultiSet {
       Update(p);
       return;
     }
-    auto x = iter;
+    Iterator x = iter;
     --x;
     Splay(x.idx_, 0);
     int64 t = iter->ch[1];
@@ -848,11 +848,11 @@ struct MultiSet {
       erase(where);
     }
 #endif
-    auto last = FindLast(value);
+    Iterator last = FindLast(value);
     if (last == end()) {
       return;
     }
-    auto first = FindFirst(value);
+    Iterator first = FindFirst(value);
     if (first == last) {
       erase(first);
       return;
@@ -954,7 +954,7 @@ struct MultiSet {
   }
 
   int64 FindCount(T value) {
-    auto it = FindFirst(value);
+    Iterator it = FindFirst(value);
     if (it == end()) {
       return 0;
     }
@@ -1415,7 +1415,7 @@ SL void BuildSuffixArray(const std::string& T, int* SA, int* rank, int* lcp) {
   const int n = static_cast<int>(std::size(T));
   int char_set[256] = {0};
   int k = 0;
-  for (auto c : T) {
+  for (char c : T) {
     if (char_set[c] == 0) {
       ++k;
     }
@@ -1752,8 +1752,8 @@ using IntegerRange128 = IntegerRange<int128>;
 template <typename T>
 SL T CountIntegersInRanges(const std::vector<IntegerRange<T>>& ranges) {
   T ret = 0;
-  for (auto& iter : ranges) {
-    const auto t = iter.Count();
+  for (IntegerRange<T>& iter : ranges) {
+    const T t = iter.Count();
     if (t < 0) {
       return -1;
     }
@@ -2226,7 +2226,7 @@ class MatrixScanner {
     }
     tasks_ = std::move(curr_tasks);
     std::vector<MatrixTask*> ret;
-    for (auto& task : tasks_) {
+    for (MatrixTask& task : tasks_) {
       task.current_row.resize(std::size(task.previous_row));
       task.current_column.resize(std::size(task.previous_column));
       ret.push_back(&task);

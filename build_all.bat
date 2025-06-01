@@ -1,1 +1,1 @@
-bazel build //test:all //example:all //:all
+bazel clean && bazel build //test:all //example:all //:all

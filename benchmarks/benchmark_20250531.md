@@ -21,6 +21,7 @@
   * gmp bn
 * Multi-threading is enable for flint.
   * Note: the multi-threading is enabled when building flint, so it will teake effect even if openmp is disabled.
+* Use -O2 option instead of -O3
 
 ## Test result
 

@@ -19,7 +19,7 @@
   * flint pn
   * ntt32 e
   * gmp bn
-* Multi-threading is enable for flint.
+* Multi-threading is enabled for flint.
   * Note: the multi-threading is enabled when building flint, so it will teake effect even if openmp is disabled.
 * Use -O2 option instead of -O3
 

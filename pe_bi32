@@ -859,27 +859,23 @@ class BigInteger {
       self.SetNativeUInt64AndKeepSign(a / b);
       return;
     }
-#if !PE_HAS_INT128
-    if (sizeof(T) > 4) {
-      BigInteger tmp_remain;
-      self = AbsDivide(self, BigInteger(other), tmp_remain);
-      remain = tmp_remain.ToInt<T>();
-      return;
-    }
-#else
     if (other <= max_32bit_value) {
+      const uint64 b = static_cast<uint64>(other);
       uint64 add = 0;
       for (int i = self.pos_; i > 0; --i) {
         const uint64 x = add + self.data_[i];
-        const uint64 next_add = (x % other) << 32;
-        self.data_[i] = x / other;
+        const uint64 next_add = (x % b) << 32;
+        self.data_[i] = x / b;
         add = next_add;
       }
       const uint64 x = add + self.data_[0];
-      self.data_[0] = x / other;
-      remain = x % other;
+      self.data_[0] = x / b;
+      remain = x % b;
       self.FixLeadingZeros();
-    } else {
+      return;
+    }
+#if PE_HAS_INT128
+    {
       uint64 add = 0;
       for (int i = self.pos_; i > 0; --i) {
         const uint128 x = (static_cast<uint128>(add) << 32) + self.data_[i];
@@ -891,6 +887,12 @@ class BigInteger {
       self.data_[0] = x / other;
       remain = x % other;
       self.FixLeadingZeros();
+    }
+#else
+    {
+      BigInteger tmp_remain;
+      self = AbsDivide(self, BigInteger(other), tmp_remain);
+      remain = tmp_remain.ToInt<T>();
     }
 #endif
   }

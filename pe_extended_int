@@ -85,14 +85,16 @@ SL REQUIRES((is_extended_integer_v<T> && pe_is_unsigned_v<T>)) RETURN(T)
 
 template <typename T>
 SL REQUIRES((is_extended_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
-    Abs(const T& x) {
-  return IntSign(x) >= 0 ? x : -x;
+    Abs(T x) {
+  x.MakeAbs();
+  return x;
 }
 
 template <typename T>
 SL REQUIRES((is_extended_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
-    FAbs(const T& x) {
-  return IntSign(x) >= 0 ? x : -x;
+    FAbs(T x) {
+  x.MakeAbs();
+  return x;
 }
 
 template <typename T, typename TN>
@@ -155,7 +157,12 @@ SL REQUIRES((is_extended_integer_v<T>)) RETURN(T)
 template <typename T, typename TM>
 SL constexpr REQUIRES((is_extended_integer_v<T>)) RETURN(int_promotion_t<T, TM>)
     Mod(T a, TM mod) {
-  return a % mod;
+  if (IntSign(a) >= 0) {
+    return a >= mod ? a % mod : a;
+  } else {
+    T tmp = a % mod;
+    return IntSign(tmp) < 0 ? tmp + mod : tmp;
+  }
 }
 
 template <typename T, typename TM>

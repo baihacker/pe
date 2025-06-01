@@ -110,24 +110,29 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 
 # Build and use pe's dependent libraries
  * Current version
-   * [gmp 6.2.1](https://gmplib.org/)
-   * [mpfr 4.1.0](https://www.mpfr.org/mpfr-current/#download)
+   * [gmp 6.3.0](https://gmplib.org/)
+   * [mpfr 4.2.2](https://www.mpfr.org/mpfr-current/#download)
    * [mpir 3.0.0](http://mpir.org/downloads.html) (not used now)
-   * [flint2 2.9.0](https://github.com/wbhart/flint2)
+   * [flint2 3.1.3](https://github.com/wbhart/flint2)
    * [libbf 2020-01-19](https://bellard.org/libbf/)
    * [ntl Windows: WinNTL-11_5_1.zip](https://www.shoup.net/ntl/download.html)
- * The compiled binaries (flint, gmp, mpfr, mpir, libbf, libntl) on windows (x64) can be found [here](https://pan.baidu.com/s/1OI-vk3JJevYphIsFoNg_vA) (pwd:x7cg).
- * Library order in compiling command: "-lbf -lgmpxx -lflint -lmpfr -lntl -lgmp"
+   * [prime count 7.15](https://github.com/kimwalisch/primecount)
+   * [gperf tools 2.16](https://github.com/gperftools/gperftools)
+ * Library order in compiling command: "-lbf -lflint -lmpfr -lntl -lgmp -lprimesieve -lprimecount -lzmq -lquadmath"
  * Use this script to build these libraries
    * Install msys2
    * Install building tools
-     * pacman -S mingw-w64-x86_64-toolchain
+     * pacman -Syuu
+     * pacman -S --needed mingw-w64-x86_64-toolchain
      * pacman -S msys/m4
      * pacman -S mingw64/mingw-w64-x86_64-yasm
      * pacman -S unzip
      * pacman -S xz
      * pacman -S tar
-     * pacman -S zip 
+     * pacman -S zip
+     * pacman -S patch
+     * pacman -S mingw-w64-x86_64-diffutils
+     * pacman -S mingw-w64-x86_64-cmake
    * Download the library package and put them under "\<msys2 installation dir\>/home/\<your username\>". Please not the library version matters.
    * Put **build_pe_deps.sh**, **makefile_libbf** and **makefile_ntl** under "\<msys2 installation dir\>/home/\<your username\>".
    * Edit **build_pe_deps.sh** manually if you just want to build some of them.
@@ -139,70 +144,107 @@ cl test\pe_test.c /TP /GS /GL /W3 /Gy /Zc:wchar_t /Zi /Gm- /O2 /Zc:inline /fp:pr
 
 BUILD_ROOT=$(pwd)
 
-GMP_DIR="gmp-6.2.1"
-MPFR_DIR="mpfr-4.1.0"
+GMP_DIR="gmp-6.3.0"
+MPFR_DIR="mpfr-4.2.2"
 MPIR_DIR="mpir-3.0.0"
 LIBBF_DIR="libbf-2020-01-19"
 WIN_NTL_DIR="WinNTL-11_5_1"
-FLINT_DIR="flint-2.8.4"
+FLINT_DIR="flint-3.1.3"
+GPERFTOOLS_DIR="gperftools-2.16"
+PRIME_COUNT_DIR="primecount-7.15"
 
 BUILD_DIR="build"
 TARGET_DIR="$(pwd)/${BUILD_DIR}"
-SHARED_FLAGS="-mtune=skylake -march=k8-sse3 -D__USE_MINGW_ANSI_STDIO=0"
+#sandybridge
+#skylake
+TARGET_ARCH=skylake
+TUNE_ARCH=raptorlake
+ENABLE_LTO=false
 
-function build_gmp(){
+ARCH_FLAGS="-march=${TARGET_ARCH} -mtune=${TUNE_ARCH}"
+OPT_FLAGS="-O3"
+SHARED_FLAGS="${OPT_FLAGS} ${ARCH_FLAGS} -D__USE_MINGW_ANSI_STDIO=0"
+
+if [ "${TARGET_ARCH}" == "sandybridge" ]; then
+AVX2_CONFIG=""
+else
+AVX2_CONFIG="--enable-avx2"
+fi
+
+if [ "${ENABLE_LTO}" == "true" ]; then
+LTO_SUFFIX="_lto"
+SHARED_FLAGS="${SHARED_FLAGS} -flto"
+else
+LTO_SUFFIX=""
+fi
+
+ARCH_SUFFIX="_${TARGET_ARCH}"
+
+echo "Build pe_dependencies_win64${ARCH_SUFFIX}${LTO_SUFFIX}_$(date '+%Y%m%d').zip"
+
+function build_gperftools() {
+  echo "build gperftools"
+  cd "${GPERFTOOLS_DIR}"
+  ./configure --prefix=${TARGET_DIR} --disable-shared --enable-static CXXFLAGS="-DPERFTOOLS_DLL_DECL="
+  make -j8
+  make install
+  cd ..
+}
+
+function build_gmp() {
   echo "build gmp"
   cd "${GMP_DIR}"
-  sed -i 's/ln -s "$ac_rel_source" "$ac_file" 2>\/dev\/null ||//g' configure
-  sed -i 's/ln "$ac_source" "$ac_file" 2>\/dev\/null ||//g' configure
-  ./configure --disable-shared --enable-static --prefix=${TARGET_DIR} --enable-cxx --host=x86_64-w64-mingw32 CFLAGS="-O3 -m64 ${SHARED_FLAGS}" CXXFLAGS="-O3 -m64 ${SHARED_FLAGS}"
+  ./configure --disable-shared --enable-static --prefix=${TARGET_DIR} --disable-cxx --enable-fat --enable-alloca=yes --host=x86_64-w64-mingw32 CFLAGS="-std=c99 -m64 ${SHARED_FLAGS}" CXXFLAGS="--std=c++20 -m64 ${SHARED_FLAGS}"
   make -j8
   make install
   cd ..
 }
 
-function build_mpfr(){
+function build_mpfr() {
   echo "build mpfr"
   cd "${MPFR_DIR}"
-  ./configure --with-gmp=/usr --enable-static --disable-shared --prefix=${TARGET_DIR} CFLAGS="-O3 -m64 ${SHARED_FLAGS}"
-  sed -i 's/DLT_OBJDIR=\\"\.libs\/\\"/DLT_OBJDIR=\.libs/g' makefile
-  sed -i 's/DMPFR_PRINTF_MAXLM=\\"j\\"/DLT_OBJDIR=\DMPFR_PRINTF_MAXLM=j/g' makefile
-  sed -i 's/DLT_OBJDIR=\\"\.libs\/\\"/DLT_OBJDIR=\.libs/g' src/makefile
-  sed -i 's/DMPFR_PRINTF_MAXLM=\\"j\\"/DLT_OBJDIR=\DMPFR_PRINTF_MAXLM=j/g' src/makefile
+  ./configure --with-gmp=${TARGET_DIR} --enable-static --disable-shared --prefix=${TARGET_DIR} CFLAGS="-std=c99 -m64 ${SHARED_FLAGS}"
   make -j8
   make install
   cd ..
 }
 
-function build_mpir(){
+function build_mpir() {
   echo "build mpir"
   cd "${MPIR_DIR}"
   sed -i 's/ln -s "$ac_rel_source" "$ac_file" 2>\/dev\/null ||//g' configure
   sed -i 's/ln "$ac_source" "$ac_file" 2>\/dev\/null ||//g' configure
-  ./configure --disable-shared --enable-static --prefix=${TARGET_DIR} CFLAGS="-m64 -O3 ${SHARED_FLAGS}" CXXFLAGS="-m64 -O3 ${SHARED_FLAGS}"
+  ./configure --disable-shared --enable-static --prefix=${TARGET_DIR} CFLAGS="-m64 ${SHARED_FLAGS} -Wno-error=implicit-int -Wno-error=implicit-function-declaration" CXXFLAGS="--std=c++20 -m64 ${SHARED_FLAGS}"
   make -j8
   make install
   cd ..
 }
 
-function build_libbf(){
+function build_libbf() {
   echo "build libbf"
   cp makefile_libbf "${LIBBF_DIR}/makefile"
   cd "${LIBBF_DIR}"
+  sed -i "s/__OPT_FLAGS__/${OPT_FLAGS}/g" makefile
+  sed -i "s/__ARCH_FLAGS__/${ARCH_FLAGS}/g" makefile
   make -j8
   cp libbf.h "${TARGET_DIR}/include/libbf.h"
-  cp libbf.avx2.a "${TARGET_DIR}/lib/libbf.avx2.a"
-  cp libbf.generic.a "${TARGET_DIR}/lib/libbf.generic.a"
+  cp libbf.a "${TARGET_DIR}/lib/libbf.a"
+  #cp libbf.generic.a "${TARGET_DIR}/lib/libbf.generic.a"
   cd ..
 }
 
-function build_ntl(){
+function build_ntl() {
   echo "build win ntl"
   cp makefile_ntl "${WIN_NTL_DIR}/src/makefile"
   cd "${WIN_NTL_DIR}"
   cd "include/NTL"
   sed -i 's/\/\* sanity checks \*\//\/\* sanity checks \*\/\n#define NTL_STD_CXX14\n#undef NTL_DISABLE_MOVE_ASSIGN/g' config.h
+  sed -i 's/#include <streambuf>/#include <streambuf>\n#include <sstream>/g' tools.h
+  sed -i 's/plain_c_string_streambuf buf(y);//g' tools.h
+  sed -i 's/std::istream istr(&buf)/std::istringstream istr(y)/g' tools.h
   cd "../../src"
+  sed -i "s/__OPT_FLAGS__/${OPT_FLAGS}/g" makefile
+  sed -i "s/__ARCH_FLAGS__/${ARCH_FLAGS}/g" makefile
   make -j8
   cp libntl.a "${TARGET_DIR}/lib/libntl.a"
   cd ..
@@ -210,39 +252,73 @@ function build_ntl(){
   cd ..
 }
 
-function build_flint(){
+function build_flint() {
   echo "build flint"
   cd "${FLINT_DIR}"
-  ./configure --disable-shared --enable-static --prefix=${TARGET_DIR} --with-gmp=${TARGET_DIR} --with-mpfr=${TARGET_DIR} --disable-pthread CFLAGS="-ansi -Wno-long-long -Wno-declaration-after-statement -O3 -funroll-loops -mpopcnt ${SHARED_FLAGS}" CXXFLAGS="-ansi -Wno-long-long -Wno-declaration-after-statement -O3 -funroll-loops -mpopcnt ${SHARED_FLAGS}"
-  cp  -f ./Makefile.subdirs ./MS
-  sed -i '1i\BUILD_DIR = ../build/${MOD}' MS
-  sed -i '1i\MOD_DIR = ${MOD}' MS
-  sed -i '/^WANT_DEPS=.*/aexport WANTDEPS=$(WANT_DEPS)' makefile
-  sed -i '/^libflint.a:.*/a\\t$(AT)$(foreach dir, $(BUILD_DIRS), mkdir -p build/$(dir))' makefile
-  sed -i 's/mkdir -p build\/$(dir); WANTDEPS=$(WANT_DEPS); export WANTDEPS; BUILD_DIR=..\/build\/$(dir); export BUILD_DIR; MOD_DIR=$(dir); export MOD_DIR; $(MAKE) -f ..\/Makefile.subdirs/export MOD=$(dir); $(MAKE) -f ..\/MS/g' makefile
-  mkdir -p fmpz_mod_mpoly/test
-  echo "int main(){return 0;}" > fmpz_mod_mpoly/test/t-1.c
-  make -j8
+  ./configure --disable-shared --enable-static --prefix=${TARGET_DIR} --with-gmp=${TARGET_DIR} --with-mpfr=${TARGET_DIR} --enable-pthread ${AVX2_CONFIG} CFLAGS="-std=c99 -Wno-long-long -Wno-declaration-after-statement -mpopcnt ${SHARED_FLAGS}" CXXFLAGS="--std=c++20 -Wno-long-long -Wno-declaration-after-statement -funroll-loops -mpopcnt ${SHARED_FLAGS}"
+  sed -i 's/@$(LD) -r $($(1)_OBJS) -o $(BUILD_DIR)\/$(1)_merged.o/@$(LD) -r $($(1)_OBJS) -o $(BUILD_DIR)\/$(1)_merged.o\n\tmkdir -p $(FLINT_DIR)\/tmp\/$(1)\n\tcp $($(1)_OBJS) $(FLINT_DIR)\/tmp\/$(1) -f/g' makefile
+  make -j12
   make install
+  rm libflint.a
+
+export src_dir="tmp"
+export dst_dir="tmp"
+
+mkdir -p "$dst_dir"
+
+#find "$src_dir" -name "*.o" | while read file; do
+#    dir_name=$(basename "$(dirname "$file")")
+#    file_name=$(basename "$file")
+#
+#    new_name="${dir_name}_${file_name}"
+#
+#    mv "$file" "$dst_dir/$new_name"
+#done
+
+#find "${src_dir}" -name "*.o" -print0 | parallel -0 '
+#  dir_name=$(basename "$(dirname {})")
+#  file_name=$(basename {})
+#  mv "{}" "'"${dst_dir}"'"/${dir_name}_${file_name}
+#'
+
+python3 ../move_files.py "${src_dir}" "${dst_dir}"
+
+  find tmp -name "*.o" > obj_files.txt
+  ar rcs libflint.a @obj_files.txt
+  strip --strip-debug libflint.a
+  cp -f ./libflint.a ${TARGET_DIR}/lib/libflint.a
   cd ..
 }
 
-function build_all(){
+function build_prime_count() {
+  echo "build prime count"
+  cd "${PRIME_COUNT_DIR}"
+  cmake -G "Unix Makefiles" . -DCMAKE_INSTALL_PREFIX:PATH=${TARGET_DIR} -DBUILD_PRIMECOUNT=OFF
+  make -j1
+  make install
+  rm -rf ${TARGET_DIR}/lib/cmake
+  cd ..
+}
+
+function build_all() {
+  build_gperftools
   build_gmp
   build_mpfr
-  build_mpir
   build_libbf
   build_ntl
   build_flint
+  build_prime_count
 }
 
 function clean() {
+  rm -r -f "${GPERFTOOLS_DIR}"
   rm -r -f "${GMP_DIR}"
   rm -r -f "${MPFR_DIR}"
-  rm -r -f "${MPIR_DIR}"
+  #rm -r -f "${MPIR_DIR}"
   rm -r -f "${LIBBF_DIR}"
   rm -r -f "${WIN_NTL_DIR}"
   rm -r -f "${FLINT_DIR}"
+  rm -r -f "${PRIME_COUNT_DIR}"
   rm -r -f "./${BUILD_DIR}"
 }
 
@@ -250,12 +326,14 @@ function extract_file() {
   #xz -d -k "${GMP_DIR}.tar.xz"
   #tar xf "${GMP_DIR}.tar"
   #rm "${GMP_DIR}.tar"
+  unzip -o -q "${GPERFTOOLS_DIR}.zip"
   tar xf "${GMP_DIR}.tar.xz"
   unzip -o -q "${MPFR_DIR}.zip"
-  unzip -o -q "${MPIR_DIR}.zip"
+  #unzip -o -q "${MPIR_DIR}.zip"
   unzip -o -q "${WIN_NTL_DIR}.zip"
   tar xf "${LIBBF_DIR}.tar.gz"
   unzip -o -q "${FLINT_DIR}.zip"
+  unzip -o -q "${PRIME_COUNT_DIR}.zip"
 }
 
 function build_main() {
@@ -268,20 +346,63 @@ function build_main() {
   cp -f ./makefile_ntl "${TARGET_DIR}/makefile_ntl"
   cp -f ./makefile_libbf "${TARGET_DIR}/makefile_libbf"
   cp -f ./build_pe_deps.sh "${TARGET_DIR}/build_pe_deps.sh"
+  cp -f ./move_files.py "${TARGET_DIR}/move_files.py"
   rm -r -f "${TARGET_DIR}/share"
   rm -r -f "${TARGET_DIR}/lib/pkgconfig"
 }
 
 function package_file() {
-  RELEASE_FILENAME="pe_dependencies_win64_$(date '+%Y%m%d').zip"
+  RELEASE_FILENAME="pe_dependencies_win64${ARCH_SUFFIX}${LTO_SUFFIX}_$(date '+%Y%m%d').zip"
   cd ${BUILD_DIR}
   zip -r -q "${RELEASE_FILENAME}" .
   cd ..
   mv -f "./${BUILD_DIR}/${RELEASE_FILENAME}" ./
 }
 
+function combine_objects() {
+  libname=$1
+  mkdir $libname
+  cd $libname
+  ar -x "../lib${libname}.a"
+  mkdir -p "../combined"
+  echo ld -x -X -r -o "../combined/lib${libname}_combined.o" "$2"
+  ld -x -X -r -o "../combined/lib${libname}_combined.o" "$2"
+  cd ..
+  rm -rf $libname
+}
+
+function package_single_file() {
+  RELEASE_FILENAME="pe_dependencies_win64${ARCH_SUFFIX}${LTO_SUFFIX}_single_$(date '+%Y%m%d').zip"
+  rm -rf ${BUILD_DIR}_single
+  cp -r ${BUILD_DIR} ${BUILD_DIR}_single
+  cd ${BUILD_DIR}_single
+  cd lib
+  combine_objects bf.generic "*.o"
+  combine_objects flint "*.o"
+  combine_objects gmp "*.o"
+  combine_objects mpfr "*.o"
+  combine_objects ntl "*.o"
+  combine_objects primecount "*.obj"
+  combine_objects primesieve "*.obj"
+  cd combined
+  ld -r -o ../pedeps.o *.o
+  cd ..
+  rm -rf *.a
+  rm -rf *.la
+  ar rcs libpedeps.a pedeps.o
+  rm -rf combined
+  rm pedeps.o
+  cd ..
+  cd ..
+  cd ${BUILD_DIR}_single
+  zip -r -q "${RELEASE_FILENAME}" .
+  cd ..
+  mv -f "./${BUILD_DIR}_single/${RELEASE_FILENAME}" ./
+}
+
 build_main
 package_file
+#package_single_file
 
 cd ${BUILD_ROOT}
 ```
@@ -290,28 +411,30 @@ cd ${BUILD_ROOT}
 ```cpp
 CC=$(CROSS_PREFIX)gcc
 CFLAGS=-Wall
-CFLAGS+=-O3
+CFLAGS+=__OPT_FLAGS__
 CFLAGS+=-D__MSVCRT_VERSION__=0x1400
+CFLAGS+=-std=c99
 CFLAGS+=-Wno-format-extra-args
 CFLAGS+=-Wno-format
-CFLAGS+=-march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0
+CFLAGS+=__ARCH_FLAGS__
+CLFAGS+=-D__USE_MINGW_ANSI_STDIO=0
 LDFLAGS=
 
-PROGS+=libbf.generic.a libbf.avx2.a
+PROGS+=libbf.a
 
 all: $(PROGS)
 
-libbf.generic.a : libbf.o  cutils.o
-	gcc-ar crv libbf.generic.a cutils.o libbf.o
+libbf.a : libbf.o  cutils.o
+	gcc-ar crv libbf.a cutils.o libbf.o
 
-libbf.avx2.a : libbf.avx2.o  cutils.avx2.o
-	gcc-ar crv libbf.avx2.a cutils.avx2.o libbf.avx2.o
+#libbf.avx2.a : libbf.avx2.o  cutils.avx2.o
+#	gcc-ar crv libbf.avx2.a cutils.avx2.o libbf.avx2.o
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-%.avx2.o: %.c
-	$(CC) $(CFLAGS) -mavx -mavx2 -mfma -mbmi2 -c -o $@ $<
+#%.avx2.o: %.c
+#	$(CC) $(CFLAGS) -mavx -mavx2 -mfma -mbmi2 -c -o $@ $<
 
 clean:
 	rm -f $(PROGS) *.o *.d *.a *.exe *~
@@ -323,15 +446,16 @@ clean:
 ```cpp
 CC=$(CROSS_PREFIX)gcc
 CFLAGS=-Wall
-CFLAGS+=-O3
+CFLAGS+=__OPT_FLAGS__
 CFLAGS+=-D__MSVCRT_VERSION__=0x1400
 CFLAGS+=-I../include
-CFLAGS+=--std=c++17
+CFLAGS+=--std=c++20
 CFLAGS+=-Wno-maybe-uninitialized
 CFLAGS+=-Wno-unused-variable
 CFLAGS+=-Wno-unused-function
 CFLAGS+=-Wno-unused-but-set-variable
-CFLAGS+=-march=k8-sse3 -mtune=skylake -D__USE_MINGW_ANSI_STDIO=0
+CFLAGS+=__ARCH_FLAGS__
+CFLAGS+=-D__USE_MINGW_ANSI_STDIO=0
 LDFLAGS=
 
 SOURCE = $(wildcard *.cpp)

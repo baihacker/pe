@@ -33,8 +33,12 @@ To use this library, you need a C++ development environment that supports:
        - `ENABLE_MPFR`: Use [MPFR](https://www.mpfr.org).
        - `ENABLE_LIBBF`: Use [libbf](https://bellard.org/libbf).
        - `ENABLE_NTL`: Use [NTL](https://www.shoup.net/ntl/download.html).
+       - `ENABLE_ZMQ`: Use [ZeroMQ](https://zeromq.org/).
+       - `ENABLE_PRIME_COUNT`: Use [PrimeCount](https://github.com/kimwalisch/primecount).
+       - `ENABLE_PRIME_SIEVE`: Use [PrimeSieve](https://github.com/kimwalisch/primesieve).
+       - `ENABLE_TCMALLOC`: Use [tcmalloc](https://github.com/gperftools/gperftools).
    - Manually edit **[pe_config](https://github.com/baihacker/pe/blob/master/pe_config)** to add or modify configuration items as needed:
-     - `ENABLE_OPENMP`: Enable [OpenMP](http://www.openmp.org). This flag is not set by the script and must be defined manually if needed. If enabled but not supported, a warning will be displayed.
+     - `ENABLE_OPENMP`: Enable [OpenMP](http://www.openmp.org). The script doesn't generate the default config for OpenMP.
 
 3. **(Optional) Generate Precompiled Header:**
    - Run `g++ -xc++-header pe.hpp` in the installation directory to create a precompiled header (`pe.hpp.gch`).
@@ -55,6 +59,7 @@ For a quick start, refer to [example.c](https://github.com/baihacker/pe/blob/mas
 - **pe_bit**: Bit manipulation utilities.
 - **pe_config**: Centralized configuration file for PE.
 - **pe_db**: Load and save pre-calculated results, such as prime pi and prime sum.
+- **pe_dpe**: Distributed computation.
 - **pe_extended_int**: Extended integer types.
 - **pe_extended_signed_int**: Extended signed integer types.
 - **pe_extended_unsigned_int**: Extended unsigned integer types.
@@ -65,6 +70,7 @@ For a quick start, refer to [example.c](https://github.com/baihacker/pe/blob/mas
 - **pe_geometry**: Support for `Point2D` and `Point3D`.
 - **pe_initializer**: Helper classes and macros for library initialization.
 - **pe_int**: Basic integer utilities.
+- **pe_int_algo**: Integer algorithm for extended integer and general big integer.
 - **pe_internal**: Includes configuration, defines necessary types/macros, and third-party libraries.
 - **pe_io**: Methods and macros for simplified or accelerated I/O operations.
 - **pe_mat**: Matrix operations.
@@ -72,22 +78,26 @@ For a quick start, refer to [example.c](https://github.com/baihacker/pe/blob/mas
 - **pe_misc**: Miscellaneous utility functions.
 - **pe_mma**: Support for MMA: helper methods or classes for MMA code generation.
 - **pe_mod**: Modular arithmetic utilities.
+- **pe_mpf**: Multi-precision floating number based on gmp.
+- **pe_mpz**: Multi-precision integer based on gmp.
 - **pe_nt**: Core number theory utilities.
 - **pe_nt_base**: Prime list generation, integer factorization, prime testing, and computations of φ and μ.
 - **pe_parallel**: Simple framework for multi-threaded problem-solving (Windows only).
 - **pe_parallel_algo**: Parallel algorithms.
 - **pe_persistance**: Key-Value Persistence (may support Linux with adjustments).
-- **pe_poly**: Polynomial wrapper for C++.
 - **pe_poly_algo**: Polynomial algorithms.
 - **pe_poly_base**: Basic polynomial algorithms.
 - **pe_poly_base_flint**: Polynomial algorithms based on FLINT.
+- **pe_poly_base_gmp**: Polynomial algorithms based on gmp.
 - **pe_poly_base_libbf**: Polynomial algorithms based on libbf.
 - **pe_poly_base_min25**: Polynomial algorithms from [Min_25](https://github.com/min-25), including the fastest polynomial multiplication.
 - **pe_poly_base_ntl**: Polynomial algorithms based on NTL.
 - **pe_rand**: Random number generation utilities.
 - **pe_range**: Range implementation.
+- **pe_serialization**: Objects serialization.
 - **pe_span**: Implementation of `Span`.
 - **pe_sym_poly**: Symbolic polynomial operations.
 - **pe_time**: Utilities for `TimeDelta` and `TimeRecorder`.
 - **pe_tree**: Tree-based data structures.
 - **pe_type_traits**: Type trait utilities.
+- **pe_vector**: Vector operations.

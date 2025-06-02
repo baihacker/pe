@@ -1002,24 +1002,24 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
   using ImplFunctionPointerType =
       typename pe::PolyMulType<T>::CStyleFunctionPointer;
   using Item = std::pair<ImplFunctionPointerType, PolyMulCoeType>;
-#if 1
-  // ntt64 friendly
+#if ENABLE_OPENMP
   constexpr std::array<std::pair<ImplFunctionPointerType, PolyMulCoeType>, 4>
-      impls = {
-          Item{&ntt32::internal::PolyMulSmallImpl<T>, ntt32::kPolyMulSmallMod},
-          Item{&ntt64::internal::PolyMulSmallImpl<T>, ntt64::kPolyMulSmallMod},
-          Item{&ntt32::internal::PolyMulMediumImpl<T>,
-               ntt32::kPolyMulMediumMod},
-          Item{&ntt64::internal::PolyMulLargeImpl<T>, ntt64::kPolyMulLargeMod},
-      };
-#else
-  // ntt32 friendly
-  constexpr std::array<std::pair<ImplFunctionPointerType, PolyMulCoeType>, 3>
       impls = {
           Item{&ntt32::internal::PolyMulSmallImpl<T>, ntt32::kPolyMulSmallMod},
           Item{&ntt32::internal::PolyMulMediumImpl<T>,
                ntt32::kPolyMulMediumMod},
           Item{&ntt32::internal::PolyMulLargeImpl<T>, ntt32::kPolyMulLargeMod},
+          Item{&ntt64::internal::PolyMulSmallImpl<T>, ntt64::kPolyMulSmallMod},
+      };
+#else
+  constexpr std::array<std::pair<ImplFunctionPointerType, PolyMulCoeType>, 3>
+      impls = {
+          Item{&ntt32::internal::PolyMulSmallImpl<T>, ntt32::kPolyMulSmallMod},
+          Item{&ntt64::internal::PolyMulSmallImpl<T>, ntt64::kPolyMulSmallMod},
+          Item{&ntt32::internal::PolyMulMediumImpl<T>,
+               ntt32::kPolyMulMediumMod},
+          Item{&ntt32::internal::PolyMulLargeImpl<T>, ntt32::kPolyMulLargeMod},
+          Item{&ntt64::internal::PolyMulLargeImpl<T>, ntt64::kPolyMulLargeMod},
       };
 #endif
   if (mod > 0) {

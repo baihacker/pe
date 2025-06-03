@@ -5,8 +5,10 @@ const int64 mod = 1000000007;
 using MT = NMod64<mod>;
 
 using SumfunctionType = int64 (*)(int64 n, int64 mod);
-SumfunctionType sum_function[8] = {nullptr,   &P1SumMod, &P2SumMod, &P3SumMod,
-                                   &P4SumMod, &P5SumMod, &P6SumMod, &P7SumMod};
+SumfunctionType sum_function[8] = {
+    nullptr,   &P1SumMod, &P2SumMod, &P3SumMod,
+    &P4SumMod, &P5SumMod, &P6SumMod, &P7SumMod,
+};
 
 int main() {
   PE_INIT(maxp = 2000000);

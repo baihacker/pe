@@ -33,12 +33,13 @@ int brute_force(const std::vector<int64>& vec) {
 int main() {
   CarlitzWordsCounter counter(1000000007, 1000000);
 
-  std::vector<std::vector<int64>> test_data{
+  std::vector<std::vector<int64>> test_data = {
       {1},    {2},          {1, 1},    {1, 3},       {2, 2},    {3, 7},
       {2, 3}, {2, 2, 2},    {2, 3, 3}, {3, 3, 2, 2}, {3, 3, 3}, {2, 2, 2, 2, 2},
-      {4, 4}, {4, 4, 2, 2}, {5, 5, 5}};
+      {4, 4}, {4, 4, 2, 2}, {5, 5, 5},
+  };
 
-  for (auto& iter : test_data) {
+  for (const std::vector<int64>& iter : test_data) {
     std::cout << brute_force(iter) << " " << counter.Cal(iter) << std::endl;
   }
   return 0;

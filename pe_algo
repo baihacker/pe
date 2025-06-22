@@ -74,7 +74,7 @@ struct FactModer {
 
     const int half_d = d >> 1;
     Evaluate(half_d, result, v);
-    std::copy(result, result + half_d + 1, &g0_[0]);
+    std::copy(result, result + half_d + 1, std::data(g0_));
 #if ENABLE_OPENMP
 #pragma omp parallel sections if (d >= 10000)
 #endif
@@ -263,7 +263,7 @@ struct FactSumModer {
     q_ += 1;
     factorial_.resize(q_);
     factorial_sum_.resize(q_);
-    InitSeqProd2<uint64>(&factorial_[0], nullptr, q_ - 1, p_);
+    InitSeqProd2<uint64>(std::data(factorial_), nullptr, q_ - 1, p_);
     factorial_sum_[0] = factorial_[0];
     for (int i = 1; i < q_; ++i) {
       factorial_sum_[i] = AddMod(factorial_sum_[i - 1], factorial_[i], p_);
@@ -400,7 +400,7 @@ struct CombModer {
     f_ = std::min(f, p_ - 1);
     fac_.resize(f_ + 1);
     ifac_.resize(f_ + 1);
-    InitSeqProd2<int64>(&fac_[0], &ifac_[0], 1, f_, p_);
+    InitSeqProd2<int64>(std::data(fac_), std::data(ifac_), 1, f_, p_);
   }
 
   int64 Sign(int64 x) const { return x & 1 ? p_ - 1 : 1; }
@@ -725,7 +725,7 @@ struct PowerSumModer {
 
     invs_ = std::vector<int64>(maxk_ + 2);
 
-    InitInverse(&invs_[0], maxk_ + 1, mod_);
+    InitInverse(std::data(invs_), maxk_ + 1, mod_);
     for (int i = 0; i <= maxk_; ++i) {
       for (int j = 0; j <= maxk_; ++j) {
         p_[i][j] = 0;
@@ -1851,7 +1851,7 @@ struct CarlitzWordsCounter {
     maxf_ = maxf;
     fac_.resize(maxf_ + 1);
     ifac_.resize(maxf_ + 1);
-    InitSeqProd2<int64>(&fac_[0], &ifac_[0], 1, maxf_, mod_);
+    InitSeqProd2<int64>(std::data(fac_), std::data(ifac_), 1, maxf_, mod_);
   }
 
   int64 Comb(int64 a, int64 b) {

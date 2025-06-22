@@ -2905,8 +2905,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   return result;
 }
 
-// PolyBatchMulAcc is used by FactSumModer
-
+namespace internal {
 // n = e - s
 // Y = X[2s:2e]
 // s(i) = (Y[0]+Y[1]*x)(Y[2]+Y[3]x)...(Y[2i]+Y[2i+1]x)
@@ -2914,8 +2913,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 // return s(0) + s(1) + s(2) + ... + s(n-1)
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
-    PolyBatchMulAcc(const std::vector<T>& X, int64 s, int64 e,
-                    std::vector<T>& M, uint64 mod) {
+    PolyBatchMulAccImpl(const std::vector<T>& X, int64 s, int64 e,
+                        std::vector<T>& M, uint64 mod) {
   const int64 n = e - s;
   if (n == 1) {
     std::vector<T> t(X.begin() + s * 2, X.begin() + e * 2);
@@ -2932,11 +2931,11 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    A = PolyBatchMulAcc(X, s, s + half, C, mod);
+    A = PolyBatchMulAccImpl(X, s, s + half, C, mod);
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    B = PolyBatchMulAcc(X, s + half, e, D, mod);
+    B = PolyBatchMulAccImpl(X, s + half, e, D, mod);
   }
 #if ENABLE_OPENMP
 #pragma omp parallel sections if (n > 5000)
@@ -2953,6 +2952,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   }
   return PolyAdd(A, B, mod);
 }
+}  // namespace internal
 
 // n = std::size(X) / 2
 // Y = X
@@ -2962,7 +2962,13 @@ template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
     PolyBatchMulAcc(const std::vector<T>& X, uint64 mod) {
   std::vector<T> C;
-  return PolyBatchMulAcc(X, 0, std::size(X) / 2, C, mod);
+  return internal::PolyBatchMulAccImpl(X, 0, std::size(X) / 2, C, mod);
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
+    PolyBatchMulAcc(const std::vector<T>& X, std::vector<T>& C, uint64 mod) {
+  return internal::PolyBatchMulAccImpl(X, 0, std::size(X) / 2, C, mod);
 }
 }  // namespace pe
 #endif

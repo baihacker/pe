@@ -2775,15 +2775,13 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 }
 
 namespace internal {
-// PolyOffsetEvaluate is used by FactModer
-
 // Calculates f[0+offset],f[1+offset],f[2+offset],...,f[d+offset]
 // for given f[0],f[1],f[2],...,f[d]
 // offset > d
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyOffsetEvaluateImpl(int64 d, const T* h, T* result, int64 offset,
-                           const T* pre_fact_inv, T mod) {
+                           const T* factorial_inv, T mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
   using signedT = typename pe_make_signed<T>::type;
 
@@ -2793,8 +2791,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   std::vector<T> T0(2 * d + 2);
   std::vector<T> T1(2 * d + 2);
   for (int64 i = 0; i <= d; ++i) {
-    T t = MulMod(h[i], pre_fact_inv[i], mod);
-    t = MulMod(t, pre_fact_inv[d - i], mod);
+    T t = MulMod(h[i], factorial_inv[i], mod);
+    t = MulMod(t, factorial_inv[d - i], mod);
     if ((d - i) & 1) {
       A[i] = t == 0 ? 0 : mod - t;
     } else {
@@ -2830,21 +2828,21 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyOffsetEvaluate(int64 d, const T* h, T* result, int64 offset,
-                       const T* pre_fact_inv, T mod) {
+                       const T* factorial_inv, T mod) {
   using UnsignedT = pe_make_unsigned_t<T>;
   internal::PolyOffsetEvaluateImpl<UnsignedT>(
       d, reinterpret_cast<const UnsignedT*>(h),
-      reinterpret_cast<UnsignedT*>(result), offset, pre_fact_inv, mod);
+      reinterpret_cast<UnsignedT*>(result), offset, factorial_inv, mod);
 }
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
     PolyOffsetEvaluate(const std::vector<T>& values, int64 offset,
-                       const T* pre_fact_inv, T mod) {
+                       const T* factorial_inv, T mod) {
   const int64 d = static_cast<int64>(std::size(values)) - 1;
   std::vector<T> result(d + 1);
   PolyOffsetEvaluate(d, std::data(values), std::data(result), offset,
-                     pre_fact_inv, mod);
+                     factorial_inv, mod);
   return result;
 }
 

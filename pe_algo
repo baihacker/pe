@@ -82,18 +82,19 @@ struct FactModer {
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-      PolyOffsetEvaluate<uint64>(half_d, result, &g1_[0], half_d + 1,
-                                 &pre_fact_inv_[0], p_);
+      PolyOffsetEvaluate<uint64>(half_d, result, std::data(g1_), half_d + 1,
+                                 std::data(factorial_inv_), p_);
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-      PolyOffsetEvaluate<uint64>(half_d, result, &g2_[0], v * half_d,
-                                 &pre_fact_inv_[0], p_);
+      PolyOffsetEvaluate<uint64>(half_d, result, std::data(g2_), v * half_d,
+                                 std::data(factorial_inv_), p_);
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-      PolyOffsetEvaluate<uint64>(half_d, result, &g3_[0], v * half_d + half_d,
-                                 &pre_fact_inv_[0], p_);
+      PolyOffsetEvaluate<uint64>(half_d, result, std::data(g3_),
+                                 v * half_d + half_d, std::data(factorial_inv_),
+                                 p_);
     }
 
     for (int i = 0; i <= half_d; ++i) {
@@ -124,7 +125,7 @@ struct FactModer {
 
   T Cal(uint64 n) {
     if (n >= p_) return 0;
-    if (n < q_) return pre_fact_[n];
+    if (n < q_) return factorial_[n];
 
     uint64 m = static_cast<int64>(std::sqrt(n));
     uint64 ret = 1;
@@ -133,7 +134,7 @@ struct FactModer {
       ret = MulMod(ret, i, p_);
     }
 
-    Evaluate(static_cast<int>(m), v_.data(), m);
+    Evaluate(static_cast<int>(m), std::data(v_), m);
 
     for (int i = 0; i < m; ++i) {
       ret = MulMod(ret, v_[i], p_);
@@ -146,9 +147,10 @@ struct FactModer {
     while (q_ * q_ < p_) ++q_;
     q_ <<= 1;
     q_ += 1;
-    pre_fact_.resize(q_);
-    pre_fact_inv_.resize(q_);
-    InitSeqProd2<uint64>(&pre_fact_[0], &pre_fact_inv_[0], 1, q_ - 1, p_);
+    factorial_.resize(q_);
+    factorial_inv_.resize(q_);
+    InitSeqProd2<uint64>(std::data(factorial_), std::data(factorial_inv_), 1,
+                         q_ - 1, p_);
     g0_.resize(q_);
     g1_.resize(q_);
     g2_.resize(q_);
@@ -159,7 +161,7 @@ struct FactModer {
  private:
   uint64 p_;
   uint64 q_;
-  std::vector<uint64> pre_fact_, pre_fact_inv_;
+  std::vector<uint64> factorial_, factorial_inv_;
   std::vector<uint64> g0_, g1_, g2_, g3_;
   std::vector<uint64> v_;
 };
@@ -193,7 +195,7 @@ struct FactSumModer {
 
   T Cal(uint64 n) {
     if (n >= p_) n = p_ - 1;
-    if (n < q_) return pre_fact_sum_[n];
+    if (n < q_) return factorial_sum_[n];
 
     const int64 m = static_cast<int64>(std::sqrt(n));
     uint64 ret = 1;
@@ -259,20 +261,20 @@ struct FactSumModer {
     while (q_ * q_ < p_) ++q_;
     q_ <<= 1;
     q_ += 1;
-    pre_fact_.resize(q_);
-    pre_fact_sum_.resize(q_);
-    InitSeqProd2<uint64>(&pre_fact_[0], nullptr, q_ - 1, p_);
-    pre_fact_sum_[0] = pre_fact_[0];
+    factorial_.resize(q_);
+    factorial_sum_.resize(q_);
+    InitSeqProd2<uint64>(&factorial_[0], nullptr, q_ - 1, p_);
+    factorial_sum_[0] = factorial_[0];
     for (int i = 1; i < q_; ++i) {
-      pre_fact_sum_[i] = AddMod(pre_fact_sum_[i - 1], pre_fact_[i], p_);
+      factorial_sum_[i] = AddMod(factorial_sum_[i - 1], factorial_[i], p_);
     }
   }
 
  private:
   uint64 p_;
   uint64 q_;
-  std::vector<uint64> pre_fact_;
-  std::vector<uint64> pre_fact_sum_;
+  std::vector<uint64> factorial_;
+  std::vector<uint64> factorial_sum_;
 };
 
 // Calculates x^n % mod using pre-computed x^(2^(i))

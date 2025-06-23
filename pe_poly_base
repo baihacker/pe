@@ -2266,16 +2266,16 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   for (int64 u = 1; u < 2 * trunc; u = u << 1) {
     std::vector<T> t0(u);
 #if HAS_POLY_FLINT
-    flint::PolyLog(std::data(ret), u, u, &t0[0], mod);
+    flint::PolyLog(std::data(ret), u, u, std::data(t0), mod);
 #else
-    PolyLog(std::data(ret), u, u, &t0[0], mod);
+    PolyLog(std::data(ret), u, u, std::data(t0), mod);
 #endif
     std::vector<T> t1(u);
-    PolySub(x, std::min(u, m), &t0[0], u, &t1[0], mod);
+    PolySub(x, std::min(u, m), std::data(t0), u, std::data(t1), mod);
     t1[0] = AddMod(1, t1[0], mod);
 
     std::vector<T> t2(u << 1);
-    PolyMul(std::data(ret), u, &t1[0], u, &t2[0], mod);
+    PolyMul(std::data(ret), u, std::data(t1), u, std::data(t2), mod);
     t2.resize(u << 1);
     ret = std::move(t2);
     ret[0] = 1;
@@ -2499,7 +2499,6 @@ SL T PolyEvaluate(const std::vector<T1>& x, T2 v) {
 }
 
 namespace internal {
-// FactSumModer uses PolyMultipointEvaluate.
 struct PSPTree {
   int64 mod;
 
@@ -2568,8 +2567,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     result[0] = (X[0] + psp->v[0] * X[1]) % mod;
     return;
   }
-  int64 c1 = psp->n >> 1;
-  int64 c2 = psp->n - c1;
+  const int64 c1 = psp->n >> 1;
+  const int64 c2 = psp->n - c1;
 
   std::vector<T> m(std::max(std::size(psp->L->p), std::size(psp->R->p)));
   PolyMod(X, n, reinterpret_cast<const T*>(&psp->L->p[0]),
@@ -2783,7 +2782,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyOffsetEvaluateImpl(int64 d, const T* h, T* result, int64 offset,
                            const T* ifac, T mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
-  using signedT = typename pe_make_signed<T>::type;
+  using SignedT = typename pe_make_signed<T>::type;
 
   std::vector<T> A(d + 1);
   std::vector<T> B(2 * d + 1);
@@ -2806,7 +2805,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   }
 
   T1[2 * d + 1] =
-      ModInv(static_cast<signedT>(T0[2 * d + 1]), static_cast<signedT>(mod));
+      ModInv(static_cast<SignedT>(T0[2 * d + 1]), static_cast<SignedT>(mod));
   for (int64 i = d - 1, j = 2 * d; i >= -d; --i, --j) {
     T1[j] = MulMod(T1[j + 1], offset + i + 1, mod);
   }

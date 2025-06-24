@@ -12,7 +12,7 @@ namespace pe {
 #if defined(COMPILER_MSVC) || !OS_TYPE_WIN
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T) SqrtI(T d) {
-  const auto result = static_cast<T>(std::sqrt(static_cast<long double>(d)));
+  const T result = static_cast<T>(std::sqrt(static_cast<long double>(d)));
   return result * result > d ? result - 1 : result;
 }
 #else
@@ -647,13 +647,13 @@ template <typename IT, typename TM>
 SL REQUIRES((!IsNModNumberV<typename std::iterator_traits<IT>::value_type>))
     RETURN(void) InitInverse(IT dest, int64 maxn, TM mod) {
   PE_ASSERT(maxn >= 0);
-  auto start = dest;
+  IT start = dest;
   *dest++ = 0;
   if (maxn >= 1) {
     *dest++ = 1;
   }
   using T = typename std::iterator_traits<IT>::value_type;
-  auto maxi = std::min(maxn, static_cast<int64>(mod) - 1);
+  int64 maxi = std::min(maxn, static_cast<int64>(mod) - 1);
   for (int64 i = 2; i <= maxi; ++i) {
     const auto t = mod / i;
     const auto k = mod % i;
@@ -676,7 +676,7 @@ template <typename IT>
 SL REQUIRES((IsNModNumberV<typename std::iterator_traits<IT>::value_type>))
     RETURN(void) InitInverse(IT dest, int64 maxn) {
   PE_ASSERT(maxn >= 0);
-  auto start = dest;
+  IT start = dest;
   *dest++ = 0;
   if (maxn >= 1) {
     *dest++ = 1;
@@ -684,7 +684,7 @@ SL REQUIRES((IsNModNumberV<typename std::iterator_traits<IT>::value_type>))
   using T = typename std::iterator_traits<IT>::value_type;
   using ModType = typename T::ints;
   const ModType mod = T().Mod();
-  auto maxi = std::min(maxn, static_cast<int64>(mod) - 1);
+  int64 maxi = std::min(maxn, static_cast<int64>(mod) - 1);
   for (int64 i = 2; i <= maxi; ++i) {
     const auto t = mod / i;
     const auto k = mod % i;
@@ -911,7 +911,7 @@ SL bool IsPrimitiveRoot(int64 x, int64 p) {
 SL int64 FindPrimitiveRoot(int64 p) {
   if (p <= 1) return -1;
   if (p == 2) return 1;
-  auto fp1 = Factorize(p - 1);
+  IntegerFactorization fp1 = Factorize(p - 1);
   for (int64 i = 2;; ++i) {
     if (IsPrimitiveRoot(i, p, fp1)) return i;
   }
@@ -931,7 +931,7 @@ SL int64 Ind(int64 a, int64 pr, int64 p) {
   using map_t = std::unordered_map<int64, int>;
   PE_ASSERT(a > 0);
   int64 inv_pr = ModInv(pr, p);
-  auto mx = static_cast<int64>(std::sqrt(double(p - 1) + 0.5));
+  int64 mx = static_cast<int64>(std::sqrt(double(p - 1) + 0.5));
   if (mx * mx != p - 1) ++mx;
   map_t mem;
   int64 t1 = 1, t2 = a;
@@ -952,7 +952,7 @@ SL int64 Ind(int64 a, int64 pr, int64 p) {
 
 class IndSolver {
   static int64 SquareRootForInd(int64 x) {
-    auto ret = static_cast<int64>(std::sqrt(double(x)));
+    int64 ret = static_cast<int64>(std::sqrt(double(x)));
     if (ret * ret < x) ++ret;
     PE_ASSERT(ret * ret >= x);
     return ret;
@@ -1243,7 +1243,7 @@ SL void TwoSquaresImpl(int now, const IntegerFactorization& f, int64 u, int64 v,
     if (u > v) std::swap(u, v);
     result.emplace_back(u, v);
   } else {
-    const auto& item = f[now];
+    const std::pair<int64, int>& item = f[now];
     if (item.first == 2) {
       for (int i = 0; i < item.second; ++i) {
         GaussMul(u, v, 1, 1);
@@ -1255,7 +1255,7 @@ SL void TwoSquaresImpl(int now, const IntegerFactorization& f, int64 u, int64 v,
       for (int i = 0, j = item.second >> 1; i < j; ++i) me *= t;
       TwoSquaresImpl(now + 1, f, u * me, v * me, result);
     } else {
-      auto t = PrimeTwoSquares(item.first);
+      std::vector<std::pair<int64, int64>> t = PrimeTwoSquares(item.first);
       const int64 a = t[0].first, b = t[0].second;
       std::vector<std::pair<int64, int64>> U, V;
       {
@@ -1292,7 +1292,7 @@ SL std::vector<std::pair<int64, int64>> TwoSquaresImpl(
 
 SL std::vector<std::pair<int64, int64>> TwoSquares(
     const IntegerFactorization& f) {
-  for (auto& iter : f) {
+  for (const std::pair<int64, int>& iter : f) {
     if ((iter.first & 3) == 3) {
       if (IsOdd(iter.second)) {
         return {};
@@ -1311,7 +1311,7 @@ SL std::vector<std::pair<int64, int64>> TwoSquares(const int64 n) {
   } else if (n == 2) {
     return {{1LL, 1LL}};
   }
-  auto f = internal::FactorizeForTwoSquares(n);
+  IntegerFactorization f = internal::FactorizeForTwoSquares(n);
   if (std::empty(f)) {
     return {};
   }
@@ -1339,7 +1339,7 @@ SL std::vector<std::pair<int64, int64>> TwoSquaresFull(const int64 n) {
   std::vector<std::pair<int64, int64>> tmp = TwoSquares(n);
   std::vector<std::pair<int64, int64>> ret;
   ret.reserve(std::size(tmp) * 4);
-  for (auto& iter : tmp) {
+  for (const std::pair<int64, int64>& iter : tmp) {
     ExpandTwoSquares(ret, iter);
     if (iter.first != iter.second) {
       ExpandTwoSquares(ret, {iter.second, iter.first});

@@ -1967,6 +1967,105 @@ SL int64 GpSumMod(int64 x, int64 a, int64 b, int64 mod, int64 zero_p_zero = 1) {
   }
   return v2;
 }
+
+// Given a prime p, provides method to return
+// Comb(n, m), Inv(n), Fac(n), IFac(n)
+// The results are converted to type T.
+template <typename T = int64>
+struct PrimeModer {
+  PrimeModer(int64 p, int64 f = 0) { Init(p, f == 0 ? p : f); }
+
+  ~PrimeModer() = default;
+
+  void Init(int64 f) { Init(p_, f); }
+
+  void Init(int64 p, int64 f) {
+    p_ = p;
+    f_ = std::min(f, p_ - 1);
+    storage_.resize((f_ + 1) * 3);
+    fac_ = &storage_[0];
+    ifac_ = &storage_[f_ + 1];
+    invs_ = &storage_[2 * (f_ + 1)];
+    InitSeqProd2<int64>(fac_, ifac_, 1, f_, p_);
+    InitInverse(invs_, f_, p_);
+  }
+
+  T fac(int64 n) const { return Fac(n); }
+
+  T Fac(int64 n) const {
+    if (n >= 0 && n <= f_) {
+      return fac_[n];
+    }
+    PE_ASSERT(n >= 0 && n <= f_);
+    return 0;
+  }
+
+  T ifac(int64 n) const { return IFac(n); }
+
+  T IFac(int64 n) const {
+    if (n >= 0 && n <= f_) {
+      return ifac_[n];
+    }
+    PE_ASSERT(n >= 0 && n <= f_);
+    return 0;
+  }
+
+  T inv(int64 n) const { return Inv(n); }
+
+  T Inv(int64 n) const {
+    if (n >= 0 && n <= f_) {
+      return invs_[n];
+    }
+    return ModInv(n, p_);
+  }
+
+  T comb(int64 n, int64 m) const { return Comb(n, m); }
+
+  T Comb(int64 n, int64 m) const {
+    if (n < 0 || m > n) return 0;
+    if (m == n || m == 0) return 1;
+    if (m == 1 || m == n - 1) return n % p_;
+
+    if (n <= f_) {
+      return MulMod(MulMod(fac_[n], ifac_[m], p_), ifac_[n - m], p_);
+    }
+
+    // It's required that x % p_ <= f_ in the following code.
+
+    int64 pp = 0;
+    int64 dist = n - m;
+
+    for (int64 nn = n / p_, mm = m / p_, dd = dist / p_; nn;
+         nn /= p_, mm /= p_, dd /= p_) {
+      pp += nn - mm - dd;
+    }
+    if (pp) return 0;
+    int64 l = 1, r = 1;
+    for (int64 x = n; x; x /= p_) {
+      l = MulMod(l, Sign(x / p_), p_);
+      l = MulMod(l, fac_[x % p_], p_);
+    }
+    for (int64 x = m; x; x /= p_) {
+      r = MulMod(r, Sign(x / p_), p_);
+      r = MulMod(r, fac_[x % p_], p_);
+    }
+    for (int64 x = dist; x; x /= p_) {
+      r = MulMod(r, Sign(x / p_), p_);
+      r = MulMod(r, fac_[x % p_], p_);
+    }
+    return MulMod(ModInv(r, p_), l, p_);
+  }
+
+ private:
+  int64 Sign(int64 x) const { return x & 1 ? p_ - 1 : 1; }
+
+ private:
+  int64 p_, f_;
+  int64* fac_;
+  int64* ifac_;
+  int64* invs_;
+  std::vector<int64> storage_;
+};
 }  // namespace pe
 // 65701
 #endif

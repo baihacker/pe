@@ -245,6 +245,282 @@ SL int64 GetGFCoefficientAt(const std::vector<int64>& A,
 #endif
 }
 
+// Calculates (1^k + 2^k + ... + n^k) % mod based on Bernoulli number
+// See
+// https://en.wikipedia.org/wiki/Bernoulli_number#Sum_of_powers
+// https://blog.csdn.net/acdreamers/article/details/38929067
+template <typename T = int64>
+struct PowerSumModerB {
+  PowerSumModerB(int64 mod, int64 maxk = 128) : mod_(mod), maxk_(maxk) {
+    Init(maxk);
+  }
+
+  ~PowerSumModerB() = default;
+
+  void Init(int64 maxk = 128) {
+    maxk_ = maxk;
+
+    bnl_ = std::vector<int64>(maxk_ + 1);
+    invs_ = std::vector<int64>(maxk_ + 2);
+
+    InitInverse(&invs_[0], maxk_ + 1, mod_);
+    InitBernoulliNumber(&bnl_[0], maxk_ + 1, &invs_[0], mod_);
+
+    bnl_[1] = mod_ - bnl_[1];
+  }
+
+  T operator()(int64 n, int64 k) const { return Cal(n, k); }
+
+  std::vector<T> operator()(const std::vector<int64>& vec) const {
+    return Cal(vec);
+  }
+
+  // n + 1, n, ..., n-k+1 is not divisible by mod
+  // 2, 3, ..., k+1 is not divisible by mod
+  T Cal(int64 n, int64 k) const {
+    PE_ASSERT(k <= maxk_);
+    if (k == 0) {
+      return n % mod_;
+    }
+
+    int64 ret = 0;
+
+    const int64 invn = PowerMod(n % mod_, mod_ - 2, mod_);
+    int64 c = PowerMod(n % mod_, k + 1, mod_);
+
+    for (int64 i = 0; i <= k; ++i) {
+      if (i > 0) {
+        c = MulMod(c, Mod(k + 2 - i, mod_), mod_);
+        c = MulMod(c, invs_[i], mod_);
+        c = MulMod(c, invn, mod_);
+      }
+
+      if (c == 0) {
+        break;
+      }
+
+      ret += MulMod(c, bnl_[i], mod_);
+      if (ret >= mod_) ret -= mod_;
+    }
+    ret = MulMod(ret, invs_[k + 1], mod_);
+    return ret;
+  }
+
+  std::vector<T> Cal(const std::vector<int64>& vec) const {
+    PE_ASSERT(std::size(vec) <= maxk_ + 1);
+    const int64 size = std::size(vec);
+    std::vector<int64> result(size + 1, 0);
+    for (int k = 0; k < size; ++k) {
+      // comb(k+1, i) b[i] n^(k+1-i) / (k + 1)
+      int64 c = invs_[k + 1];
+      for (int i = 0; i <= k; ++i) {
+        if (i > 0) {
+          c = MulMod(c, Mod(k + 2 - i, mod_), mod_);
+          c = MulMod(c, invs_[i], mod_);
+        }
+        int64 x = MulMod(c, bnl_[i], mod_);
+        const int idx = k + 1 - i;
+        result[idx] = AddMod(result[idx], MulMod(vec[k], x, mod_), mod_);
+      }
+    }
+    std::vector<T> ret(size + 1);
+    for (int i = 0; i <= size; ++i) {
+      ret[i] = result[i];
+    }
+    return result;
+  }
+
+  T CalSafe(int64 n, int64 k) const {
+    PE_ASSERT(k <= maxk_);
+    if (k == 0) {
+      return n % mod_;
+    }
+
+    int64 ret = 0;
+
+    const int64 invn = PowerMod(n % mod_, mod_ - 2, mod_);
+    int64 c = PowerMod(n % mod_, k + 1, mod_);
+
+    int64 d = 0;
+    for (int64 i = 0; i <= k; ++i) {
+      if (i > 0) {
+        auto [A, B] = ExtractFactor(k + 2 - i, mod_);
+        d += B;
+        c = MulMod(c, Mod(A, mod_), mod_);
+
+        std::tie(A, B) = ExtractFactor(i, mod_);
+        d -= B;
+        c = MulMod(c, invs_[A], mod_);
+
+        c = MulMod(c, invn, mod_);
+      }
+      if (c == 0) {
+        break;
+      }
+      if (d == 0) {
+        ret += MulMod(c, bnl_[i], mod_);
+        if (ret >= mod_) ret -= mod_;
+      }
+    }
+    ret = MulMod(ret, invs_[k + 1], mod_);
+    return ret;
+  }
+
+ private:
+  int64 mod_;
+  int64 maxk_;
+  std::vector<int64> bnl_;
+  std::vector<int64> invs_;
+};
+
+// Calculates (1^k + 2^k + ... + n^k) % mod based on Bernoulli number
+// See
+// https://en.wikipedia.org/wiki/Bernoulli_number#Sum_of_powers
+// https://blog.csdn.net/acdreamers/article/details/38929067
+template <typename T = int64>
+struct PowerSumModerB1 {
+  PowerSumModerB1(int64 mod, int64 maxk = 128) : mod_(mod), maxk_(maxk) {
+    Init(maxk);
+  }
+
+  ~PowerSumModerB1() = default;
+
+  void Init(int64 maxk = 128) {
+    maxk_ = maxk;
+
+    bnl_ = std::vector<int64>(maxk_ + 1);
+    invs_ = std::vector<int64>(maxk_ + 2);
+
+    InitInverse(&invs_[0], maxk_ + 1, mod_);
+    InitBernoulliNumber(&bnl_[0], maxk_ + 1, &invs_[0], mod_);
+  }
+
+  T operator()(int64 n, int64 k) const { return Cal(n, k); }
+
+  // n + 1, n, ..., n-k+1 is not divisible by mod
+  // 2, 3, ..., k+1 is not divisible by mod
+  T Cal(int64 n, int64 k) const {
+    PE_ASSERT(k <= maxk_);
+    if (k == 0) {
+      return n % mod_;
+    }
+
+    const int64 n1 = (n + 1) % mod_;
+    const int64 k1 = k + 1;
+
+    int64 ret = 0;
+
+    int64 c = 1 % mod_;
+    for (int64 i = 1; i <= k1; ++i) {
+      c = MulMod(c, Mod(k1 - i + 1, mod_), mod_);
+      c = MulMod(c, invs_[i], mod_);
+      c = MulMod(c, n1, mod_);
+
+      if (c == 0) {
+        break;
+      }
+
+      ret += MulMod(c, bnl_[k1 - i], mod_);
+      if (ret >= mod_) ret -= mod_;
+    }
+    ret = MulMod(ret, invs_[k1], mod_);
+    return ret;
+  }
+
+  T CalSafe(int64 n, int64 k) const {
+    PE_ASSERT(k <= maxk_);
+    if (k == 0) {
+      return n % mod_;
+    }
+
+    const int64 n1 = (n + 1) % mod_;
+    const int64 k1 = k + 1;
+
+    int64 ret = 0;
+
+    int64 c = 1 % mod_;
+    int64 d = 0;
+    for (int64 i = 1; i <= k1; ++i) {
+      auto [A, B] = ExtractFactor(k1 - i + 1, mod_);
+      d += B;
+      c = MulMod(c, Mod(A, mod_), mod_);
+
+      std::tie(A, B) = ExtractFactor(i, mod_);
+      d -= B;
+      c = MulMod(c, invs_[A], mod_);
+
+      c = MulMod(c, n1, mod_);
+
+      if (c == 0) {
+        break;
+      }
+      if (d == 0) {
+        ret += MulMod(c, bnl_[k1 - i], mod_);
+        if (ret >= mod_) ret -= mod_;
+      }
+    }
+    ret = MulMod(ret, invs_[k1], mod_);
+    return ret;
+  }
+
+ private:
+  int64 mod_;
+  int64 maxk_;
+  std::vector<int64> bnl_;
+  std::vector<int64> invs_;
+};
+
+// Calculates (1^k + 2^k + ... + n^k) % mod
+SL int64 PowerSumMod(int64 n, int64 k, int64 mod) {
+  return PowerSumModerB(mod, k).Cal(n, k);
+}
+
+// Calculates (1^k + 2^k + ... + n^k) % mod
+SL int64 PowerSumModSafe(int64 n, int64 k, int64 mod) {
+  return PowerSumModerB(mod, k).CalSafe(n, k);
+}
+
+// Calculates (1^k + 2^k + ... + n^k) % mod and stores it in result[k].
+// comb[i][j] is Binomial coefficient.
+// Complex: O(k^2)
+// baihacker pe487
+SL std::vector<int64> PowerSumModBatch(int64 n, const int maxk,
+                                       const int64 mod) {
+  std::vector<int64> a(maxk + 2, 0);
+  std::vector<int64> b(maxk + 2, 0);
+  int64* from = std::data(a);
+  int64* to = std::data(b);
+  from[0] = from[1] = Mod(1, mod);
+
+  std::vector<int64> result(maxk + 1);
+  result[0] = Mod(n, mod);
+  for (int i = 1; i <= maxk; ++i) {
+    to[0] = Mod(1, mod);
+    to[1] = Mod(i + 1, mod);
+    int64 tmp = PowerMod(n, i + 1, mod);
+    for (int j = 2; j <= i + 1; ++j) {
+      to[j] = AddMod(from[j - 1], from[j], mod);
+      int64 t = MulMod(to[j], result[i + 1 - j], mod);
+      if (j & 1) {
+        tmp = SubMod(tmp, t, mod);
+      } else {
+        tmp = AddMod(tmp, t, mod);
+      }
+    }
+    result[i] = MulMod(tmp, ModInv(Mod(i + 1, mod), mod), mod);
+    std::swap(from, to);
+  }
+
+  return result;
+}
+
+SL void PowerSumModBatch(int64 n, const int maxk, const int64 mod,
+                         int64* result) {
+  for (int64 value : PowerSumModBatch(n, maxk, mod)) {
+    *result++ = value;
+  }
+}
+
 namespace internal {
 // If the following equations holds for all n
 //

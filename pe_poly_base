@@ -2105,6 +2105,18 @@ POLY_MOD_IMPL(PolyMod, PolyDivAndMod)
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
+    PolyGcd(std::vector<T> X, std::vector<T> Y, int64 mod) {
+  AdjustPolyLeadingZero(Y);
+  while (std::size(Y) > 1 || Y[0]) {
+    auto [XX, YY] = PolyDivAndMod(X, Y, mod);
+    X = Y;
+    Y = YY;
+  }
+  return X;
+}
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
     PolyPowerModPoly(const std::vector<T>& X, int64 n,
                      const std::vector<T>& poly_mod, int64 mod) {
   std::vector<T> ret = {1};
@@ -2120,6 +2132,16 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   }
 
   return ret;
+}
+
+// Return 1 if poly is reducible over F_{mod}.
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(int)
+    IsPolyReducible(const std::vector<T>& poly, int64 mod) {
+  std::vector<int64> r = PolyPowerModPoly({0, 1}, mod, poly, mod);
+  r = PolySub(r, {0, 1 % mod}, mod);
+  r = PolyGcd(poly, r, mod);
+  return std::size(r) > 1;
 }
 
 namespace internal {

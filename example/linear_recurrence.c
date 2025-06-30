@@ -5,6 +5,7 @@ const int64 mod = 1000000007;
 
 int64 solve_nth(int64 n) {
   auto ans = MatrixPowerMod<mod>(
+      2,
       [=](auto& m, auto& v) {
         m(0, 0) = 1;
         m(0, 1) = 1;
@@ -12,12 +13,13 @@ int64 solve_nth(int64 n) {
         v[0] = 1;
         v[1] = 0;
       },
-      2, n);
+      n);
   return ans[1];
 }
 
 int64 solve_nth_sum(int64 n) {
   auto ans = MatrixPowerMod<mod>(
+      3,
       [=](auto& m, auto& v) {
         m(0, 0) = 1;
         m(0, 1) = 1;
@@ -28,7 +30,7 @@ int64 solve_nth_sum(int64 n) {
         v[1] = 0;
         v[2] = 0;
       },
-      3, n);
+      n);
   return ans[2];
 }
 

@@ -94,13 +94,15 @@ SL void TestEigenHelperMethod() {
   TimeRecorder tr;
   {
     auto res0 = MatrixPowerModEigen<1000000007>(
+        2,
         [=](auto& m) {
           m(0, 0) = 1;
           m(0, 1) = 1;
           m(1, 0) = 1;
         },
-        2, 100000);
+        100000);
     auto res1 = MatrixPowerModEigen<1000000007>(
+        2,
         [=](auto& m, auto& v) {
           m(0, 0) = 1;
           m(0, 1) = 1;
@@ -108,18 +110,20 @@ SL void TestEigenHelperMethod() {
           v[0] = 1;
           v[1] = 1;
         },
-        2, 100000);
+        100000);
   }
 
   {
     auto res0 = MatrixPowerModEigen<NMod64<1000000007>>(
+        2,
         [=](auto& m) {
           m(0, 0) = 1;
           m(0, 1) = 1;
           m(1, 0) = 1;
         },
-        2, 100000);
+        100000);
     auto res1 = MatrixPowerModEigen<NMod64<1000000007>>(
+        2,
         [=](auto& m, auto& v) {
           m(0, 0) = 1;
           m(0, 1) = 1;
@@ -127,18 +131,20 @@ SL void TestEigenHelperMethod() {
           v[0] = 1;
           v[1] = 1;
         },
-        2, 100000);
+        100000);
   }
 
   {
     auto res0 = MatrixPowerModEigen(
+        2,
         [=](auto& m) {
           m(0, 0) = 1;
           m(0, 1) = 1;
           m(1, 0) = 1;
         },
-        2, 100000, 1000000007);
+        100000, 1000000007);
     auto res1 = MatrixPowerModEigen(
+        2,
         [=](auto& m, auto& v) {
           m(0, 0) = 1;
           m(0, 1) = 1;
@@ -146,7 +152,7 @@ SL void TestEigenHelperMethod() {
           v[0] = 1;
           v[1] = 1;
         },
-        2, 100000, 1000000007);
+        100000, 1000000007);
   }
 
   std::cout << tr.Elapsed().Format() << std::endl;
@@ -156,13 +162,15 @@ SL void TestPeHelperMethod() {
   TimeRecorder tr;
   {
     auto res0 = MatrixPowerModPe<1000000007>(
+        2,
         [=](auto& m) {
           m(0, 0) = 1;
           m(0, 1) = 1;
           m(1, 0) = 1;
         },
-        2, 100000);
+        100000);
     auto res1 = MatrixPowerModPe<1000000007>(
+        2,
         [=](auto& m, auto& v) {
           m(0, 0) = 1;
           m(0, 1) = 1;
@@ -170,18 +178,20 @@ SL void TestPeHelperMethod() {
           v[0] = 1;
           v[1] = 1;
         },
-        2, 100000);
+        100000);
   }
 
   {
     auto res0 = MatrixPowerModPe<NMod64<1000000007>>(
+        2,
         [=](auto& m) {
           m(0, 0) = 1;
           m(0, 1) = 1;
           m(1, 0) = 1;
         },
-        2, 100000);
+        100000);
     auto res1 = MatrixPowerModPe<NMod64<1000000007>>(
+        2,
         [=](auto& m, auto& v) {
           m(0, 0) = 1;
           m(0, 1) = 1;
@@ -189,18 +199,20 @@ SL void TestPeHelperMethod() {
           v[0] = 1;
           v[1] = 1;
         },
-        2, 100000);
+        100000);
   }
 
   {
     auto res0 = MatrixPowerModPe(
+        2,
         [=](auto& m) {
           m(0, 0) = 1;
           m(0, 1) = 1;
           m(1, 0) = 1;
         },
-        2, 100000, 1000000007);
+        100000, 1000000007);
     auto res1 = MatrixPowerModPe(
+        2,
         [=](auto& m, auto& v) {
           m(0, 0) = 1;
           m(0, 1) = 1;
@@ -208,7 +220,7 @@ SL void TestPeHelperMethod() {
           v[0] = 1;
           v[1] = 1;
         },
-        2, 100000, 1000000007);
+        100000, 1000000007);
   }
   std::cout << tr.Elapsed().Format() << std::endl;
 }

@@ -724,8 +724,9 @@ SL PeMatrix<T, -1> MatrixPowerPe(const PeMatrix<T, C>& m, int64 n) {
 }
 
 template <typename T>
-SL PeMatrix<T> MatrixPowerPe(const std::function<void(PeMatrix<T>& mat)>& init,
-                             const int d, int64 n) {
+SL PeMatrix<T> MatrixPowerPe(const int d,
+                             const std::function<void(PeMatrix<T>& mat)>& init,
+                             int64 n) {
   PeMatrix<T> m(d, d);
 
   init(m);
@@ -763,7 +764,7 @@ SL PeMatrix<T, -1> MatrixPowerPe(const PeMatrix<T, C>& m, int64 n, T mod) {
 
 template <typename T>
 SL PeMatrix<T, -1> MatrixPowerPe(
-    const std::function<void(PeMatrix<T>& mat)>& init, const int d, int64 n,
+    const int d, const std::function<void(PeMatrix<T>& mat)>& init, int64 n,
     T mod) {
   PeMatrix<T> m(d, d);
 
@@ -799,8 +800,9 @@ SL std::vector<T> MatrixPowerPe(const PeMatrix<T, C>& m, int64 n,
 
 template <typename T>
 SL std::vector<T> MatrixPowerPe(
+    const int d,
     const std::function<void(PeMatrix<T>& mat, std::vector<T>& v)>& init,
-    const int d, int64 n) {
+    int64 n) {
   std::vector<T> v(d, 0);
   PeMatrix<T> m(d, d);
 
@@ -836,8 +838,9 @@ SL std::vector<T> MatrixPowerPe(const PeMatrix<T, C>& m, int64 n,
 
 template <typename T>
 SL std::vector<T> MatrixPowerPe(
+    const int d,
     const std::function<void(PeMatrix<T>& mat, std::vector<T>& v)>& init,
-    const int d, int64 n, T mod) {
+    int64 n, T mod) {
   std::vector<T> v(d, 0);
   PeMatrix<T> m(d, d);
 
@@ -924,9 +927,9 @@ auto res1 = MatrixPowerMod(
 // Mod is specified explicitly at compiling time.
 template <int64 mod>
 SL PeMatrix<int64> MatrixPowerModPe(
-    const std::function<void(PeMatrix<NMod64<mod>>& mat)>& init, const int d,
+    const int d, const std::function<void(PeMatrix<NMod64<mod>>& mat)>& init,
     int64 n) {
-  PeMatrix<NMod64<mod>> t = MatrixPowerPe<NMod64<mod>>(init, d, n);
+  PeMatrix<NMod64<mod>> t = MatrixPowerPe<NMod64<mod>>(d, init, n);
 
   PeMatrix<int64> ret(d, d);
   for (int i = 0; i < d; ++i) {
@@ -940,10 +943,11 @@ SL PeMatrix<int64> MatrixPowerModPe(
 
 template <int64 mod>
 SL std::vector<int64> MatrixPowerModPe(
+    const int d,
     const std::function<void(PeMatrix<NMod64<mod>>& mat,
                              std::vector<NMod64<mod>>& v)>& init,
-    const int d, int64 n) {
-  std::vector<NMod64<mod>> t = MatrixPowerPe<NMod64<mod>>(init, d, n);
+    int64 n) {
+  std::vector<NMod64<mod>> t = MatrixPowerPe<NMod64<mod>>(d, init, n);
 
   std::vector<int64> ret(d);
   for (int i = 0; i < d; ++i) {
@@ -957,25 +961,27 @@ SL std::vector<int64> MatrixPowerModPe(
 // Mod is associated with T at compiling time or runtime.
 template <typename T>
 SL REQUIRES((IsNModNumberV<T>)) RETURN(PeMatrix<T>)
-    MatrixPowerModPe(const std::function<void(PeMatrix<T>& mat)>& init,
-                     const int d, int64 n) {
-  return MatrixPowerPe<T>(init, d, n);
+    MatrixPowerModPe(const int d,
+                     const std::function<void(PeMatrix<T>& mat)>& init,
+                     int64 n) {
+  return MatrixPowerPe<T>(d, init, n);
 }
 
 template <typename T>
 SL REQUIRES((IsNModNumberV<T>)) RETURN(std::vector<T>) MatrixPowerModPe(
+    const int d,
     const std::function<void(PeMatrix<T>& mat, std::vector<T>& v)>& init,
-    const int d, int64 n) {
-  return MatrixPowerPe<T>(init, d, n);
+    int64 n) {
+  return MatrixPowerPe<T>(d, init, n);
 }
 
 // Version 3
 // Mod is specified at runtime.
 #if PE_HAS_INT128
 SL PeMatrix<int64> MatrixPowerModPe(
-    const std::function<void(PeMatrix<int128>& mat)>& init, const int d,
+    const int d, const std::function<void(PeMatrix<int128>& mat)>& init,
     int64 n, int64 mod) {
-  PeMatrix<int128> t = MatrixPowerPe<int128>(init, d, n, mod);
+  PeMatrix<int128> t = MatrixPowerPe<int128>(d, init, n, mod);
 
   PeMatrix<int64> ret(d, d);
   for (int i = 0; i < d; ++i) {
@@ -988,10 +994,11 @@ SL PeMatrix<int64> MatrixPowerModPe(
 }
 
 SL std::vector<int64> MatrixPowerModPe(
+    const int d,
     const std::function<void(PeMatrix<int128>& mat, std::vector<int128>& v)>&
         init,
-    const int d, int64 n, int64 mod) {
-  std::vector<int128> t = MatrixPowerPe<int128>(init, d, n, mod);
+    int64 n, int64 mod) {
+  std::vector<int128> t = MatrixPowerPe<int128>(d, init, n, mod);
 
   std::vector<int64> ret(d);
   for (int i = 0; i < d; ++i) {
@@ -1003,13 +1010,14 @@ SL std::vector<int64> MatrixPowerModPe(
 #else
 // mod == DefaultMod::mod()
 SL PeMatrix<int64> MatrixPowerModPe(
+    const int d,
     const std::function<void(PeMatrix<NModNumber<DefaultMod>>& mat)>& init,
-    const int d, int64 n, int64 mod) {
+    int64 n, int64 mod) {
   DefaultMod::Set(mod);
   PE_ASSERT(mod == DefaultMod::Mod());
 
   PeMatrix<NModNumber<DefaultMod>> t =
-      MatrixPowerPe<NModNumber<DefaultMod>>(init, d, n);
+      MatrixPowerPe<NModNumber<DefaultMod>>(d, init, n);
 
   PeMatrix<int64> ret(d, d);
   for (int i = 0; i < d; ++i)
@@ -1021,14 +1029,15 @@ SL PeMatrix<int64> MatrixPowerModPe(
 }
 // mod == DefaultMod::mod()
 SL std::vector<int64> MatrixPowerModPe(
+    const int d,
     const std::function<void(PeMatrix<NModNumber<DefaultMod>>& mat,
                              std::vector<NModNumber<DefaultMod>>& v)>& init,
-    const int d, int64 n, int64 mod) {
+    int64 n, int64 mod) {
   DefaultMod::Set(mod);
   PE_ASSERT(mod == DefaultMod::Mod());
 
   std::vector<NModNumber<DefaultMod>> t =
-      MatrixPowerPe<NModNumber<DefaultMod>>(init, d, n);
+      MatrixPowerPe<NModNumber<DefaultMod>>(d, init, n);
 
   std::vector<int64> ret(d);
   for (int i = 0; i < d; ++i) {
@@ -1124,7 +1133,7 @@ SL EigenMatrix<T> MatrixPowerEigen(const EigenMatrix<T>& x, int64 n) {
 
 template <typename T>
 SL EigenMatrix<T> MatrixPowerEigen(
-    const std::function<void(EigenMatrix<T>& mat)>& init, const int d,
+    const int d, const std::function<void(EigenMatrix<T>& mat)>& init,
     int64 n) {
   using MatrixT = EigenMatrix<T>;
 
@@ -1168,7 +1177,7 @@ SL EigenMatrix<T> MatrixPowerEigen(const EigenMatrix<T>& x, int64 n,
 
 template <typename T>
 SL EigenMatrix<T> MatrixPowerEigen(
-    const std::function<void(EigenMatrix<T>& mat)>& init, const int d, int64 n,
+    const int d, const std::function<void(EigenMatrix<T>& mat)>& init, int64 n,
     int64 mod) {
   using MatrixT = EigenMatrix<T>;
 
@@ -1219,8 +1228,9 @@ SL std::vector<T> MatrixPowerEigen(const EigenMatrix<T>& x, int64 n,
 
 template <typename T>
 SL std::vector<T> MatrixPowerEigen(
+    const int d,
     const std::function<void(EigenMatrix<T>& mat, std::vector<T>& v)>& init,
-    const int d, int64 n) {
+    int64 n) {
   using MatrixT = EigenMatrix<T>;
 
   std::vector<T> v(d, 0);
@@ -1273,8 +1283,9 @@ SL std::vector<T> MatrixPowerEigen(const EigenMatrix<T>& x, int64 n,
 
 template <typename T>
 SL std::vector<T> MatrixPowerEigen(
+    const int d,
     const std::function<void(EigenMatrix<T>& mat, std::vector<T>& v)>& init,
-    const int d, int64 n, int64 mod) {
+    int64 n, int64 mod) {
   using MatrixT = EigenMatrix<T>;
 
   std::vector<T> v(d, 0);
@@ -1289,9 +1300,9 @@ SL std::vector<T> MatrixPowerEigen(
 // Mod is specified explicitly at compiling time.
 template <int64 mod>
 SL EigenMatrix<int64> MatrixPowerModEigen(
-    const std::function<void(EigenMatrix<NMod64<mod>>& mat)>& init, const int d,
+    const int d, const std::function<void(EigenMatrix<NMod64<mod>>& mat)>& init,
     int64 n) {
-  EigenMatrix<NMod64<mod>> t = MatrixPowerEigen<NMod64<mod>>(init, d, n);
+  EigenMatrix<NMod64<mod>> t = MatrixPowerEigen<NMod64<mod>>(d, init, n);
 
   EigenMatrix<int64> ret(d, d);
   for (int i = 0; i < d; ++i) {
@@ -1305,10 +1316,11 @@ SL EigenMatrix<int64> MatrixPowerModEigen(
 
 template <int64 mod>
 SL std::vector<int64> MatrixPowerModEigen(
+    const int d,
     const std::function<void(EigenMatrix<NMod64<mod>>& mat,
                              std::vector<NMod64<mod>>& v)>& init,
-    const int d, int64 n) {
-  std::vector<NMod64<mod>> t = MatrixPowerEigen<NMod64<mod>>(init, d, n);
+    int64 n) {
+  std::vector<NMod64<mod>> t = MatrixPowerEigen<NMod64<mod>>(d, init, n);
 
   std::vector<int64> ret(d);
   for (int i = 0; i < d; ++i) {
@@ -1322,25 +1334,27 @@ SL std::vector<int64> MatrixPowerModEigen(
 // Mod is associated with T at compiling time or runtime.
 template <typename T>
 SL REQUIRES((IsNModNumberV<T>)) RETURN(EigenMatrix<T>)
-    MatrixPowerModEigen(const std::function<void(EigenMatrix<T>& mat)>& init,
-                        const int d, int64 n) {
-  return MatrixPowerEigen<T>(init, d, n);
+    MatrixPowerModEigen(const int d,
+                        const std::function<void(EigenMatrix<T>& mat)>& init,
+                        int64 n) {
+  return MatrixPowerEigen<T>(d, init, n);
 }
 
 template <typename T>
 SL REQUIRES((IsNModNumberV<T>)) RETURN(std::vector<T>) MatrixPowerModEigen(
+    const int d,
     const std::function<void(EigenMatrix<T>& mat, std::vector<T>& v)>& init,
-    const int d, int64 n) {
-  return MatrixPowerEigen<T>(init, d, n);
+    int64 n) {
+  return MatrixPowerEigen<T>(d, init, n);
 }
 
 // Version 3
 // Mod is specified at runtime.
 #if PE_HAS_INT128
 SL EigenMatrix<int64> MatrixPowerModEigen(
-    const std::function<void(EigenMatrix<int128>& mat)>& init, const int d,
+    const int d, const std::function<void(EigenMatrix<int128>& mat)>& init,
     int64 n, int64 mod) {
-  EigenMatrix<int128> t = MatrixPowerEigen<int128>(init, d, n, mod);
+  EigenMatrix<int128> t = MatrixPowerEigen<int128>(d, init, n, mod);
 
   EigenMatrix<int64> ret(d, d);
   for (int i = 0; i < d; ++i) {
@@ -1353,10 +1367,11 @@ SL EigenMatrix<int64> MatrixPowerModEigen(
 }
 
 SL std::vector<int64> MatrixPowerModEigen(
+    const int d,
     const std::function<void(EigenMatrix<int128>& mat, std::vector<int128>& v)>&
         init,
-    const int d, int64 n, int64 mod) {
-  std::vector<int128> t = MatrixPowerEigen<int128>(init, d, n, mod);
+    int64 n, int64 mod) {
+  std::vector<int128> t = MatrixPowerEigen<int128>(d, init, n, mod);
 
   std::vector<int64> ret(d);
   for (int i = 0; i < d; ++i) {
@@ -1368,13 +1383,14 @@ SL std::vector<int64> MatrixPowerModEigen(
 #else
 // mod == DefaultMod::mod()
 SL EigenMatrix<int64> MatrixPowerModEigen(
+    const int d,
     const std::function<void(EigenMatrix<NModNumber<DefaultMod>>& mat)>& init,
-    const int d, int64 n, int64 mod) {
+    int64 n, int64 mod) {
   DefaultMod::Set(mod);
   PE_ASSERT(mod == DefaultMod::Mod());
 
   EigenMatrix<NModNumber<DefaultMod>> t =
-      MatrixPowerEigen<NModNumber<DefaultMod>>(init, d, n);
+      MatrixPowerEigen<NModNumber<DefaultMod>>(d, init, n);
 
   EigenMatrix<int64> ret(d, d);
   for (int i = 0; i < d; ++i)
@@ -1387,14 +1403,15 @@ SL EigenMatrix<int64> MatrixPowerModEigen(
 
 // mod == DefaultMod::mod()
 SL std::vector<int64> MatrixPowerModEigen(
+    const int d,
     const std::function<void(EigenMatrix<NModNumber<DefaultMod>>& mat,
                              std::vector<NModNumber<DefaultMod>>& v)>& init,
-    const int d, int64 n, int64 mod) {
+    int64 n, int64 mod) {
   DefaultMod::Set(mod);
   PE_ASSERT(mod == DefaultMod::Mod());
 
   std::vector<NModNumber<DefaultMod>> t =
-      MatrixPowerEigen<NModNumber<DefaultMod>>(init, d, n);
+      MatrixPowerEigen<NModNumber<DefaultMod>>(d, init, n);
 
   std::vector<int64> ret(d);
   for (int i = 0; i < d; ++i) {
@@ -1428,65 +1445,72 @@ SL std::vector<T> MatrixPower(const EigenMatrix<T>& x, int64 n,
 }
 template <typename T>
 SL EigenMatrix<T> MatrixPower(
-    const std::function<void(EigenMatrix<T>& mat)>& init, const int d,
+    const int d, const std::function<void(EigenMatrix<T>& mat)>& init,
     int64 n) {
-  return MatrixPowerEigen(init, d, n);
+  return MatrixPowerEigen(d, init, n);
 }
 template <typename T>
 SL std::vector<T> MatrixPower(
+    const int d,
     const std::function<void(EigenMatrix<T>& mat, std::vector<T>& v)>& init,
-    const int d, int64 n) {
-  return MatrixPowerEigen(init, d, n);
+    int64 n) {
+  return MatrixPowerEigen(d, init, n);
 }
 
 template <int64 mod>
 SL EigenMatrix<int64> MatrixPowerMod(
-    const std::function<void(EigenMatrix<NMod64<mod>>& mat)>& init, const int d,
+    const int d, const std::function<void(EigenMatrix<NMod64<mod>>& mat)>& init,
     int64 n) {
-  return MatrixPowerModEigen<mod>(init, d, n);
+  return MatrixPowerModEigen<mod>(d, init, n);
 }
 template <int64 mod>
 SL std::vector<int64> MatrixPowerMod(
+    const int d,
     const std::function<void(EigenMatrix<NMod64<mod>>& mat,
                              std::vector<NMod64<mod>>& v)>& init,
-    const int d, int64 n) {
-  return MatrixPowerModEigen<mod>(init, d, n);
+    int64 n) {
+  return MatrixPowerModEigen<mod>(d, init, n);
 }
 template <typename T>
 SL REQUIRES((IsNModNumberV<T>)) RETURN(EigenMatrix<T>)
-    MatrixPowerMod(const std::function<void(EigenMatrix<T>& mat)>& init,
-                   const int d, int64 n) {
-  return MatrixPowerModEigen<T>(init, d, n);
+    MatrixPowerMod(const int d,
+                   const std::function<void(EigenMatrix<T>& mat)>& init,
+                   int64 n) {
+  return MatrixPowerModEigen<T>(d, init, n);
 }
 template <typename T>
 SL REQUIRES((IsNModNumberV<T>)) RETURN(std::vector<T>) MatrixPowerMod(
+    const int d,
     const std::function<void(EigenMatrix<T>& mat, std::vector<T>& v)>& init,
-    const int d, int64 n) {
-  return MatrixPowerModEigen<T>(init, d, n);
+    int64 n) {
+  return MatrixPowerModEigen<T>(d, init, n);
 }
 #if PE_HAS_INT128
 SL EigenMatrix<int64> MatrixPowerMod(
-    const std::function<void(EigenMatrix<int128>& mat)>& init, const int d,
+    const int d, const std::function<void(EigenMatrix<int128>& mat)>& init,
     int64 n, int64 mod) {
-  return MatrixPowerModEigen(init, d, n, mod);
+  return MatrixPowerModEigen(d, init, n, mod);
 }
 SL std::vector<int64> MatrixPowerMod(
+    const int d,
     const std::function<void(EigenMatrix<int128>& mat, std::vector<int128>& v)>&
         init,
-    const int d, int64 n, int64 mod) {
-  return MatrixPowerModEigen(init, d, n, mod);
+    int64 n, int64 mod) {
+  return MatrixPowerModEigen(d, init, n, mod);
 }
 #else
 SL EigenMatrix<int64> MatrixPowerMod(
+    const int d,
     const std::function<void(EigenMatrix<NModNumber<DefaultMod>>& mat)>& init,
-    const int d, int64 n, int64 mod) {
-  return MatrixPowerModEigen(init, d, n, mod);
+    int64 n, int64 mod) {
+  return MatrixPowerModEigen(d, init, n, mod);
 }
 SL std::vector<int64> MatrixPowerMod(
+    const int d,
     const std::function<void(EigenMatrix<NModNumber<DefaultMod>>& mat,
                              std::vector<NModNumber<DefaultMod>>& v)>& init,
-    const int d, int64 n, int64 mod) {
-  return MatrixPowerModEigen(init, d, n, mod);
+    int64 n, int64 mod) {
+  return MatrixPowerModEigen(d, init, n, mod);
 }
 #endif
 #else
@@ -1509,65 +1533,72 @@ SL std::vector<T> MatrixPower(const PeMatrix<T, C>& m, int64 n,
   return MatrixPowerPe(m, n, v, mod);
 }
 template <typename T>
-SL PeMatrix<T> MatrixPower(const std::function<void(PeMatrix<T>& mat)>& init,
-                           const int d, int64 n) {
-  return MatrixPowerPe(init, d, n);
+SL PeMatrix<T> MatrixPower(const int d,
+                           const std::function<void(PeMatrix<T>& mat)>& init,
+                           int64 n) {
+  return MatrixPowerPe(d, init, n);
 }
 template <typename T>
 SL std::vector<T> MatrixPower(
+    const int d,
     const std::function<void(PeMatrix<T>& mat, std::vector<T>& v)>& init,
-    const int d, int64 n) {
-  return MatrixPowerPe(init, d, n);
+    int64 n) {
+  return MatrixPowerPe(d, init, n);
 }
 
 template <int64 mod>
 SL PeMatrix<int64> MatrixPowerMod(
-    const std::function<void(PeMatrix<NMod64<mod>>& mat)>& init, const int d,
+    const int d, const std::function<void(PeMatrix<NMod64<mod>>& mat)>& init,
     int64 n) {
-  return MatrixPowerModPe<mod>(init, d, n);
+  return MatrixPowerModPe<mod>(d, init, n);
 }
 template <int64 mod>
 SL std::vector<int64> MatrixPowerMod(
+    const int d,
     const std::function<void(PeMatrix<NMod64<mod>>& mat,
                              std::vector<NMod64<mod>>& v)>& init,
-    const int d, int64 n) {
-  return MatrixPowerModPe<mod>(init, d, n);
+    int64 n) {
+  return MatrixPowerModPe<mod>(d, init, n);
 }
 template <typename T>
 SL REQUIRES((IsNModNumberV<T>)) RETURN(PeMatrix<T>)
-    MatrixPowerMod(const std::function<void(PeMatrix<T>& mat)>& init,
-                   const int d, int64 n) {
-  return MatrixPowerModPe<T>(init, d, n);
+    MatrixPowerMod(const int d,
+                   const std::function<void(PeMatrix<T>& mat)>& init, int64 n) {
+  return MatrixPowerModPe<T>(d, init, n);
 }
 template <typename T>
 SL REQUIRES((IsNModNumberV<T>)) RETURN(std::vector<T>) MatrixPowerMod(
+    const int d,
     const std::function<void(PeMatrix<T>& mat, std::vector<T>& v)>& init,
-    const int d, int64 n) {
-  return MatrixPowerModPe<T>(init, d, n);
+    int64 n) {
+  return MatrixPowerModPe<T>(d, init, n);
 }
 #if PE_HAS_INT128
 SL PeMatrix<int64> MatrixPowerMod(
-    const std::function<void(PeMatrix<int128>& mat)>& init, const int d,
+    const int d, const std::function<void(PeMatrix<int128>& mat)>& init,
     int64 n, int64 mod) {
-  return MatrixPowerModPe(init, d, n, mod);
+  return MatrixPowerModPe(d, init, n, mod);
 }
 SL std::vector<int64> MatrixPowerMod(
+    const int d,
     const std::function<void(PeMatrix<int128>& mat, std::vector<int128>& v)>&
         init,
-    const int d, int64 n, int64 mod) {
-  return MatrixPowerModPe(init, d, n, mod);
+    int64 n, int64 mod) {
+  return MatrixPowerModPe(d, init, n, mod);
 }
 #else
 SL PeMatrix<int64> MatrixPowerMod(
+    const int d,
     const std::function<void(PeMatrix<NModNumber<DefaultMod>>& mat)>& init,
-    const int d, int64 n, int64 mod) {
-  return MatrixPowerModPe(init, d, n, mod);
+    int64 n, int64 mod) {
+  return MatrixPowerModPe(d, init, n, mod);
 }
 SL std::vector<int64> MatrixPowerMod(
+    const int d,
     const std::function<void(PeMatrix<NModNumber<DefaultMod>>& mat,
                              std::vector<NModNumber<DefaultMod>>& v)>& init,
-    const int d, int64 n, int64 mod) {
-  return MatrixPowerModPe(init, d, n, mod);
+    int64 n, int64 mod) {
+  return MatrixPowerModPe(d, init, n, mod);
 }
 #endif
 #endif

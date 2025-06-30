@@ -356,13 +356,13 @@ void MatrixPowerExample() {
   std::cout << std::endl << __func__ << std::endl;
 
   // m^n, m is a k*k matrix
-  std::cout << MatrixPowerMod(
+  std::cout << MatrixPower(
                    2, [](auto& m) { m(0, 0) = m(0, 1) = m(1, 0) = 1; },
                    10000000000, mod)
             << std::endl;
 
   // m^n*v, m is a k*k matrix
-  std::cout << MatrixPowerMod(
+  std::cout << MatrixPower(
                    2,
                    [](auto& m, auto& v) {
                      m(0, 0) = m(0, 1) = m(1, 0) = 1;

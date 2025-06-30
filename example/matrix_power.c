@@ -11,7 +11,7 @@ using MT = NMod64<mod>;
 // Mod is specified at compiling time.
 // The element type is choosed internally.
 int64 solve0(int64 n) {
-  auto ans = MatrixPowerMod<mod>(
+  auto ans = MatrixPower<mod>(
       2,
       [=](auto& m, auto& v) {
         m(0, 0) = 1;
@@ -26,7 +26,7 @@ int64 solve0(int64 n) {
 
 // Mod is associated with T at compiling time.
 int64 solve1(int64 n) {
-  auto ans = MatrixPowerMod<MT>(
+  auto ans = MatrixPower<MT>(
       2,
       [=](auto& m, auto& v) {
         m(0, 0) = 1;
@@ -45,7 +45,7 @@ int64 solve1(int64 n) {
 int64 solve2(int64 n, int64 rmod) {
   SetEigenNbThreads(1);
   TLMod64::Set(rmod);
-  auto ans = MatrixPowerMod<TLNMod64<>>(
+  auto ans = MatrixPower<TLNMod64<>>(
       2,
       [=](auto& m, auto& v) {
         m(0, 0) = 1;
@@ -65,7 +65,7 @@ int64 solve2(int64 n, int64 rmod) {
 int64 solve3(int64 n, int64 rmod) {
   using T = NModNumber<DefaultMod>;
   DefaultMod::Set(rmod);
-  auto ans = MatrixPowerMod<T>(
+  auto ans = MatrixPower<T>(
       2,
       [=](auto& m, auto& v) {
         m(0, 0) = 1;
@@ -85,7 +85,7 @@ int64 solve3(int64 n, int64 rmod) {
 // as solve3 and the difference is solve3 needs to set the default mod
 // explicitly and solve4 will set it automatically.
 int64 solve4(int64 n, int64 mod) {
-  auto ans = MatrixPowerMod(
+  auto ans = MatrixPower(
       2,
       [=](auto& m, auto& v) {
         m(0, 0) = 1;

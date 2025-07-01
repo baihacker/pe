@@ -114,7 +114,7 @@ SL void TestEigenHelperMethod() {
   }
 
   {
-    auto res0 = MatrixPowerEigen<NMod64<1000000007>>(
+    auto res0 = MatrixPowerEigen<NModCC64<1000000007>>(
         2,
         [=](auto& m) {
           m(0, 0) = 1;
@@ -122,7 +122,7 @@ SL void TestEigenHelperMethod() {
           m(1, 0) = 1;
         },
         100000);
-    auto res1 = MatrixPowerEigen<NMod64<1000000007>>(
+    auto res1 = MatrixPowerEigen<NModCC64<1000000007>>(
         2,
         [=](auto& m, auto& v) {
           m(0, 0) = 1;
@@ -182,7 +182,7 @@ SL void TestPeHelperMethod() {
   }
 
   {
-    auto res0 = MatrixPowerPe<NMod64<1000000007>>(
+    auto res0 = MatrixPowerPe<NModCC64<1000000007>>(
         2,
         [=](auto& m) {
           m(0, 0) = 1;
@@ -190,7 +190,7 @@ SL void TestPeHelperMethod() {
           m(1, 0) = 1;
         },
         100000);
-    auto res1 = MatrixPowerPe<NMod64<1000000007>>(
+    auto res1 = MatrixPowerPe<NModCC64<1000000007>>(
         2,
         [=](auto& m, auto& v) {
           m(0, 0) = 1;

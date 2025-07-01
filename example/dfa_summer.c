@@ -3,7 +3,7 @@ using namespace pe;
 
 // Compute the 3rd power of the number which contains 3.
 const int64 mod = 1000000007;
-using MT = NMod64<mod>;
+using MT = NModCC64<mod>;
 
 int64 cal(int64 n) {
   const int64 m = n;

@@ -2,7 +2,7 @@
 using namespace pe;
 
 const int64 mod = 1000000007;
-using MT = NMod64<mod>;
+using MT = NModCC64<mod>;
 
 void prime_s0() {
   CachedPi cp;

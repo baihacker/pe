@@ -5,7 +5,7 @@ const int64 mod = 1000000007;
 
 int main() {
   {
-    NMod64<mod> a(5);
+    NModCC64<mod> a(5);
     std::cout << a.Power(10) << std::endl;
     std::cout << Power(a, 10) << std::endl;
     std::cout << PowerMod(a, 10) << std::endl;
@@ -15,7 +15,7 @@ int main() {
   }
   {
     TLMod<int64>::Set(mod);
-    TLNMod64<> a(5);
+    NModTL64<> a(5);
     std::cout << a.Power(10) << std::endl;
     std::cout << Power(a, 10) << std::endl;
     std::cout << PowerMod(a, 10) << std::endl;
@@ -38,7 +38,7 @@ int main() {
   }
 
   {
-    NModM64<mod> a(5);
+    NModMCC64<mod> a(5);
     std::cout << a.Power(10) << std::endl;
     std::cout << Power(a, 10) << std::endl;
     std::cout << PowerMod(a, 10) << std::endl;
@@ -48,7 +48,7 @@ int main() {
   }
   {
     TLMod<int64>::Set(mod);
-    TLNModM64<> a(5);
+    NModMTL64<> a(5);
     std::cout << a.Power(10) << std::endl;
     std::cout << Power(a, 10) << std::endl;
     std::cout << PowerMod(a, 10) << std::endl;

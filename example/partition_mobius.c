@@ -7,7 +7,7 @@ const int S = 500;
 // x1, x2, ..., x5 are distinct.
 
 const int64 mod = 1000000007;
-using MT = NMod64<mod>;
+using MT = NModCC64<mod>;
 
 char used[S + 1];
 int64 dfs(int now, int s) {

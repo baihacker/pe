@@ -2,7 +2,7 @@
 using namespace pe;
 
 const int64 mod = 1000000007;
-using MT = NMod64<mod>;
+using MT = NModCC64<mod>;
 
 using SumfunctionType = int64 (*)(int64 n, int64 mod);
 SumfunctionType sum_function[8] = {

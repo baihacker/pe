@@ -396,7 +396,7 @@ void FractionExample() {
 void ModularArithmeticExample() {
   std::cout << std::endl << __func__ << std::endl;
 
-  NMod64<mod> x = 1;
+  NModCC64<mod> x = 1;
   for (int i = 1; i <= 10000; ++i) {
     x *= i;
   }

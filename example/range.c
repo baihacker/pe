@@ -374,7 +374,7 @@ void range_general_example() {
 
   // 1*2*3*...*999999
   const int64 mod = 1000000007;
-  NMod64<mod> t(1);
+  NModCC64<mod> t(1);
   for (int i = 1; i < 1000000; ++i) t *= i;
   std::cout << t << std::endl;
 

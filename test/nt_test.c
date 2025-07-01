@@ -281,7 +281,7 @@ PE_REGISTER_TEST(&BaseKConversionTest, "BaseKConversionTest", SMALL);
 
 SL void CountCoprimeTest() {
   const int64 mod = 17;
-  using MT = NMod64<mod>;
+  using MT = NModCC64<mod>;
   for (int64 a = 1; a <= 100; ++a) {
     IntegerFactorization f = Factorize(a);
     std::vector<std::pair<int64, int>> rm = GetRadFactorsWithMu(a);
@@ -368,7 +368,7 @@ PE_REGISTER_TEST(&CountCoprimeTest, "CountCoprimeTest", SMALL);
 
 SL void SumCoprimeTest() {
   const int64 mod = 17;
-  using MT = NMod64<mod>;
+  using MT = NModCC64<mod>;
   for (int64 a = 1; a <= 100; ++a) {
     IntegerFactorization f = Factorize(a);
     std::vector<std::pair<int64, int>> rm = GetRadFactorsWithMu(a);

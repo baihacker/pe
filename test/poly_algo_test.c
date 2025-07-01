@@ -184,7 +184,7 @@ SL void SeqExprTest() {
     assert((a[1] + a[2]).SumAtWithCharPoly({0, 1}, 1000, mod) == 625271545);
   }
   {
-    using MT = NMod64<mod>;
+    using MT = NModCC64<mod>;
     Sequence<MT> a;
     (void)a;
     assert((a[1] + a[2]).ValueAt({0, 1}, 1000).value() == 517691607);

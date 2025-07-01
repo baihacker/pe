@@ -2,7 +2,7 @@
 using namespace pe;
 
 const int64 mod = 316227766016779;
-using MT = NMod64<mod>;
+using MT = NModCC64<mod>;
 
 // Computes
 // |1 1|^n *  |1|
@@ -45,7 +45,7 @@ int64 solve1(int64 n) {
 int64 solve2(int64 n, int64 rmod) {
   SetEigenNbThreads(1);
   TLMod64::Set(rmod);
-  auto ans = MatrixPower<TLNMod64<>>(
+  auto ans = MatrixPower<NModTL64<>>(
       2,
       [=](auto& m, auto& v) {
         m(0, 0) = 1;

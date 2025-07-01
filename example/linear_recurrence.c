@@ -37,6 +37,7 @@ int64 solve_nth_sum(int64 n) {
 int main() {
   const std::vector<int64> init = {0LL, 1LL, 1LL, 2LL, 3LL, 5LL, 8LL};
 
+  Sequence<int64> a;
   for (int64 n = 1; n <= 1000000000; n *= 10) {
     // Use Berlekamp Massey algorithm to find the recurrence.
     // The minimal initial element count is: 2 * order + 1
@@ -50,6 +51,7 @@ int main() {
     std::cout << "Ans0 = " << ans0 << std::endl;
     std::cout << "Ans1 = " << ans1 << std::endl;
     std::cout << "Ans2 = " << ans2 << std::endl;
+    std::cout << "Ans3 = " << (a[1] + a[2]).ValueAt(init, n, mod) << std::endl;
     std::cout << std::endl;
   }
 
@@ -61,6 +63,7 @@ int main() {
     std::cout << "n = " << n << std::endl;
     std::cout << "Ans1 = " << ans1 << std::endl;
     std::cout << "Ans2 = " << ans2 << std::endl;
+    std::cout << "Ans3 = " << (a[1] + a[2]).SumAt(init, n, mod) << std::endl;
     std::cout << std::endl;
   }
   return 0;

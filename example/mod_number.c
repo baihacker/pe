@@ -24,8 +24,8 @@ int main() {
     std::cout << PowerMod(a, 10, mod) << std::endl;
   }
   {
-    DefaultMod::Set(mod);
-    NModNumber<DefaultMod> a(5);
+    GlobalMod64::Set(mod);
+    NModNumber<GlobalMod64> a(5);
     std::cout << a.Power(10) << std::endl;
     std::cout << Power(a, 10) << std::endl;
     std::cout << PowerMod(a, 10) << std::endl;
@@ -57,8 +57,8 @@ int main() {
     std::cout << PowerMod(a, 10, mod) << std::endl;
   }
   {
-    DefaultMod::Set(mod);
-    NModNumberM<DefaultMod> a(5);
+    GlobalMod64::Set(mod);
+    NModNumberM<GlobalMod64> a(5);
     std::cout << a.Power(10) << std::endl;
     std::cout << Power(a, 10) << std::endl;
     std::cout << PowerMod(a, 10) << std::endl;

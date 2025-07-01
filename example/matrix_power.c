@@ -63,8 +63,8 @@ int64 solve2(int64 n, int64 rmod) {
 // Mod is associated with T at runtime.
 // All the threads use the same mod.
 int64 solve3(int64 n, int64 rmod) {
-  using T = NModNumber<DefaultMod>;
-  DefaultMod::Set(rmod);
+  using T = NModNumber<GlobalMod64>;
+  GlobalMod64::Set(rmod);
   auto ans = MatrixPower<T>(
       2,
       [=](auto& m, auto& v) {
@@ -81,7 +81,7 @@ int64 solve3(int64 n, int64 rmod) {
 // Mod is specified at runtime.
 // If int128 is available, use int128 as element type, different threads use
 // different mod.
-// Otherwise, use DefaultMod, all the threads use the same mod, and this is same
+// Otherwise, use GlobalMod64, all the threads use the same mod, and this is same
 // as solve3 and the difference is solve3 needs to set the default mod
 // explicitly and solve4 will set it automatically.
 int64 solve4(int64 n, int64 mod) {

@@ -226,7 +226,7 @@ SL void TestPeHelperMethod() {
 }
 
 SL void MatMulTest() {
-  DefaultMod::Set(mod);
+  GlobalMod64::Set(mod);
   std::vector<int> data;
   for (int i = 0; i < K; ++i) {
     for (int j = 0; j < K; ++j) data.push_back(j * K + i);
@@ -291,11 +291,11 @@ SL void MatMulTest() {
   TestEigen<NModNumber<CCMod64<mod>, APSB<int128, int128>>>(data, V);
   TestEigen<NModNumber<CCMod64<mod>, APSBL<int128>>>(data, V);
 
-  TestEigen<NModNumber<DefaultMod, APSB<int64, int64>>>(data, V);
-  TestEigen<NModNumber<DefaultMod, APSB<int64, int128>>>(data, V);
-  TestEigen<NModNumber<DefaultMod, APSB<int64, fake_int128>>>(data, V);
-  TestEigen<NModNumber<DefaultMod, APSB<int128, int128>>>(data, V);
-  TestEigen<NModNumber<DefaultMod, APSBL<int128>>>(data, V);
+  TestEigen<NModNumber<GlobalMod64, APSB<int64, int64>>>(data, V);
+  TestEigen<NModNumber<GlobalMod64, APSB<int64, int128>>>(data, V);
+  TestEigen<NModNumber<GlobalMod64, APSB<int64, fake_int128>>>(data, V);
+  TestEigen<NModNumber<GlobalMod64, APSB<int128, int128>>>(data, V);
+  TestEigen<NModNumber<GlobalMod64, APSBL<int128>>>(data, V);
 
   if (show) {
     std::cout << std::endl;
@@ -307,11 +307,11 @@ SL void MatMulTest() {
   TestEigen<NModNumberM<CCMod64<mod>, APSB<int128, int128>>>(data, V);
   TestEigen<NModNumberM<CCMod64<mod>, APSBL<int128>>>(data, V);
 
-  TestEigen<NModNumberM<DefaultMod, APSB<int64, int64>>>(data, V);
-  TestEigen<NModNumberM<DefaultMod, APSB<int64, int128>>>(data, V);
-  TestEigen<NModNumberM<DefaultMod, APSB<int64, fake_int128>>>(data, V);
-  TestEigen<NModNumberM<DefaultMod, APSB<int128, int128>>>(data, V);
-  TestEigen<NModNumberM<DefaultMod, APSBL<int128>>>(data, V);
+  TestEigen<NModNumberM<GlobalMod64, APSB<int64, int64>>>(data, V);
+  TestEigen<NModNumberM<GlobalMod64, APSB<int64, int128>>>(data, V);
+  TestEigen<NModNumberM<GlobalMod64, APSB<int64, fake_int128>>>(data, V);
+  TestEigen<NModNumberM<GlobalMod64, APSB<int128, int128>>>(data, V);
+  TestEigen<NModNumberM<GlobalMod64, APSBL<int128>>>(data, V);
 
   if (show) {
     std::cout << std::endl;
@@ -338,11 +338,11 @@ SL void MatMulTest() {
   TestPe<NModNumber<CCMod64<mod>, APSB<int128, int128>>>(data, V);
   TestPe<NModNumber<CCMod64<mod>, APSBL<int128>>>(data, V);
 
-  TestPe<NModNumber<DefaultMod, APSB<int64, int64>>>(data, V);
-  TestPe<NModNumber<DefaultMod, APSB<int64, int128>>>(data, V);
-  TestPe<NModNumber<DefaultMod, APSB<int64, fake_int128>>>(data, V);
-  TestPe<NModNumber<DefaultMod, APSB<int128, int128>>>(data, V);
-  TestPe<NModNumber<DefaultMod, APSBL<int128>>>(data, V);
+  TestPe<NModNumber<GlobalMod64, APSB<int64, int64>>>(data, V);
+  TestPe<NModNumber<GlobalMod64, APSB<int64, int128>>>(data, V);
+  TestPe<NModNumber<GlobalMod64, APSB<int64, fake_int128>>>(data, V);
+  TestPe<NModNumber<GlobalMod64, APSB<int128, int128>>>(data, V);
+  TestPe<NModNumber<GlobalMod64, APSBL<int128>>>(data, V);
 
   if (show) {
     std::cout << std::endl;
@@ -353,11 +353,11 @@ SL void MatMulTest() {
   TestPe<NModNumberM<CCMod64<mod>, APSB<int128, int128>>>(data, V);
   TestPe<NModNumberM<CCMod64<mod>, APSBL<int128>>>(data, V);
 
-  TestPe<NModNumberM<DefaultMod, APSB<int64, int64>>>(data, V);
-  TestPe<NModNumberM<DefaultMod, APSB<int64, int128>>>(data, V);
-  TestPe<NModNumberM<DefaultMod, APSB<int64, fake_int128>>>(data, V);
-  TestPe<NModNumberM<DefaultMod, APSB<int128, int128>>>(data, V);
-  TestPe<NModNumberM<DefaultMod, APSBL<int128>>>(data, V);
+  TestPe<NModNumberM<GlobalMod64, APSB<int64, int64>>>(data, V);
+  TestPe<NModNumberM<GlobalMod64, APSB<int64, int128>>>(data, V);
+  TestPe<NModNumberM<GlobalMod64, APSB<int64, fake_int128>>>(data, V);
+  TestPe<NModNumberM<GlobalMod64, APSB<int128, int128>>>(data, V);
+  TestPe<NModNumberM<GlobalMod64, APSBL<int128>>>(data, V);
 
   if (show) {
     std::cout << std::endl;

@@ -1200,28 +1200,41 @@ SL int IsSquareFree(const FactorizedInteger<T>& fi) {
   return fi.IsSquareFree();
 }
 
+// CalMultiplicativeOrder
 template <typename T>
-SL T CalMultiplicativeOrder(T n, T mod, T phi_mod = -1) {
+SL T CalModOrder(T n, T mod, T phi_mod = -1) {
+  if (Gcd(n, mod) != 1) {
+    std::cerr << "n and mod must be coprime" << std::endl;
+    std::cerr << "n = " << n << std::endl;
+    std::cerr << "mod = " << mod << std::endl;
+    exit(-1);
+  }
   if (phi_mod == -1) {
     phi_mod = CalPhi(mod);
   }
   FactorizedInteger<T> fi(phi_mod);
   T ret = phi_mod;
-  for (auto p : fi.GetPrimeFactors()) {
-    if (PowerMod(n, phi_mod / p, mod) == 1) {
+  for (auto [p, e] : fi.GetFactorization()) {
+    for (int i = 0; i < e && PowerMod(n, ret / p, mod) == 1; ++i) {
       ret /= p;
     }
   }
   return ret;
 }
 
+// CalMultiplicativeOrder
 template <typename T>
-SL T CalMultiplicativeOrder(T n, T mod,
-                            const FactorizedInteger<T>& phi_mod_pi) {
-  T phi_mod = phi_mod_pi.GetValue();
+SL T CalModOrder(T n, T mod, const FactorizedInteger<T>& phi_mod_fi) {
+  if (Gcd(n, mod) != 1) {
+    std::cerr << "n and mod must be coprime" << std::endl;
+    std::cerr << "n = " << n << std::endl;
+    std::cerr << "mod = " << mod << std::endl;
+    exit(-1);
+  }
+  T phi_mod = phi_mod_fi.GetValue();
   T ret = phi_mod;
-  for (auto p : phi_mod_pi.GetPrimeFactors()) {
-    if (PowerMod(n, phi_mod / p, mod) == 1) {
+  for (auto [p, e] : phi_mod_fi.GetPrimeFactors()) {
+    for (int i = 0; i < e && PowerMod(n, ret / p, mod) == 1; ++i) {
       ret /= p;
     }
   }

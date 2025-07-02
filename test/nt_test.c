@@ -181,6 +181,24 @@ SL void IsSquareFreeTest() {
 
 PE_REGISTER_TEST(&IsSquareFreeTest, "IsSquareFreeTest", SMALL);
 
+SL void CalModOrderTest() {
+  const int64 mod = 97;
+  std::map<int64, int64> order_to_cnt;
+  for (int64 n = 1; n < mod; ++n) {
+    int64 ans1 = CalModOrder<int64>(n, mod);
+    auto s =
+        MakePeriodicSequence1<int64>(n, [=](int64 a) { return a * n % mod; });
+    int64 ans2 = s.end - s.start;
+    assert(ans1 == ans2);
+    ++order_to_cnt[ans1];
+  }
+  for (auto [order, cnt] : order_to_cnt) {
+    assert(cnt == CalPhi(order));
+  }
+}
+
+PE_REGISTER_TEST(&CalModOrderTest, "CalModOrderTest", SMALL);
+
 SL void SquareRootModTest() {
   for (int i = 0; i < 1000; ++i) {
     const int64 p = plist[i];

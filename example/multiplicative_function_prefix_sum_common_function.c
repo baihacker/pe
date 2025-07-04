@@ -12,7 +12,9 @@ int main() {
   Sigma0Summer<int128> sigma0_summer;
   MuPhiSumModer mu_phi_sum_moder(mod);
   Sigma0SumModer sigma0_sum_moder(mod);
+
   std::string suffx = std::to_string(mod);
+
   for (int64 n = 1; n <= 10000000000; n *= 10) {
     std::cout << "n = " << n << std::endl;
 

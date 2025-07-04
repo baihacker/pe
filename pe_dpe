@@ -230,6 +230,7 @@ std::vector<T> ParseObjects(const DpeCommand &command) {
   }
   return ret;
 }
+constexpr int kDpeBufferLength = (1 << 20) * 100;
 }  // namespace internal
 
 // Distributred PE
@@ -247,10 +248,9 @@ class DpeServer {
     int rc = zmq_bind(responder, std::data(server_address));
     assert(rc == 0);
 
-    constexpr int buffer_length = (1 << 20) * 100;
-    char *buffer = new char[buffer_length + 1];
+    char *buffer = new char[internal::kDpeBufferLength + 1];
     for (; solved < total;) {
-      int received = zmq_recv(responder, buffer, buffer_length, 0);
+      int received = zmq_recv(responder, buffer, internal::kDpeBufferLength, 0);
       buffer[received] = 0;
       std::string response = HandleRequest(std::string_view(buffer, received));
       zmq_send(responder, std::data(response), std::size(response), 0);
@@ -453,10 +453,7 @@ template <typename Derived, typename TaskType, typename ResultType>
 class DpeClient {
  public:
   DpeClient(std::string_view target)
-      : target(target),
-        buffer_length((1 << 20) * 100),
-        get_task_buffer(nullptr),
-        send_result_buffer(nullptr) {}
+      : target(target), get_task_buffer(nullptr), send_result_buffer(nullptr) {}
   ~DpeClient() {
     if (get_task_buffer != nullptr) delete[] get_task_buffer;
     if (send_result_buffer != nullptr) delete[] send_result_buffer;
@@ -468,10 +465,10 @@ class DpeClient {
     AsDerived().InitWorker();
 
     if (get_task_buffer == nullptr) {
-      get_task_buffer = new char[buffer_length];
+      get_task_buffer = new char[internal::kDpeBufferLength];
     }
     if (send_result_buffer == nullptr) {
-      send_result_buffer = new char[buffer_length];
+      send_result_buffer = new char[internal::kDpeBufferLength];
     }
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 1) num_threads(thread_count)
@@ -547,7 +544,8 @@ class DpeClient {
     std::string cmd = raw_command.ToString();
 
     zmq_send(requester, std::data(cmd), std::size(cmd), 0);
-    int cnt = zmq_recv(requester, get_task_buffer, buffer_length, 0);
+    int cnt =
+        zmq_recv(requester, get_task_buffer, internal::kDpeBufferLength, 0);
     zmq_close(requester);
     zmq_ctx_destroy(context);
     get_task_buffer[cnt] = 0;
@@ -573,7 +571,7 @@ class DpeClient {
 
     std::string cmd = command.ToString();
     zmq_send(requester, std::data(cmd), std::size(cmd), 0);
-    zmq_recv(requester, send_result_buffer, buffer_length, 0);
+    zmq_recv(requester, send_result_buffer, internal::kDpeBufferLength, 0);
     zmq_close(requester);
     zmq_ctx_destroy(context);
 
@@ -584,7 +582,6 @@ class DpeClient {
 
  private:
   std::string target;
-  const int64 buffer_length;
   char *get_task_buffer;
   char *send_result_buffer;
 

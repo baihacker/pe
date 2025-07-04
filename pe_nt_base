@@ -367,7 +367,7 @@ SL IntegerFactorization operator*(const IntegerFactorization& a,
     return a;
   }
   std::map<int64, int> ret = a.ToMap();
-  for (auto& iter : b) {
+  for (const auto& iter : b) {
     ret[iter.first] += iter.second;
   }
   return ret;
@@ -472,8 +472,8 @@ SL IntegerFactorization Factorize(int64 n, const std::vector<int64>& hint) {
     return ret;
   }
 
-  for (auto& h : hint) {
-    for (auto iter : Factorize(h)) {
+  for (const auto& h : hint) {
+    for (const auto& iter : Factorize(h)) {
       const int64 p = iter.first;
       int c = 0;
       while (n % p == 0) n /= p, ++c;
@@ -662,7 +662,7 @@ struct FactorizedInteger {
   T GetValue() const {
     if (n_ < 0) {
       T tmp = 1;
-      for (auto iter : factorization_) {
+      for (const auto& iter : factorization_) {
         for (int i = 0; i < iter.second; ++i) {
           tmp *= iter.first;
         }
@@ -682,7 +682,7 @@ struct FactorizedInteger {
     }
 
     int max_size = 1;
-    for (auto& iter : factorization_) {
+    for (const auto& iter : factorization_) {
       max_size *= iter.second + 1;
     }
 
@@ -690,7 +690,7 @@ struct FactorizedInteger {
     result[0] = 1;
 
     int top = 1;
-    for (auto& iter : factorization_) {
+    for (const auto& iter : factorization_) {
       const int last = top;
       const T p = iter.first;
       T v = 1;
@@ -718,7 +718,7 @@ struct FactorizedInteger {
     std::vector<T> ans;
     ans.reserve(std::size(factorization_));
 
-    for (auto& iter : factorization_) {
+    for (const auto& iter : factorization_) {
       ans.push_back(iter.first);
     }
     return ans;
@@ -734,7 +734,7 @@ struct FactorizedInteger {
     result[0] = 1;
 
     int top = 1;
-    for (auto& iter : factorization_) {
+    for (const auto& iter : factorization_) {
       const int last = top;
       const int64 p = iter.first;
       T v = 1;
@@ -764,7 +764,7 @@ struct FactorizedInteger {
     result[0] = {1LL, 1};
 
     int top = 1;
-    for (auto& iter : factorization_) {
+    for (const auto& iter : factorization_) {
       const int last = top;
       const int64 p = iter.first;
       T v = 1;
@@ -793,7 +793,7 @@ struct FactorizedInteger {
       return phi[n_];
     }
     T phi_n = GetValue();
-    for (auto& it : factorization_) {
+    for (const auto& it : factorization_) {
       phi_n -= phi_n / it.first;
     }
     return phi_n;
@@ -806,7 +806,7 @@ struct FactorizedInteger {
     if (mu && n_ >= 0 && n_ <= maxp) {
       return mu[n_];
     }
-    for (auto& iter : factorization_) {
+    for (const auto& iter : factorization_) {
       if (iter.second > 0) {
         return 0;
       }
@@ -823,7 +823,7 @@ struct FactorizedInteger {
     }
 
     T ret = 1;
-    for (auto& iter : factorization_) {
+    for (const auto& iter : factorization_) {
       ret *= iter.first;
     }
     return ret;
@@ -832,9 +832,10 @@ struct FactorizedInteger {
   int CalSmallOmega() const {
     return static_cast<int>(std::size(factorization_));
   }
+
   int CalBigOmega() const {
     int ret = 0;
-    for (auto& iter : factorization_) {
+    for (const auto& iter : factorization_) {
       ret += iter.second;
     }
     return ret;
@@ -849,7 +850,7 @@ struct FactorizedInteger {
     }
 
     T ret = 1;
-    for (auto& iter : factorization_) {
+    for (const auto& iter : factorization_) {
       ret *= iter.second + 1;
     }
     return ret;
@@ -864,7 +865,7 @@ struct FactorizedInteger {
     }
 
     T ret = 1;
-    for (auto& iter : factorization_) {
+    for (const auto& iter : factorization_) {
       T s = 1 + iter.first;
       T d = iter.first;
       for (int i = 1; i < iter.second; ++i) {
@@ -877,7 +878,7 @@ struct FactorizedInteger {
   }
 
   int IsSquareFree() const {
-    for (auto& iter : factorization_) {
+    for (const auto& iter : factorization_) {
       if (iter.second > 1) {
         return 0;
       }
@@ -937,7 +938,7 @@ SL int64 CalPhi(int64 n) {
   if (phi && n <= maxp) return phi[n];
   IntegerFactorization fn = Factorize(n);
   int64 phi_n = n;
-  for (auto& it : fn) {
+  for (const auto& it : fn) {
     phi_n -= phi_n / it.first;
   }
   return phi_n;
@@ -1214,7 +1215,7 @@ SL T CalModOrder(T n, T mod, T phi_mod = -1) {
   }
   FactorizedInteger<T> fi(phi_mod);
   T ret = phi_mod;
-  for (auto [p, e] : fi.GetFactorization()) {
+  for (const auto [p, e] : fi.GetFactorization()) {
     for (int i = 0; i < e && PowerMod(n, ret / p, mod) == 1; ++i) {
       ret /= p;
     }
@@ -1233,7 +1234,7 @@ SL T CalModOrder(T n, T mod, const FactorizedInteger<T>& phi_mod_fi) {
   }
   T phi_mod = phi_mod_fi.GetValue();
   T ret = phi_mod;
-  for (auto [p, e] : phi_mod_fi.GetPrimeFactors()) {
+  for (const auto [p, e] : phi_mod_fi.GetPrimeFactors()) {
     for (int i = 0; i < e && PowerMod(n, ret / p, mod) == 1; ++i) {
       ret /= p;
     }

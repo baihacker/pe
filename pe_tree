@@ -129,5 +129,441 @@ class RSQBit : public BitBase<T, RSQBit<T>> {
 
   T Query(int x, int y) const { return Query(y) - Query(x - 1); }
 };
+
+template <typename T>
+struct SplayMultiSet {
+  struct Node {
+    int64 pre{0}, ch[2], size{1};
+    T key;
+    Node(T key) : key(key) { ch[0] = ch[1] = 0; }
+    Node() { ch[0] = ch[1] = 0; }
+  };
+
+  struct Iterator {
+    Iterator(int64 idx, std::vector<Node>& data) : idx_(idx), data_(&data) {}
+
+    T operator*() { return (*data_)[idx_].key; }
+
+    Node* operator->() { return &(*data_)[idx_]; }
+
+    int operator==(const Iterator& o) const { return idx_ == o.idx_; }
+
+    int operator!=(const Iterator& o) const { return !(this->operator==(o)); }
+
+    Iterator& operator++() {
+      auto& data = *data_;
+      if (idx_ == 0) {
+        while (data[idx_].ch[0]) idx_ = data[idx_].ch[0];
+        return *this;
+      }
+      if (data[idx_].ch[1]) {
+        idx_ = data[idx_].ch[1];
+        while (data[idx_].ch[0]) idx_ = data[idx_].ch[0];
+      } else {
+        while (idx_ != 0 && idx_ == data[data[idx_].pre].ch[1]) {
+          idx_ = data[idx_].pre;
+        }
+        if (idx_ != 0) {
+          idx_ = data[idx_].pre;
+        }
+      }
+      return *this;
+    }
+
+    Iterator operator++(int) {
+      Iterator ret(idx_, *data_);
+      ++*this;
+      return ret;
+    }
+
+    Iterator& operator--() {
+      std::vector<Node>& data = *data_;
+      if (data[idx_].ch[0]) {
+        idx_ = data[idx_].ch[0];
+        while (data[idx_].ch[1]) idx_ = data[idx_].ch[1];
+      } else {
+        while (idx_ != 0 && idx_ == data[data[idx_].pre].ch[0]) {
+          idx_ = data[idx_].pre;
+        }
+        if (idx_ != 0) {
+          idx_ = data[idx_].pre;
+        }
+      }
+      return *this;
+    }
+
+    Iterator operator--(int) {
+      Iterator ret(idx_, *data_);
+      --*this;
+      return ret;
+    }
+
+    int64 idx_;
+    std::vector<Node>* data_;
+  };
+
+  SplayMultiSet() {
+    data_.emplace_back();
+    data_.back().size = 0;
+  }
+
+  Iterator begin() {
+    Iterator t = end();
+    return ++t;
+  }
+
+  Iterator end() { return Iterator(0, data_); }
+
+  Iterator rbegin() {
+    Iterator t = end();
+    return --t;
+  }
+
+  Iterator rend() { return Iterator(0, data_); }
+
+  int LessEqual(T a, T b) { return a <= b; }
+
+  int Less(T a, T b) { return a < b; }
+
+  void insert(T value) {
+    int64 curr = data_[0].ch[0], p = 0;
+    ++data_[0].size;
+    for (p = 0; curr;) {
+      T t = data_[curr].key;
+      ++data_[curr].size;
+      p = curr;
+      if (LessEqual(value, t)) {
+        curr = data_[curr].ch[0];
+      } else {
+        curr = data_[curr].ch[1];
+      }
+    }
+    const int64 top = std::size(data_);
+    if (p == 0) {
+      data_[0].ch[0] = top;
+    } else if (value <= data_[p].key) {
+      data_[p].ch[0] = top;
+    } else {
+      data_[p].ch[1] = top;
+    }
+    data_.emplace_back(value);
+    data_.back().pre = p;
+    Splay(std::size(data_) - 1, 0);
+  }
+
+  void erase(Iterator iter) {
+    if (iter == end()) {
+      return;
+    }
+    --data_[0].size;
+
+    int64 p = iter->pre;
+    if (iter->ch[0] == 0 && iter->ch[1] == 0) {
+      if (iter.idx_ == data_[p].ch[0]) {
+        data_[p].ch[0] = 0;
+      } else {
+        data_[p].ch[1] = 0;
+      }
+      Update(p);
+      return;
+    }
+    if (iter->ch[0] == 0) {
+      int64 t = iter->ch[1];
+      if (iter.idx_ == data_[p].ch[0]) {
+        data_[p].ch[0] = t;
+      } else {
+        data_[p].ch[1] = t;
+      }
+      data_[t].pre = p;
+      Update(p);
+      return;
+    }
+    if (iter->ch[1] == 0) {
+      int64 t = iter->ch[0];
+      if (iter.idx_ == data_[p].ch[0]) {
+        data_[p].ch[0] = t;
+      } else {
+        data_[p].ch[1] = t;
+      }
+      data_[t].pre = p;
+      Update(p);
+      return;
+    }
+    Iterator x = iter;
+    --x;
+    Splay(x.idx_, 0);
+    int64 t = iter->ch[1];
+    data_[x.idx_].ch[1] = t;
+    data_[t].pre = x.idx_;
+    Update(x.idx_);
+  }
+
+  void erase(T value) {
+#if 0
+    for (;;) {
+      auto where = find_one(value);
+      if (where == end()) break;
+      erase(where);
+    }
+#endif
+    Iterator last = FindLast(value);
+    if (last == end()) {
+      return;
+    }
+    Iterator first = FindFirst(value);
+    if (first == last) {
+      erase(first);
+      return;
+    }
+    // note: first is at root position.
+    Splay(last.idx_, first.idx_);
+    int64 t = data_[last.idx_].ch[0];
+    if (t != 0) {
+      data_[0].size -= data_[t].size;
+      data_[last.idx_].ch[0] = 0;
+    }
+    erase(last);
+    erase(first);
+  }
+
+  Iterator FindKth(int64 k) {
+    if (k > size() || k <= 0) {
+      return end();
+    }
+    int64 curr = data_[0].ch[0];
+    for (;;) {
+      int64 c = data_[curr].ch[0];
+      int64 cnt = 0;
+      if (c) {
+        cnt = data_[c].size;
+      }
+      if (cnt + 1 == k) {
+        break;
+      }
+      if (k <= cnt) {
+        curr = c;
+      } else {
+        k -= cnt + 1;
+        curr = data_[curr].ch[1];
+      }
+    }
+    Splay(curr, 0);
+    return Iterator(curr, data_);
+  }
+
+  Iterator FindOne(T value) {
+    int64 curr = data_[0].ch[0], p = 0;
+    for (p = 0; curr;) {
+      T t = data_[curr].key;
+      p = curr;
+      if (value == t) {
+        Splay(curr, 0);
+        return Iterator(curr, data_);
+      }
+      if (Less(value, t)) {
+        curr = data_[curr].ch[0];
+      } else {
+        curr = data_[curr].ch[1];
+      }
+    }
+    return end();
+  }
+
+  Iterator FindFirst(T value) {
+    int64 curr = data_[0].ch[0], p = 0;
+    int64 found = 0;
+    for (p = 0; curr;) {
+      T t = data_[curr].key;
+      p = curr;
+      if (value == t) {
+        found = curr;
+      }
+      if (LessEqual(value, t)) {
+        curr = data_[curr].ch[0];
+      } else {
+        curr = data_[curr].ch[1];
+      }
+    }
+    if (found != 0) {
+      Splay(found, 0);
+    }
+    return Iterator(found, data_);
+  }
+
+  Iterator FindLast(T value) {
+    int64 curr = data_[0].ch[0], p = 0;
+    int64 found = 0;
+    for (p = 0; curr;) {
+      T t = data_[curr].key;
+      p = curr;
+      if (value == t) {
+        found = curr;
+      }
+      if (Less(value, t)) {
+        curr = data_[curr].ch[0];
+      } else {
+        curr = data_[curr].ch[1];
+      }
+    }
+    if (found != 0) {
+      Splay(found, 0);
+    }
+    return Iterator(found, data_);
+  }
+
+  int64 FindCount(T value) {
+    Iterator it = FindFirst(value);
+    if (it == end()) {
+      return 0;
+    }
+    int64 size1 = 0;
+    if (it->ch[0]) {
+      size1 = data_[it->ch[0]].size;
+    }
+    int64 size2 = 0;
+    it = FindLast(value);
+    if (it->ch[1]) {
+      size2 = data_[it->ch[1]].size;
+    }
+    return data_[0].size - size1 - size2;
+  }
+
+  int64 QueryGreater(T value) {
+    int64 curr = data_[0].ch[0], p = 0;
+    int64 ret = 0;
+    for (p = 0; curr;) {
+      T t = data_[curr].key;
+      p = curr;
+      if (Less(value, t)) {
+        ++ret;
+        if (data_[curr].ch[1]) {
+          ret += data_[data_[curr].ch[1]].size;
+        }
+        curr = data_[curr].ch[0];
+      } else {
+        curr = data_[curr].ch[1];
+      }
+    }
+    if (p != 0) Splay(p, 0);
+    return ret;
+  }
+
+  int64 QueryGreaterEqual(T value) {
+    int64 curr = data_[0].ch[0], p = 0;
+    int64 ret = 0;
+    for (p = 0; curr;) {
+      T t = data_[curr].key;
+      p = curr;
+      if (LessEqual(value, t)) {
+        ++ret;
+        if (data_[curr].ch[1]) {
+          ret += data_[data_[curr].ch[1]].size;
+        }
+        curr = data_[curr].ch[0];
+      } else {
+        curr = data_[curr].ch[1];
+      }
+    }
+    if (p != 0) Splay(p, 0);
+    return ret;
+  }
+
+  int64 QueryLess(T value) {
+    int64 curr = data_[0].ch[0], p = 0;
+    int64 ret = 0;
+    for (p = 0; curr;) {
+      T t = data_[curr].key;
+      p = curr;
+      if (Less(t, value)) {
+        ++ret;
+        if (data_[curr].ch[0]) {
+          ret += data_[data_[curr].ch[0]].size;
+        }
+        curr = data_[curr].ch[1];
+      } else {
+        curr = data_[curr].ch[0];
+      }
+    }
+    if (p != 0) Splay(p, 0);
+    return ret;
+  }
+
+  int64 QueryLessEqual(T value) {
+    int64 curr = data_[0].ch[0], p = 0;
+    int64 ret = 0;
+    for (p = 0; curr;) {
+      T t = data_[curr].key;
+      p = curr;
+      if (LessEqual(t, value)) {
+        ++ret;
+        if (data_[curr].ch[0]) {
+          ret += data_[data_[curr].ch[0]].size;
+        }
+        curr = data_[curr].ch[1];
+      } else {
+        curr = data_[curr].ch[0];
+      }
+    }
+    if (p != 0) Splay(p, 0);
+    return ret;
+  }
+
+  void Update(int64 x) {
+    if (x == 0) return;
+    Node& nd = data_[x];
+    Node& l = data_[nd.ch[0]];
+    Node& r = data_[nd.ch[1]];
+    nd.size = 1;
+    if (nd.ch[0]) nd.size += l.size;
+    if (nd.ch[1]) nd.size += r.size;
+  }
+
+  void Rotate(int64 x, int c) {
+    int64 y = data_[x].pre;
+    data_[y].ch[c ^ 1] = data_[x].ch[c];
+    if (data_[x].ch[c]) {
+      data_[data_[x].ch[c]].pre = y;
+    }
+    data_[x].pre = data_[y].pre;
+    if (data_[data_[y].pre].ch[0] == y) {
+      data_[data_[y].pre].ch[0] = x;
+    } else {
+      data_[data_[y].pre].ch[1] = x;
+    }
+    data_[x].ch[c] = y, data_[y].pre = x, Update(y);
+  }
+
+  void Splay(int64 x, int64 f) {
+    for (; data_[x].pre != f;) {
+      if (data_[data_[x].pre].pre == f) {
+        if (data_[data_[x].pre].ch[0] == x) {
+          Rotate(x, 1);
+        } else {
+          Rotate(x, 0);
+        }
+      } else {
+        int64 y = data_[x].pre, z = data_[y].pre;
+        if (data_[z].ch[0] == y) {
+          if (data_[y].ch[0] == x) {
+            Rotate(y, 1), Rotate(x, 1);
+          } else {
+            Rotate(x, 0), Rotate(x, 1);
+          }
+        } else if (data_[y].ch[1] == x) {
+          Rotate(y, 0), Rotate(x, 0);
+        } else {
+          Rotate(x, 1), Rotate(x, 0);
+        }
+      }
+    }
+    Update(x);
+  }
+
+  std::vector<Node>& data() { return data_; }
+  int64 size() { return data_[0].size; }
+
+ private:
+  std::vector<Node> data_;
+};
 }  // namespace pe
 #endif

@@ -986,6 +986,7 @@ struct MValueVisitor {
 
   void Init(int64 n) {}
   void Done() {}
+
   RT Cal(int64 n) {
     static_cast<D&>(*this).Init(n);
     RT ret = DfsLevel0(FindPrimeIdxSg(n), n);
@@ -1019,6 +1020,106 @@ RT ForMValues(
                            MVVHistory* his, int top)>& visitor) {
   return MValueVisitorHelper<RT>(visitor).Cal(n);
 }
+
+// Visit all values of x / (max primer factor of x) for x no more than n.
+template <typename D, typename RT = int64, typename AT = int64, int TN = 1>
+struct MValueVisitorEx {
+  // If top = 0, then imp = -1, vmp = 1, emp = 0.
+  RT Visit(int64 n, int64 val, int imp, int64 vmp, int emp, MVVHistory* his,
+           int top, AT now, AT now1) {
+    return 0;
+  }
+
+  RT Dfs(int limit, int64 n, int64 val, int imp, int64 vmp, int emp,
+         MVVHistory* history, int top, AT now, AT now1) {
+    RT ret = static_cast<D&>(*this).Visit(n, val, imp, vmp, emp, history, top,
+                                          now, now1);
+    for (int i = 0; i < limit; ++i) {
+      const int64 p = plist[i];
+      const int next_imp = imp == -1 ? i : imp;
+      const int64 next_vmp = imp == -1 ? p : vmp;
+      const int64 val_limit = n / p / next_vmp;
+      if (val > val_limit) break;
+      history[top].ip = i;
+      history[top].p = p;
+      history[top].e = 1;
+      history[top].pd = p;
+      int& e = history[top].e;
+      int64& pd = history[top].pd;
+      for (int64 next_val = val * p;; ++e) {
+        const AT next_now =
+            static_cast<D&>(*this).AccumulateValue(now, p, e, pd);
+        const AT next_now1 =
+            p == vmp ? now1
+                     : static_cast<D&>(*this).AccumulateValue(now1, p, e, pd);
+        ret += Dfs(i, n, next_val, next_imp, next_vmp, next_vmp == p ? e : emp,
+                   history, top + 1, next_now, next_now1);
+        if (next_val > val_limit) break;
+        pd *= p;
+        next_val *= p;
+      }
+    }
+    return ret;
+  }
+
+  RT DfsLevel0(int limit, int64 n) {
+    constexpr int64 val = 1;
+    constexpr int imp = -1;
+    constexpr int64 vmp = 1;
+    constexpr int emp = 0;
+    const AT init_value = static_cast<D&>(*this).GetInitValue();
+#if ENABLE_OPENMP
+    if constexpr (TN > 1) {
+      MVVHistory history[TN][128];
+      RT ret = static_cast<D&>(*this).Visit(n, val, imp, vmp, emp, history[0],
+                                            0, init_value, init_value);
+      PSum<RT> sum_helper;
+#pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
+      for (int i = 0; i < limit; ++i) {
+        MVVHistory* his = history[tid()];
+        const int64 p = plist[i];
+        const int64 val_limit = n / p / p;
+        if (val > val_limit) continue;
+        his[0].ip = i;
+        his[0].p = p;
+        his[0].e = 1;
+        his[0].pd = p;
+        int& e = his[0].e;
+        int64& pd = his[0].pd;
+        for (int64 next_val = val * p;; ++e) {
+          sum_helper +=
+              Dfs(i, n, next_val, i, p, e, his, 1,
+                  static_cast<D&>(*this).AccumulateValue(init_value, p, e, pd),
+                  init_value);
+          if (next_val > val_limit) break;
+          pd *= p;
+          next_val *= p;
+        }
+      }
+      ret += sum_helper.value();
+      return ret;
+    } else
+#endif
+    {
+      MVVHistory history[128];
+      return Dfs(limit, n, val, imp, vmp, emp, history, 0, init_value,
+                 init_value);
+    }
+  }
+
+  void Init(int64 n) {}
+  void Done() {}
+
+  AT GetInitValue() { return 1; }
+  AT AccumulateValue(AT init, int64 p, int64 e, int64 pd) { return init; }
+
+  RT Cal(int64 n) {
+    static_cast<D&>(*this).Init(n);
+    RT ret = DfsLevel0(FindPrimeIdxSg(n), n);
+    static_cast<D&>(*this).Done();
+    return ret;
+  }
+};
 
 template <typename D, typename RT = int64, int TN = 1,
           bool small_to_large = false>
@@ -1090,10 +1191,12 @@ struct MValueBase<D, RT, TN, false> {
     return ret;
   }
 
-  RT F(int64 /*p*/, int64 /*e*/) { return 1; }
-  RT BatchF(int /*imp*/, int64 /*vmp*/, int64 /*remain*/) { return 1; }
   void Init(int64 n) {}
   void Done() {}
+
+  RT F(int64 /*p*/, int64 /*e*/) { return 1; }
+  RT BatchF(int /*imp*/, int64 /*vmp*/, int64 /*remain*/) { return 1; }
+
   RT Cal(int64 n) {
     static_cast<D&>(*this).Init(n);
     RT ret = Dfs(FindPrimeIdxSg(n), n, 1, -1, 1, 0, 1, 1);
@@ -1161,10 +1264,12 @@ struct MValueBase<D, RT, TN, true> {
     return ret;
   }
 
-  RT F(int64 /*p*/, int64 /*e*/) { return 1; }
-  RT BatchF(int /*imp*/, int64 /*vmp*/, int64 /*remain*/) { return 1; }
   void Init(int64 n) {}
   void Done() {}
+
+  RT F(int64 /*p*/, int64 /*e*/) { return 1; }
+  RT BatchF(int /*imp*/, int64 /*vmp*/, int64 /*remain*/) { return 1; }
+
   RT Cal(int64 n) {
     static_cast<D&>(*this).Init(n);
     RT ret = Dfs(0, FindPrimeIdxSg(n), n, 1, -1, 1, 0, 1, 1);

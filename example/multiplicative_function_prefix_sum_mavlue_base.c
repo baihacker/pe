@@ -24,7 +24,7 @@ struct Solver1 : public MValueBase<Solver1, RT, 8> {
   TimeDelta usage;
 };
 
-struct Solver2 : public MValueBase<Solver2, RT, 8> {
+struct Solver2 : public MValueBase<Solver2, RT, 8, /*small_to_large=*/false> {
   RT Batch(int64 n, int64 val, int imp, int64 vmp, int emp, RT now, RT now1) {
     RT ret = 0;
     int64 remain = n / val;
@@ -56,7 +56,7 @@ struct Solver2 : public MValueBase<Solver2, RT, 8> {
   TimeDelta usage;
 };
 
-struct Solver3 : public MValueBase<Solver3, RT, 8, true> {
+struct Solver3 : public MValueBase<Solver3, RT, 8, /*small_to_large=*/true> {
   RT Batch(int64 n, int64 val, int imp, int64 vmp, int emp, RT now, RT now1) {
     RT ret = 0;
     int64 remain = n / val;
@@ -120,6 +120,43 @@ struct Solver4 : public MValueVisitor<Solver4, RT, 8> {
     tr.Record();
   }
   void Done() { usage = tr.Elapsed(); }
+  DVA<int64> dva;
+  TimeRecorder tr;
+  TimeDelta usage;
+};
+
+struct Solver5 : public MValueVisitorEx<Solver5, RT, int64, 8> {
+  using AT = int64;
+  RT Visit(int64 n, int64 val, int imp, int64 vmp, int emp, MVVHistory* his,
+           int top, AT now, AT now1) {
+    RT ret = 0;
+    int64 remain = n / val;
+
+    // we have remain >= vmp
+    // handle val * q where q > vmp
+    if (remain > vmp) {
+      ret += RT(now) * 2 * RT(dva[remain] - (imp + 1));
+    }
+    if (val > 1) {
+      // handle val * vmp
+      ret += RT(now1) * (emp + 2);
+    } else {
+      // handle f(1)
+      ret += 1;
+    }
+    return ret;
+  }
+  void Init(int64 n) {
+    dva = PrimeS0Ex<int64>(n);
+    tr.Record();
+  }
+  void Done() { usage = tr.Elapsed(); }
+
+  AT GetInitValue() { return 1; }
+  // pd = p^e
+  AT AccumulateValue(AT init, int64 p, int64 e, int64 pd) {
+    return init * (e + 1);
+  }
   DVA<int64> dva;
   TimeRecorder tr;
   TimeDelta usage;
@@ -220,6 +257,7 @@ void RunCorrectnessTest() {
   line.push_back("Solver2");
   line.push_back("Solver3");
   line.push_back("Solver4");
+  line.push_back("Solver5");
   line.push_back("Dfs");
   line.push_back("Dfs1");
   for (int64 n = 1, e = 0; n <= 100000000; n *= 10, ++e) {
@@ -228,9 +266,10 @@ void RunCorrectnessTest() {
     int64 a2 = Solver2().Cal(n);
     int64 a3 = Solver3().Cal(n);
     int64 a4 = Solver4().Cal(n);
+    int64 a5 = Solver5().Cal(n);
     ::dva = PrimeS0Ex<int64>(n);
-    int64 a5 = Dfs(pcnt, n, 1, -1, 1, 0, 1, 1);
-    int64 a6 = Dfs1(0, pcnt, n, 1, -1, 1, 0, 1, 1);
+    int64 a6 = Dfs(pcnt, n, 1, -1, 1, 0, 1, 1);
+    int64 a7 = Dfs1(0, pcnt, n, 1, -1, 1, 0, 1, 1);
     std::vector<std::string>& line = tf.AppendLine();
     line.push_back("1e" + pe::ToString(e));
     line.push_back(pe::ToString(a0));
@@ -240,6 +279,7 @@ void RunCorrectnessTest() {
     line.push_back(pe::ToString(a4));
     line.push_back(pe::ToString(a5));
     line.push_back(pe::ToString(a6));
+    line.push_back(pe::ToString(a7));
   }
   tf.Render(std::cout);
 }
@@ -251,6 +291,7 @@ void RunPerfTest() {
   line.push_back("Solver2");
   line.push_back("Solver3");
   line.push_back("Solver4");
+  line.push_back("Solver5");
   line.push_back("Dfs");
   line.push_back("Dfs1");
   for (int64 n = 1000000, e = 6; n <= 1000000000000; n *= 10, ++e) {
@@ -275,6 +316,14 @@ void RunPerfTest() {
 
     {
       Solver4 solve;
+      RT ans = solve.Cal(n);
+      // std::cout << ans << std::endl;
+      // std::cout << solve.usage.Format() << std::endl;
+      line.push_back(solve.usage.Format());
+    }
+
+    {
+      Solver5 solve;
       RT ans = solve.Cal(n);
       // std::cout << ans << std::endl;
       // std::cout << solve.usage.Format() << std::endl;

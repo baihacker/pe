@@ -690,11 +690,20 @@ SL REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
 
 template <typename T>
 struct ModValue {
-  int ok = 0;
-  T value;
-  T mod;
+ private:
+  ModValue() : value(0), mod(0) {}
 
-  T GetNoMoreThan(T n) {
+ public:
+  ModValue(T v, T m) : value(std::move(v)), mod(std::move(m)) {}
+
+  static ModValue<T> Absent() {
+    static ModValue absent_value;
+    return absent_value;
+  }
+
+  int ok() const { return mod > 0; }
+
+  T GetNoMoreThan(T n) const {
 #if 0
     if (n >= 0) {
       T ret = n / mod * mod + value;
@@ -710,7 +719,7 @@ struct ModValue {
 #endif
   }
 
-  T GetAtLeast(T n) {
+  T GetAtLeast(T n) const {
 #if 0
     if (n >= 0) {
       T ret = n / mod * mod + value;
@@ -726,17 +735,20 @@ struct ModValue {
 #endif
   }
 
-  T GetCountInRange(T min_value, T max_value) {
+  T GetCountInRange(T min_value, T max_value) const {
     T a = GetAtLeast(min_value);
     T b = GetNoMoreThan(max_value);
     return a <= b ? (b - a) / mod + 1 : 0;
   }
 
-  T GetPositiveCountNoMoreThan(T n) {
+  T GetPositiveCountNoMoreThan(T n) const {
     T a = value > 0 ? value : mod;
     T b = GetNoMoreThan(n);
     return a <= b ? (b - a) / mod + 1 : 0;
   }
+
+  T value;
+  T mod;
 };
 
 template <typename T>

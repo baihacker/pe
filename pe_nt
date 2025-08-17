@@ -333,7 +333,7 @@ SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(ModValue<T>)
 
   T xx = 0, d = ExGcd(a, m, xx);
 
-  if (b % d) return ModValue<T>{0};
+  if (b % d) return ModValue<T>::Absent();
 
   xx = (xx % m + m) % m;
   xx = xx * (b / d) % m;
@@ -341,7 +341,7 @@ SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(ModValue<T>)
   T mod = m / d;
   T value = xx % mod;
 
-  return {1, value, mod};
+  return ModValue<T>(value, mod);
 }
 
 // Solves equation x = a (mod m1) x = b (mod m2)
@@ -362,8 +362,8 @@ SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(ModValue<T>)
   if (b < 0) b += m2;
 
   ModValue<T> mod_value = SolveLinearEquation(m1, b - a, m2);
-  if (!mod_value.ok) {
-    return ModValue<T>{0};
+  if (!mod_value.ok()) {
+    return ModValue<T>::Absent();
   }
   // k0 = k1 * s + t
   // x = (k1 * s + t) * m1 + a
@@ -372,18 +372,18 @@ SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(ModValue<T>)
   T mod = mod_value.mod * m1;
   T value = ((a + mod_value.value * m1) % mod + mod) % mod;
 
-  return {1, value, mod};
+  return ModValue<T>(value, mod);
 }
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(ModValue<T>)
     CrtN(const T* val, const T* mod, int n) {
   PE_ASSERT(val != nullptr && mod != nullptr);
-  ModValue<T> ret{1, 0, 1};
+  ModValue<T> ret(0, 1);
   for (int i = 0; i < n; ++i) {
     ret = Crt2(ret.value, ret.mod, val[i], mod[i]);
-    if (!ret.ok) {
-      return ModValue<T>{0};
+    if (!ret.ok()) {
+      return ModValue<T>::Absent();
     }
   }
   return ret;
@@ -461,7 +461,7 @@ template <typename T = int64>
 SL T CountModValue(const int64 n, int64 remain0, int64 mod0, int64 remain1,
                    int64 mod1) {
   ModValue<int64> t = Crt2<int64>(remain0, mod0, remain1, mod1);
-  if (!t.ok) return 0;
+  if (!t.ok()) return 0;
   return CountModValue<T>(n, t.value, t.mod);
 }
 
@@ -471,7 +471,7 @@ template <typename T = int64>
 SL T SumModValue(const int64 n, int64 remain0, int64 mod0, int64 remain1,
                  int64 mod1) {
   ModValue<int64> t = Crt2<int64>(remain0, mod0, remain1, mod1);
-  if (!t.ok) return 0;
+  if (!t.ok()) return 0;
   return SumModValue<T>(n, t.value, t.mod);
 }
 
@@ -1114,7 +1114,7 @@ SL std::vector<int64> RootMod(int64 a, int64 n, int64 p,
   // n log_x = r mod q
   const int64 q = p - 1;
   ModValue<int64> t = SolveLinearEquation(n % q, r % q, q);
-  if (!t.ok) {
+  if (!t.ok()) {
     return {};
   }
   std::vector<int64> result;

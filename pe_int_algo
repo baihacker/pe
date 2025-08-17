@@ -112,7 +112,7 @@ SL REQUIRES((is_signed_extended_integer_v<T> || is_gbi_v<T>))
 
   T xx = 0, d = ExGcd(a, m, xx);
 
-  if (!IsZero(b % d)) return ModValue<T>{0};
+  if (!IsZero(b % d)) return ModValue<T>::Absent();
 
   xx = (xx % m + m) % m;
   xx = xx * (b / d) % m;
@@ -120,7 +120,7 @@ SL REQUIRES((is_signed_extended_integer_v<T> || is_gbi_v<T>))
   T mod = m / d;
   T value = xx % mod;
 
-  return {1, std::move(value), std::move(mod)};
+  return ModValue<T>(std::move(value), std::move(mod));
 }
 
 // Solves equation x = a (mod m1) x = b (mod m2)
@@ -141,8 +141,8 @@ SL REQUIRES((is_signed_extended_integer_v<T> || is_gbi_v<T>))
   if (IntSign(b) < 0) b += m2;
 
   ModValue<T> mod_value = SolveLinearEquation(m1, b - a, m2);
-  if (!mod_value.ok) {
-    return ModValue<T>{0};
+  if (!mod_value.ok()) {
+    return ModValue<T>::Absent();
   }
   // k0 = k1 * s + t
   // x = (k1 * s + t) * m1 + a
@@ -151,17 +151,17 @@ SL REQUIRES((is_signed_extended_integer_v<T> || is_gbi_v<T>))
   T mod = mod_value.mod * m1;
   T value = ((a + mod_value.value * m1) % mod + mod) % mod;
 
-  return {1, std::move(value), std::move(mod)};
+  return ModValue<T>(std::move(value), std::move(mod));
 }
 
 template <typename T>
 SL REQUIRES((is_signed_extended_integer_v<T> || is_gbi_v<T>))
     RETURN(ModValue<T>) CrtN(const T* val, const T* mod, int n) {
-  ModValue<T> ret = {1, 0, 1};
+  ModValue<T> ret(0, 1);
   for (int i = 0; i < n; ++i) {
     ret = Crt2(ret.value, ret.mod, val[i], mod[i]);
-    if (!ret.ok) {
-      return {0};
+    if (!ret.ok()) {
+      return ModValue<T>::Absent();
     }
   }
   return ret;

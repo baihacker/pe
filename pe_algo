@@ -65,14 +65,14 @@ struct FactModer {
   FactModer(uint64 p) : p_(p) { Init(); }
 
   // Evaluate (x+v*0+1)*(x+v*1+1)*(x+v*2+1)*...*(x+v*(d-1)+1) at 0, 1, 2, ..., d
-  void Evaluate(int d, uint64* result, uint64 v) {
+  void Evaluate(int64 d, uint64* result, uint64 v) {
     if (d == 1) {
       result[0] = 1;
       result[1] = p_ == 2 ? 0 : 2;
       return;
     }
 
-    const int half_d = d >> 1;
+    const int64 half_d = d >> 1;
     Evaluate(half_d, result, v);
     std::copy(result, result + half_d + 1, std::data(g0_));
 #if ENABLE_OPENMP
@@ -96,22 +96,22 @@ struct FactModer {
                                  v * half_d + half_d, std::data(ifac_), p_);
     }
 
-    for (int i = 0; i <= half_d; ++i) {
+    for (int64 i = 0; i <= half_d; ++i) {
       result[i] = MulMod(g0_[i], g2_[i], p_);
     }
-    for (int i = half_d + 1, j = 0; i <= half_d * 2; ++i, ++j) {
+    for (int64 i = half_d + 1, j = 0; i <= half_d * 2; ++i, ++j) {
       result[i] = MulMod(g1_[j], g3_[j + 1], p_);
     }
 
     if (d & 1) {
       uint64 tmp = (v * (d - 1) + 1) % p_;
-      for (int i = 0; i <= 2 * half_d; ++i) {
+      for (int64 i = 0; i <= 2 * half_d; ++i) {
         result[i] = MulMod(result[i], tmp++, p_);
         if (tmp >= p_) tmp -= p_;
       }
       uint64 t = 1;
       uint64 c = d + 1;
-      for (int i = 0; i < d; ++i) {
+      for (int64 i = 0; i < d; ++i) {
         t = MulMod(t, c, p_);
         c += v;
         if (c >= p_) c -= p_;
@@ -133,9 +133,9 @@ struct FactModer {
       ret = MulMod(ret, i, p_);
     }
 
-    Evaluate(static_cast<int>(m), std::data(v_), m);
+    Evaluate(static_cast<int64>(m), std::data(v_), m);
 
-    for (int i = 0; i < m; ++i) {
+    for (int64 i = 0; i < m; ++i) {
       ret = MulMod(ret, v_[i], p_);
     }
     return static_cast<int64>(ret);
@@ -200,13 +200,13 @@ struct FactSumModer {
 
     // Prepare data for computing P
     std::vector<uint64> X((m - 1) * 2);
-    for (int i = 0; i < m - 1; ++i) {
+    for (int64 i = 0; i < m - 1; ++i) {
       X[i * 2] = i + 1;
       X[i * 2 + 1] = m;
     }
 
     std::vector<uint64> V(m);
-    for (int i = 0; i < m; ++i) {
+    for (int64 i = 0; i < m; ++i) {
       V[i] = i;
     }
 
@@ -220,7 +220,7 @@ struct FactSumModer {
     // YQ *= (m + xm)
     YQ.resize(m + 1);
     YQ[m] = YQ[m - 1];
-    for (int i = static_cast<int>(m - 1); i >= 1; --i) {
+    for (int64 i = m - 1; i >= 1; --i) {
       YQ[i] = AddMod(YQ[i], YQ[i - 1], p_);
     }
     for (uint64& i : YQ) i = MulMod(i, m, p_);
@@ -230,7 +230,7 @@ struct FactSumModer {
 
     // Compute Q
     std::vector<uint64> Q = PolyMultipointEvaluate(YQ, V, p_);
-    for (int i = 1; i <= m; ++i) {
+    for (int64 i = 1; i <= m; ++i) {
       Q[i] = MulMod(Q[i], Q[i - 1], p_);
     }
 
@@ -241,7 +241,7 @@ struct FactSumModer {
 
     // Compute result
     int64 result = P[0];
-    for (int i = 1; i < m; ++i) {
+    for (int64 i = 1; i < m; ++i) {
       uint64 t = MulMod(P[i], Q[i - 1], p_);
       result = AddMod(result, t, p_);
     }
@@ -263,7 +263,7 @@ struct FactSumModer {
     fac_sum_.resize(q_);
     InitSeqProd2<uint64>(std::data(fac_), nullptr, q_ - 1, p_);
     fac_sum_[0] = fac_[0];
-    for (int i = 1; i < q_; ++i) {
+    for (int64 i = 1; i < q_; ++i) {
       fac_sum_[i] = AddMod(fac_sum_[i - 1], fac_[i], p_);
     }
   }
@@ -453,10 +453,10 @@ SL int64 ShortCombMod(int64 n, int64 m, int64 mod) {
   if (n - m < m) m = n - m;
   std::vector<int64> data;
   for (int64 i = n; i >= n - m + 1; --i) data.push_back(i);
-  const int size = static_cast<int>(std::size(data));
-  for (int i = 2; i <= m; ++i) {
+  const int64 size = static_cast<int64>(std::size(data));
+  for (int64 i = 2; i <= m; ++i) {
     int64 a = i;
-    for (int j = 0; j < size && a > 1; ++j) {
+    for (int64 j = 0; j < size && a > 1; ++j) {
       if (data[j] > 1) {
         const int64 t = Gcd(a, data[j]);
         a /= t;
@@ -465,7 +465,7 @@ SL int64 ShortCombMod(int64 n, int64 m, int64 mod) {
     }
   }
   int64 ret = 1;
-  for (int i = 0; i < size; ++i) {
+  for (int64 i = 0; i < size; ++i) {
     ret = MulMod(ret, data[i], mod);
   }
   return ret;
@@ -536,7 +536,7 @@ struct CombModerPrimePower {
     mod_ = Power(T(p_), e_);
     phi_ = Power(T(p_), (e_ - 1)) * (p_ - 1);
     f_.resize(pe + 1, 1);
-    for (int i = 1; i <= pe; ++i) {
+    for (int64 i = 1; i <= pe; ++i) {
       if (i % p_ == 0) {
         f_[i] = f_[i - 1];
       } else {
@@ -546,7 +546,7 @@ struct CombModerPrimePower {
 
     ppower_.resize(e_);
     ppower_[0] = 1;
-    for (int i = 1; i < e_; ++i) {
+    for (int64 i = 1; i < e_; ++i) {
       ppower_[i] = MulMod(ppower_[i - 1], p, mod_);
     }
   }
@@ -560,11 +560,11 @@ struct CombModerPrimePower {
     T ret = 1;
     const T u2 = u * u;
 
-    for (int j = 1; j <= r; ++j) {
+    for (int64 j = 1; j <= r; ++j) {
       T beta_numer = u;
       T beta_denom = j;
-      const int j2 = j * j;
-      for (int i = 1; i <= r; ++i) {
+      const int64 j2 = j * j;
+      for (int64 i = 1; i <= r; ++i) {
         if (i != j) {
           beta_numer *= u2 - i * i;
           beta_denom *= j2 - i * i;
@@ -587,12 +587,12 @@ struct CombModerPrimePower {
 
     ret = MulMod(ret, f_[v], mod_);
 
-    for (int j = 1; j < e_; ++j) {
+    for (int64 j = 1; j < e_; ++j) {
       T base = MulMod(f_[j * p_ + v],
                       ModInv(MulMod(f_[v], f_[j * p_], mod_), mod_), mod_);
       T alpha_numer = u;
       T alpha_denom = j;
-      for (int i = 1; i < e_; ++i) {
+      for (int64 i = 1; i < e_; ++i) {
         if (i != j) {
           alpha_numer *= u - i;
           alpha_denom *= j - i;
@@ -707,37 +707,37 @@ struct CombModerPrimeSquare {
 // https://blog.csdn.net/xianhaoming/article/details/80390426
 template <typename T = int64>
 struct PowerSumModer {
-  PowerSumModer(int64 mod, int maxk = 128) : mod_(mod), maxk_(maxk) {
+  PowerSumModer(int64 mod, int64 maxk = 128) : mod_(mod), maxk_(maxk) {
     Init(maxk);
   }
 
   ~PowerSumModer() = default;
 
-  void Init(int maxk = 128) {
+  void Init(int64 maxk = 128) {
     maxk_ = maxk;
 
     p_ = std::vector<std::vector<int64>>(maxk_ + 1);
-    for (int i = 0; i <= maxk_; ++i) {
+    for (int64 i = 0; i <= maxk_; ++i) {
       p_[i] = std::vector<int64>(maxk_ + 1);
     }
 
     invs_ = std::vector<int64>(maxk_ + 2);
 
     InitInverse(std::data(invs_), maxk_ + 1, mod_);
-    for (int i = 0; i <= maxk_; ++i) {
-      for (int j = 0; j <= maxk_; ++j) {
+    for (int64 i = 0; i <= maxk_; ++i) {
+      for (int64 j = 0; j <= maxk_; ++j) {
         p_[i][j] = 0;
       }
     }
-    for (int i = 0; i <= maxk_; ++i) p_[i][1] = 1;
-    for (int i = 1; i <= maxk_; ++i) {
-      for (int j = 1; j < i; ++j) {
+    for (int64 i = 0; i <= maxk_; ++i) p_[i][1] = 1;
+    for (int64 i = 1; i <= maxk_; ++i) {
+      for (int64 j = 1; j < i; ++j) {
         int64 t = p_[i - 1][j - 1] + p_[i - 1][j];
         if (t >= mod_) t -= mod_;
         p_[i][j] = MulMod(j, t, mod_);
       }
       p_[i][i] = 1;
-      for (int j = 1; j <= i; ++j) {
+      for (int64 j = 1; j <= i; ++j) {
         p_[i][i] = MulMod(p_[i][i], j, mod_);
       }
     }
@@ -755,7 +755,7 @@ struct PowerSumModer {
 
     int64 ret = 0;
     int64 c = (n + 1) % mod_;
-    for (int i = 1; i <= k; ++i) {
+    for (int64 i = 1; i <= k; ++i) {
       // ret += P[k][i] * ShortCombMod(n + 1, i + 1, mod) % mod;
       c = MulMod(c, Mod(n + 1 - i, mod_), mod_);
       c = MulMod(c, invs_[i + 1], mod_);
@@ -779,7 +779,7 @@ struct PowerSumModer {
     int64 ret = 0;
     int64 c = A;
     int64 d = B;
-    for (int i = 1; i <= k; ++i) {
+    for (int64 i = 1; i <= k; ++i) {
       // ret += P[k][i] * ShortCombMod(n + 1, i + 1, mod) % mod;
       std::tie(A, B) = ExtractFactor(n + 1 - i, mod_);
       d += B;
@@ -803,7 +803,7 @@ struct PowerSumModer {
 
  private:
   int64 mod_;
-  int maxk_;
+  int64 maxk_;
   std::vector<std::vector<int64>> p_;
   std::vector<int64> invs_;
 };

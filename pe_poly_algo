@@ -131,8 +131,8 @@ SL std::vector<int64> GenStirling2(int64 n, int64 mod) {
 SL std::vector<int64> GetGFCoefficientSeries(const std::vector<int64>& A,
                                              const std::vector<int64>& B,
                                              const int64 n, const int64 mod) {
-  const int sa = static_cast<int>(std::size(A));
-  const int sb = static_cast<int>(std::size(B));
+  const int64 sa = static_cast<int64>(std::size(A));
+  const int64 sb = static_cast<int64>(std::size(B));
   PE_ASSERT(sa > 0);
   PE_ASSERT(sb > 0);
 
@@ -166,8 +166,8 @@ SL std::vector<int64> GetGFCoefficientSeries(const std::vector<int64>& A,
 SL int64 GetGFCoefficientAt(const std::vector<int64>& A,
                             const std::vector<int64>& B, const int64 n,
                             const int64 mod) {
-  const int sa = static_cast<int>(std::size(A));
-  const int sb = static_cast<int>(std::size(B));
+  const int64 sa = static_cast<int64>(std::size(A));
+  const int64 sb = static_cast<int64>(std::size(B));
   PE_ASSERT(sa > 0);
   PE_ASSERT(sb > 0);
 
@@ -184,9 +184,9 @@ SL int64 GetGFCoefficientAt(const std::vector<int64>& A,
   const int64 inv_A0 = mod_value.value;
   result[0] = MulMod(inv_A0, Mod(B[0], mod), mod);
 
-  for (int i = 1; i <= m; ++i) {
+  for (int64 i = 1; i <= m; ++i) {
     int64 t = i < sb ? Mod(B[i], mod) : 0;
-    for (int j = 1; j <= std::min(i, sa - 1); ++j) {
+    for (int64 j = 1; j <= std::min<int64>(i, sa - 1); ++j) {
       t = SubMod(t, MulMod(j < sa ? Mod(A[j], mod) : 0, result[i - j], mod),
                  mod);
     }
@@ -202,13 +202,13 @@ SL int64 GetGFCoefficientAt(const std::vector<int64>& A,
   return MatrixPower(
       D,
       [&](auto& mat, auto& v) {
-        for (int i = 0; i < D; ++i) {
+        for (int64 i = 0; i < D; ++i) {
           mat(0, i) = MulMod(inv_A0, Mod(i + 1 < sa ? -A[i + 1] : 0, mod), mod);
         }
-        for (int i = 1; i < D; ++i) {
+        for (int64 i = 1; i < D; ++i) {
           mat(i, i - 1) = 1;
         }
-        for (int i = 0; i < D; ++i) {
+        for (int64 i = 0; i < D; ++i) {
           v[i] = result[m - i];
         }
       },
@@ -222,13 +222,13 @@ SL int64 GetGFCoefficientAt(const std::vector<int64>& A,
   int64* res = mat + size;
   int64* tmp = res + size;
 
-  for (int i = 0; i < D; ++i) {
+  for (int64 i = 0; i < D; ++i) {
     mat[i] = MulMod(inv_A0, Mod(i + 1 < sa ? -A[i + 1] : 0, mod), mod);
   }
-  for (int i = 1; i < D; ++i) {
+  for (int64 i = 1; i < D; ++i) {
     (mat + i * D)[i - 1] = 1;
   }
-  for (int i = 0; i < D; ++i) {
+  for (int64 i = 0; i < D; ++i) {
     res[i] = result[m - i];
   }
 
@@ -311,21 +311,21 @@ struct PowerSumModerB {
     PE_ASSERT(std::size(vec) <= maxk_ + 1);
     const int64 size = std::size(vec);
     std::vector<int64> result(size + 1, 0);
-    for (int k = 0; k < size; ++k) {
+    for (int64 k = 0; k < size; ++k) {
       // comb(k+1, i) b[i] n^(k+1-i) / (k + 1)
       int64 c = invs_[k + 1];
-      for (int i = 0; i <= k; ++i) {
+      for (int64 i = 0; i <= k; ++i) {
         if (i > 0) {
           c = MulMod(c, Mod(k + 2 - i, mod_), mod_);
           c = MulMod(c, invs_[i], mod_);
         }
         int64 x = MulMod(c, bnl_[i], mod_);
-        const int idx = k + 1 - i;
+        const int64 idx = k + 1 - i;
         result[idx] = AddMod(result[idx], MulMod(vec[k], x, mod_), mod_);
       }
     }
     std::vector<T> ret(size + 1);
-    for (int i = 0; i <= size; ++i) {
+    for (int64 i = 0; i <= size; ++i) {
       ret[i] = result[i];
     }
     return result;
@@ -548,15 +548,15 @@ namespace internal {
 // the sequence. i.e. result[0] == 0
 SL std::vector<int64> FindLinearRecurrence(Span<const int64> terms,
                                            const int64 mod) {
-  const int m = static_cast<int>(std::size(terms));
-  const int n = m >> 1;
+  const int64 m = static_cast<int64>(std::size(terms));
+  const int64 n = m >> 1;
   PE_ASSERT(n * 2 == m);
 
   std::vector<int64> r0(m + 1, 0);
   r0[m] = 1;
 
   std::vector<int64> r1(std::size(terms));
-  for (int i = 0; i < m; ++i) {
+  for (int64 i = 0; i < m; ++i) {
     r1[i] = terms[m - 1 - i];
   }
   AdjustPolyLeadingZero(r1);
@@ -583,11 +583,11 @@ SL int64 LinearRecurrenceValueNext(const std::vector<int64>& char_poly,
                                    Span<const int64> terms, int64 mod) {
   PE_ASSERT(std::size(terms) + 1 >= static_cast<int64>(std::size(char_poly)));
 
-  const int m = static_cast<int>(std::size(char_poly));
-  const int idx = static_cast<int>(std::size(terms));
+  const int64 m = static_cast<int64>(std::size(char_poly));
+  const int64 idx = static_cast<int64>(std::size(terms));
 
   int64 ret = 0;
-  for (int j = 0; j < m - 1; ++j) {
+  for (int64 j = 0; j < m - 1; ++j) {
     ret = SubMod(ret, MulMod(char_poly[j], terms[idx - (m - j - 1)], mod), mod);
   }
   return ret;
@@ -618,11 +618,11 @@ SL int64 LinearRecurrenceSumAt(const std::vector<int64>& char_poly,
 
   PE_ASSERT(std::size(terms) + 1 >= static_cast<int64>(std::size(char_poly)));
 
-  const int m = static_cast<int>(std::size(char_poly));
+  const int64 m = static_cast<int64>(std::size(char_poly));
   std::vector<int64> sum(m, 0);
   std::vector<int64> values;
   values.reserve(m);
-  for (int i = 0; i < m; ++i) {
+  for (int64 i = 0; i < m; ++i) {
     int64 t = 0;
     if (i < m - 1) {
       t = terms[i];
@@ -644,9 +644,9 @@ SL int64 LinearRecurrenceSumAt(const std::vector<int64>& char_poly,
 
 SL int VerifyLinearRecurrence(const std::vector<int64>& char_poly,
                               Span<const int64> terms, int64 mod) {
-  int order = static_cast<int>(std::size(char_poly)) - 1;
-  for (int i = static_cast<int>(std::size(char_poly)) - 1; i < std::size(terms);
-       ++i) {
+  int64 order = static_cast<int64>(std::size(char_poly)) - 1;
+  for (int64 i = static_cast<int64>(std::size(char_poly)) - 1;
+       i < std::size(terms); ++i) {
     int64 value = LinearRecurrenceValueNext(
         char_poly, terms.subspan(i - order, order), mod);
     if (value != Mod(terms[i], mod)) {
@@ -658,8 +658,8 @@ SL int VerifyLinearRecurrence(const std::vector<int64>& char_poly,
 
 SL std::optional<std::vector<int64>> FindLinearRecurrence(
     Span<const int64> terms, int64 mod, int min_use = 2) {
-  const int len = static_cast<int>(std::size(terms));
-  for (int n = (std::max(min_use, 2) + 1) / 2 * 2; n < len; n += 2) {
+  const int64 len = static_cast<int64>(std::size(terms));
+  for (int64 n = (std::max(min_use, 2) + 1) / 2 * 2; n < len; n += 2) {
     std::vector<int64> char_poly =
         internal::FindLinearRecurrence(terms.subspan(0, n), mod);
     if (VerifyLinearRecurrence(char_poly, terms, mod)) {
@@ -694,7 +694,7 @@ SL std::optional<std::vector<int64>> FindLinearRecurrenceValues(
 
   const int64 m = static_cast<int64>(std::size(terms));
   std::vector<int64> data(m);
-  for (int i = 0; i < m; ++i) {
+  for (int64 i = 0; i < m; ++i) {
     data[i] = terms[i];
   }
   for (int64 i = m; i <= n; ++i) {
@@ -720,7 +720,7 @@ class LinearSequenceRelation {
       PE_ASSERT(seq_relation_[0] == zero);
     }
     std::vector<RetType> char_poly;
-    for (int i = 1; i < std::size(seq_relation_); ++i) {
+    for (int64 i = 1; i < std::size(seq_relation_); ++i) {
       char_poly.push_back(ap.Sub(zero, seq_relation_[i]));
     }
     char_poly.push_back(ap.Value(RetType(1)));
@@ -749,7 +749,7 @@ class LinearSequenceRelation {
       PE_ASSERT(std::size(terms) + 1 >= std::size(seq_relation_));
       for (int64 i = m; i < need; ++i) {
         int64 val = seq_relation_[0];
-        for (int j = 1; j < seq_relation_.size(); ++j) {
+        for (int64 j = 1; j < seq_relation_.size(); ++j) {
           val = AddMod(val, MulMod(seq_relation_[j], ret[i - j], mod), mod);
         }
         ret[i] = val;
@@ -771,7 +771,7 @@ class LinearSequenceRelation {
       PE_ASSERT(std::size(terms) + 1 >= std::size(seq_relation_));
       for (int64 i = m; i < need; ++i) {
         T val = seq_relation_[0];
-        for (int j = 1; j < seq_relation_.size(); ++j) {
+        for (int64 j = 1; j < seq_relation_.size(); ++j) {
           val += seq_relation_[j] * ret[i - j];
         }
         ret[i] = val;
@@ -803,18 +803,18 @@ class LinearSequenceRelation {
 
     PE_ASSERT(std::size(seq_relation_) > 0);
     PE_ASSERT(std::size(terms) + 1 >= std::size(seq_relation_));
-    const int d = static_cast<int>(std::size(seq_relation_)) - 1;
+    const int64 d = static_cast<int64>(std::size(seq_relation_)) - 1;
     if (seq_relation_[0] == 0) {
       return MatrixPower(
           d,
           [&](auto& m, auto& v) {
-            for (int i = 0; i < d; ++i) {
+            for (int64 i = 0; i < d; ++i) {
               m(0, i) = seq_relation_[i + 1];
             }
-            for (int i = 1; i < d; ++i) {
+            for (int64 i = 1; i < d; ++i) {
               m(i, i - 1) = 1;
             }
-            for (int i = 0; i < d; ++i) {
+            for (int64 i = 0; i < d; ++i) {
               v[i] = terms[d - 1 - i];
             }
           },
@@ -823,15 +823,15 @@ class LinearSequenceRelation {
       return MatrixPower(
           d + 1,
           [&](auto& m, auto& v) {
-            for (int i = 0; i < d; ++i) {
+            for (int64 i = 0; i < d; ++i) {
               m(0, i) = seq_relation_[i + 1];
             }
             m(0, d) = 1;
-            for (int i = 1; i < d; ++i) {
+            for (int64 i = 1; i < d; ++i) {
               m(i, i - 1) = 1;
             }
             m(d, d) = 1;
-            for (int i = 0; i < d; ++i) {
+            for (int64 i = 0; i < d; ++i) {
               v[i] = terms[d - 1 - i];
             }
             v[d] = seq_relation_[0];
@@ -847,20 +847,20 @@ class LinearSequenceRelation {
 
     PE_ASSERT(std::size(seq_relation_) > 0);
     PE_ASSERT(std::size(terms) + 1 >= std::size(seq_relation_));
-    const int d = static_cast<int>(std::size(seq_relation_)) - 1;
+    const int64 d = static_cast<int64>(std::size(seq_relation_)) - 1;
     if (seq_relation_[0] == 0) {
       return MatrixPower(
           d + 1,
           [&](auto& m, auto& v) {
-            for (int i = 0; i < d; ++i) {
+            for (int64 i = 0; i < d; ++i) {
               m(0, i) = seq_relation_[i + 1];
             }
-            for (int i = 1; i < d; ++i) {
+            for (int64 i = 1; i < d; ++i) {
               m(i, i - 1) = 1;
             }
             m(d, d - 1) = 1;
             m(d, d) = 1;
-            for (int i = 0; i < d; ++i) {
+            for (int64 i = 0; i < d; ++i) {
               v[i] = terms[d - 1 - i];
             }
             v[d] = 0;
@@ -870,17 +870,17 @@ class LinearSequenceRelation {
       return MatrixPower(
           d + 2,
           [&](auto& m, auto& v) {
-            for (int i = 0; i < d; ++i) {
+            for (int64 i = 0; i < d; ++i) {
               m(0, i) = seq_relation_[i + 1];
             }
             m(0, d) = 1;
-            for (int i = 1; i < d; ++i) {
+            for (int64 i = 1; i < d; ++i) {
               m(i, i - 1) = 1;
             }
             m(d, d) = 1;
             m(d + 1, d - 1) = 1;
             m(d + 1, d + 1) = 1;
-            for (int i = 0; i < d; ++i) {
+            for (int64 i = 0; i < d; ++i) {
               v[i] = terms[d - 1 - i];
             }
             v[d] = seq_relation_[0];
@@ -897,18 +897,18 @@ class LinearSequenceRelation {
 
     PE_ASSERT(std::size(seq_relation_) > 0);
     PE_ASSERT(std::size(terms) + 1 >= std::size(seq_relation_));
-    const int d = static_cast<int>(std::size(seq_relation_)) - 1;
+    const int64 d = static_cast<int64>(std::size(seq_relation_)) - 1;
     if (seq_relation_[0] == T(0)) {
       return MatrixPower<T>(
           d,
           [&](auto& m, auto& v) {
-            for (int i = 0; i < d; ++i) {
+            for (int64 i = 0; i < d; ++i) {
               m(0, i) = seq_relation_[i + 1];
             }
-            for (int i = 1; i < d; ++i) {
+            for (int64 i = 1; i < d; ++i) {
               m(i, i - 1) = 1;
             }
-            for (int i = 0; i < d; ++i) {
+            for (int64 i = 0; i < d; ++i) {
               v[i] = terms[d - 1 - i];
             }
           },
@@ -917,15 +917,15 @@ class LinearSequenceRelation {
       return MatrixPower<T>(
           d + 1,
           [&](auto& m, auto& v) {
-            for (int i = 0; i < d; ++i) {
+            for (int64 i = 0; i < d; ++i) {
               m(0, i) = seq_relation_[i + 1];
             }
             m(0, d) = 1;
-            for (int i = 1; i < d; ++i) {
+            for (int64 i = 1; i < d; ++i) {
               m(i, i - 1) = 1;
             }
             m(d, d) = 1;
-            for (int i = 0; i < d; ++i) {
+            for (int64 i = 0; i < d; ++i) {
               v[i] = terms[d - 1 - i];
             }
             v[d] = seq_relation_[0];
@@ -941,20 +941,20 @@ class LinearSequenceRelation {
 
     PE_ASSERT(std::size(seq_relation_) > 0);
     PE_ASSERT(std::size(terms) + 1 >= std::size(seq_relation_));
-    const int d = static_cast<int>(std::size(seq_relation_)) - 1;
+    const int64 d = static_cast<int64>(std::size(seq_relation_)) - 1;
     if (seq_relation_[0] == T(0)) {
       return MatrixPower<T>(
           d + 1,
           [&](auto& m, auto& v) {
-            for (int i = 0; i < d; ++i) {
+            for (int64 i = 0; i < d; ++i) {
               m(0, i) = seq_relation_[i + 1];
             }
-            for (int i = 1; i < d; ++i) {
+            for (int64 i = 1; i < d; ++i) {
               m(i, i - 1) = 1;
             }
             m(d, d - 1) = 1;
             m(d, d) = 1;
-            for (int i = 0; i < d; ++i) {
+            for (int64 i = 0; i < d; ++i) {
               v[i] = terms[d - 1 - i];
             }
             v[d] = 0;
@@ -964,17 +964,17 @@ class LinearSequenceRelation {
       return MatrixPower<T>(
           d + 2,
           [&](auto& m, auto& v) {
-            for (int i = 0; i < d; ++i) {
+            for (int64 i = 0; i < d; ++i) {
               m(0, i) = seq_relation_[i + 1];
             }
             m(0, d) = 1;
-            for (int i = 1; i < d; ++i) {
+            for (int64 i = 1; i < d; ++i) {
               m(i, i - 1) = 1;
             }
             m(d, d) = 1;
             m(d + 1, d - 1) = 1;
             m(d + 1, d + 1) = 1;
-            for (int i = 0; i < d; ++i) {
+            for (int64 i = 0; i < d; ++i) {
               v[i] = terms[d - 1 - i];
             }
             v[d] = seq_relation_[0];
@@ -1094,7 +1094,7 @@ class SeqExpr {
             result = std::move(t);
           } else {
             while (result.size() < t.size()) result.push_back(zero);
-            for (int i = 0; i < t.size(); ++i)
+            for (int64 i = 0; i < t.size(); ++i)
               result[i] = ap.Add(result[i], t[i]);
           }
         }
@@ -1108,7 +1108,7 @@ class SeqExpr {
             result = std::move(t);
           } else {
             while (result.size() < t.size()) result.push_back(zero);
-            for (int i = 0; i < t.size(); ++i)
+            for (int64 i = 0; i < t.size(); ++i)
               result[i] = ap.Mul(result[i], t[i]);
           }
         }

@@ -334,8 +334,36 @@ using vi = std::vector<int>;
 using mii = std::map<int, int>;
 using si = std::set<int>;
 
-// pe will add more overloaded version for the following functions.
-using std::to_string;
+namespace internal {
+template <typename T, typename = void>
+struct has_std_to_string : std::false_type {};
+
+template <typename T>
+struct has_std_to_string<
+    T, std::void_t<decltype(std::to_string(std::declval<T>()))>>
+    : std::true_type {};
+
+template <typename T>
+inline constexpr bool has_std_to_string_v = has_std_to_string<T>::value;
+}  // namespace internal
+
+// Delegate to std::to_string if possible.
+template <typename T, typename = typename std::enable_if<
+                          internal::has_std_to_string_v<T>>::type>
+SL std::string ToString(const T& x) {
+  return std::to_string(x);
+}
+
+// Make pe::to_string possible.
+template <typename T>
+SL std::string to_string(const T& x) {
+  return ToString(x);
+}
+
+template <typename T>
+SL std::string to_string(const T& x, int dig) {
+  return ToString(x, dig);
+}
 
 // About numbers
 

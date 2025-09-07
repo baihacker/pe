@@ -272,7 +272,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 template <typename T, uint32 mod>
 SL std::vector<uint32> RunNtt(const NttMod32& moder, const T* X, int64 n,
                               const T* Y, int64 m, int64 target_mod) {
-  const int64 aligned_size = 1LL << pe_lgll(2 * (n + m - 1) - 1);
+  const int64 aligned_size = BitCeil(n + m - 1);
   const bool skip_mod = target_mod > 0 && static_cast<uint64>(target_mod) <=
                                               static_cast<uint64>(mod);
   std::vector<uint32> XX(aligned_size);
@@ -338,52 +338,56 @@ SL std::vector<std::vector<uint32>> RunNtt2D(
   const int64 m1 = sz(X[0]);
   const int64 n2 = sz(Y);
   const int64 m2 = sz(Y[0]);
-  const int64 n = BitCeil(n1 + n2 - 1);
-  const int64 m = BitCeil(m1 + m2 - 1);
+  const int64 aligned_n = BitCeil(n1 + n2 - 1);
+  const int64 aligned_m = BitCeil(m1 + m2 - 1);
+  const int64 buffer_size = aligned_n * aligned_m;
 
   const bool skip_mod = target_mod > 0 && static_cast<uint64>(target_mod) <=
                                               static_cast<uint64>(mod);
-  std::vector<uint32> XX(n * m, 0);
-  std::vector<uint32> YY(n * m, 0);
+  std::vector<uint32> XX(buffer_size, 0);
+  std::vector<uint32> YY(buffer_size, 0);
   if (skip_mod) {
     for (int64 i = 0; i < n1; ++i)
-      for (int64 j = 0; j < m1; ++j) XX[i * m + j] = ToInt<uint32>(X[i][j]);
+      for (int64 j = 0; j < m1; ++j)
+        XX[i * aligned_m + j] = ToInt<uint32>(X[i][j]);
   } else {
     for (int64 i = 0; i < n1; ++i)
       for (int64 j = 0; j < m1; ++j)
-        XX[i * m + j] = ToInt<uint32>(Mod(X[i][j], mod));
+        XX[i * aligned_m + j] = ToInt<uint32>(Mod(X[i][j], mod));
   }
   if (skip_mod) {
     for (int64 i = 0; i < n2; ++i)
-      for (int64 j = 0; j < m2; ++j) YY[i * m + j] = ToInt<uint32>(Y[i][j]);
+      for (int64 j = 0; j < m2; ++j)
+        YY[i * aligned_m + j] = ToInt<uint32>(Y[i][j]);
   } else {
     for (int64 i = 0; i < n2; ++i)
       for (int64 j = 0; j < m2; ++j)
-        YY[i * m + j] = ToInt<uint32>(Mod(Y[i][j], mod));
+        YY[i * aligned_m + j] = ToInt<uint32>(Mod(Y[i][j], mod));
   }
 #if ENABLE_OPENMP
-#pragma omp parallel sections if (n * m >= 100000)
+#pragma omp parallel sections if (buffer_size >= 100000)
 #endif
   {
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Ntt2D<uint32, mod>(std::data(XX), n, m, moder, false);
+    Ntt2D<uint32, mod>(std::data(XX), aligned_n, aligned_m, moder, false);
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Ntt2D<uint32, mod>(std::data(YY), n, m, moder, false);
+    Ntt2D<uint32, mod>(std::data(YY), aligned_n, aligned_m, moder, false);
   }
   constexpr uint64 mod1 = mod;
-  for (int64 i = 0; i < n * m; ++i) {
+  for (int64 i = 0; i < buffer_size; ++i) {
     XX[i] = static_cast<uint64>(XX[i]) * YY[i] % mod1;
   }
-  Ntt2D<uint32, mod>(std::data(XX), n, m, moder, true);
+  Ntt2D<uint32, mod>(std::data(XX), aligned_n, aligned_m, moder, true);
 
-  std::vector<std::vector<uint32>> result(n, std::vector<uint32>(m, 0));
-  for (int64 i = 0; i < n; ++i)
-    for (int64 j = 0; j < m; ++j) {
-      result[i][j] = XX[i * m + j];
+  std::vector<std::vector<uint32>> result(aligned_n,
+                                          std::vector<uint32>(aligned_m, 0));
+  for (int64 i = 0; i < aligned_n; ++i)
+    for (int64 j = 0; j < aligned_n; ++j) {
+      result[i][j] = XX[i * aligned_m + j];
     }
 
   return result;
@@ -1129,7 +1133,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 template <typename T, uint64 mod>
 SL std::vector<uint64> RunNtt(const NttMod64& moder, const T* X, int64 n,
                               const T* Y, int64 m, int64 target_mod) {
-  const int64 aligned_size = 1LL << pe_lgll(2 * (n + m - 1) - 1);
+  const int64 aligned_size = BitCeil(n + m - 1);
   const bool skip_mod = target_mod > 0 && static_cast<uint64>(target_mod) <=
                                               static_cast<uint64>(mod);
   std::vector<uint64> XX(aligned_size);
@@ -1200,56 +1204,60 @@ SL std::vector<std::vector<uint64>> RunNtt2D(
   const int64 m1 = sz(X[0]);
   const int64 n2 = sz(Y);
   const int64 m2 = sz(Y[0]);
-  const int64 n = BitCeil(n1 + n2 - 1);
-  const int64 m = BitCeil(m1 + m2 - 1);
+  const int64 aligned_n = BitCeil(n1 + n2 - 1);
+  const int64 aligned_m = BitCeil(m1 + m2 - 1);
+  const int64 buffer_size = aligned_n * aligned_m;
 
   const bool skip_mod = target_mod > 0 && static_cast<uint64>(target_mod) <=
                                               static_cast<uint64>(mod);
-  std::vector<uint64> XX(n * m, 0);
-  std::vector<uint64> YY(n * m, 0);
+  std::vector<uint64> XX(buffer_size, 0);
+  std::vector<uint64> YY(buffer_size, 0);
   if (skip_mod) {
     for (int64 i = 0; i < n1; ++i)
-      for (int64 j = 0; j < m1; ++j) XX[i * m + j] = ToInt<uint64>(X[i][j]);
+      for (int64 j = 0; j < m1; ++j)
+        XX[i * aligned_m + j] = ToInt<uint64>(X[i][j]);
   } else {
     for (int64 i = 0; i < n1; ++i)
       for (int64 j = 0; j < m1; ++j)
-        XX[i * m + j] = ToInt<uint64>(Mod(X[i][j], mod));
+        XX[i * aligned_m + j] = ToInt<uint64>(Mod(X[i][j], mod));
   }
   if (skip_mod) {
     for (int64 i = 0; i < n2; ++i)
-      for (int64 j = 0; j < m2; ++j) YY[i * m + j] = ToInt<uint64>(Y[i][j]);
+      for (int64 j = 0; j < m2; ++j)
+        YY[i * aligned_m + j] = ToInt<uint64>(Y[i][j]);
   } else {
     for (int64 i = 0; i < n2; ++i)
       for (int64 j = 0; j < m2; ++j)
-        YY[i * m + j] = ToInt<uint64>(Mod(Y[i][j], mod));
+        YY[i * aligned_m + j] = ToInt<uint64>(Mod(Y[i][j], mod));
   }
 #if ENABLE_OPENMP
-#pragma omp parallel sections if (n * m >= 100000)
+#pragma omp parallel sections if (buffer_size >= 100000)
 #endif
   {
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Ntt2D<uint64, mod>(std::data(XX), n, m, moder, false);
+    Ntt2D<uint64, mod>(std::data(XX), aligned_n, aligned_m, moder, false);
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Ntt2D<uint64, mod>(std::data(YY), n, m, moder, false);
+    Ntt2D<uint64, mod>(std::data(YY), aligned_n, aligned_m, moder, false);
   }
   constexpr uint64 mod1 = mod;
-  for (int64 i = 0; i < n * m; ++i) {
+  for (int64 i = 0; i < buffer_size; ++i) {
 #if PE_HAS_INT128
     XX[i] = Uint128ModUint64(static_cast<uint128>(XX[i]) * YY[i], mod1);
 #else
     XX[i] = MulMod(XX[i], YY[i], mod1);
 #endif
   }
-  Ntt2D<uint64, mod>(std::data(XX), n, m, moder, true);
+  Ntt2D<uint64, mod>(std::data(XX), aligned_n, aligned_m, moder, true);
 
-  std::vector<std::vector<uint64>> result(n, std::vector<uint64>(m, 0));
-  for (int64 i = 0; i < n; ++i)
-    for (int64 j = 0; j < m; ++j) {
-      result[i][j] = XX[i * m + j];
+  std::vector<std::vector<uint64>> result(aligned_n,
+                                          std::vector<uint64>(aligned_m, 0));
+  for (int64 i = 0; i < aligned_n; ++i)
+    for (int64 j = 0; j < aligned_m; ++j) {
+      result[i][j] = XX[i * aligned_m + j];
     }
 
   return result;

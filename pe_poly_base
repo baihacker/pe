@@ -277,16 +277,6 @@ SL std::vector<uint32> RunNtt(const NttMod32& moder, const T* X, int64 n,
                                               static_cast<uint64>(mod);
   std::vector<uint32> XX(aligned_size);
   std::vector<uint32> YY(aligned_size);
-  if (skip_mod) {
-    for (int64 i = 0; i < n; ++i) XX[i] = ToInt<uint32>(X[i]);
-  } else {
-    for (int64 i = 0; i < n; ++i) XX[i] = ToInt<uint32>(Mod(X[i], mod));
-  }
-  if (skip_mod) {
-    for (int64 i = 0; i < m; ++i) YY[i] = ToInt<uint32>(Y[i]);
-  } else {
-    for (int64 i = 0; i < m; ++i) YY[i] = ToInt<uint32>(Mod(Y[i], mod));
-  }
 #if ENABLE_OPENMP
 #pragma omp parallel sections if (n + m >= 100000)
 #endif
@@ -294,11 +284,33 @@ SL std::vector<uint32> RunNtt(const NttMod32& moder, const T* X, int64 n,
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Ntt<uint32, mod>(std::data(XX), aligned_size, moder, false);
+    {
+      if (skip_mod) {
+        for (int64 i = 0; i < n; ++i) {
+          XX[i] = ToInt<uint32>(X[i]);
+        }
+      } else {
+        for (int64 i = 0; i < n; ++i) {
+          XX[i] = ToInt<uint32>(Mod(X[i], mod));
+        }
+      }
+      Ntt<uint32, mod>(std::data(XX), aligned_size, moder, false);
+    }
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Ntt<uint32, mod>(std::data(YY), aligned_size, moder, false);
+    {
+      if (skip_mod) {
+        for (int64 i = 0; i < m; ++i) {
+          YY[i] = ToInt<uint32>(Y[i]);
+        }
+      } else {
+        for (int64 i = 0; i < m; ++i) {
+          YY[i] = ToInt<uint32>(Mod(Y[i], mod));
+        }
+      }
+      Ntt<uint32, mod>(std::data(YY), aligned_size, moder, false);
+    }
   }
   constexpr uint64 mod1 = mod;
   for (int64 i = 0; i < aligned_size; ++i) {
@@ -346,24 +358,6 @@ SL std::vector<std::vector<uint32>> RunNtt2D(
                                               static_cast<uint64>(mod);
   std::vector<uint32> XX(buffer_size, 0);
   std::vector<uint32> YY(buffer_size, 0);
-  if (skip_mod) {
-    for (int64 i = 0; i < n1; ++i)
-      for (int64 j = 0; j < m1; ++j)
-        XX[i * aligned_m + j] = ToInt<uint32>(X[i][j]);
-  } else {
-    for (int64 i = 0; i < n1; ++i)
-      for (int64 j = 0; j < m1; ++j)
-        XX[i * aligned_m + j] = ToInt<uint32>(Mod(X[i][j], mod));
-  }
-  if (skip_mod) {
-    for (int64 i = 0; i < n2; ++i)
-      for (int64 j = 0; j < m2; ++j)
-        YY[i * aligned_m + j] = ToInt<uint32>(Y[i][j]);
-  } else {
-    for (int64 i = 0; i < n2; ++i)
-      for (int64 j = 0; j < m2; ++j)
-        YY[i * aligned_m + j] = ToInt<uint32>(Mod(Y[i][j], mod));
-  }
 #if ENABLE_OPENMP
 #pragma omp parallel sections if (buffer_size >= 100000)
 #endif
@@ -371,11 +365,37 @@ SL std::vector<std::vector<uint32>> RunNtt2D(
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Ntt2D<uint32, mod>(std::data(XX), aligned_n, aligned_m, moder, false);
+    {
+      if (skip_mod) {
+        for (int64 i = 0; i < n1; ++i)
+          for (int64 j = 0; j < m1; ++j) {
+            XX[i * aligned_m + j] = ToInt<uint32>(X[i][j]);
+          }
+      } else {
+        for (int64 i = 0; i < n1; ++i)
+          for (int64 j = 0; j < m1; ++j) {
+            XX[i * aligned_m + j] = ToInt<uint32>(Mod(X[i][j], mod));
+          }
+      }
+      Ntt2D<uint32, mod>(std::data(XX), aligned_n, aligned_m, moder, false);
+    }
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Ntt2D<uint32, mod>(std::data(YY), aligned_n, aligned_m, moder, false);
+    {
+      if (skip_mod) {
+        for (int64 i = 0; i < n2; ++i)
+          for (int64 j = 0; j < m2; ++j) {
+            YY[i * aligned_m + j] = ToInt<uint32>(Y[i][j]);
+          }
+      } else {
+        for (int64 i = 0; i < n2; ++i)
+          for (int64 j = 0; j < m2; ++j) {
+            YY[i * aligned_m + j] = ToInt<uint32>(Mod(Y[i][j], mod));
+          }
+      }
+      Ntt2D<uint32, mod>(std::data(YY), aligned_n, aligned_m, moder, false);
+    }
   }
   constexpr uint64 mod1 = mod;
   for (int64 i = 0; i < buffer_size; ++i) {
@@ -1138,16 +1158,6 @@ SL std::vector<uint64> RunNtt(const NttMod64& moder, const T* X, int64 n,
                                               static_cast<uint64>(mod);
   std::vector<uint64> XX(aligned_size);
   std::vector<uint64> YY(aligned_size);
-  if (skip_mod) {
-    for (int64 i = 0; i < n; ++i) XX[i] = ToInt<uint64>(X[i]);
-  } else {
-    for (int64 i = 0; i < n; ++i) XX[i] = ToInt<uint64>(Mod(X[i], mod));
-  }
-  if (skip_mod) {
-    for (int64 i = 0; i < m; ++i) YY[i] = ToInt<uint64>(Y[i]);
-  } else {
-    for (int64 i = 0; i < m; ++i) YY[i] = ToInt<uint64>(Mod(Y[i], mod));
-  }
 #if ENABLE_OPENMP
 #pragma omp parallel sections if (n + m >= 100000)
 #endif
@@ -1155,11 +1165,33 @@ SL std::vector<uint64> RunNtt(const NttMod64& moder, const T* X, int64 n,
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Ntt<uint64, mod>(std::data(XX), aligned_size, moder, false);
+    {
+      if (skip_mod) {
+        for (int64 i = 0; i < n; ++i) {
+          XX[i] = ToInt<uint64>(X[i]);
+        }
+      } else {
+        for (int64 i = 0; i < n; ++i) {
+          XX[i] = ToInt<uint64>(Mod(X[i], mod));
+        }
+      }
+      Ntt<uint64, mod>(std::data(XX), aligned_size, moder, false);
+    }
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Ntt<uint64, mod>(std::data(YY), aligned_size, moder, false);
+    {
+      if (skip_mod) {
+        for (int64 i = 0; i < m; ++i) {
+          YY[i] = ToInt<uint64>(Y[i]);
+        }
+      } else {
+        for (int64 i = 0; i < m; ++i) {
+          YY[i] = ToInt<uint64>(Mod(Y[i], mod));
+        }
+      }
+      Ntt<uint64, mod>(std::data(YY), aligned_size, moder, false);
+    }
   }
   constexpr uint64 mod1 = mod;
   for (int64 i = 0; i < aligned_size; ++i) {
@@ -1212,24 +1244,7 @@ SL std::vector<std::vector<uint64>> RunNtt2D(
                                               static_cast<uint64>(mod);
   std::vector<uint64> XX(buffer_size, 0);
   std::vector<uint64> YY(buffer_size, 0);
-  if (skip_mod) {
-    for (int64 i = 0; i < n1; ++i)
-      for (int64 j = 0; j < m1; ++j)
-        XX[i * aligned_m + j] = ToInt<uint64>(X[i][j]);
-  } else {
-    for (int64 i = 0; i < n1; ++i)
-      for (int64 j = 0; j < m1; ++j)
-        XX[i * aligned_m + j] = ToInt<uint64>(Mod(X[i][j], mod));
-  }
-  if (skip_mod) {
-    for (int64 i = 0; i < n2; ++i)
-      for (int64 j = 0; j < m2; ++j)
-        YY[i * aligned_m + j] = ToInt<uint64>(Y[i][j]);
-  } else {
-    for (int64 i = 0; i < n2; ++i)
-      for (int64 j = 0; j < m2; ++j)
-        YY[i * aligned_m + j] = ToInt<uint64>(Mod(Y[i][j], mod));
-  }
+
 #if ENABLE_OPENMP
 #pragma omp parallel sections if (buffer_size >= 100000)
 #endif
@@ -1237,11 +1252,37 @@ SL std::vector<std::vector<uint64>> RunNtt2D(
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Ntt2D<uint64, mod>(std::data(XX), aligned_n, aligned_m, moder, false);
+    {
+      if (skip_mod) {
+        for (int64 i = 0; i < n1; ++i)
+          for (int64 j = 0; j < m1; ++j) {
+            XX[i * aligned_m + j] = ToInt<uint64>(X[i][j]);
+          }
+      } else {
+        for (int64 i = 0; i < n1; ++i)
+          for (int64 j = 0; j < m1; ++j) {
+            XX[i * aligned_m + j] = ToInt<uint64>(Mod(X[i][j], mod));
+          }
+      }
+      Ntt2D<uint64, mod>(std::data(XX), aligned_n, aligned_m, moder, false);
+    }
 #if ENABLE_OPENMP
 #pragma omp section
 #endif
-    Ntt2D<uint64, mod>(std::data(YY), aligned_n, aligned_m, moder, false);
+    {
+      if (skip_mod) {
+        for (int64 i = 0; i < n2; ++i)
+          for (int64 j = 0; j < m2; ++j) {
+            YY[i * aligned_m + j] = ToInt<uint64>(Y[i][j]);
+          }
+      } else {
+        for (int64 i = 0; i < n2; ++i)
+          for (int64 j = 0; j < m2; ++j) {
+            YY[i * aligned_m + j] = ToInt<uint64>(Mod(Y[i][j], mod));
+          }
+      }
+      Ntt2D<uint64, mod>(std::data(YY), aligned_n, aligned_m, moder, false);
+    }
   }
   constexpr uint64 mod1 = mod;
   for (int64 i = 0; i < buffer_size; ++i) {
@@ -1273,17 +1314,15 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
                      int64 mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
 
-  std::vector<uint64> tresult[1];
-  {
-    tresult[0] = RunNtt<T, ntt_mods[1]>(ntt_mod_1, X, n, Y, m, mod);
-  }
+  std::vector<uint64> tresult =
+      RunNtt<T, ntt_mods[1]>(ntt_mod_1, X, n, Y, m, mod);
 
   const int64 result_size = n + m - 1;
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
 #endif
   for (int64 i = 0; i < result_size; ++i) {
-    const uint64 a = tresult[0][i];
+    const uint64 a = tresult[i];
     result[i] = mod > 0 ? a % mod : a;
   }
 }

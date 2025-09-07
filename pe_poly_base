@@ -307,6 +307,87 @@ SL std::vector<uint32> RunNtt(const NttMod32& moder, const T* X, int64 n,
   Ntt<uint32, mod>(std::data(XX), aligned_size, moder, true);
   return XX;
 }
+
+template <typename T, uint32 mod>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    Ntt2D(T* data, int64 rows, int64 cols, const NttMod32& moder,
+          bool inv = false) {
+  for (int64 i = 0; i < rows; ++i) {
+    T* row_ptr = data + i * cols;
+    Ntt<T, mod>(row_ptr, cols, moder, inv);
+  }
+
+  std::vector<T> column_buffer(rows);
+  for (int64 j = 0; j < cols; ++j) {
+    for (int64 i = 0; i < rows; ++i) {
+      column_buffer[i] = data[i * cols + j];
+    }
+    Ntt<T, mod>(column_buffer.data(), rows, moder, inv);
+
+    for (int64 i = 0; i < rows; ++i) {
+      data[i * cols + j] = column_buffer[i];
+    }
+  }
+}
+
+template <typename T, uint32 mod>
+SL std::vector<std::vector<uint32>> RunNtt2D(
+    const NttMod32& moder, const std::vector<std::vector<T>>& X,
+    const std::vector<std::vector<T>>& Y, int64 target_mod) {
+  const int64 n1 = sz(X);
+  const int64 m1 = sz(X[0]);
+  const int64 n2 = sz(Y);
+  const int64 m2 = sz(Y[0]);
+  const int64 n = BitCeil(n1 + n2 - 1);
+  const int64 m = BitCeil(m1 + m2 - 1);
+
+  const bool skip_mod = target_mod > 0 && static_cast<uint64>(target_mod) <=
+                                              static_cast<uint64>(mod);
+  std::vector<uint32> XX(n * m, 0);
+  std::vector<uint32> YY(n * m, 0);
+  if (skip_mod) {
+    for (int64 i = 0; i < n1; ++i)
+      for (int64 j = 0; j < m1; ++j) XX[i * m + j] = ToInt<uint32>(X[i][j]);
+  } else {
+    for (int64 i = 0; i < n1; ++i)
+      for (int64 j = 0; j < m1; ++j)
+        XX[i * m + j] = ToInt<uint32>(Mod(X[i][j], mod));
+  }
+  if (skip_mod) {
+    for (int64 i = 0; i < n2; ++i)
+      for (int64 j = 0; j < m2; ++j) YY[i * m + j] = ToInt<uint32>(Y[i][j]);
+  } else {
+    for (int64 i = 0; i < n2; ++i)
+      for (int64 j = 0; j < m2; ++j)
+        YY[i * m + j] = ToInt<uint32>(Mod(Y[i][j], mod));
+  }
+#if ENABLE_OPENMP
+#pragma omp parallel sections if (n * m >= 100000)
+#endif
+  {
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    Ntt2D<uint32, mod>(std::data(XX), n, m, moder, false);
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    Ntt2D<uint32, mod>(std::data(YY), n, m, moder, false);
+  }
+  constexpr uint64 mod1 = mod;
+  for (int64 i = 0; i < n * m; ++i) {
+    XX[i] = static_cast<uint64>(XX[i]) * YY[i] % mod1;
+  }
+  Ntt2D<uint32, mod>(std::data(XX), n, m, moder, true);
+
+  std::vector<std::vector<uint32>> result(n, std::vector<uint32>(m, 0));
+  for (int64 i = 0; i < n; ++i)
+    for (int64 j = 0; j < m; ++j) {
+      result[i][j] = XX[i * m + j];
+    }
+
+  return result;
+}
 }  // namespace internal
 
 namespace internal {
@@ -333,6 +414,36 @@ static constexpr PolyMulCoeType kPolyMulSmallMod = ntt_mods[1];
 
 POLY_MUL_IMPL(PolyMulSmall, internal::PolyMulSmallImpl)
 
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>))
+    RETURN(std::vector<std::vector<T>>)
+        PolyMul2DSmall(const std::vector<std::vector<T>>& X,
+                       const std::vector<std::vector<T>>& Y, int64 mod) {
+  const int64 n1 = sz(X);
+  const int64 n2 = sz(Y);
+  if (n1 == 0 || n2 == 0) {
+    return {};
+  }
+
+  const int64 m1 = sz(X[0]);
+  const int64 m2 = sz(Y[0]);
+  if (m1 == 0 || m2 == 0) {
+    return {};
+  }
+
+  std::vector<std::vector<uint32>> tresult =
+      internal::RunNtt2D<T, ntt_mods[1]>(ntt_mod_1, X, Y, mod);
+
+  std::vector<std::vector<T>> ret(n1 + n2 - 1,
+                                  std::vector<int64>(m1 + m2 - 1, 0));
+  for (int64 i = 0; i < n1 + n2 - 1; ++i)
+    for (int64 j = 0; j < m1 + m2 - 1; ++j) {
+      ret[i][j] = mod > 0 ? tresult[i][j] % mod : tresult[i][j];
+    }
+
+  return ret;
+}
+
 namespace internal {
 // The medium version uses two modulus.
 struct NttMediumConstant {
@@ -340,6 +451,22 @@ struct NttMediumConstant {
   static constexpr uint64 M2 = ntt_mods[2];
   static constexpr uint64 INV_M2__M1 = 2594876085;
 };
+
+template <typename T>
+SL T CombineMod2(uint64 a, uint64 b, int64 mod) {
+  const uint64 x = a >= b ? a - b : a + NttMediumConstant::M1 - b;
+  const uint64 y = x * NttMediumConstant::INV_M2__M1 % NttMediumConstant::M1;
+  const uint64 t = y * NttMediumConstant::M2 + b;
+  return t % mod;
+}
+
+template <typename T>
+SL T CombineValue2(uint64 a, uint64 b) {
+  const uint64 x = a >= b ? a - b : a + NttMediumConstant::M1 - b;
+  const uint64 y = x * NttMediumConstant::INV_M2__M1 % NttMediumConstant::M1;
+  const uint64 t = y * NttMediumConstant::M2 + b;
+  return t;
+}
 
 // Multiply two polynomials.
 // Make sure the length of result is at least: n + m - 1
@@ -367,16 +494,20 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
   }
 
   const int64 result_size = n + m - 1;
+  if (mod > 0) {
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
 #endif
-  for (int64 i = 0; i < result_size; ++i) {
-    const uint64 a = tresult[0][i];
-    const uint64 b = tresult[1][i];
-    const uint64 x = a >= b ? a - b : a + NttMediumConstant::M1 - b;
-    const uint64 y = x * NttMediumConstant::INV_M2__M1 % NttMediumConstant::M1;
-    const uint64 t = y * NttMediumConstant::M2 + b;
-    result[i] = mod > 0 ? t % mod : t;
+    for (int64 i = 0; i < result_size; ++i) {
+      result[i] = CombineMod2<T>(tresult[0][i], tresult[1][i], mod);
+    }
+  } else {
+#if ENABLE_OPENMP
+#pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
+#endif
+    for (int64 i = 0; i < result_size; ++i) {
+      result[i] = CombineValue2<T>(tresult[0][i], tresult[1][i]);
+    }
   }
 }
 }  // namespace internal
@@ -387,6 +518,58 @@ static constexpr PolyMulCoeType kPolyMulMediumMod =
 // Multiply two polynomials.
 // The length of result is at least n + m - 1.
 POLY_MUL_IMPL(PolyMulMedium, internal::PolyMulMediumImpl)
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>))
+    RETURN(std::vector<std::vector<T>>)
+        PolyMul2DMedium(const std::vector<std::vector<T>>& X,
+                        const std::vector<std::vector<T>>& Y, int64 mod) {
+  const int64 n1 = sz(X);
+  const int64 n2 = sz(Y);
+  if (n1 == 0 || n2 == 0) {
+    return {};
+  }
+
+  const int64 m1 = sz(X[0]);
+  const int64 m2 = sz(Y[0]);
+  if (m1 == 0 || m2 == 0) {
+    return {};
+  }
+
+  std::vector<std::vector<uint32>> tresult[2];
+#if ENABLE_OPENMP
+#pragma omp parallel sections
+#endif
+  {
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    tresult[0] = internal::RunNtt2D<T, ntt_mods[1]>(ntt_mod_1, X, Y, mod);
+
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    tresult[1] = internal::RunNtt2D<T, ntt_mods[2]>(ntt_mod_2, X, Y, mod);
+  }
+
+  std::vector<std::vector<T>> result(n1 + n2 - 1,
+                                     std::vector<T>(m1 + m2 - 1, 0));
+  if (mod > 0) {
+    for (int64 i = 0; i < n1 + n2 - 1; ++i)
+      for (int64 j = 0; j < m1 + m2 - 1; ++j) {
+        result[i][j] =
+            internal::CombineMod2<T>(tresult[0][i][j], tresult[1][i][j], mod);
+      }
+  } else {
+    for (int64 i = 0; i < n1 + n2 - 1; ++i)
+      for (int64 j = 0; j < m1 + m2 - 1; ++j) {
+        result[i][j] =
+            internal::CombineValue2<T>(tresult[0][i][j], tresult[1][i][j]);
+      }
+  }
+
+  return result;
+}
 
 namespace internal {
 #define NTT32_DIRECT_INT128_IMPLEMENTATION 0
@@ -413,6 +596,50 @@ struct NttLargeConstant {
   static constexpr uint64 M2M3 = M2 * M3;
   static constexpr uint64 INV_M1__M2M3 = 1498797794963418808;
 };
+
+template <typename T>
+SL T CombineMod3(uint64 a, uint64 b, uint64 c, int64 mod) {
+  const uint64 x1 = b >= c ? b - c : NttLargeConstant::M2 - c + b;
+  const uint64 y1 = x1 * NttLargeConstant::INV_M3__M2 % NttLargeConstant::M2;
+  const uint64 ans_mod_m2m3 = y1 * NttLargeConstant::M3 + c;
+
+  const uint64 x2 = ans_mod_m2m3 >= a
+                        ? ans_mod_m2m3 - a
+                        : NttLargeConstant::M2M3 - a + ans_mod_m2m3;
+  const uint64 y2 =
+      MulMod(x2, NttLargeConstant::INV_M1__M2M3, NttLargeConstant::M2M3);
+  const uint64 t = MulMod(y2 % mod, NttLargeConstant::M1 % mod, mod);
+  return AddMod(t, a % mod, mod);
+}
+
+template <typename T>
+SL T CombineValue3(uint64 a, uint64 b, uint64 c) {
+#if PE_HAS_INT128
+#if NTT32_DIRECT_INT128_IMPLEMENTATION
+  const uint128 A = a * NttLargeConstant::M23M;
+  const uint128 B = b * NttLargeConstant::M13M;
+  const uint128 C = c * NttLargeConstant::M12M;
+  const uint128 t = A + B + C;
+  const uint128 tmp =
+      t < NttLargeConstant::M123 ? t : t % NttLargeConstant::M123;
+  return static_cast<T>(tmp);
+#else
+  const uint64 x1 = b >= c ? b - c : NttLargeConstant::M2 - c + b;
+  const uint64 y1 = x1 * NttLargeConstant::INV_M3__M2 % NttLargeConstant::M2;
+  const uint64 mod_bc = y1 * NttLargeConstant::M3 + c;
+  const uint64 x2 =
+      mod_bc >= a ? mod_bc - a : NttLargeConstant::M2M3 - a + mod_bc;
+
+  const uint64 y2 = static_cast<uint128>(x2) * NttLargeConstant::INV_M1__M2M3 %
+                    NttLargeConstant::M2M3;
+  const uint128 t = static_cast<uint128>(y2) * NttLargeConstant::M1 + a;
+  return static_cast<T>(t);
+#endif
+#else
+  PE_ASSERT(0);
+  return 0;
+#endif
+}
 
 // Multiply two polynomials.
 // Make sure the length of result is at least: n + m - 1
@@ -450,56 +677,15 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
 #pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
 #endif
     for (int64 i = 0; i < result_size; ++i) {
-      const uint64 a = tresult[0][i];
-      const uint64 b = tresult[1][i];
-      const uint64 c = tresult[2][i];
-
-      const uint64 x1 = b >= c ? b - c : NttLargeConstant::M2 - c + b;
-      const uint64 y1 =
-          x1 * NttLargeConstant::INV_M3__M2 % NttLargeConstant::M2;
-      const uint64 ans_mod_m2m3 = y1 * NttLargeConstant::M3 + c;
-
-      const uint64 x2 = ans_mod_m2m3 >= a
-                            ? ans_mod_m2m3 - a
-                            : NttLargeConstant::M2M3 - a + ans_mod_m2m3;
-      const uint64 y2 =
-          MulMod(x2, NttLargeConstant::INV_M1__M2M3, NttLargeConstant::M2M3);
-      const uint64 t = MulMod(y2 % mod, NttLargeConstant::M1 % mod, mod);
-      result[i] = AddMod(t, a % mod, mod);
+      result[i] =
+          CombineMod3<T>(tresult[0][i], tresult[1][i], tresult[2][i], mod);
     }
   } else {
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
 #endif
     for (int64 i = 0; i < result_size; ++i) {
-#if PE_HAS_INT128
-#if NTT32_DIRECT_INT128_IMPLEMENTATION
-      const uint128 a = tresult[0][i] * NttLargeConstant::M23M;
-      const uint128 b = tresult[1][i] * NttLargeConstant::M13M;
-      const uint128 c = tresult[2][i] * NttLargeConstant::M12M;
-      const uint128 t = a + b + c;
-      const uint128 tmp =
-          t < NttLargeConstant::M123 ? t : t % NttLargeConstant::M123;
-      result[i] = static_cast<T>(tmp);
-#else
-      const uint64 a = tresult[0][i];
-      const uint64 b = tresult[1][i];
-      const uint64 c = tresult[2][i];
-      const uint64 x1 = b >= c ? b - c : NttLargeConstant::M2 - c + b;
-      const uint64 y1 =
-          x1 * NttLargeConstant::INV_M3__M2 % NttLargeConstant::M2;
-      const uint64 mod_bc = y1 * NttLargeConstant::M3 + c;
-      const uint64 x2 =
-          mod_bc >= a ? mod_bc - a : NttLargeConstant::M2M3 - a + mod_bc;
-
-      const uint64 y2 = static_cast<uint128>(x2) *
-                        NttLargeConstant::INV_M1__M2M3 % NttLargeConstant::M2M3;
-      const uint128 t = static_cast<uint128>(y2) * NttLargeConstant::M1 + a;
-      result[i] = static_cast<T>(t);
-#endif
-#else
-      PE_ASSERT(0);
-#endif
+      result[i] = CombineValue3<T>(tresult[0][i], tresult[1][i], tresult[2][i]);
     }
   }
 }
@@ -511,6 +697,63 @@ static constexpr PolyMulCoeType kPolyMulLargeMod =
 // Multiply two polynomials.
 // The length of result is at least n + m - 1.
 POLY_MUL_IMPL(PolyMulLarge, internal::PolyMulLargeImpl)
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>))
+    RETURN(std::vector<std::vector<T>>)
+        PolyMul2DLarge(const std::vector<std::vector<T>>& X,
+                       const std::vector<std::vector<T>>& Y, int64 mod) {
+  const int64 n1 = sz(X);
+  const int64 n2 = sz(Y);
+  if (n1 == 0 || n2 == 0) {
+    return {};
+  }
+
+  const int64 m1 = sz(X[0]);
+  const int64 m2 = sz(Y[0]);
+  if (m1 == 0 || m2 == 0) {
+    return {};
+  }
+
+  std::vector<std::vector<uint32>> tresult[3];
+#if ENABLE_OPENMP
+#pragma omp parallel sections
+#endif
+  {
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    tresult[0] = internal::RunNtt2D<T, ntt_mods[1]>(ntt_mod_1, X, Y, mod);
+
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    tresult[1] = internal::RunNtt2D<T, ntt_mods[2]>(ntt_mod_2, X, Y, mod);
+
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    tresult[2] = internal::RunNtt2D<T, ntt_mods[3]>(ntt_mod_3, X, Y, mod);
+  }
+
+  std::vector<std::vector<T>> result(n1 + n2 - 1,
+                                     std::vector<T>(m1 + m2 - 1, 0));
+  if (mod > 0) {
+    for (int64 i = 0; i < n1 + n2 - 1; ++i)
+      for (int64 j = 0; j < m1 + m2 - 1; ++j) {
+        result[i][j] = internal::CombineMod3<T>(
+            tresult[0][i][j], tresult[1][i][j], tresult[2][i][j], mod);
+      }
+  } else {
+    for (int64 i = 0; i < n1 + n2 - 1; ++i)
+      for (int64 j = 0; j < m1 + m2 - 1; ++j) {
+        result[i][j] = internal::CombineValue3<T>(
+            tresult[0][i][j], tresult[1][i][j], tresult[2][i][j]);
+      }
+  }
+
+  return result;
+}
 
 namespace internal {
 #define NTT32_DIRECT_INT128_IMPLEMENTATION 0
@@ -529,6 +772,58 @@ struct NttEnormousConstant {
 
   static constexpr uint64 INV_M3M4__M1M2 = 4552771471729767515;
 };
+template <typename T>
+SL T CombineMod4(uint64 a, uint64 b, uint64 c, uint64 d, int64 mod) {
+  const uint64 x1 = a >= b ? a - b : NttEnormousConstant::M1 - b + a;
+  const uint64 y1 =
+      x1 * NttEnormousConstant::INV_M2__M1 % NttEnormousConstant::M1;
+  const uint64 ans_mod_m1m2 = y1 * NttEnormousConstant::M2 + b;
+
+  const uint64 x2 = c >= d ? c - d : NttEnormousConstant::M3 - d + c;
+  const uint64 y2 =
+      x2 * NttEnormousConstant::INV_M4__M3 % NttEnormousConstant::M3;
+  const uint64 ans_mod_m3m4 = y2 * NttEnormousConstant::M4 + d;
+
+  const uint64 x3 =
+      ans_mod_m1m2 >= ans_mod_m3m4
+          ? ans_mod_m1m2 - ans_mod_m3m4
+          : NttEnormousConstant::M1M2 - ans_mod_m3m4 + ans_mod_m1m2;
+
+  const uint64 y3 = MulMod(x3, NttEnormousConstant::INV_M3M4__M1M2,
+                           NttEnormousConstant::M1M2);
+  const uint64 t = MulMod(y3 % mod, NttEnormousConstant::M3M4 % mod, mod);
+  return AddMod(t, ans_mod_m3m4 % mod, mod);
+}
+
+template <typename T>
+SL T CombineValue4(uint64 a, uint64 b, uint64 c, uint64 d) {
+#if PE_HAS_INT128
+  const uint64 x1 = a >= b ? a - b : NttEnormousConstant::M1 - b + a;
+  const uint64 y1 =
+      x1 * NttEnormousConstant::INV_M2__M1 % NttEnormousConstant::M1;
+  const uint64 ans_mod_m1m2 = y1 * NttEnormousConstant::M2 + b;
+
+  const uint64 x2 = c >= d ? c - d : NttEnormousConstant::M3 - d + c;
+  const uint64 y2 =
+      x2 * NttEnormousConstant::INV_M4__M3 % NttEnormousConstant::M3;
+  const uint64 ans_mod_m3m4 = y2 * NttEnormousConstant::M4 + d;
+
+  const uint64 x3 =
+      ans_mod_m1m2 >= ans_mod_m3m4
+          ? ans_mod_m1m2 - ans_mod_m3m4
+          : NttEnormousConstant::M1M2 - ans_mod_m3m4 + ans_mod_m1m2;
+
+  const uint64 y3 = static_cast<uint128>(x3) *
+                    NttEnormousConstant::INV_M3M4__M1M2 %
+                    NttEnormousConstant::M1M2;
+  const uint128 ans =
+      static_cast<uint128>(y3) * NttEnormousConstant::M3M4 + ans_mod_m3m4;
+  return static_cast<T>(ans);
+#else
+  PE_ASSERT(0);
+  return 0;
+#endif
+}
 
 // Multiply two polynomials.
 // Make sure the length of result is at least: n + m - 1
@@ -571,66 +866,16 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
 #pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
 #endif
     for (int64 i = 0; i < result_size; ++i) {
-      const uint64 a = tresult[0][i];
-      const uint64 b = tresult[1][i];
-      const uint64 c = tresult[2][i];
-      const uint64 d = tresult[3][i];
-
-      const uint64 x1 = a >= b ? a - b : NttEnormousConstant::M1 - b + a;
-      const uint64 y1 =
-          x1 * NttEnormousConstant::INV_M2__M1 % NttEnormousConstant::M1;
-      const uint64 ans_mod_m1m2 = y1 * NttEnormousConstant::M2 + b;
-
-      const uint64 x2 = c >= d ? c - d : NttEnormousConstant::M3 - d + c;
-      const uint64 y2 =
-          x2 * NttEnormousConstant::INV_M4__M3 % NttEnormousConstant::M3;
-      const uint64 ans_mod_m3m4 = y2 * NttEnormousConstant::M4 + d;
-
-      const uint64 x3 =
-          ans_mod_m1m2 >= ans_mod_m3m4
-              ? ans_mod_m1m2 - ans_mod_m3m4
-              : NttEnormousConstant::M1M2 - ans_mod_m3m4 + ans_mod_m1m2;
-
-      const uint64 y3 = MulMod(x3, NttEnormousConstant::INV_M3M4__M1M2,
-                               NttEnormousConstant::M1M2);
-      const uint64 t = MulMod(y3 % mod, NttEnormousConstant::M3M4 % mod, mod);
-      result[i] = AddMod(t, ans_mod_m3m4 % mod, mod);
+      result[i] = CombineMod4<T>(tresult[0][i], tresult[1][i], tresult[2][i],
+                                 tresult[3][i], mod);
     }
   } else {
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
 #endif
     for (int64 i = 0; i < result_size; ++i) {
-#if PE_HAS_INT128
-      const uint64 a = tresult[0][i];
-      const uint64 b = tresult[1][i];
-      const uint64 c = tresult[2][i];
-      const uint64 d = tresult[3][i];
-
-      const uint64 x1 = a >= b ? a - b : NttEnormousConstant::M1 - b + a;
-      const uint64 y1 =
-          x1 * NttEnormousConstant::INV_M2__M1 % NttEnormousConstant::M1;
-      const uint64 ans_mod_m1m2 = y1 * NttEnormousConstant::M2 + b;
-
-      const uint64 x2 = c >= d ? c - d : NttEnormousConstant::M3 - d + c;
-      const uint64 y2 =
-          x2 * NttEnormousConstant::INV_M4__M3 % NttEnormousConstant::M3;
-      const uint64 ans_mod_m3m4 = y2 * NttEnormousConstant::M4 + d;
-
-      const uint64 x3 =
-          ans_mod_m1m2 >= ans_mod_m3m4
-              ? ans_mod_m1m2 - ans_mod_m3m4
-              : NttEnormousConstant::M1M2 - ans_mod_m3m4 + ans_mod_m1m2;
-
-      const uint64 y3 = static_cast<uint128>(x3) *
-                        NttEnormousConstant::INV_M3M4__M1M2 %
-                        NttEnormousConstant::M1M2;
-      const uint128 ans =
-          static_cast<uint128>(y3) * NttEnormousConstant::M3M4 + ans_mod_m3m4;
-      result[i] = static_cast<T>(ans);
-#else
-      PE_ASSERT(0);
-#endif
+      result[i] = CombineValue4<T>(tresult[0][i], tresult[1][i], tresult[2][i],
+                                   tresult[3][i]);
     }
   }
 }
@@ -642,6 +887,70 @@ static constexpr PolyMulCoeType kPolyMulEnormousMod =
 // Multiply two polynomials.
 // The length of result is at least n + m - 1.
 POLY_MUL_IMPL(PolyMulEnormous, internal::PolyMulEnormousImpl)
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>))
+    RETURN(std::vector<std::vector<T>>)
+        PolyMul2DEnormous(const std::vector<std::vector<T>>& X,
+                          const std::vector<std::vector<T>>& Y, int64 mod) {
+  const int64 n1 = sz(X);
+  const int64 n2 = sz(Y);
+  if (n1 == 0 || n2 == 0) {
+    return {};
+  }
+
+  const int64 m1 = sz(X[0]);
+  const int64 m2 = sz(Y[0]);
+  if (m1 == 0 || m2 == 0) {
+    return {};
+  }
+
+  std::vector<std::vector<uint32>> tresult[4];
+#if ENABLE_OPENMP
+#pragma omp parallel sections
+#endif
+  {
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    tresult[0] = internal::RunNtt2D<T, ntt_mods[1]>(ntt_mod_1, X, Y, mod);
+
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    tresult[1] = internal::RunNtt2D<T, ntt_mods[2]>(ntt_mod_2, X, Y, mod);
+
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    tresult[2] = internal::RunNtt2D<T, ntt_mods[3]>(ntt_mod_3, X, Y, mod);
+
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    tresult[3] = internal::RunNtt2D<T, ntt_mods[4]>(ntt_mod_4, X, Y, mod);
+  }
+
+  std::vector<std::vector<T>> result(n1 + n2 - 1,
+                                     std::vector<T>(m1 + m2 - 1, 0));
+  if (mod > 0) {
+    for (int64 i = 0; i < n1 + n2 - 1; ++i)
+      for (int64 j = 0; j < m1 + m2 - 1; ++j) {
+        result[i][j] =
+            internal::CombineMod4<T>(tresult[0][i][j], tresult[1][i][j],
+                                     tresult[2][i][j], tresult[3][i][j], mod);
+      }
+  } else {
+    for (int64 i = 0; i < n1 + n2 - 1; ++i)
+      for (int64 j = 0; j < m1 + m2 - 1; ++j) {
+        result[i][j] =
+            internal::CombineValue4<T>(tresult[0][i][j], tresult[1][i][j],
+                                       tresult[2][i][j], tresult[3][i][j]);
+      }
+  }
+
+  return result;
+}
 
 namespace internal {
 template <typename T>
@@ -860,6 +1169,91 @@ SL std::vector<uint64> RunNtt(const NttMod64& moder, const T* X, int64 n,
 
   return XX;
 }
+
+template <typename T, uint64 mod>
+SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
+    Ntt2D(T* data, int64 rows, int64 cols, const NttMod64& moder,
+          bool inv = false) {
+  for (int64 i = 0; i < rows; ++i) {
+    T* row_ptr = data + i * cols;
+    Ntt<T, mod>(row_ptr, cols, moder, inv);
+  }
+
+  std::vector<T> column_buffer(rows);
+  for (int64 j = 0; j < cols; ++j) {
+    for (int64 i = 0; i < rows; ++i) {
+      column_buffer[i] = data[i * cols + j];
+    }
+    Ntt<T, mod>(column_buffer.data(), rows, moder, inv);
+
+    for (int64 i = 0; i < rows; ++i) {
+      data[i * cols + j] = column_buffer[i];
+    }
+  }
+}
+
+template <typename T, uint64 mod>
+SL std::vector<std::vector<uint64>> RunNtt2D(
+    const NttMod64& moder, const std::vector<std::vector<T>>& X,
+    const std::vector<std::vector<T>>& Y, int64 target_mod) {
+  const int64 n1 = sz(X);
+  const int64 m1 = sz(X[0]);
+  const int64 n2 = sz(Y);
+  const int64 m2 = sz(Y[0]);
+  const int64 n = BitCeil(n1 + n2 - 1);
+  const int64 m = BitCeil(m1 + m2 - 1);
+
+  const bool skip_mod = target_mod > 0 && static_cast<uint64>(target_mod) <=
+                                              static_cast<uint64>(mod);
+  std::vector<uint64> XX(n * m, 0);
+  std::vector<uint64> YY(n * m, 0);
+  if (skip_mod) {
+    for (int64 i = 0; i < n1; ++i)
+      for (int64 j = 0; j < m1; ++j) XX[i * m + j] = ToInt<uint64>(X[i][j]);
+  } else {
+    for (int64 i = 0; i < n1; ++i)
+      for (int64 j = 0; j < m1; ++j)
+        XX[i * m + j] = ToInt<uint64>(Mod(X[i][j], mod));
+  }
+  if (skip_mod) {
+    for (int64 i = 0; i < n2; ++i)
+      for (int64 j = 0; j < m2; ++j) YY[i * m + j] = ToInt<uint64>(Y[i][j]);
+  } else {
+    for (int64 i = 0; i < n2; ++i)
+      for (int64 j = 0; j < m2; ++j)
+        YY[i * m + j] = ToInt<uint64>(Mod(Y[i][j], mod));
+  }
+#if ENABLE_OPENMP
+#pragma omp parallel sections if (n * m >= 100000)
+#endif
+  {
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    Ntt2D<uint64, mod>(std::data(XX), n, m, moder, false);
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    Ntt2D<uint64, mod>(std::data(YY), n, m, moder, false);
+  }
+  constexpr uint64 mod1 = mod;
+  for (int64 i = 0; i < n * m; ++i) {
+#if PE_HAS_INT128
+    XX[i] = Uint128ModUint64(static_cast<uint128>(XX[i]) * YY[i], mod1);
+#else
+    XX[i] = MulMod(XX[i], YY[i], mod1);
+#endif
+  }
+  Ntt2D<uint64, mod>(std::data(XX), n, m, moder, true);
+
+  std::vector<std::vector<uint64>> result(n, std::vector<uint64>(m, 0));
+  for (int64 i = 0; i < n; ++i)
+    for (int64 j = 0; j < m; ++j) {
+      result[i][j] = XX[i * m + j];
+    }
+
+  return result;
+}
 }  // namespace internal
 
 namespace internal {
@@ -893,12 +1287,66 @@ static constexpr PolyMulCoeType kPolyMulSmallMod = ntt_mods[1];
 // The length of result is at least n + m - 1.
 POLY_MUL_IMPL(PolyMulSmall, internal::PolyMulSmallImpl)
 
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>))
+    RETURN(std::vector<std::vector<T>>)
+        PolyMul2DSmall(const std::vector<std::vector<T>>& X,
+                       const std::vector<std::vector<T>>& Y, int64 mod) {
+  const int64 n1 = sz(X);
+  const int64 n2 = sz(Y);
+  if (n1 == 0 || n2 == 0) {
+    return {};
+  }
+
+  const int64 m1 = sz(X[0]);
+  const int64 m2 = sz(Y[0]);
+  if (m1 == 0 || m2 == 0) {
+    return {};
+  }
+
+  std::vector<std::vector<uint64>> tresult =
+      internal::RunNtt2D<T, ntt_mods[1]>(ntt_mod_1, X, Y, mod);
+
+  std::vector<std::vector<T>> ret(n1 + n2 - 1,
+                                  std::vector<int64>(m1 + m2 - 1, 0));
+  for (int64 i = 0; i < n1 + n2 - 1; ++i)
+    for (int64 j = 0; j < m1 + m2 - 1; ++j) {
+      ret[i][j] = mod > 0 ? tresult[i][j] % mod : tresult[i][j];
+    }
+
+  return ret;
+}
+
 namespace internal {
 struct NttLargeConstant {
   static constexpr uint64 M1 = 1945555039024054273;
   static constexpr uint64 M2 = 180143985094819841;
   static constexpr uint64 INV_M2__M1 = 714693687804754632;
 };
+
+template <typename T>
+SL T CombineMod2(uint64 a, uint64 b, int64 mod) {
+  const uint64 x = a >= b ? a - b : NttLargeConstant::M1 - b + a;
+  const uint64 y =
+      MulMod(x, NttLargeConstant::INV_M2__M1, NttLargeConstant::M1);
+  const uint64 t = MulMod(y % mod, NttLargeConstant::M2 % mod, mod);
+  return AddMod(t, b % mod, mod);
+}
+
+template <typename T>
+SL T CombineValue2(uint64 a, uint64 b) {
+#if PE_HAS_INT128
+  const uint64 x = a >= b ? a - b : NttLargeConstant::M1 - b + a;
+  const uint64 y =
+      Uint128ModUint64(static_cast<uint128>(x) * NttLargeConstant::INV_M2__M1,
+                       NttLargeConstant::M1);
+  const uint128 t = static_cast<uint128>(y) * NttLargeConstant::M2 + b;
+  return static_cast<T>(t);
+#else
+  PE_ASSERT(0);
+  return 0;
+#endif
+}
 
 // Multiply two polynomials.
 // Make sure the length of result is at least: n + m - 1
@@ -930,33 +1378,14 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
 #pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
 #endif
     for (int64 i = 0; i < result_size; ++i) {
-      const uint64 a = tresult[0][i];
-      const uint64 b = tresult[1][i];
-
-      const uint64 x = a >= b ? a - b : NttLargeConstant::M1 - b + a;
-      const uint64 y =
-          MulMod(x, NttLargeConstant::INV_M2__M1, NttLargeConstant::M1);
-      const uint64 t = MulMod(y % mod, NttLargeConstant::M2 % mod, mod);
-      result[i] = AddMod(t, b % mod, mod);
+      result[i] = CombineMod2<T>(tresult[0][i], tresult[1][i], mod);
     }
   } else {
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
 #endif
     for (int64 i = 0; i < result_size; ++i) {
-#if PE_HAS_INT128
-      const uint64 a = tresult[0][i];
-      const uint64 b = tresult[1][i];
-
-      const uint64 x = a >= b ? a - b : NttLargeConstant::M1 - b + a;
-      const uint64 y = Uint128ModUint64(
-          static_cast<uint128>(x) * NttLargeConstant::INV_M2__M1,
-          NttLargeConstant::M1);
-      const uint128 t = static_cast<uint128>(y) * NttLargeConstant::M2 + b;
-      result[i] = static_cast<T>(t);
-#else
-      PE_ASSERT(0);
-#endif
+      result[i] = CombineValue2<T>(tresult[0][i], tresult[1][i]);
     }
   }
 }
@@ -968,6 +1397,58 @@ static constexpr PolyMulCoeType kPolyMulLargeMod =
 // Multiply two polynomials.
 // The length of result is at least n + m - 1.
 POLY_MUL_IMPL(PolyMulLarge, internal::PolyMulLargeImpl)
+
+template <typename T>
+SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>))
+    RETURN(std::vector<std::vector<T>>)
+        PolyMul2DLarge(const std::vector<std::vector<T>>& X,
+                       const std::vector<std::vector<T>>& Y, int64 mod) {
+  const int64 n1 = sz(X);
+  const int64 n2 = sz(Y);
+  if (n1 == 0 || n2 == 0) {
+    return {};
+  }
+
+  const int64 m1 = sz(X[0]);
+  const int64 m2 = sz(Y[0]);
+  if (m1 == 0 || m2 == 0) {
+    return {};
+  }
+
+  std::vector<std::vector<uint64>> tresult[2];
+#if ENABLE_OPENMP
+#pragma omp parallel sections
+#endif
+  {
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    tresult[0] = internal::RunNtt2D<T, ntt_mods[1]>(ntt_mod_1, X, Y, mod);
+
+#if ENABLE_OPENMP
+#pragma omp section
+#endif
+    tresult[1] = internal::RunNtt2D<T, ntt_mods[2]>(ntt_mod_2, X, Y, mod);
+  }
+
+  std::vector<std::vector<T>> result(n1 + n2 - 1,
+                                     std::vector<T>(m1 + m2 - 1, 0));
+  if (mod > 0) {
+    for (int64 i = 0; i < n1 + n2 - 1; ++i)
+      for (int64 j = 0; j < m1 + m2 - 1; ++j) {
+        result[i][j] =
+            internal::CombineMod2<T>(tresult[0][i][j], tresult[1][i][j], mod);
+      }
+  } else {
+    for (int64 i = 0; i < n1 + n2 - 1; ++i)
+      for (int64 j = 0; j < m1 + m2 - 1; ++j) {
+        result[i][j] =
+            internal::CombineValue2<T>(tresult[0][i][j], tresult[1][i][j]);
+      }
+  }
+
+  return result;
+}
 
 namespace internal {
 template <typename T>
@@ -2084,7 +2565,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 // The inverse of Y[m-1] exists.
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>))
-    RETURN(std::tuple<std::vector<T>, std::vector<T> >)
+    RETURN(std::tuple<std::vector<T>, std::vector<T>>)
         PolyDivAndMod(const std::vector<T>& X, const std::vector<T>& Y,
                       int64 mod) {
   const int64 n = static_cast<int64>(std::size(X)) - 1;
@@ -2624,9 +3105,9 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyMultipointEvaluateBlsImpl(const T* X, int64 n, const T* V, T* result,
                                   int64 mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
-  std::vector<std::vector<std::vector<T> > > tree;
+  std::vector<std::vector<std::vector<T>>> tree;
   {
-    std::vector<std::vector<T> > from;
+    std::vector<std::vector<T>> from;
     for (int64 i = 0; i < n; ++i) {
       std::vector<T> tmp{(V[i] == 0 ? 0 : mod - V[i]) % mod, 1};
       from.push_back(tmp);
@@ -2635,7 +3116,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     tree.push_back(from);
     int64 last_size = n;
     while (last_size != 1) {
-      std::vector<std::vector<T> > to;
+      std::vector<std::vector<T>> to;
       to.reserve(last_size / 2);
       for (int64 i = 0; i < last_size / 2; ++i) {
         to.push_back(PolyMul(from[i * 2], from[i * 2 + 1], mod));
@@ -2667,7 +3148,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     t.resize(n);
     std::reverse(t.begin(), t.end());
 
-    std::vector<std::vector<T> > c(n);
+    std::vector<std::vector<T>> c(n);
     c[0] = std::move(t);
     // c[0] = std::vector<uint64>(X, X+n);
     for (int64 i = d; i > 0; --i) {

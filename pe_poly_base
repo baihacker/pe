@@ -420,6 +420,7 @@ SL std::vector<std::vector<uint32>> RunNtt2D(
 namespace internal {
 struct NttRunnerSmall {
   static constexpr PolyMulCoeType kMod = ntt_mods[1];
+
   // Multiply two polynomials.
   // Make sure the length of result is at least: n + m - 1
   template <typename T>
@@ -500,28 +501,32 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>))
 namespace internal {
 // The medium version uses two modulus.
 struct NttRunnerMedium {
+ private:
   static constexpr uint64 M1 = ntt_mods[1];
   static constexpr uint64 M2 = ntt_mods[2];
   static constexpr uint64 INV_M2__M1 = 2594876085;
 
-  static constexpr PolyMulCoeType kMod =
-      Prod<PolyMulCoeType>(ntt_mods[1], ntt_mods[2]);
+  using Self = NttRunnerMedium;
 
   template <typename T>
   SL T CombineMod(uint64 a, uint64 b, int64 mod) {
-    const uint64 x = a >= b ? a - b : a + NttRunnerMedium::M1 - b;
-    const uint64 y = x * NttRunnerMedium::INV_M2__M1 % NttRunnerMedium::M1;
-    const uint64 t = y * NttRunnerMedium::M2 + b;
+    const uint64 x = a >= b ? a - b : a + Self::M1 - b;
+    const uint64 y = x * Self::INV_M2__M1 % Self::M1;
+    const uint64 t = y * Self::M2 + b;
     return t % mod;
   }
 
   template <typename T>
   SL T CombineValue(uint64 a, uint64 b) {
-    const uint64 x = a >= b ? a - b : a + NttRunnerMedium::M1 - b;
-    const uint64 y = x * NttRunnerMedium::INV_M2__M1 % NttRunnerMedium::M1;
-    const uint64 t = y * NttRunnerMedium::M2 + b;
+    const uint64 x = a >= b ? a - b : a + Self::M1 - b;
+    const uint64 y = x * Self::INV_M2__M1 % Self::M1;
+    const uint64 t = y * Self::M2 + b;
     return t;
   }
+
+ public:
+  static constexpr PolyMulCoeType kMod =
+      Prod<PolyMulCoeType>(ntt_mods[1], ntt_mods[2]);
 
   // Multiply two polynomials.
   // Make sure the length of result is at least: n + m - 1
@@ -636,6 +641,7 @@ namespace internal {
 #define NTT32_DIRECT_INT128_IMPLEMENTATION 0
 
 struct NttRunnerLarge {
+ private:
   static constexpr uint64 M1 = 3892314113;
   static constexpr uint64 M2 = 3489660929;
   static constexpr uint64 M3 = 3221225473;
@@ -657,21 +663,18 @@ struct NttRunnerLarge {
   static constexpr uint64 M2M3 = M2 * M3;
   static constexpr uint64 INV_M1__M2M3 = 1498797794963418808;
 
-  static constexpr PolyMulCoeType kMod =
-      Prod<PolyMulCoeType>(ntt_mods[1], ntt_mods[2], ntt_mods[3]);
+  using Self = NttRunnerLarge;
 
   template <typename T>
   SL T CombineMod(uint64 a, uint64 b, uint64 c, int64 mod) {
-    const uint64 x1 = b >= c ? b - c : NttRunnerLarge::M2 - c + b;
-    const uint64 y1 = x1 * NttRunnerLarge::INV_M3__M2 % NttRunnerLarge::M2;
-    const uint64 ans_mod_m2m3 = y1 * NttRunnerLarge::M3 + c;
+    const uint64 x1 = b >= c ? b - c : Self::M2 - c + b;
+    const uint64 y1 = x1 * Self::INV_M3__M2 % Self::M2;
+    const uint64 ans_mod_m2m3 = y1 * Self::M3 + c;
 
-    const uint64 x2 = ans_mod_m2m3 >= a
-                          ? ans_mod_m2m3 - a
-                          : NttRunnerLarge::M2M3 - a + ans_mod_m2m3;
-    const uint64 y2 =
-        MulMod(x2, NttRunnerLarge::INV_M1__M2M3, NttRunnerLarge::M2M3);
-    const uint64 t = MulMod(y2 % mod, NttRunnerLarge::M1 % mod, mod);
+    const uint64 x2 =
+        ans_mod_m2m3 >= a ? ans_mod_m2m3 - a : Self::M2M3 - a + ans_mod_m2m3;
+    const uint64 y2 = MulMod(x2, Self::INV_M1__M2M3, Self::M2M3);
+    const uint64 t = MulMod(y2 % mod, Self::M1 % mod, mod);
     return AddMod(t, a % mod, mod);
   }
 
@@ -679,22 +682,21 @@ struct NttRunnerLarge {
   SL T CombineValue(uint64 a, uint64 b, uint64 c) {
 #if PE_HAS_INT128
 #if NTT32_DIRECT_INT128_IMPLEMENTATION
-    const uint128 A = a * NttRunnerLarge::M23M;
-    const uint128 B = b * NttRunnerLarge::M13M;
-    const uint128 C = c * NttRunnerLarge::M12M;
+    const uint128 A = a * Self::M23M;
+    const uint128 B = b * Self::M13M;
+    const uint128 C = c * Self::M12M;
     const uint128 t = A + B + C;
-    const uint128 tmp = t < NttRunnerLarge::M123 ? t : t % NttRunnerLarge::M123;
+    const uint128 tmp = t < Self::M123 ? t : t % Self::M123;
     return static_cast<T>(tmp);
 #else
-    const uint64 x1 = b >= c ? b - c : NttRunnerLarge::M2 - c + b;
-    const uint64 y1 = x1 * NttRunnerLarge::INV_M3__M2 % NttRunnerLarge::M2;
-    const uint64 mod_bc = y1 * NttRunnerLarge::M3 + c;
-    const uint64 x2 =
-        mod_bc >= a ? mod_bc - a : NttRunnerLarge::M2M3 - a + mod_bc;
+    const uint64 x1 = b >= c ? b - c : Self::M2 - c + b;
+    const uint64 y1 = x1 * Self::INV_M3__M2 % Self::M2;
+    const uint64 mod_bc = y1 * Self::M3 + c;
+    const uint64 x2 = mod_bc >= a ? mod_bc - a : Self::M2M3 - a + mod_bc;
 
-    const uint64 y2 = static_cast<uint128>(x2) * NttRunnerLarge::INV_M1__M2M3 %
-                      NttRunnerLarge::M2M3;
-    const uint128 t = static_cast<uint128>(y2) * NttRunnerLarge::M1 + a;
+    const uint64 y2 =
+        static_cast<uint128>(x2) * Self::INV_M1__M2M3 % Self::M2M3;
+    const uint128 t = static_cast<uint128>(y2) * Self::M1 + a;
     return static_cast<T>(t);
 #endif
 #else
@@ -702,6 +704,10 @@ struct NttRunnerLarge {
     return 0;
 #endif
   }
+
+ public:
+  static constexpr PolyMulCoeType kMod =
+      Prod<PolyMulCoeType>(ntt_mods[1], ntt_mods[2], ntt_mods[3]);
 
   // Multiply two polynomials.
   // Make sure the length of result is at least: n + m - 1
@@ -829,6 +835,7 @@ namespace internal {
 #define NTT32_DIRECT_INT128_IMPLEMENTATION 0
 
 struct NttRunnerEnormous {
+ private:
   static constexpr uint64 M1 = 3892314113;
   static constexpr uint64 M2 = 3489660929;
   static constexpr uint64 M3 = 3221225473;
@@ -842,61 +849,55 @@ struct NttRunnerEnormous {
 
   static constexpr uint64 INV_M3M4__M1M2 = 4552771471729767515;
 
-  static constexpr PolyMulCoeType kMod =
-      Prod<PolyMulCoeType>(ntt_mods[1], ntt_mods[2], ntt_mods[3], ntt_mods[4]);
+  using Self = NttRunnerEnormous;
 
   template <typename T>
   SL T CombineMod(uint64 a, uint64 b, uint64 c, uint64 d, int64 mod) {
-    const uint64 x1 = a >= b ? a - b : NttRunnerEnormous::M1 - b + a;
-    const uint64 y1 =
-        x1 * NttRunnerEnormous::INV_M2__M1 % NttRunnerEnormous::M1;
-    const uint64 ans_mod_m1m2 = y1 * NttRunnerEnormous::M2 + b;
+    const uint64 x1 = a >= b ? a - b : Self::M1 - b + a;
+    const uint64 y1 = x1 * Self::INV_M2__M1 % Self::M1;
+    const uint64 ans_mod_m1m2 = y1 * Self::M2 + b;
 
-    const uint64 x2 = c >= d ? c - d : NttRunnerEnormous::M3 - d + c;
-    const uint64 y2 =
-        x2 * NttRunnerEnormous::INV_M4__M3 % NttRunnerEnormous::M3;
-    const uint64 ans_mod_m3m4 = y2 * NttRunnerEnormous::M4 + d;
+    const uint64 x2 = c >= d ? c - d : Self::M3 - d + c;
+    const uint64 y2 = x2 * Self::INV_M4__M3 % Self::M3;
+    const uint64 ans_mod_m3m4 = y2 * Self::M4 + d;
 
-    const uint64 x3 =
-        ans_mod_m1m2 >= ans_mod_m3m4
-            ? ans_mod_m1m2 - ans_mod_m3m4
-            : NttRunnerEnormous::M1M2 - ans_mod_m3m4 + ans_mod_m1m2;
+    const uint64 x3 = ans_mod_m1m2 >= ans_mod_m3m4
+                          ? ans_mod_m1m2 - ans_mod_m3m4
+                          : Self::M1M2 - ans_mod_m3m4 + ans_mod_m1m2;
 
-    const uint64 y3 =
-        MulMod(x3, NttRunnerEnormous::INV_M3M4__M1M2, NttRunnerEnormous::M1M2);
-    const uint64 t = MulMod(y3 % mod, NttRunnerEnormous::M3M4 % mod, mod);
+    const uint64 y3 = MulMod(x3, Self::INV_M3M4__M1M2, Self::M1M2);
+    const uint64 t = MulMod(y3 % mod, Self::M3M4 % mod, mod);
     return AddMod(t, ans_mod_m3m4 % mod, mod);
   }
 
   template <typename T>
   SL T CombineValue(uint64 a, uint64 b, uint64 c, uint64 d) {
 #if PE_HAS_INT128
-    const uint64 x1 = a >= b ? a - b : NttRunnerEnormous::M1 - b + a;
-    const uint64 y1 =
-        x1 * NttRunnerEnormous::INV_M2__M1 % NttRunnerEnormous::M1;
-    const uint64 ans_mod_m1m2 = y1 * NttRunnerEnormous::M2 + b;
+    const uint64 x1 = a >= b ? a - b : Self::M1 - b + a;
+    const uint64 y1 = x1 * Self::INV_M2__M1 % Self::M1;
+    const uint64 ans_mod_m1m2 = y1 * Self::M2 + b;
 
-    const uint64 x2 = c >= d ? c - d : NttRunnerEnormous::M3 - d + c;
-    const uint64 y2 =
-        x2 * NttRunnerEnormous::INV_M4__M3 % NttRunnerEnormous::M3;
-    const uint64 ans_mod_m3m4 = y2 * NttRunnerEnormous::M4 + d;
+    const uint64 x2 = c >= d ? c - d : Self::M3 - d + c;
+    const uint64 y2 = x2 * Self::INV_M4__M3 % Self::M3;
+    const uint64 ans_mod_m3m4 = y2 * Self::M4 + d;
 
-    const uint64 x3 =
-        ans_mod_m1m2 >= ans_mod_m3m4
-            ? ans_mod_m1m2 - ans_mod_m3m4
-            : NttRunnerEnormous::M1M2 - ans_mod_m3m4 + ans_mod_m1m2;
+    const uint64 x3 = ans_mod_m1m2 >= ans_mod_m3m4
+                          ? ans_mod_m1m2 - ans_mod_m3m4
+                          : Self::M1M2 - ans_mod_m3m4 + ans_mod_m1m2;
 
-    const uint64 y3 = static_cast<uint128>(x3) *
-                      NttRunnerEnormous::INV_M3M4__M1M2 %
-                      NttRunnerEnormous::M1M2;
-    const uint128 ans =
-        static_cast<uint128>(y3) * NttRunnerEnormous::M3M4 + ans_mod_m3m4;
+    const uint64 y3 =
+        static_cast<uint128>(x3) * Self::INV_M3M4__M1M2 % Self::M1M2;
+    const uint128 ans = static_cast<uint128>(y3) * Self::M3M4 + ans_mod_m3m4;
     return static_cast<T>(ans);
 #else
     PE_ASSERT(0);
     return 0;
 #endif
   }
+
+ public:
+  static constexpr PolyMulCoeType kMod =
+      Prod<PolyMulCoeType>(ntt_mods[1], ntt_mods[2], ntt_mods[3], ntt_mods[4]);
 
   // Multiply two polynomials.
   // Make sure the length of result is at least: n + m - 1
@@ -1451,35 +1452,38 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>))
 
 namespace internal {
 struct NttRunnerLarge {
+ private:
   static constexpr uint64 M1 = 1945555039024054273;
   static constexpr uint64 M2 = 180143985094819841;
   static constexpr uint64 INV_M2__M1 = 714693687804754632;
 
-  static constexpr PolyMulCoeType kMod =
-      Prod<PolyMulCoeType>(ntt_mods[1], ntt_mods[2]);
+  using Self = NttRunnerLarge;
 
   template <typename T>
   SL T CombineMod(uint64 a, uint64 b, int64 mod) {
-    const uint64 x = a >= b ? a - b : NttRunnerLarge::M1 - b + a;
-    const uint64 y = MulMod(x, NttRunnerLarge::INV_M2__M1, NttRunnerLarge::M1);
-    const uint64 t = MulMod(y % mod, NttRunnerLarge::M2 % mod, mod);
+    const uint64 x = a >= b ? a - b : Self::M1 - b + a;
+    const uint64 y = MulMod(x, Self::INV_M2__M1, Self::M1);
+    const uint64 t = MulMod(y % mod, Self::M2 % mod, mod);
     return AddMod(t, b % mod, mod);
   }
 
   template <typename T>
   SL T CombineValue(uint64 a, uint64 b) {
 #if PE_HAS_INT128
-    const uint64 x = a >= b ? a - b : NttRunnerLarge::M1 - b + a;
+    const uint64 x = a >= b ? a - b : Self::M1 - b + a;
     const uint64 y =
-        Uint128ModUint64(static_cast<uint128>(x) * NttRunnerLarge::INV_M2__M1,
-                         NttRunnerLarge::M1);
-    const uint128 t = static_cast<uint128>(y) * NttRunnerLarge::M2 + b;
+        Uint128ModUint64(static_cast<uint128>(x) * Self::INV_M2__M1, Self::M1);
+    const uint128 t = static_cast<uint128>(y) * Self::M2 + b;
     return static_cast<T>(t);
 #else
     PE_ASSERT(0);
     return 0;
 #endif
   }
+
+ public:
+  static constexpr PolyMulCoeType kMod =
+      Prod<PolyMulCoeType>(ntt_mods[1], ntt_mods[2]);
 
   // Multiply two polynomials.
   // Make sure the length of result is at least: n + m - 1

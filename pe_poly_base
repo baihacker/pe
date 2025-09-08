@@ -1351,12 +1351,22 @@ struct NttRunner1 {
         RunNtt<T, ntt_mods[1]>(ntt_mod_1, X, n, Y, m, mod);
 
     const int64 result_size = n + m - 1;
+    if (mod > 0) {
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
 #endif
-    for (int64 i = 0; i < result_size; ++i) {
-      const uint64 a = tresult[i];
-      result[i] = mod > 0 ? a % mod : a;
+      for (int64 i = 0; i < result_size; ++i) {
+        const uint64 a = tresult[i];
+        result[i] = a % mod;
+      }
+    } else {
+#if ENABLE_OPENMP
+#pragma omp parallel for schedule(dynamic, 100000) if (n + m >= 100000)
+#endif
+      for (int64 i = 0; i < result_size; ++i) {
+        const uint64 a = tresult[i];
+        result[i] = a;
+      }
     }
   }
 
@@ -1382,10 +1392,17 @@ struct NttRunner1 {
 
     std::vector<std::vector<T>> ret(n1 + n2 - 1,
                                     std::vector<int64>(m1 + m2 - 1, 0));
-    for (int64 i = 0; i < n1 + n2 - 1; ++i)
-      for (int64 j = 0; j < m1 + m2 - 1; ++j) {
-        ret[i][j] = mod > 0 ? tresult[i][j] % mod : tresult[i][j];
-      }
+    if (mod > 0) {
+      for (int64 i = 0; i < n1 + n2 - 1; ++i)
+        for (int64 j = 0; j < m1 + m2 - 1; ++j) {
+          ret[i][j] = tresult[i][j] % mod;
+        }
+    } else {
+      for (int64 i = 0; i < n1 + n2 - 1; ++i)
+        for (int64 j = 0; j < m1 + m2 - 1; ++j) {
+          ret[i][j] = tresult[i][j];
+        }
+    }
 
     return ret;
   }

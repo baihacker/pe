@@ -419,6 +419,7 @@ SL std::vector<std::vector<uint32>> RunNtt2D(
 
 namespace internal {
 struct NttRunnerSmall {
+  static constexpr PolyMulCoeType kMod = ntt_mods[1];
   // Multiply two polynomials.
   // Make sure the length of result is at least: n + m - 1
   template <typename T>
@@ -483,7 +484,8 @@ struct NttRunnerSmall {
 };
 }  // namespace internal
 
-static constexpr PolyMulCoeType kPolyMulSmallMod = ntt_mods[1];
+static constexpr PolyMulCoeType kPolyMulSmallMod =
+    internal::NttRunnerSmall::kMod;
 
 POLY_MUL_IMPL(PolyMulSmall, internal::NttRunnerSmall::PolyMul)
 
@@ -501,6 +503,9 @@ struct NttRunnerMedium {
   static constexpr uint64 M1 = ntt_mods[1];
   static constexpr uint64 M2 = ntt_mods[2];
   static constexpr uint64 INV_M2__M1 = 2594876085;
+
+  static constexpr PolyMulCoeType kMod =
+      Prod<PolyMulCoeType>(ntt_mods[1], ntt_mods[2]);
 
   template <typename T>
   SL T CombineMod(uint64 a, uint64 b, int64 mod) {
@@ -613,7 +618,7 @@ struct NttRunnerMedium {
 }  // namespace internal
 
 static constexpr PolyMulCoeType kPolyMulMediumMod =
-    Prod<PolyMulCoeType>(ntt_mods[1], ntt_mods[2]);
+    internal::NttRunnerMedium::kMod;
 
 // Multiply two polynomials.
 // The length of result is at least n + m - 1.
@@ -651,6 +656,9 @@ struct NttRunnerLarge {
 
   static constexpr uint64 M2M3 = M2 * M3;
   static constexpr uint64 INV_M1__M2M3 = 1498797794963418808;
+
+  static constexpr PolyMulCoeType kMod =
+      Prod<PolyMulCoeType>(ntt_mods[1], ntt_mods[2], ntt_mods[3]);
 
   template <typename T>
   SL T CombineMod(uint64 a, uint64 b, uint64 c, int64 mod) {
@@ -803,7 +811,7 @@ struct NttRunnerLarge {
 }  // namespace internal
 
 static constexpr PolyMulCoeType kPolyMulLargeMod =
-    Prod<PolyMulCoeType>(ntt_mods[1], ntt_mods[2], ntt_mods[3]);
+    internal::NttRunnerLarge::kMod;
 
 // Multiply two polynomials.
 // The length of result is at least n + m - 1.
@@ -833,6 +841,9 @@ struct NttRunnerEnormous {
   static constexpr uint64 M3M4 = M3 * M4;
 
   static constexpr uint64 INV_M3M4__M1M2 = 4552771471729767515;
+
+  static constexpr PolyMulCoeType kMod =
+      Prod<PolyMulCoeType>(ntt_mods[1], ntt_mods[2], ntt_mods[3], ntt_mods[4]);
 
   template <typename T>
   SL T CombineMod(uint64 a, uint64 b, uint64 c, uint64 d, int64 mod) {
@@ -1006,7 +1017,7 @@ struct NttRunnerEnormous {
 }  // namespace internal
 
 static constexpr PolyMulCoeType kPolyMulEnormousMod =
-    Prod<PolyMulCoeType>(ntt_mods[1], ntt_mods[2], ntt_mods[3], ntt_mods[4]);
+    internal::NttRunnerEnormous::kMod;
 
 // Multiply two polynomials.
 // The length of result is at least n + m - 1.
@@ -1031,9 +1042,9 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
   constexpr std::array<std::pair<ImplFunctionPointerType, PolyMulCoeType>, 3>
       impls = {
           Item{&ntt32::internal::NttRunnerSmall::PolyMul<T>,
-               ntt32::kPolyMulSmallMod},
+               ntt32::internal::NttRunnerSmall::kMod},
           Item{&ntt32::internal::NttRunnerMedium::PolyMul<T>,
-               ntt32::kPolyMulMediumMod},
+               ntt32::internal::NttRunnerMedium::kMod},
       };
   if (mod > 0) {
     for (int i = 0; i < impls.size(); ++i) {
@@ -1054,7 +1065,8 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
 }
 }  // namespace internal
 
-static constexpr PolyMulCoeType kPolyMulMod = kPolyMulEnormousMod;
+static constexpr PolyMulCoeType kPolyMulMod =
+    ntt32::internal::NttRunnerEnormous::kMod;
 POLY_MUL_IMPL(PolyMul, internal::PolyMulImpl)
 }  // namespace ntt32
 
@@ -1352,6 +1364,8 @@ SL std::vector<std::vector<uint64>> RunNtt2D(
 
 namespace internal {
 struct NttRunnerSmall {
+  static constexpr PolyMulCoeType kMod = ntt_mods[1];
+
   // Multiply two polynomials.
   // Make sure the length of result is at least: n + m - 1
   template <typename T>
@@ -1420,7 +1434,9 @@ struct NttRunnerSmall {
 };
 }  // namespace internal
 
-static constexpr PolyMulCoeType kPolyMulSmallMod = ntt_mods[1];
+static constexpr PolyMulCoeType kPolyMulSmallMod =
+    internal::NttRunnerSmall::kMod;
+
 // Multiply two polynomials.
 // The length of result is at least n + m - 1.
 POLY_MUL_IMPL(PolyMulSmall, internal::NttRunnerSmall::PolyMul)
@@ -1438,6 +1454,9 @@ struct NttRunnerLarge {
   static constexpr uint64 M1 = 1945555039024054273;
   static constexpr uint64 M2 = 180143985094819841;
   static constexpr uint64 INV_M2__M1 = 714693687804754632;
+
+  static constexpr PolyMulCoeType kMod =
+      Prod<PolyMulCoeType>(ntt_mods[1], ntt_mods[2]);
 
   template <typename T>
   SL T CombineMod(uint64 a, uint64 b, int64 mod) {
@@ -1556,7 +1575,7 @@ struct NttRunnerLarge {
 }  // namespace internal
 
 static constexpr PolyMulCoeType kPolyMulLargeMod =
-    Prod<PolyMulCoeType>(ntt_mods[1], ntt_mods[2]);
+    internal::NttRunnerLarge::kMod;
 
 // Multiply two polynomials.
 // The length of result is at least n + m - 1.
@@ -1590,7 +1609,7 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
 }
 }  // namespace internal
 
-static constexpr PolyMulCoeType kPolyMulMod = kPolyMulLargeMod;
+static constexpr PolyMulCoeType kPolyMulMod = internal::NttRunnerLarge::kMod;
 POLY_MUL_IMPL(PolyMul, internal::PolyMulImpl)
 }  // namespace ntt64
 
@@ -1607,27 +1626,27 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
   constexpr std::array<std::pair<ImplFunctionPointerType, PolyMulCoeType>, 4>
       impls = {
           Item{&ntt32::internal::NttRunnerSmall::PolyMul<T>,
-               ntt32::kPolyMulSmallMod},
+               ntt32::internal::NttRunnerSmall::kMod},
           Item{&ntt32::internal::NttRunnerMedium::PolyMul<T>,
-               ntt32::kPolyMulMediumMod},
+               ntt32::internal::NttRunnerMedium::kMod},
           Item{&ntt32::internal::NttRunnerLarge::PolyMul<T>,
-               ntt32::kPolyMulLargeMod},
+               ntt32::internal::NttRunnerLarge::kMod},
           Item{&ntt64::internal::NttRunnerSmall::PolyMul<T>,
-               ntt64::kPolyMulSmallMod},
+               ntt64::internal::NttRunnerSmall::kMod},
       };
 #else
   constexpr std::array<std::pair<ImplFunctionPointerType, PolyMulCoeType>, 5>
       impls = {
           Item{&ntt32::internal::NttRunnerSmall::PolyMul<T>,
-               ntt32::kPolyMulSmallMod},
+               ntt32::internal::NttRunnerSmall::kMod},
           Item{&ntt64::internal::NttRunnerSmall::PolyMul<T>,
-               ntt64::kPolyMulSmallMod},
+               ntt64::internal::NttRunnerSmall::kMod},
           Item{&ntt32::internal::NttRunnerMedium::PolyMul<T>,
-               ntt32::kPolyMulMediumMod},
+               ntt32::internal::NttRunnerMedium::kMod},
           Item{&ntt32::internal::NttRunnerLarge::PolyMul<T>,
-               ntt32::kPolyMulLargeMod},
+               ntt32::internal::NttRunnerLarge::kMod},
           Item{&ntt64::internal::NttRunnerLarge::PolyMul<T>,
-               ntt64::kPolyMulLargeMod},
+               ntt64::internal::NttRunnerLarge::kMod},
       };
 #endif
   if (mod > 0) {
@@ -1650,7 +1669,8 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
 }
 }  // namespace internal
 
-static constexpr PolyMulCoeType kPolyMulMod = ntt64::kPolyMulLargeMod;
+static constexpr PolyMulCoeType kPolyMulMod =
+    ntt32::internal::NttRunnerEnormous::kMod;
 POLY_MUL_IMPL(PolyMul, internal::PolyMulImpl)
 }  // namespace ntt
 

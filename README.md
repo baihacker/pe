@@ -50,58 +50,89 @@ For a quick start, refer to [example.c](https://github.com/baihacker/pe/blob/mas
 
 ## File List
 
-*   **pe**: Contains all implementation files.
-*   **pe.hpp**: Header file for generating the precompiled header. It includes the core library components required for most functionalities.
-*   **pe_algo**: Contains various algorithms, including binary search, combinatorial calculations (`CombModer`, `CombModerEx`), modular factorial (`FactModer`), modular power sum (`PowerSumModer`), and advanced algorithms for number theory problems like counting Pythagorean triples and perfect powers.
-*   **pe_array**: Implements compile-time (`FArray`) and runtime (`DArray`) dimensioned arrays. Supports element counts exceeding `int32` limits and allows for custom allocators.
-*   **pe_base**: A foundational header that pre-includes standard C++ library headers, defines common macros (like `PE_ASSERT`), typedefs for integer types (`int64`, `uint128`), and basic inline utility functions.
-*   **pe_bi32**: Provides a big integer implementation (`BigInteger`) with a base of 1 << 32, using `uint32` arrays for storage. It supports standard arithmetic, bitwise operations, and conversion from native integer types and strings.
-*   **pe_bit**: A utility for bit manipulation, offering functions to count leading/trailing zeros (`pe_clzll`, `pe_ctzll`), population count (`pe_popcountll`), and determine bit width for various integer types, including `__int128`.
-*   **pe_config**: A centralized configuration file for the PE library. It contains macros to enable or disable features like `int128` support and third-party libraries such as GMP and FLINT.
-*   **pe_db**: Provides functionality to load and save pre-calculated results, such as the prime-counting function (`PrimePi`) and the sum of primes (`PrimeSum`), from a database to speed up computations.
-*   **pe_dpe**: A framework for distributed computation, leveraging ZeroMQ (`ENABLE_ZMQ`) for communication between a server and clients to solve tasks in parallel.
-*   **pe_extended_int**: A header file that includes and consolidates extended-precision signed and unsigned integer types (`ExtendedSignedIntImpl`, `ExtendedUnsignedIntImpl`).
-*   **pe_extended_signed_int**: Implements extended-precision signed integer types by building upon the unsigned versions, providing support for larger-than-native integer arithmetic.
-*   **pe_extended_unsigned_int**: Implements extended-precision unsigned integer types (`ExtendedUnsignedIntImpl`) that can be larger than standard 64-bit integers.
-*   **pe_fft**: Contains utilities for Fast Fourier Transform and polynomial multiplication, offering multiple implementations based on different precision and performance trade-offs.
-*   **pe_float**: Provides unified functions for floating-point operations, including support for the `__float128` type if available.
-*   **pe_fraction**: Supports arithmetic operations for fractions, templated to work with various integer types.
-*   **pe_gbi**: Defines a concept for General Big Integers (`is_gbi_v`) and provides a unified interface for operations on different big integer types, such as those from GMP or custom implementations.
-*   **pe_geometry**: Provides support for 2D (`Point2D`) and 3D (`Point3D`) geometric points and related operations like dot and cross products.
-*   **pe_initializer**: Offers helper classes and macros (`PE_INIT`) for initializing library components at program startup, such as generating prime lists or configuring parallel execution environments.
-*   **pe_int**: Contains basic utility functions for integer types, including modular arithmetic helpers and functions like `Gcd` and `Lcm`.
-*   **pe_int_algo**: Provides integer algorithms specifically for extended integer types (`is_extended_integer_v`) and general big integers (`is_gbi_v`), such as the Extended Euclidean Algorithm (`ExGcd`) and the Chinese Remainder Theorem (`Crt`).
-*   **pe_internal**: An internal header that includes the `pe_config` file, performs compiler and platform checks, and manages the inclusion of third-party libraries.
-*   **pe_io**: Contains methods and macros for simplified or accelerated I/O operations, such as fast integer reading (`ReadInt`) and a helper for printing answers (`PromptAnswer`).
-*   **pe_mat**: Provides functions for matrix operations, including matrix multiplication (`MatMulMat`), matrix-vector multiplication (`MatMulVec`), and their modular arithmetic versions.
-*   **pe_memory**: Contains memory management utilities, including a `LargeMemory` allocator for Windows environments.
-*   **pe_misc**: A collection of miscellaneous utility functions that do not fit into other categories, such as Gaussian elimination (`GaussianEliminationMod2`).
-*   **pe_mma**: Includes helper methods and classes for generating Mathematica (MMA) code, such as finding recurrence formulas (`FRHelper`).
-*   **pe_mod**: Offers utilities for modular arithmetic, such as modular addition (`AddMod`), multiplication (`MulMod`), and exponentiation (`PowerMod`).
-*   **pe_mpf**: A wrapper for multi-precision floating-point numbers based on the GMP library (`mpf_t`), enabled by `ENABLE_GMP`.
-*   **pe_mpz**: A wrapper for multi-precision integers based on the GMP library (`mpz_t`), enabled by `ENABLE_GMP`.
-*   **pe_nt**: Core number theory utilities, extending `pe_nt_base`. It includes functions like integer square root (`SqrtI`), prime factorization (`Factorize`), and primality testing (`IsPrimeEx`).
-*   **pe_nt_base**: Basic number theory functionalities, including prime list generation (`InitPrimes`), integer factorization, and computation of number-theoretic functions like Euler's totient (`phi`) and Möbius (`mu`).
-*   **pe_ntf**: Provides implementations for calculating prefix sums of various number-theoretic functions, such as the sum of `mu` (`MuSummer`) and the sum of `sigma0` (`Sigma0Summer`).
-*   **pe_parallel**: A simple framework for multi-threaded problem-solving (currently Windows only).
-*   **pe_parallel_algo**: Contains parallel algorithms such as parallel sort (`ParallelSort`) and parallel find (`ParallelFindFirst`), which require OpenMP to be enabled.
-*   **pe_persistance**: Offers key-value persistence functionality, which may require adjustments to support Linux.
-*   **pe_poly_algo**: Contains advanced polynomial algorithms, such as generating Bernoulli numbers (`GenBernoulliNumber`) and Stirling numbers (`GenStirling1`, `GenStirling2`).
-*   **pe_poly_base**: Provides basic polynomial algorithms and serves as a hub for including various underlying implementations (e.g., from FLINT, NTL) for polynomial operations.
-*   **pe_poly_base_flint**: Implements polynomial algorithms using the FLINT library, enabled by `ENABLE_FLINT`.
-*   **pe_poly_base_gmp**: Implements polynomial algorithms based on the GMP library, enabled by `ENABLE_GMP`.
-*   **pe_poly_base_libbf**: Implements polynomial algorithms based on the libbf library, enabled by `ENABLE_LIBBF`.
-*   **pe_poly_base_min25**: Contains polynomial algorithms from user [Min_25](https://github.com/min-25), noted for including the fastest polynomial multiplication.
-*   **pe_poly_base_ntl**: Implements polynomial algorithms using the NTL library, enabled by `ENABLE_NTL`.
-*   **pe_poly_base_ntt**: Provides Number Theoretic Transform (NTT) based polynomial multiplication, with multiple implementations (`ntt32`, `ntt64`) optimized for different modulus sizes and coefficient ranges.
-*   **pe_rand**: Provides random number generation utilities.
-*   **pe_range**: An implementation for creating and manipulating ranges, offering a fluent API for operations like `Filter`, `Map`, and `Reduce`.
-*   **pe_serialization**: Provides functionality to serialize and deserialize objects into sequences of integers.
-*   **pe_span**: An implementation of a `Span` class, which provides a non-owning view over a contiguous sequence of objects.
-*   **pe_sym_poly**: Supports symbolic polynomial operations, allowing for manipulation of polynomials with variables as symbols.
-*   **pe_time**: Contains time-related utilities like `TimeDelta` for measuring durations and `TimeRecorder` for timing code execution.
-*   **pe_tree**: Implements tree-based data structures, such as Fenwick trees (`RUBit`, `RSQBit`) and Splay trees (`SplayMultiSet`).
-*   **pe_type_traits**: Provides custom type trait utilities for compile-time type introspection.
-*   **pe_vector**: Offers utilities for vector operations like addition, subtraction, scaling, and dot product.
+Of course. Here is the categorized `File List` in English, enhanced with details from the provided sources.
+
+---
+
+#### File List
+
+This list categorizes the library files by their functional modules for easier understanding and navigation.
+
+**Core & Base**
+
+*   `pe.hpp`: **Core header file**. Used to generate a precompiled header, it includes the main functional modules of the library.
+*   `pe_base`: **Base components**. Includes standard library headers, common macros (e.g., `PE_ASSERT`), type definitions (`int64`, `uint128`), and basic inline functions.
+*   `pe_internal`: **Internal implementation details**. Includes the configuration file (`pe_config`), performs compiler/platform checks, and manages the inclusion of third-party libraries.
+*   `pe_config`: **Centralized configuration file**. Used to configure various features of the PE library, such as enabling third-party libraries (`ENABLE_GMP`), `int128` support, and assertions.
+*   `pe_initializer`: **Library initialization helper**. Provides helper classes and macros (`PE_INIT`) to initialize library settings at program startup, such as prime table generation and parallel environment setup.
+*   `pe_type_traits`: **Type trait utilities**. Offers custom type traits for compile-time type introspection.
+*   `pe_time`: **Time utilities**. Provides `TimeDelta` and `TimeRecorder` for timing code execution.
+*   `pe_io`: **I/O operations**. Provides simplified or accelerated I/O methods and macros, such as `ReadInt` and `PromptAnswer`.
+
+**Data Structures**
+
+*   `pe_array`: **Multi-dimensional arrays**. Implements compile-time (`FArray`) and runtime (`DArray`) dimensioned arrays, supporting element counts beyond `int32` limits and custom allocators.
+*   `pe_vector`: **Vector operations**. Provides utilities for vector addition, subtraction, scaling, and dot product.
+*   `pe_span`: **Span implementation**. Provides an implementation of `Span` to represent a non-owning view over a contiguous sequence of objects.
+*   `pe_range`: **Range implementation**. Used for creating and operating on sequence ranges with a fluent API.
+*   `pe_tree`: **Tree-based data structures**. Contains implementations such as Fenwick trees (`RUBit`, `RSQBit`) and Splay trees (`SplayMultiSet`).
+*   `pe_persistance`: **Key-value persistence**. Offers key-value persistence functionality, which may require adjustments to support Linux.
+
+**Integer & Numerical Computing**
+
+*   `pe_int`: **Basic integer utilities**. Provides fundamental integer operation utility functions.
+*   `pe_extended_int`: **Extended integer types**. A header that consolidates extended-precision signed and unsigned integer types.
+*   `pe_extended_unsigned_int`: **Extended unsigned integers**. Implements arbitrarily large unsigned integer types.
+*   `pe_extended_signed_int`: **Extended signed integers**. Implements arbitrarily large signed integer types by building upon the unsigned versions.
+*   `pe_bi32`: **Big integer (Base 1<<32)**. A big integer implementation (`BigInteger`) using an array of `uint32` values.
+*   `pe_mpz`: **Multi-precision integers (GMP-based)**. A wrapper for the GMP library's `mpz_t` type for high-precision integer arithmetic.
+*   `pe_gbi`: **General big integer operations**. Provides a unified interface for operations on various big integer types defined in the library.
+*   `pe_fraction`: **Fraction arithmetic**. Supports arithmetic operations for fractions (`Fraction`).
+*   `pe_float`: **Unified float operations**. Provides unified functions for floating-point types, including `__float128`.
+*   `pe_mpf`: **Multi-precision floats (GMP-based)**. A wrapper for the GMP library's `mpf_t` type for high-precision floating-point calculations.
+*   `pe_mod`: **Modular arithmetic utilities**. Offers modular addition, multiplication, and exponentiation.
+*   `pe_mat`: **Matrix operations**. Provides matrix multiplication, matrix-vector multiplication, and matrix power, with support for modular arithmetic.
+
+**Algorithms**
+
+*   `pe_algo`: **General algorithms collection**. Contains various algorithms like binary search, combinatorial functions, power sums, and prefix sums of number theory functions.
+*   `pe_int_algo`: **Integer algorithms**. Algorithms for extended and general big integers, such as the Extended Euclidean Algorithm (`ExGcd`) and the Chinese Remainder Theorem (`Crt`).
+*   `pe_bit`: **Bit manipulation utilities**. Provides functions for counting leading/trailing zeros (`pe_clzll`, `pe_ctzll`), population count, and determining bit width.
+
+**Number Theory**
+
+*   `pe_nt_base`: **Basic number theory**. Includes prime list generation, integer factorization, primality testing, and computation of Euler's totient (`phi`) and Möbius (`mu`) functions.
+*   `pe_nt`: **Core number theory utilities**. An extension of `pe_nt_base`, providing more number theory functions like integer square root (`SqrtI`) and advanced primality testing (`IsPrimeEx`).
+*   `pe_ntf`: **Number-theoretic functions**. Contains algorithms for prefix sums of advanced number-theoretic functions like `MuSummer`, `MuPhiSummer`, and `Sigma0Summer`.
+*   `pe_db`: **Pre-calculated results database**. Loads and saves pre-calculated results, such as the prime-counting function `π(x)` and the sum of primes, to speed up computations.
+
+**Polynomial & Fast Fourier Transform**
+
+*   `pe_fft`: **Fast Fourier Transform**. Provides FFT utilities and polynomial multiplication.
+*   `pe_poly_base`: **Basic polynomial algorithms**. Provides fundamental polynomial operations like addition, subtraction, multiplication, division, inversion, and exponentiation, serving as an entry point for various underlying implementations.
+*   `pe_poly_base_flint`: **FLINT-based** polynomial algorithm implementation.
+*   `pe_poly_base_gmp`: **GMP-based** polynomial algorithm implementation.
+*   `pe_poly_base_libbf`: **libbf-based** polynomial algorithm implementation.
+*   `pe_poly_base_min25`: Contains polynomial algorithms from user **[Min_25](https://github.com/min-25)**, including a very fast polynomial multiplication.
+*   `pe_poly_base_ntl`: **NTL-based** polynomial algorithm implementation.
+*   `pe_poly_base_ntt`: Provides **Number Theoretic Transform (NTT)** based polynomial multiplication with multiple implementations (`ntt32`, `ntt64`) for different modulus sizes.
+*   `pe_poly_algo`: **Advanced polynomial algorithms**. Provides higher-level polynomial algorithms, such as generating Bernoulli and Stirling numbers.
+*   `pe_sym_poly`: **Symbolic polynomial operations**. Supports symbolic manipulation of polynomials.
+
+**Parallel & Distributed Computing**
+
+*   `pe_parallel`: **Multi-threading framework**. A simple framework for multi-threaded problem-solving (Windows only).
+*   `pe_parallel_algo`: **Parallel algorithms**. Contains parallel sort (`ParallelSort`) and parallel find (`ParallelFindFirst`) algorithms.
+*   `pe_dpe`: **Distributed computation**. Provides a framework for distributed computing using ZeroMQ (`ENABLE_ZMQ`).
+
+**Miscellaneous**
+
+*   `pe_geometry`: **Geometric computations**. Supports `Point2D` and `Point3D` objects and their operations.
+*   `pe_memory`: **Memory management**. Provides memory management utilities (Windows only).
+*   `pe_misc`: **Miscellaneous utility functions**. Contains useful functions that don't fit into other categories, such as Gaussian elimination (`GaussianEliminationMod2`).
+*   `pe_mma`: **Mathematica (MMA) support**. Provides helper methods or classes for generating MMA code, like `FRHelper`.
+*   `pe_rand`: **Random number generation**. Includes random number generation utilities.
+*   `pe_serialization`: **Object serialization**. Provides functionality to serialize objects into sequences of integers.
+
 
 

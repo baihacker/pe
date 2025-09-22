@@ -50,12 +50,6 @@ For a quick start, refer to [example.c](https://github.com/baihacker/pe/blob/mas
 
 ## File List
 
-Of course. Here is the categorized `File List` in English, enhanced with details from the provided sources.
-
----
-
-#### File List
-
 This list categorizes the library files by their functional modules for easier understanding and navigation.
 
 **Core & Base**
@@ -133,6 +127,7 @@ This list categorizes the library files by their functional modules for easier u
 *   `pe_mma`: **Mathematica (MMA) support**. Provides helper methods or classes for generating MMA code, like `FRHelper`.
 *   `pe_rand`: **Random number generation**. Includes random number generation utilities.
 *   `pe_serialization`: **Object serialization**. Provides functionality to serialize objects into sequences of integers.
+
 
 
 

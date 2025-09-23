@@ -4,7 +4,7 @@ using namespace pe;
 // Given the number of each letter, find the number of words without adjacent
 // letter of the same
 
-int brute_force(const std::vector<int64>& vec) {
+int BruteForce(const std::vector<int64>& vec) {
   int size = 0;
   for (auto& iter : vec) size += iter;
 
@@ -40,7 +40,7 @@ int main() {
   };
 
   for (const std::vector<int64>& iter : test_data) {
-    std::cout << brute_force(iter) << " " << counter.Cal(iter) << std::endl;
+    std::cout << BruteForce(iter) << " " << counter.Cal(iter) << std::endl;
   }
   return 0;
 }

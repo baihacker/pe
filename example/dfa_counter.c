@@ -2,14 +2,15 @@
 using namespace pe;
 
 // Count the number which contains 3.
-
-int64 cal(int64 n) {
-  for (; n; n /= 10)
-    if (n % 10 == 3) return 1;
-  return 0;
+int64 BruteForce(int64 n) {
+  return XRange<int64>(1LL, n)
+      .Map<int64>([](int64 n) {
+        for (; n; n /= 10)
+          if (n % 10 == 3) return 1;
+        return 0;
+      })
+      .Sum();
 }
-
-int64 bf(int64 n) { return XRange<int64>(1LL, n).Map<int64>(cal).Sum(); }
 
 int main() {
   PE_INIT(maxp = 1000000);
@@ -52,7 +53,7 @@ int main() {
   counter2.set_count_each_len(1);
 
   for (int64 n = 10; n <= 1000000; n *= 10) {
-    auto a = bf(n);
+    auto a = BruteForce(n);
     auto b = counter1.Cal(n);
     auto c = counter2.Cal(n);
     std::cout << n << "\t" << a << "\t" << b << "\t" << c << std::endl;

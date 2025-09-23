@@ -3,7 +3,7 @@ using namespace pe;
 
 const int64 mod = 1000000007;
 
-int64 solve_nth(int64 n) {
+int64 SolveNth(int64 n) {
   auto ans = MatrixPower<mod>(
       2,
       [=](auto& m, auto& v) {
@@ -17,7 +17,7 @@ int64 solve_nth(int64 n) {
   return ans[1];
 }
 
-int64 solve_nth_sum(int64 n) {
+int64 SolveNthSum(int64 n) {
   auto ans = MatrixPower<mod>(
       3,
       [=](auto& m, auto& v) {
@@ -46,7 +46,7 @@ int main() {
     const int64 ans1 =
         LinearRecurrenceValueAt({mod - 1, mod - 1, 1}, init, n, mod);
     // Use matric multiplication to compute the nth element.
-    const int64 ans2 = solve_nth(n);
+    const int64 ans2 = SolveNth(n);
     std::cout << "n = " << n << std::endl;
     std::cout << "Ans0 = " << ans0 << std::endl;
     std::cout << "Ans1 = " << ans1 << std::endl;
@@ -59,7 +59,7 @@ int main() {
     // The minimal initial element count is: 2 * (order + 1) + 1
     const int64 ans1 =
         LinearRecurrenceSumAt({mod - 1, mod - 1, 1}, init, n, mod);
-    const int64 ans2 = solve_nth_sum(n);
+    const int64 ans2 = SolveNthSum(n);
     std::cout << "n = " << n << std::endl;
     std::cout << "Ans1 = " << ans1 << std::endl;
     std::cout << "Ans2 = " << ans2 << std::endl;

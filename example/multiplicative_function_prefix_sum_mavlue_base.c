@@ -333,7 +333,8 @@ void RunPerfTest() {
     {
       ::dva = PrimeS0Ex<int64>(n);
       TimeRecorder tr;
-      RT ans = Dfs(pcnt, n, 1, -1, 1, 0, 1, 1);
+      RT ans = Dfs(/*limit=*/pcnt, /*n=*/n, /*val=*/1, /*imp=*/-1, /*vmp=*/1,
+                   /*emp=*/0, /*now=*/1, /*now1=*/1);
       // std::cout << ans << std::endl;
       // std::cout << tr.Elapsed().Format() << std::endl;
       line.push_back(tr.Elapsed().Format());
@@ -342,7 +343,8 @@ void RunPerfTest() {
     {
       ::dva = PrimeS0Ex<int64>(n);
       TimeRecorder tr;
-      RT ans = Dfs1(0, pcnt, n, 1, -1, 1, 0, 1, 1);
+      RT ans = Dfs1(/*start=*/0, /*limit=*/pcnt, /*n=*/n, /*val=*/1, /*imp=*/-1,
+                    /*vmp=*/1, /*emp=*/0, /*now=*/1, /*now1=*/1);
       // std::cout << ans << std::endl;
       // std::cout << tr.Elapsed().Format() << std::endl;
       line.push_back(tr.Elapsed().Format());

@@ -2,7 +2,7 @@
 using namespace pe;
 
 template <typename T>
-void demo() {
+void DemonstrateContinuedFraction() {
   std::vector<int> data = {1, 2, 2, 2, 2, 2, 2, 2, 2, 2};
   for (int i = 0; i < 10; ++i) {
     std::cout << FromCf<T>(data, i) << std::endl;
@@ -20,9 +20,9 @@ void demo() {
 }
 
 int main() {
-  demo<BigInteger>();
+  DemonstrateContinuedFraction<BigInteger>();
 #if ENABLE_GMP
-  demo<MpInteger>();
+  DemonstrateContinuedFraction<MpInteger>();
 #endif
   return 0;
 }

@@ -577,8 +577,9 @@ SL void PolyMulDcImpl(const T* X, const T* Y, const int64 n, T* result) {
   const T* x1 = X;
   const T* y1 = Y;
 
-  T* x0y0 = new T[dbm1];
-  T* x1y1 = new T[dbm1];
+  std::vector<T> storage(dbm1 * 2);
+  T* x0y0 = std::data(storage);         // size = dbm1
+  T* x1y1 = std::data(storage) + dbm1;  // size = dbm1
 #if ENABLE_OPENMP
 #pragma omp parallel sections if (n > 5000)
 #endif
@@ -596,10 +597,12 @@ SL void PolyMulDcImpl(const T* X, const T* Y, const int64 n, T* result) {
     x0y0[dbm0] = 0;
     x0y0[dbm0 + 1] = 0;
   }
-  T* w = new T[dbm1];
+  std::vector<T> storage1(dbm1);
+  T* w = std::data(storage1);  // size = dbm1
   {
-    T* u = new T[m1];
-    T* v = new T[m1];
+    std::vector<T> storage2(2 * m1);
+    T* u = std::data(storage2);       // size = m1
+    T* v = std::data(storage2) + m1;  // size = m1
 
     for (int64 i = 0; i < m0; ++i) {
       u[i] = x0[i] + x1[i], v[i] = y0[i] + y1[i];
@@ -609,8 +612,6 @@ SL void PolyMulDcImpl(const T* X, const T* Y, const int64 n, T* result) {
       v[m1 - 1] = y1[m1 - 1];
     }
     PolyMulDcImpl(u, v, m1, w);
-    delete[] u;
-    delete[] v;
     for (int64 i = 0; i < m1 * 2; ++i) {
       w[i] -= x0y0[i] + x1y1[i];
     }
@@ -625,9 +626,6 @@ SL void PolyMulDcImpl(const T* X, const T* Y, const int64 n, T* result) {
   for (int64 i = 0; i < dbm1; ++i) {
     result[i] += x1y1[i];
   }
-  delete[] x0y0;
-  delete[] x1y1;
-  delete[] w;
 }
 }  // namespace internal
 

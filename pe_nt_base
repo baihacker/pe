@@ -351,6 +351,17 @@ struct IntegerFactorization : public std::vector<std::pair<int64, int>> {
     return *this;
   }
 
+  IntegerFactorization& operator*=(const IntegerFactorization& a) {
+    std::map<int64, int> ret = ToMap();
+    for (const auto& iter : a) {
+      ret[iter.first] += iter.second;
+    }
+    *this = IntegerFactorization(ret);
+    return *this;
+  }
+
+  IntegerFactorization& operator*=(int64 a) { return *this *= Factorize(a); }
+
   std::map<int64, int> ToMap() const {
     return std::map<int64, int>(base::begin(), base::end());
   }
@@ -382,6 +393,14 @@ SL IntegerFactorization operator*(const IntegerFactorization& a,
     ret[iter.first] += iter.second;
   }
   return ret;
+}
+
+SL IntegerFactorization operator*(const IntegerFactorization& a, int64 b) {
+  return a * Factorize(b);
+}
+
+SL IntegerFactorization operator*(int64 a, const IntegerFactorization& b) {
+  return Factorize(a) * b;
 }
 
 SL std::ostream& operator<<(std::ostream& o, const IntegerFactorization& v) {

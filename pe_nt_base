@@ -562,7 +562,8 @@ SL IntegerFactorization FactorizePower(int64 n, int r) {
     return ret;
   }
 
-  for (int i = 0; i < pcnt; ++i) {
+  int i = 0;
+  for (; i < pcnt; ++i) {
     if (n <= maxp) {
       FactorizePowerByPmask(n, r, ret);
       return ret;
@@ -574,7 +575,26 @@ SL IntegerFactorization FactorizePower(int64 n, int r) {
     while (n % p == 0) n /= p, ++c;
     if (c) ret.emplace_back(p, c * r);
   }
+
+  if (i == pcnt) {
+    internal::FactorizeWarningOnce(n);
+    {
+      int p2 = 0;
+      while ((n & 1) == 0) n >>= 1, ++p2;
+      if (p2) ret.emplace_back(2, p2 * r);
+    }
+    const int64 start = pcnt <= 1 ? 3 : plist[pcnt - 1] + 2;
+    for (int64 p = start;; p += 2) {
+      const int64 test = p * p;
+      if (test > n) break;
+      int c = 0;
+      while (n >= p && n % p == 0) n /= p, ++c;
+      if (c) ret.emplace_back(p, c * r);
+    }
+  }
+
   if (n != 1) ret.emplace_back(n, r);
+
   return ret;
 }
 

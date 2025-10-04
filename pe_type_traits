@@ -467,10 +467,7 @@ struct pe_element_type_traits {
   using reference = T&;
   using const_reference = const_element_type&;
 
-  using const_element_access_type = make_const_arg_type_t<T>;
-  using element_access_type =
-      std::conditional_t<std::is_const_v<T>, const_element_access_type,
-                         reference>;
+  using const_arg_type = make_const_arg_type_t<T>;
 
   static constexpr bool is_element_type_const =
       std::is_same_v<element_type, const_element_type>;
@@ -492,38 +489,22 @@ struct pe_no_ref_element_type_traits {
   using reference = T;
   using const_reference = const_element_type;
 
-  using const_element_access_type = const_reference;
-  using element_access_type = reference;
+  using const_arg_type = make_const_arg_type_t<T>;
 
   static constexpr bool is_element_type_const =
       std::is_same_v<element_type, const_element_type>;
 };
 
 // pe_iterator_traits
-template <typename IT, bool has_element_access_type = true>
-struct pe_iterator_traits_impl {
-  using value_type = typename IT::value_type;
-
-  using reference = typename IT::reference;
-
-  using const_element_access_type = typename IT::const_element_access_type;
-  using element_access_type = typename IT::element_access_type;
-};
-
 template <typename IT>
-struct pe_iterator_traits_impl<IT, false> {
+struct pe_iterator_traits {
   using value_type = typename IT::value_type;
 
   using reference = typename IT::reference;
 
-  using const_element_access_type = std::add_lvalue_reference_t<
+  using const_arg_type = std::add_lvalue_reference_t<
       std::add_const_t<std::remove_reference_t<typename IT::reference>>>;
-  using element_access_type = reference;
 };
-
-template <typename IT>
-struct pe_iterator_traits
-    : public pe_iterator_traits_impl<IT, has_element_access_type_v<IT>> {};
 
 template <typename T>
 struct pe_iterator_traits<T*> {
@@ -533,9 +514,7 @@ struct pe_iterator_traits<T*> {
 
   using reference = typename element_type_traits::reference;
 
-  using const_element_access_type =
-      typename element_type_traits::const_element_access_type;
-  using element_access_type = typename element_type_traits::element_access_type;
+  using const_arg_type = typename element_type_traits::const_arg_type;
 };
 
 template <typename T>
@@ -546,9 +525,7 @@ struct pe_iterator_traits<const T*> {
 
   using reference = typename element_type_traits::reference;
 
-  using const_element_access_type =
-      typename element_type_traits::const_element_access_type;
-  using element_access_type = typename element_type_traits::element_access_type;
+  using const_arg_type = typename element_type_traits::const_arg_type;
 };
 
 // Span like

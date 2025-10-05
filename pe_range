@@ -6,111 +6,6 @@
 #include "pe_mod"
 
 namespace pe {
-// range utility
-namespace ru {
-template <typename T = int64, typename U = T>
-struct Reducer {
-  using VT = T;
-  using IT = U;
-
-  Reducer(VT init_value, const std::function<void(VT&, IT)>& accumulator,
-          const std::function<void(VT&, VT)>& combiner)
-      : init_value_(init_value),
-        accumulator_(accumulator),
-        combiner_(combiner) {}
-
-  Reducer(VT init_value, const std::function<void(VT&, IT)>& accumulator)
-      : init_value_(init_value),
-        accumulator_(accumulator),
-        combiner_(accumulator) {}
-
-  VT GetInitValue() const { return init_value_; }
-
-  void Accumulate(VT& v, IT a) const { accumulator_(v, a); }
-  void Combine(VT& v, VT a) const { combiner_(v, a); }
-
-  VT init_value_;
-  std::function<void(VT&, IT)> accumulator_;
-  std::function<void(VT&, VT)> combiner_;
-};
-
-template <typename T, typename U>
-SL T IdMap(U a) {
-  return a;
-}
-
-template <typename T = int64, typename U = T>
-struct Add {
-  using VT = T;
-  using IT = U;
-
-  Add(const std::function<VT(IT)>& mapper = IdMap<VT, IT>) : mapper_(mapper) {}
-
-  VT GetInitValue() const { return 0; }
-
-  void Accumulate(VT& v, const IT& a) const { v += mapper_(a); }
-
-  void Combine(VT& v, VT a) const { v += a; }
-
-  std::function<VT(IT)> mapper_;
-};
-
-template <typename T = int64, typename U = T>
-struct AddMod {
-  using VT = T;
-  using IT = U;
-
-  AddMod(VT mod, const std::function<VT(IT)>& mapper = IdMap<VT, IT>)
-      : mod_(mod), mapper_(mapper) {}
-
-  VT GetInitValue() const { return 0; }
-
-  void Accumulate(VT& v, const IT& a) const {
-    v = pe::AddMod<VT>(v, Mod(mapper_(a), mod_), mod_);
-  }
-
-  void Combine(VT& v, VT a) const { v = pe::AddMod<VT>(v, a, mod_); }
-
-  const VT mod_;
-  std::function<VT(IT)> mapper_;
-};
-
-template <typename T = int64, typename U = T>
-struct Mul {
-  using VT = T;
-  using IT = U;
-
-  Mul(const std::function<VT(IT)>& mapper = IdMap<VT, IT>) : mapper_(mapper) {}
-
-  VT GetInitValue() const { return 1; }
-
-  void Accumulate(VT& v, const IT& a) const { v *= mapper_(a); }
-
-  void Combine(VT& v, VT a) const { v *= a; }
-
-  std::function<VT(IT)> mapper_;
-};
-
-template <typename T = int64, typename U = T>
-struct MulMod {
-  using VT = T;
-  using IT = U;
-
-  MulMod(VT mod, const std::function<VT(IT)>& mapper = IdMap<VT, IT>)
-      : mod_(mod), mapper_(mapper) {}
-
-  VT GetInitValue() const { return 1; }
-
-  void Accumulate(VT& v, const IT& a) const {
-    v = pe::MulMod<VT>(v, Mod(mapper_(a), mod_), mod_);
-  }
-
-  void Combine(VT& v, VT a) const { v = pe::MulMod<VT>(v, a, mod_); }
-
-  const VT mod_;
-  std::function<VT(IT)> mapper_;
-};
-}  // namespace ru
 
 template <typename IT>
 struct ContainerRange;
@@ -197,68 +92,20 @@ struct RangeBase {
     return PFilter(filter, TN, PS);
   }
 
-  // Reduce: reducer versions
-
-  template <typename T>
-  auto Reduce(const T& reducer) const -> typename T::VT {
-    using VT = typename T::VT;
-    VT ret = reducer.GetInitValue();
-    auto now = static_cast<const DERIVED&>(*this).begin();
-    auto x = static_cast<const DERIVED&>(*this).end();
-    while (now != x) {
-      reducer.Accumulate(ret, *now++);
-    }
-    return ret;
-  }
-
-  template <typename T>
-  auto PReduce(const T& reducer, const int thread_number = kDefaultThreadNumber,
-               int64 partition_size = kDefaultPartitionSize) const ->
-      typename T::VT {
-#if ENABLE_OPENMP
-    using VT = typename T::VT;
-    std::vector<value_type> data = ToVector();
-    const int64 size = static_cast<int>(std::size(data));
-    if (size == 0) {
-      return reducer.GetInitValue();
-    }
-
-    partition_size =
-        CalculateDefaultPartitionSize(size, thread_number, partition_size);
-
-    std::vector<VT> tmp(thread_number, reducer.GetInitValue());
-#pragma omp parallel for schedule(dynamic, partition_size) \
-    num_threads(thread_number)
-    for (int i = 0; i < size; ++i) {
-      const int id = omp_get_thread_num();
-      reducer.Accumulate(tmp[id], std::move(data[i]));
-    }
-
-    VT ret = tmp[0];
-    for (int i = 1; i < thread_number; ++i) {
-      reducer.Combine(ret, std::move(tmp[i]));
-    }
-    return ret;
-#else
-    return Reduce(reducer);
-#endif
-  }
-
-  // Reduce: accumulator versions
-
-  template <typename VT, typename AT>
-  VT Reduce(const VT& v, const AT& accumulator) const {
+  // Reduce
+  template <typename VT, typename BinaryOp>
+  VT Reduce(const VT& v, const BinaryOp& op) const {
     VT ret = v;
     auto now = static_cast<const DERIVED&>(*this).begin();
     auto x = static_cast<const DERIVED&>(*this).end();
     while (now != x) {
-      accumulator(ret, *now++);
+      ret = op(ret, *now++);
     }
     return ret;
   }
 
-  template <typename VT, typename AT>
-  VT PReduce(const VT& v, const AT& accumulator,
+  template <typename VT, typename BinaryOp>
+  VT PReduce(const VT& v, const BinaryOp& op,
              const int thread_number = kDefaultThreadNumber,
              int64 partition_size = kDefaultPartitionSize) const {
 #if ENABLE_OPENMP
@@ -276,25 +123,34 @@ struct RangeBase {
     num_threads(thread_number)
     for (int i = 0; i < size; ++i) {
       const int id = omp_get_thread_num();
-      accumulator(tmp[id], data[i]);
+      tmp[id] = op(tmp[id], data[i]);
     }
 
     VT ret = tmp[0];
     for (int i = 1; i < thread_number; ++i) {
-      accumulator(ret, std::move(tmp[i]));
+      ret = op(ret, std::move(tmp[i]));
     }
     return ret;
 #else
-    return Reduce(v, accumulator);
+    return Reduce(v, op);
 #endif
   }
 
-  // Reduce: accumulator and combiner versions
+  template <typename VT, typename BinaryOp>
+  VT InplaceReduce(const VT& v, const BinaryOp& op) const {
+    VT ret = v;
+    auto now = static_cast<const DERIVED&>(*this).begin();
+    auto x = static_cast<const DERIVED&>(*this).end();
+    while (now != x) {
+      op(ret, *now++);
+    }
+    return ret;
+  }
 
-  template <typename VT, typename AT, typename CT>
-  VT PReduce(const VT& v, const AT& accumulator, const CT& combiner,
-             const int thread_number = kDefaultThreadNumber,
-             int64 partition_size = kDefaultPartitionSize) const {
+  template <typename VT, typename BinaryOp>
+  VT PInplaceReduce(const VT& v, const BinaryOp& op,
+                    const int thread_number = kDefaultThreadNumber,
+                    int64 partition_size = kDefaultPartitionSize) const {
 #if ENABLE_OPENMP
     std::vector<value_type> data = ToVector();
     const int size = static_cast<int>(std::size(data));
@@ -310,16 +166,16 @@ struct RangeBase {
     num_threads(thread_number)
     for (int i = 0; i < size; ++i) {
       const int id = omp_get_thread_num();
-      accumulator(tmp[id], data[i]);
+      op(tmp[id], data[i]);
     }
 
     VT ret = tmp[0];
     for (int i = 1; i < thread_number; ++i) {
-      combiner(ret, std::move(tmp[i]));
+      op(ret, std::move(tmp[i]));
     }
     return ret;
 #else
-    return Reduce(v, accumulator);
+    return InplaceReduce(v, op);
 #endif
   }
 

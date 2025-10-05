@@ -156,37 +156,29 @@ void range_array_reduce() {
   // Sequential
   {
     int a[6] = {1, 2, 3, 4, 5, 6};
-    std::cout << Range(a).Reduce(ru::Add<int64>()) << std::endl;
-    std::cout << Range(a).Reduce(0, [](int& a, int b) -> void { a += b; })
-              << std::endl;
+    std::cout << Range(a).InplaceReduce(0, [](int& a, int b) -> void {
+      a += b;
+    }) << std::endl;
   }
   {
     std::array<int, 6> a = {1, 2, 3, 4, 5, 6};
-    std::cout << Range(a).Reduce(ru::Add<int64>()) << std::endl;
-    std::cout << Range(a).Reduce(0, [](int& a, int b) -> void { a += b; })
-              << std::endl;
+    std::cout << Range(a).InplaceReduce(0, [](int& a, int b) -> void {
+      a += b;
+    }) << std::endl;
   }
 
   // Parallel
   {
     int a[6] = {1, 2, 3, 4, 5, 6};
-    std::cout << Range(a).PReduce(ru::Add<int64>()) << std::endl;
-    std::cout << Range(a).PReduce(0, [](int& a, int b) -> void { a += b; })
-              << std::endl;
-    std::cout << Range(a).PReduce(
-                     0, [](int& a, int b) -> void { a += b; },
-                     [](int& a, int b) -> void { a += b; })
-              << std::endl;
+    std::cout << Range(a).PInplaceReduce(0, [](int& a, int b) -> void {
+      a += b;
+    }) << std::endl;
   }
   {
     std::array<int, 6> a = {1, 2, 3, 4, 5, 6};
-    std::cout << Range(a).PReduce(ru::Add<int64>()) << std::endl;
-    std::cout << Range(a).PReduce(0, [](int& a, int b) -> void { a += b; })
-              << std::endl;
-    std::cout << Range(a).PReduce(
-                     0, [](int& a, int b) -> void { a += b; },
-                     [](int& a, int b) -> void { a += b; })
-              << std::endl;
+    std::cout << Range(a).PInplaceReduce(0, [](int& a, int b) -> void {
+      a += b;
+    }) << std::endl;
   }
 }
 
@@ -194,21 +186,17 @@ void range_vector_reduce() {
   // Sequential
   {
     std::vector<int> a = {1, 2, 3, 4, 5, 6};
-    std::cout << Range(a).Reduce(ru::Add<int64>()) << std::endl;
-    std::cout << Range(a).Reduce(0, [](int& a, int b) -> void { a += b; })
-              << std::endl;
+    std::cout << Range(a).InplaceReduce(0, [](int& a, int b) -> void {
+      a += b;
+    }) << std::endl;
   }
 
   // Parallel
   {
     std::vector<int> a = {1, 2, 3, 4, 5, 6};
-    std::cout << Range(a).PReduce(ru::Add<int64>()) << std::endl;
-    std::cout << Range(a).PReduce(0, [](int& a, int b) -> void { a += b; })
-              << std::endl;
-    std::cout << Range(a).PReduce(
-                     0, [](int& a, int b) -> void { a += b; },
-                     [](int& a, int b) -> void { a += b; })
-              << std::endl;
+    std::cout << Range(a).PInplaceReduce(0, [](int& a, int b) -> void {
+      a += b;
+    }) << std::endl;
   }
 }
 
@@ -216,21 +204,17 @@ void range_set_reduce() {
   // Sequential
   {
     std::set<int> a = {1, 2, 3, 4, 5, 6};
-    std::cout << Range(a).Reduce(ru::Add<int64>()) << std::endl;
-    std::cout << Range(a).Reduce(0, [](int& a, int b) -> void { a += b; })
-              << std::endl;
+    std::cout << Range(a).InplaceReduce(0, [](int& a, int b) -> void {
+      a += b;
+    }) << std::endl;
   }
 
   // Parallel
   {
     std::set<int> a = {1, 2, 3, 4, 5, 6};
-    std::cout << Range(a).PReduce(ru::Add<int64>()) << std::endl;
-    std::cout << Range(a).PReduce(0, [](int& a, int b) -> void { a += b; })
-              << std::endl;
-    std::cout << Range(a).PReduce(
-                     0, [](int& a, int b) -> void { a += b; },
-                     [](int& a, int b) -> void { a += b; })
-              << std::endl;
+    std::cout << Range(a).PInplaceReduce(0, [](int& a, int b) -> void {
+      a += b;
+    }) << std::endl;
   }
 }
 
@@ -240,12 +224,6 @@ void range_map_reduce() {
     std::map<int, int> a;
     a[1] = 2;
     a[2] = 3;
-    std::cout << Range(a).Reduce(ru::Add<int64, std::pair<const int, int>>(
-                     [=](std::pair<const int, int> x) -> int64 {
-                       return x.second;
-                     }))
-              << std::endl;
-
     std::cout
         << Range(a).Map<int64>([](const auto& a) { return a.second; }).Sum()
         << std::endl;
@@ -256,11 +234,6 @@ void range_map_reduce() {
     std::map<int, int> a;
     a[1] = 2;
     a[2] = 3;
-    std::cout << Range(a).PReduce(ru::Add<int64, std::pair<const int, int>>(
-                     [=](std::pair<const int, int> x) -> int64 {
-                       return x.second;
-                     }))
-              << std::endl;
     std::cout
         << Range(a).PMap<int64>([](const auto& a) { return a.second; }).Sum()
         << std::endl;
@@ -270,37 +243,24 @@ void range_map_reduce() {
 void range_number_range_reduce() {
   // Sequential
   {
-    std::cout << Range(Range(1, 20)).Reduce(ru::Add<int64>()) << std::endl;
-    std::cout << Range(Range(1, 20)).Reduce(0, [](int& a, int b) -> void {
-      a += b;
-    }) << std::endl;
-    std::cout << Range(Range(1, 20)).Reduce(ru::Mul<int64>()) << std::endl;
     std::cout << Range(Range(1, 20))
-                     .Reduce<int64>(1, [](int64& a, int b) -> void { a *= b; })
+                     .InplaceReduce(0, [](int& a, int b) -> void { a += b; })
+              << std::endl;
+    std::cout << Range(Range(1, 20))
+                     .InplaceReduce<int64>(
+                         1, [](int64& a, int b) -> void { a *= b; })
               << std::endl;
   }
 
   // Parallel
   {
-    std::cout << Range(Range(1, 20)).PReduce(ru::Add<int64>()) << std::endl;
-    std::cout << Range(Range(1, 20)).PReduce(0, [](int& a, int b) -> void {
-      a += b;
-    }) << std::endl;
     std::cout << Range(Range(1, 20))
-                     .PReduce(
-                         0, [](int& a, int b) -> void { a += b; },
-                         [](int& a, int b) -> void { a += b; })
+                     .PInplaceReduce(0, [](int& a, int b) -> void { a += b; })
               << std::endl;
 
-    std::cout << Range(Range(1, 20)).PReduce(ru::Mul<int64>()) << std::endl;
     std::cout << Range(Range(1, 20))
-                     .PReduce<int64>(1,
-                                     [](int64& a, int64 b) -> void { a *= b; })
-              << std::endl;
-    std::cout << Range(Range(1, 20))
-                     .PReduce<int64>(
-                         1, [](int64& a, int64 b) -> void { a *= b; },
-                         [](int64& a, int64 b) -> void { a *= b; })
+                     .PInplaceReduce<int64>(
+                         1, [](int64& a, int64 b) -> void { a *= b; })
               << std::endl;
   }
 }
@@ -331,16 +291,15 @@ void range_general_example() {
     std::cout << i << std::endl;
   }
 
-  std::cout << Range(1, 10)
-                   .Filter([](auto v) { return v % 2 == 0; })
-                   .Reduce(ru::Add<int64>())
-            << std::endl;
+  std::cout
+      << Range(1, 10).Filter([](auto v) { return v % 2 == 0; }).Sum<int64>()
+      << std::endl;
   std::cout << Range(1, 10)
                    .Filter([](auto v) { return v % 2 == 0; })
                    .Filter([](auto v) { return v % 3 == 0; })
                    .Map<int64>([](auto v) { return v * 3; })
                    .Map<int64>([](auto v) { return v * 3; })
-                   .Reduce(ru::Add<int64>())
+                   .Sum<int64>()
             << std::endl;
   std::cout << Range(1, 10).Filter([](auto v) { return v % 2 == 0; }).ToVector()
             << std::endl;
@@ -350,27 +309,27 @@ void range_general_example() {
   const int* a0 = a;
   const int* a1 = a + 6;
 
-  std::cout << Range(a0, a1).Reduce(ru::Mul<int64>()) << std::endl;
-  std::cout << Range(a, a + 6).Reduce(ru::Mul<int64>()) << std::endl;
-  std::cout << Range(a).Reduce(ru::Add<int64>()) << std::endl;
+  std::cout << Range(a0, a1).Prod<int64>() << std::endl;
+  std::cout << Range(a, a + 6).Prod<int64>() << std::endl;
+  std::cout << Range(a).Sum<int64>() << std::endl;
 
   for (auto i : Range(x)) {
     std::cout << i << std::endl;
   }
 
-  std::cout
-      << Range(static_cast<const std::vector<int>&>(x)).Reduce(ru::Add<int64>())
-      << std::endl;
+  std::cout << Range(static_cast<const std::vector<int>&>(x)).Sum<int64>()
+            << std::endl;
 
-  std::cout << Range(x.begin(), x.end()).Reduce(ru::Add<int64>()) << std::endl;
+  std::cout << Range(x.begin(), x.end()).Sum<int64>() << std::endl;
 
   for (auto i : Range(mem)) {
     std::cout << i.first << " " << i.second << std::endl;
   }
 
   // 1*2*3*...*9
-  std::cout << Range(1, 10).Reduce(ru::Mul<int64>()) << std::endl;
-  std::cout << Range(1, 10).PReduce(ru::Mul<int64>()) << std::endl;
+  std::cout << Range(1, 10).Prod<int64>() << std::endl;
+  std::cout << Range(1, 10).PReduce<int64>(1, std::multiplies<int64>())
+            << std::endl;
 
   // 1*2*3*...*999999
   const int64 mod = 1000000007;
@@ -378,44 +337,42 @@ void range_general_example() {
   for (int i = 1; i < 1000000; ++i) t *= i;
   std::cout << t << std::endl;
 
-  std::cout << Range(1, 1000000).Reduce(ru::MulMod<int64>(mod)) << std::endl;
+  std::cout << Range(1, 1000000).ProdMod(mod) << std::endl;
+  std::cout << Range(1, 1000000)
+                   .PInplaceReduce<int64>(
+                       1, [&](int64& a, int64 b) { a = MulMod(a, b, mod); })
+            << std::endl;
 
-  std::cout << Range(1, 1000000).PReduce(ru::MulMod<int64>(mod)) << std::endl;
-
-  // Reduce on x
-  std::cout << Range(x).Reduce(ru::Mul<int64>()) << std::endl;
-  std::cout << Range(x).PReduce(ru::Mul<int64>()) << std::endl;
+  // InplaceReduce on x
+  std::cout << Range(x).Prod<int64>() << std::endl;
+  std::cout << Range(x).PReduce<int64>(1, std::multiplies<int64>())
+            << std::endl;
 
   // Count prime.
   std::cout << Range(1, 10000000 + 1)
                    .Map<int64>([](auto a) { return IsPrime(a); })
-                   .Reduce(ru::Add<int64>())
+                   .Sum<int64>()
             << std::endl;
-  std::cout << Range(1, 10000000 + 1).PReduce(ru::Add<int64>()) << std::endl;
 
-  // Reduce on mem
-  std::cout << Range(mem).PReduce(ru::Add<int64, std::pair<const int, int>>(
-                   [=](std::pair<const int, int> x) -> int64 {
+  // InplaceReduce on mem
+  std::cout << Range(mem)
+                   .PMap<int64>([=](std::pair<const int, int> x) -> int64 {
                      return x.second;
-                   }))
-            << std::endl;
-  std::cout << Range(1, 10000000 + 1)
-                   .Map<int64>([](auto a) { return a; })
-                   .Reduce(ru::Reducer<int64, int>(
-                       0, [=](int64& r, int v) { r += v; }))
+                   })
+                   .Sum<int64>()
             << std::endl;
 
-  std::cout << Range(mem).PReduce(
+  std::cout << Range(mem).PInplaceReduce(
                    std::pair<int, int>{0, 0},
                    [](auto& a, auto b) { a.second += b.second; }, 2)
             << std::endl;
   std::vector<Pt> y;
   y.push_back({1, 2});
   y.push_back({3, 4});
-  std::cout << Range(y).PReduce(ru::Reducer<Pt>({0, 0}, [=](Pt& r, Pt v) {
+  std::cout << Range(y).PInplaceReduce(Pt{0, 0}, [=](Pt& r, Pt v) {
     r.a += v.a;
     r.b += v.b;
-  })) << std::endl;
+  }) << std::endl;
 }
 
 void irange_example() {

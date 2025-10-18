@@ -133,14 +133,14 @@ SL REQUIRES((std::is_invocable_r_v<void, IMPL, const T*, int64, const T*, int64,
     y_offset.push_back(std::min<int64>(y_offset.back() + block_size, m));
   }
   std::vector<std::pair<int, int>> tasks;
-  for (int i = 0; i + 1 < x_offset.size(); ++i)
-    for (int j = 0; j + 1 < y_offset.size(); ++j) {
+  for (int i = 0; i + 1 < std::size(x_offset); ++i)
+    for (int j = 0; j + 1 < std::size(y_offset); ++j) {
       tasks.push_back({i, j});
     }
 
   OmpLock lock;
 #pragma omp parallel for schedule(dynamic, 1) num_threads(thread_number)
-  for (int i = 0; i < tasks.size(); ++i) {
+  for (int i = 0; i < std::size(tasks); ++i) {
     std::pair<int, int> task = tasks[i];
     const int64 x_start = x_offset[tasks[i].first];
     const int64 x_size = x_offset[tasks[i].first + 1] - x_start;
@@ -152,7 +152,7 @@ SL REQUIRES((std::is_invocable_r_v<void, IMPL, const T*, int64, const T*, int64,
          std::data(tans), mod);
 
     OmpGuard guard(lock);
-    const int64 tans_size = tans.size();
+    const int64 tans_size = std::size(tans);
     for (int64 j = 0; j < tans_size; ++j) {
       result[j + x_start + y_start] =
           AddMod(result[j + x_start + y_start], tans[j], mod);
@@ -186,14 +186,14 @@ SL REQUIRES((std::is_invocable_r_v<std::vector<T>, IMPL, std::vector<T>,
     y_offset.push_back(std::min<int64>(y_offset.back() + block_size, m));
   }
   std::vector<std::pair<int, int>> tasks;
-  for (int i = 0; i + 1 < x_offset.size(); ++i)
-    for (int j = 0; j + 1 < y_offset.size(); ++j) {
+  for (int i = 0; i + 1 < std::size(x_offset); ++i)
+    for (int j = 0; j + 1 < std::size(y_offset); ++j) {
       tasks.push_back({i, j});
     }
 
   OmpLock lock;
 #pragma omp parallel for schedule(dynamic, 1) num_threads(thread_number)
-  for (int i = 0; i < tasks.size(); ++i) {
+  for (int i = 0; i < std::size(tasks); ++i) {
     std::pair<int, int> task = tasks[i];
     const int64 x_start = x_offset[tasks[i].first];
     const int64 x_size = x_offset[tasks[i].first + 1] - x_start;
@@ -205,7 +205,7 @@ SL REQUIRES((std::is_invocable_r_v<std::vector<T>, IMPL, std::vector<T>,
         std::vector<T>(Y.begin() + y_start, Y.begin() + y_start + y_size), mod);
 
     OmpGuard guard(lock);
-    const int64 tans_size = tans.size();
+    const int64 tans_size = std::size(tans);
     for (int64 j = 0; j < tans_size; ++j) {
       result[j + x_start + y_start] =
           AddMod(result[j + x_start + y_start], tans[j], mod);

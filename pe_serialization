@@ -48,7 +48,7 @@ SL REQUIRES((can_copy_by_byte_v<T> && sizeof(T) >= 16 && sizeof(T) % 8 == 0))
 
 std::vector<int64> SerializeObject(const std::string &value) {
   std::vector<int64> ret;
-  ret.push_back(value.size());
+  ret.push_back(std::size(value));
   ret.insert(ret.end(), value.begin(), value.end());
   return ret;
 }
@@ -87,7 +87,7 @@ std::vector<int64> SerializeObject(const std::pair<U, V> &value) {
 template <typename T>
 std::vector<int64> SerializeVectorLike(const T &vector_like) {
   std::vector<int64> ret;
-  ret.push_back(vector_like.size());
+  ret.push_back(std::size(vector_like));
   for (const auto &iter : vector_like) {
     for (int64 t : SerializeObject(iter)) {
       ret.push_back(t);
@@ -115,7 +115,7 @@ RETURN(std::vector<int64>) SerializeObject(const std::unordered_set<T> &value) {
 template <typename T>
 std::vector<int64> SerializeMapLike(const T &map_like) {
   std::vector<int64> ret;
-  ret.push_back(map_like.size());
+  ret.push_back(std::size(map_like));
   for (const auto &iter : map_like) {
     for (int64 t : SerializeObject(iter.first)) {
       ret.push_back(t);
@@ -172,7 +172,7 @@ SL REQUIRES((has_as_tuple_v<T>)) RETURN(void)
 template <typename T>
 SL REQUIRES((can_copy_by_byte_v<T> && sizeof(T) == 4)) RETURN(void)
     DeserializeObject(const std::vector<int64> &src, int64 &idx, T &value) {
-  const int64 size = src.size();
+  const int64 size = std::size(src);
   if (idx >= size) {
     std::cerr << "Invalid index (sizeof(T) == 4), idx = " << idx
               << ", size = " << size << std::endl;
@@ -186,7 +186,7 @@ SL REQUIRES((can_copy_by_byte_v<T> && sizeof(T) == 4)) RETURN(void)
 template <typename T>
 SL REQUIRES((can_copy_by_byte_v<T> && sizeof(T) == 8)) RETURN(void)
     DeserializeObject(const std::vector<int64> &src, int64 &idx, T &value) {
-  const int64 size = src.size();
+  const int64 size = std::size(src);
   if (idx >= size) {
     std::cerr << "Invalid index (sizeof(T) == 8), idx = " << idx
               << ", size = " << size << std::endl;
@@ -200,7 +200,7 @@ template <typename T>
 SL REQUIRES((can_copy_by_byte_v<T> && sizeof(T) >= 16 && sizeof(T) % 8 == 0))
     RETURN(void)
         DeserializeObject(const std::vector<int64> &src, int64 &idx, T &value) {
-  const int size = static_cast<int>(src.size());
+  const int size = static_cast<int>(std::size(src));
   if (idx >= size) {
     std::cerr << "Invalid index, idx = " << idx << ", size = " << size
               << std::endl;
@@ -223,7 +223,7 @@ SL REQUIRES((can_copy_by_byte_v<T> && sizeof(T) >= 16 && sizeof(T) % 8 == 0))
 
 void DeserializeObject(const std::vector<int64> &src, int64 &idx,
                        std::string &value) {
-  const int64 size = src.size();
+  const int64 size = std::size(src);
   if (idx >= size) {
     std::cerr << "Invalid index, idx = " << idx << ", size = " << size
               << std::endl;
@@ -235,8 +235,8 @@ void DeserializeObject(const std::vector<int64> &src, int64 &idx,
               << ", length = " << length << ", size = " << size << std::endl;
     exit(-1);
   }
-  const int64 old_value_size = value.size();
-  value.resize(value.size() + length);
+  const int64 old_value_size = std::size(value);
+  value.resize(std::size(value) + length);
   for (int64 i = idx + 1, j = old_value_size; i <= idx + length; ++i, ++j) {
     value[j] = static_cast<char>(src[i]);
   }
@@ -268,7 +268,7 @@ void DeserializeObject(const std::vector<int64> &src, int64 &idx,
 template <typename U, typename V>
 void DeserializeObject(const std::vector<int64> &src, int64 &idx,
                        std::pair<U, V> &value) {
-  const int64 size = src.size();
+  const int64 size = std::size(src);
   if (idx >= size) {
     std::cerr << "Invalid index, idx = " << idx << ", size = " << size
               << std::endl;
@@ -282,7 +282,7 @@ void DeserializeObject(const std::vector<int64> &src, int64 &idx,
 template <typename T, typename C>
 void DeserializeVectorLike(const std::vector<int64> &src, int64 &idx,
                            C &value) {
-  const int64 size = src.size();
+  const int64 size = std::size(src);
   if (idx >= size) {
     std::cerr << "Invalid index, idx = " << idx << ", size = " << size
               << std::endl;
@@ -321,7 +321,7 @@ RETURN(void) DeserializeObject(const std::vector<int64> &src, int64 &idx,
 
 template <typename K, typename V, typename T>
 void DeserializeMapLike(const std::vector<int64> &src, int64 &idx, T &value) {
-  const int64 size = src.size();
+  const int64 size = std::size(src);
   if (idx >= size) {
     std::cerr << "Invalid index, idx = " << idx << ", size = " << size
               << std::endl;
@@ -358,7 +358,7 @@ template <typename... T>
 void DeserializeObjectImpl(const std::vector<int64> &source, int64 &idx,
                            std::tuple<T...> &&obj) {
   const int field_count = std::tuple_size_v<std::tuple<T...>>;
-  const int size = source.size();
+  const int size = std::size(source);
   if (idx >= size) {
     std::cerr << "Invalid index, idx = " << idx << ", size = " << size
               << std::endl;

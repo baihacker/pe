@@ -7,7 +7,7 @@ SL void BinarySearchTest() {
   srand(123456789);
   for (int i = 0; i < n; ++i) vec[i] = (rand() % 20) * 2 + 1 - 20;
   for (int i = 0; i < 4; ++i) vec.push_back(vec[i]);
-  sort(vec.begin(), vec.end());
+  sort(std::begin(vec), std::end(vec));
 
   const int start = 0, end = static_cast<int>(std::size(vec)) - 1;
 

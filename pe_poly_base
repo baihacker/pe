@@ -417,7 +417,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
         reinterpret_cast<const UnsignedT*>(X),
         reinterpret_cast<const UnsignedT*>(Y), n,
         reinterpret_cast<UnsignedT*>(std::data(tresult)), mod);
-    std::copy(tresult.begin(), tresult.begin() + n + m - 1, result);
+    std::copy(std::begin(tresult), std::begin(tresult) + n + m - 1, result);
   } else if (n > m) {
     std::vector<T> YY(n);
     for (int64 i = 0; i < m; ++i) YY[i] = Y[i];
@@ -426,7 +426,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
         reinterpret_cast<const UnsignedT*>(X),
         reinterpret_cast<const UnsignedT*>(std::data(YY)), n,
         reinterpret_cast<UnsignedT*>(std::data(tresult)), mod);
-    std::copy(tresult.begin(), tresult.begin() + n + m - 1, result);
+    std::copy(std::begin(tresult), std::begin(tresult) + n + m - 1, result);
   } else {
     std::vector<T> XX(m);
     for (int64 i = 0; i < n; ++i) XX[i] = X[i];
@@ -435,7 +435,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
         reinterpret_cast<const UnsignedT*>(std::data(XX)),
         reinterpret_cast<const UnsignedT*>(Y), m,
         reinterpret_cast<UnsignedT*>(std::data(tresult)), mod);
-    std::copy(tresult.begin(), tresult.begin() + n + m - 1, result);
+    std::copy(std::begin(tresult), std::begin(tresult) + n + m - 1, result);
   }
 }
 
@@ -639,19 +639,19 @@ SL void PolyMulDc(const T* X, const int64 n, const T* Y, const int64 m,
     // requirement of PolyMulDcImpl.
     std::vector<T> tresult(2 * n);
     internal::PolyMulDcImpl(std::data(X), std::data(Y), n, std::data(result));
-    std::copy(tresult.begin(), tresult.begin() + n + m - 1, result);
+    std::copy(std::begin(tresult), std::begin(tresult) + n + m - 1, result);
   } else if (n > m) {
     std::vector<T> YY(n);
     for (int64 i = 0; i < m; ++i) YY[i] = Y[i];
     std::vector<T> tresult(2 * n);
     internal::PolyMulDcImpl(X, std::data(YY), n, std::data(tresult));
-    std::copy(tresult.begin(), tresult.begin() + n + m - 1, result);
+    std::copy(std::begin(tresult), std::begin(tresult) + n + m - 1, result);
   } else {
     std::vector<T> XX(m);
     for (int64 i = 0; i < n; ++i) XX[i] = X[i];
     std::vector<T> tresult(2 * m);
     internal::PolyMulDcImpl(std::data(XX), Y, m, std::data(tresult));
-    std::copy(tresult.begin(), tresult.begin() + n + m - 1, result);
+    std::copy(std::begin(tresult), std::begin(tresult) + n + m - 1, result);
   }
 }
 
@@ -944,7 +944,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   }
 
   PolyInvDoublingImpl(trunc, std::data(a), std::data(b), tmp, mod);
-  std::copy(b.begin(), b.begin() + trunc, result);
+  std::copy(std::begin(b), std::begin(b) + trunc, result);
 }
 }  // namespace internal
 
@@ -1064,9 +1064,9 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   for (int64 i = 0; i < n; ++i) XR[i] = X[n - 1 - i];
   std::vector<T> Z = PolyMul(XR, IYR, mod);
   Z.resize(n - m + 1);
-  std::reverse(Z.begin(), Z.end());
+  std::reverse(std::begin(Z), std::end(Z));
   if (q != nullptr) {
-    std::copy(Z.begin(), Z.end(), q);
+    std::copy(std::begin(Z), std::end(Z), q);
   }
   if (r != nullptr) {
     std::vector<T> tmp(n);
@@ -1120,7 +1120,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     std::reverse(q, q + top);
   }
   if (r != nullptr) {
-    std::copy(tmp.begin(), tmp.begin() + m, r);
+    std::copy(std::begin(tmp), std::begin(tmp) + m, r);
   }
 }
 }  // namespace internal
@@ -1383,7 +1383,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   }
 
   ret.resize(trunc);
-  std::copy(ret.begin(), ret.end(), result);
+  std::copy(std::begin(ret), std::end(ret), result);
 }
 }  // namespace internal
 
@@ -1731,9 +1731,9 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   const int64 d = static_cast<int64>(std::size(tree)) - 1;
   {
     std::vector<T> alpha = tree[d][0];
-    std::reverse(alpha.begin(), alpha.end());
+    std::reverse(std::begin(alpha), std::end(alpha));
     alpha = PolyInv(alpha, n, mod);
-    std::reverse(alpha.begin(), alpha.end());
+    std::reverse(std::begin(alpha), std::end(alpha));
 
     std::vector<uint64> b(X, X + n);
     int64 degb = static_cast<int64>(std::size(b)) - 1;
@@ -1744,7 +1744,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     }
     assert(degb + 1 >= n);
     t.resize(n);
-    std::reverse(t.begin(), t.end());
+    std::reverse(std::begin(t), std::end(t));
 
     std::vector<std::vector<T>> c(n);
     c[0] = std::move(t);
@@ -1762,7 +1762,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
         std::vector<T> x;
         {
           const int64 os = static_cast<int64>(std::size(tree[i - 1][2 * j]));
-          std::reverse(tree[i - 1][2 * j].begin(), tree[i - 1][2 * j].end());
+          std::reverse(std::begin(tree[i - 1][2 * j]),
+                       std::end(tree[i - 1][2 * j]));
           x = PolyMul(tree[i - 1][2 * j], c[j], mod);
           int64 s = 0;
           const int64 sizeX = static_cast<int64>(std::size(x));
@@ -1776,8 +1777,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
         {
           const int64 os =
               static_cast<int64>(std::size(tree[i - 1][2 * j + 1]));
-          std::reverse(tree[i - 1][2 * j + 1].begin(),
-                       tree[i - 1][2 * j + 1].end());
+          std::reverse(std::begin(tree[i - 1][2 * j + 1]),
+                       std::end(tree[i - 1][2 * j + 1]));
           y = PolyMul(tree[i - 1][2 * j + 1], c[j], mod);
           int64 s = 0;
           const int64 ySize = static_cast<int64>(std::size(y));
@@ -2015,7 +2016,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
                         std::vector<T>& M, uint64 mod) {
   const int64 n = e - s;
   if (n == 1) {
-    std::vector<T> t(X.begin() + s * 2, X.begin() + e * 2);
+    std::vector<T> t(std::begin(X) + s * 2, std::begin(X) + e * 2);
     M = t;
     return t;
   }

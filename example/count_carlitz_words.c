@@ -26,7 +26,7 @@ int BruteForce(const std::vector<int64>& vec) {
       }
     }
     ret += ok;
-  } while (next_permutation(data.begin(), data.end()));
+  } while (next_permutation(std::begin(data), std::end(data)));
   return ret;
 }
 

@@ -252,8 +252,8 @@ int main() {
       ParseTestSizeList(std::string(enabled_test_list));
 
   auto is_enabled_test_size = [&](TestSize size) {
-    return std::find(enabled_test_size.begin(), enabled_test_size.end(),
-                     size) != enabled_test_size.end();
+    return std::find(std::begin(enabled_test_size), std::end(enabled_test_size),
+                     size) != std::end(enabled_test_size);
   };
 
   PeInitializer()

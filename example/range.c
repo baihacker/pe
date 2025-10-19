@@ -320,7 +320,7 @@ void range_general_example() {
   std::cout << Range(static_cast<const std::vector<int>&>(x)).Sum<int64>()
             << std::endl;
 
-  std::cout << Range(x.begin(), x.end()).Sum<int64>() << std::endl;
+  std::cout << Range(std::begin(x), std::end(x)).Sum<int64>() << std::endl;
 
   for (auto i : Range(mem)) {
     std::cout << i.first << " " << i.second << std::endl;

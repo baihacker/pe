@@ -28,7 +28,7 @@ std::map<std::vector<int>, int64> cache;
 int64 compute(std::vector<int> coe) {
   // sum(coe[i] * x_i) = S
   auto where = cache.find(coe);
-  if (where != cache.end()) {
+  if (where != std::end(cache)) {
     return where->second;
   }
   int64 dp[S + 1] = {1};

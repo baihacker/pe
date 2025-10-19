@@ -108,7 +108,7 @@ SL void TestImpl(int dp, int n, int64 mod) {
     clock_t end = clock();
     fprintf(stderr, "%-8s : %.3f\n", who.name,
             1. * (end - start) / CLOCKS_PER_SEC);
-    if (expected.empty()) {
+    if (std::empty(expected)) {
       expected = result;
     } else {
       assert(expected == result);

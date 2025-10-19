@@ -48,7 +48,7 @@ struct RangeBase {
       const std::function<int(const_arg_type)>& filter, const int thread_number,
       int64 partition_size = 0) const {
     std::vector<value_type> data = ToVector();
-    const int size = static_cast<int>(std::size(data));
+    const int64 size = static_cast<int64>(std::size(data));
     if (size == 0) {
       return std::vector<value_type>{};
     }
@@ -61,7 +61,7 @@ struct RangeBase {
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, partition_size) \
     num_threads(thread_number)
-    for (int i = 0; i < size; ++i) {
+    for (int64 i = 0; i < size; ++i) {
       if (filter(data[i])) {
         const int id = omp_get_thread_num();
         tmp[id].push_back(std::move(data[i]));
@@ -78,7 +78,7 @@ struct RangeBase {
       }
     }
 #else
-    for (int i = 0; i < size; ++i) {
+    for (int64 i = 0; i < size; ++i) {
       if (filter(data[i])) {
         vec.push_back(std::move(data[i]));
       }
@@ -111,7 +111,7 @@ struct RangeBase {
              int64 partition_size = kDefaultPartitionSize) const {
 #if ENABLE_OPENMP
     std::vector<value_type> data = ToVector();
-    const int size = static_cast<int>(std::size(data));
+    const int64 size = static_cast<int64>(std::size(data));
     if (size == 0) {
       return v;
     }
@@ -122,7 +122,7 @@ struct RangeBase {
     std::vector<VT> tmp(thread_number, v);
 #pragma omp parallel for schedule(dynamic, partition_size) \
     num_threads(thread_number)
-    for (int i = 0; i < size; ++i) {
+    for (int64 i = 0; i < size; ++i) {
       const int id = omp_get_thread_num();
       tmp[id] = op(tmp[id], data[i]);
     }
@@ -154,7 +154,7 @@ struct RangeBase {
                     int64 partition_size = kDefaultPartitionSize) const {
 #if ENABLE_OPENMP
     std::vector<value_type> data = ToVector();
-    const int size = static_cast<int>(std::size(data));
+    const int64 size = static_cast<int64>(std::size(data));
     if (size == 0) {
       return v;
     }
@@ -165,7 +165,7 @@ struct RangeBase {
     std::vector<VT> tmp(thread_number, v);
 #pragma omp parallel for schedule(dynamic, partition_size) \
     num_threads(thread_number)
-    for (int i = 0; i < size; ++i) {
+    for (int64 i = 0; i < size; ++i) {
       const int id = omp_get_thread_num();
       op(tmp[id], data[i]);
     }
@@ -193,7 +193,7 @@ struct RangeBase {
                        const int thread_number = kDefaultThreadNumber,
                        int64 partition_size = kDefaultPartitionSize) const {
     std::vector<value_type> data = ToVector();
-    const int size = static_cast<int>(std::size(data));
+    const int64 size = static_cast<int64>(std::size(data));
     if (size == 0) {
       return std::vector<TT>{};
     }
@@ -206,7 +206,7 @@ struct RangeBase {
 #pragma omp parallel for schedule(dynamic, partition_size) \
     num_threads(thread_number)
 #endif
-    for (int i = 0; i < size; ++i) {
+    for (int64 i = 0; i < size; ++i) {
       vec[i] = mapper(std::move(data[i]));
     }
 
@@ -235,7 +235,7 @@ struct RangeBase {
                       int64 partition_size = kDefaultPartitionSize) {
 #if ENABLE_OPENMP
     std::vector<value_type> data = ToVector();
-    const int size = static_cast<int>(std::size(data));
+    const int64 size = static_cast<int64>(std::size(data));
     if (size == 0) {
       return *this;
     }
@@ -245,7 +245,7 @@ struct RangeBase {
 
 #pragma omp parallel for schedule(dynamic, partition_size) \
     num_threads(thread_number)
-    for (int i = 0; i < size; ++i) {
+    for (int64 i = 0; i < size; ++i) {
       action(std::move(data[i]));
     }
 

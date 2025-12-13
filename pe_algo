@@ -1616,10 +1616,17 @@ struct DfaCounter {
     return *this;
   }
 
-  DfaCounter& Init(int state_count, int number_base, int max_len) {
+  DfaCounter& SetInitState(int init_state) {
+    init_state_ = init_state;
+    return *this;
+  }
+
+  DfaCounter& Init(int state_count, int number_base, int max_len,
+                   int init_state = 0) {
     state_count_ = state_count;
     number_base_ = number_base;
     max_len_ = max_len;
+    init_state_ = init_state;
 
     dfa_.Reset({state_count, number_base_});
 
@@ -1659,7 +1666,7 @@ struct DfaCounter {
         }
         dp_[i][j] = tmp;
       }
-      acc_[i] = dp_[i][0] + acc_[i - 1];
+      acc_[i] = dp_[i][init_state_] + acc_[i - 1];
     }
 
     prepared_ = 1;
@@ -1686,11 +1693,11 @@ struct DfaCounter {
     CT result = 0;
     if (count_each_len_) {
       for (int i = 1; i < len; ++i) {
-        result += dp_[i][0];
+        result += dp_[i][init_state_];
       }
     }
 
-    int state = 0;
+    int state = init_state_;
     for (int curr = len - 1; curr >= 0; --curr) {
       const int me = dig[curr];
       for (int i = 0; i < me; ++i) {
@@ -1707,10 +1714,10 @@ struct DfaCounter {
   int FindLen(CT k) {
     int len = 0;
     if (count_each_len_ == 0) {
-      while (dp_[len][0] < k && len + 1 <= max_len_) {
+      while (dp_[len][init_state_] < k && len + 1 <= max_len_) {
         ++len;
       }
-      PE_ASSERT(dp_[len][0] >= k);
+      PE_ASSERT(dp_[len][init_state_] >= k);
     } else {
       while (acc_[len] < k && len + 1 <= max_len_) {
         ++len;
@@ -1777,6 +1784,7 @@ struct DfaCounter {
   int number_base_ = 0;
   int prepared_ = 0;
   int max_len_ = 0;
+  int init_state_ = 0;
   DArray<int, 2> dfa_;
   DArray<CT, 2> dp_;
   std::vector<CT> acc_;

@@ -4,11 +4,11 @@
 
 #if 1
 #include "poly_mul_test.c"
-//#include "poly_div_test.c"
-//#include "bi_div_test.c"
-//#include "bi_mul_test.c"
-//#include "extended_signed_int_test.c"
-//#include "extended_unsigned_int_test.c"
+// #include "poly_div_test.c"
+// #include "bi_div_test.c"
+// #include "bi_mul_test.c"
+// #include "extended_signed_int_test.c"
+// #include "extended_unsigned_int_test.c"
 #endif
 
 TestRegistry& GetTestRegistry() {
@@ -18,13 +18,13 @@ TestRegistry& GetTestRegistry() {
 
 static inline std::string FormatSecond(double s) {
   char buff[256];
-  sprintf(buff, "%.3f", s);
+  snprintf(buff, 256, "%.3f", s);
   return buff;
 }
 
 static inline std::string FormatSecond(TimeDelta d) {
   char buff[256];
-  sprintf(buff, "%.3f", d.ToSeconds());
+  snprintf(buff, 256, "%.3f", d.ToSeconds());
   return buff;
 }
 

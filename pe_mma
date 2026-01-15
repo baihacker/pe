@@ -84,7 +84,7 @@ struct FRHelper {
     for (auto offset : offsets_) {
       for (int k = 0; k <= max_degree_; ++k) {
         char buff[30];
-        sprintf(buff, "x%dp%d", offset, k);
+        snprintf(buff, buff, "x%dp%d", offset, k);
         vars.emplace_back(buff);
       }
     }
@@ -1025,11 +1025,11 @@ struct MmaModExpCompiler {
     switch (tree->nodeType) {
       case NUMBER:
       case VAR:
-        sprintf(buff, "%s", tree->token.c_str());
+        snprintf(buff, 512, "%s", tree->token.c_str());
         break;
       case NEG:
         CompileImpl(tree->right, has_mod);
-        sprintf(buff, "(mod - t%d)", tree->right->iid);
+        snprintf(buff, 512, "(mod - t%d)", tree->right->iid);
         break;
       case ADD:
       case MUL: {
@@ -1039,9 +1039,9 @@ struct MmaModExpCompiler {
         int b = tree->right->iid;
         if (a > b) std::swap(a, b);
         if (tree->nodeType == ADD) {
-          sprintf(buff, "(t%d + t%d)", a, b);
+          snprintf(buff, 512, "(t%d + t%d)", a, b);
         } else {
-          sprintf(buff, "(t%d * t%d)", a, b);
+          snprintf(buff, 512, "(t%d * t%d)", a, b);
         }
         break;
       }
@@ -1053,20 +1053,20 @@ struct MmaModExpCompiler {
         if (tree->nodeType == SUB) {
           CompileImpl(tree->right, has_mod);
           int b = tree->right->iid;
-          sprintf(buff, "(t%d - t%d)", a, b);
+          snprintf(buff, 512, "(t%d - t%d)", a, b);
         } else if (tree->nodeType == DIV) {
           CompileImpl(tree->right, has_mod);
           int b = tree->right->iid;
-          sprintf(buff, "t%d * ModInv(t%d, mod)", a, b);
+          snprintf(buff, 512, "t%d * ModInv(t%d, mod)", a, b);
         } else {
           CompileImpl(tree->right, 0);
           int b = tree->right->iid;
-          sprintf(buff, "PowerMod(t%d, t%d, mod)", a, b);
+          snprintf(buff, 512, "PowerMod(t%d, t%d, mod)", a, b);
         }
         break;
       }
       case FUN: {
-        sprintf(buff, "Unknown function %s", tree->token.c_str());
+        snprintf(buff, 512, "Unknown function %s", tree->token.c_str());
       }
     }
     std::string myExpr = buff;
@@ -1088,7 +1088,7 @@ struct MmaModExpCompiler {
       int iid = static_cast<int>(std::size(expToId));
       expToId[myExpr] = iid;
       tree->iid = iid;
-      sprintf(buff, "  const int64 t%d = %s", iid, myExpr.c_str());
+      snprintf(buff, 512, "  const int64 t%d = %s", iid, myExpr.c_str());
       result.emplace_back(buff);
     } else {
       tree->iid = where->second;
@@ -1099,10 +1099,10 @@ struct MmaModExpCompiler {
     CompileImpl(tree);
     int iid = tree->iid;
     char buff[512];
-    sprintf(buff, "  return t%d;", iid);
+    snprintf(buff, 512, "  return t%d;", iid);
     result.emplace_back(buff);
 
-    sprintf(buff, "int64 %s(", function_name.c_str());
+    snprintf(buff, 512, "int64 %s(", function_name.c_str());
     std::string t = buff;
     for (auto& iter : vars) {
       t += std::string("int64 ") + iter + std::string(", ");

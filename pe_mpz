@@ -318,27 +318,23 @@ class MpInteger {
   }
 
   template <typename T>
-  REQUIRES((is_builtin_integer_v<T> && pe_is_unsigned_v<T>))
+  REQUIRES((is_builtin_integer_v<T> && pe_is_unsigned_v<T> &&
+            (sizeof(mp_limb_t) < sizeof(T))))
   RETURN(T) ToInt() const {
     T result = 0;
     const mp_limb_t* buff = data();
     for (int i = size() - 1; i >= 0; --i) {
-#if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
-      result <<= sizeof(mp_limb_t) * 2;
-      result <<= sizeof(mp_limb_t) * 2;
-      result <<= sizeof(mp_limb_t) * 2;
-      result = static_cast<T>((result << sizeof(mp_limb_t) * 2) | buff[i]);
-#elif PE_HAS_CPP20
-      if constexpr (sizeof(mp_limb_t) >= sizeof(T)) {
-        result = static_cast<T>(buff[i]);
-      } else {
-        result = (result << sizeof(mp_limb_t) * 8) | buff[i];
-      }
-#else
       result = (result << sizeof(mp_limb_t) * 8) | buff[i];
-#endif
     }
     return result;
+  }
+
+  template <typename T>
+  REQUIRES((is_builtin_integer_v<T> && pe_is_unsigned_v<T> &&
+            (sizeof(mp_limb_t) >= sizeof(T))))
+  RETURN(T) ToInt() const {
+    const mp_limb_t* buff = data();
+    return static_cast<T>(buff[0]);
   }
 
   template <typename T>

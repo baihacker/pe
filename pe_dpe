@@ -250,6 +250,10 @@ class DpeServer {
 
     char *buffer = new char[internal::kDpeBufferLength + 1];
     for (; solved < total;) {
+      // TODO(bug): zmq_recv returns the actual message size even when it
+      // exceeds the buffer (truncating the copy), so a message larger than
+      // kDpeBufferLength makes `received` overflow this null-terminator
+      // write. Clamp `received` to kDpeBufferLength before using it.
       int received = zmq_recv(responder, buffer, internal::kDpeBufferLength, 0);
       buffer[received] = 0;
       std::string response = HandleRequest(std::string_view(buffer, received));
@@ -332,6 +336,9 @@ class DpeServer {
     char *buff = new char[buff_size];
     while (fgets(buff, buff_size, fp) != nullptr) {
       auto *curr = buff;
+      // TODO(bug): no bound against the end of the fgets buffer -- a
+      // malformed/corrupted cache line with no whitespace delimiter causes
+      // this to scan past the buffer (out-of-bounds read).
       while (!std::isspace(*curr)) ++curr;
       std::string key(buff, curr);
       ++curr;
@@ -544,6 +551,9 @@ class DpeClient {
     std::string cmd = raw_command.ToString();
 
     zmq_send(requester, std::data(cmd), std::size(cmd), 0);
+    // TODO(bug): same truncation issue as RunReducer -- `cnt` can exceed
+    // kDpeBufferLength for an oversized message, overflowing the
+    // null-terminator write below.
     int cnt =
         zmq_recv(requester, get_task_buffer, internal::kDpeBufferLength, 0);
     zmq_close(requester);

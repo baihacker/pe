@@ -101,6 +101,10 @@ SL constexpr REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
   return internal::AddModImpl<T, TM>(a, b, mod);
 }
 
+// TODO(bug): this base case returns `a` unreduced. If `a >= mod`, the
+// recursive AddMod(x, SumMod(mod, a), mod) call above only does a single
+// conditional subtraction and may return a value still >= mod, e.g.
+// SumMod(10, 3, 25) should be 8 but can return 18.
 template <typename TM, typename T>
 SL constexpr T SumMod(TM /*mod*/, T a) {
   return a;
@@ -154,6 +158,11 @@ SL constexpr REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
   return internal::MulModDirectlyImpl<T, TM>(a, b, mod);
 }
 
+// TODO(bug): the direct-multiply branch below is chosen based only on the
+// size of `mod`, not on whether `a`/`b` are already reduced (< mod). For
+// unreduced 32-bit a/b with a small mod, `a * b` can wrap around 2^32 before
+// the modulo, producing a wrong result (e.g. MulModUint32(2147483648u, 2u,
+// 3u) should be 1 but computes 0). Safe only if callers guarantee a, b < mod.
 SL constexpr uint32 MulModUint32(uint32 a, uint32 b, uint32 mod) {
   if (mod >> 16) {
     return uint64(a) * b % mod;
@@ -162,6 +171,9 @@ SL constexpr uint32 MulModUint32(uint32 a, uint32 b, uint32 mod) {
   }
 }
 
+// TODO(bug): same issue as MulModUint32 above -- the branch is picked from
+// the size of `mod` alone, so unreduced a/b can overflow before the modulo
+// and yield a wrong result.
 SL constexpr int32 MulModInt32(int32 a, int32 b, int32 mod) {
   if (static_cast<uint32>(mod) >> 15) {
     return int64(a) * b % mod;

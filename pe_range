@@ -59,6 +59,11 @@ struct RangeBase {
     std::vector<std::vector<value_type>> tmp(thread_number);
     std::vector<value_type> vec;
 #if ENABLE_OPENMP
+    // TODO(bug) (#97): with schedule(dynamic), elements are appended to
+    // per-thread buckets and the buckets are joined in thread order, so the
+    // result doesn't keep the source order (Filter and the non-OpenMP path do).
+    // NOTE: Do not let AI tools fix this automatically; it will be fixed
+    // manually.
 #pragma omp parallel for schedule(dynamic, partition_size) \
     num_threads(thread_number)
     for (int64 i = 0; i < size; ++i) {
@@ -119,6 +124,11 @@ struct RangeBase {
     partition_size =
         CalculateDefaultPartitionSize(size, thread_number, partition_size);
 
+    // TODO(bug) (#98): every thread's slot is seeded with v, so v is folded
+    // into the result thread_number times; Reduce (the non-OpenMP path) uses it
+    // once. E.g. {1, 2, 3}.PReduce(10, plus) returns 86 instead of 16.
+    // NOTE: Do not let AI tools fix this automatically; it will be fixed
+    // manually.
     std::vector<VT> tmp(thread_number, v);
 #pragma omp parallel for schedule(dynamic, partition_size) \
     num_threads(thread_number)
@@ -290,7 +300,7 @@ struct RangeBase {
 
   template <typename VT = int64>
   VT ProdMod(VT mod) const {
-    VT ret = 1;
+    VT ret = 1 % mod;
     auto now = std::begin(static_cast<const DERIVED&>(*this));
     auto x = std::end(static_cast<const DERIVED&>(*this));
     while (now != x) {
@@ -525,6 +535,11 @@ struct NumberRange : public RangeBase<NumberRange<ET>, NumberIter<ET>> {
     std::vector<std::vector<value_type>> tmp(thread_number);
     std::vector<value_type> vec;
 #if ENABLE_OPENMP
+    // TODO(bug) (#97): with schedule(dynamic), elements are appended to
+    // per-thread buckets and the buckets are joined in thread order, so the
+    // result doesn't keep the source order (Filter and the non-OpenMP path do).
+    // NOTE: Do not let AI tools fix this automatically; it will be fixed
+    // manually.
 #pragma omp parallel for schedule(dynamic, partition_size) \
     num_threads(thread_number)
     for (value_type i = b_; i < e_; ++i) {
@@ -572,6 +587,11 @@ struct NumberRange : public RangeBase<NumberRange<ET>, NumberIter<ET>> {
     partition_size = RangeBase<NumberRange<ET>, NumberIter<ET>>::
         CalculateDefaultPartitionSize(size, thread_number, partition_size);
 
+    // TODO(bug) (#99): every thread's slot is seeded with v, so v is folded
+    // into the result thread_number times; Reduce (the non-OpenMP path) uses it
+    // once. E.g. Range(1, 4).PReduce(10, plus) returns 86 instead of 16.
+    // NOTE: Do not let AI tools fix this automatically; it will be fixed
+    // manually.
     std::vector<VT> tmp(thread_number, v);
 #pragma omp parallel for schedule(dynamic, partition_size) \
     num_threads(thread_number)
@@ -617,7 +637,7 @@ struct NumberRange : public RangeBase<NumberRange<ET>, NumberIter<ET>> {
     }
     return ret;
 #else
-    return RangeBase<NumberRange<ET>, NumberIter<ET>>::Reduce(v, op);
+    return RangeBase<NumberRange<ET>, NumberIter<ET>>::InplaceReduce(v, op);
 #endif
   }
 
@@ -704,8 +724,13 @@ struct NumberRangeD : public RangeBase<NumberRangeD<ET>, NumberIterD<ET>> {
 
   NumberRangeD(value_type b, value_type n, value_type delta)
       : b_(b), e_(n), n_(n), delta_(delta) {
-    value_type d = std::abs(delta_);
     value_type r = std::abs(n - b);
+    if (r == 0) {
+      // Empty range, delta may be 0.
+      e_ = b;
+      return;
+    }
+    value_type d = std::abs(delta_);
     value_type s = r / d;
     e_ = b + s * delta_;
     if (r % d) {
@@ -944,7 +969,7 @@ struct MappedRangeIter {
 
   using src_const_arg_type = typename IT::const_arg_type;
 
-  reference operator*() { return mapper_(*iter_); }
+  reference operator*() { return (*mapper_)(*iter_); }
 
   int operator==(const MappedRangeIter& o) const { return iter_ == o.iter_; }
 
@@ -967,7 +992,9 @@ struct MappedRangeIter {
   MappedRangeIter operator--(int) { return MappedRangeIter{iter_--, mapper_}; }
 
   IT iter_;
-  const std::function<TT(src_const_arg_type)>& mapper_;
+  // Shared with the owning range so that the iterators (and ranges built from
+  // them, e.g. by chaining Filter/Map) keep the callable alive.
+  std::shared_ptr<const std::function<TT(src_const_arg_type)>> mapper_;
 };
 
 template <typename IT, typename TT>
@@ -980,14 +1007,17 @@ struct MappedRange
   using src_const_arg_type = typename iterator::src_const_arg_type;
 
   MappedRange(IT b, IT e, const std::function<TT(src_const_arg_type)>& mapper)
-      : b_(b), e_(e), mapper_(mapper) {}
+      : b_(b),
+        e_(e),
+        mapper_(std::make_shared<const std::function<TT(src_const_arg_type)>>(
+            mapper)) {}
 
   iterator begin() const { return iterator{b_, mapper_}; }
   iterator end() const { return iterator{e_, mapper_}; }
 
   IT b_;
   IT e_;
-  const std::function<TT(src_const_arg_type)> mapper_;
+  std::shared_ptr<const std::function<TT(src_const_arg_type)>> mapper_;
 };
 
 template <typename IT>
@@ -1014,7 +1044,7 @@ struct FilterRangeIter {
     while (iter_ != e_) {
       ++iter_;
       if (iter_ == e_) break;
-      if (filter_(*iter_)) break;
+      if ((*filter_)(*iter_)) break;
     }
     return *this;
   }
@@ -1027,7 +1057,8 @@ struct FilterRangeIter {
 
   IT iter_;
   IT e_;
-  const std::function<int(src_const_arg_type)>& filter_;
+  // Shared with the owning range, see MappedRangeIter::mapper_.
+  std::shared_ptr<const std::function<int(src_const_arg_type)>> filter_;
 };
 
 template <typename IT>
@@ -1039,11 +1070,14 @@ struct FilterRange : public RangeBase<FilterRange<IT>, FilterRangeIter<IT>> {
   using src_const_arg_type = typename iterator::const_arg_type;
 
   FilterRange(IT b, IT e, const std::function<int(src_const_arg_type)>& filter)
-      : b_(b), e_(e), filter_(filter) {}
+      : b_(b),
+        e_(e),
+        filter_(std::make_shared<const std::function<int(src_const_arg_type)>>(
+            filter)) {}
 
   iterator begin() const {
     auto now = b_;
-    while (now != e_ && !filter_(*now)) ++now;
+    while (now != e_ && !(*filter_)(*now)) ++now;
     return iterator{now, e_, filter_};
   }
 
@@ -1051,7 +1085,7 @@ struct FilterRange : public RangeBase<FilterRange<IT>, FilterRangeIter<IT>> {
 
   IT b_;
   IT e_;
-  const std::function<int(src_const_arg_type)> filter_;
+  std::shared_ptr<const std::function<int(src_const_arg_type)>> filter_;
 };
 
 // IRange support. i = index.

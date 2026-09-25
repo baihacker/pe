@@ -9,7 +9,7 @@
 #include "pe_poly_base"
 
 namespace pe {
-// Initializes bernoulli number modulo mod: B[0]...B[n].
+// Initializes bernoulli number modulo mod: B[0]...B[n-1] (n values).
 // B[1] = -1/2
 // invs[n] should be available.
 SL void InitBernoulliNumber(int64* dest, int64 n, int64* invs, int64 mod) {
@@ -33,18 +33,20 @@ SL void InitBernoulliNumber(int64* dest, int64 n, int64* invs, int64 mod) {
 // Initializes bernoulli number modu: B[0]...B[n].
 // B[1] = -1/2
 SL void InitBernoulliNumber(int64* dest, int64 n, int64 mod) {
-  std::vector<int64> invs(n + 1);
-  InitInverse(std::data(invs), n, mod);
-  InitBernoulliNumber(dest, n, std::data(invs), mod);
+  // n + 1 values B[0]...B[n], which need invs[n + 1].
+  std::vector<int64> invs(n + 2);
+  InitInverse(std::data(invs), n + 1, mod);
+  InitBernoulliNumber(dest, n + 1, std::data(invs), mod);
 }
 
 // Generates bernoulli number modulo mod: B[0]...B[n].
 // B[1] = -1/2
 SL std::vector<int64> GenBernoulliNumber(int64 n, int64 mod) {
-  std::vector<int64> invs(n + 1);
-  InitInverse(std::data(invs), n, mod);
+  // n + 1 values B[0]...B[n], which need invs[n + 1].
+  std::vector<int64> invs(n + 2);
+  InitInverse(std::data(invs), n + 1, mod);
   std::vector<int64> dest(n + 1);
-  InitBernoulliNumber(std::data(dest), n, std::data(invs), mod);
+  InitBernoulliNumber(std::data(dest), n + 1, std::data(invs), mod);
   return dest;
 }
 
@@ -197,6 +199,11 @@ SL int64 GetGFCoefficientAt(const std::vector<int64>& A,
     return result[m];
   }
 
+  // A is a constant, so f = B / A[0] is a polynomial of degree sb - 1 < n.
+  if (sa == 1) {
+    return 0;
+  }
+
   const int64 D = sa - 1;
 #if PE_HAS_INT128
   return MatrixPower(
@@ -267,7 +274,10 @@ struct PowerSumModerB {
     InitInverse(&invs_[0], maxk_ + 1, mod_);
     InitBernoulliNumber(&bnl_[0], maxk_ + 1, &invs_[0], mod_);
 
-    bnl_[1] = mod_ - bnl_[1];
+    // bnl_ has only one element if maxk == 0.
+    if (maxk_ >= 1) {
+      bnl_[1] = mod_ - bnl_[1];
+    }
   }
 
   T operator()(int64 n, int64 k) const { return Cal(n, k); }

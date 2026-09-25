@@ -83,8 +83,12 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
 
 // |block  0|block  1|...|block  TN-1|block TN|block TN+1|...
 // |thread 0|thread 1|...|thread TN-1|thead  0|thread   1|...
+//
+// ParallelFindFirst/ParallelFindLast require a signed T: they use first - 1
+// (or last + 1) as the not-found value and as an ordered sentinel, which
+// wraps around for an unsigned T (e.g. first == 0).
 template <int TN, typename T, int B = 10000>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
     ParallelFindFirst(T first, T last, const std::function<T(T, T)>& f) {
 #if !ENABLE_OPENMP
   return f(first, last);
@@ -127,7 +131,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
 }
 
 template <int TN, typename T, int B = 10000>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
     ParallelFindFirst(T first, T last, const std::function<bool(T)>& f) {
   auto g = [&](T a, T b) -> T {
     while (a <= b && !f(a)) ++a;
@@ -137,7 +141,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
 }
 
 template <int TN, typename T, int B = 10000>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
     ParallelFindFirst(T first, const std::function<T(T, T)>& f) {
 #if !ENABLE_OPENMP
   return FindFirst<T, B>(first, f);
@@ -180,7 +184,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
 }
 
 template <int TN, typename T, int B = 10000>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
     ParallelFindFirst(T first, const std::function<bool(T)>& f) {
   auto g = [&](T a, T b) -> T {
     while (a <= b && !f(a)) ++a;
@@ -218,7 +222,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
 }
 
 template <int TN, typename T, int B = 10000>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
     ParallelFindLast(T first, T last, const std::function<T(T, T)>& f) {
 #if !ENABLE_OPENMP
   return f(first, last);
@@ -231,32 +235,25 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
   omp_init_lock(&locker);
 
   const T STEP = static_cast<T>(TN) * B;
-  // first - 1 can't be used as an ordered sentinel (it wraps for unsigned T
-  // with first == 0), so track whether a match was found separately.
-  T best = end;
-  int found = 0;
+  T best = first - 1;
 
 #pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
   for (int id = 0; id < TN; ++id) {
-    if (last - first < static_cast<T>(id) * B) continue;
-    // j - first is used instead of j so that j never goes below first.
-    for (T j = last - static_cast<T>(id) * B;;) {
-      const T y = j - first >= B - 1 ? j - (B - 1) : first;
+    for (T j = last - static_cast<T>(id) * B; j >= first; j -= STEP) {
+      const T y = std::max(first, j - B + 1);
       T x = f(y, j);
-      if (x >= y && x <= j) {
+      if (x >= y) {
         omp_set_lock(&locker);
-        if (!found || x > best) best = x, found = 1;
+        if (x > best) best = x;
         omp_unset_lock(&locker);
         break;
       } else {
         int should_exit = 0;
         omp_set_lock(&locker);
-        if (found && best > j) should_exit = 1;
+        if (best > j) should_exit = 1;
         omp_unset_lock(&locker);
         if (should_exit) break;
       }
-      if (j - first < STEP) break;
-      j -= STEP;
     }
   }
 
@@ -268,7 +265,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
 }
 
 template <int TN, typename T, int B = 10000>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
     ParallelFindLast(T first, T last, const std::function<bool(T)>& f) {
   auto g = [&](T a, T b) -> T {
     while (b >= a && !f(b)) --b;
@@ -278,7 +275,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
 }
 
 template <int TN, typename T, int B = 10000>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
     ParallelFindLast(T last, const std::function<T(T, T)>& f) {
 #if !ENABLE_OPENMP
   return FindLast(last, f);
@@ -321,7 +318,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
 }
 
 template <int TN, typename T, int B = 10000>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
     ParallelFindLast(T last, const std::function<bool(T)>& f) {
   auto g = [&](T a, T b) -> T {
     while (b >= a && !f(b)) --b;

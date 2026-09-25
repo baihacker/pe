@@ -483,6 +483,10 @@ SL IntegerFactorization Factorize(int64 n) {
     }
     const int64 start = pcnt <= 1 ? 3 : plist[pcnt - 1] + 2;
     for (int64 p = start;; p += 2) {
+      // TODO(bug) (#140): p * p overflows int64 once p > 3037000499, i.e. when
+      // the remaining n is a prime (or has no smaller factor) close to 2^63.
+      // It is kept as a multiplication on purpose, to avoid a division.
+      // NOTE: Do not let AI tools change this.
       const int64 test = p * p;
       if (test > n) break;
       int c = 0;
@@ -534,6 +538,10 @@ SL IntegerFactorization Factorize(int64 n, const std::vector<int64>& hint) {
     }
     const int64 start = pcnt <= 1 ? 3 : plist[pcnt - 1] + 2;
     for (int64 p = start;; p += 2) {
+      // TODO(bug) (#140): p * p overflows int64 once p > 3037000499, i.e. when
+      // the remaining n is a prime (or has no smaller factor) close to 2^63.
+      // It is kept as a multiplication on purpose, to avoid a division.
+      // NOTE: Do not let AI tools change this.
       const int64 test = p * p;
       if (test > n) break;
       int c = 0;
@@ -585,6 +593,10 @@ SL IntegerFactorization FactorizePower(int64 n, int r) {
     }
     const int64 start = pcnt <= 1 ? 3 : plist[pcnt - 1] + 2;
     for (int64 p = start;; p += 2) {
+      // TODO(bug) (#140): p * p overflows int64 once p > 3037000499, i.e. when
+      // the remaining n is a prime (or has no smaller factor) close to 2^63.
+      // It is kept as a multiplication on purpose, to avoid a division.
+      // NOTE: Do not let AI tools change this.
       const int64 test = p * p;
       if (test > n) break;
       int c = 0;
@@ -882,7 +894,8 @@ SL int64 CalMuImplByPmask(int64 n, int64 v = 1) {
 SL int64 CalMuImpl(int64 n) {
   int64 v = 1;
 
-  for (int i = 0; i < pcnt; ++i) {
+  int i = 0;
+  for (; i < pcnt; ++i) {
     if (n <= maxp) {
       return CalMuImplByPmask(n, v);
     }
@@ -896,6 +909,14 @@ SL int64 CalMuImpl(int64 n) {
     } else if (c == 1) {
       v = -v;
     }
+  }
+  if (i == pcnt && n != 1) {
+    // The prime list ran out, so the remaining n may be composite.
+    for (const auto& iter : Factorize(n)) {
+      if (iter.second > 1) return 0;
+      v = -v;
+    }
+    return v;
   }
   if (n != 1) v = -v;
   return v;
@@ -950,7 +971,8 @@ SL int64 CalRadImplByPmask(int64 n, int64 v = 1) {
 SL int64 CalRadImpl(int64 n) {
   int64 v = 1;
 
-  for (int i = 0; i < pcnt; ++i) {
+  int i = 0;
+  for (; i < pcnt; ++i) {
     if (n <= maxp) {
       return CalRadImplByPmask(n, v);
     }
@@ -960,6 +982,13 @@ SL int64 CalRadImpl(int64 n) {
     int c = 0;
     while (n % p == 0) n /= p, ++c;
     if (c >= 1) v *= p;
+  }
+  if (i == pcnt && n != 1) {
+    // The prime list ran out, so the remaining n may be composite.
+    for (const auto& iter : Factorize(n)) {
+      v *= iter.first;
+    }
+    return v;
   }
   if (n != 1) v *= n;
   return v;
@@ -1498,7 +1527,7 @@ using PrimeEnumerator = PrimeEnumeratorPs<T>;
 
 template <typename T = int64>
 SL std::vector<T> GetPrimesInRange(int64 start, int64 end) {
-  return GetPrimesInRangePs(start, end);
+  return GetPrimesInRangePs<T>(start, end);
 }
 #else
 template <typename T = int64>
@@ -1506,7 +1535,7 @@ using PrimeEnumerator = PrimeEnumeratorPe<T>;
 
 template <typename T = int64>
 SL std::vector<T> GetPrimesInRange(int64 start, int64 end) {
-  return GetPrimesInRangePe(start, end);
+  return GetPrimesInRangePe<T>(start, end);
 }
 #endif
 }  // namespace pe

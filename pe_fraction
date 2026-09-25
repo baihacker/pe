@@ -129,8 +129,10 @@ struct Fraction {
   }
 #if PE_HAS_CPP20
   int operator<=>(const Fraction& o) const {
-    T t = a * o.b - b * o.a;
-    return t < 0 ? -1 : t > 0;
+    // Compare the products directly: their difference may overflow.
+    const T l = a * o.b;
+    const T r = b * o.a;
+    return l < r ? -1 : (r < l ? 1 : 0);
   }
   int operator==(const Fraction& o) const {
     return (this->operator<=>(o)) == 0;

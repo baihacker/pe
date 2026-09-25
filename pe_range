@@ -124,22 +124,27 @@ struct RangeBase {
     partition_size =
         CalculateDefaultPartitionSize(size, thread_number, partition_size);
 
-    // TODO(bug): every thread's slot is seeded with v, so v is folded
-    // into the result thread_number times; Reduce (the non-OpenMP path) uses it
-    // once. E.g. {1, 2, 3}.PReduce(10, plus) returns 86 instead of 16.
-    // NOTE: Do not let AI tools fix this automatically; it will be fixed
-    // manually.
-    std::vector<VT> tmp(thread_number, v);
+    // Each thread starts from its first element, and v is folded in once when
+    // the partial results are combined, as in std::reduce.
+    static_assert(std::is_convertible_v<value_type, VT>,
+                  "value_type must be convertible to VT");
+    std::vector<std::optional<VT>> tmp(thread_number);
 #pragma omp parallel for schedule(dynamic, partition_size) \
     num_threads(thread_number)
     for (int64 i = 0; i < size; ++i) {
       const int id = omp_get_thread_num();
-      tmp[id] = op(tmp[id], data[i]);
+      if (tmp[id].has_value()) {
+        tmp[id] = op(std::move(*tmp[id]), data[i]);
+      } else {
+        tmp[id].emplace(data[i]);
+      }
     }
 
-    VT ret = tmp[0];
-    for (int i = 1; i < thread_number; ++i) {
-      ret = op(ret, std::move(tmp[i]));
+    VT ret = v;
+    for (int i = 0; i < thread_number; ++i) {
+      if (tmp[i].has_value()) {
+        ret = op(std::move(ret), std::move(*tmp[i]));
+      }
     }
     return ret;
 #else
@@ -172,17 +177,27 @@ struct RangeBase {
     partition_size =
         CalculateDefaultPartitionSize(size, thread_number, partition_size);
 
-    std::vector<VT> tmp(thread_number, v);
+    // Each thread starts from its first element, and v is folded in once when
+    // the partial results are combined.
+    static_assert(std::is_convertible_v<value_type, VT>,
+                  "value_type must be convertible to VT");
+    std::vector<std::optional<VT>> tmp(thread_number);
 #pragma omp parallel for schedule(dynamic, partition_size) \
     num_threads(thread_number)
     for (int64 i = 0; i < size; ++i) {
       const int id = omp_get_thread_num();
-      op(tmp[id], data[i]);
+      if (tmp[id].has_value()) {
+        op(*tmp[id], data[i]);
+      } else {
+        tmp[id].emplace(data[i]);
+      }
     }
 
-    VT ret = tmp[0];
-    for (int i = 1; i < thread_number; ++i) {
-      op(ret, std::move(tmp[i]));
+    VT ret = v;
+    for (int i = 0; i < thread_number; ++i) {
+      if (tmp[i].has_value()) {
+        op(ret, std::move(*tmp[i]));
+      }
     }
     return ret;
 #else
@@ -587,22 +602,27 @@ struct NumberRange : public RangeBase<NumberRange<ET>, NumberIter<ET>> {
     partition_size = RangeBase<NumberRange<ET>, NumberIter<ET>>::
         CalculateDefaultPartitionSize(size, thread_number, partition_size);
 
-    // TODO(bug): every thread's slot is seeded with v, so v is folded
-    // into the result thread_number times; Reduce (the non-OpenMP path) uses it
-    // once. E.g. Range(1, 4).PReduce(10, plus) returns 86 instead of 16.
-    // NOTE: Do not let AI tools fix this automatically; it will be fixed
-    // manually.
-    std::vector<VT> tmp(thread_number, v);
+    // Each thread starts from its first element, and v is folded in once when
+    // the partial results are combined, as in std::reduce.
+    static_assert(std::is_convertible_v<value_type, VT>,
+                  "value_type must be convertible to VT");
+    std::vector<std::optional<VT>> tmp(thread_number);
 #pragma omp parallel for schedule(dynamic, partition_size) \
     num_threads(thread_number)
     for (value_type i = b_; i < e_; ++i) {
       const int id = omp_get_thread_num();
-      tmp[id] = op(tmp[id], i);
+      if (tmp[id].has_value()) {
+        tmp[id] = op(std::move(*tmp[id]), i);
+      } else {
+        tmp[id].emplace(i);
+      }
     }
 
-    VT ret = tmp[0];
-    for (int i = 1; i < thread_number; ++i) {
-      ret = op(ret, std::move(tmp[i]));
+    VT ret = v;
+    for (int i = 0; i < thread_number; ++i) {
+      if (tmp[i].has_value()) {
+        ret = op(std::move(ret), std::move(*tmp[i]));
+      }
     }
     return ret;
 #else
@@ -623,17 +643,27 @@ struct NumberRange : public RangeBase<NumberRange<ET>, NumberIter<ET>> {
     partition_size = RangeBase<NumberRange<ET>, NumberIter<ET>>::
         CalculateDefaultPartitionSize(size, thread_number, partition_size);
 
-    std::vector<VT> tmp(thread_number, v);
+    // Each thread starts from its first element, and v is folded in once when
+    // the partial results are combined.
+    static_assert(std::is_convertible_v<value_type, VT>,
+                  "value_type must be convertible to VT");
+    std::vector<std::optional<VT>> tmp(thread_number);
 #pragma omp parallel for schedule(dynamic, partition_size) \
     num_threads(thread_number)
     for (value_type i = b_; i < e_; ++i) {
       const int id = omp_get_thread_num();
-      op(tmp[id], i);
+      if (tmp[id].has_value()) {
+        op(*tmp[id], i);
+      } else {
+        tmp[id].emplace(i);
+      }
     }
 
-    VT ret = tmp[0];
-    for (int i = 1; i < thread_number; ++i) {
-      op(ret, std::move(tmp[i]));
+    VT ret = v;
+    for (int i = 0; i < thread_number; ++i) {
+      if (tmp[i].has_value()) {
+        op(ret, std::move(*tmp[i]));
+      }
     }
     return ret;
 #else

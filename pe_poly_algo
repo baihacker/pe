@@ -30,7 +30,7 @@ SL void InitBernoulliNumber(int64* dest, int64 n, int64* invs, int64 mod) {
   }
 }
 
-// Initializes bernoulli number modu: B[0]...B[n].
+// Initializes Bernoulli numbers modulo mod: B[0]...B[n].
 // B[1] = -1/2
 SL void InitBernoulliNumber(int64* dest, int64 n, int64 mod) {
   // n + 1 values B[0]...B[n], which need invs[n + 1].
@@ -73,7 +73,7 @@ SL std::vector<int64> GenStirling1(int64 n, int64 mod, int has_sign = 0) {
 namespace pmod {
 // Generates the nth column of the stirling number of the first kind.
 // [0, n], [1, n], ..., [m, n]
-// Formula: ((-log(1-x))^m)/m!
+// Formula: [k, n] = k! * [x^k] ((-log(1-x))^n / n!), for k = 0..m
 // http://oeis.org/A008275
 SL std::vector<int64> GenStirling1Column(int64 n, int64 m, int64 mod) {
   std::vector<int64> a = PolyLog(std::vector<int64>{1, mod - 1}, m + 1, mod);
@@ -126,7 +126,7 @@ SL std::vector<int64> GenStirling2(int64 n, int64 mod) {
 }
 }  // namespace pmod
 
-// Finds the coefficient of x^0,x1,...x^n of f such that: A*f = B
+// Finds the coefficients of x^0, x^1, ..., x^n of f such that: A*f = B
 // Returns empty vector if there is no integer solution.
 // Complexity: O(size(A) * n)
 // Consider PolyMul(A.inv(n+1), B)[n] if it has a better complexity.
@@ -495,8 +495,9 @@ SL int64 PowerSumModSafe(int64 n, int64 k, int64 mod) {
 }
 
 // Calculates (1^k + 2^k + ... + n^k) % mod and stores it in result[k].
-// comb[i][j] is Binomial coefficient.
-// Complex: O(k^2)
+// from/to are rolling rows of binomial coefficients: at step i,
+// to[j] = C(i+1, j).
+// Complexity: O(k^2)
 // baihacker pe487
 SL std::vector<int64> PowerSumModBatch(int64 n, const int maxk,
                                        const int64 mod) {
@@ -536,13 +537,13 @@ SL void PowerSumModBatch(int64 n, const int maxk, const int64 mod,
 }
 
 namespace internal {
-// If the following equations holds for all n
+// If the following equations hold for all n
 //
 // A[n] * C[K] + A[n-1] * C[K-1] + ... + A[n-K] * C[0] = 0
 // C[K] = 1
 //
 // sequence A is linear recurrence with characteristic polynomial C of order K.
-// The corresonding matrix is:
+// The corresponding matrix is:
 //
 /*
 | -C[K-1] , -C[K-2], ..., -C[1], -C[0] |  A[K-1]

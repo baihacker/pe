@@ -9,8 +9,8 @@
 
 #include "pe_poly_base_common"
 
-// Each of the following included files contains a third party polynomial
-// operation function implementations. It is NOT necessary that each file should
+// Each of the following included files contains third party polynomial
+// operation implementations. It is NOT necessary that each file should
 // implement every function.
 #include "pe_poly_base_flint"
 #include "pe_poly_base_ntl"
@@ -43,10 +43,10 @@
 //     Dc: divide and conquer
 //
 //   scalability suffix:
-//     SmallMod: mod is a small
-//     LargeMod: mod is a large
-//     Small: (mod-1)^2*n is relative small
-//     Large: (mod-1)^2*n is relative large
+//     SmallMod: mod is small
+//     LargeMod: mod is large
+//     Small: (mod-1)^2*n is relatively small
+//     Large: (mod-1)^2*n is relatively large
 //
 // Template parameters:
 //   T: is_builtin_integer_v<T> || is_extended_integer_v<T>
@@ -64,8 +64,8 @@
 // flint::pmod::PolyMul         : enable flint && GMP_LIMB_BITS == 64
 // flint::bn_poly_mul::PolyMul  : enable flint && GMP_LIMB_BITS == 64
 // flint::PolyMul               : enable flint && GMP_LIMB_BITS == 64
-// ntl::PolyMulSmallMod         : enable ntl
-// ntl::PolyMulLargeMod         : enable ntl
+// ntl::PolyMulSmall            : enable ntl
+// ntl::PolyMulLarge            : enable ntl
 // ntl::PolyMul                 : enable ntl
 //
 // ntt32::PolyMul      = automatically decided
@@ -74,10 +74,10 @@
 // min25::PolyMul      = automatically decided
 // ntl::PolyMul        = automatically decided
 //
-// PolyMul will choose an implementation from the aboves.
+// PolyMul will choose an implementation from the above.
 //
 // Constraints:
-// mod < 2^62 in all implementation.
+// mod < 2^62 in all implementations.
 //
 // ntt32::PolyMulSmall
 // (mod-1)^2*n < 3892314113                                       3.8e9
@@ -305,8 +305,9 @@ SL T PartialSumAt(Span<const T> terms, int64 n) {
 }
 
 namespace internal {
-// Multiplies two polynomials of the same length using Divide and Conquer
-// algorithm. size result >= 2 * n size return = 2 * n (deg return = 2 * n - 1)
+// Multiplies two polynomials of the same length n using Divide and Conquer
+// algorithm. size result >= 2 * n; 2 * n entries are written (deg <= 2 * n - 2,
+// result[2 * n - 1] = 0).
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyMulDcImpl(const T* X, const T* Y, const int64 n, T* result, int64 mod) {
@@ -411,7 +412,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     return;
   }
   if (n == m) {
-    // In case n == m, we still allocate tempory result space to meet the
+    // In case n == m, we still allocate temporary result space to meet the
     // requirement of PolyMulDcImpl.
     std::vector<T> tresult(2 * n);
     internal::PolyMulDcImpl<UnsignedT>(
@@ -467,7 +468,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
     return result;
   }
   if (n == m) {
-    // In case n == m, we still allocate tempory result space to meet the
+    // In case n == m, we still allocate temporary result space to meet the
     // requirement of PolyMulDcImpl.
     std::vector<T> result(2 * n);
     internal::PolyMulDcImpl<UnsignedT>(
@@ -552,9 +553,9 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 }
 
 namespace internal {
-// Multiplies two polynomials of the same length using Divide and Conquer
-// algorithm. size result >= 2 * n size return = 2 * n (deg return = 2 * n -
-// 1)
+// Multiplies two polynomials of the same length n using Divide and Conquer
+// algorithm. size result >= 2 * n; 2 * n entries are written (deg <= 2 * n - 2,
+// result[2 * n - 1] = 0).
 template <typename T>
 SL void PolyMulDcImpl(const T* X, const T* Y, const int64 n, T* result) {
   const int64 n2 = n << 1;
@@ -636,7 +637,7 @@ template <typename T>
 SL void PolyMulDc(const T* X, const int64 n, const T* Y, const int64 m,
                   T* result) {
   if (n == m) {
-    // In case n == m, we still allocate tempory result space to meet the
+    // In case n == m, we still allocate temporary result space to meet the
     // requirement of PolyMulDcImpl.
     std::vector<T> tresult(2 * n);
     internal::PolyMulDcImpl(X, Y, n, std::data(tresult));
@@ -663,7 +664,7 @@ SL std::vector<T> PolyMulDc(const std::vector<T>& X, const std::vector<T>& Y) {
   const int64 m = static_cast<int64>(std::size(Y));
   const int64 result_size = n + m - 1;
   if (n == m) {
-    // In case n == m, we still allocate tempory result space to meet the
+    // In case n == m, we still allocate temporary result space to meet the
     // requirement of PolyMulDcImpl.
     std::vector<T> result(2 * n);
     internal::PolyMulDcImpl(std::data(X), std::data(Y), n, std::data(result));
@@ -1038,7 +1039,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 }  // namespace pmod
 
 namespace internal {
-// Divides two polynomials using Divide and Conquer algorithm.
+// Divides two polynomials: reverses X and Y, computes the power series inverse
+// of reversed Y (PolyInv), multiplies, and reverses back.
 // The inverse of Y[m-1] exists.
 // size r >= m
 // size q >= n - m + 1
@@ -1274,7 +1276,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 
 namespace pmod {
 namespace internal {
-// Calculates the integral of a polynomial.
+// Calculates the integral of a polynomial. The constant term is set to 1
+// (result[0] = 1 % mod), not 0.
 // size result >= m + 1
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
@@ -1288,7 +1291,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 }
 }  // namespace internal
 
-// Calculates the integral of a polynomial.
+// Calculates the integral of a polynomial. The constant term is set to 1
+// (result[0] = 1 % mod), not 0.
 // size result >= m + 1
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
@@ -1299,7 +1303,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
                                         mod);
 }
 
-// Calculates the integral of a polynomial.
+// Calculates the integral of a polynomial. The constant term is set to 1
+// (result[0] = 1 % mod), not 0.
 // size result >= m + 1
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
@@ -1721,7 +1726,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   delete psp;
 }
 
-// Tellegen's Principle into Pratice
+// Tellegen's Principle into Practice
 // A. Bostan, G. Lecerf, E. Schost
 // size(V) = n
 template <typename T>
@@ -1974,8 +1979,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 }
 
 namespace internal {
-// Returns: (X[0]+X[1]*x)(X[2]+X[3]x)...(X[2k-2]+X[2k-1]x)
-// where e - s = 2 * k
+// Returns: (X[2s]+X[2s+1]*x)(X[2s+2]+X[2s+3]x)...(X[2e-2]+X[2e-1]x)
+// where k = e - s is the number of factors
 // size(result) >= k + 1
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
@@ -2011,9 +2016,9 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 }
 }  // namespace internal
 
-// Returns: (X[0]+X[1]*x)(X[2]+X[3]x)...(X[2k-2]+X[2k-1]x)
-// where n = 2 * k
-// size(result) >= k + 1
+// Returns: (X[0]+X[1]*x)(X[2]+X[3]x)...(X[2n-2]+X[2n-1]x)
+// where n is the number of factors (X has 2 * n entries)
+// size(result) >= n + 1
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyBatchMul(const T* X, const int64 n, T* result, int64 mod) {
@@ -2092,7 +2097,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 // n = std::size(X) / 2
 // Y = X
 // s(i) = (Y[0]+Y[1]*x)(Y[2]+Y[3]x)...(Y[2i]+Y[2i+1]x)
-// return s(0) + s(2) + s(3) + ... + s(n-1)
+// return s(0) + s(1) + s(2) + ... + s(n-1)
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
     PolyBatchMulAcc(const std::vector<T>& X, uint64 mod) {

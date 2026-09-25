@@ -429,6 +429,7 @@ SL REQUIRES((IsNModNumberV<T>)) RETURN(T)
 }
 
 // Returns the number of x in the range [1, n] such that x = remain mod(mod).
+// Requires mod > 0 and 0 <= remain < mod.
 template <typename T = int64>
 SL T CountModValue(const int64 n, int64 remain, int64 mod) {
   if (remain == 0) {
@@ -456,6 +457,7 @@ SL REQUIRES((IsNModNumberV<T>)) RETURN(T)
 }  // namespace internal
 
 // Returns the sum of x in the range [1, n] such that x = remain mod(mod).
+// Requires mod > 0 and 0 <= remain < mod.
 template <typename T = int64>
 SL T SumModValue(const int64 n, int64 remain, int64 mod) {
   if (remain == 0) {
@@ -524,7 +526,7 @@ SL T CountCoprime(int64 n, int64 a) {
   return ret;
 }
 
-// Returns the number x in the range [1, n] such that gcd(x, a) = 1 and x =
+// Returns the number of x in the range [1, n] such that gcd(x, a) = 1 and x =
 // remain mod(mod). The rad factors with mu are given by rad_factors_with_mu.
 template <typename T = int64>
 SL T CountCoprime(int64 n,
@@ -565,7 +567,7 @@ SL T CountCoprime(int64 n, int64 a, int64 remain, int64 mod) {
   return ret;
 }
 
-// Returns the sum x in the range [1, n] such that gcd(x, a) = 1.
+// Returns the sum of x in the range [1, n] such that gcd(x, a) = 1.
 // The rad factors with mu are given by rad_factors_with_mu.
 template <typename T = int64>
 SL T SumCoprime(int64 n,
@@ -604,9 +606,8 @@ SL T SumCoprime(int64 n, int64 a) {
   return ret;
 }
 
-// Returns the sum x in the range [1, n] such that gcd(x, a) = 1 and x =
-// remain mod(mod) The rad factors with mu are given by rad_factors_with_mu.
-// The rad factors with mu are given by rad_factors_with_mu.
+// Returns the sum of x in the range [1, n] such that gcd(x, a) = 1 and x =
+// remain mod(mod). The rad factors with mu are given by rad_factors_with_mu.
 template <typename T = int64>
 SL T SumCoprime(int64 n,
                 const std::vector<std::pair<int64, int>>& rad_factors_with_mu,
@@ -910,8 +911,8 @@ SL REQUIRES((IsNModNumberV<T>)) RETURN(void) InitComb(T (*comb)[D]) {
   InitComb(comb, D - 1);
 }
 
-// Checks whether x is the primitive root of p while  the factorization of p -1
-// is f.
+// Checks whether x is a primitive root of p, given that the factorization of
+// p - 1 is f.
 SL bool IsPrimitiveRoot(int64 x, int64 p, const IntegerFactorization& f) {
   return std::none_of(std::begin(f), std::end(f),
                       [=](const std::pair<int64, int>& it) {
@@ -1589,8 +1590,9 @@ SL int64 P1SumMod(int64 n, int64 mod) {
 }
 
 // Calculates sum of arithmetic progression modulo mod.
-// a <= b, a + delta, a + 2 delta, ..., a + maxk detla <= b for delta >= 0 or
-// a >= b, a + delta, a + 2 delta, ..., a + maxk delta >= b for delta < 0
+// a <= b, a + delta, a + 2 delta, ..., a + maxk delta <= b for delta > 0 or
+// a >= b, a + delta, a + 2 delta, ..., a + maxk delta >= b for delta < 0.
+// delta == 0 requires a == b and returns a (not reduced modulo mod).
 SL int64 P1SumModEx(int64 a, int64 b, int64 mod, int64 delta = 1) {
   if (delta == 0) {
     PE_ASSERT(a == b);
@@ -2014,7 +2016,7 @@ SL int64 GpSumMod(int64 x, int64 a, int64 b, int64 mod, int64 zero_p_zero = 1) {
   return v2;
 }
 
-// Given a prime p, provides method to return
+// Given a prime p, provides methods to return
 // Comb(n, m), Inv(n), Fac(n), IFac(n)
 // The results are converted to type T.
 template <typename T = int64>

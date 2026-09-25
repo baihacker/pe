@@ -53,9 +53,10 @@ SL void ParallelSort(T* s, T* e) {
   }
 }
 
-// FindFirst/FindLast require a signed T: they use first - 1 (or last + 1) as
-// the not-found value and step past the range boundary, which wraps around
-// for an unsigned T (e.g. FindLast with first == 0 never terminates).
+// FindFirst/FindLast require a signed T: they return last + 1 (FindFirst) or
+// first - 1 (FindLast) as the not-found value and step past the range
+// boundary, which wraps around for an unsigned T (e.g. FindLast with
+// first == 0 never terminates).
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
     FindFirst(T first, T last, const std::function<bool(T)>& f) {
@@ -85,11 +86,12 @@ SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
 }
 
 // |block  0|block  1|...|block  TN-1|block TN|block TN+1|...
-// |thread 0|thread 1|...|thread TN-1|thead  0|thread   1|...
+// |thread 0|thread 1|...|thread TN-1|thread 0|thread   1|...
 //
-// ParallelFindFirst/ParallelFindLast require a signed T: they use first - 1
-// (or last + 1) as the not-found value and as an ordered sentinel, which
-// wraps around for an unsigned T (e.g. first == 0).
+// ParallelFindFirst/ParallelFindLast require a signed T: they use last + 1
+// (ParallelFindFirst) or first - 1 (ParallelFindLast) as the not-found value
+// and as an ordered sentinel, which wraps around for an unsigned T (e.g.
+// first == 0).
 template <int TN, typename T, int B = 10000>
 SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
     ParallelFindFirst(T first, T last, const std::function<T(T, T)>& f) {

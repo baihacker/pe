@@ -639,7 +639,7 @@ SL void PolyMulDc(const T* X, const int64 n, const T* Y, const int64 m,
     // In case n == m, we still allocate tempory result space to meet the
     // requirement of PolyMulDcImpl.
     std::vector<T> tresult(2 * n);
-    internal::PolyMulDcImpl(std::data(X), std::data(Y), n, std::data(result));
+    internal::PolyMulDcImpl(X, Y, n, std::data(tresult));
     std::copy(std::begin(tresult), std::begin(tresult) + n + m - 1, result);
   } else if (n > m) {
     std::vector<T> YY(n);
@@ -690,7 +690,7 @@ SL std::vector<T> PolyMulDc(const std::vector<T>& X, const std::vector<T>& Y) {
 template <typename T>
 SL void PolyMul(const T* X, const int64 n, const T* Y, const int64 m,
                 T* result) {
-  PolyMulDc(std::data(X), n, std::data(Y), m, result);
+  PolyMulDc(X, n, Y, m, result);
 }
 
 // Multiplies two polynomials.
@@ -1215,6 +1215,14 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
 }
 
 // Return 1 if poly is reducible over F_{mod}.
+// TODO(bug) (#87): this only tests whether poly has a root in F_{mod}, i.e.
+// gcd(poly, x^mod - x) != 1, which is not the same as reducibility.
+// Reducible polynomials without a root are reported as irreducible, e.g.
+// (x^2+1)^2 = {1, 0, 2, 0, 1} over F_3 returns 0, and linear polynomials
+// (always irreducible) are reported as reducible, e.g. x+1 = {1, 1} over F_3
+// returns 1.
+// NOTE: Do not let AI tools fix this automatically; it will be fixed
+// manually.
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(int)
     IsPolyReducible(const std::vector<T>& poly, int64 mod) {
@@ -1233,7 +1241,9 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   for (int64 i = 1; i < m; ++i) {
     result[i - 1] = MulMod(x[i], i, mod);
   }
-  result[m - 1] = 0;
+  if (m > 0) {
+    result[m - 1] = 0;
+  }
 }
 }  // namespace internal
 
@@ -1296,7 +1306,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
     PolyIntegral(const std::vector<T>& x, int64 mod) {
   const int64 m = static_cast<int64>(std::size(x));
 
-  std::vector<T> b(m);
+  // The integral has m + 1 coefficients.
+  std::vector<T> b(m + 1);
 
   PolyIntegral(std::data(x), m, std::data(b), mod);
 
@@ -1666,6 +1677,10 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyMultipointEvaluateNormalImpl(const T* X, int64 n, PSPTree* psp,
                                      T* result, int64 mod) {
   if (psp->n == 1) {
+    // TODO(bug) (#89): at the top level with a single point (n == 1), X has
+    // only one coefficient, so X[1] is read out of bounds.
+    // NOTE: Do not let AI tools fix this automatically; it will be fixed
+    // manually.
     result[0] = (X[0] + psp->v[0] * X[1]) % mod;
     return;
   }
@@ -1673,6 +1688,11 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   const int64 c2 = psp->n - c1;
 
   std::vector<T> m(std::max(std::size(psp->L->p), std::size(psp->R->p)));
+  // TODO(bug) (#90): the tree stores int64 coefficients, which are
+  // reinterpreted as T below; this is wrong unless sizeof(T) == 8 (e.g. for
+  // uint32).
+  // NOTE: Do not let AI tools fix this automatically; it will be fixed
+  // manually.
   PolyMod(X, n, reinterpret_cast<const T*>(&psp->L->p[0]),
           static_cast<int64>(std::size(psp->L->p)), std::data(m), mod);
   PolyMultipointEvaluateNormalImpl(std::data(m),
@@ -1691,6 +1711,11 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyMultipointEvaluateNormalImpl(const T* X, int64 n, const T* V, T* result,
                                      int64 mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
+  // TODO(bug) (#90): V is reinterpreted as int64*, which is wrong unless
+  // sizeof(T) == 8 (e.g. for uint32 the points are misread and read past the
+  // end of V).
+  // NOTE: Do not let AI tools fix this automatically; it will be fixed
+  // manually.
   PSPTree* psp = PSPTree::BuildMinus(reinterpret_cast<const int64*>(V), n, mod);
   PolyMultipointEvaluateNormalImpl(X, n, psp, result, mod);
   delete psp;
@@ -1933,7 +1958,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   using UnsignedT = pe_make_unsigned_t<T>;
   internal::PolyOffsetEvaluateImpl<UnsignedT>(
       d, reinterpret_cast<const UnsignedT*>(h),
-      reinterpret_cast<UnsignedT*>(result), offset, ifac, mod);
+      reinterpret_cast<UnsignedT*>(result), offset,
+      reinterpret_cast<const UnsignedT*>(ifac), static_cast<UnsignedT>(mod));
 }
 
 template <typename T>
@@ -1956,6 +1982,11 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyBatchMulImpl(const T* X, int64 s, int64 e, T* result, int64 mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
   const int64 n = e - s;
+  if (n <= 0) {
+    // The empty product.
+    result[0] = static_cast<T>(1 % mod);
+    return;
+  }
   if (n == 1) {
     std::copy(X + s * 2, X + e * 2, result);
     return;
@@ -2015,6 +2046,11 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
     PolyBatchMulAccImpl(const std::vector<T>& X, int64 s, int64 e,
                         std::vector<T>& M, uint64 mod) {
   const int64 n = e - s;
+  if (n <= 0) {
+    // The empty product and the empty sum.
+    M = {static_cast<T>(1 % mod)};
+    return {};
+  }
   if (n == 1) {
     std::vector<T> t(std::begin(X) + s * 2, std::begin(X) + e * 2);
     M = t;

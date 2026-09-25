@@ -58,6 +58,12 @@ struct DArray : public DArrayRef<T, D> {
     base::dimension_ = &dimension_[0];
     base::element_counts_ = &element_counts_[0];
     base::data_ = reinterpret_cast<T*>(A::Allocate(element_count_ * sizeof(T)));
+    // TODO(bug): if a T constructor throws, the elements already constructed
+    // and the storage are leaked; after a failed Reset, data_ and the element
+    // count are already set, so the destructor's Clear destroys elements that
+    // were never constructed.
+    // NOTE: Do not let AI tools fix this automatically; it will be fixed
+    // manually.
     for (int64 i = 0; i < element_count_; ++i) {
       new (base::data_ + i) T(arg...);
     }
@@ -175,6 +181,12 @@ struct FArray : public FArrayRef<T, S> {
   template <class... Args>
   void Init(Args&&... arg) {
     base::data_ = reinterpret_cast<T*>(A::Allocate(S::EC * sizeof(T)));
+    // TODO(bug): if a T constructor throws, the elements already constructed
+    // and the storage are leaked; after a failed Reset, data_ and the element
+    // count are already set, so the destructor's Clear destroys elements that
+    // were never constructed.
+    // NOTE: Do not let AI tools fix this automatically; it will be fixed
+    // manually.
     for (int64 i = 0; i < S::EC; ++i) {
       new (base::data_ + i) T(arg...);
     }

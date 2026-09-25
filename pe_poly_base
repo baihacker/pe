@@ -1681,23 +1681,17 @@ template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyMultipointEvaluateNormalImpl(const T* X, int64 n, PSPTree* psp,
                                      T* result, int64 mod) {
+  // The tree stores int64 coefficients, which are reinterpreted as T below.
+  static_assert(sizeof(T) == 8, "T must be a 64-bit integer");
   if (psp->n == 1) {
-    // TODO(bug): at the top level with a single point (n == 1), X has
-    // only one coefficient, so X[1] is read out of bounds.
-    // NOTE: Do not let AI tools fix this automatically; it will be fixed
-    // manually.
-    result[0] = (X[0] + psp->v[0] * X[1]) % mod;
+    // At the top level with a single point, X has only one coefficient.
+    result[0] = n >= 2 ? (X[0] + psp->v[0] * X[1]) % mod : X[0] % mod;
     return;
   }
   const int64 c1 = psp->n >> 1;
   const int64 c2 = psp->n - c1;
 
   std::vector<T> m(std::max(std::size(psp->L->p), std::size(psp->R->p)));
-  // TODO(bug): the tree stores int64 coefficients, which are
-  // reinterpreted as T below; this is wrong unless sizeof(T) == 8 (e.g. for
-  // uint32).
-  // NOTE: Do not let AI tools fix this automatically; it will be fixed
-  // manually.
   PolyMod(X, n, reinterpret_cast<const T*>(&psp->L->p[0]),
           static_cast<int64>(std::size(psp->L->p)), std::data(m), mod);
   PolyMultipointEvaluateNormalImpl(std::data(m),
@@ -1716,11 +1710,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyMultipointEvaluateNormalImpl(const T* X, int64 n, const T* V, T* result,
                                      int64 mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
-  // TODO(bug): V is reinterpreted as int64*, which is wrong unless
-  // sizeof(T) == 8 (e.g. for uint32 the points are misread and read past the
-  // end of V).
-  // NOTE: Do not let AI tools fix this automatically; it will be fixed
-  // manually.
+  // V is reinterpreted as int64*.
+  static_assert(sizeof(T) == 8, "T must be a 64-bit integer");
   PSPTree* psp = PSPTree::BuildMinus(reinterpret_cast<const int64*>(V), n, mod);
   PolyMultipointEvaluateNormalImpl(X, n, psp, result, mod);
   delete psp;

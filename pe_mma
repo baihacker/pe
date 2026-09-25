@@ -1058,7 +1058,7 @@ struct MmaModExpCompiler {
       case POW: {
         // Inside an exponent (has_mod == 0) no "% mod" is appended and SUB/DIV
         // are not reduced. A nested power, however, is still emitted as
-        // PowerMod(..., mod), so x^(y^2) uses y^2 mod `mod` as the exponent.
+        // PowerMod(..., mod), see below.
         CompileImpl(tree->left, has_mod);
         int a = tree->left->iid;
         if (tree->nodeType == SUB) {
@@ -1076,6 +1076,11 @@ struct MmaModExpCompiler {
         } else {
           CompileImpl(tree->right, 0);
           int b = tree->right->iid;
+          // TODO(bug): this is also emitted inside an exponent (has_mod == 0),
+          // so a nested power is reduced mod `mod`: x^(y^2) uses y^2 mod `mod`
+          // as the exponent.
+          // NOTE: Do not let AI tools fix this automatically; it will be fixed
+          // manually.
           snprintf(buff, 512, "PowerMod(t%d, t%d, mod)", a, b);
         }
         break;

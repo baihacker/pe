@@ -986,12 +986,15 @@ struct MmaExpCompiler {
         if ((tree->left->nodeType == VAR || tree->left->nodeType == NUMBER) &&
             (tree->right->token == "1" || tree->right->token == "2" ||
              tree->right->token == "3" || tree->right->token == "4")) {
-          result.append(tree->left->token);
           int cnt = atoi(tree->right->token.c_str()) - 1;
+          // Parenthesize the expansion, e.g. a / x^2 must not become a / x * x.
+          if (cnt > 0) result.append("(");
+          result.append(tree->left->token);
           while (cnt-- > 0) {
             result.append(" * ");
             result.append(tree->left->token);
           }
+          if (tree->right->token != "1") result.append(")");
         } else {
           result.append("Power(");
           CompileImpl(tree->left);
@@ -1030,7 +1033,11 @@ struct MmaModExpCompiler {
         break;
       case NEG:
         CompileImpl(tree->right, has_mod);
-        snprintf(buff, 512, "(mod - t%d)", tree->right->iid);
+        if (has_mod) {
+          snprintf(buff, 512, "(mod - t%d)", tree->right->iid);
+        } else {
+          snprintf(buff, 512, "(-t%d)", tree->right->iid);
+        }
         break;
       case ADD:
       case MUL: {
@@ -1049,7 +1056,8 @@ struct MmaModExpCompiler {
       case SUB:
       case DIV:
       case POW: {
-        CompileImpl(tree->left);
+        // Inside an exponent (has_mod == 0) nothing is reduced mod `mod`.
+        CompileImpl(tree->left, has_mod);
         int a = tree->left->iid;
         if (tree->nodeType == SUB) {
           CompileImpl(tree->right, has_mod);
@@ -1058,7 +1066,11 @@ struct MmaModExpCompiler {
         } else if (tree->nodeType == DIV) {
           CompileImpl(tree->right, has_mod);
           int b = tree->right->iid;
-          snprintf(buff, 512, "t%d * ModInv(t%d, mod)", a, b);
+          if (has_mod) {
+            snprintf(buff, 512, "t%d * ModInv(t%d, mod)", a, b);
+          } else {
+            snprintf(buff, 512, "(t%d / t%d)", a, b);
+          }
         } else {
           CompileImpl(tree->right, 0);
           int b = tree->right->iid;

@@ -64,10 +64,14 @@ struct DArray : public DArrayRef<T, D> {
   }
 
   void Clear() {
+    // Clear may be called explicitly before the destructor calls it again.
+    if (base::data_ == nullptr) return;
     for (int64 i = 0; i < element_count_; ++i) {
       (base::data_ + i)->~T();
     }
     A::Deallocate(base::data_);
+    base::data_ = nullptr;
+    element_count_ = 0;
   }
 
   T* data() { return base::data_; }
@@ -177,10 +181,13 @@ struct FArray : public FArrayRef<T, S> {
   }
 
   void Clear() {
+    // Clear may be called explicitly before the destructor calls it again.
+    if (base::data_ == nullptr) return;
     for (int64 i = 0; i < S::EC; ++i) {
       (base::data_ + i)->~T();
     }
     A::Deallocate(base::data_);
+    base::data_ = nullptr;
   }
 
   T* data() { return base::data_; }

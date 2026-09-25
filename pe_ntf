@@ -280,7 +280,7 @@ struct MuPhiSumModer {
     auto where = mem_sum_mu_.find(n);
     if (where != std::end(mem_sum_mu_)) return where->second;
 
-    int64 ret = 1;
+    int64 ret = 1 % mod_;
     for (int64 i = 2; i <= n;) {
       const int64 v = n / i;
       const int64 maxi = n / v;
@@ -365,13 +365,24 @@ struct Sigma0SumModer {
     auto where = mem_.find(n);
     if (where != std::end(mem_)) return where->second;
 
+#if PE_HAS_INT128
+    // n / i may be much larger than mod_. The sum fits in int128, so it is
+    // reduced once instead of for every term.
+    int128 sum = 0;
+    for (int64 i = 1; i * i <= n; ++i) {
+      sum += n / i;
+    }
+    int64 ret = static_cast<int64>(sum % mod_);
+#else
     int64 ret = 0;
     for (int64 i = 1; i * i <= n; ++i) {
-      ret += n / i;
+      // n / i may be much larger than mod_.
+      ret += (n / i) % mod_;
       if (ret >= mod_) {
         ret -= mod_;
       }
     }
+#endif
     ret <<= 1;
     if (ret >= mod_) {
       ret -= mod_;
@@ -701,6 +712,10 @@ SL REQUIRES((IsNModNumberV<T>)) RETURN(void)
                               factorization[i - W], 1, factors);
       for (const auto [x, y] : factors) {
         const int64 t = i / (x * y);
+        // Only the true bucket t = n / (x * y) of the product is corrected;
+        // otherwise a pair is handled once for every valid t. Since
+        // i = x * y * t, this is n < i + x * y (no division needed).
+        if (shape.n - i >= x * y) continue;
         if (shape.n / (shape.n / t) != t) continue;
         const int64 k0 = std::ceil(S * std::log(x));
         const int64 k1 = std::ceil(S * std::log(y));
@@ -721,6 +736,9 @@ SL REQUIRES((IsNModNumberV<T>)) RETURN(void)
           if (have % y) continue;
           if (shape.n / (shape.n / y) != y) continue;
           const int64 t = have / y;
+          // Only the true bucket t = n / (x * y) of the product is corrected
+          // (i = x * y * t, so this is n < i + x * y).
+          if (shape.n - i >= x * y) continue;
           if (shape.n / (shape.n / t) != t) continue;
           const int64 k0 = std::ceil(S * std::log(x));
           const int64 k1 = std::ceil(S * std::log(y));
@@ -748,6 +766,10 @@ SL REQUIRES((IsNModNumberV<T>)) RETURN(void)
                               factorization[i - W], 1, factors);
       for (const auto [x, y] : factors) {
         const int64 t = i / (x * y);
+        // Only the true bucket t = n / (x * y) of the product is corrected;
+        // otherwise a pair is handled once for every valid t. Since
+        // i = x * y * t, this is n < i + x * y (no division needed).
+        if (shape.n - i >= x * y) continue;
         if (shape.n / (shape.n / t) != t) continue;
         const int64 k0 = std::ceil(S * std::log(x));
         const int64 k1 = std::ceil(S * std::log(y));
@@ -768,6 +790,9 @@ SL REQUIRES((IsNModNumberV<T>)) RETURN(void)
           if (have % y) continue;
           if (shape.n / (shape.n / y) != y) continue;
           const int64 t = have / y;
+          // Only the true bucket t = n / (x * y) of the product is corrected
+          // (i = x * y * t, so this is n < i + x * y).
+          if (shape.n - i >= x * y) continue;
           if (shape.n / (shape.n / t) != t) continue;
           const int64 k0 = std::ceil(S * std::log(x));
           const int64 k1 = std::ceil(S * std::log(y));
@@ -853,6 +878,10 @@ SL REQUIRES((!IsNModNumberV<T>)) RETURN(void)
                               factorization[i - W], 1, factors);
       for (const auto [x, y] : factors) {
         const int64 t = i / (x * y);
+        // Only the true bucket t = n / (x * y) of the product is corrected;
+        // otherwise a pair is handled once for every valid t. Since
+        // i = x * y * t, this is n < i + x * y (no division needed).
+        if (shape.n - i >= x * y) continue;
         if (shape.n / (shape.n / t) != t) continue;
         const int64 k0 = std::ceil(S * std::log(x));
         const int64 k1 = std::ceil(S * std::log(y));
@@ -874,6 +903,9 @@ SL REQUIRES((!IsNModNumberV<T>)) RETURN(void)
           if (have % y) continue;
           if (shape.n / (shape.n / y) != y) continue;
           const int64 t = have / y;
+          // Only the true bucket t = n / (x * y) of the product is corrected
+          // (i = x * y * t, so this is n < i + x * y).
+          if (shape.n - i >= x * y) continue;
           if (shape.n / (shape.n / t) != t) continue;
           const int64 k0 = std::ceil(S * std::log(x));
           const int64 k1 = std::ceil(S * std::log(y));
@@ -901,6 +933,10 @@ SL REQUIRES((!IsNModNumberV<T>)) RETURN(void)
                               factorization[i - W], 1, factors);
       for (const auto [x, y] : factors) {
         const int64 t = i / (x * y);
+        // Only the true bucket t = n / (x * y) of the product is corrected;
+        // otherwise a pair is handled once for every valid t. Since
+        // i = x * y * t, this is n < i + x * y (no division needed).
+        if (shape.n - i >= x * y) continue;
         if (shape.n / (shape.n / t) != t) continue;
         const int64 k0 = std::ceil(S * std::log(x));
         const int64 k1 = std::ceil(S * std::log(y));
@@ -923,9 +959,12 @@ SL REQUIRES((!IsNModNumberV<T>)) RETURN(void)
           if (have % y) continue;
           if (shape.n / (shape.n / y) != y) continue;
           const int64 t = have / y;
+          // Only the true bucket t = n / (x * y) of the product is corrected
+          // (i = x * y * t, so this is n < i + x * y).
+          if (shape.n - i >= x * y) continue;
           if (shape.n / (shape.n / t) != t) continue;
           const int64 k0 = std::ceil(S * std::log(x));
-          const int64 k1 = std::ceil(S * std::(y));
+          const int64 k1 = std::ceil(S * std::log(y));
           if (k0 + k1 > S * std::log(shape.n / t)) {
             T tmp = MulMod(a[shape.IdxOfValue(x)], b[shape.IdxOfValue(y)], mod);
             tans_data[tid()][k0 + k1] =
@@ -1207,7 +1246,8 @@ SL T DVAConvInverseAt(const DVA<T>& ps_h, const DVA<T>& ps_g,
                       const DVA<T>& ps_f, int64 m) {
   PE_ASSERT(ps_h.n == ps_f.n);
   if (m == 1) {
-    return 1;
+    // G(1) = g(1) = f(1) / h(1), and h(1) = 1 is assumed.
+    return ps_f[1];
   }
 
   T now = 0;
@@ -1237,7 +1277,8 @@ SL DVA<T> DVAConvInverse(const DVA<T>& ps_h, const DVA<T>& ps_f) {
 
   DVA<T> ret(ps_h.n);
 
-  ret.values[1] = 1;
+  // G(1) = g(1) = f(1) / h(1), and h(1) = 1 is assumed.
+  ret.values[1] = ps_f[1];
 
   for (int64 i = 2; i < ret.key_size;) {
     int64 max_i = ret.IdxOfValue(ret.keys[i] * 2);
@@ -1818,8 +1859,11 @@ SL void PrimeSkExImpl(const int64 /*n*/, int k, int64* PK, TreeType& tree,
 SL DVA<int64> PrimeSkEx(const int64 n, int k, int64* PK, int64 mod) {
   PowerSumModerB psm(mod);
 
-  PE_ASSERT(GlobalMod64::Mod() != 1);
   PE_ASSERT(n >= 1);
+  // The tree works modulo GlobalMod64, so use mod there during the
+  // computation and restore the previous value afterwards.
+  const int64 old_mod = GlobalMod64::Mod();
+  GlobalMod64::Set(mod);
   DVA<int64> dva(n);
 
   const int key_size = static_cast<int>(dva.key_size);
@@ -1833,6 +1877,7 @@ SL DVA<int64> PrimeSkEx(const int64 n, int k, int64* PK, int64 mod) {
 
   PrimeSkExImpl(n, k, PK, tree, dva, mod);
 
+  GlobalMod64::Set(old_mod);
   return dva;
 }
 
@@ -2266,19 +2311,16 @@ struct CachedPi {
     }
   }
 
-  ~CachedPi() { Release(); }
-
   void Release() {
-    if (prepi_ != nullptr) {
-      delete[] prepi_;
-      prepi_ = nullptr;
-    }
+    prepi_.clear();
+    prepi_.shrink_to_fit();
   }
 
   void Init(int pivot) {
     Release();
     pivot_ = pivot;
-    prepi_ = new int[pivot_ + 1];
+    // A vector (instead of new[]) makes CachedPi safe to copy and move.
+    prepi_.assign(pivot_ + 1, 0);
     prepi_[0] = 0;
     for (int i = 1; i <= pivot_; ++i) {
       prepi_[i] = prepi_[i - 1] + IsPrime(i);
@@ -2295,7 +2337,7 @@ struct CachedPi {
   }
 
  private:
-  int* prepi_ = nullptr;
+  std::vector<int> prepi_;
   int pivot_;
   std::unordered_map<int64, int64> pi_cache_;
 };

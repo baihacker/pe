@@ -17,21 +17,27 @@ SL T ReadInt() {
   static X f;
   T v = 0;
   int s = 1, c;
-  for (; !f.dig[c = getchar()];) {
+  // getchar() returns EOF (-1) at the end of input, which must not be used as
+  // an index.
+  for (c = getchar(); c != EOF && !f.dig[c]; c = getchar()) {
     ;
+  }
+  if (c == EOF) {
+    return 0;
   }
   if (c == '-') {
     s = 0;
-  } else if (f.dig[c]) {
+  } else {
     v = c ^ 48;  // '0' == 48, so c ^ 48 converts ASCII digit to its value
   }
-  for (; f.dig[c = getchar()]; v = v * 10 + (c ^ 48)) {
+  for (; (c = getchar()) != EOF && f.dig[c] && c != '-';
+       v = v * 10 + (c ^ 48)) {
     ;
   }
   return s ? v : -v;
 }
 
-#define Rint read_int<int>
+#define Rint pe::ReadInt<int>
 
 template <typename T>
 SL T ReadValue() {
@@ -86,19 +92,31 @@ namespace pe {
 
 #if OS_TYPE_WIN && ENABLE_CLIPBOARD
 SL bool CopyStringToClipboard(const std::string& s) {
-  OpenClipboard(nullptr);
+  if (!OpenClipboard(nullptr)) {
+    return false;
+  }
   EmptyClipboard();
   HGLOBAL hg = GlobalAlloc(GMEM_MOVEABLE, std::size(s) + 1);
   if (!hg) {
     CloseClipboard();
     return false;
   }
-  memcpy(GlobalLock(hg), s.c_str(), std::size(s));
+  char* p = static_cast<char*>(GlobalLock(hg));
+  if (!p) {
+    GlobalFree(hg);
+    CloseClipboard();
+    return false;
+  }
+  // Include the NUL terminator required by CF_TEXT.
+  memcpy(p, s.c_str(), std::size(s) + 1);
   GlobalUnlock(hg);
-  SetClipboardData(CF_TEXT, hg);
+  // On success the system owns hg, so it must only be freed on failure.
+  const bool ok = SetClipboardData(CF_TEXT, hg) != nullptr;
+  if (!ok) {
+    GlobalFree(hg);
+  }
   CloseClipboard();
-  GlobalFree(hg);
-  return true;
+  return ok;
 }
 
 SL int PromptYesAndNo(const std::string& title, const std::string& content) {
@@ -126,7 +144,7 @@ SL REQUIRES((is_general_integer_v<T>)) RETURN(void) PromptAnswer(const T& v) {
 template <typename... T>
 SL void PromptAnswer(const std::string& format, T... v) {
   char buff[1024];
-  smprintf(buff, 1024, format.c_str(), v...);
+  snprintf(buff, 1024, format.c_str(), v...);
   PromptAnswer(buff);
 }
 

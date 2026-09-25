@@ -183,7 +183,8 @@ struct SymPoly {
   static TermKey MergeTermKey(const TermKey& a, const TermKey& b) {
     if (std::empty(a)) return b;
     if (std::empty(b)) return a;
-    std::map<std::string, CT> terms;
+    // Exponents are int64; adding them in CT would reduce or round them.
+    std::map<std::string, int64> terms;
     for (const auto& iter : a) terms[iter.first] += iter.second;
     for (const auto& iter : b) terms[iter.first] += iter.second;
     TermKey result;
@@ -286,7 +287,8 @@ SL std::optional<SymPoly<CT>> ParseSymPolyPower(const std::string& s, int& i) {
   }
 
   auto e = t->AsNumber();
-  if (!e.has_value()) {
+  // A negative exponent is a syntax error (Power requires e >= 0).
+  if (!e.has_value() || *e < 0) {
     return std::nullopt;
   }
 
@@ -304,15 +306,19 @@ SL std::optional<SymPoly<CT>> ParseSymPolyMul(const std::string& s, int& i) {
   for (;;) {
     while (i < size && std::isspace(s[i])) ++i;
     if (i == size) break;
+    // After an explicit '*', the next factor must be parsed, even if it starts
+    // with a unary sign (e.g. a*-b).
+    bool explicit_mul = false;
     if (s[i] == '*') {
       ++i;
       while (i < size && std::isspace(s[i])) ++i;
       if (i == size) {
         return std::nullopt;
       }
+      explicit_mul = true;
     }
-    if (std::isdigit(s[i]) || std::isalpha(s[i]) || s[i] == '_' ||
-        s[i] == '(') {
+    if (explicit_mul || std::isdigit(s[i]) || std::isalpha(s[i]) ||
+        s[i] == '_' || s[i] == '(') {
       auto t = ParseSymPolyPower<CT>(s, i);
       if (!t.has_value()) {
         return std::nullopt;
@@ -363,8 +369,9 @@ SL SymPoly<CT> ParseSymPoly(const std::string& s) {
   auto ret = ParseSymPolyAddOrSubstract<CT>(s, i);
 
   const int size = std::size(s);
-  if (i < size && std::isspace(s[i])) ++i;
-  if (!ret.has_value()) {
+  while (i < size && std::isspace(s[i])) ++i;
+  // Unparsed trailing input (e.g. "a/b") is a syntax error too.
+  if (!ret.has_value() || i != size) {
     if (i < size) {
       std::cerr << "Syntax error: cannot parse " << s.substr(i) << std::endl;
     } else {

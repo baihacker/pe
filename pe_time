@@ -29,14 +29,19 @@ class TimeDelta {
   double ToDays() const { return 1. * duration_.count() / DAY_CLOCKS; }
   std::string Format() const {
     char temp[128];
-    const int64 nano_seconds = duration_.count();
-    const int64 day = nano_seconds / DAY_CLOCKS;
+    const int64 count = duration_.count();
+    // Format the absolute value; negative durations get a leading '-'.
+    const bool neg = count < 0;
+    const uint64 nano_seconds =
+        neg ? 0 - static_cast<uint64>(count) : static_cast<uint64>(count);
+    const uint64 day = nano_seconds / DAY_CLOCKS;
     const int hour = static_cast<int>(nano_seconds % DAY_CLOCKS / HOUR_CLOCKS);
     const int min = static_cast<int>(nano_seconds % HOUR_CLOCKS / MIN_CLOCKS);
     const int sec = static_cast<int>(nano_seconds % MIN_CLOCKS / SEC_CLOCKS);
     const int msec =
         static_cast<int>(nano_seconds % SEC_CLOCKS / MILLI_SEC_CLOCKS);
-    snprintf(temp, 128, "%" PRId64 ":%02d:%02d:%02d.%03d", day, hour, min, sec, msec);
+    snprintf(temp, 128, "%s%" PRIu64 ":%02d:%02d:%02d.%03d", neg ? "-" : "",
+             day, hour, min, sec, msec);
     return temp;
   }
 

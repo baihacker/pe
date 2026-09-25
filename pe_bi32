@@ -202,7 +202,14 @@ class BigInteger {
   }
 
   void FromString(const std::string& str) {
-    const int n = static_cast<int>(std::size(str));
+    // An optional leading sign.
+    int start = 0;
+    int sgn = 1;
+    if (!std::empty(str) && (str[0] == '-' || str[0] == '+')) {
+      sgn = str[0] == '-' ? -1 : 1;
+      start = 1;
+    }
+    const int n = static_cast<int>(std::size(str)) - start;
     if (n == 0) {
       Reserve(1);
       data_[0] = 0;
@@ -211,7 +218,7 @@ class BigInteger {
     }
     std::vector<uint32> value(n);
     for (int i = 0, j = n - 1; i < n; ++i, --j) {
-      value[j] = str[i] - '0';
+      value[j] = str[start + i] - '0';
     }
 
     int now = n - 1;
@@ -234,10 +241,12 @@ class BigInteger {
 
     Reserve(static_cast<int>(std::size(result)));
 
-    sign_ = 1;
+    sign_ = sgn;
     pos_ = std::max<int>(0, static_cast<int>(std::size(result)) - 1);
     std::copy(std::begin(result), std::end(result), data_);
     FixLeadingZeros();
+    // Zero ("0", "-0", "000") must have sign_ == 0.
+    FixSign();
   }
 
   void Reserve(int new_size) {
@@ -1221,8 +1230,21 @@ class BigInteger {
   template <typename T>
   REQUIRES((is_builtin_integer_v<T> && sizeof(T) <= 8))
   RETURN(BigInteger&) operator/=(T other) {
-    T remain;
-    DivideInplace(*this, other, remain);
+    if (IsZero() || other == 0) {
+      T remain;
+      DivideInplace(*this, other, remain);
+      return *this;
+    }
+    // Only the quotient is needed, so a negative *this with an unsigned T is
+    // fine here (the remainder isn't stored in T).
+    using UnsignedT = pe_make_unsigned_t<T>;
+    const int signl = sign_;
+    const UnsignedT abs_value = BigInteger::GetAbsValue(other);
+    UnsignedT x;
+    AbsDivideInplace(*this, abs_value, x);
+    sign_ = signl * (other > 0 ? 1 : -1);
+    FixLeadingZeros();
+    FixSign();
     return *this;
   }
 
@@ -1234,9 +1256,7 @@ class BigInteger {
   template <typename T>
   REQUIRES((is_builtin_integer_v<T> && sizeof(T) <= 8))
   RETURN(BigInteger&) operator%=(T other) {
-    T remain;
-    DivideInplace(*this, other, remain);
-    return *this = remain;
+    return *this = *this % other;
   }
 
   BigInteger& operator&=(const BigInteger& other) {
@@ -1470,8 +1490,9 @@ class BigInteger {
       (is_builtin_integer_v<T> &&
        !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
        sizeof(T) <= 8)) RETURN(BigInteger) operator/(const BigInteger& l, T r) {
-    T remain;
-    return Divide(l, r, remain);
+    BigInteger ret(l);
+    ret /= r;
+    return ret;
   }
 
   friend inline BigInteger Divide(const BigInteger& l, const BigInteger& r,
@@ -1574,12 +1595,12 @@ class BigInteger {
     ret.sign_ = signl * (r > 0 ? 1 : -1);
     ret.FixLeadingZeros();
     ret.FixSign();
-    if (l.sign_ < 0) {
-      PE_ASSERT(x == 0 || !pe_is_unsigned_v<T>);
-      x = BigInteger::GetAbsValue(x);
-    }
-
     remain = static_cast<T>(x);
+    if (l.sign_ < 0) {
+      // The remainder has the sign of l, as in the BigInteger overload.
+      PE_ASSERT(remain == 0 || !pe_is_unsigned_v<T>);
+      remain = BigInteger::GetNegValue(remain);
+    }
 
     return ret;
   }
@@ -1630,13 +1651,21 @@ class BigInteger {
       (is_builtin_integer_v<T> &&
        !std::is_same<typename std::remove_cvref<T>::type, BigInteger>::value &&
        sizeof(T) <= 8)) RETURN(BigInteger) operator%(const BigInteger& l, T r) {
-    BigInteger u;
-    T remain;
-    Divide(l, r, remain);
-    if (l.sign() < 0) {
-      remain = BigInteger::GetNegValue(remain);
+    if (l.IsZero() || r == 0) {
+      return 0;
     }
-    return remain;
+    // The remainder has the sign of l. It is computed as |remainder| so that a
+    // negative l also works with an unsigned T.
+    using UnsignedT = pe_make_unsigned_t<T>;
+    BigInteger q(l);
+    const UnsignedT abs_value = BigInteger::GetAbsValue(r);
+    UnsignedT x;
+    BigInteger::AbsDivideInplace(q, abs_value, x);
+    BigInteger ret(x);
+    if (l.sign_ < 0) {
+      ret.sign_ = -ret.sign_;
+    }
+    return ret;
   }
 
   friend inline BigInteger operator&(const BigInteger& l, const BigInteger& r) {

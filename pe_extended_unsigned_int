@@ -132,6 +132,19 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     FromUInt32Vector(other.ToUInt32Vector());
   }
 
+  // A negative signed extended integer of another width is sign-extended, as a
+  // negative builtin integer is.
+  template <typename ET1, bool is_builtin_integer1,
+            typename TT = REQUIRES((!std::is_same_v<ET1, ET>)) RETURN(void)>
+  constexpr ExtendedUnsignedIntImpl(
+      const ExtendedSignedIntImpl<ET1, is_builtin_integer1>& other) {
+    std::vector<uint32> bits32 = other.ToUInt32Vector(0);
+    if (other.IntSign() < 0) {
+      bits32.resize(2 * sizeof(ET) / sizeof(uint32), 0xFFFFFFFFu);
+    }
+    FromUInt32Vector(bits32);
+  }
+
   constexpr ExtendedUnsignedIntImpl& operator=(const ET& other) {
     low_ = other;
     hi_ = 0;
@@ -1233,6 +1246,19 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   constexpr ExtendedUnsignedIntImpl(
       const ExtendedUnsignedIntImpl<ET1, is_builtin_integer1>& other) {
     FromUInt32Vector(other.ToUInt32Vector());
+  }
+
+  // A negative signed extended integer of another width is sign-extended, as a
+  // negative builtin integer is.
+  template <typename ET1, bool is_builtin_integer1,
+            typename TT = REQUIRES((!std::is_same_v<ET1, ET>)) RETURN(void)>
+  constexpr ExtendedUnsignedIntImpl(
+      const ExtendedSignedIntImpl<ET1, is_builtin_integer1>& other) {
+    std::vector<uint32> bits32 = other.ToUInt32Vector(0);
+    if (other.IntSign() < 0) {
+      bits32.resize(2 * sizeof(ET) / sizeof(uint32), 0xFFFFFFFFu);
+    }
+    FromUInt32Vector(bits32);
   }
 
   constexpr ExtendedUnsignedIntImpl& operator=(const ET& other) {

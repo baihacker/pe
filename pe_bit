@@ -267,7 +267,10 @@ SL constexpr int __pe_lg128(uint128 x) { return 127 - __pe_clz128(x); }
 template <typename T>
 SL constexpr REQUIRES((is_builtin_integer_v<T> && sizeof(T) <= 4)) RETURN(int)
     Popcount(T x) {
-  return pe_popcount(static_cast<uint32>(x));
+  // Convert to the unsigned type of the same width first so that negative
+  // values are not sign-extended.
+  using UnsignedT = pe_make_unsigned_t<T>;
+  return pe_popcount(static_cast<uint32>(static_cast<UnsignedT>(x)));
 }
 
 template <typename T>
@@ -295,13 +298,15 @@ SL constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(int) HasSingleBit(T x) {
 template <typename T>
 SL constexpr REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 1)) RETURN(int)
     CountLeftZero(T x) {
-  return x ? __pe_clz8(static_cast<uint32>(x)) : 8;
+  using UnsignedT = pe_make_unsigned_t<T>;
+  return x ? __pe_clz8(static_cast<uint32>(static_cast<UnsignedT>(x))) : 8;
 }
 
 template <typename T>
 SL constexpr REQUIRES((is_builtin_integer_v<T> && sizeof(T) == 2)) RETURN(int)
     CountLeftZero(T x) {
-  return x ? __pe_clz16(static_cast<uint32>(x)) : 16;
+  using UnsignedT = pe_make_unsigned_t<T>;
+  return x ? __pe_clz16(static_cast<uint32>(static_cast<UnsignedT>(x))) : 16;
 }
 
 template <typename T>
@@ -387,7 +392,8 @@ SL constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
   constexpr int bitcount = sizeof(T) * 8;
   s %= bitcount;
   if (s < 0) s += bitcount;
-  return static_cast<T>(unsigned_v << s) | (unsigned_v >> (bitcount - s));
+  if (s == 0) return x;
+  return static_cast<T>((unsigned_v << s) | (unsigned_v >> (bitcount - s)));
 }
 
 template <typename T>
@@ -398,7 +404,8 @@ SL constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
   constexpr int bitcount = sizeof(T) * 8;
   s %= bitcount;
   if (s < 0) s += bitcount;
-  return static_cast<T>(unsigned_v << bitcount - s) | (unsigned_v >> (s));
+  if (s == 0) return x;
+  return static_cast<T>((unsigned_v << (bitcount - s)) | (unsigned_v >> s));
 }
 
 template <typename T>
@@ -446,9 +453,11 @@ SL constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(T) BitFloor(T v) {
 
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<int>) BitIndex(T v) {
+  using UnsignedT = pe_make_unsigned_t<T>;
+  UnsignedT u = static_cast<UnsignedT>(v);
   std::vector<int> ret;
-  for (int i = 0; v; v >>= 1, ++i)
-    if (v & 1) {
+  for (int i = 0; u; u >>= 1, ++i)
+    if (u & 1) {
       ret.push_back(i);
     }
   return ret;

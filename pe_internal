@@ -217,9 +217,10 @@
 
 // Link: https://www.openmp.org/
 // Doc: https://www.openmp.org/wp-content/uploads/openmp-4.5.pdf
-// Add -fopenmp in gcc compile command of config it in vc solution property
-// dialog. Change 1 to 0, if you want to prevent pe from using OPENMP even if
-// OPENMP is enabled by compiler.
+// Add -fopenmp to the gcc compile command or configure it in the vc solution
+// property dialog. ENABLE_OPENMP defaults to 1 iff _OPENMP is defined; define
+// ENABLE_OPENMP=0 (e.g. -DENABLE_OPENMP=0 or in pe_config) to prevent pe from
+// using OPENMP even if OPENMP is enabled by compiler.
 #if !defined(ENABLE_OPENMP)
 #if defined(_OPENMP)
 #define ENABLE_OPENMP 1
@@ -246,7 +247,8 @@
 
 // Link: http://eigen.tuxfamily.org/index.php?title=Main_Page
 // Doc: http://eigen.tuxfamily.org/dox/
-// Please make sure #include <Eigen/Dense> work
+// Please make sure #include <Eigen/Dense> works (gen_config.py probes it; pe
+// includes <Eigen/Core>).
 #if !defined(ENABLE_EIGEN)
 #define ENABLE_EIGEN 1
 #endif
@@ -339,7 +341,8 @@ void* make_tcmalloc_used = tc_malloc(4);
 #if ENABLE_LIBBF
 
 //  Use the following fix if the libbf version is less than 2019-02-10.
-//  pe_ntt_libbf is also required to modify, see the modified code in pe4.0.
+//  pe_poly_base_libbf also needs to be modified, see the modified code in
+//  pe4.0.
 //  #include <cstdint>
 //  #include <cstdlib>
 //
@@ -408,9 +411,9 @@ static inline std::ostream& operator<<(std::ostream& o, __mpz_struct const* x) {
 #if ENABLE_MPFR
 #include <mpfr.h>
 // Don't use this adapter by default.
-// Due to some compatibilities reason,
-// If this adapter is enabled, the initialization from string will
-// have precision issue, memory allocation function may fail.
+// Due to some compatibility reasons,
+// if this adapter is enabled, the initialization from string will
+// have precision issues and memory allocation functions may fail.
 // #include <mpf2mpfr.h>
 
 #if defined(COMPILER_MSVC)
@@ -542,10 +545,10 @@ static inline std::ostream& operator<<(std::ostream& o, __mpz_struct const* x) {
 
 #if OS_TYPE_WIN
 // #if defined(COMPILER_MSVC) && OS_TYPE_WIN && PE_X86_64
-// pe_mod depends VirtualProtect when the target arch is x64.
+// pe_mod depends on VirtualProtect when the target is Windows x64.
 // pe_memory depends on several APIs if the platform is windows.
 #include <windows.h>
-// Used by pe_parallel
+// Used by the legacy pe_parallel (legacy/pe_parallel.hpp).
 #include <process.h>
 #endif
 

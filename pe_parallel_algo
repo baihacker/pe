@@ -53,8 +53,11 @@ SL void ParallelSort(T* s, T* e) {
   }
 }
 
+// FindFirst/FindLast require a signed T: they use first - 1 (or last + 1) as
+// the not-found value and step past the range boundary, which wraps around
+// for an unsigned T (e.g. FindLast with first == 0 never terminates).
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
     FindFirst(T first, T last, const std::function<bool(T)>& f) {
   const T end = last + 1;
   if (first > last) return end;
@@ -63,14 +66,14 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
     FindFirst(T first, const std::function<bool(T)>& f) {
   while (!f(first)) ++first;
   return first;
 }
 
 template <typename T, int B = 10000>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
     FindFirst(T first, const std::function<T(T, T)>& f) {
   for (T j = first;; j += B) {
     const T y = j + B - 1;
@@ -194,7 +197,7 @@ SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
     FindLast(T first, T last, const std::function<bool(T)>& f) {
   const T end = first - 1;
   if (first > last) return end;
@@ -203,14 +206,14 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
 }
 
 template <typename T>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
     FindLast(T last, const std::function<bool(T)>& f) {
   while (!f(last)) --last;
   return last;
 }
 
 template <typename T, int B = 10000>
-SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T)
+SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
     FindLast(T last, const std::function<T(T, T)>& f) {
   for (T j = last;; j -= B) {
     const T y = j - B + 1;

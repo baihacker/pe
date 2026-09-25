@@ -150,7 +150,9 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
   fmpz_mul(a, a, b);
 
   if (!COEFF_IS_MPZ(*a)) {
-    result[0] = *a;
+    // *a >= 0 since the packed inputs are non-negative.
+    result[0] = mod > 0 ? static_cast<T>(static_cast<uint64>(*a) % mod)
+                        : static_cast<T>(*a);
     for (int64 i = 1; i < n + m - 1; ++i) {
       result[i] = 0;
     }
@@ -279,6 +281,10 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
   for (int64 i = 0; i < size; ++i) {
     mp_limb_t v = nmod_poly_get_coeff_ui(a[0].coeffs + i, 0);
     result[i] = v;
+  }
+  // The leading coefficients of the product may vanish mod p.
+  for (int64 i = size; i < n + m - 1; ++i) {
+    result[i] = 0;
   }
 
   fq_nmod_poly_clear(a, ctx);
@@ -928,8 +934,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   using UnsignedT = pe_make_unsigned_t<T>;
   internal::PolyMultipointEvaluateImpl<UnsignedT>(
       reinterpret_cast<const UnsignedT*>(X), n,
-      reinterpret_cast<const UnsignedT*>(V), n, static_cast<UnsignedT*>(result),
-      mod);
+      reinterpret_cast<const UnsignedT*>(V), n,
+      reinterpret_cast<UnsignedT*>(result), mod);
 }
 
 template <typename T>

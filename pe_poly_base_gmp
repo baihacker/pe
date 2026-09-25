@@ -18,6 +18,11 @@ template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     InitAsMpz(mpz_t a, const T* X, const int64 n, const int64 need_limb,
               int64 mod) {
+  // TODO(bug) (#93): mp_bitcnt_t is a 32-bit unsigned long on Windows, so this
+  // bit index wraps once need_limb * n >= 2^26. mpz_setbit then allocates too
+  // few limbs and the loops below write past the end of the mpz buffer.
+  // NOTE: Do not let AI tools fix this automatically; it will be fixed
+  // manually.
   mpz_setbit(a,
              static_cast<mp_bitcnt_t>(need_limb * n * sizeof(mp_limb_t) * 8));
   mpz_ptr ptr = a;
@@ -44,6 +49,11 @@ template <typename T>
 SL REQUIRES((is_extended_integer_v<T>)) RETURN(void)
     InitAsMpz(mpz_t a, const T* X, const int64 n, const int64 need_limb,
               int64 mod) {
+  // TODO(bug) (#93): mp_bitcnt_t is a 32-bit unsigned long on Windows, so this
+  // bit index wraps once need_limb * n >= 2^26. mpz_setbit then allocates too
+  // few limbs and the loops below write past the end of the mpz buffer.
+  // NOTE: Do not let AI tools fix this automatically; it will be fixed
+  // manually.
   mpz_setbit(a, need_limb * n * sizeof(mp_limb_t) * 8);
   mpz_ptr ptr = a;
   if (mod > 0) {
@@ -127,15 +137,22 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
     } else {
       for (int64 i = 0; i < all_size; ++i) {
         const int64 offset = i * need_limb;
-        T it = 0;
-        for (int j = static_cast<int>(need_limb - 1); j >= 0; --j) {
-          const mp_limb_t v =
-              offset + j >= has_size ? 0 : ptr->_mp_d[offset + j];
-          it <<= 32;
-          it <<= 32;
-          it |= v;
+        if constexpr (sizeof(T) <= sizeof(mp_limb_t)) {
+          // The low limb is already the value mod 2^bits(T); shifting a T
+          // narrower than 64 bits by 32 would be undefined behavior.
+          result[i] = static_cast<T>(offset >= has_size ? 0
+                                                         : ptr->_mp_d[offset]);
+        } else {
+          T it = 0;
+          for (int j = static_cast<int>(need_limb - 1); j >= 0; --j) {
+            const mp_limb_t v =
+                offset + j >= has_size ? 0 : ptr->_mp_d[offset + j];
+            it <<= 32;
+            it <<= 32;
+            it |= v;
+          }
+          result[i] = it;
         }
-        result[i] = it;
       }
     }
   }

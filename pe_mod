@@ -158,8 +158,8 @@ SL constexpr REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
   return internal::MulModDirectlyImpl<T, TM>(a, b, mod);
 }
 
-// TODO(bug) (#131): the direct-multiply branch below is chosen based only on
-// the size of `mod`, not on whether `a`/`b` are already reduced (< mod). For
+// TODO(bug): the direct-multiply branch below is chosen based only on the
+// size of `mod`, not on whether `a`/`b` are already reduced (< mod). For
 // unreduced 32-bit a/b with a small mod, `a * b` can wrap around 2^32 before
 // the modulo, producing a wrong result (e.g. MulModUint32(2147483648u, 2u,
 // 3u) should be 1 but computes 0). Safe only if callers guarantee a, b < mod.
@@ -191,7 +191,7 @@ SL constexpr int32 MulModInt32(int32 a, int32 b, int32 mod) {
 
 // Gnu assembly language implementation
 #if defined(COMPILER_GNU) && PE_X86_64
-// TODO(bug) (#61): the 32-bit fast path is chosen when mod < 2^32 and then
+// TODO(bug): the 32-bit fast path is chosen when mod < 2^32 and then
 // truncates a and b to uint32, so unreduced operands >= 2^32 give a wrong
 // result, e.g. MulMod((uint64)(2^32 + 1), (uint64)1, (uint64)7) returns 1
 // instead of 5. The 64-bit MulMod dispatcher sends every call here on GCC
@@ -521,7 +521,7 @@ SL REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
   }
 
   internal::MulModSlowWarningOnce();
-  // TODO(bug) (#132): the shift-and-multiply fallback below is wrong: the
+  // TODO(bug): the shift-and-multiply fallback below is wrong: the
   // chunk mask uses d bits although only `now` new bits are taken, and
   // (ret << now) can overflow. If the larger operand is >= 2^63, d == now == 0
   // and the loop never ends.
@@ -824,7 +824,7 @@ struct GlobalMod {
 using GlobalMod64 = GlobalMod<int64>;
 
 // The modulus is a compiling time constant.
-// TODO(bug) (#62): BigType = M (also in TLMod and MemMod) makes the default
+// TODO(bug): BigType = M (also in TLMod and MemMod) makes the default
 // policy APSB<M, M> multiply in M without widening, which overflows once mod
 // is above about sqrt(max of M), e.g. NModNumber<CCMod64<p>> for p > 3.04e9.
 // NModCC64 and NModTL64 override the policy with fake_int128.
@@ -879,7 +879,7 @@ struct APSB {
   }
   static ints Sub(ints a, ints b, ints mod) {
     intb c = static_cast<intb>(a) - b;
-    // TODO(bug) (#134): for an unsigned intb, c < 0 is never true, so a - b
+    // TODO(bug): for an unsigned intb, c < 0 is never true, so a - b
     // wraps modulo 2^w and mod is never added back.
     // NOTE: Do not let AI tools change this.
     if (c < 0) c += mod;
@@ -905,7 +905,7 @@ struct APSB<S, S> {
   }
   static ints Sub(ints a, ints b, ints mod) {
     a -= b;
-    // TODO(bug) (#134): for an unsigned ints (e.g. CCMod<uint64, p>), a < 0 is
+    // TODO(bug): for an unsigned ints (e.g. CCMod<uint64, p>), a < 0 is
     // never true, so a - b wraps modulo 2^w and mod is never added back.
     // NOTE: Do not let AI tools change this.
     if (a < 0) a += mod;
@@ -931,7 +931,7 @@ struct APSB<S, fake_int128> {
   }
   static ints Sub(ints a, ints b, ints mod) {
     a -= b;
-    // TODO(bug) (#134): for an unsigned ints (e.g. CCMod<uint64, p>), a < 0 is
+    // TODO(bug): for an unsigned ints (e.g. CCMod<uint64, p>), a < 0 is
     // never true, so a - b wraps modulo 2^w and mod is never added back.
     // NOTE: Do not let AI tools change this.
     if (a < 0) a += mod;

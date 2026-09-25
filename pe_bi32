@@ -66,10 +66,10 @@ struct BiAllocatorFixedSize {
 using BiAllocator = internal::BiAllocatorStd;
 
 // Class layout principle:
-// Idealy, if a method A uses method B, B should be declared before A.
+// Ideally, if a method A uses method B, B should be declared before A.
 
 // Class layout:
-// Usefule constants
+// Useful constants
 // Utility function for constructors
 // Constructor and operator=
 // Internal constructors
@@ -149,7 +149,8 @@ class BigInteger {
     if (value > 0) {
       FromNativeInt<UnsignedT>(static_cast<UnsignedT>(value));
     } else {
-      // Note: it works for value = T::min()
+      // Note: -value overflows (UB) for value = T::min() when T is at least as
+      // wide as int; it only gives the right magnitude on compilers that wrap.
       FromNativeInt<UnsignedT>(static_cast<UnsignedT>(-value));
       sign_ = -1;
     }
@@ -686,7 +687,8 @@ class BigInteger {
 
 #if HAS_POLY_MUL_NTT32
     {
-      // If the cost of ntt is less than normal multiplication, then use ntt.
+      // Use ntt if its estimated cost is less than half of the cost of the
+      // normal multiplication.
       const uint64 cost1 = static_cast<uint64>(std::size(l)) * std::size(r);
       const uint64 len = (std::size(l) + std::size(r)) << 1;
       int64 aligned_len = 1;

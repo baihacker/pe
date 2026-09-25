@@ -36,13 +36,13 @@ To use this library, you need a C++ development environment that supports:
        - `ENABLE_ZMQ`: Use [ZeroMQ](https://zeromq.org/).
        - `ENABLE_PRIME_COUNT`: Use [PrimeCount](https://github.com/kimwalisch/primecount).
        - `ENABLE_PRIME_SIEVE`: Use [PrimeSieve](https://github.com/kimwalisch/primesieve).
-       - `ENABLE_TCMALLOC`: Use [tcmalloc](https://github.com/gperftools/gperftools).
+     - `ENABLE_TCMALLOC` ([tcmalloc](https://github.com/gperftools/gperftools)) is not detected; the script always sets it to `0`.
    - Manually edit **[pe_config](https://github.com/baihacker/pe/blob/master/pe_config)** to add or modify configuration items as needed:
      - `ENABLE_OPENMP`: Enable [OpenMP](http://www.openmp.org). The script doesn't generate the default config for OpenMP.
 
 3. **(Optional) Generate Precompiled Header:**
-   - Run `g++ -xc++-header pe.hpp` in the installation directory to create a precompiled header (`pe.hpp.gch`).
-   - You may add additional compiler options if required (e.g., `g++ -xc++-header pe.hpp --std=c++20 -O3 -march=native -fopenmp`).
+   - Run `g++ -xc++-header pe.hpp --std=c++20` in the installation directory to create a precompiled header (`pe.hpp.gch`).
+   - The options must match those used to compile your programs, so add them as required (e.g., `g++ -xc++-header pe.hpp --std=c++20 -O3 -march=native -fopenmp`).
 
 ## Usage
 
@@ -85,13 +85,13 @@ int main() {
   // Sequence
   Sequence<int64> a;
   std::cout << (a[1] + a[2]).Generate({0, 1}, 20)
-            << std::endl;  // First 20 fibonacci numbers.
+            << std::endl;  // Fibonacci numbers F(0) to F(20).
   std::cout << *FindLinearRecurrenceValues({0, 1, 1, 2, 3}, 20, mod)
             << std::endl;  // Automatically find the linear recurrence and
-                           // output the first 20 elements. Fibonacci numbers.
+                           // output the elements 0 to 20. Fibonacci numbers.
   std::cout << *FindRecurrenceValues({1, 1, 2, 5, 14, 42}, 20, mod, 1)
             << std::endl;  // Automatically find the recurrence and output the
-                           // first 20 elements. Catalan numbers.
+                           // elements 0 to 20. Catalan numbers.
 
   return 0;
 }
@@ -105,7 +105,8 @@ This list categorizes the library files by their functional modules for easier u
 
 **Core & Base**
 
-*   `pe.hpp`: **Core header file**. Used to generate a precompiled header, it includes the main functional modules of the library.
+*   `pe.hpp`: **Entry point**. The header to include (`#include <pe.hpp>`) and to use for a precompiled header. It only includes `pe`.
+*   `pe`: **Module aggregator**. Includes all the functional modules of the library in dependency order.
 *   `pe_base`: **Base components**. Includes standard library headers, common macros (e.g., `PE_ASSERT`), type definitions (`int64`, `uint128`), and basic inline functions.
 *   `pe_internal`: **Internal implementation details**. Includes the configuration file (`pe_config`), performs compiler/platform checks, and manages the inclusion of third-party libraries.
 *   `pe_config`: **Centralized configuration file**. Used to configure various features of the PE library, such as enabling third-party libraries (`ENABLE_GMP`), `int128` support, and assertions.
@@ -121,14 +122,14 @@ This list categorizes the library files by their functional modules for easier u
 *   `pe_span`: **Span implementation**. Provides an implementation of `Span` to represent a non-owning view over a contiguous sequence of objects.
 *   `pe_range`: **Range implementation**. Used for creating and operating on sequence ranges with a fluent API.
 *   `pe_tree`: **Tree-based data structures**. Contains implementations such as Fenwick trees (`RUBit`, `RSQBit`) and Splay trees (`SplayMultiSet`).
-*   `pe_persistance`: **Key-value persistence**. Offers key-value persistence functionality, which may require adjustments to support Linux.
+*   `pe_persistance`: **Placeholder**. Reserved for key-value persistence; currently empty.
 
 **Integer & Numerical Computing**
 
 *   `pe_int`: **Basic integer utilities**. Provides fundamental integer operation utility functions.
 *   `pe_extended_int`: **Extended integer types**. A header that consolidates extended-precision signed and unsigned integer types.
-*   `pe_extended_unsigned_int`: **Extended unsigned integers**. Implements arbitrarily large unsigned integer types.
-*   `pe_extended_signed_int`: **Extended signed integers**. Implements arbitrarily large signed integer types by building upon the unsigned versions.
+*   `pe_extended_unsigned_int`: **Extended unsigned integers**. Implements fixed-width unsigned integer types by doubling the width of a smaller type (`uint128e`, `uint256e`, `uint512e`, `uint1024e`).
+*   `pe_extended_signed_int`: **Extended signed integers**. Implements fixed-width signed integer types by building upon the unsigned versions (`int128e` to `int1024e`).
 *   `pe_bi32`: **Big integer (Base 1<<32)**. A big integer implementation (`BigInteger`) using an array of `uint32` values.
 *   `pe_mpz`: **Multi-precision integers (GMP-based)**. A wrapper for the GMP library's `mpz_t` type for high-precision integer arithmetic.
 *   `pe_gbi`: **General big integer operations**. Provides a unified interface for operations on various big integer types defined in the library.
@@ -146,14 +147,15 @@ This list categorizes the library files by their functional modules for easier u
 
 **Number Theory**
 
-*   `pe_nt_base`: **Basic number theory**. Includes prime list generation, integer factorization, primality testing, and computation of Euler's totient (`phi`) and Möbius (`mu`) functions.
-*   `pe_nt`: **Core number theory utilities**. An extension of `pe_nt_base`, providing more number theory functions like integer square root (`SqrtI`) and advanced primality testing (`IsPrimeEx`).
+*   `pe_nt_base`: **Basic number theory**. Includes prime list generation, integer factorization, primality testing (`IsPrime`, `IsPrimeEx`), and computation of Euler's totient (`phi`) and Möbius (`mu`) functions.
+*   `pe_nt`: **Core number theory utilities**. An extension of `pe_nt_base`, providing more number theory functions like integer square root (`SqrtI`).
 *   `pe_ntf`: **Number-theoretic functions**. Contains algorithms for prefix sums of advanced number-theoretic functions like `MuSummer`, `MuPhiSummer`, and `Sigma0Summer`.
 *   `pe_db`: **Pre-calculated results database**. Loads and saves pre-calculated results, such as the prime-counting function `π(x)` and the sum of primes, to speed up computations.
 
 **Polynomial & Fast Fourier Transform**
 
 *   `pe_fft`: **Fast Fourier Transform**. Provides FFT utilities and polynomial multiplication.
+*   `pe_poly_base_common`: **Shared polynomial definitions**. Common types and helpers used by the polynomial backends (e.g., `PolyMulCoeType`).
 *   `pe_poly_base`: **Basic polynomial algorithms**. Provides fundamental polynomial operations like addition, subtraction, multiplication, division, inversion, and exponentiation, serving as an entry point for various underlying implementations.
 *   `pe_poly_base_flint`: **FLINT-based** polynomial algorithm implementation.
 *   `pe_poly_base_gmp`: **GMP-based** polynomial algorithm implementation.
@@ -166,7 +168,7 @@ This list categorizes the library files by their functional modules for easier u
 
 **Parallel & Distributed Computing**
 
-*   `pe_parallel`: **Multi-threading framework**. A simple framework for multi-threaded problem-solving (Windows only).
+*   `pe_parallel`: **Process and thread utilities**. Process priority and single-instance helpers (Windows only), and an OpenMP lock (`OmpLock`, when `ENABLE_OPENMP` is set).
 *   `pe_parallel_algo`: **Parallel algorithms**. Contains parallel sort (`ParallelSort`) and parallel find (`ParallelFindFirst`) algorithms.
 *   `pe_dpe`: **Distributed computation**. Provides a framework for distributed computing using ZeroMQ (`ENABLE_ZMQ`).
 

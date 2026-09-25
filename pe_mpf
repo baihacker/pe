@@ -135,6 +135,11 @@ class Mpf {
 
   Mpf(double t) { mpf_init_set_d(f, t); }
 
+  // TODO(bug) (#67): std::to_string(long double) formats with "%Lf", i.e. only
+  // 6 decimal places, so small values become 0 (Mpf(1e-10L) is 0) and every
+  // value loses precision beyond 1e-6.
+  // NOTE: Do not let AI tools fix this automatically; it will be fixed
+  // manually.
   Mpf(long double t) : Mpf(std::to_string(t)) {}
 
   Mpf(const std::string& s) : Mpf(s.c_str()) {}
@@ -416,7 +421,8 @@ class Mpfr {
 
   Mpfr(double t) { mpfr_init_set_d(f, t, MPFR_RNDNA); }
 
-  Mpfr(long double t) : Mpfr(std::to_string(t)) {}
+  // std::to_string(long double) keeps only 6 decimal places.
+  Mpfr(long double t) { mpfr_init_set_ld(f, t, MPFR_RNDN); }
 
   Mpfr(const std::string& s) : Mpfr(s.c_str()) {}
 

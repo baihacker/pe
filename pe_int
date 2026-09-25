@@ -123,13 +123,8 @@ struct hash<uint128> {
 #endif
 #endif
 
-SL int128 gcd(int128 a, int128 b) {
-  while (b != 0) {
-    int128 t = a % b;
-    a = b;
-    b = t;
-  }
-  return a;
+SL uint128 __pe_abs_u128(int128 a) {
+  return a < 0 ? -static_cast<uint128>(a) : static_cast<uint128>(a);
 }
 
 SL uint128 gcd(uint128 a, uint128 b) {
@@ -141,25 +136,27 @@ SL uint128 gcd(uint128 a, uint128 b) {
   return a;
 }
 
-SL uint128 gcd(int128 a, uint128 b) { return gcd(static_cast<uint128>(a), b); }
-
-SL uint128 gcd(uint128 a, int128 b) { return gcd(a, static_cast<uint128>(b)); }
-
-SL int128 lcm(int128 a, int128 b) {
-  if (a == 0) return b;
-  if (b == 0) return a;
-  return a / gcd(a, b) * b;
+// Like std::gcd and std::lcm: the results are non-negative, and lcm(0, x) = 0.
+SL int128 gcd(int128 a, int128 b) {
+  return static_cast<int128>(gcd(__pe_abs_u128(a), __pe_abs_u128(b)));
 }
+
+SL uint128 gcd(int128 a, uint128 b) { return gcd(__pe_abs_u128(a), b); }
+
+SL uint128 gcd(uint128 a, int128 b) { return gcd(a, __pe_abs_u128(b)); }
 
 SL uint128 lcm(uint128 a, uint128 b) {
-  if (a == 0) return b;
-  if (b == 0) return a;
+  if (a == 0 || b == 0) return 0;
   return a / gcd(a, b) * b;
 }
 
-SL uint128 lcm(int128 a, uint128 b) { return lcm(static_cast<uint128>(a), b); }
+SL int128 lcm(int128 a, int128 b) {
+  return static_cast<int128>(lcm(__pe_abs_u128(a), __pe_abs_u128(b)));
+}
 
-SL uint128 lcm(uint128 a, int128 b) { return lcm(a, static_cast<uint128>(b)); }
+SL uint128 lcm(int128 a, uint128 b) { return lcm(__pe_abs_u128(a), b); }
+
+SL uint128 lcm(uint128 a, int128 b) { return lcm(a, __pe_abs_u128(b)); }
 }  // namespace std
 
 #endif

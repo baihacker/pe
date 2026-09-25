@@ -238,8 +238,15 @@ SL std::vector<T> ToContinuedFraction(DT p, DT q, int n = -1) {
   if (n >= 0) {
     result.reserve(n);
   }
+  // Use floor division with a positive denominator, so that every term after
+  // the first is positive (the canonical expansion), also for negative input.
+  if (q < 0) {
+    p = -p;
+    q = -q;
+  }
   while (q != 0 && (n == -1 || std::size(result) < n)) {
-    auto [quotient, remainder] = Div(p, q);
+    DT quotient = FloorDiv(p, q);
+    DT remainder = p - quotient * q;
     result.push_back(std::move(quotient));
     std::swap(p = std::move(remainder), q);
   }

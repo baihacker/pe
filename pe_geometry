@@ -219,13 +219,16 @@ struct Point3D {
   }
 
   friend T Cross(const Point3D& a, const Point3D& b, const Point3D& c) {
-    return a.x * Cross({b.y, b.z}, {c.y, c.z}) -
-           b.x * Cross({a.y, a.z}, {c.y, c.z}) +
-           c.x * Cross({a.y, a.z}, {b.y, b.z});
+    // Determinant of the matrix with rows a, b, c, expanded along its first
+    // column. (No 2D Cross overload accepts braced lists, so the 2x2 minors
+    // are written out.)
+    return a.x * (b.y * c.z - b.z * c.y) - b.x * (a.y * c.z - a.z * c.y) +
+           c.x * (a.y * b.z - a.z * b.y);
   }
 
-  friend Point3D Cross(const Point3D& a, const Point3D& b, const Point3D& c,
-                       const Point3D& d) {
+  // Signed volume (times 6) of the tetrahedron a, b, c, d.
+  friend T Cross(const Point3D& a, const Point3D& b, const Point3D& c,
+                 const Point3D& d) {
     return Cross(b - a, c - a, d - a);
   }
 
@@ -260,14 +263,14 @@ SL T Cross(std::pair<T, T> v0, std::pair<T, T> v1) {
 
 template <typename T>
 SL T Dot(std::pair<T, T> v0, std::pair<T, T> v1, std::pair<T, T> v2) {
-  return Dot<std::pair<T, T>>(
+  return Dot<T>(
       std::pair<T, T>{v1.first - v0.first, v1.second - v0.second},
       std::pair<T, T>{v2.first - v0.first, v2.second - v0.second});
 }
 
 template <typename T>
 SL T Cross(std::pair<T, T> v0, std::pair<T, T> v1, std::pair<T, T> v2) {
-  return Cross<std::pair<T, T>>(
+  return Cross<T>(
       std::pair<T, T>{v1.first - v0.first, v1.second - v0.second},
       std::pair<T, T>{v2.first - v0.first, v2.second - v0.second});
 }
@@ -289,7 +292,7 @@ SL typename GeoConstant::DT DegreeToRad(GeoConstant::DT degree) {
 
 template <typename T = double>
 struct Rotation {
-  Rotation(T rad_) : cos_(std::cos(rad_)), sin_(std::sin(rad_)) {}
+  Rotation(T rad) : rad_(rad), cos_(std::cos(rad)), sin_(std::sin(rad)) {}
   std::pair<T, T> operator()(T x, T y) const {
     return {cos_ * x - sin_ * y, sin_ * x + cos_ * y};
   }

@@ -88,12 +88,14 @@ SL std::optional<int64> ParseNumberToken(std::optional<std::string> s) {
       }
       ++j;
     }
-    int64 value = 0;
-    while (j < size && std::isdigit(t[j])) {
-      value = value * 10 + t[j] - '0';
+    // Accumulate in uint64 so that values near the int64 limits (including
+    // INT64_MIN) don't overflow; the conversion back to int64 is modular.
+    uint64 value = 0;
+    while (j < size && std::isdigit(static_cast<unsigned char>(t[j]))) {
+      value = value * 10 + static_cast<uint64>(t[j] - '0');
       ++j;
     }
-    return sgn < 0 ? -value : value;
+    return static_cast<int64>(sgn < 0 ? uint64(0) - value : value);
   }
   return std::nullopt;
 }
@@ -250,15 +252,30 @@ class DpeServer {
 
     char *buffer = new char[internal::kDpeBufferLength + 1];
     for (; solved < total;) {
-      // TODO(bug): zmq_recv returns the actual message size even when it
-      // exceeds the buffer (truncating the copy), so a message larger than
-      // kDpeBufferLength makes `received` overflow this null-terminator
-      // write. Clamp `received` to kDpeBufferLength before using it.
       int received = zmq_recv(responder, buffer, internal::kDpeBufferLength, 0);
+      if (received < 0) {
+        // Nothing was received, so no reply is expected.
+        if (zmq_errno() != EINTR) {
+          std::cerr << "zmq_recv failed: " << zmq_strerror(zmq_errno())
+                    << std::endl;
+        }
+        continue;
+      }
+      if (received > internal::kDpeBufferLength) {
+        // zmq_recv returns the full message size when the message is
+        // truncated. The request is rejected, but REP still needs a reply.
+        std::cerr << "Request is too large: " << received << " bytes"
+                  << std::endl;
+        const std::string response = "error()";
+        zmq_send(responder, std::data(response), std::size(response), 0);
+        continue;
+      }
       buffer[received] = 0;
       std::string response = HandleRequest(std::string_view(buffer, received));
       zmq_send(responder, std::data(response), std::size(response), 0);
     }
+    // Results received after the last periodic save.
+    SaveCache();
     LogProgress();
     delete[] buffer;
     zmq_close(responder);
@@ -336,10 +353,9 @@ class DpeServer {
     char *buff = new char[buff_size];
     while (fgets(buff, buff_size, fp) != nullptr) {
       auto *curr = buff;
-      // TODO(bug): no bound against the end of the fgets buffer -- a
-      // malformed/corrupted cache line with no whitespace delimiter causes
-      // this to scan past the buffer (out-of-bounds read).
-      while (!std::isspace(*curr)) ++curr;
+      while (*curr && !std::isspace(static_cast<unsigned char>(*curr))) ++curr;
+      // Skip a malformed or truncated line without a key delimiter.
+      if (*curr == '\0' || curr == buff) continue;
       std::string key(buff, curr);
       ++curr;
       auto where = cache.find(key);
@@ -395,11 +411,13 @@ class DpeServer {
     for (const auto &result : answers) {
       std::string key = result.Key();
       auto where = cache.find(key);
-      if (where != std::end(cache)) {
-        where->second = result;
-        ++solved;
+      // Only count and reduce a result the first time its key is seen.
+      if (where == std::end(cache) || where->second.has_value()) {
+        continue;
       }
-      AsDerived().Reduce(task_map[key], result);
+      where->second = result;
+      ++solved;
+      AsDerived().Reduce(task_map.at(key), result);
       if (solved % 1000 == 0) {
         SaveCache();
       }
@@ -472,10 +490,10 @@ class DpeClient {
     AsDerived().InitWorker();
 
     if (get_task_buffer == nullptr) {
-      get_task_buffer = new char[internal::kDpeBufferLength];
+      get_task_buffer = new char[internal::kDpeBufferLength + 1];
     }
     if (send_result_buffer == nullptr) {
-      send_result_buffer = new char[internal::kDpeBufferLength];
+      send_result_buffer = new char[internal::kDpeBufferLength + 1];
     }
 #if ENABLE_OPENMP
 #pragma omp parallel for schedule(dynamic, 1) num_threads(thread_count)
@@ -551,13 +569,15 @@ class DpeClient {
     std::string cmd = raw_command.ToString();
 
     zmq_send(requester, std::data(cmd), std::size(cmd), 0);
-    // TODO(bug): same truncation issue as RunReducer -- `cnt` can exceed
-    // kDpeBufferLength for an oversized message, overflowing the
-    // null-terminator write below.
     int cnt =
         zmq_recv(requester, get_task_buffer, internal::kDpeBufferLength, 0);
     zmq_close(requester);
     zmq_ctx_destroy(context);
+    // cnt < 0: error. cnt > kDpeBufferLength: the message was truncated.
+    if (cnt < 0 || cnt > internal::kDpeBufferLength) {
+      std::cerr << "Cannot receive tasks" << std::endl;
+      exit(-1);
+    }
     get_task_buffer[cnt] = 0;
 
     std::optional<DpeCommand> result =

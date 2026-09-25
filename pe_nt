@@ -194,10 +194,14 @@ SL REQUIRES((sizeof...(TT) >= 2 &&
 template <typename T>
 SL REQUIRES((is_general_integer_v<T>)) RETURN(T)
     Lcm(std::initializer_list<T> init) {
+  // lcm with 0 is 0. The empty list gives 0.
+  bool first = true;
   T ret = 0;
   for (const T& v : init) {
-    if (IsZero(ret)) {
+    if (IsZero(v)) return T(0);
+    if (first) {
       ret = v;
+      first = false;
     } else {
       ret = ret / Gcd(ret, v) * v;
     }
@@ -208,10 +212,14 @@ SL REQUIRES((is_general_integer_v<T>)) RETURN(T)
 template <typename T>
 SL REQUIRES((is_general_integer_v<T>)) RETURN(T)
     Lcm(const std::vector<T>& init) {
+  // lcm with 0 is 0. The empty list gives 0.
+  bool first = true;
   T ret = 0;
   for (const T& v : init) {
-    if (IsZero(ret)) {
+    if (IsZero(v)) return T(0);
+    if (first) {
       ret = v;
+      first = false;
     } else {
       ret = ret / Gcd(ret, v) * v;
     }
@@ -414,7 +422,8 @@ SL REQUIRES((!IsNModNumberV<T>)) RETURN(T)
 template <typename T = int64>
 SL REQUIRES((IsNModNumberV<T>)) RETURN(T)
     SumMultiple(const int64 n, const int64 d) {
-  const auto t0 = ExtractValue(T(n / d));
+  // Take the parity of n / d before reducing it: the modulus may be even.
+  const int64 t0 = n / d;
   const T t1 = t0 & 1 ? T((t0 + 1) >> 1) * t0 : T(t0 >> 1) * (t0 + 1);
   return t1 * d;
 }
@@ -648,6 +657,11 @@ template <typename IT, typename TM>
 SL REQUIRES((!IsNModNumberV<typename std::iterator_traits<IT>::value_type>))
     RETURN(void) InitInverse(IT dest, int64 maxn, TM mod) {
   PE_ASSERT(maxn >= 0);
+  if (mod == 1) {
+    // Every value is 0 modulo 1.
+    for (int64 i = 0; i <= maxn; ++i) *dest++ = 0;
+    return;
+  }
   IT start = dest;
   *dest++ = 0;
   if (maxn >= 1) {
@@ -693,8 +707,9 @@ SL REQUIRES((IsNModNumberV<typename std::iterator_traits<IT>::value_type>))
     const auto u = start[k] * start[k];
     *dest++ = u * v * i;
   }
-  for (auto i = mod; i <= maxn; ++i) {
-    *dest++ = start[i - mod];
+  // Index explicitly: for mod == 1, dest is already at index 2.
+  for (int64 i = std::max<int64>(mod, 2); i <= maxn; ++i) {
+    start[i] = start[i - mod];
   }
 }
 
@@ -935,10 +950,11 @@ SL int64 Ind(int64 a, int64 pr, int64 p) {
   int64 mx = static_cast<int64>(std::sqrt(double(p - 1) + 0.5));
   if (mx * mx != p - 1) ++mx;
   map_t mem;
+  a %= p;
   int64 t1 = 1, t2 = a;
   for (int i = 0; i <= mx - 1; ++i) {
     mem[t2] = i;
-    t2 = t2 * inv_pr % p;
+    t2 = MulMod(t2, inv_pr, p);
   }
   const int64 temp = PowerMod(pr, mx, p);
   for (int i = 0; i <= mx - 1; ++i) {
@@ -946,7 +962,7 @@ SL int64 Ind(int64 a, int64 pr, int64 p) {
     if (where != std::end(mem)) {
       return i * mx + where->second;
     }
-    t1 = t1 * temp % p;
+    t1 = MulMod(t1, temp, p);
   }
   return -1;
 }
@@ -968,7 +984,7 @@ class IndSolver {
     int64 t = 1;
     for (int i = 0; i <= mx_ - 1; ++i) {
       mem_[t] = i;
-      t = t * inv_pr % p_;
+      t = MulMod(t, inv_pr, p_);
     }
   }
 
@@ -987,7 +1003,7 @@ class IndSolver {
       if (where != std::end(mem_)) {
         return i * mx_ + where->second;
       }
-      t = t * temp % p_;
+      t = MulMod(t, temp, p_);
     }
 
     return -1;
@@ -1054,6 +1070,8 @@ SL int64 SquareRootModImpl(int64 n, int64 p) {
   if (p == 2) {
     return n & 1;
   }
+  n %= p;
+  if (n < 0) n += p;
   if (n == 0) {
     return 0;
   }
@@ -1974,8 +1992,9 @@ SL int64 HeptSumMod(int64 n, int64 mod) { return P7SumMod(n, mod); }
 // if b < a: return 0
 SL int64 GpSumMod(int64 x, int64 a, int64 b, int64 mod, int64 zero_p_zero = 1) {
   if (mod == 1 || b < a) return 0;
-  if (b < a) return 0;
+  // x must be in [0, mod) for MulMod/AddMod.
   x %= mod;
+  if (x < 0) x += mod;
   // |x 0|^(b-a) x^a
   // |x 1|       x^a
   int64 u = x;

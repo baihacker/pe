@@ -350,7 +350,8 @@ struct PowerModerEx {
     c_ = MulMod(powers_.back(), x_, mod_);
 
     const int64 size = (128 + lgf_ - 1) / lgf_;
-    ppowers_.resize(size);
+    // Rebuild the rows from scratch, Init may be called more than once.
+    ppowers_.assign(size, {});
     ppowers_[0] = powers_;
 
     for (int64 i = 1; i < size; ++i) {
@@ -408,7 +409,7 @@ struct CombModer {
   T Comb(int64 n, int64 m) const { return Cal(n, m); }
 
   T Cal(int64 n, int64 m) const {
-    if (n < 0 || m > n) return 0;
+    if (n < 0 || m < 0 || m > n) return 0;
     if (m == n || m == 0) return 1;
     if (m == 1 || m == n - 1) return n % p_;
 
@@ -494,7 +495,7 @@ struct CombModerEx {
   T Comb(int64 n, int64 m) { return Cal(n, m); }
 
   T Cal(int64 n, int64 m) {
-    if (n < 0 || m > n) return 0;
+    if (n < 0 || m < 0 || m > n) return 0;
     if (m == n || m == 0) return 1;
     if (m == 1 || m == n - 1) return n % p_;
 
@@ -552,6 +553,15 @@ struct CombModerPrimePower {
   }
 
   // Note: if i % p == 0, then the contribution of i is 1.
+  //
+  // TODO(bug): the Lagrange numerators below (beta_numer = u * prod(u^2 - i^2)
+  // and alpha_numer = u * prod(u - i), with u = n / p) are computed exactly in
+  // T before dividing by the denominator and reducing mod phi_. They overflow
+  // T for large u, e.g. with T = int64 and e >= 3 once u is around 2e6, and
+  // then the result is wrong: CombModerPrimePower<int64>(3, 4)(30000000, 1)
+  // returns 66 instead of 30.
+  // NOTE: Do not let AI tools fix this automatically; it will be fixed
+  // manually.
   T FactorialModInternal(const T& n) const {
     T u = n / p_;
     T v = n % p_;
@@ -1738,7 +1748,8 @@ struct DfaCounter {
       prepared_ = 1;
     }
 
-    U l = 1, r = 0;
+    // Start from 0: the number 0 (the empty digit string) may be accepted.
+    U l = 0, r = 0;
     for (int len = FindLen(k); len--;) {
       r = r * number_base_ + number_base_ - 1;
     }
@@ -1761,12 +1772,12 @@ struct DfaCounter {
     }
 
     int len = FindLen(k);
-    if (count_each_len_) {
+    if (count_each_len_ && len > 0) {
       k -= acc_[len - 1];
     }
 
     U result = 0;
-    for (int state = 0; len > 0; --len) {
+    for (int state = init_state_; len > 0; --len) {
       for (int i = 0; i < number_base_; ++i) {
         int now = dfa_[state][i];
         CT cnt = dp_[len - 1][now];
@@ -1976,6 +1987,11 @@ struct CarlitzWordsCounter {
   }
 
   int64 Cal(std::vector<int64> vec) {
+    // A letter that never appears doesn't change the count.
+    vec.erase(std::remove(std::begin(vec), std::end(vec), 0), std::end(vec));
+    if (std::empty(vec)) {
+      return 1 % mod_;
+    }
     if (std::size(vec) == 1) {
       return vec[0] == 1 ? 1 : 0;
     }
@@ -2126,7 +2142,7 @@ SL int64 RecurrenceValueNext(const std::vector<std::vector<int64>>& recurrence,
   int64 s = 0;
   for (int i = 1; i <= order; ++i) {
     const int64 k = SubMod(Mod(m, mod), Mod(i, mod), mod);
-    int64 t = terms[std::size(terms) - i];
+    int64 t = Mod(terms[std::size(terms) - i], mod);
     for (int d = 0; d <= deg; ++d) {
       s = AddMod(s, MulMod(t, recurrence[order - i][d], mod), mod);
       t = MulMod(t, k, mod);

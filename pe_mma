@@ -23,9 +23,9 @@ namespace mma {
 //
 // Example: example/mma_find_recurrence.c.
 //
-// If leading = 1 and max_degree = 0, use NthElement, FindLinearRecurrence
-// implemented in pe_poly_algo. The implementation uses Berlekamp Massey
-// algorithm.
+// If leading = 1 and max_degree = 0, use FindLinearRecurrence,
+// FindLinearRecurrenceValueAt or LinearRecurrenceValueAt implemented in
+// pe_poly_algo. The implementation uses Berlekamp Massey algorithm.
 template <typename T>
 SL void ValidateAll(const std::vector<T>& values, const std::string& result,
                     T leading = 1);
@@ -719,9 +719,9 @@ struct MmaExpParser {
     // operand is missing.
     // = 1, an operator is expected, build is the last building node of
     // the last operand of the previous expression.
-    // the last operand is [suffix unary operators]* operand [postfix unary
-    // operators]* where operand can have bracket. The last building node is the
-    // node corresponds to the operand of the last unary operator.
+    // the last operand is [prefix unary operators]* operand [postfix unary
+    // operators]* where operand can have brackets. The last building node is
+    // the node corresponds to the operand of the last unary operator.
     int state = 0;
     std::string token;
     for (int t = NextToken(token);
@@ -1056,7 +1056,9 @@ struct MmaModExpCompiler {
       case SUB:
       case DIV:
       case POW: {
-        // Inside an exponent (has_mod == 0) nothing is reduced mod `mod`.
+        // Inside an exponent (has_mod == 0) no "% mod" is appended and SUB/DIV
+        // are not reduced. A nested power, however, is still emitted as
+        // PowerMod(..., mod), so x^(y^2) uses y^2 mod `mod` as the exponent.
         CompileImpl(tree->left, has_mod);
         int a = tree->left->iid;
         if (tree->nodeType == SUB) {

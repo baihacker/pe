@@ -57,8 +57,10 @@ SL constexpr REQUIRES((is_builtin_integer_v<T>)) RETURN(T) Mod(T a, T mod) {
 #if PE_HAS_INT128
 // Returns a % b.
 // If possible, it uses an assembly language implementation which requires a / b
-// <= uint64_max, otherwise an exception is thrown.
-// The common use case is a = x * y whwere x < b and y < b.
+// <= uint64_max, otherwise the CPU raises a divide error and the process
+// crashes (it is not a C++ exception). The portable fallback has no such
+// restriction.
+// The common use case is a = x * y where x < b and y < b.
 SL uint64 Uint128ModUint64(uint128 a, uint64 b) {
 #if defined(COMPILER_GNU) && PE_X86_64
   uint64 q, r;
@@ -102,9 +104,9 @@ SL constexpr REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
 }
 
 // TODO(bug): this base case returns `a` unreduced. If `a >= mod`, the
-// recursive AddMod(x, SumMod(mod, a), mod) call above only does a single
-// conditional subtraction and may return a value still >= mod, e.g.
-// SumMod(10, 3, 25) should be 8 but can return 18.
+// recursive AddMod(x, SumMod(mod, a), mod) call in the variadic overload below
+// only does a single conditional subtraction and may return a value still
+// >= mod, e.g. SumMod(10, 3, 25) should be 8 but returns 18.
 template <typename TM, typename T>
 SL constexpr T SumMod(TM /*mod*/, T a) {
   return a;
@@ -460,7 +462,7 @@ SL constexpr REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
          static_cast<ResultType>(mod);
 }
 
-// If all the operand size is no more than sizeof(int32), use uint32
+// If all operand sizes are no more than sizeof(int32), use the uint32
 // implementation.
 template <typename T1, typename T2, typename TM>
 SL constexpr REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
@@ -472,7 +474,7 @@ SL constexpr REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
   return MulModUint32(a, b, mod);
 }
 
-// At least one of the operand size is sizeof(int64) and all are no more than
+// At least one operand size is sizeof(int64) and all are no more than
 // sizeof(int64).
 template <typename T1, typename T2, typename TM>
 SL REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
@@ -801,7 +803,7 @@ enum class ModContextType { STATIC, DYNAMIC };
 // instance. This context can only be used with NModNumberM. NModNumberM is
 // not used in most cases.
 
-// 1. If the modulus is a compiling-time integer, use CCMod<T, value>.
+// 1. If the modulus is a compile-time integer, use CCMod<T, value>.
 // 2. If the modulus is a runtime integer accessed by a single thread or
 // multiple threads share the same modulus, use GlobalMod<T>.
 // Call GlobalMod<T>::Set(mod_value) to initialize the modulus once.
@@ -823,7 +825,7 @@ struct GlobalMod {
 
 using GlobalMod64 = GlobalMod<int64>;
 
-// The modulus is a compiling time constant.
+// The modulus is a compile-time constant.
 // TODO(bug): BigType = M (also in TLMod and MemMod) makes the default
 // policy APSB<M, M> multiply in M without widening, which overflows once mod
 // is above about sqrt(max of M), e.g. NModNumber<CCMod64<p>> for p > 3.04e9.
@@ -959,7 +961,7 @@ struct NModNumber;
 
 // MC = mod context
 // AP = arithmetic policy
-// Use MC::mod() to get the modulus, i.e. the modulus can be retrieve from a
+// Use MC::mod() to get the modulus, i.e. the modulus can be retrieved from a
 // static context (not related to an instance of the mod context)
 template <typename MC,
           typename AP = APSB<typename MC::ModType, typename MC::BigType>>
@@ -1149,8 +1151,8 @@ struct NModNumberM;
 
 // MC = mod context
 // AP = arithmetic policy
-// Use mc.mod() to get the modulus. i.e. the modulus is associated with
-// an instance of mod context.
+// Use mc.mod() to get the modulus, i.e. the modulus is associated with
+// an instance of the mod context.
 template <typename MC,
           typename AP = APSB<typename MC::ModType, typename MC::BigType>>
 struct NModNumberM {

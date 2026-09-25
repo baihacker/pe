@@ -256,8 +256,9 @@ struct ExtendedSignedIntImpl<ET, true>
 
   constexpr ExtendedSignedIntImpl Difference(
       const ExtendedSignedIntImpl& other) const {
-    auto t = base::Difference(other);
-    return ExtendedSignedIntImpl(t.low(), t.hi());
+    // The unsigned base::Difference compares the bit patterns as unsigned
+    // values, which is wrong for operands with different signs.
+    return *this >= other ? *this - other : other - *this;
   }
 
  public:
@@ -408,6 +409,12 @@ struct ExtendedSignedIntImpl<ET, true>
     return *this;
   }
 
+  template <typename T>
+  constexpr REQUIRES((is_builtin_integer_v<T>))
+      RETURN(ExtendedSignedIntImpl&) operator&=(const T & other) {
+    return *this &= ExtendedSignedIntImpl(other);
+  }
+
   constexpr ExtendedSignedIntImpl& operator^=(
       const ExtendedSignedIntImpl& other) {
     base::low_ ^= other.low();
@@ -420,6 +427,12 @@ struct ExtendedSignedIntImpl<ET, true>
     return *this;
   }
 
+  template <typename T>
+  constexpr REQUIRES((is_builtin_integer_v<T>))
+      RETURN(ExtendedSignedIntImpl&) operator^=(const T & other) {
+    return *this ^= ExtendedSignedIntImpl(other);
+  }
+
   constexpr ExtendedSignedIntImpl& operator|=(
       const ExtendedSignedIntImpl& other) {
     base::low_ |= other.low();
@@ -430,6 +443,12 @@ struct ExtendedSignedIntImpl<ET, true>
   constexpr ExtendedSignedIntImpl& operator|=(const ET& other) {
     base::low_ |= other;
     return *this;
+  }
+
+  template <typename T>
+  constexpr REQUIRES((is_builtin_integer_v<T>))
+      RETURN(ExtendedSignedIntImpl&) operator|=(const T & other) {
+    return *this |= ExtendedSignedIntImpl(other);
   }
 
   // TODO(bug): no validation that cnt >= 0; a negative cnt reaches a shift
@@ -816,8 +835,9 @@ struct ExtendedSignedIntImpl<ET, false>
 
   constexpr ExtendedSignedIntImpl Difference(
       const ExtendedSignedIntImpl& other) const {
-    auto t = base::Difference(other);
-    return ExtendedSignedIntImpl(t.low(), t.hi());
+    // The unsigned base::Difference compares the bit patterns as unsigned
+    // values, which is wrong for operands with different signs.
+    return *this >= other ? *this - other : other - *this;
   }
 
  public:

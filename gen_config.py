@@ -55,7 +55,7 @@ def main():
   content.append('// Configuration priority (first match):')
   content.append('// 1. Compiling command')
   content.append('// 2. The configurations in this file')
-  content.append('// 3. The configurations in file pe')
+  content.append('// 3. The default configurations in file pe_internal')
   content.append('')
   add_define('ENABLE_ASSERT', '1')
   add_define('TRY_TO_USE_INT128', '1')

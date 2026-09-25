@@ -26,7 +26,10 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
     }
   } else {
     for (int64 i = 0; i < n; ++i) {
-      p[i] = ToInt<uint64>(Mod(x[i], mod));
+      // mod < 2^32 so the value fits in unsigned long (32 bits on Windows).
+      // Assigning it as a (signed) long would wrap values >= 2^31.
+      p[i] = NTL::to_ZZ_p(NTL::to_ZZ(
+          static_cast<unsigned long>(ToInt<uint64>(Mod(x[i], mod)))));
     }
   }
 }
@@ -45,7 +48,7 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
     }
   } else {
     for (int64 i = 0; i <= m; ++i) {
-      x[i] = static_cast<T>(to_int(reinterpret_cast<NTL::ZZ&>(p[i])));
+      x[i] = static_cast<T>(NTL::to_ulong(reinterpret_cast<NTL::ZZ&>(p[i])));
     }
   }
   for (int64 i = m + 1; i < n; ++i) {
@@ -117,6 +120,7 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
                 int64 mod) {
   if (PolyMulAcceptLengthAndMod(NTL_SP_BOUND, n, m, mod)) {
     PolyMulSmallImpl(X, n, Y, m, result, mod);
+    return;
   }
   PolyMulLargeImpl(X, n, Y, m, result, mod);
 }

@@ -365,7 +365,7 @@ struct PowerModerEx {
   T operator()(int64 n) { return Cal(n); }
 
   T Cal(int64 n) {
-    if (n <= f_) {
+    if (n < f_) {
       return powers_[n];
     }
     int64 r = 1 % mod_;
@@ -1050,8 +1050,8 @@ struct MValueVisitorEx {
         const AT next_now =
             static_cast<D&>(*this).AccumulateValue(now, p, e, pd);
         const AT next_now1 =
-            p == vmp ? now1
-                     : static_cast<D&>(*this).AccumulateValue(now1, p, e, pd);
+            imp == -1 ? now1
+                      : static_cast<D&>(*this).AccumulateValue(now1, p, e, pd);
         ret += Dfs(i, n, next_val, next_imp, next_vmp, next_vmp == p ? e : emp,
                    history, top + 1, next_now, next_now1);
         if (next_val > val_limit) break;
@@ -1373,9 +1373,13 @@ struct PerfectPowerCounter {
 
   void Init() {
     PE_ASSERT(pivot_ < (1 << 20));
-    pre_ = new int[pivot_][20];
+    pre_ = new int[pivot_ + 1][20];
     std::fill(pre_[0], pre_[0] + 20, 0);
-    pre_[0][0] = 1;
+    if (pivot_ >= 1) {
+      // x = 1 has f(1) = Gcd() = 0.
+      std::fill(pre_[1], pre_[1] + 20, 0);
+      pre_[1][0] = 1;
+    }
     for (int i = 2; i <= pivot_; ++i) {
       int d = 0;
       for (auto& iter : Factorize(i)) d = Gcd(d, iter.second);
@@ -1386,7 +1390,7 @@ struct PerfectPowerCounter {
 
   // Use f(x) to denote Gcd of exponentions of x.
   // i.e if x = p1^e1 * p2^e2 * p3^e3, then f(x) = Gcd(e1, e2, e3).
-  // f(1) = 1
+  // f(1) = 0
   // This method returns # {x | f(x) = d, 1 <= x <= n}
   // n < 2^128, d >= 0
   T Cal(T n, int d) {

@@ -259,45 +259,27 @@ struct SplayMultiSet {
     }
     --data_[0].size;
 
-    int64 p = iter->pre;
-    if (iter->ch[0] == 0 && iter->ch[1] == 0) {
-      if (iter.idx_ == data_[p].ch[0]) {
-        data_[p].ch[0] = 0;
-      } else {
-        data_[p].ch[1] = 0;
-      }
-      Update(p);
+    // Splay the node to the root first so that the sizes of all its ancestors
+    // are recomputed and its neighbors are easy to reach.
+    const int64 v = iter.idx_;
+    Splay(v, 0);
+    const int64 l = data_[v].ch[0];
+    const int64 r = data_[v].ch[1];
+    if (l == 0) {
+      data_[0].ch[0] = r;
+      if (r) data_[r].pre = 0;
       return;
     }
-    if (iter->ch[0] == 0) {
-      int64 t = iter->ch[1];
-      if (iter.idx_ == data_[p].ch[0]) {
-        data_[p].ch[0] = t;
-      } else {
-        data_[p].ch[1] = t;
-      }
-      data_[t].pre = p;
-      Update(p);
-      return;
-    }
-    if (iter->ch[1] == 0) {
-      int64 t = iter->ch[0];
-      if (iter.idx_ == data_[p].ch[0]) {
-        data_[p].ch[0] = t;
-      } else {
-        data_[p].ch[1] = t;
-      }
-      data_[t].pre = p;
-      Update(p);
-      return;
-    }
-    Iterator x = iter;
-    --x;
-    Splay(x.idx_, 0);
-    int64 t = iter->ch[1];
-    data_[x.idx_].ch[1] = t;
-    data_[t].pre = x.idx_;
-    Update(x.idx_);
+    // Splay the predecessor (the maximum of the left subtree) below v. It then
+    // has no right child and can take over v's right subtree.
+    int64 x = l;
+    while (data_[x].ch[1]) x = data_[x].ch[1];
+    Splay(x, v);
+    data_[x].ch[1] = r;
+    if (r) data_[r].pre = x;
+    data_[x].pre = 0;
+    data_[0].ch[0] = x;
+    Update(x);
   }
 
   void erase(T value) {

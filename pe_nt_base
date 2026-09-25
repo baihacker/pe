@@ -288,7 +288,7 @@ SL void InitPrimes(int cal_phi, int cal_mu, int cal_rad, int cal_sigma0,
       if (static_cast<uint32>(i) % static_cast<uint32>(plist[j]) == 0) {
         if (mu) mu[t] = 0;
         if (phi) phi[t] = phi[i] * plist[j];
-        if (rad) rad[t] = 0;
+        if (rad) rad[t] = rad[i];
         break;
       } else {
         if (mu) mu[t] = -mu[i];
@@ -1452,6 +1452,8 @@ struct PrimeEnumeratorPs {
   Iterator begin() const {
     Iterator ret{start_, end_, const_cast<primesieve::iterator*>(&it_)};
     ret.SeekNext();
+    // primesieve >= 11 yields primes >= start - 1, older versions > start - 1.
+    while (*ret > 0 && *ret < start_) ++ret;
     return ret;
   }
 
@@ -1480,7 +1482,10 @@ SL std::vector<T> GetPrimesInRangePs(int64 start, int64 end) {
 
   std::vector<T> result;
   primesieve::iterator it(std::max(start - 1, 1LL), end);
-  for (auto p = it.next_prime(); p <= end; p = it.next_prime()) {
+  auto p = it.next_prime();
+  // primesieve >= 11 yields primes >= start - 1, older versions > start - 1.
+  while (p < start) p = it.next_prime();
+  for (; p <= end; p = it.next_prime()) {
     result.emplace_back(p);
   }
   return result;

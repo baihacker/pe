@@ -255,20 +255,50 @@ SL std::vector<T> ToContinuedFraction(int64 x, int64 y, int64 w, int64 z,
                                       int n) {
   PE_ASSERT(w > 0);
   PE_ASSERT(n >= 0);
-  const int64 sqrt_w = SqrtI(w);
+  int64 sqrt_w = SqrtI(w);
+  while (sqrt_w > 0 && static_cast<uint64>(sqrt_w) * sqrt_w > static_cast<uint64>(w)) {
+    --sqrt_w;
+  }
+  while (static_cast<uint64>(sqrt_w + 1) * (sqrt_w + 1) <= static_cast<uint64>(w)) {
+    ++sqrt_w;
+  }
   if (sqrt_w * sqrt_w == w) {
     return ToContinuedFraction<T>(x + y * sqrt_w, z, n);
   }
+  // (x + y sqrt(w)) / z = (p + sqrt(d)) / q with p = +-x*z, q = +-z^2,
+  // d = w*(y*z)^2, where the sign is chosen so that sqrt(d) has coefficient +1.
+  // q | d - p^2 holds, as required by the standard recurrence.
+  T k = T(y) * z;
   T p = T(x) * z;
-  const T d = T(w) * y * y * z * z;
   T q = T(z) * z;
-  const T dd = T(sqrt_w) * y * z;
+  if (k < 0) {
+    k = -k;
+    p = -p;
+    q = -q;
+  }
+  const T d = T(w) * k * k;
+  // s = floor(sqrt(d)) = floor(k * sqrt(w)), which lies in
+  // [sqrt_w * k, (sqrt_w + 1) * k).
+  T lo = T(sqrt_w) * k;
+  T hi = lo + k;
+  while (hi - lo > 1) {
+    const T mid = lo + (hi - lo) / 2;
+    if (mid * mid <= d) {
+      lo = mid;
+    } else {
+      hi = mid;
+    }
+  }
+  const T s = lo;
   std::vector<T> result;
   result.reserve(n);
   while (std::size(result) < n) {
-    result.emplace_back((p + dd) / q);
-    p = result.back() * q - p;
+    // floor((p + sqrt(d)) / q). sqrt(d) is irrational, so for q < 0 the value
+    // is -ceil((p + sqrt(d)) / |q|) = -(floor((p + s) / |q|) + 1).
+    T a = q > 0 ? FloorDiv(p + s, q) : -(FloorDiv(p + s, -q) + 1);
+    p = a * q - p;
     q = (d - p * p) / q;
+    result.push_back(std::move(a));
   }
   return result;
 }

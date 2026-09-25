@@ -544,9 +544,13 @@ class BigInteger {
   static void AbsAddInplace(BigInteger& self, const BigInteger& other) {
     if (std::size(self) <= 2 && std::size(other) <= 1 ||
         std::size(self) <= 1 && std::size(other) <= 2) {
-      self.SetNativeUInt64AndKeepSign(self.ToInt<uint64>() +
-                                      other.ToInt<uint64>());
-      return;
+      const uint64 a = self.ToInt<uint64>();
+      const uint64 sum = a + other.ToInt<uint64>();
+      // Only take the fast path if there is no carry out of 64 bits.
+      if (sum >= a) {
+        self.SetNativeUInt64AndKeepSign(sum);
+        return;
+      }
     }
 
     self.Reserve(std::size(self) + std::size(other) + 1);

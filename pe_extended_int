@@ -180,11 +180,19 @@ SL REQUIRES((is_extended_integer_v<T>)) RETURN(T)
 template <typename T, typename TM>
 SL REQUIRES((is_extended_integer_v<T>)) RETURN(T)
     SubMod(T a, const T& b, TM mod) {
-  a -= b;
-  if (IntSign(a) < 0) {
-    a += mod;
+  if constexpr (pe_is_unsigned_v<T>) {
+    if (a >= b) return a - b;
+    T t = mod;
+    t -= b;
+    t += a;
+    return t;
+  } else {
+    a -= b;
+    if (IntSign(a) < 0) {
+      a += mod;
+    }
+    return a;
   }
-  return a;
 }
 
 template <typename T, typename TM>

@@ -76,7 +76,15 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
   bf_add(&z1, &z0, &toadd, BF_PREC_MAX, 0);
 
   const int64 size = n + m - 1;
-  const limb_t* data = z1.tab;
+  // libbf strips trailing zero limbs from the result, so z1.tab may start above
+  // limb 0 of the full layout. The full layout is the 2(n+m)-limb product plus
+  // the 2 limbs that hold toadd. Re-align into a zero padded buffer.
+  const int64 full_len = 2 * (n + m) + 2;
+  const int64 shift = full_len - static_cast<int64>(z1.len);
+  PE_ASSERT(shift >= 0);
+  std::vector<limb_t> buffer(full_len, 0);
+  std::copy(z1.tab, z1.tab + z1.len, std::begin(buffer) + shift);
+  const limb_t* data = std::data(buffer);
 
   if (mod > 0) {
     const auto magic1 = (1LL << 32) % mod;

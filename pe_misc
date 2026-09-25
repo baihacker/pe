@@ -140,7 +140,9 @@ class GaussianEliminationSolver {
   }
 
   const std::vector<double>& Solve() {
-    reduce(0);
+    // Partial pivoting is required: without it a zero leading entry divides
+    // by zero even if the system is nonsingular.
+    reduce(1);
     PE_ASSERT(Rank() == row);
     ans.resize(row);
     for (int i = row - 1; i >= 0; --i) {
@@ -795,7 +797,8 @@ u128 sigma1_sum_fast(const u64 N) {
   }
   ret += y * (N / y) + s / 2;
   ret -= u128(y - 1) * x * (x + 1) / 2;
-  return ret - u128(N) * (N + 1) / 2;
+  // The upstream code returns sum(sigma1(n) - n); we want sum(sigma1(n)).
+  return ret;
 }
 #endif
 }  // namespace min25

@@ -74,6 +74,8 @@ SL void MatMulMatMod(T (*a)[D], T (*b)[D], T (*c)[D], int64 mod, int N = D) {
     for (int j = 0; j < N; ++j) {
       int64 s = 0;
       for (int k = 0; k < N; ++k) {
+        // Intended: s + MulMod(...) is assumed not to overflow int64, i.e.
+        // mod <= 2^62. NOTE: Do not let AI tools change this.
         s += MulMod(a[i][k], b[k][j], mod);
         if (s >= mod) {
           s -= mod;
@@ -92,6 +94,8 @@ SL void MatMulMatMod(T* aa, T* bb, T* cc, int64 mod, int N) {
       T* c = cc + i * N;
       int64 s = 0;
       for (int k = 0; k < N; ++k) {
+        // Intended: s + MulMod(...) is assumed not to overflow int64, i.e.
+        // mod <= 2^62. NOTE: Do not let AI tools change this.
         s += MulMod(a[k], (bb + k * N)[j], mod);
         if (s >= mod) {
           s -= mod;
@@ -107,6 +111,8 @@ SL void MatMulVecMod(T (*a)[D], T (*b)[D], T (*c)[D], int64 mod, int N = D) {
   for (int i = 0; i < N; ++i) {
     int64 s = 0;
     for (int k = 0; k < N; ++k) {
+      // Intended: s + MulMod(...) is assumed not to overflow int64, i.e.
+      // mod <= 2^62. NOTE: Do not let AI tools change this.
       s += MulMod(a[i][k], b[k][0], mod);
       if (s >= mod) {
         s -= mod;
@@ -121,6 +127,8 @@ SL void MatMulVecMod(T (*a)[D], T* b, T* c, int64 mod, int N = D) {
   for (int i = 0; i < N; ++i) {
     int64 s = 0;
     for (int k = 0; k < N; ++k) {
+      // Intended: s + MulMod(...) is assumed not to overflow int64, i.e.
+      // mod <= 2^62. NOTE: Do not let AI tools change this.
       s += MulMod(a[i][k], b[k], mod);
       if (s >= mod) {
         s -= mod;
@@ -136,6 +144,8 @@ SL void MatMulVecMod(T* aa, T* b, T* c, int64 mod, int N) {
     T* a = aa + i * N;
     int64 s = 0;
     for (int k = 0; k < N; ++k) {
+      // Intended: s + MulMod(...) is assumed not to overflow int64, i.e.
+      // mod <= 2^62. NOTE: Do not let AI tools change this.
       s += MulMod(a[k], b[k], mod);
       if (s >= mod) {
         s -= mod;
@@ -593,6 +603,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(PeMatrix<T, -1>)
 #endif
   for (int i = 0; i < r; ++i) {
     for (int j = 0; j < c; ++j) {
+      // Intended: the unreduced sum is assumed to fit in T.
+      // NOTE: Do not let AI tools change this.
       T s = 0;
       for (int k = 0; k < cr; ++k) {
         s += MulMod(m1(i, k), m2(k, j), mod);
@@ -669,6 +681,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   const int cr = m1.col();
   std::vector<T> result(r);
   for (int i = 0; i < r; ++i) {
+    // Intended: the unreduced sum is assumed to fit in T.
+    // NOTE: Do not let AI tools change this.
     T s = 0;
     for (int k = 0; k < cr; ++k) {
       s += MulMod(m1(i, k), m2[k], mod);
@@ -745,7 +759,17 @@ SL PeMatrix<T, -1> MatrixPowerPe(const PeMatrix<T, C>& m, int64 n, T mod) {
   PeMatrix<T, -1> result(r, r);
   PeMatrix<T, C> t(m);
 
-  const T ONE = 1;
+  // MulMod requires the operands in [0, mod).
+  if constexpr (is_builtin_integer_v<T>) {
+    for (int i = 0; i < r; ++i) {
+      for (int j = 0; j < r; ++j) {
+        t(i, j) = Mod(t(i, j), mod);
+      }
+    }
+  }
+
+  // The identity is reduced too, so that mod == 1 gives zeros.
+  const T ONE = T(1) % mod;
   for (int i = 0; i < r; ++i) {
     result(i, i) = ONE;
   }
@@ -823,6 +847,18 @@ SL std::vector<T> MatrixPowerPe(const PeMatrix<T, C>& m, int64 n,
 
   std::vector<T> result = v;
   PeMatrix<T, C> t = m;
+
+  // MulMod requires the operands in [0, mod).
+  if constexpr (is_builtin_integer_v<T>) {
+    for (int i = 0; i < r; ++i) {
+      for (int j = 0; j < r; ++j) {
+        t(i, j) = Mod(t(i, j), mod);
+      }
+    }
+    for (auto& x : result) {
+      x = Mod(x, mod);
+    }
+  }
 
   for (; n; n >>= 1) {
     if (n & 1) {
@@ -1540,12 +1576,12 @@ class SparseMatrixAdjMap {
 
   int Row() const { return n_; }
 
-  std::vector<std::map<int, T>>& Row(int i) {
+  std::map<int, T>& Row(int i) {
     PE_ASSERT(i >= 0 && i < n_);
     return adj_[i];
   }
 
-  const std::vector<std::map<int, T>>& Row(int i) const {
+  const std::map<int, T>& Row(int i) const {
     PE_ASSERT(i >= 0 && i < n_);
     return adj_[i];
   }

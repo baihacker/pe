@@ -982,7 +982,8 @@ SL void BuildSuffixArray(std::string_view T, int* SA, int* rank, int* lcp) {
   const int n = static_cast<int>(std::size(T));
   int char_set[256] = {0};
   int k = 0;
-  for (char c : T) {
+  // char may be signed: use unsigned char as the index.
+  for (unsigned char c : T) {
     if (char_set[c] == 0) {
       ++k;
     }
@@ -993,7 +994,7 @@ SL void BuildSuffixArray(std::string_view T, int* SA, int* rank, int* lcp) {
   }
   int* text = new int[n + 3];
   for (int i = 0; i < n; ++i) {
-    text[i] = char_set[T[i]];
+    text[i] = char_set[static_cast<unsigned char>(T[i])];
   }
   text[n] = text[n + 1] = text[n + 2] = 0;
   if (n == 1) {
@@ -1047,12 +1048,15 @@ struct SAM {
   void Reset() {
     state_[0].len = 0;
     state_[0].link = -1;
+    state_[0].next.clear();
     top_ = 1;
     last_ = 0;
   }
 
   void Extend(char c) {
     const int cur = top_++;
+    // The slot may be reused after Reset.
+    state_[cur].next.clear();
     state_[cur].len = state_[last_].len + 1;
     int p = last_;
     while (p != -1 && !state_[p].next.count(c)) {
@@ -1141,7 +1145,7 @@ struct TableFormatter {
           left_padding = diff;
         } else {
           left_padding = diff >> 1;
-          right_padding = width - left_padding;
+          right_padding = diff - left_padding;
         }
         std::string result = str;
         if (left_padding > 0) {
@@ -1319,7 +1323,7 @@ using IntegerRange128 = IntegerRange<int128>;
 template <typename T>
 SL T CountIntegersInRanges(const std::vector<IntegerRange<T>>& ranges) {
   T ret = 0;
-  for (IntegerRange<T>& iter : ranges) {
+  for (const IntegerRange<T>& iter : ranges) {
     const T t = iter.Count();
     if (t < 0) {
       return -1;
@@ -1626,7 +1630,7 @@ struct PeriodicSequence {
       each += values[i];
     }
     ret += (n - start) / (end - start) * each;
-    for (int i = start; i <= start + (n - start) % (end - start); ++i) {
+    for (int64 i = start; i < start + (n - start) % (end - start); ++i) {
       ret += values[i];
     }
     return ret;

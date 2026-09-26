@@ -158,6 +158,10 @@ template <typename T, uint32 mod>
 SL std::vector<uint32> RunNtt(const NttMod32& moder, const T* X, int64 n,
                               const T* Y, int64 m, int64 target_mod) {
   const int64 aligned_size = BitCeil(n + m - 1);
+  // The modulus only has 2^i-th roots of unity for i <= moder.k: a larger
+  // transform would read the uninitialized omg[i] and silently return a wrong
+  // product.
+  PE_ASSERT(aligned_size <= (int64(1) << moder.k));
   // When target_mod <= NTT mod, coefficients already fit in [0, mod) if they
   // are reduced into [0, target_mod) (the caller's responsibility; unreduced
   // values are truncated to uint32); no pre-reduction step is needed before
@@ -289,6 +293,9 @@ SL std::vector<std::vector<uint32>> RunNtt2D(
   const int64 aligned_m = BitCeil(m1 + m2 - 1);
   const int64 buffer_size = aligned_n * aligned_m;
 
+  // The modulus only has 2^i-th roots of unity for i <= moder.k.
+  PE_ASSERT(aligned_n <= (int64(1) << moder.k));
+  PE_ASSERT(aligned_m <= (int64(1) << moder.k));
   const bool skip_mod = target_mod > 0 && static_cast<uint64>(target_mod) <=
                                               static_cast<uint64>(mod);
   std::vector<uint32> XX(buffer_size, 0);

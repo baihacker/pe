@@ -1436,17 +1436,14 @@ SL std::vector<T> GetPrimesInRangePe(int64 start, int64 end) {
 template <typename T = int64>
 struct PrimeEnumeratorPs {
   PrimeEnumeratorPs(T start, T end = -1)
-      : start_(start <= 1 ? 2 : start),
-        end_(end),
-        it_(std::max(start_ - 1, 1LL),
-            end < 0 ? primesieve::get_max_stop() : end) {}
+      : start_(start <= 1 ? 2 : start), end_(end) {}
 
   struct Iterator {
     using reference = T;
     using value_type = T;
 
-    Iterator(T now, T end, primesieve::iterator* it)
-        : now_(now), end_(end), it_(it) {}
+    Iterator(T now, T end, std::shared_ptr<primesieve::iterator> it)
+        : now_(now), end_(end), it_(std::move(it)) {}
 
     int operator==(const Iterator& o) const { return now_ == o.now_; }
 
@@ -1480,23 +1477,26 @@ struct PrimeEnumeratorPs {
    private:
     T now_;
     T end_;
-    primesieve::iterator* it_;
+    std::shared_ptr<primesieve::iterator> it_;
   };
 
   using iterator = Iterator;
   using const_iterator = Iterator;
 
   Iterator begin() const {
-    Iterator ret{start_, end_, const_cast<primesieve::iterator*>(&it_)};
+    // Each begin() gets its own primesieve iterator, so that the range can be
+    // enumerated more than once and iterators do not interfere.
+    auto it = std::make_shared<primesieve::iterator>(
+        static_cast<uint64>(start_) - 1,
+        end_ < 0 ? primesieve::get_max_stop() : static_cast<uint64>(end_));
+    Iterator ret{start_, end_, std::move(it)};
     ret.SeekNext();
     // primesieve >= 11 yields primes >= start - 1, older versions > start - 1.
     while (*ret > 0 && *ret < start_) ++ret;
     return ret;
   }
 
-  Iterator end() const {
-    return {-1, end_, const_cast<primesieve::iterator*>(&it_)};
-  }
+  Iterator end() const { return {static_cast<T>(-1), end_, nullptr}; }
 
   ContainerRange<Iterator> ToRange() const {
     return ContainerRange<Iterator>(begin(), end());
@@ -1505,7 +1505,6 @@ struct PrimeEnumeratorPs {
  private:
   T start_;
   T end_;
-  primesieve::iterator it_;
 };
 
 template <typename T = int64>

@@ -34,29 +34,39 @@ class MpInteger {
     int cnt = 0;
     for (T v = value; v;) {
       ++cnt;
+      // A T narrower than a limb fits in one limb; shifting it (after integer
+      // promotion) by LIMB_BITCOUNT / 2 could be undefined behavior.
+      if constexpr (sizeof(T) < sizeof(mp_limb_t)) {
+        v = 0;
+      } else {
 #if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
-      v >>= MpInteger::LIMB_BITCOUNT / 4;
-      v >>= MpInteger::LIMB_BITCOUNT / 4;
-      v >>= MpInteger::LIMB_BITCOUNT / 4;
-      v >>= MpInteger::LIMB_BITCOUNT / 4;
+        v >>= MpInteger::LIMB_BITCOUNT / 4;
+        v >>= MpInteger::LIMB_BITCOUNT / 4;
+        v >>= MpInteger::LIMB_BITCOUNT / 4;
+        v >>= MpInteger::LIMB_BITCOUNT / 4;
 #else
-      v >>= MpInteger::LIMB_BITCOUNT / 2;
-      v >>= MpInteger::LIMB_BITCOUNT / 2;
+        v >>= MpInteger::LIMB_BITCOUNT / 2;
+        v >>= MpInteger::LIMB_BITCOUNT / 2;
 #endif
+      }
     }
     mpz_init2(z, cnt * MpInteger::LIMB_BITCOUNT);
     mp_limb_t* t = z->_mp_d;
     for (int i = 0; i < cnt; ++i) {
       *t++ = MpInteger::LIMB_MASK & value;
+      if constexpr (sizeof(T) < sizeof(mp_limb_t)) {
+        value = 0;
+      } else {
 #if defined(COMPILER_MSVC) || defined(COMPILER_CLANG)
-      value >>= MpInteger::LIMB_BITCOUNT / 4;
-      value >>= MpInteger::LIMB_BITCOUNT / 4;
-      value >>= MpInteger::LIMB_BITCOUNT / 4;
-      value >>= MpInteger::LIMB_BITCOUNT / 4;
+        value >>= MpInteger::LIMB_BITCOUNT / 4;
+        value >>= MpInteger::LIMB_BITCOUNT / 4;
+        value >>= MpInteger::LIMB_BITCOUNT / 4;
+        value >>= MpInteger::LIMB_BITCOUNT / 4;
 #else
-      value >>= MpInteger::LIMB_BITCOUNT / 2;
-      value >>= MpInteger::LIMB_BITCOUNT / 2;
+        value >>= MpInteger::LIMB_BITCOUNT / 2;
+        value >>= MpInteger::LIMB_BITCOUNT / 2;
 #endif
+      }
     }
     z->_mp_size = cnt;
   }
@@ -157,16 +167,16 @@ class MpInteger {
   MpInteger(const mpz_t o) { mpz_init_set(z, o); }
 
   template <typename T,
-            typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(void)>
+            typename TT = REQUIRES((is_builtin_integer_v<T> &&
+                                    !std::is_same<T, bool>::value))
+                RETURN(void)>
   MpInteger(T value) {
     FromNativeInt(value);
   }
 
-  template <typename T,
-            typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(T)>
-  MpInteger(const std::vector<T>& v) {
-    FromUInt32Vector(v);
-  }
+  MpInteger(bool value) : MpInteger(static_cast<long>(value)) {}
+
+  MpInteger(const std::vector<uint32>& v) { FromUInt32Vector(v); }
 
   template <typename T,
             typename TT = REQUIRES((is_extended_integer_v<T>)) RETURN(void)>

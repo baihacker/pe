@@ -34,15 +34,18 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
   limb_t* data = target->tab;
   if (mod == 0) {
     for (int64 i = 0; i < n; ++i) {
-      T t = X[i];
-      PE_ASSERT((t >> 64) == 0);
+      // Shifting a T of at most 64 bits by 64 would be undefined behavior.
+      if constexpr (sizeof(T) > 8) {
+        PE_ASSERT((X[i] >> 64) == 0);
+      }
       data[i << 1] = ToInt<limb_t>(X[i]);
       data[(i << 1) | 1] = 0;
     }
   } else {
     for (int64 i = 0; i < n; ++i) {
-      T t = X[i];
-      PE_ASSERT((t >> 64) == 0);
+      if constexpr (sizeof(T) > 8) {
+        PE_ASSERT((X[i] >> 64) == 0);
+      }
       data[i << 1] = ToInt<limb_t>(Mod(X[i], mod));
       data[(i << 1) | 1] = 0;
     }
@@ -106,6 +109,10 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
       const uint64 hi = data[(i << 1) | 1];
       if (hi == 0) {
         result[i] = low;
+      } else if constexpr (sizeof(T) <= 8) {
+        // The low limb is already the value mod 2^bits(T); shifting a T
+        // narrower than 64 bits by 32 would be undefined behavior.
+        result[i] = static_cast<T>(low);
       } else {
         T it = hi;
         it <<= 32;

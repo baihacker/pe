@@ -413,15 +413,15 @@ class Mpfr {
 
   static int GetDefaultPrec() { return mpfr_get_default_prec(); }
 
-  Mpfr() { mpfr_init_set_si(f, 0, MPFR_RNDNA); }
+  Mpfr() { mpfr_init_set_si(f, 0, MPFR_RNDN); }
 
   Mpfr(bool t) : Mpfr(static_cast<long>(t ? 1 : 0)) {}
 
   Mpfr(int t) : Mpfr(static_cast<long>(t)) {}
 
-  Mpfr(long t) { mpfr_init_set_si(f, t, MPFR_RNDNA); }
+  Mpfr(long t) { mpfr_init_set_si(f, t, MPFR_RNDN); }
 
-  Mpfr(double t) { mpfr_init_set_d(f, t, MPFR_RNDNA); }
+  Mpfr(double t) { mpfr_init_set_d(f, t, MPFR_RNDN); }
 
   // Use mpfr_init_set_ld directly (full precision). Going through
   // std::to_string(long double), as Mpf does, keeps only 6 decimal places.
@@ -429,13 +429,13 @@ class Mpfr {
 
   Mpfr(const std::string& s) : Mpfr(s.c_str()) {}
 
-  Mpfr(const char* s) { mpfr_init_set_str(f, s, 10, MPFR_RNDNA); }
+  Mpfr(const char* s) { mpfr_init_set_str(f, s, 10, MPFR_RNDN); }
 
-  Mpfr(const mpfr_t o) { mpfr_init_set(f, o, MPFR_RNDNA); }
+  Mpfr(const mpfr_t o) { mpfr_init_set(f, o, MPFR_RNDN); }
 
   Mpfr(const MpInteger& o) {
     mpfr_init(f);
-    mpfr_set_z(f, o.mpz(), MPFR_RNDNA);
+    mpfr_set_z(f, o.mpz(), MPFR_RNDN);
   }
 
   template <typename T, typename TT = REQUIRES((is_builtin_integer_v<T> &&
@@ -443,12 +443,12 @@ class Mpfr {
                             RETURN(void)>
   Mpfr(T value) : Mpfr(MpInteger(value)) {}
 
-  Mpfr(const Mpfr& o) { mpfr_init_set(f, o.f, MPFR_RNDNA); }
+  Mpfr(const Mpfr& o) { mpfr_init_set(f, o.f, MPFR_RNDN); }
 
   Mpfr(Mpfr&& o) noexcept {
     // Initialize first, so that the moved-from object is a valid zero after
     // the swap (and can be reassigned or queried).
-    mpfr_init_set_si(f, 0, MPFR_RNDNA);
+    mpfr_init_set_si(f, 0, MPFR_RNDN);
     mpfr_swap(f, o.f);
   }
 
@@ -459,7 +459,7 @@ class Mpfr {
   }
 
   Mpfr& operator=(const Mpfr& o) {
-    mpfr_set(f, o.f, MPFR_RNDNA);
+    mpfr_set(f, o.f, MPFR_RNDN);
     return *this;
   }
 
@@ -471,28 +471,28 @@ class Mpfr {
   template <typename T,
             typename TT = REQUIRES((is_builtin_integer_v<T>)) RETURN(T)>
   Mpfr& operator=(T value) {
-    mpfr_set_z(f, MpInteger(value).mpz(), MPFR_RNDNA);
+    mpfr_set_z(f, MpInteger(value).mpz(), MPFR_RNDN);
     return *this;
   }
 
  public:
   Mpfr& operator+=(const Mpfr& a) {
-    mpfr_add(f, f, a.f, MPFR_RNDNA);
+    mpfr_add(f, f, a.f, MPFR_RNDN);
     return *this;
   }
 
   Mpfr& operator-=(const Mpfr& a) {
-    mpfr_sub(f, f, a.f, MPFR_RNDNA);
+    mpfr_sub(f, f, a.f, MPFR_RNDN);
     return *this;
   }
 
   Mpfr& operator*=(const Mpfr& a) {
-    mpfr_mul(f, f, a.f, MPFR_RNDNA);
+    mpfr_mul(f, f, a.f, MPFR_RNDN);
     return *this;
   }
 
   Mpfr& operator/=(const Mpfr& a) {
-    mpfr_div(f, f, a.f, MPFR_RNDNA);
+    mpfr_div(f, f, a.f, MPFR_RNDN);
     return *this;
   }
 
@@ -503,7 +503,7 @@ class Mpfr {
 
   Mpfr operator++(int) {
     Mpfr ret(*this);
-    mpfr_add_ui(f, f, 1, MPFR_RNDNA);
+    mpfr_add_ui(f, f, 1, MPFR_RNDN);
     return ret;
   }
 
@@ -516,31 +516,31 @@ class Mpfr {
 
   const Mpfr operator-() const {
     Mpfr t;
-    mpfr_neg(t.f, f, MPFR_RNDNA);
+    mpfr_neg(t.f, f, MPFR_RNDN);
     return t;
   }
 
   Mpfr operator--(int) {
     Mpfr ret(*this);
-    mpfr_sub_ui(f, f, 1, MPFR_RNDNA);
+    mpfr_sub_ui(f, f, 1, MPFR_RNDN);
     return ret;
   }
 
   Mpfr Sqrt() const {
     Mpfr t;
-    mpfr_sqrt(t.f, f, MPFR_RNDNA);
+    mpfr_sqrt(t.f, f, MPFR_RNDN);
     return t;
   }
 
   Mpfr Power(unsigned long p) const {
     Mpfr t;
-    mpfr_pow_ui(t.f, f, p, MPFR_RNDNA);
+    mpfr_pow_ui(t.f, f, p, MPFR_RNDN);
     return t;
   }
 
   Mpfr Abs() const {
     Mpfr t;
-    mpfr_abs(t.f, f, MPFR_RNDNA);
+    mpfr_abs(t.f, f, MPFR_RNDN);
     return t;
   }
 
@@ -569,7 +569,7 @@ class Mpfr {
   int Prec() const { return mpfr_get_prec(f); }
 
  public:
-  double ToDouble() const { return mpfr_get_d(f, MPFR_RNDNA); }
+  double ToDouble() const { return mpfr_get_d(f, MPFR_RNDN); }
 
   std::string ToString(int dig = 20) const {
     const int s = Sgn();
@@ -579,7 +579,7 @@ class Mpfr {
     // dig < 1020
     mpfr_exp_t e;
     char buff[1024];
-    mpfr_get_str(buff, &e, 10, dig, f, MPFR_RNDNA);
+    mpfr_get_str(buff, &e, 10, dig, f, MPFR_RNDN);
     const int offset = buff[0] == '-' ? 2 : 1;
     std::string temp(buff);
     std::string t =
@@ -614,25 +614,25 @@ class Mpfr {
 
 SL Mpfr operator+(const Mpfr& a, const Mpfr& b) {
   Mpfr t;
-  mpfr_add(t.f, a.f, b.f, MPFR_RNDNA);
+  mpfr_add(t.f, a.f, b.f, MPFR_RNDN);
   return t;
 }
 
 SL Mpfr operator-(const Mpfr& a, const Mpfr& b) {
   Mpfr t;
-  mpfr_sub(t.f, a.f, b.f, MPFR_RNDNA);
+  mpfr_sub(t.f, a.f, b.f, MPFR_RNDN);
   return t;
 }
 
 SL Mpfr operator*(const Mpfr& a, const Mpfr& b) {
   Mpfr t;
-  mpfr_mul(t.f, a.f, b.f, MPFR_RNDNA);
+  mpfr_mul(t.f, a.f, b.f, MPFR_RNDN);
   return t;
 }
 
 SL Mpfr operator/(const Mpfr& a, const Mpfr& b) {
   Mpfr t;
-  mpfr_div(t.f, a.f, b.f, MPFR_RNDNA);
+  mpfr_div(t.f, a.f, b.f, MPFR_RNDN);
   return t;
 }
 

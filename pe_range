@@ -791,6 +791,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(NumberRange<int64>)
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(NumberRange<int64>)
     XRange(T s, T e) {
+  // s > e is an empty range; {s, e + 1} would never reach its end.
+  if (s > e) return NumberRange<int64>{s, s};
   // TODO(bug): e + 1 is computed in T and overflows when e is the maximum
   // value of T, e.g. XRange(0, INT_MAX).Count() returns -2147483648 instead of
   // 2147483648, although the result type int64 can hold it.

@@ -79,8 +79,14 @@ SL std::ostream& operator<<(std::ostream& o, uint128 x) {
 
 namespace std {
 #if defined(__GLIBCXX__)
-// libstdc++ releases before gcc 10.3 (__GLIBCXX__ < 20210408) don't specialize
-// numeric_limits for int128 and uint128 in strict ansi mode.
+// See gcc version and __GLIBCXX__ values (date) here
+// https://gcc.gnu.org/develop.html#timeline
+
+// Prior to GCC 10.3 (PR libstdc++/96042, released 2021-04-08), libstdc++ does
+// not provide std::numeric_limits specializations for __int128 and
+// unsigned __int128 in strict ANSI/ISO C++ mode.
+// Note: __GLIBCXX__ is a release date, so older branches released later
+// (e.g. GCC 8.5, 9.4, 9.5) are not covered by this check.
 #if __GLIBCXX__ < 20210408 && defined(__STRICT_ANSI__)
 template <>
 struct numeric_limits<uint128> {
@@ -105,8 +111,12 @@ struct numeric_limits<int128> {
 };
 #endif
 
-// glibc++ doesn't specialize hash for int128 and uint128 in ansi mode.
-#if defined(__STRICT_ANSI__)
+// Prior to GCC 16.1 (PR libstdc++/96710, released 2026-04-30), libstdc++ does
+// not provide std::hash specializations for __int128 and unsigned __int128 in
+// strict ANSI/ISO C++ mode.
+// Note: __GLIBCXX__ is a release date, so older branches released later
+// (e.g. GCC 14.4, released 2026-06-26) are not covered by this check.
+#if __GLIBCXX__ < 20260430 && defined(__STRICT_ANSI__)
 template <>
 struct hash<int128> {
   size_t operator()(int128 val) const noexcept {

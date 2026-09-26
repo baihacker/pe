@@ -203,15 +203,22 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
       } else {
         for (int64 i = 0; i < all_size; ++i) {
           const int64 offset = i * need_limb;
-          T it = 0;
-          for (int j = need_limb - 1; j >= 0; --j) {
-            const mp_limb_t v =
-                offset + j >= has_size ? 0 : ptr->_mp_d[offset + j];
-            it <<= 32;
-            it <<= 32;
-            it |= v;
+          if constexpr (sizeof(T) <= sizeof(mp_limb_t)) {
+            // The low limb is already the value mod 2^bits(T); shifting a T
+            // narrower than 64 bits by 32 would be undefined behavior.
+            result[i] = static_cast<T>(offset >= has_size ? 0
+                                                           : ptr->_mp_d[offset]);
+          } else {
+            T it = 0;
+            for (int j = need_limb - 1; j >= 0; --j) {
+              const mp_limb_t v =
+                  offset + j >= has_size ? 0 : ptr->_mp_d[offset + j];
+              it <<= 32;
+              it <<= 32;
+              it |= v;
+            }
+            result[i] = it;
           }
-          result[i] = it;
         }
       }
     }
@@ -903,7 +910,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     nmod_poly_set_coeff_ui(u, i, X[i]);
   }
 
-  if (sizeof(mp_limb_t) == sizeof(T)) {
+  if constexpr (sizeof(mp_limb_t) == sizeof(T)) {
     nmod_poly_evaluate_nmod_vec_fast(result, u, V, m);
   } else {
     std::vector<mp_limb_t> x(m), y(m);

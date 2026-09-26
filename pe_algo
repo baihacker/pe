@@ -127,6 +127,9 @@ struct FactModer {
     if (n < q_) return fac_[n];
 
     uint64 m = static_cast<int64>(std::sqrt(n));
+    // The double result may be off by one for n >= ~2^52.
+    while (m * m > n) --m;
+    while ((m + 1) * (m + 1) <= n) ++m;
     uint64 ret = 1;
 
     for (uint64 i = m * m + 1; i <= n; ++i) {
@@ -195,7 +198,10 @@ struct FactSumModer {
     if (n >= p_) n = p_ - 1;
     if (n < q_) return fac_sum_[n];
 
-    const int64 m = static_cast<int64>(std::sqrt(n));
+    int64 m = static_cast<int64>(std::sqrt(n));
+    // The double result may be off by one for n >= ~2^52.
+    while (static_cast<uint64>(m) * m > n) --m;
+    while (static_cast<uint64>(m + 1) * (m + 1) <= n) ++m;
     uint64 ret = 1;
 
     // Prepare data for computing P
@@ -837,7 +843,8 @@ struct PatternNumberCounter {
     Release();
 
     prime_cnt_ = prime_cnt;
-    is_prime_used_ = new char[prime_cnt];
+    // Value-initialized: DfsPattern reads the flags before writing them.
+    is_prime_used_ = new char[prime_cnt]{};
     if (pi_pivot == 0) {
       PE_ASSERT(pe::plist != nullptr);
       pi_pivot = pe::plist[prime_cnt - 1];
@@ -871,7 +878,8 @@ struct PatternNumberCounter {
       }
     }
 
-    for (int i = start;; ++i) {
+    // Only the first prime_cnt_ primes are considered (see Init).
+    for (int i = start; i < prime_cnt_; ++i) {
       if (is_prime_used_[i] == 0) {
         int128 tmp = remain;
         for (int j = 0; j < e; ++j) tmp /= plist[i];

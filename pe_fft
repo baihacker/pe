@@ -143,11 +143,10 @@ SL void PolyMulFftImpl(uint64* x, uint64* y, uint64* z, const int n,
   }
   for (int i = 0; i < n; ++i) {
     int j = (n - i) & (n - 1);
-    static Complex da, db, dc, dd;
-    da = (a[i] + conj(a[j])) * Complex(0.5, 0);
-    db = (a[i] - conj(a[j])) * Complex(0, -0.5);
-    dc = (b[i] + conj(b[j])) * Complex(0.5, 0);
-    dd = (b[i] - conj(b[j])) * Complex(0, -0.5);
+    const Complex da = (a[i] + conj(a[j])) * Complex(0.5, 0);
+    const Complex db = (a[i] - conj(a[j])) * Complex(0, -0.5);
+    const Complex dc = (b[i] + conj(b[j])) * Complex(0.5, 0);
+    const Complex dd = (b[i] - conj(b[j])) * Complex(0, -0.5);
     dfta[j] = da * dc;
     dftb[j] = da * dd;
     dftc[j] = db * dc;
@@ -173,8 +172,18 @@ SL void PolyMulFftImpl(uint64* x, uint64* y, uint64* z, const int n,
     const uint64 db = static_cast<uint64>(a[i].y / n + 0.5) % mod;
     const uint64 dc = static_cast<uint64>(b[i].x / n + 0.5) % mod;
     const uint64 dd = static_cast<uint64>(b[i].y / n + 0.5) % mod;
-    uint64 c = da, d = (db + dc) * m % mod, e = dd * m % mod * m % mod;
-    z[i] = mod > 0 ? (c + d + e) % mod : c + d + e;
+    // (db + dc) * m and dd * m can exceed 64 bits for mod > ~2^42, well
+    // below the supported mod range, so multiply with MulMod.
+    // The original code:
+    // uint64 c = da, d = (db + dc) * m % mod, e = dd * m % mod * m % mod;
+    // z[i] = mod > 0 ? (c + d + e) % mod : c + d + e;
+    const uint64 c = da;
+    const uint64 d = MulMod(AddMod(db, dc, static_cast<uint64>(mod)),
+                            static_cast<uint64>(m), static_cast<uint64>(mod));
+    const uint64 e =
+        MulMod(MulMod(dd, static_cast<uint64>(m), static_cast<uint64>(mod)),
+               static_cast<uint64>(m), static_cast<uint64>(mod));
+    z[i] = (c + d + e) % mod;
   }
 }
 }  // namespace fft_internal

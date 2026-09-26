@@ -380,6 +380,12 @@ SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(ModValue<T>)
   // x = k1 * s * m1 + (a + t * m1)
 
   T mod = mod_value.mod * m1;
+  // TODO(bug): (a + value * m1) % mod is already in [0, mod), so the extra
+  // "+ mod" overflows T when mod is in (2^62, 2^63), e.g.
+  // Crt2<int64>(0, 4294967296, 1, 2147483647) returns a negative value
+  // instead of 2^62. CrtN can reach such a mod by multiplying the moduli.
+  // NOTE: Do not let AI tools fix this automatically; it will be fixed
+  // manually.
   T value = ((a + mod_value.value * m1) % mod + mod) % mod;
 
   return ModValue<T>(value, mod);

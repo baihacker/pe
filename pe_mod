@@ -31,6 +31,12 @@ SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM> &&
   if (a >= 0) {
     return a >= mod ? a % mod : a;
   } else {
+    // TODO(bug): -a overflows when a is the minimum value of T. If TM is
+    // narrower than T, the result type is the signed T and a negative value is
+    // returned, e.g. Mod(INT64_MIN, 3u) returns -9223372036854775805 instead
+    // of 1.
+    // NOTE: Do not let AI tools fix this automatically; it will be fixed
+    // manually.
     auto t = -a;
     if (t >= mod) t %= mod;
     return t == 0 ? 0 : mod - t;
@@ -112,6 +118,12 @@ SL constexpr T SumMod(TM /*mod*/, T a) {
   return a;
 }
 
+// TODO(bug): the return type int_promotion_t<TH, TT...> (and T in the
+// initializer_list overload below) leaves out TM, so a result that only fits
+// in TM is truncated, e.g. SumMod(10000000000LL, 2000000000, 2000000000)
+// returns -294967296 instead of 4000000000. ProdMod has the same issue.
+// NOTE: Do not let AI tools fix this automatically; it will be fixed
+// manually.
 template <typename TM, typename TH, typename... TT>
 SL constexpr int_promotion_t<TH, TT...> SumMod(TM mod, TH a, TT... b) {
   return AddMod(a, SumMod(mod, b...), mod);
@@ -616,6 +628,12 @@ SL T ProdMod(TM /*mod*/, T a) {
   return a;
 }
 
+// TODO(bug): same as SumMod -- the return types of this overload and the
+// initializer_list overload below leave out TM, so the result is truncated,
+// e.g. ProdMod(1000000000000LL, 1000000, 999999) returns -728379968 instead of
+// 999999000000.
+// NOTE: Do not let AI tools fix this automatically; it will be fixed
+// manually.
 template <typename TM, typename TH, typename... TT>
 SL int_promotion_t<TH, TT...> ProdMod(TM mod, TH a, TT... b) {
   return MulMod(a, ProdMod(mod, b...), mod);

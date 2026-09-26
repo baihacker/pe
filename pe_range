@@ -791,6 +791,11 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(NumberRange<int64>)
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(NumberRange<int64>)
     XRange(T s, T e) {
+  // TODO(bug): e + 1 is computed in T and overflows when e is the maximum
+  // value of T, e.g. XRange(0, INT_MAX).Count() returns -2147483648 instead of
+  // 2147483648, although the result type int64 can hold it.
+  // NOTE: Do not let AI tools fix this automatically; it will be fixed
+  // manually.
   return NumberRange<int64>{s, e + 1};
 }
 
@@ -816,6 +821,10 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(NumberRangeD<int64>)
     PE_ASSERT(delta != 0);
   }
   T off_by_one = delta >= 0 ? 1 : -1;
+  // TODO(bug): same as XRange(s, e) -- e + off_by_one is computed in T and
+  // overflows when e is the maximum (or minimum) value of T.
+  // NOTE: Do not let AI tools fix this automatically; it will be fixed
+  // manually.
   return NumberRangeD<int64>{s, e + off_by_one, delta};
 }
 

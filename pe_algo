@@ -291,6 +291,13 @@ struct PowerModer {
     f_ = std::max<int64>(100000LL, f);
     powers_.resize(f_ + 1);
     powers_[0] = 1 % mod_;
+    // TODO(bug): x_ is passed to MulMod without being reduced modulo mod_.
+    // MulMod truncates operands to 32 bits when mod < 2^32, so x >= 2^32 gives
+    // wrong powers, e.g. PowerModer<int64>(2^32 + 1, 7)(1) returns 1 instead of
+    // 5; a negative x (x_ % mod_ is also negative) crashes in the 32-bit
+    // division.
+    // NOTE: Do not let AI tools fix this automatically; it will be fixed
+    // manually.
     for (int64 i = 1; i <= f_; ++i) {
       powers_[i] = MulMod<int64, int64, int64>(powers_[i - 1], x_, mod_);
     }
@@ -345,6 +352,11 @@ struct PowerModerEx {
     mask_ = f_ - 1;
     powers_.resize(f_);
     powers_[0] = 1 % mod_;
+    // TODO(bug): same as PowerModer::Init -- x_ is passed to MulMod unreduced,
+    // so x >= 2^32 or a negative x gives wrong results, e.g.
+    // PowerModerEx<int64>(-3, 7)(1) returns 1 instead of 4.
+    // NOTE: Do not let AI tools fix this automatically; it will be fixed
+    // manually.
     for (int64 i = 1; i < f_; ++i) {
       powers_[i] = MulMod<int64, int64, int64>(powers_[i - 1], x_, mod_);
     }
@@ -478,6 +490,11 @@ SL T ShortComb(int64 n, int64 m) {
   if (m > n || m < 0) return 0;
   if (n - m < m) m = n - m;
   T ret = 1;
+  // TODO(bug): ret * (n - i) can overflow T even when C(n, m) fits in T,
+  // e.g. ShortComb<int64>(62, 31) returns -284401161134521734 instead of
+  // 465428353255261088.
+  // NOTE: Do not let AI tools fix this automatically; it will be fixed
+  // manually.
   for (int64 i = 0; i < m; ++i) {
     ret *= n - i;
     ret /= i + 1;
@@ -788,6 +805,12 @@ struct PowerSumModer {
     auto [A, B] = ExtractFactor(n + 1, mod_);
 
     int64 ret = 0;
+    // TODO(bug): A is not reduced modulo mod_ before it is passed to MulMod
+    // below, which truncates operands to 32 bits when mod < 2^32. For
+    // n + 1 >= 2^32 the result is wrong, e.g. mod = 1e9+7, n = 5e9, k = 1
+    // returns 161927750 instead of 595 (Cal is correct).
+    // NOTE: Do not let AI tools fix this automatically; it will be fixed
+    // manually.
     int64 c = A;
     int64 d = B;
     for (int64 i = 1; i <= k; ++i) {
@@ -1570,6 +1593,12 @@ SL T CountNotDiv(T n, const std::vector<T>& L, int* bc) {
   for (int i = 0; i < size; ++i) {
     mask[1 << i] = L[i];
   }
+  // TODO(bug): the product mask[i ^ f] * mask[f] can overflow T for large
+  // pairwise coprime elements, e.g. CountNotDiv<int64>(1e10, {2^32, 2^32 + 1})
+  // returns 9999999998 instead of 9999999996. A product that wraps to 0 also
+  // divides by zero.
+  // NOTE: Do not let AI tools fix this automatically; it will be fixed
+  // manually.
   for (int i = 1; i < limit; ++i) {
     if (i & (i - 1)) {
       const int f = i & -i;
@@ -1595,6 +1624,9 @@ SL T CountNotDiv(T n, const std::vector<T>& L) {
     mask[1 << i] = L[i];
   }
   bc[0] = 0;
+  // TODO(bug): same overflow of mask[i ^ f] * mask[f] as in the overload above.
+  // NOTE: Do not let AI tools fix this automatically; it will be fixed
+  // manually.
   for (int i = 1; i < limit; ++i) {
     if (i & (i - 1)) {
       const int f = i & -i;

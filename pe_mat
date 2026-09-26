@@ -1111,6 +1111,13 @@ SL EigenMatrix<T> MatrixPowerEigen(const EigenMatrix<T>& x, int64 n,
   MatrixT y = x;
   NormalMatrixModFixer<T>::Fix(y, mod);
 
+  // TODO(bug): e *= y and y *= y accumulate d products below mod^2 before the
+  // result is reduced, which overflows T. For T = int128 this happens when
+  // d * (mod - 1)^2 >= 2^127, e.g. mod = 9223372036854775783, d = 3, n = 2.
+  // MatrixPowerPe gives the right result for the same input. The vector
+  // overload below has the same issue.
+  // NOTE: Do not let AI tools fix this automatically; it will be fixed
+  // manually.
   for (; n; n >>= 1) {
     // std::cout << "n = " << n << std::endl;
     if (n & 1) {
@@ -1214,6 +1221,10 @@ SL std::vector<T> MatrixPowerEigen(const EigenMatrix<T>& x, int64 n,
   for (; n; n >>= 1) {
     // std::cout << "n = " << n << std::endl;
     if (n & 1) {
+      // TODO(bug): same overflow as the matrix overload above: s accumulates
+      // d products below mod^2 before it is reduced.
+      // NOTE: Do not let AI tools fix this automatically; it will be fixed
+      // manually.
       for (int i = 0; i < d; ++i) {
         T s = 0;
         for (int j = 0; j < d; ++j) {

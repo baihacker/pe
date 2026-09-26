@@ -911,6 +911,12 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
       tmp[0][trunc - 1] = 0;
     }
     PolyMul(a, trunc, tmp[0], trunc, tmp[1], mod);
+    // TODO(bug): for T = uint32 and mod in (2^31, 2^32), b[i] << 1 and
+    // t + mod - tmp[1][i] overflow uint32, e.g.
+    // PolyInv(std::vector<uint32>{3, 5, 7, 11, 13, 17, 19, 23}, 8, 4294967291)
+    // is wrong (uint64 is correct).
+    // NOTE: Do not let AI tools fix this automatically; it will be fixed
+    // manually.
     for (int64 i = 0; i < trunc; ++i) {
       T t = b[i] << 1;
       if (t >= static_cast<uint64>(mod)) t -= mod;
@@ -1927,6 +1933,13 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
   }
 
   T0[0] = T1[0] = 1;
+  // TODO(bug): offset + i and offset + i + 1 (below) are passed to MulMod
+  // without being reduced modulo mod. MulMod truncates operands to 32 bits
+  // when mod < 2^32, so offset >= 2^32 gives wrong results, e.g. f(x) = x,
+  // d = 1, offset = 5e9, mod = 1e9+7 gives {705032704, 705032705} instead of
+  // {999999972, 999999973}.
+  // NOTE: Do not let AI tools fix this automatically; it will be fixed
+  // manually.
   for (int64 i = -d, j = 1; i <= d; ++i, ++j) {
     T0[j] = MulMod(T0[j - 1], offset + i, mod);
   }

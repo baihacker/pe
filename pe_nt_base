@@ -24,6 +24,14 @@ SL void InitMaxp(int64 v) {
   maxp = v;
   maxp2 = maxp * maxp;
   assert(maxp >= 100000);
+  // TODO(bug): maxp == INT_MAX is accepted, but the loops
+  // `for (int i = ...; i <= maxp; ++i)` in InitPrimes (both overloads),
+  // InitSigma0 and InitSigma1 then overflow int and never end;
+  // sigma1[i] = i + 1 in InitSigma1 also overflows for i == INT_MAX. The
+  // `i <= pivot` loops of MuSummer, MuPhiSummer, Sigma0Summer, MuPhiSumModer
+  // and Sigma0SumModer in pe_ntf have the same issue for pivot == INT_MAX.
+  // NOTE: Do not let AI tools fix this automatically; it will be fixed
+  // manually.
   assert(maxp <= INT_MAX);
 }
 

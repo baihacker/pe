@@ -207,6 +207,12 @@ struct Sigma0Summer {
 
     pre_.resize(pivot + 1);
     std::fill(std::begin(pre_), std::end(pre_), 0);
+    // TODO(bug): j += i overflows int when pivot > INT_MAX / 2 (allowed since
+    // pivot <= maxp <= INT_MAX); j wraps to a negative index and ++pre_[j]
+    // writes out of bounds, e.g. PE_INIT(maxp = 1100000000) then
+    // Sigma0Summer<int64> s(1100000000) crashes.
+    // NOTE: Do not let AI tools fix this automatically; it will be fixed
+    // manually.
     for (int i = 1; i <= pivot; ++i) {
       for (int j = i; j <= pivot; j += i) {
         ++pre_[j];
@@ -347,6 +353,10 @@ struct Sigma0SumModer {
 
     pre_.resize(pivot + 1);
     std::fill(std::begin(pre_), std::end(pre_), 0);
+    // TODO(bug): same as Sigma0Summer::Init -- j += i overflows int when
+    // pivot > INT_MAX / 2 and ++pre_[j] writes out of bounds.
+    // NOTE: Do not let AI tools fix this automatically; it will be fixed
+    // manually.
     for (int i = 1; i <= pivot; ++i) {
       for (int j = i; j <= pivot; j += i) {
         ++pre_[j];

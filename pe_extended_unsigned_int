@@ -816,6 +816,15 @@ struct ExtendedUnsignedIntImpl<ET, true> {
     return *this;
   }
 
+  // TODO(bug): unlike the other specializations, this one has no
+  // template <T> REQUIRES(is_builtin_integer_v<T>) overloads of
+  // += -= *= /= %= &= ^= |=, so a builtin integer argument is converted to ET
+  // first: a negative value is zero-extended instead of sign-extended, and a
+  // uint128/int128 wider than ET is truncated, e.g. uint128e x = 5; x += -1;
+  // gives 18446744073709551620 instead of 4. AddMod and PowerMod in
+  // pe_extended_int are wrong for a uint128 modulus for the same reason.
+  // NOTE: Do not let AI tools fix this automatically; it will be fixed
+  // manually.
   constexpr ExtendedUnsignedIntImpl& operator+=(const ET& other) {
     if (IsZero()) {
       low_ = other;

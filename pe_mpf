@@ -178,6 +178,9 @@ class Mpf {
     return *this;
   }
 
+  // TODO(bug): swap also exchanges the precision, so a move assignment loses
+  // the target's SetPrec setting (copy assignment keeps it), e.g.
+  // hp.SetPrec(512); hp = Mpf(1) / Mpf(3); gives hp.Prec() == 64.
   Mpf& operator=(Mpf&& o) noexcept {
     mpf_swap(f, o.f);
     return *this;
@@ -463,6 +466,8 @@ class Mpfr {
     return *this;
   }
 
+  // TODO(bug): swap also exchanges the precision, so a move assignment loses
+  // the target's SetPrec setting, the same as Mpf.
   Mpfr& operator=(Mpfr&& o) noexcept {
     mpfr_swap(f, o.f);
     return *this;
@@ -571,6 +576,9 @@ class Mpfr {
  public:
   double ToDouble() const { return mpfr_get_d(f, MPFR_RNDN); }
 
+  // TODO(bug): NaN and Inf are not handled: mpfr_sgn is 0 for NaN, so NaN
+  // prints "0" (and IsZero(NaN) is true); for Inf mpfr_get_str does not set
+  // e, so an uninitialized exponent is printed.
   std::string ToString(int dig = 20) const {
     const int s = Sgn();
     if (s == 0) {
@@ -595,6 +603,9 @@ class Mpfr {
     return result;
   }
 
+  // TODO(bug): this rounds to nearest (ties away from zero), while Mpf's
+  // ToMpInteger truncates, e.g. Mpfr(2.7).ToInt<int>() == 3 but
+  // Mpf(2.7).ToInt<int>() == 2. MpInteger::operator=(const Mpfr&) is the same.
   MpInteger ToMpInteger() const {
     MpInteger z;
     mpfr_get_z(z.mpz(), mpfr(), MPFR_RNDNA);

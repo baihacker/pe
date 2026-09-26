@@ -17,6 +17,10 @@ namespace pe {
 // Returns r + 1 if failed.
 // It is assumed that if f(x) is true then f(x+1) is true.
 // It is required that l - 1 <= r, i.e. l <= r or l - 1 = r.
+// TODO(bug): for an unsigned T, ++r (here) and --l (BinarySearchLast) wrap
+// around when r is the maximum value or l == 0, so PE_ASSERT(l <= r) fails,
+// e.g. BinarySearchLast<uint64>(0, 10, f). With assertions disabled the
+// modular arithmetic still gives the right answer.
 template <typename T, typename F>
 SL constexpr T BinarySearchFirst(T l, T r, const F& f) {
   ++r;
@@ -483,6 +487,10 @@ SL int64 ShortCombMod(int64 n, int64 m, int64 mod) {
       }
     }
   }
+  // TODO(bug): data[i] is passed to MulMod without being reduced modulo mod.
+  // MulMod truncates operands to 32 bits when mod < 2^32, so
+  // ShortCombMod(4294967297, 1, 7) returns 1 instead of 5. Also, ret should
+  // start as 1 % mod: ShortCombMod(5, 0, 1) returns 1 instead of 0.
   int64 ret = 1;
   for (int64 i = 0; i < size; ++i) {
     ret = MulMod(ret, data[i], mod);
@@ -852,6 +860,10 @@ struct PowerSumModer {
 struct PatternNumberCounter {
   PatternNumberCounter() = default;
 
+  // TODO(bug): is_prime_used_ is an owning raw pointer, but the implicit copy
+  // constructor and copy assignment are not deleted. A copy frees the same
+  // array in its destructor, so the original reads freed memory and frees it
+  // twice.
   ~PatternNumberCounter() { Release(); }
 
   void Release() {
@@ -1412,6 +1424,9 @@ template <typename T>
 struct PerfectPowerCounter {
   PerfectPowerCounter(int pivot = 1000000) : pivot_(pivot) { Init(); }
 
+  // TODO(bug): pre_ is an owning raw pointer, but the implicit copy
+  // constructor and copy assignment are not deleted, so a copy leads to a
+  // double free. Calling Init() again also leaks the old table.
   ~PerfectPowerCounter() { delete[] pre_; }
 
   void Init() {
@@ -1672,6 +1687,11 @@ struct DfaCounter {
     return *this;
   }
 
+  // TODO(bug): SetInitState, AddTrans and MarkTargetState don't reset
+  // prepared_, so after Prepare() (or a first Cal) later changes are ignored
+  // and Cal mixes target_state_ with a stale dp_, e.g. Init(1, 10, 3),
+  // AddTrans(0, 0, 0), Prepare(), MarkTargetState(0), Cal(99) returns 1
+  // instead of 100.
   DfaCounter& SetInitState(int init_state) {
     init_state_ = init_state;
     return *this;
@@ -1897,6 +1917,8 @@ struct DfaSummer {
     return *this;
   }
 
+  // TODO(bug): same as DfaCounter -- AddTrans and MarkTargetState don't reset
+  // prepared_, so changes after Prepare() are ignored.
   DfaSummer& AddTrans(int s, int d, int t) {
     dfa_[s][d] = t;
     return *this;

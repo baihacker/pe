@@ -81,6 +81,10 @@ SL uint64 Uint128ModUint64(uint128 a, uint64 b) {
 #endif
 
 namespace internal {
+// TODO(bug): a0 + b0 can overflow ResultType even for reduced a and b, e.g.
+// m = UINT64_MAX, a = b = m - 1: AddMod returns 18446744073709551612 instead
+// of 18446744073709551613. For a signed type with a large mod it is signed
+// overflow.
 template <typename T, typename TM>
 SL constexpr REQUIRES((is_builtin_integer_v<T> && is_builtin_integer_v<TM>))
     RETURN(int_promotion_t<T, TM>) AddModImpl(T a, T b, TM mod) {
@@ -623,6 +627,8 @@ SL REQUIRES((is_builtin_integer_v<T1> && is_builtin_integer_v<T2> &&
 #endif
 }
 
+// TODO(bug): this base case returns `a` unreduced, e.g. ProdMod(7, 10)
+// returns 10 instead of 3 (same issue as the SumMod base case).
 template <typename TM, typename T>
 SL T ProdMod(TM /*mod*/, T a) {
   return a;
@@ -1055,6 +1061,8 @@ struct NModNumber {
     return *this;
   }
 
+  // TODO(bug): a negative n never reaches 0 with n >>= 1, so Power loops
+  // forever, e.g. NModCC64<7>(3).Power(-1). PowerModImpl asserts n >= 0.
   template <typename T>
   REQUIRES((is_builtin_integer_v<T>))
   RETURN(NModNumber) Power(T n) const {
@@ -1268,6 +1276,7 @@ struct NModNumberM {
     return *this;
   }
 
+  // TODO(bug): same as NModNumber::Power -- a negative n loops forever.
   template <typename T>
   REQUIRES((is_builtin_integer_v<T>))
   RETURN(NModNumberM) Power(T n) const {

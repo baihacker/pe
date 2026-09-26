@@ -328,6 +328,10 @@ class DpeServer {
     LogProgress();
   }
 
+  // TODO(bug): the key is written as "%s %s" and LoadCache splits at the
+  // first whitespace, but TaskType::Key() may contain whitespace. Such keys
+  // are silently not reloaded (everything is recomputed), and if the prefix
+  // is another valid key, parsing fails and the process exits.
   void SaveCache() {
     if (std::empty(cache_path)) return;
     FILE *fp = fopen(std::data(cache_path), "w");
@@ -386,6 +390,9 @@ class DpeServer {
       return AsDerived().HandleGetTasks(command->args[0][0]);
     }
 
+    // TODO(bug): the arguments are not validated before deserializing, so a
+    // malformed SetResults (e.g. "SetResults({2,1})") makes DeserializeObject
+    // exit the server process instead of replying "error()".
     if (command->name == "SetResults") {
       return AsDerived().HandleSetResults(
           internal::ParseObjects<ResultType>(*command));

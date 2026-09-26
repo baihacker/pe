@@ -1050,6 +1050,9 @@ class BigInteger {
     return ret;
   }
 
+  // TODO(bug): the Horner step result = result * 2^32 + limb rounds at every
+  // limb, so the result can be 1 ulp off the correctly rounded value, e.g.
+  // 2^96 + 2^43 + 1 converts to 2^96.
   template <typename T>
   T ToFloat() const {
     T result = 0;
@@ -1535,6 +1538,10 @@ class BigInteger {
       ret.FixLeadingZeros();
       ret.FixSign();
 
+      // TODO(bug): if remain and l are the same object, l has just been
+      // overwritten, so l.sign_ below is always non-negative, e.g.
+      // BigInteger a(-7); Divide(a, BigInteger(2), a); gives a == 1 instead
+      // of -1. The branch for divisors with more than 2 limbs is correct.
       remain = x;
       if (l.sign_ < 0) {
         remain.sign_ = -remain.sign_;

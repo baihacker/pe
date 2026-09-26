@@ -228,6 +228,10 @@ struct ExtendedSignedIntImpl<ET, true>
 
   using base::ToInt;
 
+  // TODO(bug): for the minimum value (e.g. int128e(0, uint64(1) << 63)),
+  // Abs() is the value itself, so the negative branch recurses forever
+  // (stack overflow). It should convert the unsigned magnitude through the
+  // unsigned base instead.
   template <typename T>
   constexpr T ToFloat() const {
     if (IntSign() >= 0) {
@@ -807,6 +811,8 @@ struct ExtendedSignedIntImpl<ET, false>
 
   using base::ToInt;
 
+  // TODO(bug): same as above -- the negative branch recurses forever for the
+  // minimum value.
   template <typename T>
   constexpr T ToFloat() const {
     if (IntSign() >= 0) {

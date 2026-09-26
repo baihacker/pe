@@ -76,6 +76,11 @@ class GaussianEliminationMod2 {
 
 class GaussianEliminationSolver {
  public:
+  // TODO(bug): the absolute eps = 1e-16 is below the rounding error of the
+  // elimination for values of magnitude 1, so a pivot that should be 0 (e.g.
+  // 8.9e-16) is taken as nonzero. The rank of a singular matrix is
+  // overestimated and Solve returns garbage without triggering its
+  // assertion.
   GaussianEliminationSolver() : eps(1e-16) {}
 
   void Init(int r, int c) {
@@ -428,6 +433,7 @@ SL int64 CountPtInCircleBf(int64 n) {
 
 #if PE_HAS_INT128
 // Returns sum(sigma0(i), i=1..n)
+// TODO(bug): n == 0 divides by zero (y = n / m with m == 0).
 SL int128 SumSigma0(int64 n) {
   struct Pt {
     int64 x, y;
@@ -694,6 +700,8 @@ using u128 = __uint128_t;
 
 // sigma0 sum copied from
 // https://github.com/min-25/algorithms/blob/master/math/sigma0_sum.cpp
+// TODO(bug): N == 0 gives v = 0 and x = N / v divides by zero; in practice
+// the call never returns. It should return 0.
 SL u128 sigma0_sum_fast(const u64 N) {
   auto out = [N](u64 x, u64 y) { return x * y > N; };
   auto cut = [N](u64 x, u64, int ldx, int ldy) {
@@ -744,6 +752,7 @@ SL u128 sigma0_sum_fast(const u64 N) {
 
 // sigma1 sum copied from
 // https://github.com/min-25/algorithms/blob/master/math/sigma1_sum.cpp
+// TODO(bug): N == 0 never returns (v == w == 0). It should return 0.
 SL u128 sigma1_sum_fast(const u64 N) {
   // about O(N^{1/3} log(N))
   auto out = [N](u64 x, u64 y) { return x * y > N; };

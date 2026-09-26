@@ -292,6 +292,9 @@ class MpInteger {
     return t;
   }
 
+  // TODO(bug): LowerBits() does not check size() == 0. GMP does not clear the
+  // limb when a result becomes 0, so a stale value is returned, e.g.
+  // MpInteger z(7); z -= z; z.LowerBits() returns 7 instead of 0.
   uint32 LowerBits() const { return static_cast<uint32>(data()[0]); }
 
   int BitWidth() const { return IntSign() == 0 ? 0 : SizeInBase(2); }
@@ -364,6 +367,8 @@ class MpInteger {
     return ret;
   }
 
+  // TODO(bug): accumulating limb by limb rounds at every step, so the result
+  // can be 1 ulp off the correctly rounded value, e.g. 2^128 + 2^75 + 1.
   template <typename T>
   T ToFloat() const {
     T result = 0;

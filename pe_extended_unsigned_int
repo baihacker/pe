@@ -211,6 +211,10 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   constexpr int Popcount() const {
     const int each = sizeof(ET) / sizeof(uint32);
 
+    // TODO(bug): for ET = uint32 (ExtendedUnsignedInt<uint32>), the GCC branch
+    // `t >>= 32` below shifts by the full width of ET, which is undefined
+    // behavior (it fails in a constant expression). ToUInt32Vector and
+    // FromUInt32Vector (`<< 32`) have the same issue.
     int ret = 0;
     ET t = low_;
     for (int i = 0; t && i < each; ++i) {
@@ -699,6 +703,10 @@ struct ExtendedUnsignedIntImpl<ET, true> {
                           static_cast<UnsignedT>(low_));
   }
 
+  // TODO(bug): the Horner step r = r * 2^32 + t[i] rounds at every limb, so
+  // the result can be 1 ulp off the correctly rounded value, e.g. uint128e v =
+  // 290602444458147399461147764774320719 gives 2.9060244445814737e+35 while
+  // (double)(uint128)v is 2.9060244445814741e+35.
   template <typename T>
   T ToFloat() const {
     auto t = ToUInt32Vector();
@@ -1306,6 +1314,9 @@ struct ExtendedUnsignedIntImpl<ET, false> {
   }
 
  public:
+  // TODO(bug): MakeAbs() is declared but never defined, so calling it (e.g.
+  // on uint512e) fails to link. The builtin-ET specialization defines it as
+  // an empty function.
   constexpr void MakeAbs();
 
   constexpr void FlipBits() {
@@ -1743,6 +1754,8 @@ struct ExtendedUnsignedIntImpl<ET, false> {
                           low_.template ToInt<UnsignedT>());
   }
 
+  // TODO(bug): same double rounding as the ToFloat of the builtin-ET
+  // specialization; the result can be 1 ulp off.
   template <typename T>
   T ToFloat() const {
     auto t = ToUInt32Vector();

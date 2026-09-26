@@ -63,6 +63,9 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(T) RootI(T v, int n) {
   if (v == 0 || v == 1) {
     return v;
   }
+  // TODO(bug): for an unsigned T, -1 converts to the maximum value, so
+  // RootI(UINT64_MAX, 3) takes this branch and returns UINT64_MAX instead of
+  // 2642245 (an even n fails the assertion). Only a signed T should check -1.
   if (v == -1) {
     PE_ASSERT(n % 2 == 1);
     return v;
@@ -98,6 +101,9 @@ SL REQUIRES((is_general_integer_v<T1> && is_general_integer_v<T2>)) RETURN(int)
   return idx;
 }
 
+// TODO(bug): B = 1 or B = -1 never makes A reach 0 (A % B == 0 always holds
+// and A / B does not shrink), so ExtractFactor(5, 1) loops forever; B = 0
+// divides by zero.
 template <typename T1, typename T2>
 SL std::tuple<T1, int64> ExtractFactor(T1 A, T2 B) {
   int64 c = 0;
@@ -305,6 +311,10 @@ SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
   return internal::ExGcdImpl(a, b, x);
 }
 
+// TODO(bug): a negative a makes the first a %= b negative, then b becomes
+// negative and the loop stops early, so the old mod is taken as the gcd and
+// the process exits, e.g. ModInv(-3, 7) prints "mod inv error" instead of
+// returning 2. a should be normalized to [0, mod) first.
 template <typename T>
 SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
     ModInv(T a, T mod) {
@@ -346,6 +356,10 @@ SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(ModValue<T>)
   if (b % d) return ModValue<T>::Absent();
 
   xx = (xx % m + m) % m;
+  // TODO(bug): xx * (b / d) is computed in T and overflows for a narrow T
+  // (the m <= PE_SOI63 check only covers int64), e.g.
+  // SolveLinearEquation(50000, 50000, 100003) with T = int returns -38451
+  // instead of 1. Crt2 is affected through this function.
   xx = xx * (b / d) % m;
 
   T mod = m / d;
@@ -921,6 +935,8 @@ SL REQUIRES((IsNModNumberV<T>)) RETURN(void) InitComb(T (*comb)[D]) {
 
 // Checks whether x is a primitive root of p, given that the factorization of
 // p - 1 is f.
+// TODO(bug): x % p == 0 is not rejected: every PowerMod is 0, so all checks
+// pass, e.g. IsPrimitiveRoot(5, 5) and IsPrimitiveRoot(0, 7) return true.
 SL bool IsPrimitiveRoot(int64 x, int64 p, const IntegerFactorization& f) {
   return std::none_of(std::begin(f), std::end(f),
                       [=](const std::pair<int64, int>& it) {
@@ -1004,6 +1020,9 @@ class IndSolver {
     a %= p_;
 
     const int64 temp = PowerMod(pr_, mx_, p_);
+    // TODO(bug): a % p_ == 0 is not handled; ModInv(0, p_) prints an error
+    // and exits the process, e.g. IndSolver(7)(7). Ind returns -1 for the
+    // same input.
     const int64 inv_a = ModInv(a, p_);
     int64 t = 1;
 
@@ -1343,6 +1362,9 @@ SL std::vector<std::pair<int64, int64>> TwoSquares(
 }
 
 // Represent n as two squares: n = x^2 + y^2 where 0 <= x <= y.
+// TODO(bug): a negative n passes n <= maxp in FactorizeForTwoSquares, reads
+// pmask[n] out of bounds and divides by zero, e.g. TwoSquares(-5) crashes.
+// It should return an empty vector.
 SL std::vector<std::pair<int64, int64>> TwoSquares(const int64 n) {
   if (n == 0) {
     return {{0LL, 0LL}};
@@ -1389,6 +1411,10 @@ SL std::vector<std::pair<int64, int64>> TwoSquaresFull(const int64 n) {
 }
 #endif
 
+// TODO(bug): for an unsigned T with a negative k, n % k and n / k convert k
+// to a huge unsigned value, so ToBaseK(uint64(6), -2) returns {6} instead of
+// {0, 1, 0, 1, 1}. The negative-base conversion also needs signed
+// quotients. The width branch has the same issue.
 template <typename T>
 SL std::vector<int> ToBaseK(T n, int k, int width = 0) {
   if (n == 0) {
@@ -1431,6 +1457,10 @@ SL T FromBaseK(const std::vector<int>& vec, int k) {
   return ret;
 }
 
+// TODO(bug): if end > plist[pcnt - 1]^2, the remaining cofactor may be
+// composite but is added as a prime factor, e.g. maxp = 1e5 and
+// Sieve(10002200050, 10002200060) gives {10002200057^1} although it is
+// composite.
 SL std::pair<std::vector<int64>,
              std::vector<std::vector<std::pair<int64, int>>>>
 Sieve(int64 start, int64 end) {

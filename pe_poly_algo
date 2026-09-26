@@ -749,6 +749,11 @@ class LinearSequenceRelation {
     return ToCharPoly(internal::OperationTraitsWithMod<T, int64>(mod));
   }
 
+  // TODO(bug): seq_relation_ and terms are passed to AddMod/MulMod without
+  // being reduced, so a relation with negative coefficients gives wrong
+  // values, e.g. LinearSequenceRelation<int64>({0, 1, -1}), terms {1, 2},
+  // Generate(terms, 2, 1e9+7)[2] is 294967269 instead of 1. ValueAt/SumAt
+  // are correct for the same input.
   std::vector<int64> Generate(Span<const int64> terms, int64 n,
                               int64 mod) const {
     const int64 need = n + 1;
@@ -810,6 +815,11 @@ class LinearSequenceRelation {
     return LinearRecurrenceSumAt(ToCharPoly(mod), terms, n, mod);
   }
 
+  // TODO(bug): for an order-0 relation (constant sequence,
+  // size(seq_relation_) == 1) d == 0, and the code below reads index d - 1 ==
+  // -1; SumAt writes column -1 and returns a wrong value (e.g. 0 instead of 20
+  // for SeqExpr::Number(5), n = 3). The same applies to SumAt and the
+  // non-mod overloads.
   int64 ValueAt(Span<const int64> terms, int64 n, int64 mod) const {
     if (n < static_cast<int64>(std::size(terms))) {
       return terms[static_cast<int>(n)];

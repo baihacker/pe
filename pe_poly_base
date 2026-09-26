@@ -394,6 +394,11 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyMulDc(const T* X, const int64 n, const T* Y, const int64 m, T* result,
               int64 mod) {
   using UnsignedT = pe_make_unsigned_t<T>;
+  // TODO(bug): mod == 0 is not supported here (MulMod divides by zero), but
+  // pe::PolyMul sends short inputs (max(n, m) < 50) here while longer inputs
+  // with mod == 0 go to min25/ntt and work, e.g. PolyMul({1, 2}, {3, 4}, 0)
+  // crashes. Also n == m == 0 gives n + m - 1 == -1 and fill gets a reversed
+  // range.
   if (n * m <= 2500) {
     std::fill(result, result + n + m - 1, 0);
     if (n <= m) {
@@ -544,6 +549,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(std::vector<T>)
   const int64 n = static_cast<int64>(std::size(X));
   const int64 m = static_cast<int64>(std::size(Y));
 
+  // TODO(bug): two empty polynomials give n + m - 1 == -1, so the vector
+  // constructor throws std::length_error.
   std::vector<T> result(n + m - 1);
   PolyMul(std::data(X), n, std::data(Y), m, std::data(result), mod);
 
@@ -907,6 +914,9 @@ template <typename T>
 SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyInvDoublingImpl(int64 trunc, const T* a, T* b, T* tmp[2], int64 mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
+  // TODO(bug): trunc == 0 gives m = (0 + 1) >> 1 == 0 and recurses with
+  // trunc == 0 forever (stack overflow), e.g. PolyInv({1, 2, 3}, 0, mod).
+  // PolyLog also writes result[0] for trunc == 0.
   if (trunc == 1) {
     b[0] = ModInv(static_cast<int64>(a[0]), mod);
   } else {

@@ -1726,6 +1726,8 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     PolyMultipointEvaluateBlsImpl(const T* X, int64 n, const T* V, T* result,
                                   int64 mod) {
   static_assert(pe_is_unsigned_v<T>, "T must be unsigned");
+  // b below is a std::vector<uint64> multiplied with std::vector<T>.
+  static_assert(sizeof(T) == 8, "T must be a 64-bit integer");
   if (n <= 0) return;
   std::vector<std::vector<std::vector<T>>> tree;
   {
@@ -1758,7 +1760,7 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
     alpha = PolyInv(alpha, n, mod);
     std::reverse(std::begin(alpha), std::end(alpha));
 
-    std::vector<T> b(X, X + n);
+    std::vector<uint64> b(X, X + n);
     int64 degb = static_cast<int64>(std::size(b)) - 1;
     std::vector<T> t = PolyMul(alpha, b, mod);
     assert(static_cast<int64>(std::size(t)) - 1 == n - 1 + degb);

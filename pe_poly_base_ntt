@@ -964,6 +964,10 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
       }
     }
   }
+  // TODO(bug): Enormous is used without checking its capacity, so the result
+  // is silently wrong once (mod-1)^2*min(n, m) >= its kMod.
+  // NOTE: Do not let AI tools fix this automatically; it will be fixed
+  // manually.
   return NttRunnerEnormous::PolyMul(X, n, Y, m, result, mod);
 }
 }  // namespace internal
@@ -1617,6 +1621,11 @@ SL REQUIRES((is_builtin_integer_v<T> || is_extended_integer_v<T>)) RETURN(void)
     }
   }
 
+  // TODO(bug): Enormous is used without checking its capacity. If
+  // (mod-1)^2*min(n, m) >= its kMod (about 9.9e37), the result is silently
+  // wrong, e.g. mod = 2^61 - 1 with n = m = 100.
+  // NOTE: Do not let AI tools fix this automatically; it will be fixed
+  // manually.
   return ntt32::internal::NttRunnerEnormous::PolyMul(X, n, Y, m, result, mod);
 }
 }  // namespace internal

@@ -509,6 +509,13 @@ SL REQUIRES((is_builtin_integer_v<T>)) RETURN(void)
 
   const int is_big = std::max(n, m) >= 50;
   if (is_big) {
+    // TODO(bug): min25 and ntt only work while (mod-1)^2*min(n, m) is below
+    // their internal modulus (about 1.26e36 for min25, 9.9e37 for ntt), but
+    // the capacity is not checked, so a large mod gives a silently wrong
+    // result, e.g. mod = 1e18+3 with n = m = 100. PolyInv, PolyDivAndMod,
+    // Log, Exp and multipoint evaluation are affected through this function.
+    // NOTE: Do not let AI tools fix this automatically; it will be fixed
+    // manually.
 #if HAS_POLY_MUL_FLINT
     flint::PolyMul(X, n, Y, m, result, mod);
 #elif HAS_POLY_MUL_MIN25

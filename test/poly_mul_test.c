@@ -504,10 +504,15 @@ SL void PolyMulOtherTypesTest() {
     assert(result == expected_s);
   }
   {
-    std::vector<uint32> xs(std::begin(x), std::end(x));
-    std::vector<uint32> ys(std::begin(y), std::end(y));
-    const std::vector<uint32> expected_s(std::begin(expected),
-                                         std::end(expected));
+    // The values are below mod < 2^32, the narrowing is explicit.
+    auto to_u32 = [](const std::vector<uint64>& v) {
+      std::vector<uint32> ret;
+      for (uint64 e : v) ret.push_back(static_cast<uint32>(e));
+      return ret;
+    };
+    const std::vector<uint32> xs = to_u32(x);
+    const std::vector<uint32> ys = to_u32(y);
+    const std::vector<uint32> expected_s = to_u32(expected);
     assert(PolyMul(xs, ys, mod) == expected_s);
     assert(ntt32::PolyMul(xs, ys, mod) == expected_s);
   }

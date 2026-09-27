@@ -2,145 +2,113 @@
 
 namespace fraction_test {
 
-SL void FractionArithmeticTest() {
-  using F = Fraction<int64>;
+template <typename T>
+SL void TestFractionType() {
+  using F = Fraction<T>;
+  // The canonical form: gcd(a, b) == 1 and b > 0.
+  auto canonical = [](const F& f) {
+    return f.b > 0 && Gcd(Abs(f.a), f.b) == 1;
+  };
+  // p / q with q != 0 against exact cross multiplication.
+  auto is = [](const F& f, int64 p, int64 q) {
+    return f.a * T(q) == f.b * T(p);
+  };
+  for (int64 a = -6; a <= 6; ++a) {
+    for (int64 b = -6; b <= 6; ++b) {
+      if (b == 0) continue;
+      const F x{T(a), T(b)};
+      assert(canonical(x) && is(x, a, b));
+      assert(is(-x, -a, b) && is(+x, a, b));
+      for (int64 c = -4; c <= 4; ++c) {
+        for (int64 d = 1; d <= 4; ++d) {
+          const F y{T(c), T(d)};
+          const F sum = x + y, diff = x - y, prod = x * y;
+          assert(canonical(sum) && is(sum, a * d + c * b, b * d));
+          assert(canonical(diff) && is(diff, a * d - c * b, b * d));
+          assert(canonical(prod) && is(prod, a * c, b * d));
+          if (c != 0) {
+            const F quot = x / y;
+            assert(canonical(quot) && is(quot, a * d, b * c));
+            F z = x;
+            z /= y;
+            assert(z == quot);
+          }
+          F z = x;
+          z += y;
+          assert(z == sum);
+          z = x;
+          z -= y;
+          assert(z == diff);
+          z = x;
+          z *= y;
+          assert(z == prod);
 
-  // Constructor auto-reduces: 4/6 -> 2/3
-  {
-    F a(4, 6);
-    assert(a.a == 2 && a.b == 3);
+          // Comparisons: a / b op c / d with positive denominators.
+          const int64 l = a * (b < 0 ? -1 : 1) * d;
+          const int64 r = c * (b < 0 ? -b : b);
+          assert((x < y) == (l < r) && (x > y) == (l > r));
+          assert((x <= y) == (l <= r) && (x >= y) == (l >= r));
+          assert((x == y) == (l == r) && (x != y) == (l != r));
+        }
+        // Mixed with a scalar on either side.
+        assert(is(x + T(c), a + c * b, b) && is(T(c) + x, a + c * b, b));
+        assert(is(x - T(c), a - c * b, b) && is(T(c) - x, c * b - a, b));
+        assert(is(x * T(c), a * c, b) && is(T(c) * x, a * c, b));
+        if (c != 0) assert(is(x / T(c), a, b * c));
+        if (a != 0) assert(is(T(c) / x, c * b, a));
+      }
+    }
   }
 
-  // Negative denominator normalised: 1/-3 -> -1/3
-  {
-    F b(1, -3);
-    assert(b.a == -1 && b.b == 3);
-  }
-
-  // Both negative: -4/-6 -> 2/3
-  {
-    F c(-4, -6);
-    assert(c.a == 2 && c.b == 3);
-  }
-
-  // Zero numerator: 0/5 -> 0/1
-  {
-    F d(0, 5);
-    assert(d.a == 0 && d.b == 1);
-  }
-
-  // Addition: 1/2 + 1/3 = 5/6
-  {
-    F r = F(1, 2) + F(1, 3);
-    assert(r.a == 5 && r.b == 6);
-  }
-
-  // Subtraction: 3/4 - 1/4 = 1/2
-  {
-    F r = F(3, 4) - F(1, 4);
-    assert(r.a == 1 && r.b == 2);
-  }
-
-  // Multiplication with reduction: 2/3 * 3/4 = 1/2
-  {
-    F r = F(2, 3) * F(3, 4);
-    assert(r.a == 1 && r.b == 2);
-  }
-
-  // Division: (1/2) / (3/4) = 2/3
-  {
-    F r = F(1, 2) / F(3, 4);
-    assert(r.a == 2 && r.b == 3);
-  }
-
-  // Mixed scalar: 1/2 + 1 = 3/2
-  {
-    assert((F(1, 2) + 1).a == 3);
-    assert((1 + F(1, 2)).a == 3);
-    assert((F(3, 2) - 1).a == 1);
-    assert((2 - F(1, 2)).a == 3);
-    assert((F(1, 2) * 2).a == 1);
-    assert((2 * F(1, 2)).a == 1);
-    assert((F(3, 2) / 3).a == 1);
-  }
-
-  // Comparisons
-  assert(F(1, 2) < F(2, 3));
-  assert(F(2, 3) > F(1, 2));
-  assert(F(1, 2) == F(2, 4));
-  assert(F(1, 3) != F(1, 2));
-  assert(F(1, 2) <= F(1, 2));
-  assert(F(1, 2) >= F(1, 2));
-  assert(F(1, 3) <= F(2, 3));
-  assert(F(2, 3) >= F(1, 3));
-
-  // Unary negation: -(1/3) = -1/3
-  {
-    F r = -F(1, 3);
-    assert(r.a == -1 && r.b == 3);
-  }
-
-  // Unary plus is identity
-  {
-    F r = +F(1, 3);
-    assert(r.a == 1 && r.b == 3);
-  }
-
-  // Compound assignment
-  {
-    F x(1, 6);
-    x += F(1, 6);
-    assert(x.a == 1 && x.b == 3);
-    x -= F(1, 6);
-    assert(x.a == 1 && x.b == 6);
-    x *= F(2, 1);
-    assert(x.a == 1 && x.b == 3);
-    x /= F(2, 1);
-    assert(x.a == 1 && x.b == 6);
-  }
-
-  // Accumulate harmonic series: sum 1/i for i=1..10 = 7381/2520
-  {
-    F sum;
-    for (int i = 1; i <= 10; ++i) sum += F(1, i);
-    assert(sum.a == 7381 && sum.b == 2520);
-  }
-}
-
-PE_REGISTER_TEST(&FractionArithmeticTest, "FractionArithmeticTest", SMALL);
-
-SL void FractionIncrDecrTest() {
-  using F = Fraction<int64>;
-  F x(3, 4);
-
+  // ++ and -- add and subtract 1.
+  F x{T(3), T(4)};
   F& ref = ++x;
-  assert(x.a == 7 && x.b == 4);
-  assert(&ref == &x);
+  assert(&ref == &x && is(x, 7, 4));
+  assert(is(x++, 7, 4) && is(x, 11, 4));
+  assert(is(--x, 7, 4));
+  assert(is(x--, 7, 4) && is(x, 3, 4));
 
-  F old = x++;
-  assert(old.a == 7 && old.b == 4);
-  assert(x.a == 11 && x.b == 4);
+  // Copy and move
+  F copy(x);
+  F moved(std::move(copy));
+  F assigned;
+  assigned = moved;
+  F move_assigned;
+  move_assigned = std::move(assigned);
+  assert(is(moved, 3, 4) && is(move_assigned, 3, 4));
+  assert(is(F(), 0, 1));
 
-  --x;
-  assert(x.a == 7 && x.b == 4);
+  // Harmonic sum 1 + 1/2 + ... + 1/10 = 7381/2520
+  F h;
+  for (int i = 1; i <= 10; ++i) h += F(T(1), T(i));
+  assert(h.a == T(7381) && h.b == T(2520));
 
-  old = x--;
-  assert(old.a == 7 && old.b == 4);
-  assert(x.a == 3 && x.b == 4);
+  std::stringstream ss;
+  ss << F(T(-4), T(6));
+  assert(ss.str() == "-2/3");
+  assert(FAbs(F(T(-1), T(4)).ToDouble() + 0.25) < 1e-15);
+  assert(FAbs(F(T(22), T(7)).ToLongDouble() - 22.0L / 7.0L) < 1e-18L);
 }
 
-PE_REGISTER_TEST(&FractionIncrDecrTest, "FractionIncrDecrTest", SMALL);
+SL void FractionTest() {
+  TestFractionType<int64>();
+#if PE_HAS_INT128
+  TestFractionType<int128>();
+#endif
+  TestFractionType<int128e>();
+  TestFractionType<BigInteger>();
+#if ENABLE_GMP
+  TestFractionType<MpInteger>();
+#endif
 
-SL void FractionToDoubleTest() {
-  using F = Fraction<int64>;
-
-  assert(std::abs(F(1, 4).ToDouble() - 0.25) < 1e-15);
-  assert(std::abs(F(1, 3).ToDouble() - 1.0 / 3.0) < 1e-14);
-  assert(std::abs(F(22, 7).ToDouble() - 22.0 / 7.0) < 1e-14);
-  assert(std::abs(F(-1, 2).ToDouble() - (-0.5)) < 1e-15);
-  assert(std::abs(F(1, 4).ToLongDouble() - 0.25L) < 1e-18L);
+  // The converting constructor from another integer type.
+  Fraction<int64> f(4, 6);
+  assert(f.a == 2 && f.b == 3);
+  // Values that need more than 64 bits.
+  const Fraction<BigInteger> big(Power(10_bi, 30), Power(10_bi, 20) * 4);
+  assert(big.a == Power(10_bi, 10) / 4 && big.b == 1);
 }
 
-PE_REGISTER_TEST(&FractionToDoubleTest, "FractionToDoubleTest", SMALL);
+PE_REGISTER_TEST(&FractionTest, "FractionTest", SMALL);
 
 }  // namespace fraction_test

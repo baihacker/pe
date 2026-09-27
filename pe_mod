@@ -1063,6 +1063,13 @@ struct NModNumber {
 
   // TODO(bug): a negative n never reaches 0 with n >>= 1, so Power loops
   // forever, e.g. NModCC64<7>(3).Power(-1). PowerModImpl asserts n >= 0.
+  // TODO(bug): with the lazy APSBL policy, ret * x and x * x are not reduced,
+  // so the repeated squaring overflows ints, e.g.
+  // NModNumber<CCMod64<1000000007>, APSBL<int128>>(1000000006).Power(5)
+  // gives 566570489 instead of 1000000006. NModNumberM::Power has the same
+  // issue.
+  // NOTE: Do not let AI tools fix this automatically; it will be fixed
+  // manually.
   template <typename T>
   REQUIRES((is_builtin_integer_v<T>))
   RETURN(NModNumber) Power(T n) const {
@@ -1276,7 +1283,10 @@ struct NModNumberM {
     return *this;
   }
 
-  // TODO(bug): same as NModNumber::Power -- a negative n loops forever.
+  // TODO(bug): same as NModNumber::Power -- a negative n loops forever, and
+  // the lazy APSBL policy overflows in the repeated squaring.
+  // NOTE: Do not let AI tools fix this automatically; it will be fixed
+  // manually.
   template <typename T>
   REQUIRES((is_builtin_integer_v<T>))
   RETURN(NModNumberM) Power(T n) const {

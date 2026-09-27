@@ -670,6 +670,11 @@ struct NttRunnerLarge {
     return static_cast<T>(t);
 #endif
 #else
+    // TODO(bug): without int128, mod == 0 (the exact product) is not
+    // supported here: PE_ASSERT fails, or all coefficients are 0 when
+    // assertions are disabled, e.g. ntt32::PolyMulLarge({1, 2}, {3, 4}, 0).
+    // The comment in pe_poly_base says mod could be 0 for ntt32::*. The
+    // Enormous runner and ntt64 Large have the same issue.
     PE_ASSERT(0);
     return 0;
 #endif
@@ -829,6 +834,8 @@ struct NttRunnerEnormous {
     const uint128 ans = static_cast<uint128>(y3) * Self::M3M4 + ans_mod_m3m4;
     return static_cast<T>(ans);
 #else
+    // TODO(bug): same as NttRunnerLarge::CombineValue, mod == 0 is not
+    // supported without int128.
     PE_ASSERT(0);
     return 0;
 #endif
@@ -1438,6 +1445,9 @@ struct NttRunnerLarge {
     const uint128 t = static_cast<uint128>(y) * Self::M2 + b;
     return static_cast<T>(t);
 #else
+    // TODO(bug): same as ntt32's NttRunnerLarge::CombineValue, mod == 0 is
+    // not supported without int128, although the comment in pe_poly_base says
+    // mod could be 0 for ntt64::*.
     PE_ASSERT(0);
     return 0;
 #endif

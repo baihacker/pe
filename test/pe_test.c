@@ -62,7 +62,7 @@ SL std::string AsString(const T& v) {
   return std::to_string(v);
 }
 
-SL std::string AsString(const std::string& str) { return str; }
+[[maybe_unused]] SL std::string AsString(const std::string& str) { return str; }
 SL std::string AsString(const char* str) { return str; }
 
 #define AddDefined(x) AddResult((#x), AsString(x))

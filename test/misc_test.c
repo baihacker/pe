@@ -84,7 +84,7 @@ SL void SumSigma0Test() {
   for (int64 i = 1; i <= 10000; ++i) {
     int64 u = SumSigma0(i);
     int64 v = SumSigma0Bf(i);
-    auto w = min25::sigma0_sum_fast(i);
+    const int64 w = static_cast<int64>(min25::sigma0_sum_fast(i));
     if (u != v || v != w || u != w) {
       std::cerr << i << " " << u << " " << v << " " << w << std::endl;
     }
@@ -99,7 +99,7 @@ SL void SumSigma0Test() {
       int64 target = i + j;
       int64 u = SumSigma0(target);
       int64 v = SumSigma0Bf(target);
-      auto w = min25::sigma0_sum_fast(target);
+      const int64 w = static_cast<int64>(min25::sigma0_sum_fast(target));
       if (u != v || v != w || u != w) {
         std::cerr << target << " " << u << " " << v << " " << w << std::endl;
       }

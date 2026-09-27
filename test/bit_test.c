@@ -27,7 +27,7 @@ SL void BitTest() {
       assert(__pe_ffs64(target) == __builtin_ffsll(target));
       assert(__pe_parity64(target) == __builtin_parityll(target));
 #if defined(STL_GLIBCXX)
-      assert(__pe_lg64(target) == std::__lg(target));
+      assert(__pe_lg64(target) == static_cast<int>(std::__lg(target)));
 #endif
     }
   }

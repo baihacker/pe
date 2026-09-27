@@ -150,7 +150,7 @@ SL void PolyMulPerformanceTest() {
                                 4611686018427387847LL};
   constexpr int min_log2 = 10;
   constexpr int max_log2 = 20;
-  for (int level = 0; level < mods.size(); ++level) {
+  for (int level = 0; level < static_cast<int>(mods.size()); ++level) {
     const uint64 mod = mods[level];
     printf("mod = %llu\n", (unsigned long long)mod);
 

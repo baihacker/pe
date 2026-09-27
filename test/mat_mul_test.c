@@ -238,7 +238,8 @@ SL void PeMatrixTest() {
     PeMatrix<int64> x(1, 1);
     x = dyn;
     assert(FromPe(x) == d);
-    x = x;
+    PeMatrix<int64>& x_ref = x;  // Avoids -Wself-assign-overloaded.
+    x = x_ref;
     assert(FromPe(x) == d);
     PeMatrix<int64, 4> y(1, 4);
     y = fixed;

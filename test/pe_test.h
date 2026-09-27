@@ -18,7 +18,7 @@ SL bool SameStringIgnoreCase(std::string_view a, std::string_view b) {
   if (a.size() != b.size()) {
     return false;
   }
-  for (int i = 0; i < a.size(); ++i) {
+  for (int i = 0; i < static_cast<int>(a.size()); ++i) {
     if (std::tolower(a[i]) != std::tolower(b[i])) {
       return false;
     }

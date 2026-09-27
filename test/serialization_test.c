@@ -91,12 +91,13 @@ SL void ScalarTest() {
   for (uint32 v : {0U, 1U, 4000000000U, std::numeric_limits<uint32>::max()}) {
     CheckScalar<uint32>(v);
   }
-  for (int64 v : {0LL, 1LL, -1LL, 1234567890123LL,
-                  std::numeric_limits<int64>::max(),
-                  std::numeric_limits<int64>::min()}) {
+  for (int64 v : std::initializer_list<int64>{
+           0, 1, -1, 1234567890123LL, std::numeric_limits<int64>::max(),
+           std::numeric_limits<int64>::min()}) {
     CheckScalar<int64>(v);
   }
-  for (uint64 v : {0ULL, 1ULL, std::numeric_limits<uint64>::max()}) {
+  for (uint64 v : std::initializer_list<uint64>{
+           0, 1, std::numeric_limits<uint64>::max()}) {
     CheckScalar<uint64>(v);
   }
   for (double v : {0.0, -0.0, 1.5, -3.25e100, 1e-300}) {

@@ -315,7 +315,8 @@ SL void AbsDivideTest() {
   }
   // Larger values in base 16.
   const int64 big = 0x123456789ABCDEFLL;
-  for (int64 r : {1LL, 15LL, 16LL, 255LL, 4097LL, 0x10000000LL, big}) {
+  for (int64 r : std::initializer_list<int64>{1, 15, 16, 255, 4097, 0x10000000,
+                                              big}) {
     V rem;
     const V q = internal::AbsDivide(4, ToDigits(big, 4), ToDigits(r, 4), rem);
     assert(q == ToDigits(big / r, 4) && rem == ToDigits(big % r, 4));

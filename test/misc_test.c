@@ -1,8 +1,5 @@
 #include "pe_test.h"
 
-// pe_base doesn't include <bitset>; MSVC doesn't get it transitively.
-#include <bitset>
-
 namespace misc_test {
 SL void MiscTest() {
   GaussianEliminationSolver solver;

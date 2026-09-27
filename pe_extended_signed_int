@@ -1102,6 +1102,12 @@ struct ExtendedSignedIntImpl<ET, false>
     return l.CompareTo(r) != 0;
   }
 #endif
+  // TODO(bug): a binary operator with a signed value and an ET operand is
+  // ambiguous here, e.g. int512e(1) + uint256e(2) (also - * / % & ^ |): both
+  // this friend (ET converts to ExtendedSignedIntImpl) and the base
+  // ExtendedUnsignedIntImpl friend (the signed value converts to its base)
+  // are viable. The <ET, true> specialization is not affected; the compound
+  // operators (+= etc.) with an ET operand work.
   constexpr friend inline ExtendedSignedIntImpl operator+(
       const ExtendedSignedIntImpl& l, const ExtendedSignedIntImpl& r) {
     ExtendedSignedIntImpl ret(l);

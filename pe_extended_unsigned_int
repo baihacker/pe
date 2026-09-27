@@ -127,6 +127,14 @@ struct ExtendedUnsignedIntImpl<ET, true> {
   constexpr ExtendedUnsignedIntImpl(const ExtendedUnsignedIntImpl& other)
       : low_(other.low_), hi_(other.hi_) {}
 
+  // TODO(bug): this converting constructor is not explicit, so a binary
+  // operator with an ET operand is ambiguous, e.g. uint512e(1) + uint256e(2)
+  // (also - * / % & ^ |): ADL also finds the friend operators of ET and of
+  // the narrower types inside it, and this constructor lets the uint512e
+  // operand convert (truncate) to each of them, so every candidate needs one
+  // user-defined conversion. The same happens for
+  // ExtendedSignedIntImpl<ET, false>. The compound operators (+= etc.) with an
+  // ET operand work.
   template <typename ET1, bool is_builtin_integer1>
   constexpr ExtendedUnsignedIntImpl(
       const ExtendedUnsignedIntImpl<ET1, is_builtin_integer1>& other) {

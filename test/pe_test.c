@@ -28,6 +28,15 @@
 #include "int_algo_test.c"
 #include "prime_pi_sum_test.c"
 #include "tree_test.c"
+#include "geometry_test.c"
+#include "int_test.c"
+#include "mma_test.c"
+#include "parallel_algo_test.c"
+#include "rand_test.c"
+#include "range_test.c"
+#include "serialization_test.c"
+#include "span_test.c"
+#include "sym_poly_test.c"
 #endif
 
 static TimeUsage __time_usage;

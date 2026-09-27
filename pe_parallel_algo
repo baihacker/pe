@@ -95,6 +95,9 @@ SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
 template <int TN, typename T, int B = 10000>
 SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
     ParallelFindFirst(T first, T last, const std::function<T(T, T)>& f) {
+// TODO(bug): without OpenMP the empty-range (first > last) check is skipped,
+// so ParallelFindFirst<4, int64, 5>(10, 5, always_true) returns 10 instead of
+// the not-found value last + 1 == 6 returned by the OpenMP build and FindFirst.
 #if !ENABLE_OPENMP
   return f(first, last);
 #else
@@ -229,6 +232,9 @@ SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
 template <int TN, typename T, int B = 10000>
 SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
     ParallelFindLast(T first, T last, const std::function<T(T, T)>& f) {
+// TODO(bug): without OpenMP the empty-range (first > last) check is skipped,
+// so ParallelFindLast<4, int64, 5>(10, 5, always_true) returns 5 instead of
+// the not-found value first - 1 == 9 returned by the OpenMP build and FindLast.
 #if !ENABLE_OPENMP
   return f(first, last);
 #else

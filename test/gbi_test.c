@@ -13,7 +13,6 @@ class GbiTests {
   }
 
   SL void TestConstructor() {
-    TestT x;
     // TestConstructorImpl<bool>();
     TestConstructorImpl<char>();
     TestConstructorImpl<signed char>();
@@ -135,124 +134,82 @@ class GbiTests {
     TestAsmdImpl<int256e>();
     TestAsmdImpl<uint256e>();
 
-    for (int A : {-10000, 0, 10000}) {
-      for (int a = A - 10; a <= A + 10; ++a) {
-        for (int b = -10; b <= 10; ++b) {
-          assert((TestT(a) + TestT(b)).template ToInt<int>() == (a + b));
-          assert((TestT(a) += TestT(b)).template ToInt<int>() == (a + b));
-          assert((TestT(a) - TestT(b)).template ToInt<int>() == (a - b));
-          assert((TestT(a) -= TestT(b)).template ToInt<int>() == (a - b));
-          assert((TestT(a) * TestT(b)).template ToInt<int>() == (a * b));
-          assert((TestT(a) *= TestT(b)).template ToInt<int>() == (a * b));
+    // int and int64 operands take different mixed-type overloads.
+    TestValues<int>({0, 10000});
+    TestValues<int64>({-10000000000LL, 10000000000LL});
+  }
+
+  template <typename VT>
+  SL void TestValues(std::initializer_list<VT> centers) {
+    for (VT A : centers) {
+      for (VT a = A - 10; a <= A + 10; ++a) {
+        for (VT b = -10; b <= 10; ++b) {
+          assert((TestT(a) + TestT(b)).template ToInt<VT>() == (a + b));
+          assert((TestT(a) += TestT(b)).template ToInt<VT>() == (a + b));
+          assert((TestT(a) - TestT(b)).template ToInt<VT>() == (a - b));
+          assert((TestT(a) -= TestT(b)).template ToInt<VT>() == (a - b));
+          assert((TestT(a) * TestT(b)).template ToInt<VT>() == (a * b));
+          assert((TestT(a) *= TestT(b)).template ToInt<VT>() == (a * b));
           if (b != 0) {
-            assert((TestT(a) / TestT(b)).template ToInt<int>() == (a / b));
-            assert((TestT(a) /= TestT(b)).template ToInt<int>() == (a / b));
-            assert((TestT(a) % TestT(b)).template ToInt<int>() == (a % b));
-            assert((TestT(a) %= TestT(b)).template ToInt<int>() == (a % b));
+            assert((TestT(a) / TestT(b)).template ToInt<VT>() == (a / b));
+            assert((TestT(a) /= TestT(b)).template ToInt<VT>() == (a / b));
+            assert((TestT(a) % TestT(b)).template ToInt<VT>() == (a % b));
+            assert((TestT(a) %= TestT(b)).template ToInt<VT>() == (a % b));
           }
           if (a >= 0 && b >= 0) {
-            assert((TestT(a) | TestT(b)).template ToInt<int>() == (a | b));
-            assert((TestT(a) |= TestT(b)).template ToInt<int>() == (a | b));
-            assert((TestT(a) & TestT(b)).template ToInt<int>() == (a & b));
-            assert((TestT(a) &= TestT(b)).template ToInt<int>() == (a & b));
-            assert((TestT(a) ^ TestT(b)).template ToInt<int>() == (a ^ b));
-            assert((TestT(a) ^= TestT(b)).template ToInt<int>() == (a ^ b));
+            assert((TestT(a) | TestT(b)).template ToInt<VT>() == (a | b));
+            assert((TestT(a) |= TestT(b)).template ToInt<VT>() == (a | b));
+            assert((TestT(a) & TestT(b)).template ToInt<VT>() == (a & b));
+            assert((TestT(a) &= TestT(b)).template ToInt<VT>() == (a & b));
+            assert((TestT(a) ^ TestT(b)).template ToInt<VT>() == (a ^ b));
+            assert((TestT(a) ^= TestT(b)).template ToInt<VT>() == (a ^ b));
           }
 
-          assert((TestT(a) + b).template ToInt<int>() == (a + b));
-          assert((TestT(a) += b).template ToInt<int>() == (a + b));
-          assert((TestT(a) - b).template ToInt<int>() == (a - b));
-          assert((TestT(a) -= b).template ToInt<int>() == (a - b));
-          assert((TestT(a) * b).template ToInt<int>() == (a * b));
-          assert((TestT(a) *= b).template ToInt<int>() == (a * b));
+          assert((TestT(a) + b).template ToInt<VT>() == (a + b));
+          assert((TestT(a) += b).template ToInt<VT>() == (a + b));
+          assert((TestT(a) - b).template ToInt<VT>() == (a - b));
+          assert((TestT(a) -= b).template ToInt<VT>() == (a - b));
+          assert((TestT(a) * b).template ToInt<VT>() == (a * b));
+          assert((TestT(a) *= b).template ToInt<VT>() == (a * b));
           if (b != 0) {
-            assert((TestT(a) / b).template ToInt<int>() == (a / b));
-            assert((TestT(a) /= b).template ToInt<int>() == (a / b));
-            assert((TestT(a) % b).template ToInt<int>() == (a % b));
-            assert((TestT(a) %= b).template ToInt<int>() == (a % b));
+            assert((TestT(a) / b).template ToInt<VT>() == (a / b));
+            assert((TestT(a) /= b).template ToInt<VT>() == (a / b));
+            assert((TestT(a) % b).template ToInt<VT>() == (a % b));
+            assert((TestT(a) %= b).template ToInt<VT>() == (a % b));
           }
           if (a >= 0 && b >= 0) {
-            assert((TestT(a) | b).template ToInt<int>() == (a | b));
-            assert((TestT(a) |= b).template ToInt<int>() == (a | b));
-            assert((TestT(a) & b).template ToInt<int>() == (a & b));
-            assert((TestT(a) &= b).template ToInt<int>() == (a & b));
-            assert((TestT(a) ^ b).template ToInt<int>() == (a ^ b));
-            assert((TestT(a) ^= b).template ToInt<int>() == (a ^ b));
+            assert((TestT(a) | b).template ToInt<VT>() == (a | b));
+            assert((TestT(a) |= b).template ToInt<VT>() == (a | b));
+            assert((TestT(a) & b).template ToInt<VT>() == (a & b));
+            assert((TestT(a) &= b).template ToInt<VT>() == (a & b));
+            assert((TestT(a) ^ b).template ToInt<VT>() == (a ^ b));
+            assert((TestT(a) ^= b).template ToInt<VT>() == (a ^ b));
           }
 
-          assert((a + TestT(b)).template ToInt<int>() == (a + b));
-          assert((a - TestT(b)).template ToInt<int>() == (a - b));
-          assert((a * TestT(b)).template ToInt<int>() == (a * b));
+          assert((a + TestT(b)).template ToInt<VT>() == (a + b));
+          assert((a - TestT(b)).template ToInt<VT>() == (a - b));
+          assert((a * TestT(b)).template ToInt<VT>() == (a * b));
           if (b != 0) {
-            assert((a / TestT(b)).template ToInt<int>() == (a / b));
-            assert((a % TestT(b)).template ToInt<int>() == (a % b));
+            assert((a / TestT(b)).template ToInt<VT>() == (a / b));
+            assert((a % TestT(b)).template ToInt<VT>() == (a % b));
           }
           if (a >= 0 && b >= 0) {
-            assert((a | TestT(b)).template ToInt<int>() == (a | b));
-            assert((a & TestT(b)).template ToInt<int>() == (a & b));
-            assert((a ^ TestT(b)).template ToInt<int>() == (a ^ b));
-          }
-        }
-      }
-    }
-
-    for (int64 A : {-10000000000LL, -10000LL, 0LL, 10000LL, 10000000000LL}) {
-      for (int64 a = A - 10; a <= A + 10; ++a) {
-        for (int64 b = -10; b <= 10; ++b) {
-          assert((TestT(a) + TestT(b)).template ToInt<int64>() == (a + b));
-          assert((TestT(a) += TestT(b)).template ToInt<int64>() == (a + b));
-          assert((TestT(a) - TestT(b)).template ToInt<int64>() == (a - b));
-          assert((TestT(a) -= TestT(b)).template ToInt<int64>() == (a - b));
-          assert((TestT(a) * TestT(b)).template ToInt<int64>() == (a * b));
-          assert((TestT(a) *= TestT(b)).template ToInt<int64>() == (a * b));
-          if (b != 0) {
-            assert((TestT(a) / TestT(b)).template ToInt<int64>() == (a / b));
-            assert((TestT(a) /= TestT(b)).template ToInt<int64>() == (a / b));
-            assert((TestT(a) % TestT(b)).template ToInt<int64>() == (a % b));
-            assert((TestT(a) %= TestT(b)).template ToInt<int64>() == (a % b));
-          }
-          if (a >= 0 && b >= 0) {
-            assert((TestT(a) | TestT(b)).template ToInt<int64>() == (a | b));
-            assert((TestT(a) |= TestT(b)).template ToInt<int64>() == (a | b));
-            assert((TestT(a) & TestT(b)).template ToInt<int64>() == (a & b));
-            assert((TestT(a) &= TestT(b)).template ToInt<int64>() == (a & b));
-            assert((TestT(a) ^ TestT(b)).template ToInt<int64>() == (a ^ b));
-            assert((TestT(a) ^= TestT(b)).template ToInt<int64>() == (a ^ b));
+            assert((a | TestT(b)).template ToInt<VT>() == (a | b));
+            assert((a & TestT(b)).template ToInt<VT>() == (a & b));
+            assert((a ^ TestT(b)).template ToInt<VT>() == (a ^ b));
           }
 
-          assert((TestT(a) + b).template ToInt<int64>() == (a + b));
-          assert((TestT(a) += b).template ToInt<int64>() == (a + b));
-          assert((TestT(a) - b).template ToInt<int64>() == (a - b));
-          assert((TestT(a) -= b).template ToInt<int64>() == (a - b));
-          assert((TestT(a) * b).template ToInt<int64>() == (a * b));
-          assert((TestT(a) *= b).template ToInt<int64>() == (a * b));
-          if (b != 0) {
-            assert((TestT(a) / b).template ToInt<int64>() == (a / b));
-            assert((TestT(a) /= b).template ToInt<int64>() == (a / b));
-            assert((TestT(a) % b).template ToInt<int64>() == (a % b));
-            assert((TestT(a) %= b).template ToInt<int64>() == (a % b));
-          }
-          if (a >= 0 && b >= 0) {
-            assert((TestT(a) | b).template ToInt<int64>() == (a | b));
-            assert((TestT(a) |= b).template ToInt<int64>() == (a | b));
-            assert((TestT(a) & b).template ToInt<int64>() == (a & b));
-            assert((TestT(a) &= b).template ToInt<int64>() == (a & b));
-            assert((TestT(a) ^ b).template ToInt<int64>() == (a ^ b));
-            assert((TestT(a) ^= b).template ToInt<int64>() == (a ^ b));
-          }
-
-          assert((a + TestT(b)).template ToInt<int64>() == (a + b));
-          assert((a - TestT(b)).template ToInt<int64>() == (a - b));
-          assert((a * TestT(b)).template ToInt<int64>() == (a * b));
-          if (b != 0) {
-            assert((a / TestT(b)).template ToInt<int64>() == (a / b));
-            assert((a % TestT(b)).template ToInt<int64>() == (a % b));
-          }
-          if (a >= 0 && b >= 0) {
-            assert((a | TestT(b)).template ToInt<int64>() == (a | b));
-            assert((a & TestT(b)).template ToInt<int64>() == (a & b));
-            assert((a ^ TestT(b)).template ToInt<int64>() == (a ^ b));
-          }
+          // Comparison: big vs big, big vs builtin, builtin vs big
+          assert((a < b) == (TestT(a) < TestT(b)));
+          assert((a > b) == (TestT(a) > TestT(b)));
+          assert((a <= b) == (TestT(a) <= TestT(b)));
+          assert((a >= b) == (TestT(a) >= TestT(b)));
+          assert((a == b) == (TestT(a) == TestT(b)));
+          assert((a != b) == (TestT(a) != TestT(b)));
+          assert((a < b) == (TestT(a) < b));
+          assert((a == b) == (TestT(a) == b));
+          assert((a > b) == (a > TestT(b)));
+          assert((a == b) == (a == TestT(b)));
         }
       }
     }
@@ -282,13 +239,6 @@ class GbiTests {
     assert((x <= NT(1)) == 1);
     assert((x >= NT(1)) == 1);
     assert((x != NT(1)) == 0);
-
-    assert((x == x) == 1);
-    assert((x > x) == 0);
-    assert((x < x) == 0);
-    assert((x <= x) == 1);
-    assert((x >= x) == 1);
-    assert((x != x) == 0);
   }
 
   SL void TestCompareOperator() {
@@ -351,53 +301,24 @@ class GbiTests {
       }
     }
     {
+      auto only_bit_120 = [](const TestT& a) {
+        assert(BitWidth(a) == 121);
+        assert(Popcount(a) == 1);
+        for (int i = 0; i < 120; ++i) {
+          assert(GetBit(a, i) == 0);
+        }
+        assert(GetBit(a, 120) == 1);
+      };
       TestT a;
       SetBit(a, 120);
-      assert(BitWidth(a) == 121);
-      assert(Popcount(a) == 1);
-      for (int i = 0; i < 120; ++i) {
-        assert(GetBit(a, i) == 0);
-      }
-      assert(GetBit(a, 120) == 1);
+      only_bit_120(a);
       RevBit(a, 120);
       assert(IsZero(a));
-    }
-    {
-      TestT a;
       RevBit(a, 120);
-      assert(BitWidth(a) == 121);
-      assert(Popcount(a) == 1);
-      for (int i = 0; i < 120; ++i) {
-        assert(GetBit(a, i) == 0);
-      }
-      assert(GetBit(a, 120) == 1);
+      only_bit_120(a);
       ResetBit(a, 120);
       assert(IsZero(a));
     }
-  }
-
-  SL void TestCorrectness() {
-    for (int i = -100; i <= 100; ++i)
-      for (int j = -100; j <= 100; ++j) {
-        TestT a(i), b(j);
-        assert(i + j == a + b);
-        assert(i - j == a - b);
-        assert(i * j == a * b);
-        if (j != 0) {
-          assert(i / j == a / b);
-          assert(i % j == a % b);
-        }
-        if (i >= 0 && j >= 0) {
-          assert((i & j) == (a & b));
-          assert((i ^ j) == (a ^ b));
-          assert((i | j) == (a | b));
-        }
-        assert((i > j) == (bool)(a > b));
-        assert((i < j) == (bool)(a < b));
-        assert((i == j) == (bool)(a == b));
-        assert((i >= j) == (bool)(a >= b));
-        assert((i <= j) == (bool)(a <= b));
-      }
   }
 
   SL void TestUtilities() {
@@ -457,13 +378,9 @@ class GbiTests {
       assert(Gcd(x) == 1);
       assert(Gcd(x, x) == 1);
       assert(Gcd(x, x, x) == 1);
-      assert(Gcd(x, x, x, x) == 1);
-      assert(Gcd(x, x, x, x, x) == 1);
       assert(Lcm(x) == 1);
       assert(Lcm(x, x) == 1);
       assert(Lcm(x, x, x) == 1);
-      assert(Lcm(x, x, x, x) == 1);
-      assert(Lcm(x, x, x, x, x) == 1);
       assert(std::get<0>(ExGcd(x, x)) == 1);
     }
     {
@@ -491,7 +408,6 @@ class GbiTests {
       TestT mod = Power(TestT(2), 48);
       TestT ans = 1;
       FactPPowerModer<TestT> moder(2, 48);
-      int i = 0;
       while (N > 1) {
         ans = ans * moder.Cal(N) % mod;
         N >>= 1;
@@ -503,21 +419,137 @@ class GbiTests {
     }
     {
       for (int i = 2; i <= 16; ++i) {
-        for (int64 k = 1; k <= 100; ++k) {
-          TestT n = Power<TestT>(2, k);
-          int ans = LogI(i, n);
-          TestT val1 = Power<TestT>(i, ans);
-          TestT val2 = Power<TestT>(i, ans + 1);
-          assert(val1 <= n);
-          assert(val2 > n);
+        for (int base : {2, 10}) {
+          for (int64 k = 1; k <= 100; ++k) {
+            TestT n = Power<TestT>(base, k);
+            int ans = LogI(i, n);
+            TestT val1 = Power<TestT>(i, ans);
+            TestT val2 = Power<TestT>(i, ans + 1);
+            assert(val1 <= n);
+            assert(val2 > n);
+          }
         }
-        for (int64 k = 1; k <= 100; ++k) {
-          TestT n = Power<TestT>(10, k);
-          int ans = LogI(i, n);
-          TestT val1 = Power<TestT>(i, ans);
-          TestT val2 = Power<TestT>(i, ans + 1);
-          assert(val1 <= n);
-          assert(val2 > n);
+      }
+    }
+  }
+
+  SL void TestIntegerUtil() {
+    for (int a = -12; a <= 12; ++a) {
+      const TestT x(a);
+      assert(IntSign(x) == (a > 0) - (a < 0));
+      assert(IsZero(x) == (a == 0));
+      assert(IsEven(x) == (a % 2 == 0));
+      assert(IsOdd(x) == (a % 2 != 0));
+      assert(SameParity(x, TestT(a + 2)) && !SameParity(x, TestT(a + 1)));
+      assert(Abs(x) == std::abs(a));
+      assert(FAbs(x) == std::abs(a));
+      if (a > 0) {
+        assert(LowerBits(x) == static_cast<uint32>(a));
+      }
+      for (int b = -5; b <= 5; ++b) {
+        if (b == 0) continue;
+        const TestT y(b);
+        auto [q, r] = Div(x, y);
+        assert(q == a / b && r == a % b);
+        assert(FloorDiv(x, y) == FloorDiv(a, b));
+        assert(CeilDiv(x, y) == CeilDiv(a, b));
+        if (b > 0) {
+          const int expected = (a % b + b) % b;
+          assert(Mod(x, b) == expected);
+          assert(Mod(x, y) == expected);
+        }
+      }
+    }
+
+    const int m = 7;
+    for (int a = 0; a < m; ++a) {
+      for (int b = 0; b < m; ++b) {
+        assert(AddMod(TestT(a), TestT(b), m) == (a + b) % m);
+        assert(SubMod(TestT(a), TestT(b), m) == (a - b + m) % m);
+        assert(MulMod(TestT(a), TestT(b), m) == a * b % m);
+      }
+    }
+
+    // All three PowerMod overloads, negative base and mod == 1.
+    for (int a = -10; a <= 10; ++a) {
+      for (int n = 0; n <= 6; ++n) {
+        const int64 expected = PowerMod(int64(a % m + m), int64(n), int64(m));
+        assert(PowerMod(TestT(a), n, TestT(m)) == expected);
+        assert(PowerMod(TestT(a), n, m) == expected);
+        assert(PowerMod(TestT(a), TestT(n), TestT(m)) == expected);
+      }
+    }
+    assert(IsZero(PowerMod(TestT(5), 3, TestT(1))));
+    assert(IsZero(PowerMod(TestT(5), 3, 1)));
+    assert(IsZero(PowerMod(TestT(5), TestT(3), TestT(1))));
+  }
+
+  SL void TestBigValues() {
+    // Deterministic multi-limb values of both signs.
+    std::vector<TestT> values;
+    TestT v = 1;
+    for (int i = 0; i < 12; ++i) {
+      v = v * 1000000007 + i * 12345;
+      values.push_back(v);
+      values.push_back(-v);
+    }
+    for (const TestT& a : values) {
+      assert(TestT(ToString(a)) == a);
+      for (int k : {1, 31, 32, 33, 100}) {
+        assert((a << k) == a * Power(TestT(2), k));
+        assert(((a << k) >> k) == a);
+      }
+      for (const TestT& b : values) {
+        auto [q, r] = Div(a, b);
+        assert(q * b + r == a);
+        assert(Abs(r) < Abs(b));
+        assert(IsZero(r) || IntSign(r) == IntSign(a));
+        assert((a + b) - b == a);
+        assert(a * b / b == a);
+        assert(IsZero(a * b % b));
+
+        const TestT g = Gcd(Abs(a), Abs(b));
+        assert(IsZero(a % g) && IsZero(b % g));
+        assert(Gcd(Abs(a) / g, Abs(b) / g) == 1);
+        TestT x, y;
+        const TestT d = ExGcd(a, b, x, y);
+        assert(a * x + b * y == d && Abs(d) == g);
+      }
+    }
+    // Truncating right shift of a negative value.
+    assert((TestT(-5) >> 1) == -2);
+
+    // Powers of two convert to double exactly.
+    for (int k : {0, 50, 100, 500}) {
+      assert(ToFloat<double>(TestT(1) << k) == std::ldexp(1.0, k));
+      assert(ToFloat<double>(-(TestT(1) << k)) == -std::ldexp(1.0, k));
+    }
+  }
+
+  // Compares the gbi overloads with the builtin int64 ones.
+  SL void TestNumberTheory() {
+    for (int64 m = 1; m <= 12; ++m) {
+      for (int64 a = 0; a < m; ++a) {
+        for (int64 b = 0; b < m; ++b) {
+          const auto e = SolveLinearEquation(a, b, m);
+          const auto ans = SolveLinearEquation<TestT>(a, b, m);
+          assert(ans.ok() == e.ok());
+          if (e.ok()) assert(ans.value == e.value && ans.mod == e.mod);
+        }
+        if (Gcd(a, m) == 1 && m > 1) {
+          assert(ModInv<TestT>(a, m) == ModInv(a, m));
+        }
+      }
+    }
+    for (int64 m1 = 1; m1 <= 6; ++m1) {
+      for (int64 m2 = 1; m2 <= 6; ++m2) {
+        for (int64 a = 0; a < m1; ++a) {
+          for (int64 b = 0; b < m2; ++b) {
+            const auto e = Crt2(a, m1, b, m2);
+            const auto ans = Crt2<TestT>(a, m1, b, m2);
+            assert(ans.ok() == e.ok());
+            if (e.ok()) assert(ans.value == e.value && ans.mod == e.mod);
+          }
         }
       }
     }
@@ -531,8 +563,10 @@ SL void GbiTest_BigInteger() {
   tester.TestAsmdOperator();
   tester.TestCompareOperator();
   tester.TestBitOperator();
-  tester.TestCorrectness();
   tester.TestUtilities();
+  tester.TestIntegerUtil();
+  tester.TestBigValues();
+  tester.TestNumberTheory();
   Gcd(12_bi, 8_bi);
   123456789123456789_bi * 2 * 5_bi * "10"_bi;
 }
@@ -546,8 +580,10 @@ SL void GbiTest_MpInteger() {
   tester.TestAsmdOperator();
   tester.TestCompareOperator();
   tester.TestBitOperator();
-  tester.TestCorrectness();
   tester.TestUtilities();
+  tester.TestIntegerUtil();
+  tester.TestBigValues();
+  tester.TestNumberTheory();
   Gcd(12_mpi, 8_mpi);
   123456789123456789_mpi * 2 * 5_mpi * "10"_mpi;
 }

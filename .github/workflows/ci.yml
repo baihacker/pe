@@ -10,6 +10,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
+      - name: Install latest GCC and dependencies
+        run: |
+          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+          sudo apt-get update
+
+          # 自动匹配 PPA 中版本号最高的 g++ 包名（例如 g++-14、g++-15）
+          LATEST_GCC=$(apt-cache search '^gcc-[0-9]+$' | awk '{print $1}' | sort -V | tail -n 1)
+          LATEST_GXX=$(apt-cache search '^g\+\+-[0-9]+$' | awk '{print $1}' | sort -V | tail -n 1)
+
+          echo "Found latest GCC version: $LATEST_GCC / $LATEST_GXX"
+
+          sudo apt-get install -y "$LATEST_GCC" "$LATEST_GXX" libgmp-dev libflint-dev libntl-dev
+          
+          # 自动设置软链接
+          sudo update-alternatives --install /usr/bin/gcc gcc "/usr/bin/$LATEST_GCC" 100 --slave /usr/bin/g++ g++ "/usr/bin/$LATEST_GXX"
+
+      - name: Check GCC version
+        run: g++ --version
+
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y g++ libgmp-dev libflint-dev libntl-dev
 

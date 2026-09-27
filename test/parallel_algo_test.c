@@ -161,6 +161,12 @@ SL void ParallelFindImpl() {
     }
 
     // Unbounded searches; every m here has a hit within m steps.
+    // Only cases where every id's blocks contain a hit: see the TODO(bug) at
+    // the unbounded ParallelFindFirst/ParallelFindLast in pe_parallel_algo,
+    // they hang otherwise when fewer than TN threads are available.
+    if (m > B && std::gcd(static_cast<int64>(m), int64(TN) * B) != 1) {
+      continue;
+    }
     for (T start : {T(-300), T(0), T(123)}) {
       T ef = start;
       while (!f(ef)) ++ef;

@@ -32,7 +32,6 @@ package(
              "ENABLE_LIBBF=0",
              "ENABLE_PRIME_COUNT=0",
              "ENABLE_PRIME_SIEVE=0",
-             "TEST_ALL",
              "CONTINUOUS_INTEGRATION_TEST",
              "NO_SUPER_TEST"],
            linkopts = [

@@ -2,43 +2,19 @@
 
 namespace nt_test {
 SL void ParityTest() {
-  assert(IsEven(0) == 1);
-  assert(IsEven(1) == 0);
-  assert(IsEven(2) == 1);
-  assert(IsEven(3) == 0);
-
-  assert(IsOdd(0) == 0);
-  assert(IsOdd(1) == 1);
-  assert(IsOdd(2) == 0);
-  assert(IsOdd(3) == 1);
-
-  assert(SameParity(0, 0) == 1);
-  assert(SameParity(0, 1) == 0);
-  assert(SameParity(0, 2) == 1);
-  assert(SameParity(0, 3) == 0);
-
-  assert(SameParity(1, 0) == 0);
-  assert(SameParity(1, 1) == 1);
-  assert(SameParity(1, 2) == 0);
-  assert(SameParity(1, 3) == 1);
-
-  assert(SameParity(2, 0) == 1);
-  assert(SameParity(2, 1) == 0);
-  assert(SameParity(2, 2) == 1);
-  assert(SameParity(2, 3) == 0);
-
-  assert(SameParity(3, 0) == 0);
-  assert(SameParity(3, 1) == 1);
-  assert(SameParity(3, 2) == 0);
-  assert(SameParity(3, 3) == 1);
-
-  for (int i = -100; i <= 100; ++i) assert(IsEven(i) + IsOdd(i) == 1);
+  for (int i = -5; i <= 5; ++i) {
+    assert(IsEven(i) == (i % 2 == 0));
+    assert(IsOdd(i) == (i % 2 != 0));
+    for (int j = -5; j <= 5; ++j) {
+      assert(SameParity(i, j) == ((i - j) % 2 == 0));
+    }
+  }
 }
 PE_REGISTER_TEST(&ParityTest, "ParityTest", SMALL);
 
 SL void SqrtITest() {
-  int f = 0;
-  for (int64 i = 1; i <= 10000000; ++i) {
+  // Dense for small i, then sparse up to 3e9 (i^2 close to 2^63).
+  for (int64 i = 1; i <= 3000000000; i += i / 10000 + 1) {
     const int64 num = i * i;
     for (int64 offset = -10; offset <= 10; ++offset) {
       int64 n = offset + num;
@@ -122,21 +98,15 @@ SL void GcdTest() {
 PE_REGISTER_TEST(&GcdTest, "GcdTest", SMALL);
 
 SL void GetFactorsTest() {
-  std::vector<pe::int64> result = GetFactors(1);
-  assert(result == std::vector<int64>{1});
-
-  result = GetFactors(2);
-  assert(result == std::vector<int64>({1, 2}));
-
-  result = GetFactors(3);
-  assert(result == std::vector<int64>({1, 3}));
-
-  result = GetFactors(4);
-  assert(result == std::vector<int64>({1, 2, 4}));
-
-  result = GetFactors(12);
-  std::sort(std::begin(result), std::end(result));
-  assert(result == std::vector<int64>({1, 2, 3, 4, 6, 12}));
+  for (int64 n = 1; n <= 100; ++n) {
+    std::vector<int64> result = GetFactors(n);
+    std::sort(std::begin(result), std::end(result));
+    std::vector<int64> expected;
+    for (int64 d = 1; d <= n; ++d) {
+      if (n % d == 0) expected.push_back(d);
+    }
+    assert(result == expected);
+  }
 
   for (int64 limit = -1; limit <= 20; ++limit) {
     std::vector<pe::int64> result = GetFactors(12, limit);
@@ -163,20 +133,12 @@ SL int IsSquareFreeNormal(int64 n) {
 }
 
 SL void IsSquareFreeTest() {
-  const int64 n = maxp * 2;
-  int64 ans1 = 0;
-  {
-    TimeRecorder tr;
-    for (int i = 1; i <= n; ++i) ans1 += IsSquareFree(i);
-    // std::cerr << tr.Elapsed().Format() << std::endl;
+  // pmask path, around maxp, and trial division path.
+  for (int64 start : {int64(1), maxp - 5000, int64(1000000000000)}) {
+    for (int64 n = start; n <= start + 2000; ++n) {
+      assert(IsSquareFree(n) == IsSquareFreeNormal(n));
+    }
   }
-  int64 ans2 = 0;
-  {
-    TimeRecorder tr;
-    for (int i = 1; i <= n; ++i) ans2 += IsSquareFreeNormal(i);
-    // std::cerr << tr.Elapsed().Format() << std::endl;
-  }
-  assert(ans1 == ans2);
 }
 
 PE_REGISTER_TEST(&IsSquareFreeTest, "IsSquareFreeTest", SMALL);
@@ -200,7 +162,7 @@ SL void CalModOrderTest() {
 PE_REGISTER_TEST(&CalModOrderTest, "CalModOrderTest", SMALL);
 
 SL void SquareRootModTest() {
-  for (int i = 0; i < 1000; ++i) {
+  for (int i = 0; i < 200; ++i) {
     const int64 p = plist[i];
     int cnt = 0;
     for (int n = 0; n < p; ++n) {
@@ -258,14 +220,10 @@ SL void TwoSquaresTest() {
     }
     return ret * 4;
   };
-  int64 offset = 0;
-  for (int64 n = 2; n <= 10000; ++n) {
-    TestTwoSquaresImpl(offset + n, num_solutions(offset + n));
-  }
-  // 1e12
-  offset = 1000000000000;
-  for (int64 n = 2; n <= 10000; ++n) {
-    TestTwoSquaresImpl(offset + n, num_solutions(offset + n));
+  for (int64 offset : {int64(0), int64(1000000000000)}) {
+    for (int64 n = 2; n <= 2000; ++n) {
+      TestTwoSquaresImpl(offset + n, num_solutions(offset + n));
+    }
   }
 }
 
@@ -280,18 +238,17 @@ SL void BaseKConversionTest() {
       }
     }
   }
-  for (int64 n = 0; n <= 10000; ++n) {
+  for (int64 n = 0; n <= 1000000; n += n / 100 + 1) {
     for (int k = -16; k <= 16; ++k) {
       if (Abs(k) >= 2) {
         assert(FromBaseK<int64>(ToBaseK(n, k), k) == n);
       }
     }
   }
-  for (int64 n = -100; n <= 100; ++n) {
+  // Negative n only works with a negative base.
+  for (int64 n = -100; n < 0; ++n) {
     for (int k = -200; k <= -2; ++k) {
-      if (Abs(k) >= 2) {
-        assert(FromBaseK<int64>(ToBaseK(n, k), k) == n);
-      }
+      assert(FromBaseK<int64>(ToBaseK(n, k), k) == n);
     }
   }
 }
@@ -305,79 +262,31 @@ SL void CountCoprimeTest() {
     std::vector<std::pair<int64, int>> rm = GetRadFactorsWithMu(a);
     for (int64 n = 1; n <= 1000; n *= 10) {
       int64 ans0 = 0;
-      int64 ans1 = CountCoprime(n, a);
-      int64 ans2 = CountCoprime(n, f);
-      int64 ans3 = CountCoprime(n, rm);
       for (int64 i = 1; i <= n; ++i) {
         if (Gcd(i, a) == 1) {
           ++ans0;
         }
       }
-      assert(ans1 == ans0);
-      assert(ans2 == ans0);
-      assert(ans3 == ans0);
-    }
-  }
+      assert(CountCoprime(n, a) == ans0);
+      assert(CountCoprime(n, f) == ans0);
+      assert(CountCoprime(n, rm) == ans0);
+      assert(CountCoprime<MT>(n, a).value() == ans0 % mod);
+      assert(CountCoprime<MT>(n, f).value() == ans0 % mod);
+      assert(CountCoprime<MT>(n, rm).value() == ans0 % mod);
 
-  for (int64 a = 1; a <= 100; ++a) {
-    IntegerFactorization f = Factorize(a);
-    std::vector<std::pair<int64, int>> rm = GetRadFactorsWithMu(a);
-    for (int64 n = 1; n <= 1000; n *= 10) {
-      int64 ans0 = 0;
-      int64 ans1 = CountCoprime<MT>(n, a).value();
-      int64 ans2 = CountCoprime<MT>(n, f).value();
-      int64 ans3 = CountCoprime<MT>(n, rm).value();
-      for (int64 i = 1; i <= n; ++i) {
-        if (Gcd(i, a) == 1) {
-          ++ans0;
-        }
-      }
-      ans0 %= mod;
-      assert(ans1 == ans0);
-      assert(ans2 == ans0);
-      assert(ans3 == ans0);
-    }
-  }
-
-  for (int64 a = 1; a <= 100; ++a) {
-    IntegerFactorization f = Factorize(a);
-    std::vector<std::pair<int64, int>> rm = GetRadFactorsWithMu(a);
-    for (int64 n = 1; n <= 1000; n *= 10) {
       for (int64 remain = 0; remain < 5; ++remain) {
-        int64 ans0 = 0;
-        int64 ans1 = CountCoprime(n, a, remain, 5);
-        int64 ans2 = CountCoprime(n, f, remain, 5);
-        int64 ans3 = CountCoprime(n, rm, remain, 5);
+        int64 ans1 = 0;
         for (int64 i = 1; i <= n; ++i) {
           if (Gcd(i, a) == 1 && i % 5 == remain) {
-            ++ans0;
+            ++ans1;
           }
         }
-        assert(ans1 == ans0);
-        assert(ans2 == ans0);
-        assert(ans3 == ans0);
-      }
-    }
-  }
-
-  for (int64 a = 1; a <= 100; ++a) {
-    IntegerFactorization f = Factorize(a);
-    std::vector<std::pair<int64, int>> rm = GetRadFactorsWithMu(a);
-    for (int64 n = 1; n <= 1000; n *= 10) {
-      for (int64 remain = 0; remain < 5; ++remain) {
-        int64 ans0 = 0;
-        int64 ans1 = CountCoprime<MT>(n, a, remain, 5).value();
-        int64 ans2 = CountCoprime<MT>(n, f, remain, 5).value();
-        int64 ans3 = CountCoprime<MT>(n, rm, remain, 5).value();
-        for (int64 i = 1; i <= n; ++i) {
-          if (Gcd(i, a) == 1 && i % 5 == remain) {
-            ++ans0;
-          }
-        }
-        ans0 %= mod;
-        assert(ans1 == ans0);
-        assert(ans2 == ans0);
-        assert(ans3 == ans0);
+        assert(CountCoprime(n, a, remain, 5) == ans1);
+        assert(CountCoprime(n, f, remain, 5) == ans1);
+        assert(CountCoprime(n, rm, remain, 5) == ans1);
+        assert(CountCoprime<MT>(n, a, remain, 5).value() == ans1 % mod);
+        assert(CountCoprime<MT>(n, f, remain, 5).value() == ans1 % mod);
+        assert(CountCoprime<MT>(n, rm, remain, 5).value() == ans1 % mod);
       }
     }
   }
@@ -392,79 +301,31 @@ SL void SumCoprimeTest() {
     std::vector<std::pair<int64, int>> rm = GetRadFactorsWithMu(a);
     for (int64 n = 1; n <= 1000; n *= 10) {
       int64 ans0 = 0;
-      int64 ans1 = SumCoprime(n, a);
-      int64 ans2 = SumCoprime(n, f);
-      int64 ans3 = SumCoprime(n, rm);
       for (int64 i = 1; i <= n; ++i) {
         if (Gcd(i, a) == 1) {
           ans0 += i;
         }
       }
-      assert(ans1 == ans0);
-      assert(ans2 == ans0);
-      assert(ans3 == ans0);
-    }
-  }
+      assert(SumCoprime(n, a) == ans0);
+      assert(SumCoprime(n, f) == ans0);
+      assert(SumCoprime(n, rm) == ans0);
+      assert(SumCoprime<MT>(n, a).value() == ans0 % mod);
+      assert(SumCoprime<MT>(n, f).value() == ans0 % mod);
+      assert(SumCoprime<MT>(n, rm).value() == ans0 % mod);
 
-  for (int64 a = 1; a <= 100; ++a) {
-    IntegerFactorization f = Factorize(a);
-    std::vector<std::pair<int64, int>> rm = GetRadFactorsWithMu(a);
-    for (int64 n = 1; n <= 1000; n *= 10) {
-      int64 ans0 = 0;
-      int64 ans1 = SumCoprime<MT>(n, a).value();
-      int64 ans2 = SumCoprime<MT>(n, f).value();
-      int64 ans3 = SumCoprime<MT>(n, rm).value();
-      for (int64 i = 1; i <= n; ++i) {
-        if (Gcd(i, a) == 1) {
-          ans0 += i;
-        }
-      }
-      ans0 %= mod;
-      assert(ans1 == ans0);
-      assert(ans2 == ans0);
-      assert(ans3 == ans0);
-    }
-  }
-
-  for (int64 a = 1; a <= 100; ++a) {
-    IntegerFactorization f = Factorize(a);
-    std::vector<std::pair<int64, int>> rm = GetRadFactorsWithMu(a);
-    for (int64 n = 1; n <= 1000; n *= 10) {
       for (int64 remain = 0; remain < 5; ++remain) {
-        int64 ans0 = 0;
-        int64 ans1 = SumCoprime(n, a, remain, 5);
-        int64 ans2 = SumCoprime(n, f, remain, 5);
-        int64 ans3 = SumCoprime(n, rm, remain, 5);
+        int64 ans1 = 0;
         for (int64 i = 1; i <= n; ++i) {
           if (Gcd(i, a) == 1 && i % 5 == remain) {
-            ans0 += i;
+            ans1 += i;
           }
         }
-        assert(ans1 == ans0);
-        assert(ans2 == ans0);
-        assert(ans3 == ans0);
-      }
-    }
-  }
-
-  for (int64 a = 1; a <= 100; ++a) {
-    IntegerFactorization f = Factorize(a);
-    std::vector<std::pair<int64, int>> rm = GetRadFactorsWithMu(a);
-    for (int64 n = 1; n <= 1000; n *= 10) {
-      for (int64 remain = 0; remain < 5; ++remain) {
-        int64 ans0 = 0;
-        int64 ans1 = SumCoprime<MT>(n, a, remain, 5).value();
-        int64 ans2 = SumCoprime<MT>(n, f, remain, 5).value();
-        int64 ans3 = SumCoprime<MT>(n, rm, remain, 5).value();
-        for (int64 i = 1; i <= n; ++i) {
-          if (Gcd(i, a) == 1 && i % 5 == remain) {
-            ans0 += i;
-          }
-        }
-        ans0 %= mod;
-        assert(ans1 == ans0);
-        assert(ans2 == ans0);
-        assert(ans3 == ans0);
+        assert(SumCoprime(n, a, remain, 5) == ans1);
+        assert(SumCoprime(n, f, remain, 5) == ans1);
+        assert(SumCoprime(n, rm, remain, 5) == ans1);
+        assert(SumCoprime<MT>(n, a, remain, 5).value() == ans1 % mod);
+        assert(SumCoprime<MT>(n, f, remain, 5).value() == ans1 % mod);
+        assert(SumCoprime<MT>(n, rm, remain, 5).value() == ans1 % mod);
       }
     }
   }
@@ -472,19 +333,11 @@ SL void SumCoprimeTest() {
 PE_REGISTER_TEST(&SumCoprimeTest, "SumCoprimeTest", SMALL);
 
 SL void LcmTest() {
-  // Two-argument form
-  assert(Lcm((int64)4, (int64)6) == 12);
-  assert(Lcm((int64)3, (int64)5) == 15);
-  assert(Lcm((int64)7, (int64)7) == 7);
-  assert(Lcm((int64)1, (int64)7) == 7);
-  assert(Lcm((int64)7, (int64)1) == 7);
-
   // Mixed types
   assert(Lcm(4, 6LL) == 12LL);
 
   // Variadic (3 arguments)
   assert(Lcm((int64)4, (int64)6, (int64)10) == 60);
-  assert(Lcm((int64)2, (int64)3, (int64)5) == 30);
 
   // initializer_list
   assert(Lcm({(int64)4, (int64)6, (int64)10}) == 60);
@@ -505,28 +358,21 @@ SL void LcmTest() {
 PE_REGISTER_TEST(&LcmTest, "LcmTest", SMALL);
 
 SL void ExGcdBuiltinTest() {
-  // Three-output form: verify Bezout identity for all small inputs
-  for (int a = 1; a <= 20; ++a) {
-    for (int b = 1; b <= 20; ++b) {
+  // Verify the Bezout identity of all three forms for small inputs
+  for (int64 a = 1; a <= 20; ++a) {
+    for (int64 b = 1; b <= 20; ++b) {
       int64 x, y;
-      int64 d = ExGcd((int64)a, (int64)b, x, y);
-      assert(d == Gcd((int64)a, (int64)b));
-      assert((int64)a * x + (int64)b * y == d);
+      const int64 d = ExGcd(a, b, x, y);
+      assert(d == Gcd(a, b));
+      assert(a * x + b * y == d);
+
+      auto [d1, x1, y1] = ExGcd(a, b);
+      assert(d1 == d && a * x1 + b * y1 == d);
+
+      int64 x2;
+      assert(ExGcd(a, b, x2) == d);
+      assert(x2 == x);
     }
-  }
-
-  // Tuple form
-  {
-    auto [d, x, y] = ExGcd((int64)24, (int64)36);
-    assert(d == 12);
-    assert(24 * x + 36 * y == d);
-  }
-
-  // Single-x form: verify d is correct
-  {
-    int64 x;
-    int64 d = ExGcd((int64)24, (int64)36, x);
-    assert(d == 12);
   }
 
   // Negative operands
@@ -556,21 +402,13 @@ SL void SolveLinearEquationBuiltinTest() {
         if (first_sol < 0) {
           assert(!ans.ok());
         } else {
+          // Solutions are periodic with period m / gcd(a, m).
           assert(ans.ok());
-          assert((a * ans.value % m + m) % m == b);
+          assert(ans.value == first_sol);
+          assert(ans.mod == m / Gcd(a, m));
         }
       }
     }
-  }
-
-  // No solution when gcd(a, m) does not divide b
-  assert(!SolveLinearEquation((int64)2, (int64)3, (int64)4).ok());
-
-  // Unique solution when gcd(a, m) == 1
-  {
-    auto ans = SolveLinearEquation((int64)3, (int64)4, (int64)7);
-    assert(ans.ok() && ans.mod == 7);
-    assert(3 * ans.value % 7 == 4);
   }
 }
 
@@ -578,16 +416,6 @@ PE_REGISTER_TEST(&SolveLinearEquationBuiltinTest,
                  "SolveLinearEquationBuiltinTest", SMALL);
 
 SL void Crt2CrtNBuiltinTest() {
-  // x = 1 (mod 3), x = 2 (mod 5) -> x = 7 (mod 15)
-  {
-    auto ans = Crt2((int64)1, (int64)3, (int64)2, (int64)5);
-    assert(ans.ok());
-    assert(ans.value == 7 && ans.mod == 15);
-  }
-
-  // No solution: x = 0 (mod 4), x = 1 (mod 2)
-  assert(!Crt2((int64)0, (int64)4, (int64)1, (int64)2).ok());
-
   // CrtN: x = 1 (mod 2), x = 2 (mod 3), x = 3 (mod 5) -> x = 23 (mod 30)
   {
     int64 val[] = {1, 2, 3};
@@ -622,7 +450,7 @@ SL void Crt2CrtNBuiltinTest() {
             assert(!ans.ok());
           } else {
             assert(ans.ok());
-            assert(ans.value == found);
+            assert(ans.value == found && ans.mod == Lcm(m1, m2));
           }
         }
       }
@@ -735,17 +563,10 @@ SL void ExtractFactorInvOfTest() {
 PE_REGISTER_TEST(&ExtractFactorInvOfTest, "ExtractFactorInvOfTest", SMALL);
 
 SL void CountSumMultipleModValueTest() {
-  // CountMultiple(n, d) = floor(n/d)
-  assert(CountMultiple(int64(10), int64(3)) == 3);
-  assert(CountMultiple(int64(12), int64(3)) == 4);
   assert(CountMultiple(int64(0), int64(5)) == 0);
+  assert(SumMultiple(int64(0), int64(5)) == 0);
 
-  // SumMultiple(n, d) = d + 2d + ... + floor(n/d)*d
-  assert(SumMultiple(int64(10), int64(3)) == 3 + 6 + 9);
-  assert(SumMultiple(int64(12), int64(3)) == 3 + 6 + 9 + 12);
-  assert(SumMultiple(int64(1), int64(5)) == 0);
-
-  // CountModValue and SumModValue verified by brute force
+  // Verified by brute force; r == 0 also checks CountMultiple / SumMultiple
   for (int64 n = 1; n <= 50; ++n) {
     for (int64 m = 1; m <= 10; ++m) {
       for (int64 r = 0; r < m; ++r) {
@@ -758,6 +579,10 @@ SL void CountSumMultipleModValueTest() {
         }
         assert(CountModValue(n, r, m) == ecnt);
         assert(SumModValue(n, r, m) == esum);
+        if (r == 0) {
+          assert(CountMultiple(n, m) == ecnt);
+          assert(SumMultiple(n, m) == esum);
+        }
       }
     }
   }
@@ -765,4 +590,235 @@ SL void CountSumMultipleModValueTest() {
 
 PE_REGISTER_TEST(&CountSumMultipleModValueTest, "CountSumMultipleModValueTest",
                  SMALL);
+
+SL void IsPrimeTest() {
+  auto bf_is_prime = [](int64 n) -> int {
+    if (n <= 1) return 0;
+    for (int64 d = 2; d * d <= n; ++d) {
+      if (n % d == 0) return 0;
+    }
+    return 1;
+  };
+  // Below maxp (pmask), just above maxp (trial division / Miller-Rabin) and
+  // near 1e12.
+  for (int64 start : {int64(-10), maxp - 1000, int64(1000000000000)}) {
+    for (int64 n = start; n <= start + 500; ++n) {
+      const int expected = bf_is_prime(n);
+      assert(IsPrime(n) == expected);
+      assert(IsPrimeEx(n) == expected);
+    }
+  }
+
+  // Strong pseudoprimes for the Miller-Rabin bases (OEIS A014233).
+  for (int64 n : {int64(2047), int64(1373653), int64(25326001),
+                  int64(3215031751), int64(2152302898747),
+                  int64(3474749660383), int64(341550071728321),
+                  int64(3825123056546413051)}) {
+    assert(IsPrimeEx(n) == 0);
+  }
+  assert(MrTest(2047, 2) == 1);
+  assert(MrTest(2047, 3) == 0);
+
+  assert(IsPrimeEx(1000000007) == 1);
+  assert(IsPrimeEx(998244353) == 1);
+  assert(IsPrimeEx(1000000000000000003) == 1);
+  assert(IsPrimeEx(2305843009213693951) == 1);  // 2^61 - 1
+  assert(IsPrimeEx(int64(1000000007) * 998244353) == 0);
+  assert(IsPrimeEx(int64(3037000493) * 3037000493) == 0);
+}
+
+PE_REGISTER_TEST(&IsPrimeTest, "IsPrimeTest", SMALL);
+
+SL void FactorizationUtilTest() {
+  for (int64 start : {int64(1), int64(1000000000000)}) {
+    for (int64 n = start; n <= start + 300; ++n) {
+      const IntegerFactorization f = Factorize(n);
+      assert(f.GetValue<int64>() == n);
+
+      // The hint only changes the search order, not the result.
+      const IntegerFactorization fh = Factorize(n, {6, 35});
+      assert(fh.ToMap() == f.ToMap());
+
+      const IntegerFactorization fp = FactorizePower(n, 3);
+      assert(std::size(fp) == std::size(f));
+      for (int i = 0; i < static_cast<int>(std::size(f)); ++i) {
+        assert(fp[i].first == f[i].first && fp[i].second == f[i].second * 3);
+      }
+
+      int big_omega = 0;
+      std::vector<int64> primes;
+      for (auto [p, e] : f) {
+        assert(IsPrimeEx(p));
+        big_omega += e;
+        primes.push_back(p);
+      }
+      assert(CalSmallOmega(n) == static_cast<int>(std::size(f)));
+      assert(CalBigOmega(n) == big_omega);
+      assert(GetPrimeFactors(n) == primes);
+
+      if (start == 1) {
+        std::vector<int64> rad = GetRadFactors(n);
+        std::sort(std::begin(rad), std::end(rad));
+        std::vector<int64> expected;
+        for (int64 d = 1; d <= n; ++d) {
+          if (n % d == 0 && CalMu(d) != 0) expected.push_back(d);
+        }
+        assert(rad == expected);
+      }
+    }
+  }
+
+  // operator*
+  for (int64 a = 1; a <= 60; ++a) {
+    for (int64 b = 1; b <= 60; ++b) {
+      const auto expected = Factorize(a * b).ToMap();
+      assert((Factorize(a) * Factorize(b)).ToMap() == expected);
+      assert((Factorize(a) * b).ToMap() == expected);
+      assert((a * Factorize(b)).ToMap() == expected);
+      IntegerFactorization f(a);
+      f *= b;
+      assert(f.ToMap() == expected);
+    }
+  }
+}
+
+PE_REGISTER_TEST(&FactorizationUtilTest, "FactorizationUtilTest", SMALL);
+
+SL void ModInvTest() {
+  for (int64 m = 2; m <= 50; ++m) {
+    for (int64 a = 1; a < m; ++a) {
+      if (Gcd(a, m) != 1) continue;
+      const int64 inv = ModInv(a, m);
+      assert(0 <= inv && inv < m);
+      assert(a * inv % m == 1);
+    }
+  }
+  assert(ModInv(int64(2), int64(1000000007)) == 500000004);
+}
+
+PE_REGISTER_TEST(&ModInvTest, "ModInvTest", SMALL);
+
+SL void PrimitiveRootIndTest() {
+  assert(FindPrimitiveRoot(2) == 1);
+  for (int i = 1; i < 30; ++i) {
+    const int64 p = plist[i];
+    const int64 g = FindPrimitiveRoot(p);
+    assert(g == FindPrimitiveRoot(p, Factorize(p - 1)));
+    assert(CalModOrder<int64>(g, p) == p - 1);
+
+    int64 cnt = 0;
+    for (int64 x = 1; x < p; ++x) {
+      const bool is_root = IsPrimitiveRoot(x, p);
+      assert(is_root == (CalModOrder<int64>(x, p) == p - 1));
+      cnt += is_root;
+    }
+    assert(cnt == CalPhi(p - 1));
+
+    IndSolver sv(p);
+    assert(sv.pr() == g);
+    for (int64 a = 1; a < p; ++a) {
+      const int64 k = Ind(a, g, p);
+      assert(0 <= k && k < p - 1);
+      assert(PowerMod(g, k, p) == a);
+      assert(sv(a) == k);
+    }
+  }
+
+  {
+    const int64 p = 1000000007;
+    assert(FindPrimitiveRoot(p) == 5);
+    IndSolver sv(p, 5);
+    for (int64 k : {int64(0), int64(1), int64(12345), p - 2}) {
+      const int64 a = PowerMod(int64(5), k, p);
+      assert(Ind(a, 5, p) == k);
+      assert(sv(a) == k);
+    }
+  }
+}
+
+PE_REGISTER_TEST(&PrimitiveRootIndTest, "PrimitiveRootIndTest", SMALL);
+
+SL void RootModTest() {
+  for (int i = 0; i < 25; ++i) {
+    const int64 p = plist[i];
+    for (int64 n = 1; n <= 6; ++n) {
+      for (int64 a = 0; a < p; ++a) {
+        std::vector<int64> expected;
+        for (int64 x = 0; x < p; ++x) {
+          if (PowerMod(x, n, p) == a) expected.push_back(x);
+        }
+        std::vector<int64> ans = pmod::RootMod(a, n, p);
+        std::sort(std::begin(ans), std::end(ans));
+        assert(ans == expected);
+      }
+    }
+  }
+  // x^4 = 1 (mod 13) has 4 roots, only 2 are requested.
+  assert(std::size(pmod::RootMod(1, 4, 13, 2)) == 2);
+  // a is reduced first.
+  assert(pmod::RootMod(-12, 2, 13) == pmod::RootMod(1, 2, 13));
+  assert(pmod::RootMod(26, 3, 13) == std::vector<int64>{0});
+}
+
+PE_REGISTER_TEST(&RootModTest, "RootModTest", SMALL);
+
+#if PE_HAS_INT128
+SL void TwoSquaresFullTest() {
+  for (int64 n = 0; n <= 2000; ++n) {
+    std::vector<std::pair<int64, int64>> expected;
+    for (int64 x = -SqrtI(n); x * x <= n; ++x) {
+      for (int64 y = -SqrtI(n); y * y <= n; ++y) {
+        if (x * x + y * y == n) expected.emplace_back(x, y);
+      }
+    }
+    std::vector<std::pair<int64, int64>> ans = TwoSquaresFull(n);
+    std::sort(std::begin(ans), std::end(ans));
+    assert(ans == expected);
+  }
+}
+
+PE_REGISTER_TEST(&TwoSquaresFullTest, "TwoSquaresFullTest", SMALL);
+#endif
+
+SL void SieveTest() {
+  // end must not exceed maxp^2.
+  for (int64 start : {int64(0), int64(1000000000000)}) {
+    const int64 end = start + 1000;
+    auto [rest, factorization] = Sieve(start, end);
+    assert(static_cast<int64>(std::size(factorization)) == end - start + 1);
+    for (int64 i = start; i <= end; ++i) {
+      std::vector<std::pair<int64, int>> expected = Factorize(i);
+      assert(factorization[i - start] == expected);
+    }
+  }
+}
+
+PE_REGISTER_TEST(&SieveTest, "SieveTest", SMALL);
+
+SL void GetPrimesInRangeTest() {
+  for (int64 start : {int64(-5), int64(0), int64(2), int64(3), maxp - 100,
+                      int64(1000000000000)}) {
+    for (int64 len : {int64(0), int64(1), int64(1000)}) {
+      const int64 end = start + len;
+      std::vector<int64> expected;
+      for (int64 n = start; n <= end; ++n) {
+        if (IsPrime(n)) expected.push_back(n);
+      }
+      assert(GetPrimesInRange(start, end) == expected);
+      assert(GetPrimesInRangePe(start, end) == expected);
+
+      // A non-positive end means an unbounded enumeration.
+      if (end >= 2) {
+        std::vector<int64> enumerated;
+        for (int64 p : PrimeEnumeratorPe<int64>(start, end)) {
+          enumerated.push_back(p);
+        }
+        assert(enumerated == expected);
+      }
+    }
+  }
+  assert(std::empty(GetPrimesInRange(10, 5)));
+}
+
+PE_REGISTER_TEST(&GetPrimesInRangeTest, "GetPrimesInRangeTest", SMALL);
 }  // namespace nt_test

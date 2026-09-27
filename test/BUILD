@@ -10,7 +10,6 @@ pe_binary(
   name = "test_perf",
   srcs = ["test_perf.c"],
   defines = [
-    "TEST_ALL",
     "ENABLE_ASSERT=0",
     "TRY_TO_USE_INT128=1",
     "ENABLE_OPENMP=1",

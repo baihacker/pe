@@ -210,8 +210,14 @@ SL void ParallelFindTest() {
   // inactive, so each call runs on a single thread. Only odd numbers hit, so
   // with B == 1 half of the blocks never contain a hit.
   std::function<bool(int64)> is_odd = [](int64 x) { return x % 2 != 0; };
+#if _OPENMP >= 201811
   const int old_levels = omp_get_max_active_levels();
   omp_set_max_active_levels(1);
+#else
+  // MSVC only supports OpenMP 2.0.
+  const int old_nested = omp_get_nested();
+  omp_set_nested(0);
+#endif
   int64 res[2][4];
 #pragma omp parallel for num_threads(2)
   for (int i = 0; i < 2; ++i) {
@@ -220,7 +226,11 @@ SL void ParallelFindTest() {
     res[i][2] = ParallelFindFirst<8, int64, 3>(int64(-8), is_odd);
     res[i][3] = ParallelFindLast<8, int64, 3>(int64(8), is_odd);
   }
+#if _OPENMP >= 201811
   omp_set_max_active_levels(old_levels);
+#else
+  omp_set_nested(old_nested);
+#endif
   for (int i = 0; i < 2; ++i) {
     assert(res[i][0] == 1 && res[i][1] == -1);
     assert(res[i][2] == -7 && res[i][3] == 7);

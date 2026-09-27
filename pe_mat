@@ -201,6 +201,11 @@ struct PeMatrixStorage {
     return *this;
   }
 
+  // TODO(bug): storage is const but data() has no const overload, so
+  // std::data(storage) does not compile. Copying a PeMatrix lvalue across
+  // column counts (e.g. PeMatrix<T, 4> x(dyn) or x = dyn with dyn a
+  // PeMatrix<T, -1>) fails to compile; moving works. The same applies to the
+  // PeMatrixStorage<T, -1> overload below.
   template <int C1>
   PeMatrixStorage(const PeMatrixStorage<T, C1>& storage)
       : PeMatrixStorage(storage.row(), storage.column()) {
@@ -317,6 +322,8 @@ struct PeMatrixStorage<T, -1> {
     storage.set_own(0);
   }
 
+  // TODO(bug): same as above, std::data(storage) on a const storage does not
+  // compile, e.g. PeMatrix<T> x(fixed) with fixed a PeMatrix<T, 4> lvalue.
   template <int C>
   PeMatrixStorage(const PeMatrixStorage<T, C>& storage)
       : PeMatrixStorage(storage.row(), storage.column()) {

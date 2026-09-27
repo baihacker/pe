@@ -161,12 +161,9 @@ SL void ParallelFindImpl() {
     }
 
     // Unbounded searches; every m here has a hit within m steps.
-    // Only cases where every id's blocks contain a hit: see the TODO(bug) at
-    // the unbounded ParallelFindFirst/ParallelFindLast in pe_parallel_algo,
-    // they hang otherwise when fewer than TN threads are available.
-    if (m > B && std::gcd(static_cast<int64>(m), int64(TN) * B) != 1) {
-      continue;
-    }
+    // Tiny blocks with a large m cost thousands of lock round trips; the
+    // few-threads case is covered separately below.
+    if (m > 100 * B) continue;
     for (T start : {T(-300), T(0), T(123)}) {
       T ef = start;
       while (!f(ef)) ++ef;
@@ -206,6 +203,28 @@ SL void ParallelFindTest() {
   ParallelFindImpl<8, 10000, int64>();
 #if PE_HAS_INT128
   ParallelFindImpl<4, 9, int128>();
+#endif
+
+#if ENABLE_OPENMP
+  // Unbounded searches with fewer threads than TN: the inner regions are
+  // inactive, so each call runs on a single thread. Only odd numbers hit, so
+  // with B == 1 half of the blocks never contain a hit.
+  std::function<bool(int64)> is_odd = [](int64 x) { return x % 2 != 0; };
+  const int old_levels = omp_get_max_active_levels();
+  omp_set_max_active_levels(1);
+  int64 res[2][4];
+#pragma omp parallel for num_threads(2)
+  for (int i = 0; i < 2; ++i) {
+    res[i][0] = ParallelFindFirst<2, int64, 1>(int64(0), is_odd);
+    res[i][1] = ParallelFindLast<2, int64, 1>(int64(0), is_odd);
+    res[i][2] = ParallelFindFirst<8, int64, 3>(int64(-8), is_odd);
+    res[i][3] = ParallelFindLast<8, int64, 3>(int64(8), is_odd);
+  }
+  omp_set_max_active_levels(old_levels);
+  for (int i = 0; i < 2; ++i) {
+    assert(res[i][0] == 1 && res[i][1] == -1);
+    assert(res[i][2] == -7 && res[i][3] == 7);
+  }
 #endif
 }
 

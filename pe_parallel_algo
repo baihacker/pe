@@ -151,11 +151,6 @@ SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
 template <int TN, typename T, int B = 10000>
 SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
     ParallelFindFirst(T first, const std::function<T(T, T)>& f) {
-// TODO(bug): assumes all TN ids run at the same time. With fewer threads than
-// TN (omp_set_dynamic(1) from PE_INIT, OMP_THREAD_LIMIT, a busy machine), a
-// thread whose blocks never contain a hit spins forever while the id owning
-// the hit waits for a free thread. E.g. with OMP_THREAD_LIMIT=1,
-// ParallelFindFirst<2, int64, 1>(0, is_odd) never returns.
 #if !ENABLE_OPENMP
   return FindFirst<T, B>(first, f);
 #else
@@ -166,28 +161,56 @@ SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
   omp_init_lock(&locker);
 
   const T guard = first - 1;
-  const T STEP = static_cast<T>(TN) * B;
   T best = guard;
+  // Blocks are handed out in increasing order, so the search terminates even
+  // if fewer than TN threads are available (e.g. omp_set_dynamic(1)).
+  T next = first;
 
-#pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
-  for (int id = 0; id < TN; ++id) {
-    for (T j = first + static_cast<T>(id) * B;; j += STEP) {
-      const T y = j + B - 1;
-      T x = f(j, y);
-      if (x <= y) {
-        omp_set_lock(&locker);
-        if (best == guard || x < best) best = x;
-        omp_unset_lock(&locker);
-        break;
-      } else {
-        int should_exit = 0;
-        omp_set_lock(&locker);
-        if (best != guard && best < j) should_exit = 1;
-        omp_unset_lock(&locker);
-        if (should_exit) break;
-      }
+#pragma omp parallel num_threads(TN)
+  for (;;) {
+    omp_set_lock(&locker);
+    if (best != guard && best < next) {
+      omp_unset_lock(&locker);
+      break;
+    }
+    const T j = next;
+    next += B;
+    omp_unset_lock(&locker);
+
+    const T y = j + B - 1;
+    T x = f(j, y);
+    if (x <= y) {
+      omp_set_lock(&locker);
+      if (best == guard || x < best) best = x;
+      omp_unset_lock(&locker);
     }
   }
+
+  // Old implementation, kept for reference. Each id owns a fixed residue
+  // class of blocks, so it hangs when fewer than TN threads are available and
+  // some id's blocks never contain a hit.
+  //
+  // const T STEP = static_cast<T>(TN) * B;
+  //
+  // #pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
+  // for (int id = 0; id < TN; ++id) {
+  //   for (T j = first + static_cast<T>(id) * B;; j += STEP) {
+  //     const T y = j + B - 1;
+  //     T x = f(j, y);
+  //     if (x <= y) {
+  //       omp_set_lock(&locker);
+  //       if (best == guard || x < best) best = x;
+  //       omp_unset_lock(&locker);
+  //       break;
+  //     } else {
+  //       int should_exit = 0;
+  //       omp_set_lock(&locker);
+  //       if (best != guard && best < j) should_exit = 1;
+  //       omp_unset_lock(&locker);
+  //       if (should_exit) break;
+  //     }
+  //   }
+  // }
 
   omp_destroy_lock(&locker);
 
@@ -293,9 +316,6 @@ SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
 template <int TN, typename T, int B = 10000>
 SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
     ParallelFindLast(T last, const std::function<T(T, T)>& f) {
-// TODO(bug): same hang as the unbounded ParallelFindFirst when fewer than TN
-// threads are available, e.g. ParallelFindLast<2, int64, 1>(0, is_odd) with
-// OMP_THREAD_LIMIT=1.
 #if !ENABLE_OPENMP
   return FindLast(last, f);
 #else
@@ -306,28 +326,56 @@ SL REQUIRES((is_builtin_integer_v<T> && pe_is_signed_v<T>)) RETURN(T)
   omp_init_lock(&locker);
 
   const T guard = last + 1;
-  const T STEP = static_cast<T>(TN) * B;
   T best = guard;
+  // Blocks are handed out in decreasing order, so the search terminates even
+  // if fewer than TN threads are available (e.g. omp_set_dynamic(1)).
+  T next = last;
 
-#pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
-  for (int id = 0; id < TN; ++id) {
-    for (T j = last - static_cast<T>(id) * B;; j -= STEP) {
-      const T y = j - B + 1;
-      T x = f(y, j);
-      if (x >= y) {
-        omp_set_lock(&locker);
-        if (best == guard || x > best) best = x;
-        omp_unset_lock(&locker);
-        break;
-      } else {
-        int should_exit = 0;
-        omp_set_lock(&locker);
-        if (best != guard && best > j) should_exit = 1;
-        omp_unset_lock(&locker);
-        if (should_exit) break;
-      }
+#pragma omp parallel num_threads(TN)
+  for (;;) {
+    omp_set_lock(&locker);
+    if (best != guard && best > next) {
+      omp_unset_lock(&locker);
+      break;
+    }
+    const T j = next;
+    next -= B;
+    omp_unset_lock(&locker);
+
+    const T y = j - B + 1;
+    T x = f(y, j);
+    if (x >= y) {
+      omp_set_lock(&locker);
+      if (best == guard || x > best) best = x;
+      omp_unset_lock(&locker);
     }
   }
+
+  // Old implementation, kept for reference. Each id owns a fixed residue
+  // class of blocks, so it hangs when fewer than TN threads are available and
+  // some id's blocks never contain a hit.
+  //
+  // const T STEP = static_cast<T>(TN) * B;
+  //
+  // #pragma omp parallel for schedule(dynamic, 1) num_threads(TN)
+  // for (int id = 0; id < TN; ++id) {
+  //   for (T j = last - static_cast<T>(id) * B;; j -= STEP) {
+  //     const T y = j - B + 1;
+  //     T x = f(y, j);
+  //     if (x >= y) {
+  //       omp_set_lock(&locker);
+  //       if (best == guard || x > best) best = x;
+  //       omp_unset_lock(&locker);
+  //       break;
+  //     } else {
+  //       int should_exit = 0;
+  //       omp_set_lock(&locker);
+  //       if (best != guard && best > j) should_exit = 1;
+  //       omp_unset_lock(&locker);
+  //       if (should_exit) break;
+  //     }
+  //   }
+  // }
 
   omp_destroy_lock(&locker);
 

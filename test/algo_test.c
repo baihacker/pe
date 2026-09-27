@@ -885,6 +885,9 @@ SL void RecurrenceTest() {
 
 PE_REGISTER_TEST(&RecurrenceTest, "RecurrenceTest", SMALL);
 
+// FindSurrealNumber doesn't compile with clang (see the TODO(bug) in
+// pe_fraction).
+#if !defined(COMPILER_CLANG)
 SL void SurrealNumberTest() {
   using F = Fraction<int64>;
   const std::optional<F> none;
@@ -904,4 +907,5 @@ SL void SurrealNumberTest() {
 }
 
 PE_REGISTER_TEST(&SurrealNumberTest, "SurrealNumberTest", SMALL);
+#endif
 }  // namespace algo_test

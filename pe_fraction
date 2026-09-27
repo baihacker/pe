@@ -107,6 +107,12 @@ struct Fraction {
     }
     if (b < 0) b = -b, a = -a;
   }
+  // TODO(bug): U is unconstrained. std::optional<Fraction<T>> checks
+  // is_constructible<Fraction<T>, const std::nullopt_t&>, which makes clang
+  // instantiate the default argument `const std::nullopt_t& v = 1` and fail
+  // with a hard error ("reference to type 'const std::nullopt_t' could not
+  // bind to an rvalue of type 'int'"), so FindSurrealNumber (which returns
+  // std::nullopt) doesn't compile with clang. GCC accepts it.
   template <typename U>
   Fraction(const U& u = 0, const U& v = 1) : Fraction(T(u), T(v)) {}
   Fraction(const Fraction& f) {

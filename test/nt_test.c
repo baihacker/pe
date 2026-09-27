@@ -369,9 +369,9 @@ SL void ExGcdBuiltinTest() {
       auto [d1, x1, y1] = ExGcd(a, b);
       assert(d1 == d && a * x1 + b * y1 == d);
 
-      int64 x2;
-      assert(ExGcd(a, b, x2) == d);
-      assert(x2 == x);
+      int64 x2 = 0;
+      const int64 d2 = ExGcd(a, b, x2);
+      assert(d2 == d && x2 == x);
     }
   }
 

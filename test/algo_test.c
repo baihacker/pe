@@ -592,7 +592,7 @@ SL void NotDivTest() {
   // Pairwise coprime
   for (const auto& L : std::vector<std::vector<int64>>{
            {}, {7}, {5, 3}, {4, 9, 25}, {11, 2, 3, 35}}) {
-    std::vector<int> bc(1 << std::size(L));
+    std::vector<int> bc(size_t(1) << std::size(L));
     for (int i = 1; i < static_cast<int>(std::size(bc)); ++i) {
       bc[i] = bc[i >> 1] + (i & 1);
     }

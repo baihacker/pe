@@ -169,11 +169,14 @@ SL void BitFunctionsTest() {
   for (int n = 1; n <= 10; ++n) {
     for (int k = 1; k <= n; ++k) {
       std::vector<int64> expected;
-      for (int64 m = 0; m < (1 << n); ++m) {
+      for (int64 m = 0; m < (int64(1) << n); ++m) {
         if (Popcount(m) == k) expected.push_back(m);
       }
       std::vector<int64> got;
-      for (int64 m = (1 << k) - 1; m < (1 << n); m = NextComb(m)) got.push_back(m);
+      for (int64 m = (int64(1) << k) - 1; m < (int64(1) << n);
+           m = NextComb(m)) {
+        got.push_back(m);
+      }
       assert(got == expected);
     }
   }

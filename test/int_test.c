@@ -88,7 +88,9 @@ SL void IntPredicateTest() {
   assert(Abs(int64(-1) << 62) == int64(1) << 62);
   assert(FAbs(-7) == 7 && FAbs(uint32(7)) == 7u);
   static_assert(Abs(-3) == 3 && IntSign(-3) == -1 && IsZero(0));
-  static_assert(IsEven(4) && IsOdd(-1) && SameParity(3, -1));
+  static_assert(IsEven(4) == 1);
+  static_assert(IsOdd(-1) == 1);
+  static_assert(SameParity(3, -1) == 1);
 
 #if PE_HAS_INT128
   const int128 big = int128(1) << 100;
